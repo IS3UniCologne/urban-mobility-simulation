@@ -1,3 +1,5 @@
+import simpy
+
 import simulation.world.world as world
 
 # world.run()
@@ -14,15 +16,18 @@ task = TransportTask(pos, pos)
 
 search_engine = SharedVehicleSearchEngine()
 
-x = user.User(pos, "Test", task, search_engine)
+env = simpy.Environment()
+x = user.User(pos, "Test", task, search_engine, env)
 
-vehicle = SharedVehicle(pos)
-print(x.position)
-vehicle.mount(x)
-print(vehicle)
-vehicle.dismount(x)
-print(vehicle)
-vehicle.dismount(x)
+env.run(until = 10)
+
+#vehicle = SharedVehicle(pos)
+#print(x.position)
+#vehicle.mount(x)
+#print(vehicle)
+#vehicle.dismount(x)
+#print(vehicle)
+#vehicle.dismount(x)
 
 
 # import simpy
