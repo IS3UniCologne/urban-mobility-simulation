@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from simulation.agent.agent import Agent
 from simulation.environment.position import Position
 
-
 class Vehicle(ABC):
 
     def __init__(self, position, available_seats, max_available_seats):
