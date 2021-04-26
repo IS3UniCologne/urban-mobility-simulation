@@ -1,69 +1,210 @@
+from random import randint
+
 from .agent import Agent
-from ..operator.search_engine_interface import SearchEngineInterface
+from ..operator.data_transfer_object.transportation_alternative import TransportationAlternative
+from ..operator.data_transfer_object.transportation_alternative_browser import TransportationAlternativeBrowser
+from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
+from ..operator.interface.vehicle_allocation_engine_interface import VehicleAllocationEngineInterface
 from ..tasks.transport_task import TransportTask
-from ..tasks.vehicle_search_task import VehicleSearchTask
+from ..tasks.transportation_search_task import TransportationSearchTask
 from enum import Enum
 import simpy
 
+import logging
+
 class UserState(Enum):
     INITIALIZED = 0
-    SEARCHING_VEHICLE = 1
-    SELECTING_VEHICLE = 2
-    MOUNTING_VEHICLE  = 3
-    DISMOUNTING_VEHICLE = 4
-    DRIVING = 5
-    PAYING = 6
-    FINISHED = 7
+    SEARCHING_TRANSPORT_ALTERNATIVES = 1
+    SELECTING_TRANSPORT_ALTERNATIVES = 2
+    ALLOCATING_VEHICLE = 3
+    MOVING_TO_PICK_UP_POS = 4
+    WAITING_FOR_VEHICLE = 5
+    DRIVING = 6
+    PAYING = 7
+    FULFILLED = 8
+    CANCELLED = 9
+    MISSED = 10
 
 class User(Agent):
-    def __init__(self, position, name, transport_task: TransportTask, vehicle_search_service: SearchEngineInterface, env: simpy.Environment):
-        self._name = name                                                       # Name of Agent (ID)
+    user_id = 0
+
+    def __init__(self, position, transport_task: TransportTask, transportation_search_service: SearchEngineInterface, vehicle_assignment_service: VehicleAllocationEngineInterface, env: simpy.Environment):
+        self._id   = User.user_id                                               # User ID
+        User.user_id += 1                                                       # Increment User Id
+
         self._position = position                                               # Initial Position of Agent
         self._transport_task = transport_task                                   # Objective of generated agent
-        self._vehicle_search_service = vehicle_search_service                   # Register Vehicle Search Service
+
+        # Operator Interfaces
+        self._transportation_search_service = transportation_search_service     # Register Transport Search Service
+        self._vehicle_assignment_service    = vehicle_assignment_service        # Register Vehicle Assignment Service
+
+        # Simpy Environment
         self._env = env                                                         # Simulation Environment
 
+        # Events
+        self._transportation_alternatives_received = self._env.event()
+        self._transportation_alternatives_selected = self._env.event()
+        self._vehicle_allocated = self._env.event()
+        self._arrived_at_pick_up_position = self._env.event()
+        self._assigned_vehicle_arrived = self._env.event()
+        self._arrived_at_destination = self._env.event()
+
+
+        # Initial State and Runtime
         self._state = UserState.INITIALIZED                                     # Initial State of agent
-        self._action = self._env.process(self.run())                            # Spawn agent
+        logging.debug(f"Initialized.", extra= {"clazz":self.__class__.__name__, "oid": self._id})
 
     def run(self):
-        while self._state != UserState.FINISHED:
-            available_vehicles = yield self._env.process(self.search_for_vehicle())
+        while self._state != UserState.FULFILLED:
 
-            print(self._env.now)
+            # Retrieve available transportation alternatives
+            available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
 
-            yield self._env.process(self.select_available_vehicle())
-            print(self._env.now)
+            selected_transportation_alternative = yield self._env.process(self.select_transportation_alternative(available_transportation_alternatives))
+
+            vehicle_allocation                  = yield self._env.process(self.allocate_vehicle(selected_transportation_alternative))
+
+            yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
+
+            yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
+
+            yield self._env.process(self.start_driving())
 
             yield self._env.process(self.stop())
 
-            print(self._env.now)
-
-    def stop(self):
-        self._state = UserState.FINISHED
-
-        yield self._env.timeout(0)
-
-    def search_for_vehicle(self):
+    def search_for_alternatives(self):
         """
-            User searches for available vehicles using concrete instance of py:mod:`~operator.SearchEngineInterface`
+            User searches for available mobility alternatives using concrete instance of py:mod:`~operator.SearchEngineInterface`
         :return:
         """
-        self._state = UserState.SEARCHING_VEHICLE
 
-        search_task = VehicleSearchTask(self._position)
+        # Wait for next event
+        yield self._env.timeout(randint(1, 5))  # Open App
 
-        available_vehicles = self._vehicle_search_service.search_for_vehicles(search_task)
-        available_vehicles = ['Huhu']
+        # Update current state
+        self._state = UserState.SEARCHING_TRANSPORT_ALTERNATIVES
 
-        yield self._env.timeout(1)
-        return available_vehicles
+        # Search for transportation alternatives
+        search_task = TransportationSearchTask(self._position, self._transport_task)
 
-    def select_available_vehicle(self):
-        self._state = UserState.SELECTING_VEHICLE
-        # Implement Choice Behavior
-        yield self._env.timeout(5)
+        available_transportation_alternatives = self._transportation_search_service.search_for_transportation_alternatives(search_task)
+
+        # Trigger next event
+        self._transportation_alternatives_received.succeed()
+        logging.debug(f"Received transportation alternatives: {available_transportation_alternatives}.", extra= {"clazz":self.__class__.__name__, "oid": self._id})
+
+        return available_transportation_alternatives
+
+    def select_transportation_alternative(self, available_transportation_alternatives: TransportationAlternativeBrowser):
+        """
+            User selects transportation alternative
+        :param available_transportation_alternatives:
+        :return:
+        """
+
+        # Wait for event
+        yield self._transportation_alternatives_received
+
+        # Set current state
+        self._state = UserState.SELECTING_TRANSPORT_ALTERNATIVES
+
+        # Select transportation alternative
+        selected_transportation_alternative = available_transportation_alternatives.transportation_alternatives[0]
+
+        # Trigger next event
+        self._transportation_alternatives_selected.succeed(selected_transportation_alternative)
+        logging.debug(f"Selected transportation alternative: {selected_transportation_alternative}.", extra= {"clazz":self.__class__.__name__, "oid": self._id})
+
+
+        return selected_transportation_alternative
+
+    def allocate_vehicle(self, selected_transportation_alternative: TransportationAlternative):
+        # Wait for event
+        yield self._transportation_alternatives_selected
+
+        # Set current state
+        self._state = UserState.ALLOCATING_VEHICLE
+
+        # Get Vehicle Allocation
+        vehicle_allocation = yield self._env.process(self._vehicle_assignment_service.request_vehicle_allocation(self, selected_transportation_alternative))
+
+        # Trigger next event
+        self._vehicle_allocated.succeed()
+        logging.debug(f"Vehicle {vehicle_allocation.vehicle.id} has been allocated to user {self._id}.", extra= {"clazz":self.__class__.__name__, "oid": self._id})
+
+        # Return vehicle allocation
+        return vehicle_allocation
+
+    def move_to_pick_up_position(self, vehicle_assignment: VehicleAllocation):
+
+        # Wait for event
+        yield self._vehicle_allocated
+
+        # Set current state
+        self._state = UserState.MOVING_TO_PICK_UP_POS
+
+        # Calculate route to pick up position, and update user's position
+        duration = randint(4,8)
+        # duration = RoutePlanner.calculateDuration(user.position, vehicle_assignment.pick_up_position, Strategy.Walking)
+
+        yield self._env.timeout(duration)
+
+        self.position = vehicle_assignment.pick_up_position
+
+        # Trigger next event
+        self._arrived_at_pick_up_position.succeed()
+        logging.debug(f"Arrived at pick up position {self.position} at time {self._env.now}.", extra= {"clazz":self.__class__.__name__, "oid": self._id})
+
+
+    def wait_for_vehicle(self, vehicle_assignment : VehicleAllocation):
+
+        # Waiting time
+        start_waiting = self._env.now
+
+        # Wait for event
+        yield self._arrived_at_pick_up_position
+
+        # Update current state
+        self._state = UserState.WAITING_FOR_VEHICLE
+
+        # Notify operator that user is waiting at pick up position
+        self._vehicle_assignment_service.notify_user_arrival_at_pick_up_position(vehicle_assignment)
+
+        yield self._env.timeout(randint(5, 10))
+
+        # Trigger next event
+        self._assigned_vehicle_arrived.succeed()
+        logging.debug(f"Vehicle {vehicle_assignment.vehicle.id} has arrived after {self._env.now-start_waiting} time units at pick up position to pick up user {self._id}", extra= {"clazz":self.__class__.__name__, "oid": self._id})
+
+    def start_driving(self):
+
+        # Wait for event
+        yield self._assigned_vehicle_arrived
+
+        # Update current state
+        self._state = UserState.DRIVING
+
+        # Start Driving
+        yield self._env.timeout(randint(30, 200))
+
+        # Arrive
+
+        # Trigger next event
+        self._arrived_at_destination.succeed()
+        logging.debug(f"Arrived at destination.", extra= {"clazz":self.__class__.__name__, "oid": self._id})
+
+
+    def stop(self):
+
+        # Wait for next event
+        yield self._arrived_at_destination
+
+        # Update current state
+        self._state = UserState.FULFILLED
+        logging.debug(f"Transport request of user {self._id} has been successfully fulfilled.", extra= {"clazz":self.__class__.__name__, "oid": self._id})
 
 
     def __str__(self):
-        return f'My Name is {self._name}'
+        return f'User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}'

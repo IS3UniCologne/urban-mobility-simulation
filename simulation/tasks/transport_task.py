@@ -23,3 +23,6 @@ class TransportTask:
     @destination.setter
     def destination(self, position: Position):
         self._destination = position
+
+    def __str__(self):
+        return f'From {self._origin} to {self._destination}'
