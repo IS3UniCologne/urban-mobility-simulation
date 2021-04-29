@@ -1,14 +1,67 @@
 from abc import ABC, abstractmethod
+from enum import Enum
+
+from simpy import Environment
+
 from simulation.agent.agent import Agent
 from simulation.environment.position import Position
+from simulation.vehicle.interfaces.driver_interface import DriverInterface
+
+import logging
+
+from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
+
+
+class VehicleState(Enum):
+    INITIALIZED = 0
+    PARKING = 1
+    DRIVING = 2
+    RELOCATING = 3
+    CHARGING  = 4
 
 class Vehicle(ABC):
+    vehicle_id = 0
 
-    def __init__(self, position, available_seats, max_available_seats):
+    def __init__(self, env: Environment, position, available_seats, max_available_seats, velocity, driver: DriverInterface):
+        self(env, position, available_seats, max_available_seats, velocity)
+        self.mount_driver(driver)
+
+    def __init__(self, env: Environment, position, available_seats, max_available_seats, velocity):
+        self._id = Vehicle.vehicle_id
+        Vehicle.vehicle_id += 1  # Increment User Id
+        self._env = env
         self._position = position
         self._available_seats = available_seats
         self._max_available_seats = max_available_seats
         self._seats = []
+        self._driver = None
+        self._velocity = velocity   # meter per minute (16.67m/min = 1kmh)
+
+        #### Vehicle Events
+        # Driving Events
+        self._vehicle_parked = self._env.event()
+        self._user_mounted = self._env.event()
+        self._driving_started = self._env.event()
+        self._driving_finished = self._env.event()
+        self._user_demounted = self._env.event()
+
+        self._driver_mounted = self._env.event()
+        self._driver_unmounted = self._env.event()
+
+
+        # Relocation Events
+        self._vehicle_relocation_started = self._env.event()
+        self._vehicle_relocation_finished = self._env.event()
+
+        # Charging Events
+        self._charging_station_plugged_in = self._env.event()
+        self._charging_station_charging_started = self._env.event()
+        self._charging_station_charging_finished = self._env.event()
+        self._charging_station_plugged_out = self._env.event()
+
+        # Initial State
+        self.state = VehicleState.INITIALIZED
+
 
     # Properties
     @property
@@ -27,6 +80,9 @@ class Vehicle(ABC):
     def position(self, position : Position):
         self._position = position
 
+        logging.debug(f'Position updated {self._position}.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
     @property
     def available_seats(self):
         return self._available_seats
@@ -43,6 +99,9 @@ class Vehicle(ABC):
     def max_available_seats(self, max_available_seats):
         self._max_available_seats = max_available_seats
 
+    @property
+    def velocity(self):
+        return self._velocity
 
     # Methods
     @abstractmethod
@@ -53,19 +112,59 @@ class Vehicle(ABC):
     def stop_driving(self):
         pass
 
-    def mount(self, agent: Agent):
+    @abstractmethod
+    def park(self):
+        pass
+
+    def mount_driver(self, driver: DriverInterface):
+        if self._driver is not None:
+            raise Exception('Vehicle has already a driver. Unable to mount driver.')
+
+        self._driver = driver
+        self._driver_mounted.succeed()
+        self._driver_mounted = self._env.event()
+
+        logging.debug(f'Driver: {driver.identify_driver()} mounted vehicle.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+    def unmount_driver(self):
+        if(self._driver is None):
+            raise Exception('Vehicle has no driver to unmount.')
+
+        tmp_driver_id=self._driver.identify_driver()
+        self._driver = None
+        self._driver_unmounted.succeed()
+        self._driver_unmounted = self._env.event()
+
+        logging.debug(f'Driver: {tmp_driver_id} unmounted vehicle.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+    def mount_passenger(self, passenger: PassengerInterface):
         if(len(self._seats) < self._available_seats):
-            self._seats.append(agent)
+            self._seats.append(passenger)
             self._available_seats -= 1
-        elif agent in self._seats:
-            raise Exception('Agent is already in vehicle.')
+
+            self._user_mounted.succeed()
+            self._user_mounted = self._env.event()
+
+            logging.debug(f'Passenger: {passenger.identify_passenger()} mounted vehicle.',
+                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+        elif passenger in self._seats:
+            raise Exception('Passenger is already in vehicle.')
         else:
             raise Exception('Vehicle is full.')
 
-    def dismount(self, agent: Agent):
-        if agent in self._seats:
-            self._seats.remove(agent)
+    def unmount_passenger(self, passenger: PassengerInterface):
+        if passenger in self._seats:
+            self._seats.remove(passenger)
             self._available_seats += 1
+
+            self._user_unmounted.succeed()
+            self._user_unmounted = self._env.event()
+
+            logging.debug(f'Passenger: {passenger.identify_passenger()} unmounted vehicle.',
+                          extra={"clazz": self.__class__.__name__, "oid": self._id})
         else:
             raise Exception('Agent is not in vehicle.')
 
