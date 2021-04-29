@@ -8,11 +8,14 @@ from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearch
 from simulation.tasks.transport_task import TransportTask
 
 # Simulation Environment
+from simulation.vehicle.shared_vehicle import SharedVehicle
+from simulation.vehicle.vehicle import Vehicle
+
 env = simpy.Environment()
 
 # Configure Logging
 import logging
-logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)5s] [%(clazz)s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
 logger = logging.getLogger()
 cf = SimulationContextFilter(filter_name='add_env', extra=env)
 edf = ExtraDefaultFilter(filter_name = "add_default_value")
@@ -26,17 +29,20 @@ task = TransportTask(pos, pos)
 search_engine = SharedVehicleSearchEngine(env)
 vehicle_assignment_engine = SharedVehicleAllocationEngine(env)
 
-x = user.User(pos, task, search_engine, vehicle_assignment_engine, env)
-env.process(x.run())
 
-# def run_agents():
-#     while True:
-#         x = user.User(pos, task, search_engine, vehicle_assignment_engine, env)
-#         y = user.User(pos, task, search_engine, vehicle_assignment_engine, env)
-#         env.process(x.run())
-#         env.process(y.run())
-#         yield env.timeout(100)
-# env.process(run_agents())
+
+#x = user.User(pos, task, search_engine, search_engine, vehicle_assignment_engine, env)
+
+#env.process(x.run())
+
+def run_agents():
+    while True:
+        x = user.User(pos, task, search_engine, search_engine, vehicle_assignment_engine, env)
+        y = user.User(pos, task, search_engine, search_engine,  vehicle_assignment_engine, env)
+        env.process(x.run())
+        env.process(y.run())
+        yield env.timeout(100)
+env.process(run_agents())
 
 env.run(until = 500)
 

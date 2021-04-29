@@ -7,5 +7,5 @@ class SimulationContextFilter(logging.Filter):
         self._env = extra
 
     def filter(self, record):
-        record.env_time = self._env.now
+        record.env_time = round(self._env.now, 2)
         return True

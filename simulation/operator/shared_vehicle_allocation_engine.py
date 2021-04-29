@@ -35,7 +35,7 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
 
         selected_vehicle = selected_transportation_alternative.vehicle
 
-        return VehicleAllocation(user, selected_vehicle, selected_vehicle.position)
+        return VehicleAllocation(user, selected_vehicle, selected_transportation_alternative, selected_vehicle.position)
 
     def notify_user_arrival_at_pick_up_position(self, vehicle_assignment: VehicleAllocation):
         # Notify operator that user has arrived at location

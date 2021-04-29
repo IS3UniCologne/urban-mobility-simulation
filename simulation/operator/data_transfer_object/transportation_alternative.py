@@ -1,4 +1,4 @@
-from simulation.infrastructure.Route import Route
+from simulation.infrastructure.route import Route
 from simulation.vehicle.vehicle import Vehicle
 
 
