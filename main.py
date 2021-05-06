@@ -1,5 +1,6 @@
 import simpy
 import simulation.agent.user as user
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
@@ -7,42 +8,82 @@ from simulation.operator.shared_vehicle_allocation_engine import SharedVehicleAl
 from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
 from simulation.tasks.transport_task import TransportTask
 
+import geopandas as gpd
+
 # Simulation Environment
-from simulation.vehicle.shared_vehicle import SharedVehicle
-from simulation.vehicle.vehicle import Vehicle
 
 env = simpy.Environment()
 
 # Configure Logging
 import logging
+
+# Make it beautiful
 logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
 logger = logging.getLogger()
+
+# Block Logger of third party software
+logging.getLogger("fiona").setLevel(logging.WARNING)
+
+# Add Custom Filters
 cf = SimulationContextFilter(filter_name='add_env', extra=env)
 edf = ExtraDefaultFilter(filter_name = "add_default_value")
 logger.addFilter(cf)
 logger.addFilter(edf)
 
+def load_environment():
+  "Move this into a seperate file"
+  # Read Environment Files
+  filename = "/Users/demircanm/Development/urban-mobility-simulation/data/environment/geodesic/env_bounding_box.geojson"
+
+  with open(filename) as file:
+    env_df = gpd.read_file(file)
+
+  filename = "/Users/demircanm/Development/urban-mobility-simulation/data/environment/geodesic/env_hex_9.geojson"
+  with open(filename) as file:
+    env_df_hex_9 = gpd.read_file(file, driver= "GeoJSON")
+
+  filename = "/Users/demircanm/Development/urban-mobility-simulation/data/environment/geodesic/env_hex_8.geojson"
+  with open(filename) as file:
+    env_df_hex_8 = gpd.read_file(file)
+
+  filename = "/Users/demircanm/Development/urban-mobility-simulation/data/environment/geodesic/env_hex_7.geojson"
+  with open(filename) as file:
+    env_df_hex_7 = gpd.read_file(file)
+
+
+  geodesic_environment = GeodesicEnvironment()
+  geodesic_environment.addLayer("bounding_box", env_df)
+  geodesic_environment.addLayer("hex_9", env_df_hex_9)
+  geodesic_environment.addLayer("hex_8", env_df_hex_8)
+  geodesic_environment.addLayer("hex_7", env_df_hex_7)
+
+  return geodesic_environment
+
+# Load Spatial Environment
+load_environment()
 
 # Dummy Tasks
-pos = GeodesicPosition(13.4, 53.3)
+pos = GeodesicPosition(52.52823, 13.35555) # (Lat, Lng)
+
+# hex_id, hexagon = pos.get_hexagon(8)
+
 task = TransportTask(pos, pos)
 search_engine = SharedVehicleSearchEngine(env)
 vehicle_assignment_engine = SharedVehicleAllocationEngine(env)
 
 
+x = user.User(pos, task, search_engine, search_engine, vehicle_assignment_engine, env)
 
-#x = user.User(pos, task, search_engine, search_engine, vehicle_assignment_engine, env)
+env.process(x.run())
 
-#env.process(x.run())
-
-def run_agents():
-    while True:
-        x = user.User(pos, task, search_engine, search_engine, vehicle_assignment_engine, env)
-        y = user.User(pos, task, search_engine, search_engine,  vehicle_assignment_engine, env)
-        env.process(x.run())
-        env.process(y.run())
-        yield env.timeout(100)
-env.process(run_agents())
+# def run_agents():
+#     while True:
+#         x = user.User(pos, task, search_engine, search_engine, vehicle_assignment_engine, env)
+#         y = user.User(pos, task, search_engine, search_engine,  vehicle_assignment_engine, env)
+#         env.process(x.run())
+#         env.process(y.run())
+#         yield env.timeout(100)
+# env.process(run_agents())
 
 env.run(until = 500)
 
@@ -132,5 +173,3 @@ env.run(until = 500)
 #   )
 #
 #
-# if __name__ == '__main__':
-#     main()

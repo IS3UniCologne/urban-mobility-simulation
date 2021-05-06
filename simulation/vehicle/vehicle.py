@@ -5,6 +5,7 @@ from simpy import Environment
 
 from simulation.agent.agent import Agent
 from simulation.environment.position import Position
+from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 
 import logging
@@ -53,6 +54,9 @@ class Vehicle(ABC):
         self._vehicle_relocation_started = self._env.event()
         self._vehicle_relocation_finished = self._env.event()
 
+        # Spatial Events
+        self._position_changed = self._env.event()
+
         # Charging Events
         self._charging_station_plugged_in = self._env.event()
         self._charging_station_charging_started = self._env.event()
@@ -79,6 +83,9 @@ class Vehicle(ABC):
     @position.setter
     def position(self, position : Position):
         self._position = position
+
+        self._position_changed.succeed(self._position)
+        self._position_changed = self._env.event()
 
         logging.debug(f'Position updated {self._position}.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
@@ -115,6 +122,30 @@ class Vehicle(ABC):
     @abstractmethod
     def park(self):
         pass
+
+    def move(self, route_segment: Edge):
+        distance = route_segment.distance
+        velocity = self._velocity
+        time = distance / velocity
+
+        yield self._env.timeout(time)
+
+        self._update_positions(route_segment.destination.position)
+
+    def _update_positions(self, new_position: Position):
+        # Update Vehicle Position
+        self.position = new_position
+
+        # Update Position of Driver
+        self._driver.position = new_position
+
+        # Update Position of Passengers
+        for passenger in self._seats:
+            passenger.position = new_position
+
+        logging.debug(f'Current position {self._position}.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
 
     def mount_driver(self, driver: DriverInterface):
         if self._driver is not None:

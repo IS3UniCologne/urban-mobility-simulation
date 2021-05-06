@@ -11,6 +11,7 @@ class Route:
         self._destination = destination
         self._route_segments: List[Edge] =  []
 
+        self._route_segments.append(Edge(1500, Vertex(origin), Vertex(origin))) # Append Dummy Edge
         self._route_segments.append(Edge(4500, Vertex(origin), Vertex(destination))) # Append Dummy Edge
 
     @property

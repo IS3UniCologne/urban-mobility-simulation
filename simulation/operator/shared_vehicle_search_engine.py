@@ -19,7 +19,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         browser = TransportationAlternativeBrowser()
 
         # Implement Search Behavior
-        transportation_alternative = TransportationAlternative(SharedVehicle(self._env, GeodesicPosition(13.4, 53.3)), Route(GeodesicPosition(13.4, 53.3), GeodesicPosition(16.4, 55.3)), price = 9.35, distance = 0, duration = 45)
+        transportation_alternative = TransportationAlternative(SharedVehicle(self._env, GeodesicPosition(53.3, 13.3)), Route(GeodesicPosition(53.3, 13.3), GeodesicPosition(53.3, 13.5)), price = 9.35, distance = 0, duration = 45)
         browser.add_transportation_alternative(transportation_alternative)
 
         return browser
