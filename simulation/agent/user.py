@@ -1,6 +1,7 @@
 from random import randint
 
 from .agent import Agent
+from ..environment.position import Position
 from ..operator.data_transfer_object.transportation_alternative import TransportationAlternative
 from ..operator.data_transfer_object.transportation_alternative_browser import TransportationAlternativeBrowser
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
@@ -58,9 +59,23 @@ class User(Agent, DriverInterface):
         self._assigned_vehicle_arrived = self._env.event()
         self._arrived_at_destination = self._env.event()
 
+        self._position_changed = self._env.event()
+
         # Initial State and Runtime
         self._state = UserState.INITIALIZED  # Initial State of agent
         logging.debug(f"Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+    @property
+    def position(self) -> Position:
+        return self._position
+
+    @position.setter
+    def position(self, position: Position):
+        self._position = position
+
+        self._position_changed.succeed(position)
+        self._position_changed = self._env.event()
+
 
     def run(self):
         """
@@ -165,8 +180,10 @@ class User(Agent, DriverInterface):
         duration = randint(4, 8)
         # duration = RoutePlanner.calculateDuration(user.position, vehicle_assignment.pick_up_position, Strategy.Walking)
 
-        yield self._env.timeout(duration)
+        distance = self.position >> vehicle_assignment.pick_up_position # Eucl. Distance
+        duration = distance/50 # 50 m/min (average agent distance)
 
+        yield self._env.timeout(duration)
         self.position = vehicle_assignment.pick_up_position
 
         # Trigger next event
@@ -187,7 +204,8 @@ class User(Agent, DriverInterface):
         # Notify operator that user is waiting at pick up position
         self._vehicle_assignment_service.notify_user_arrival_at_pick_up_position(vehicle_assignment)
 
-        yield self._env.timeout(randint(5, 10))
+        while self.position != vehicle_assignment.vehicle.position:
+            vehicle_location = yield vehicle_assignment.vehicle._position_changed
 
         # Trigger next event
         self._assigned_vehicle_arrived.succeed()
@@ -236,10 +254,8 @@ class User(Agent, DriverInterface):
             velocity = vehicle.velocity
             time = distance/velocity
 
-            yield self._env.timeout(time)
-
-            self._position = route_segment.destination.position
-            vehicle.position = route_segment.destination.position
+            # yield self._env.timeout(time)
+            yield self._env.process(vehicle.move(route_segment))
 
         vehicle.stop_driving()
 
@@ -252,5 +268,8 @@ class User(Agent, DriverInterface):
     def identify_driver(self):
         return f'User {self._id}'
 
+    """
+        Auxiliary Functions  
+    """
     def __str__(self):
         return f'User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}'

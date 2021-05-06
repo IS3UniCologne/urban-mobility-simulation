@@ -14,7 +14,7 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
 
     def run(self):
         while True:
-            yield self._env.timeout(45)
+            yield self._env.timeout(2)
             # Implement vehicle assignment functionality here
             self._vehicles_assigned_to_users.succeed()
             self._vehicles_assigned_to_users = self._env.event()
@@ -37,6 +37,23 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
 
         return VehicleAllocation(user, selected_vehicle, selected_transportation_alternative, selected_vehicle.position)
 
-    def notify_user_arrival_at_pick_up_position(self, vehicle_assignment: VehicleAllocation):
+    def test(self, vehicle_assignment, old_position):
         # Notify operator that user has arrived at location
-        return
+
+        # self._env.process()
+        yield self._env.timeout(10)
+
+        from simulation.environment.geodesic_position import GeodesicPosition
+        vehicle_assignment.vehicle.position = GeodesicPosition(55.3, 13.3)
+
+        yield self._env.timeout(10)
+
+        vehicle_assignment.vehicle.position = old_position
+
+
+    def notify_user_arrival_at_pick_up_position(self, vehicle_assignment: VehicleAllocation):
+        old_position = vehicle_assignment.vehicle.position
+        from simulation.environment.geodesic_position import GeodesicPosition
+        vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
+
+        self._env.process(self.test(vehicle_assignment, old_position))
