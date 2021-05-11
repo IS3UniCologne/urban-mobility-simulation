@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import pandas as pd
 import simpy
 import simulation.agent.user as user
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -11,6 +14,7 @@ from simulation.tasks.transport_task import TransportTask
 import geopandas as gpd
 
 # Simulation Environment
+from simulation.world.demand.demand_importer import DemandImporter, SpatialResolution
 
 env = simpy.Environment()
 
@@ -30,6 +34,12 @@ edf = ExtraDefaultFilter(filter_name = "add_default_value")
 logger.addFilter(cf)
 logger.addFilter(edf)
 
+p = Path('/Users/demircanm/sciebo/IS3/Research_Projects/HeterogeneousFleetManagement/01_Fleet_Sizing/0_Data/Berlin/shared_vehicle_trips_berlin.csv')
+di = DemandImporter(spatial_resolution = SpatialResolution.HEX_8)
+
+demand_profile = di.generate_demand(p)
+
+print(demand_profile)
 def load_environment():
   "Move this into a seperate file"
   # Read Environment Files
@@ -65,7 +75,9 @@ load_environment()
 # Dummy Tasks
 pos = GeodesicPosition(52.52823, 13.35555) # (Lat, Lng)
 
-# hex_id, hexagon = pos.get_hexagon(8)
+hex_id, hexagon = pos.get_hexagon(8)
+hex_id, hexagon = pos.get_hexagon(8)
+
 
 task = TransportTask(pos, pos)
 search_engine = SharedVehicleSearchEngine(env)

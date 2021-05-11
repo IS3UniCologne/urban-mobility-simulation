@@ -1,7 +1,7 @@
 from enum import Enum
+from pathlib import Path
 
-from pandas import DataFrame
-
+import pandas as pd
 
 class TemporalBucket(Enum):
     HOURLY_BUCKETS = 0
@@ -19,8 +19,8 @@ class SpatialResolution(Enum):
 class DemandImporter:
 
     def __init__(self, temporal_resolution: TemporalBucket = TemporalBucket.FOUR_HOURLY_BUCKETS,
-                 spatial_resolution: SpatialResolution =  SpatialResolution.HEX_9,
-                 day_of_week = False):
+                 spatial_resolution: SpatialResolution = SpatialResolution.HEX_7,
+                 day_of_week = True):
 
         self._temporal_resolution = temporal_resolution
         self._spatial_resolution = spatial_resolution
@@ -39,12 +39,36 @@ class DemandImporter:
     def consider_day_of_week(self):
         return self._day_of_week
 
-    def generate_demand(self, trip_data: DataFrame):
+    def generate_demand(self, trip_data_path: Path):
+        """
+        Returns a DataFrame with distributional data regarding arrival times and origin destination trips
+        in spatio-temporal resolution.
+
+        :param trip_data:
+        :return: Pandas DataFrame
+            - Column:
+                - is_holiday: yes/no (!weekday)
+                - temporal bucket: TemporalBucket
+                - origin: Hexagon ID by given resolution
+                - destination: Hexagon ID by given resolution
+                - od_multinom_p_est: Multionomial Distribution Coeffcients for P(D | is_holiday, temp_bucket, origin). Add up to 1 for each triplet.
+                - o_poisson_est: Lambda of poisson distribution for each triplet (is_holiday, temp_bucket, origin); destination not considered
+        """
 
         hex_start_column, hex_end_column = self._get_spatial_column()
         temporal_column = self._get_temporal_column()
         day_of_week_column = "is_holiday"
         date_column = "date_start"
+
+        # First try to load cache
+        cache_path = Path('data/demand/', f"weekday_{temporal_column}_{hex_start_column}.csv")
+
+        if cache_path.exists():
+            # Load cached data and return
+            return pd.read_csv(cache_path)
+
+        # Read Data
+        trip_data = pd.read_csv(trip_data_path)
 
         ##################################
         #### First Calculate Arrival Times
@@ -67,7 +91,7 @@ class DemandImporter:
         hexagon_to_consider["key"] = 1 # For Cross Join Later
 
         # Strip out records for which we don't have complete data (hexagons where #data points < number_of_temporal_combinations)
-        arrival_times = arrival_times.merge(hexagon_to_consider, on="h3_start_7", how="inner")
+        arrival_times = arrival_times.merge(hexagon_to_consider, on=hex_start_column, how="inner")
 
         ####################################################################
         #### Second Calculate Destinations Distribution
@@ -153,6 +177,11 @@ class DemandImporter:
         sub_set.iloc[idx] or sub_set.iloc[idx]["h3_end_7"]
         
         """
+
+        cache_path = Path('data/demand/', f"weekday_{temporal_column}_{hex_start_column}.csv")
+
+        # Cache results
+        result.to_csv(cache_path, index= False)
 
         return result
 
