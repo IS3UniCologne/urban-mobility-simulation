@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-
+import logging
 import pandas as pd
 
 class TemporalBucket(Enum):
@@ -39,12 +39,12 @@ class DemandImporter:
     def consider_day_of_week(self):
         return self._day_of_week
 
-    def generate_demand(self, trip_data_path: Path):
+    def extract_spatio_temporal_demand_estimates(self, trip_data_path: Path):
         """
-        Returns a DataFrame with distributional data regarding arrival times and origin destination trips
+        Returns a DataFrame with distributional data regarding arrival times (poisson) and origin destination trips (frequency)
         in spatio-temporal resolution.
 
-        :param trip_data:
+        :param trip_data: Path to Mobility Trip Data
         :return: Pandas DataFrame
             - Column:
                 - is_holiday: yes/no (!weekday)
@@ -57,7 +57,7 @@ class DemandImporter:
 
         hex_start_column, hex_end_column = self._get_spatial_column()
         temporal_column = self._get_temporal_column()
-        day_of_week_column = "is_holiday"
+        day_of_week_column = self._get_day_of_week_column()
         date_column = "date_start"
 
         # First try to load cache
@@ -65,7 +65,13 @@ class DemandImporter:
 
         if cache_path.exists():
             # Load cached data and return
+            logging.debug(f'Demand File already existing for selected resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.',
+                          extra={"clazz": self.__class__.__name__, "oid": ""})
             return pd.read_csv(cache_path)
+
+
+        logging.debug(f'Generating demand data based on mobility trip data for resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.',
+                          extra={"clazz": self.__class__.__name__, "oid": ""})
 
         # Read Data
         trip_data = pd.read_csv(trip_data_path)
@@ -215,8 +221,27 @@ class DemandImporter:
             return "time_bucket_4h"
 
     def _get_day_of_week_column(self):
-        return "dayofweek"
+        return "is_holiday"
 
+    def _get_temporal_duration_in_hours(self):
+        """
+        Get the length of each temporal unit
+        :return:
+        """
+        if self.temporal_resolution == TemporalBucket.HOURLY_BUCKETS:
+            return 1
+        elif self.temporal_resolution == TemporalBucket.TWO_HOURLY_BUCKETS:
+            return 2
+        elif self.temporal_resolution == TemporalBucket.FOUR_HOURLY_BUCKETS:
+            return 4
+        elif self.temporal_resolution == TemporalBucket.SIX_HOURLY_BUCKETS:
+            return 6
+        elif self.temporal_resolution == TemporalBucket.EIGHT_HOURLY_BUCKETS:
+            return 8
+        elif self.temporal_resolution == TemporalBucket.TWELVE_HOURLY_BUCKETS:
+            return 12
+        else:
+            return 4
 
 
 

@@ -1,6 +1,10 @@
 from pathlib import Path
 
-import pandas as pd
+import pandas as pd;
+
+from simulation.world.demand.demand_factory import DemandFactory
+
+pd.set_option('display.max_columns', None)
 import simpy
 import simulation.agent.user as user
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -35,11 +39,17 @@ logger.addFilter(cf)
 logger.addFilter(edf)
 
 p = Path('/Users/demircanm/sciebo/IS3/Research_Projects/HeterogeneousFleetManagement/01_Fleet_Sizing/0_Data/Berlin/shared_vehicle_trips_berlin.csv')
-di = DemandImporter(spatial_resolution = SpatialResolution.HEX_8)
+di = DemandImporter(spatial_resolution = SpatialResolution.HEX_7)
 
-demand_profile = di.generate_demand(p)
+demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
-print(demand_profile)
+demand_factory = DemandFactory(env, demand_profile, di)
+
+env.process(demand_factory.generate_demand())
+
+print("Debug")
+
+
 def load_environment():
   "Move this into a seperate file"
   # Read Environment Files
@@ -84,9 +94,9 @@ search_engine = SharedVehicleSearchEngine(env)
 vehicle_assignment_engine = SharedVehicleAllocationEngine(env)
 
 
-x = user.User(pos, task, search_engine, search_engine, vehicle_assignment_engine, env)
+# x = user.User(pos, task, search_engine, search_engine, vehicle_assignment_engine, env)
 
-env.process(x.run())
+# env.process(x.run())
 
 # def run_agents():
 #     while True:
@@ -97,8 +107,9 @@ env.process(x.run())
 #         yield env.timeout(100)
 # env.process(run_agents())
 
-env.run(until = 500)
+env.run(until = 60*24)
 
+print(DemandFactory.counter)
 #vehicle = SharedVehicle(pos)
 #print(x.position)
 #vehicle.mount(x)
