@@ -63,7 +63,7 @@ class User(Agent, DriverInterface):
 
         # Initial State and Runtime
         self._state = UserState.INITIALIZED  # Initial State of agent
-        logging.debug(f"Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id})
+        logging.info(f"Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     @property
     def position(self) -> Position:

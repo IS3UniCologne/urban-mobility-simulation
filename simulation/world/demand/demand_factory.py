@@ -5,13 +5,17 @@ import numpy
 from simulation.world.demand.demand_importer import DemandImporter
 import logging
 
+from simulation.world.world import World
+
+
 class DemandFactory:
     counter = 0
 
-    def __init__(self, env, demand_profile, demand_importer: DemandImporter):
+    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World):
         self._env = env
         self._demand_profile = demand_profile
         self._demand_importer = demand_importer
+        self._world = world
 
         origin, destination = demand_importer._get_spatial_column()
         temporal = demand_importer._get_temporal_column()
@@ -31,7 +35,6 @@ class DemandFactory:
         spawned = self._env.event()
 
         for unit in self._spatial_units:
-            print(unit)
             self._env.process(self.spawn_demand_process(unit))
 
         yield spawned.succeed()
@@ -84,6 +87,8 @@ class DemandFactory:
 
             # Append Arrival to World
             # create agent or similar consumers
+
+            self._world.add_user(spatial_unit, destination)
 
             # Increase global counter (not thread safe)
             DemandFactory.counter += 1

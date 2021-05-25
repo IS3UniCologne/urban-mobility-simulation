@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd;
 
 from simulation.world.demand.demand_factory import DemandFactory
+from simulation.world.world import World
 
 pd.set_option('display.max_columns', None)
 import simpy
@@ -26,7 +27,7 @@ env = simpy.Environment()
 import logging
 
 # Make it beautiful
-logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
 logger = logging.getLogger()
 
 # Block Logger of third party software
@@ -38,18 +39,26 @@ edf = ExtraDefaultFilter(filter_name = "add_default_value")
 logger.addFilter(cf)
 logger.addFilter(edf)
 
+
+# Operator Modules
+search_engine = SharedVehicleSearchEngine(env)
+payment_engine = search_engine
+vehicle_assignment_engine = SharedVehicleAllocationEngine(env)
+
+# World
+world = World(env, search_engine, search_engine, vehicle_assignment_engine)
+
+# Demand
 p = Path('/Users/demircanm/sciebo/IS3/Research_Projects/HeterogeneousFleetManagement/01_Fleet_Sizing/0_Data/Berlin/shared_vehicle_trips_berlin.csv')
 di = DemandImporter(spatial_resolution = SpatialResolution.HEX_7)
 
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
-demand_factory = DemandFactory(env, demand_profile, di)
+demand_factory = DemandFactory(env, demand_profile, di, world)
 
 env.process(demand_factory.generate_demand())
 
-print("Debug")
-
-
+# Environment (Spatial)
 def load_environment():
   "Move this into a seperate file"
   # Read Environment Files
@@ -76,123 +85,16 @@ def load_environment():
   geodesic_environment.addLayer("hex_9", env_df_hex_9)
   geodesic_environment.addLayer("hex_8", env_df_hex_8)
   geodesic_environment.addLayer("hex_7", env_df_hex_7)
-
+  geodesic_environment.get_centroid("871f1d7b3ffffff")
   return geodesic_environment
 
 # Load Spatial Environment
 load_environment()
 
-# Dummy Tasks
-pos = GeodesicPosition(52.52823, 13.35555) # (Lat, Lng)
-
-hex_id, hexagon = pos.get_hexagon(8)
-hex_id, hexagon = pos.get_hexagon(8)
+# Vehicles
+# TODO
 
 
-task = TransportTask(pos, pos)
-search_engine = SharedVehicleSearchEngine(env)
-vehicle_assignment_engine = SharedVehicleAllocationEngine(env)
-
-
-# x = user.User(pos, task, search_engine, search_engine, vehicle_assignment_engine, env)
-
-# env.process(x.run())
-
-# def run_agents():
-#     while True:
-#         x = user.User(pos, task, search_engine, search_engine, vehicle_assignment_engine, env)
-#         y = user.User(pos, task, search_engine, search_engine,  vehicle_assignment_engine, env)
-#         env.process(x.run())
-#         env.process(y.run())
-#         yield env.timeout(100)
-# env.process(run_agents())
-
-env.run(until = 60*24)
+env.run(until = 360)
 
 print(DemandFactory.counter)
-#vehicle = SharedVehicle(pos)
-#print(x.position)
-#vehicle.mount(x)
-#print(vehicle)
-#vehicle.dismount(x)
-#print(vehicle)
-#vehicle.dismount(x)
-
-
-# import simpy
-# import random
-# import statistics
-#
-# wait_times = []
-#
-#
-# class Theater(object):
-#     def __init__(self, env, num_cashiers, num_ushers, num_servers):
-#         self.env = env
-#         self.cashier = simpy.Resource(env, num_cashiers)
-#         self.usher = simpy.Resource(env, num_ushers)
-#         self.server = simpy.Resource(env, num_servers)
-#
-#
-#     def purchase_ticket(self, moviegoer):
-#         yield self.env.timeout(random.randint(60, 180))
-#
-#     def check_ticket(self, moviegoer):
-#         yield self.env.timeout(random.randint(1, 5))
-#
-#     def sell_food(self, moviegoer):
-#         yield self.env.timeout(random.randint(60, 300))
-#
-# def go_to_movies(env, moviegoer, theater):
-#     # Moviegoer arrives at the theater
-#     arrival_time = env.now
-#
-#     with theater.cashier.request() as request:
-#         yield request
-#         yield env.process(theater.purchase_ticket(moviegoer))
-#
-#     with theater.usher.request() as request:
-#         yield request
-#         yield env.process(theater.check_ticket(moviegoer))
-#
-#     if random.choice([True, False]):
-#             with theater.server.request() as request:
-#                 yield request
-#                 yield env.process(theater.sell_food(moviegoer))
-#
-#     # Moviegoer heads into the theater
-#     wait_times.append(env.now - arrival_time)
-#
-# def run_theater(env, num_cashiers, num_servers, num_ushers):
-#     theater = Theater(env, num_cashiers, num_servers, num_ushers)
-#
-#     for moviegoer in range(3):
-#         env.process(go_to_movies(env, moviegoer, theater))
-#
-#     while True:
-#         yield env.timeout(12)  # Wait a bit before generating a new person
-#
-#         moviegoer += 1
-#         env.process(go_to_movies(env, moviegoer, theater))
-#
-# def get_average_wait_time(wait_times):
-#     return statistics.mean(wait_times)
-#
-# def main():
-#   # Setup
-#   random.seed(42)
-#   num_cashiers, num_servers, num_ushers = [1, 1, 1]
-#
-#   # Run the simulation
-#   env = simpy.Environment()
-#   env.process(run_theater(env, num_cashiers, num_servers, num_ushers))
-#   env.run(until=90*60)
-#
-#   # View the results
-#   average_wait = get_average_wait_time(wait_times)
-#   print(
-#       "Running simulation...",
-#       f"\nThe average wait time is {average_wait/60} minutes.",
-#   )
-#
-#
