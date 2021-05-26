@@ -60,3 +60,8 @@ class GeodesicPosition(Position):
 
         return hex_id, geometry
 
+    def is_in_geometry(self, geometry):
+        if self._geometry.intersects(geometry):
+            return True
+        else:
+            return False

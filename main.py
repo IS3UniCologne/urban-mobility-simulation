@@ -2,6 +2,9 @@ from pathlib import Path
 
 import pandas as pd;
 
+from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+from simulation.vehicle.shared_car import SharedCar
+from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.world import World
 
@@ -94,6 +97,19 @@ load_environment()
 # Vehicles
 # TODO
 
+car_1 = SharedCar(env, GeodesicPosition(52.59, 13.35))
+car_2 = SharedCar(env, GeodesicPosition(55.59, 13.35))
+
+kick_scooter = SharedKickScooter(env, GeodesicPosition(52.59, 13.35))
+
+fleet = MixedSharedVehicleFleet()
+fleet.add_shared_vehicle(car_1)
+fleet.add_shared_vehicle(car_2)
+fleet.add_shared_vehicle(kick_scooter)
+
+pos = GeodesicPosition(52.59, 13.35)
+hex_id, geometry = pos.get_hexagon()
+x,y,z,t = fleet.get_vehicles_in_area(hex_id)
 
 env.run(until = 360)
 
