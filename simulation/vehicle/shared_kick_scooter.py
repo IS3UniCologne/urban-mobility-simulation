@@ -1,0 +1,17 @@
+from simpy import Environment
+
+from simulation.vehicle.shared_vehicle import SharedVehicle
+
+
+class SharedKickScooter(SharedVehicle):
+    # Shared Care Counter
+    shared_kick_scooter_id = 0
+
+    def __init__(self, env: Environment, position, max_available_seats=1, velocity=166.7):
+        super(SharedKickScooter, self).__init__(env, position, max_available_seats, velocity)
+
+        # Increment Shared Car ID
+        self.car_id = SharedKickScooter.shared_kick_scooter_id
+        SharedKickScooter.shared_kick_scooter_id += 1
+
+
