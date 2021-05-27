@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd;
 
+from simulation.operator.fleet_factory import generate_fleet_config, generate_mixed_fleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
@@ -95,21 +96,10 @@ def load_environment():
 load_environment()
 
 # Vehicles
-# TODO
+supply_prob = pd.read_csv('data/supply/vehicle_supply_distribution_hex_7.csv')
 
-car_1 = SharedCar(env, GeodesicPosition(52.59, 13.35))
-car_2 = SharedCar(env, GeodesicPosition(55.59, 13.35))
-
-kick_scooter = SharedKickScooter(env, GeodesicPosition(52.59, 13.35))
-
-fleet = MixedSharedVehicleFleet()
-fleet.add_shared_vehicle(car_1)
-fleet.add_shared_vehicle(car_2)
-fleet.add_shared_vehicle(kick_scooter)
-
-pos = GeodesicPosition(52.59, 13.35)
-hex_id, geometry = pos.get_hexagon()
-x,y,z,t = fleet.get_vehicles_in_area(hex_id)
+fleet_config = generate_fleet_config(supply_prob)
+mixed_fleet = generate_mixed_fleet(env, fleet_config)
 
 env.run(until = 360)
 
