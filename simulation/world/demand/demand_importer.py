@@ -44,6 +44,8 @@ class DemandImporter:
         Returns a DataFrame with distributional data regarding arrival times (poisson) and origin destination trips (frequency)
         in spatio-temporal resolution.
 
+        Input Distribution generated using Script: Prepare_Trip_Demand_Data
+
         :param trip_data: Path to Mobility Trip Data
         :return: Pandas DataFrame
             - Column:

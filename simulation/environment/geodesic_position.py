@@ -6,7 +6,7 @@ from haversine import haversine
 
 class GeodesicPosition(Position):
 
-    def __init__(self, latitude, longitude):
+    def __init__(self, latitude, longitude) -> object:
         super(GeodesicPosition, self).__init__()
         self._lat = latitude
         self._lng = longitude
