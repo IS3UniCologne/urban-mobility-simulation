@@ -1,25 +1,25 @@
 from pathlib import Path
 
-import pandas as pd;
+# Random Number Seed
+import random
+import numpy
+RANDOM_SEED = 42
+random.seed(RANDOM_SEED)
+numpy.random.seed(RANDOM_SEED)
+
+import pandas as pd
 
 from simulation.operator.fleet_factory import generate_fleet_config, generate_mixed_fleet
-from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
-from simulation.vehicle.shared_car import SharedCar
-from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.world import World
 
 pd.set_option('display.max_columns', None)
 import simpy
-import simulation.agent.user as user
 from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 from simulation.operator.shared_vehicle_allocation_engine import SharedVehicleAllocationEngine
 from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
-from simulation.tasks.transport_task import TransportTask
-
 import geopandas as gpd
 
 # Simulation Environment
@@ -98,8 +98,24 @@ load_environment()
 # Vehicles
 supply_prob = pd.read_csv('data/supply/vehicle_supply_distribution_hex_7.csv')
 
-fleet_config = generate_fleet_config(supply_prob)
+fleet_config = generate_fleet_config(supply_prob, n_cars = 0, n_scooter = 0, n_kick_scooter=0, n_bikes=0)
 mixed_fleet = generate_mixed_fleet(env, fleet_config)
+
+# Artifically add vehicle (see world add new user)
+# Access to underlying geodesic environment
+# geo_env = GeodesicEnvironment.getInstance()
+# from simulation.environment.geodesic_position import GeodesicPosition
+# from simulation.vehicle.shared_car import SharedCar
+#
+# rdm_lat, rdm_lng = geo_env.get_random_position('871f1d498ffffff')
+# pos = GeodesicPosition(rdm_lat, rdm_lng)
+# car = SharedCar(env, pos)
+# car_2 = SharedCar(env, pos)
+# mixed_fleet.add_shared_vehicle(car)
+# mixed_fleet.add_shared_vehicle(car_2)
+
+# Register Modules
+search_engine.register_fleet(mixed_fleet)
 
 env.run(until = 360)
 

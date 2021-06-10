@@ -10,7 +10,7 @@ class TransportationSearchTask:
 
     @property
     def agent_position(self):
-        pass
+        return self._agent_position
 
     @property
     def transport_task(self):

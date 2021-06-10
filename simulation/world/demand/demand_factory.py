@@ -1,5 +1,3 @@
-import random
-
 import numpy
 
 from simulation.world.demand.demand_importer import DemandImporter
@@ -11,7 +9,7 @@ from simulation.world.world import World
 class DemandFactory:
     counter = 0
 
-    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World):
+    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World, maximal_demand = 1_000_000_000):
         self._env = env
         self._demand_profile = demand_profile
         self._demand_importer = demand_importer
@@ -25,6 +23,8 @@ class DemandFactory:
         self._destination_column = destination
         self._temporal_column = temporal
         self._day_of_week_column = day_of_week_column
+
+        self._maximal_demand = maximal_demand
 
         self._spatial_units = list(self._demand_profile[origin].unique())
 
@@ -50,16 +50,19 @@ class DemandFactory:
         local_demand_profile = self._demand_profile[(self._demand_profile[self._origin_column] == spatial_unit)]
 
         # Run until simulation ends
-        while True:
+        while (DemandFactory.counter < self._maximal_demand):
+            # Increase global counter (not thread safe)
+            DemandFactory.counter += 1
+
             # Transform current time to temporal buckets as defined in the demand profile
             time_bucket = self._convert_running_time_to_temporal_bucket(self._env.now)
             non_working_day = self._convert_running_time_to_day_of_week_bucket(self._env.now)
 
             # Filter demand profile on current time
             demand_slice = local_demand_profile[(local_demand_profile[self._temporal_column] == time_bucket)
-                                                & (local_demand_profile[
-                                                       self._day_of_week_column] == non_working_day)
-                                                ]
+                                               & (local_demand_profile[
+                                                     self._day_of_week_column] == non_working_day)
+                                               ]
             if(demand_slice.shape[0] == 0):
                 print(f"Hex: {spatial_unit}  Time: {time_bucket}  Date:{non_working_day}  Env Time: {self._env.now}")
 
@@ -83,21 +86,20 @@ class DemandFactory:
 
             destination = demand_slice.iloc[idx][self._destination_column]
 
-            logging.debug(f'Demand generated from hexagon {spatial_unit} to {destination}.',extra={"clazz": self.__class__.__name__, "oid": ""})
-
             # Append Arrival to World
             # create agent or similar consumers
+            logging.debug(f'Demand generated from hexagon {spatial_unit} to {destination}.',
+                              extra={"clazz": self.__class__.__name__, "oid": ""})
 
             self._world.add_user(spatial_unit, destination)
 
-            # Increase global counter (not thread safe)
-            DemandFactory.counter += 1
-
 
     def _convert_running_time_to_temporal_bucket(self, t):
+        # TODO: Move to dedicated time class
         return (t % (24*60)) // (self._demand_importer._get_temporal_duration_in_hours() * 60) # Reduce to one day, then get day of week
 
     def _convert_running_time_to_day_of_week_bucket(self, t):
+        # TODO: Move to dedicated time class
         day_of_week =  (t % (24*60*7)) // (24*60) # Reduce to one week, then get day of week
 
         if day_of_week < 5:

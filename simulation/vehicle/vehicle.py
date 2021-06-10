@@ -64,7 +64,7 @@ class Vehicle(ABC):
         self._charging_station_plugged_out = self._env.event()
 
         # Initial State
-        self.state = VehicleState.INITIALIZED
+        self.state = VehicleState.PARKING
 
 
     # Properties
@@ -143,17 +143,21 @@ class Vehicle(ABC):
         for passenger in self._seats:
             passenger.position = new_position
 
-        logging.debug(f'Current position {self._position}.',
+        region_id, _ = self._position.get_hexagon()
+
+        logging.debug(f'Current position {self._position} in region {region_id}.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
 
     def mount_driver(self, driver: DriverInterface):
         if self._driver is not None:
-            raise Exception('Vehicle has already a driver. Unable to mount driver.')
+            raise Exception(f'Vehicle {self._id} has already a driver {self._driver.identify_driver()}. Unable to mount driver.')
 
         self._driver = driver
         self._driver_mounted.succeed()
         self._driver_mounted = self._env.event()
+
+        self.state == VehicleState.DRIVING
 
         logging.debug(f'Driver: {driver.identify_driver()} mounted vehicle.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
@@ -166,6 +170,8 @@ class Vehicle(ABC):
         self._driver = None
         self._driver_unmounted.succeed()
         self._driver_unmounted = self._env.event()
+
+        self.state == VehicleState.PARKING
 
         logging.debug(f'Driver: {tmp_driver_id} unmounted vehicle.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
