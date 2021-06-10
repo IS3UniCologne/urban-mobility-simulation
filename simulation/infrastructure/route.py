@@ -11,8 +11,8 @@ class Route:
         self._destination = destination
         self._route_segments: List[Edge] =  []
 
-        self._route_segments.append(Edge(1500, Vertex(origin), Vertex(origin))) # Append Dummy Edge
-        self._route_segments.append(Edge(4500, Vertex(origin), Vertex(destination))) # Append Dummy Edge
+        distance = origin >> destination # euclidean distance
+        self._route_segments.append(Edge(distance, Vertex(origin), Vertex(destination))) # Append Dummy Edge
 
     @property
     def origin(self):
@@ -25,3 +25,10 @@ class Route:
     @property
     def route_segments(self):
         return self._route_segments
+
+    @property
+    def distance(self):
+        distance = 0
+        for rs in self.route_segments:
+            distance += rs.distance
+        return distance

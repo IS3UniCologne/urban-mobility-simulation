@@ -31,6 +31,9 @@ class World:
 
 
     def add_user(self, origin, destination):
+        # TODO:
+        # origin = '871f1d498ffffff'
+
         """
             Add a user agent to the world with an origin and a destination.
         :param origin: Spatial Unit ID (e.g., hex_id)

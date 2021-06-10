@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from enum import Enum
 
 import logging
@@ -8,13 +9,16 @@ from .vehicle import Vehicle, VehicleState
 
 class SharedVehicleState(VehicleState, Enum):
     SOME_STATE = 1002
+    RESERVED = 1001
 
-class SharedVehicle(Vehicle):
+class SharedVehicle(Vehicle, ABC):
     shared_vehicle_id = 0
 
     def __init__(self, env: Environment, position,  max_available_seats = 1, velocity = 166.7):
         super(SharedVehicle, self).__init__(env, position, max_available_seats, max_available_seats, velocity)
         self._id = SharedVehicle.shared_vehicle_id
+        self._price_per_minute = None
+
         SharedVehicle.shared_vehicle_id += 1
 
     def start_driving(self):
@@ -35,9 +39,25 @@ class SharedVehicle(Vehicle):
         logging.debug(f'Parked.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
+    def reserve(self, user):
+        self.state = SharedVehicleState.RESERVED
+
+        logging.debug(f'Reserved to {user.id}.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+
     @property
     def id(self):
         return self._id
+
+    @property
+    def price_per_minute(self):
+        return self._price_per_minute
+
+    @price_per_minute.setter
+    def price_per_minute(self, price_per_minute):
+        self._price_per_minute = price_per_minute
+
 
     def __str__(self):
         return f'I have {len(self.available_seats)} passengers on boards'

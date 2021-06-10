@@ -54,6 +54,7 @@ class User(Agent, DriverInterface):
         # Events
         self._transportation_alternatives_received = self._env.event()
         self._transportation_alternatives_selected = self._env.event()
+        self._transportation_alternatives_not_found = self._env.event()
         self._vehicle_allocated = self._env.event()
         self._arrived_at_pick_up_position = self._env.event()
         self._assigned_vehicle_arrived = self._env.event()
@@ -82,13 +83,17 @@ class User(Agent, DriverInterface):
         Life Cycle of User
         :return:
         """
-        while self._state != UserState.FULFILLED:
+        while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
             # Retrieve available transportation alternatives
             available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
 
             selected_transportation_alternative = yield self._env.process(
                 self.select_transportation_alternative(available_transportation_alternatives))
 
+            if not selected_transportation_alternative:
+                yield self._env.process(self.withdraw_request())
+
+            # Vehicle Found
             vehicle_allocation = yield self._env.process(self.allocate_vehicle(selected_transportation_alternative))
 
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
@@ -140,8 +145,17 @@ class User(Agent, DriverInterface):
         # Set current state
         self._state = UserState.SELECTING_TRANSPORT_ALTERNATIVES
 
+        if len(available_transportation_alternatives.transportation_alternatives) == 0:
+            # Trigger Missed Demand Event
+            self._transportation_alternatives_not_found.succeed()
+            return
+
         # Select transportation alternative
         selected_transportation_alternative = available_transportation_alternatives.transportation_alternatives[0]
+
+        # Reserve TODO: implement in allocation engine
+        # selected_vehicle = selected_transportation_alternative.vehicle
+        # selected_vehicle.reserve(self)
 
         # Trigger next event
         self._transportation_alternatives_selected.succeed(selected_transportation_alternative)
@@ -181,7 +195,7 @@ class User(Agent, DriverInterface):
         # duration = RoutePlanner.calculateDuration(user.position, vehicle_assignment.pick_up_position, Strategy.Walking)
 
         distance = self.position >> vehicle_assignment.pick_up_position # Eucl. Distance
-        duration = distance/50 # 50 m/min (average agent distance)
+        duration = distance/83.33 # 83.33 m/min (average agent speed = 5km/h)
 
         yield self._env.timeout(duration)
         self.position = vehicle_assignment.pick_up_position
@@ -239,6 +253,18 @@ class User(Agent, DriverInterface):
         logging.debug(f"Transport request of user {self._id} has been successfully fulfilled.",
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
+    def withdraw_request(self):
+        # Wait for missed demand event
+        yield self._transportation_alternatives_not_found
+
+        # Update current state
+        self._state = UserState.MISSED
+
+        self._payment_service.withdraw_transportation_task(self, self._transport_task)
+
+        logging.debug(f"Transport request of user {self._id} has been withdrawn due to lack of vehicles.",
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
     """
         Implementation of DriverInterface to navigate the as driver mounted vehicle 
     """
@@ -271,5 +297,9 @@ class User(Agent, DriverInterface):
     """
         Auxiliary Functions  
     """
+    @property
+    def id(self):
+        return self._id
+
     def __str__(self):
         return f'User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}'

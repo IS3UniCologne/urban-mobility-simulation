@@ -81,8 +81,6 @@ def generate_mixed_fleet(env, fleet_config, resolution = "hex_7"):
         kick_scooter_count = row["kick_scooters"]
         bike_count = row["bikes"]
 
-        # TODO: Create Vehicle Object and place on random point on hex.
-
         # Add Cars
         for current_car in range(car_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)

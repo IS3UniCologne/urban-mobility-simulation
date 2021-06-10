@@ -1,10 +1,13 @@
 from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.operator.interface.fleet_interface import FleetInterface
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
 from simulation.vehicle.shared_vehicle import SharedVehicle
+from simulation.vehicle.vehicle import VehicleState
 
-class MixedSharedVehicleFleet:
+
+class MixedSharedVehicleFleet(FleetInterface):
 
     def __init__(self):
         self._scooters = []
@@ -22,14 +25,15 @@ class MixedSharedVehicleFleet:
         else:
             self._bikes.append(vehicle)
 
-    def get_vehicles_in_area(self, hexagon_id):
+
+    def get_all_vehicles(self, region):
         """
-        Return all vehicles which are located in a spatial unit
+        Return all vehicles which are located in a region
 
         Example
-        cars, scooters, kick_scooters, bikes = fleet.get_vehicles_in_area('871f1d4acffffff')
+        cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
 
-        :param hexagon_id: Hexagon ID
+        :param region: Hexagon ID
         :return: Lists of vehicles in area
         """
         cars_in_area = []
@@ -38,7 +42,7 @@ class MixedSharedVehicleFleet:
         bikes_in_area = []
 
         geo_env  = GeodesicEnvironment.getInstance()
-        geometry = geo_env.get_hexagon(hexagon_id)
+        geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
             if car.position.is_in_geometry(geometry):
@@ -58,6 +62,41 @@ class MixedSharedVehicleFleet:
 
         return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
 
+    def get_available_vehicles(self, region):
+        """
+        Return all vehicles which are located in a region
+
+        Example
+        cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
+
+        :param region: Hexagon ID
+        :return: Lists of vehicles in area
+        """
+        cars_in_area = []
+        scooters_in_area = []
+        kick_scooters_in_area = []
+        bikes_in_area = []
+
+        geo_env  = GeodesicEnvironment.getInstance()
+        geometry = geo_env.get_hexagon(region)
+
+        for car in self._cars:
+            if car.position.is_in_geometry(geometry) and car.state == VehicleState.PARKING:
+                cars_in_area.append(car)
+
+        for scooter in self._scooters:
+            if scooter.position.is_in_geometry(geometry) and scooter.state == VehicleState.PARKING:
+                scooters_in_area.append(scooter)
+
+        for kick_scooter in self._kick_scooters:
+            if kick_scooter.position.is_in_geometry(geometry) and kick_scooter.state == VehicleState.PARKING:
+                kick_scooters_in_area.append(kick_scooter)
+
+        for bike in self._bikes:
+            if bike.position.is_in_geometry(geometry) and bike.state == VehicleState.PARKING:
+                bikes_in_area.append(bike)
+
+        return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
     def count_scooters(self):
         return len(self._scooters)
 

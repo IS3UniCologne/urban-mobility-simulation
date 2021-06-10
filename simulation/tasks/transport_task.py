@@ -10,7 +10,7 @@ class TransportTask:
 
     @property
     def origin(self):
-        pass
+        return self._origin
 
     @origin.setter
     def trip_origin(self, position: Position):
@@ -18,7 +18,7 @@ class TransportTask:
 
     @property
     def destination(self):
-        pass
+        return self._destination
 
     @destination.setter
     def destination(self, position: Position):
