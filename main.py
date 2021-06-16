@@ -74,14 +74,17 @@ def load_environment():
   filename = "/Users/demircanm/Development/urban-mobility-simulation/data/environment/geodesic/env_hex_9.geojson"
   with open(filename) as file:
     env_df_hex_9 = gpd.read_file(file, driver= "GeoJSON")
+    env_df_hex_9.set_index('hex_id_9', inplace=True)
 
   filename = "/Users/demircanm/Development/urban-mobility-simulation/data/environment/geodesic/env_hex_8.geojson"
   with open(filename) as file:
     env_df_hex_8 = gpd.read_file(file)
+    env_df_hex_8.set_index('hex_id_8', inplace=True)
 
   filename = "/Users/demircanm/Development/urban-mobility-simulation/data/environment/geodesic/env_hex_7.geojson"
   with open(filename) as file:
     env_df_hex_7 = gpd.read_file(file)
+    env_df_hex_7.set_index('hex_id_7', inplace=True)
 
 
   geodesic_environment = GeodesicEnvironment()
@@ -89,7 +92,7 @@ def load_environment():
   geodesic_environment.addLayer("hex_9", env_df_hex_9)
   geodesic_environment.addLayer("hex_8", env_df_hex_8)
   geodesic_environment.addLayer("hex_7", env_df_hex_7)
-  geodesic_environment.get_centroid("871f1d7b3ffffff")
+
   return geodesic_environment
 
 # Load Spatial Environment
@@ -98,7 +101,7 @@ load_environment()
 # Vehicles
 supply_prob = pd.read_csv('data/supply/vehicle_supply_distribution_hex_7.csv')
 
-fleet_config = generate_fleet_config(supply_prob, n_cars = 0, n_scooter = 0, n_kick_scooter=0, n_bikes=0)
+fleet_config = generate_fleet_config(supply_prob, n_cars = 1000, n_scooter = 0, n_kick_scooter=0, n_bikes=0)
 mixed_fleet = generate_mixed_fleet(env, fleet_config)
 
 # Artifically add vehicle (see world add new user)
@@ -117,6 +120,7 @@ mixed_fleet = generate_mixed_fleet(env, fleet_config)
 # Register Modules
 search_engine.register_fleet(mixed_fleet)
 
-env.run(until = 360)
+env.run(until = 720)
 
 print(DemandFactory.counter)
+
