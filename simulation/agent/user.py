@@ -83,6 +83,8 @@ class User(Agent, DriverInterface):
         Life Cycle of User
         :return:
         """
+
+
         while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
             # Retrieve available transportation alternatives
             available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
@@ -105,6 +107,8 @@ class User(Agent, DriverInterface):
             self._payment_service.pay_for_fulfilled_transportation_task(self, selected_transportation_alternative)
 
             yield self._env.process(self.stop())
+
+
 
     def search_for_alternatives(self):
         """

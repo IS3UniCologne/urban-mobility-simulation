@@ -49,16 +49,8 @@ class GeodesicEnvironment(Environment):
         # Select Layer
         gdf = self.layer[layer_name]
 
-        # Get geometry of hexagon
-        if layer_name == "hex_7":
-            geometry = gdf[gdf["hex_id_7"] == hex_id].geometry
-        elif layer_name == "hex_8":
-            geometry = gdf[gdf["hex_id_8"] == hex_id].geometry
-        elif layer_name == "hex_9":
-            geometry = gdf[gdf["hex_id_9"] == hex_id].geometry
-
-        # Extract Polygon (Shapely) object
-        geometry = geometry.iloc[0]
+        # Select Hexagon
+        geometry = gdf.loc[hex_id].geometry
 
         # Sample random point within hexagon
         minx, miny, maxx, maxy = geometry.bounds
@@ -81,15 +73,7 @@ class GeodesicEnvironment(Environment):
         gdf = self.layer[layer_name]
 
         # Get geometry of hexagon
-        if layer_name == "hex_7":
-            geometry = gdf[gdf["hex_id_7"] == hex_id].geometry
-        elif layer_name == "hex_8":
-            geometry = gdf[gdf["hex_id_8"] == hex_id].geometry
-        elif layer_name == "hex_9":
-            geometry = gdf[gdf["hex_id_9"] == hex_id].geometry
-
-        # Extract Polygon (Shapely) object
-        geometry = geometry.iloc[0]
+        geometry = gdf.loc[hex_id].geometry
 
         return geometry.centroid.y, geometry.centroid.x # Lat, Lng
 
@@ -99,22 +83,15 @@ class GeodesicEnvironment(Environment):
         Get geometry of hexagon
         :param hex_id: Hexagon ID
         :param layer_name: Layername (i.e., resolution, hex_7, hex_8, hex_9)
-        :return: Point (lat,lng) representing centroid of hexagon
+        :return: Polygon (lat,lng) representing hexagon
         """
+
         # Select Layer
         gdf = self.layer[layer_name]
 
         # Get geometry of hexagon
-        if layer_name == "hex_7":
-            geometry = gdf[gdf["hex_id_7"] == hex_id].geometry
-        elif layer_name == "hex_8":
-            geometry = gdf[gdf["hex_id_8"] == hex_id].geometry
-        elif layer_name == "hex_9":
-            geometry = gdf[gdf["hex_id_9"] == hex_id].geometry
+        geometry = gdf.loc[hex_id].geometry
 
-        # Extract Polygon (Shapely) object
-        geometry = geometry.iloc[0]
-
-        return geometry # Lat, Lng
+        return geometry # Hexagon Geometry
 
 

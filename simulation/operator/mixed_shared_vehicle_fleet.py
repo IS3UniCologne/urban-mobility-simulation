@@ -97,6 +97,7 @@ class MixedSharedVehicleFleet(FleetInterface):
                 bikes_in_area.append(bike)
 
         return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
+
     def count_scooters(self):
         return len(self._scooters)
 
