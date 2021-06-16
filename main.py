@@ -101,16 +101,17 @@ load_environment()
 # Vehicles
 supply_prob = pd.read_csv('data/supply/vehicle_supply_distribution_hex_7.csv')
 
-fleet_config = generate_fleet_config(supply_prob, n_cars = 1000, n_scooter = 0, n_kick_scooter=0, n_bikes=0)
+fleet_config = generate_fleet_config(supply_prob, n_cars = 100, n_scooter = 0, n_kick_scooter=0, n_bikes=0)
 mixed_fleet = generate_mixed_fleet(env, fleet_config)
 
+# TODO: [Testing]
 # Artifically add vehicle (see world add new user)
 # Access to underlying geodesic environment
 # geo_env = GeodesicEnvironment.getInstance()
 # from simulation.environment.geodesic_position import GeodesicPosition
 # from simulation.vehicle.shared_car import SharedCar
-#
 # rdm_lat, rdm_lng = geo_env.get_random_position('871f1d498ffffff')
+#
 # pos = GeodesicPosition(rdm_lat, rdm_lng)
 # car = SharedCar(env, pos)
 # car_2 = SharedCar(env, pos)
@@ -120,7 +121,8 @@ mixed_fleet = generate_mixed_fleet(env, fleet_config)
 # Register Modules
 search_engine.register_fleet(mixed_fleet)
 
-env.run(until = 720)
+# ToDo: Analyze why "DemandFactory" != Total Trips + Missed Trips
+env.run(until = 120)
 
 print(DemandFactory.counter)
 

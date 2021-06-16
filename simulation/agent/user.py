@@ -64,7 +64,7 @@ class User(Agent, DriverInterface):
 
         # Initial State and Runtime
         self._state = UserState.INITIALIZED  # Initial State of agent
-        logging.info(f"Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id})
+        logging.debug(f"Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     @property
     def position(self) -> Position:
@@ -84,19 +84,25 @@ class User(Agent, DriverInterface):
         :return:
         """
 
-
         while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
-            # Retrieve available transportation alternatives
+            ## Retrieve available transportation alternatives
             available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
 
+            # Select Alternative
             selected_transportation_alternative = yield self._env.process(
                 self.select_transportation_alternative(available_transportation_alternatives))
 
+            # Withdraw Request since no vehicle is available matching my needs
             if not selected_transportation_alternative:
                 yield self._env.process(self.withdraw_request())
-
+                break
+                
             # Vehicle Found
             vehicle_allocation = yield self._env.process(self.allocate_vehicle(selected_transportation_alternative))
+
+            if not vehicle_allocation:
+                yield self._env.process(self.withdraw_request())
+                break
 
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
@@ -107,8 +113,6 @@ class User(Agent, DriverInterface):
             self._payment_service.pay_for_fulfilled_transportation_task(self, selected_transportation_alternative)
 
             yield self._env.process(self.stop())
-
-
 
     def search_for_alternatives(self):
         """
@@ -157,10 +161,6 @@ class User(Agent, DriverInterface):
         # Select transportation alternative
         selected_transportation_alternative = available_transportation_alternatives.transportation_alternatives[0]
 
-        # Reserve TODO: implement in allocation engine
-        # selected_vehicle = selected_transportation_alternative.vehicle
-        # selected_vehicle.reserve(self)
-
         # Trigger next event
         self._transportation_alternatives_selected.succeed(selected_transportation_alternative)
         logging.debug(f"Selected transportation alternative: {selected_transportation_alternative}.",
@@ -179,13 +179,18 @@ class User(Agent, DriverInterface):
         vehicle_allocation = yield self._env.process(
             self._vehicle_assignment_service.request_vehicle_allocation(self, selected_transportation_alternative))
 
-        # Trigger next event
         self._vehicle_allocated.succeed()
-        logging.debug(f"Vehicle {vehicle_allocation.vehicle.id} has been allocated to user {self._id}.",
-                      extra={"clazz": self.__class__.__name__, "oid": self._id})
 
-        # Return vehicle allocation
-        return vehicle_allocation
+        # Vehicle was successfully allocated to request
+        if vehicle_allocation:
+            # Trigger next event
+            logging.debug(f"Vehicle {vehicle_allocation.vehicle.id} has been allocated to user {self._id}.",
+                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+            # Return vehicle allocation
+            return vehicle_allocation
+        else:
+            return None
 
     def move_to_pick_up_position(self, vehicle_assignment: VehicleAllocation):
         # Wait for event

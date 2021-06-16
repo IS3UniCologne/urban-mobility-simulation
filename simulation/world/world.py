@@ -29,17 +29,17 @@ class World:
 
         self._user_limit = 10_000_000
 
-
     def add_user(self, origin, destination):
-        # TODO:
-        # origin = '871f1d498ffffff'
-
         """
             Add a user agent to the world with an origin and a destination.
         :param origin: Spatial Unit ID (e.g., hex_id)
         :param destination: Spatial Unit ID (e.g., hex_id)
         :return: None
         """
+
+        # TODO: [Testing]
+        # origin = '871f1d498ffffff'
+
         if len(self._users) < self._user_limit:
             # Get Origin and Destination based on underlying environment
             geo_env = GeodesicEnvironment.getInstance()
@@ -56,7 +56,8 @@ class World:
             new_user = user.User(origin_position, task, self._search_engine, self._payment_engine, self._vehicle_assignment_engine, self._env)
 
             # Add user to user list
-            self._users.append(new_user)
+            # ToDo: not needed right now
+            # self._users.append(new_user)
 
             # Start Process for each new user
             self._env.process(new_user.run())

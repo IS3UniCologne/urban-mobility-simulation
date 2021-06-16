@@ -19,6 +19,9 @@ class SharedVehicle(Vehicle, ABC):
         self._id = SharedVehicle.shared_vehicle_id
         self._price_per_minute = None
 
+        # Vehicle Reservation
+        self._reserved_for_user = None
+
         SharedVehicle.shared_vehicle_id += 1
 
     def start_driving(self):
@@ -34,6 +37,10 @@ class SharedVehicle(Vehicle, ABC):
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def park(self):
+        # Lift reservation
+        self._reserved_for_user = None
+
+        # Make vehicle available for others again
         self.state = SharedVehicleState.PARKING
 
         logging.debug(f'Parked.',
@@ -41,6 +48,8 @@ class SharedVehicle(Vehicle, ABC):
 
     def reserve(self, user):
         self.state = SharedVehicleState.RESERVED
+
+        self._reserved_for_user = user
 
         logging.debug(f'Reserved to {user.id}.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
@@ -58,6 +67,9 @@ class SharedVehicle(Vehicle, ABC):
     def price_per_minute(self, price_per_minute):
         self._price_per_minute = price_per_minute
 
+    @property
+    def reserved_for_user(self):
+        return self._reserved_for_user
 
     def __str__(self):
         return f'I have {len(self.available_seats)} passengers on boards'
