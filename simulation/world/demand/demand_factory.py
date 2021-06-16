@@ -9,7 +9,7 @@ from simulation.world.world import World
 class DemandFactory:
     counter = 0
 
-    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World, maximal_demand = 1_000_000_000):
+    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World, maximal_demand = 1_000_000):
         self._env = env
         self._demand_profile = demand_profile
         self._demand_importer = demand_importer

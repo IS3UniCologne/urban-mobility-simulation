@@ -2,6 +2,7 @@ from simulation.agent.user import User
 from simulation.operator.data_transfer_object.transportation_alternative import TransportationAlternative
 from simulation.operator.data_transfer_object.vehicle_allocation import VehicleAllocation
 from simulation.operator.interface.vehicle_allocation_engine_interface import VehicleAllocationEngineInterface
+from simulation.vehicle.vehicle import VehicleState
 
 
 class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
@@ -15,9 +16,13 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
     def run(self):
         while True:
             yield self._env.timeout(2)
-            # Implement vehicle assignment functionality here
+            
+            # Matching Algorithm
+            # First Come First Serve - Assign vehicles to first request
+            for user, requests in self._vehicle_assignment_requests:
+                if requests.vehicle.state == VehicleState.PARKING:
+                    requests.vehicle.reserve(user)
 
-            # TODO:
             # Implement: First come First Serve
             self._vehicles_assigned_to_users.succeed()
             self._vehicles_assigned_to_users = self._env.event()
@@ -32,12 +37,17 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
         :return:
         """
 
-        self._vehicle_assignment_requests.append(selected_transportation_alternative)
+        self._vehicle_assignment_requests.append((user, selected_transportation_alternative))
 
         yield self._vehicles_assigned_to_users
 
         selected_vehicle = selected_transportation_alternative.vehicle
 
+        # No Vehicle Allocation
+        if selected_vehicle.reserved_for_user != user:
+            return None
+
+        # Vehicle was succesfully allocated
         return VehicleAllocation(user, selected_vehicle, selected_transportation_alternative, selected_vehicle.position)
 
     def test(self, vehicle_assignment, old_position):
