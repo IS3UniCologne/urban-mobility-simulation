@@ -1,5 +1,3 @@
-from random import randint
-
 from .agent import Agent
 from ..environment.position import Position
 from ..operator.data_transfer_object.transportation_alternative import TransportationAlternative
@@ -121,7 +119,7 @@ class User(Agent, DriverInterface):
         """
 
         # Wait for next event
-        yield self._env.timeout(randint(1, 5))  # Open App
+        yield self._env.timeout(1)  # Open App
 
         # Update current state
         self._state = UserState.SEARCHING_TRANSPORT_ALTERNATIVES
@@ -200,9 +198,7 @@ class User(Agent, DriverInterface):
         self._state = UserState.MOVING_TO_PICK_UP_POS
 
         # Calculate route to pick up position, and update user's position
-        duration = randint(4, 8)
         # duration = RoutePlanner.calculateDuration(user.position, vehicle_assignment.pick_up_position, Strategy.Walking)
-
         distance = self.position >> vehicle_assignment.pick_up_position # Eucl. Distance
         duration = distance/83.33 # 83.33 m/min (average agent speed = 5km/h)
 

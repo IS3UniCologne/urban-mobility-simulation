@@ -1,4 +1,6 @@
 from numpy import random
+import numpy
+
 from shapely.geometry import Point
 from simulation.environment.environment import Environment
 
@@ -21,6 +23,8 @@ class GeodesicEnvironment(Environment):
         else:
             GeodesicEnvironment.__instance = self
             super(GeodesicEnvironment, self).__init__()
+            self._random = numpy.random.RandomState(42)
+
 
     def getLayer(self, layer_name):
         """
@@ -56,8 +60,8 @@ class GeodesicEnvironment(Environment):
         minx, miny, maxx, maxy = geometry.bounds
         points = []
         while len(points) < 1:
-            y = random.uniform(minx, maxx)
-            pnt = Point(random.uniform(minx, maxx), random.uniform(miny, maxy))
+            y = self._random.uniform(minx, maxx)
+            pnt = Point(self._random.uniform(minx, maxx), self._random.uniform(miny, maxy))
             if geometry.contains(pnt):
                 return pnt.y, pnt.x # Latitude, Longitude
 
