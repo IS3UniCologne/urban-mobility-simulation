@@ -134,7 +134,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 100, n_scooter
   # # # # # # # # # # # # # # # # # # # # # #
 
   # Simulation Environment
-  env = simpy.Environment(initial_time=0)
+  env = simpy.Environment(initial_time=start_time)
 
   from simulation.vehicle.shared_car import SharedCar
   from simulation.vehicle.shared_kick_scooter import SharedKickScooter
