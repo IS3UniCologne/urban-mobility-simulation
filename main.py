@@ -1,12 +1,5 @@
 from pathlib import Path
 
-# Random Number Seed
-import random
-import numpy
-RANDOM_SEED = 42
-random.seed(RANDOM_SEED)
-numpy.random.seed(RANDOM_SEED)
-
 import pandas as pd
 
 from simulation.operator.fleet_factory import generate_fleet_config, generate_mixed_fleet
@@ -25,13 +18,13 @@ import geopandas as gpd
 # Simulation Environment
 from simulation.world.demand.demand_importer import DemandImporter, SpatialResolution
 
-env = simpy.Environment()
+env = simpy.Environment(initial_time = 0)
 
 # Configure Logging
 import logging
 
 # Make it beautiful
-logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
 logger = logging.getLogger()
 
 # Block Logger of third party software
@@ -101,7 +94,7 @@ load_environment()
 # Vehicles
 supply_prob = pd.read_csv('data/supply/vehicle_supply_distribution_hex_7.csv')
 
-fleet_config = generate_fleet_config(supply_prob, n_cars = 100, n_scooter = 0, n_kick_scooter=0, n_bikes=0)
+fleet_config = generate_fleet_config(supply_prob, n_cars = 100, n_scooter = 100, n_kick_scooter= 0, n_bikes=0)
 mixed_fleet = generate_mixed_fleet(env, fleet_config)
 
 # TODO: [Testing]
@@ -122,7 +115,7 @@ mixed_fleet = generate_mixed_fleet(env, fleet_config)
 search_engine.register_fleet(mixed_fleet)
 
 # ToDo: Analyze why "DemandFactory" != Total Trips + Missed Trips
-env.run(until = 120)
+env.run(until = 60)
 
 print(DemandFactory.counter)
 

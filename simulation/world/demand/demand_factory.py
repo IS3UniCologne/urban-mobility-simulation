@@ -28,6 +28,9 @@ class DemandFactory:
 
         self._spatial_units = list(self._demand_profile[origin].unique())
 
+        # Randon Number Generator
+        self._random = numpy.random.RandomState(42)
+
     def generate_demand(self):
         """
             Invokes for each spatial unit a dedicated process which generates demand
@@ -51,9 +54,6 @@ class DemandFactory:
 
         # Run until simulation ends
         while (DemandFactory.counter < self._maximal_demand):
-            # Increase global counter (not thread safe)
-            DemandFactory.counter += 1
-
             # Transform current time to temporal buckets as defined in the demand profile
             time_bucket = self._convert_running_time_to_temporal_bucket(self._env.now)
             non_working_day = self._convert_running_time_to_day_of_week_bucket(self._env.now)
@@ -71,7 +71,10 @@ class DemandFactory:
             poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
 
             # Based on Poisson Estimate sample next arrival time (in minutes)
-            inter_arrival_time = numpy.random.exponential(
+            #inter_arrival_time = numpy.random.exponential(
+            #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
+
+            inter_arrival_time = self._random.exponential(
                 1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
 
             # await next arrival
@@ -80,7 +83,7 @@ class DemandFactory:
             # Sample Destination
             prob_array = demand_slice["od_multinom_p_est"].to_numpy()
 
-            low_soc_vehicle_sample = numpy.random.multinomial(1, prob_array)  # No of vehicles to be charged
+            low_soc_vehicle_sample = self._random.multinomial(1, prob_array)  # No of vehicles to be charged
 
             idx = low_soc_vehicle_sample.argmax()
 
@@ -92,6 +95,9 @@ class DemandFactory:
                               extra={"clazz": self.__class__.__name__, "oid": ""})
 
             self._world.add_user(spatial_unit, destination)
+
+            # Increase global counter (not thread safe)
+            DemandFactory.counter += 1
 
 
     def _convert_running_time_to_temporal_bucket(self, t):

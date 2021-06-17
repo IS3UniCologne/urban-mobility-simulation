@@ -18,28 +18,31 @@ def generate_fleet_config(distribution, n_cars = 1000, n_scooter = 500, n_kick_s
     :return: Fleet Configuration (i.e., where are how many vehciles distributed)
     """
 
+    # Random Number Generator
+    random = np.random.RandomState(42)
+
     # Sample Supply Distribution for Cars
     cars_prob_arr = distribution["cars_prob"].to_numpy()
-    car_cnt = pd.DataFrame(np.random.multinomial(n_cars, cars_prob_arr, size=1).transpose(), columns=["car_count"])
+    car_cnt = pd.DataFrame(random.multinomial(n_cars, cars_prob_arr, size=1).transpose(), columns=["car_count"])
     car_cnt.index = distribution.index
     distribution["cars"] = car_cnt["car_count"]
 
     # Sample Supply Distribution for Cars
     scooters_prob_arr = distribution["scooters_prob"].to_numpy()
-    scooters_cnt = pd.DataFrame(np.random.multinomial(n_scooter, scooters_prob_arr, size=1).transpose(),
+    scooters_cnt = pd.DataFrame(random.multinomial(n_scooter, scooters_prob_arr, size=1).transpose(),
                                 columns=["scooters_count"])
     scooters_cnt.index = distribution.index
     distribution["scooters"] = scooters_cnt["scooters_count"]
 
     # Sample Supply Distribution for Cars
     kick_scooters_prob_arr = distribution["kick_scooters_prob"].to_numpy()
-    kick_scooters_cnt = pd.DataFrame(np.random.multinomial(n_kick_scooter, kick_scooters_prob_arr, size=1).transpose(), columns = ["kick_scooters_count"])
+    kick_scooters_cnt = pd.DataFrame(random.multinomial(n_kick_scooter, kick_scooters_prob_arr, size=1).transpose(), columns = ["kick_scooters_count"])
     kick_scooters_cnt.index = distribution.index
     distribution["kick_scooters"] = kick_scooters_cnt["kick_scooters_count"]
 
     # Sample Supply Distribution for Cars
     bikes_prob_arr = distribution["bikes_prob"].to_numpy()
-    bikes_cnt = pd.DataFrame(np.random.multinomial(n_bikes, bikes_prob_arr, size=1).transpose(), columns = ["bikes_count"])
+    bikes_cnt = pd.DataFrame(random.multinomial(n_bikes, bikes_prob_arr, size=1).transpose(), columns = ["bikes_count"])
     bikes_cnt.index = distribution.index
     distribution["bikes"] = bikes_cnt["bikes_count"]
 

@@ -16,8 +16,11 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
     def run(self):
         while True:
             yield self._env.timeout(2)
-            
-            # Matching Algorithm
+
+            # ################## # ###################### #
+            # Matching Algorithm : First Come First Serve #
+            # ################## # ###################### #
+
             # First Come First Serve - Assign vehicles to first request
             for user, requests in self._vehicle_assignment_requests:
                 if requests.vehicle.state == VehicleState.PARKING:
@@ -50,6 +53,16 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
         # Vehicle was succesfully allocated
         return VehicleAllocation(user, selected_vehicle, selected_transportation_alternative, selected_vehicle.position)
 
+
+    def notify_user_arrival_at_pick_up_position(self, vehicle_assignment: VehicleAllocation):
+        pass
+
+        # For Autonomous Vehicles or Mass Transit (i.e., listen to position of vehicle)
+        # old_position = vehicle_assignment.vehicle.position
+        # from simulation.environment.geodesic_position import GeodesicPosition
+        # vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
+        # self._env.process(self.test(vehicle_assignment, old_position))
+
     def test(self, vehicle_assignment, old_position):
         # Notify operator that user has arrived at location
 
@@ -62,13 +75,3 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
         yield self._env.timeout(10)
 
         vehicle_assignment.vehicle.position = old_position
-
-
-    def notify_user_arrival_at_pick_up_position(self, vehicle_assignment: VehicleAllocation):
-        pass
-
-        # For Autonomous Vehicles or Mass Transit (i.e., listen to position of vehicle)
-        # old_position = vehicle_assignment.vehicle.position
-        # from simulation.environment.geodesic_position import GeodesicPosition
-        # vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
-        # self._env.process(self.test(vehicle_assignment, old_position))

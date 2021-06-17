@@ -36,13 +36,15 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         o_hex,_ = origin.get_hexagon()
         d_hex,_ = destination.get_hexagon()
 
+        # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
+        # Calc Route
+        route = Route(origin, destination)
+
+        # Calc Distance
+        distance = route.distance  # Euclidean Distance
+
+        # Add all available cars to alternative browser
         for car in cars_in_area:
-            # Calc Route
-            route = Route(origin, destination)
-
-            # Calc Distance
-            distance = route.distance          # Euclidean Distance
-
             # Calc Duration
             duration = distance/car.velocity
 
@@ -51,6 +53,32 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
 
             # Put together
             transportation_alternative = TransportationAlternative(car, route, price, duration, distance)
+
+            browser.add_transportation_alternative(transportation_alternative)
+
+        # Add all available scooter to alternative browser
+        for scooter in scooters_in_area:
+            # Calc Duration
+            duration = distance/scooter.velocity
+
+            # Calc Price
+            price = duration*scooter.price_per_minute
+
+            # Put together
+            transportation_alternative = TransportationAlternative(scooter, route, price, duration, distance)
+
+            browser.add_transportation_alternative(transportation_alternative)
+
+        # Add all available kick scooter to alternative browser
+        for kick_scooter in kick_scooters_in_area:
+            # Calc Duration
+            duration = distance / kick_scooter.velocity
+
+            # Calc Price
+            price = duration * kick_scooter.price_per_minute
+
+            # Put together
+            transportation_alternative = TransportationAlternative(kick_scooter, route, price, duration, distance)
 
             browser.add_transportation_alternative(transportation_alternative)
 
