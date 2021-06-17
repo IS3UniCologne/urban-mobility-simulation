@@ -98,4 +98,5 @@ class GeodesicEnvironment(Environment):
 
         return geometry # Hexagon Geometry
 
-
+    def reset_random_generator(self, seed = 42):
+        self._random = numpy.random.RandomState(seed)

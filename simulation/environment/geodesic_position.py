@@ -5,6 +5,9 @@ from .geodesic_environment import GeodesicEnvironment
 from .position import Position
 from haversine import haversine
 
+from ..helper.configuration.configuration import Configuration
+
+
 class GeodesicPosition(Position):
 
     def __init__(self, latitude, longitude) -> object:
@@ -33,17 +36,20 @@ class GeodesicPosition(Position):
         """
         return haversine((self._lat, self._lng), (other._lat, other._lng))*1000 # in meter
 
-
-    def get_hexagon(self, resolution=7):
+    def get_hexagon(self, resolution = 0):
         """
         Return h3 hexagon object based on current position (lng, lat)
-        :param resolution: H3 Resolution
+        :param resolution: H3 Resolution (res = 0 <=> default => use global setting)
         :return: hex_id:   String
                  geometry: Hexagon geometry
         """
         import geopandas as gpd
 
         geo_env = GeodesicEnvironment.getInstance()
+
+        # If resolution is set to default, use global settings
+        if resolution == 0:
+            resolution = Configuration.instance().spatial_resolution_value
 
         layer = geo_env.getLayer(f'hex_{resolution}')
 #

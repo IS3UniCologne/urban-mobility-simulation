@@ -3,28 +3,26 @@ from pathlib import Path
 import logging
 import pandas as pd
 
-class TemporalBucket(Enum):
-    HOURLY_BUCKETS = 0
-    TWO_HOURLY_BUCKETS = 1
-    FOUR_HOURLY_BUCKETS = 2
-    SIX_HOURLY_BUCKETS = 3
-    EIGHT_HOURLY_BUCKETS = 4
-    TWELVE_HOURLY_BUCKETS = 5
+from simulation.helper.configuration.configuration import TemporalBucket, SpatialResolution, DailyResolution
 
-class SpatialResolution(Enum):
-    HEX_7 = 0
-    HEX_8 = 1
-    HEX_9 = 2
 
 class DemandImporter:
 
     def __init__(self, temporal_resolution: TemporalBucket = TemporalBucket.FOUR_HOURLY_BUCKETS,
                  spatial_resolution: SpatialResolution = SpatialResolution.HEX_7,
-                 day_of_week = True):
+                 daily_resolution: DailyResolution = DailyResolution.WEEKDAY_WEEKEND):
+        """
+        Initizalize Demand Importer. Reads Trip Data and transform it to spatio-temporal cells
+        (see extract_spatio_temporal_demand_estimates)
+
+        :param temporal_resolution: Temporal Resolution (see TemporalBucket)
+        :param spatial_resolution: Spatial Resolution (see SpatialResolution)
+        :param day_of_week: True => Differentiate between working days and weekend/holidays
+        """
 
         self._temporal_resolution = temporal_resolution
         self._spatial_resolution = spatial_resolution
-        self._day_of_week = day_of_week
+        self._daily_resolution = daily_resolution
 
 
     @property
@@ -34,10 +32,6 @@ class DemandImporter:
     @property
     def spatial_resolution(self):
         return self._spatial_resolution
-
-    @property
-    def consider_day_of_week(self):
-        return self._day_of_week
 
     def extract_spatio_temporal_demand_estimates(self, trip_data_path: Path):
         """
@@ -61,6 +55,9 @@ class DemandImporter:
         temporal_column = self._get_temporal_column()
         day_of_week_column = self._get_day_of_week_column()
         date_column = "date_start"
+
+        if self._daily_resolution != DailyResolution.WEEKDAY_WEEKEND:
+            raise NotImplementedError("Currently we can only distuinguish between weekday and weekend demand.")
 
         # First try to load cache
         cache_path = Path('data/demand/', f"weekday_{temporal_column}_{hex_start_column}.csv")
@@ -192,7 +189,6 @@ class DemandImporter:
         result.to_csv(cache_path, index= False)
 
         return result
-
 
 
     def _get_spatial_column(self):
