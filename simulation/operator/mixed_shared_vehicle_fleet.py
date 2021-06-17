@@ -1,4 +1,5 @@
 from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.interface.fleet_interface import FleetInterface
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
@@ -42,6 +43,7 @@ class MixedSharedVehicleFleet(FleetInterface):
         bikes_in_area = []
 
         geo_env  = GeodesicEnvironment.getInstance()
+        config   = Configuration.instance()
         geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:

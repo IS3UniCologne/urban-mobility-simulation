@@ -3,13 +3,15 @@ import pandas as pd
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.configuration.configuration import SpatialResolution, Configuration
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
 
-def generate_fleet_config(distribution, n_cars = 1000, n_scooter = 500, n_kick_scooter = 500, n_bikes = 0, resolution = "hex_7"):
+def generate_fleet_config(distribution, n_cars = 1000, n_scooter = 500, n_kick_scooter = 500, n_bikes = 0):
+
     """
     Calculate vehicle distribution based on activity distribution per mode.
 
@@ -46,8 +48,7 @@ def generate_fleet_config(distribution, n_cars = 1000, n_scooter = 500, n_kick_s
     bikes_cnt.index = distribution.index
     distribution["bikes"] = bikes_cnt["bikes_count"]
 
-    if resolution == "hex_7":
-        hex_column = "hex_id_7"
+    hex_column = Configuration.instance().spatial_resolution_column
 
     # Slice fleet config
     fleet_config = distribution[[hex_column, "cars", "scooters", "kick_scooters", "bikes"]]
@@ -55,12 +56,11 @@ def generate_fleet_config(distribution, n_cars = 1000, n_scooter = 500, n_kick_s
     return fleet_config
 
 
-def generate_mixed_fleet(env, fleet_config, resolution = "hex_7"):
+def generate_mixed_fleet(env, fleet_config):
     """
     Generate a mixed shared vehicle fleet based on given fleet config.
     :param env: SimPy Environment (passed to vehicles)
     :param fleet_config: DataFrame with following 5 columns hex_id, cars, scooters, kick_scooters, bikes
-    :param resolution: Geodesic Resolution (default = hex_7)
     :return: MixedSharedVehicleFleet Object
     """
     # New Fleet Object
@@ -69,10 +69,8 @@ def generate_mixed_fleet(env, fleet_config, resolution = "hex_7"):
     # Access to underlying geodesic environment
     geo_env = GeodesicEnvironment.getInstance()
 
-    if resolution == "hex_7":
-        hex_column = "hex_id_7"
-    else:
-        raise NotImplementedError()
+    # Get Column Identifier for current resolution (e.g., hex_id_7)
+    hex_column = Configuration.instance().spatial_resolution_column
 
     for index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
