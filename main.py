@@ -225,13 +225,13 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 100, n_scooter
   print(DemandFactory.counter)
 
 # TODO: Pass seed to sub modules otherwise they are always set to 42
-run_single_simulation(end_time = 60, n_cars = 100, n_scooter = 0, n_kick_scooter = 0)
-run_single_simulation(end_time = 60, n_cars = 200, n_scooter = 0, n_kick_scooter = 0)
+run_single_simulation(end_time = 1440, n_cars = 1000, n_scooter = 0, n_kick_scooter = 0)
+# run_single_simulation(end_time = 60, n_cars = 200, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 300, n_scooter = 0, n_kick_scooter = 0)
-run_single_simulation(end_time = 60, n_cars = 400, n_scooter = 0, n_kick_scooter = 0)
+# run_single_simulation(end_time = 60, n_cars = 400, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 500, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 600, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 700, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 800, n_scooter = 0, n_kick_scooter = 0)
 
-run_single_simulation(end_time = 60, n_cars = 200, n_scooter = 0, n_kick_scooter = 200)
+# run_single_simulation(end_time = 60, n_cars = 200, n_scooter = 0, n_kick_scooter = 0)
