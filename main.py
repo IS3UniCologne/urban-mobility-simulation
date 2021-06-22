@@ -23,7 +23,13 @@ import geopandas as gpd
 
 import sys
 from configparser import ConfigParser
+import os
 
+# Change working directory to path of main.py
+working_dir = Path(__file__).parent
+os.chdir(working_dir)
+
+# Read args
 parser = ConfigParser()
 parser.read(sys.argv[1])
 
