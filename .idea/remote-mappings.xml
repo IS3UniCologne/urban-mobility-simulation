@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteMappingsManager">
+    <list>
+      <list>
+        <remote-mappings server-id="python@sftp://mdemircan@134.95.119.102:22/opt/anaconda3/envs/urban-mobility-simulation/bin/python3.7" />
+      </list>
+    </list>
+  </component>
+</project>
