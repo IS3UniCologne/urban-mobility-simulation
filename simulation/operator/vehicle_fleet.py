@@ -22,4 +22,3 @@ class VehicleFleet:
             self._fleet.remove(vehicle)
         else:
             raise Exception(f'Vehicle {vehicle} is not registered in Fleet yet')
-
