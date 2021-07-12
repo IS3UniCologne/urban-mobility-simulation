@@ -7,8 +7,18 @@ class SharedKickScooter(SharedVehicle):
     # Shared Care Counter
     shared_kick_scooter_id = 0
 
-    def __init__(self, env: Environment, position, max_available_seats=1, velocity=333.33):
-        super(SharedKickScooter, self).__init__(env, position, max_available_seats, velocity)
+    def __init__(self, env: Environment, position, max_available_seats=1, max_state_of_charge=0.288, energy_consumption = 0.0072, velocity=333.33):
+        """
+
+        :param env:
+        :param position:
+        :param max_available_seats:
+        :param max_state_of_charge:
+        :param energy_consumption:
+        (see e.g, https://www.okai.co/products/es200) vendor of Tier (8aH, 36V => 288Wh)
+        :param velocity:
+        """
+        super(SharedKickScooter, self).__init__(env, position, max_available_seats, max_state_of_charge, energy_consumption, velocity)
 
         # Increment Shared Car ID
         self.car_id = SharedKickScooter.shared_kick_scooter_id

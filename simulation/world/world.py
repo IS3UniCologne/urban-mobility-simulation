@@ -37,9 +37,6 @@ class World:
         :return: None
         """
 
-        # TODO: [Testing]
-        # origin = '871f1d498ffffff'
-
         if len(self._users) < self._user_limit:
             # Get Origin and Destination based on underlying environment
             geo_env = GeodesicEnvironment.getInstance()

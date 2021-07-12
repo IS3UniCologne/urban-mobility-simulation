@@ -130,7 +130,7 @@ di = DemandImporter(spatial_resolution=global_config.spatial_resolution,
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 
-def run_single_simulation(start_time = 0, end_time = 20, n_cars = 100, n_scooter = 100, n_kick_scooter = 100):
+def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter = 0, n_kick_scooter = 0):
   # # # # # # # # # # # # # # # # # # # # # #
   #                                         #
   # Setup Simulation Environment.           #
@@ -226,10 +226,13 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 100, n_scooter
   print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
   print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
 
+  print("Number of Vehicles to be charged: " + str(mixed_fleet.get_all_vehicles_below_soc_level(0.1)))
+
   print(DemandFactory.counter)
+  print(len(world._users))
 
 # TODO: Pass seed to sub modules otherwise they are always set to 42
-run_single_simulation(end_time = 1440, n_cars = 1000, n_scooter = 0, n_kick_scooter = 0)
+run_single_simulation(end_time = 60, n_cars = 1000, n_scooter = 0, n_kick_scooter = 0)
 # run_single_simulation(end_time = 60, n_cars = 200, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 300, n_scooter = 0, n_kick_scooter = 0)
 # run_single_simulation(end_time = 60, n_cars = 400, n_scooter = 0, n_kick_scooter = 0)

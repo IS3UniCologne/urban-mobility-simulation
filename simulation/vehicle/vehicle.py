@@ -23,11 +23,11 @@ class VehicleState(Enum):
 class Vehicle(ABC):
     vehicle_id = 0
 
-    def __init__(self, env: Environment, position, available_seats, max_available_seats, velocity, driver: DriverInterface):
-        self(env, position, available_seats, max_available_seats, velocity)
+    def __init__(self, env: Environment, position, available_seats, max_available_seats, max_state_of_charge, energy_consumption, velocity, driver: DriverInterface):
+        self(env, position, available_seats, max_available_seats, max_state_of_charge, energy_consumption, velocity)
         self.mount_driver(driver)
 
-    def __init__(self, env: Environment, position, available_seats, max_available_seats, velocity):
+    def __init__(self, env: Environment, position, available_seats, max_available_seats, max_state_of_charge, energy_consumption, velocity):
         self._id = Vehicle.vehicle_id
         Vehicle.vehicle_id += 1  # Increment User Id
         self._env = env
@@ -37,6 +37,11 @@ class Vehicle(ABC):
         self._seats = []
         self._driver = None
         self._velocity = velocity   # meter per minute (16.67m/min = 1kmh)
+
+        # State Of Charge
+        self._max_state_of_charge = max_state_of_charge # in kWh
+        self._current_state_of_charge = max_state_of_charge # in kWh
+        self._energy_consumption = energy_consumption # in kWh/km
 
         #### Vehicle Events
         # Driving Events
@@ -107,6 +112,22 @@ class Vehicle(ABC):
         self._max_available_seats = max_available_seats
 
     @property
+    def max_state_of_charge(self):
+        return self._max_state_of_charge
+
+    @property
+    def current_state_of_charge(self):
+        return self._current_state_of_charge
+
+    @property
+    def current_relative_state_of_charge(self):
+        return self.current_state_of_charge/self.max_state_of_charge
+
+    @property
+    def energy_consumption(self):
+        return self._energy_consumption
+
+    @property
     def velocity(self):
         return self._velocity
 
@@ -128,9 +149,39 @@ class Vehicle(ABC):
         velocity = self._velocity
         time = distance / velocity
 
+        if not self.has_enough_state_of_charge(distance):
+            raise RuntimeError(f"{str(self.__class__.__name__)} {self._id} has been tried to move but has not enough state of charge.")
+
         yield self._env.timeout(time)
 
         self._update_positions(route_segment.destination.position)
+        self._update_state_of_charge(distance)
+
+    def has_enough_state_of_charge(self, distance):
+        """
+        Check if vehicle has enough SoC left for trip
+        :param distance: in meter
+        :return:
+        """
+        if self.energy_consumption * distance / 1000 >= self._current_state_of_charge:
+            return False
+        return True
+
+    def _update_state_of_charge(self, distance):
+        """
+        Update state of charge of vehicles based on driven distance.
+        SoC = SoC_old - EnergyConsumption (kWh/km) * km
+        :param distance: Distance driven
+        """
+        energy_consumed = self.energy_consumption * distance / 1000
+        self._current_state_of_charge -= energy_consumed
+
+        if self._current_state_of_charge < 0:
+            self._current_state_of_charge = 0.0
+
+        logging.debug(f'Current state of charge {round(self.current_state_of_charge, 2)}/{self.max_state_of_charge} ({round(self.current_state_of_charge/self.max_state_of_charge*100, 2)}%).',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
 
     def _update_positions(self, new_position: Position):
         # Update Vehicle Position

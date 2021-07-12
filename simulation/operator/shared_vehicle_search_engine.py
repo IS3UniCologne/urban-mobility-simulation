@@ -54,7 +54,8 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
             # Put together
             transportation_alternative = TransportationAlternative(car, route, price, duration, distance)
 
-            browser.add_transportation_alternative(transportation_alternative)
+            if car.has_enough_state_of_charge(distance):
+                browser.add_transportation_alternative(transportation_alternative)
 
         # Add all available scooter to alternative browser
         for scooter in scooters_in_area:
@@ -67,7 +68,8 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
             # Put together
             transportation_alternative = TransportationAlternative(scooter, route, price, duration, distance)
 
-            browser.add_transportation_alternative(transportation_alternative)
+            if scooter.has_enough_state_of_charge(distance):
+                browser.add_transportation_alternative(transportation_alternative)
 
         # Add all available kick scooter to alternative browser
         for kick_scooter in kick_scooters_in_area:
@@ -80,7 +82,8 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
             # Put together
             transportation_alternative = TransportationAlternative(kick_scooter, route, price, duration, distance)
 
-            browser.add_transportation_alternative(transportation_alternative)
+            if kick_scooter.has_enough_state_of_charge(distance):
+                browser.add_transportation_alternative(transportation_alternative)
 
         return browser
 
