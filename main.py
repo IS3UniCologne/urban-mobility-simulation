@@ -74,11 +74,9 @@ logger.setLevel(log_level)
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
 
-# Add Custom Filters
-# cf = SimulationContextFilter(filter_name='add_env', extra=env)
-# edf = ExtraDefaultFilter(filter_name = "add_default_value")
-# logger.addFilter(cf)
-# logger.addFilter(edf)
+# Add Custom Init Filters (which work without the ENV obj)
+cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
+logger.addFilter(cf_init)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
