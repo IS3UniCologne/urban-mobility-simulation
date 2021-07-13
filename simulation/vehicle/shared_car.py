@@ -8,7 +8,7 @@ class SharedCar(SharedVehicle):
     # Shared Care Counter
     shared_car_id = 0
 
-    def __init__(self, env: Environment, position, max_available_seats=4, max_state_of_charge=16.7, energy_consumption=0.152, velocity = 833.33):
+    def __init__(self, env: Environment, position, max_available_seats=4, max_state_of_charge=16.7, energy_consumption=0.152, velocity = 833.33, price_per_min = 0.26):
         """
 
         :param env:
@@ -19,9 +19,9 @@ class SharedCar(SharedVehicle):
         :param energy_consumption: 15.2 kWh/100km as per Smart EQ specification
         :param velocity:
         """
-        super(SharedCar, self).__init__(env, position, max_available_seats, max_state_of_charge, energy_consumption, velocity)
+        super(SharedCar, self).__init__(env, position, max_available_seats, max_state_of_charge, energy_consumption, velocity, price_per_min)
 
         # Increment Shared Car ID
         self.car_id = SharedCar.shared_car_id
-        self._price_per_minute = 0.26
+        self._price_per_minute = price_per_min
         SharedCar.shared_car_id += 1

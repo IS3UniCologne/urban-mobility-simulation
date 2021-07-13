@@ -72,6 +72,14 @@ def generate_mixed_fleet(env, fleet_config):
     # Get Column Identifier for current resolution (e.g., hex_id_7)
     hex_column = Configuration.instance().spatial_resolution_column
 
+    # Global Config File (values from config ini files)
+    config = Configuration.instance()
+
+    # Load Vehicle Configurations
+    c_config = config.get_vehicle_config("SHARED_CAR")
+    s_config = config.get_vehicle_config("SHARED_SCOOTER")
+    ks_config = config.get_vehicle_config("SHARED_KICK_SCOOTER")
+
     for index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
         hex_id = row[hex_column]
@@ -86,21 +94,27 @@ def generate_mixed_fleet(env, fleet_config):
         for current_car in range(car_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng)
-            car = SharedCar(env, pos)
+            car = SharedCar(env, pos,
+                            c_config.max_available_seats, c_config.max_state_of_charge,
+                            c_config.energy_consumption, c_config.velocity, c_config.price_per_min)
             fleet.add_shared_vehicle(car)
 
         # Add Scooter
         for current_scooter in range(scooter_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng)
-            scooter = SharedScooter(env, pos)
+            scooter = SharedScooter(env, pos,
+                            s_config.max_available_seats, s_config.max_state_of_charge,
+                            s_config.energy_consumption, s_config.velocity, s_config.price_per_min)
             fleet.add_shared_vehicle(scooter)
 
         # Add Kick Scooter
         for current_kick_scooter in range(kick_scooter_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng)
-            kick_scooter = SharedKickScooter(env, pos)
+            kick_scooter = SharedKickScooter(env, pos,
+                            ks_config.max_available_seats, ks_config.max_state_of_charge,
+                            ks_config.energy_consumption, ks_config.velocity, ks_config.price_per_min)
             fleet.add_shared_vehicle(kick_scooter)
 
         # Add Bikes
