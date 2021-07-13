@@ -1,7 +1,7 @@
 from pathlib import Path
 import pandas as pd
 
-from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.configuration import Configuration, VehicleConfig
 from simulation.operator.fleet_factory import generate_fleet_config, generate_mixed_fleet
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
@@ -53,6 +53,17 @@ env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 
 # Create Global Config File
 global_config = Configuration.init(spatial_res, temporal_res, daily_res)
+
+# Read Shared Vehicle Config and add to Global Config File
+for vehicle_type in ["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]:
+  price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
+  max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
+  energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
+  velocity = parser.getfloat(vehicle_type, "VELOCITY")
+  max_available_seats = parser.getint(vehicle_type, "MAX_AVAILABLE_SEATS")
+
+  vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats)
+  global_config.add_vehicle_config(vehicle_type, vc)
 
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
@@ -229,10 +240,9 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   print("Number of Vehicles to be charged: " + str(mixed_fleet.get_all_vehicles_below_soc_level(0.1)))
 
   print(DemandFactory.counter)
-  print(len(world._users))
 
 # TODO: Pass seed to sub modules otherwise they are always set to 42
-run_single_simulation(end_time = 60, n_cars = 1000, n_scooter = 0, n_kick_scooter = 0)
+run_single_simulation(end_time = 1440, n_cars = 0, n_scooter = 0, n_kick_scooter = 100)
 # run_single_simulation(end_time = 60, n_cars = 200, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 300, n_scooter = 0, n_kick_scooter = 0)
 # run_single_simulation(end_time = 60, n_cars = 400, n_scooter = 0, n_kick_scooter = 0)

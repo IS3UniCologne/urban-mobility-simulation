@@ -7,7 +7,7 @@ class SharedScooter(SharedVehicle):
     # Shared Care Counter
     shared_scooter_id = 0
 
-    def __init__(self, env: Environment, position, max_available_seats=4, max_state_of_charge = 4.8, energy_consumption = 0.01, velocity=500):
+    def __init__(self, env: Environment, position, max_available_seats=1, max_state_of_charge = 4.8, energy_consumption = 0.01, velocity=500, price_per_min = 0.23):
         """
 
         :param env:
@@ -17,11 +17,11 @@ class SharedScooter(SharedVehicle):
         :param energy_consumption: 0.048 kWh/km
         :param velocity:
         """
-        super(SharedScooter, self).__init__(env, position, max_available_seats, max_state_of_charge, energy_consumption, velocity)
+        super(SharedScooter, self).__init__(env, position, max_available_seats, max_state_of_charge, energy_consumption, velocity, price_per_min)
 
         # Increment Shared Car ID
         self.car_id = SharedScooter.shared_scooter_id
-        self._price_per_minute = 0.23
+        self._price_per_minute = price_per_min
 
         SharedScooter.shared_scooter_id += 1
 

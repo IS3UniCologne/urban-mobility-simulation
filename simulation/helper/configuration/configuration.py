@@ -49,6 +49,8 @@ class Configuration:
         self._temporal_resolution = TemporalBucket(temporal_resolution)
         self._daily_resolution = DailyResolution(daily_resolution)
 
+        self._vehicle_configs = {}
+
     @property
     def spatial_resolution(self):
         return self._spatial_resolution
@@ -68,3 +70,17 @@ class Configuration:
     @property
     def daily_resolution(self):
         return self._daily_resolution
+
+    def add_vehicle_config(self, vehicle_type_name, vehicle_config):
+        self._vehicle_configs[vehicle_type_name] = vehicle_config
+
+    def get_vehicle_config(self, vehicle_type_name):
+        return self._vehicle_configs[vehicle_type_name]
+
+class VehicleConfig:
+    def __init__(self, price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats):
+        self.price_per_min = price_per_min
+        self.max_state_of_charge = max_state_of_charge
+        self.energy_consumption = energy_consumption
+        self.velocity = velocity
+        self.max_available_seats = max_available_seats

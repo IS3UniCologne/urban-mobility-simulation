@@ -14,10 +14,10 @@ class SharedVehicleState(VehicleState, Enum):
 class SharedVehicle(Vehicle, ABC):
     shared_vehicle_id = 0
 
-    def __init__(self, env: Environment, position,  max_available_seats = 1, max_state_of_charge=1, energy_consumption = 0.01, velocity = 166.7):
+    def __init__(self, env: Environment, position,  max_available_seats = 1, max_state_of_charge=1, energy_consumption = 0.01, velocity = 166.7, price_per_min = 1):
         super(SharedVehicle, self).__init__(env, position, max_available_seats, max_available_seats, max_state_of_charge, energy_consumption, velocity)
         self._id = SharedVehicle.shared_vehicle_id
-        self._price_per_minute = None
+        self._price_per_minute = price_per_min
 
         # Vehicle Reservation
         self._reserved_for_user = None
