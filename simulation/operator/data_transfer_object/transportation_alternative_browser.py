@@ -13,3 +13,7 @@ class TransportationAlternativeBrowser:
     def transportation_alternatives(self):
         return self._transportation_alternatives
 
+    @transportation_alternatives.setter
+    def transportation_alternatives(self, transportation_alternatives):
+        self._transportation_alternatives = transportation_alternatives
+

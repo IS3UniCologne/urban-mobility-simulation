@@ -14,6 +14,11 @@ import simpy
 import logging
 
 from ..vehicle.interfaces.driver_interface import DriverInterface
+from ..vehicle.shared_car import SharedCar
+from ..vehicle.shared_kick_scooter import SharedKickScooter
+from ..vehicle.shared_scooter import SharedScooter
+from ..vehicle_choice_model.trip_characteristics import TripCharacteristics
+from ..vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
 
 
 class UserState(Enum):
@@ -34,7 +39,8 @@ class User(Agent, DriverInterface):
     user_id = 0
 
     def __init__(self, position, transport_task: TransportTask, transportation_search_service: SearchEngineInterface,
-                 payment_service: PaymentInterface, vehicle_assignment_service: VehicleAllocationEngineInterface, env: simpy.Environment):
+                 payment_service: PaymentInterface, vehicle_assignment_service: VehicleAllocationEngineInterface,
+                 vehicle_choice_behavior: VehicleChoiceBehaviorInterface, env: simpy.Environment):
         self._id = User.user_id  # User ID
         User.user_id += 1  # Increment User Id
 
@@ -48,6 +54,9 @@ class User(Agent, DriverInterface):
 
         # Simpy Environment
         self._env = env  # Simulation Environment
+
+        # Vehicle Choice Model
+        self._vehicle_choice_behavior = vehicle_choice_behavior
 
         # Events
         self._transportation_alternatives_received = self._env.event()
@@ -95,12 +104,21 @@ class User(Agent, DriverInterface):
                 yield self._env.process(self.withdraw_request())
                 break
                 
-            # Vehicle Found
+            # Vehicle Found and allocated?
             vehicle_allocation = yield self._env.process(self.allocate_vehicle(selected_transportation_alternative))
 
+            # If not allocated, retry.
             if not vehicle_allocation:
-                yield self._env.process(self.withdraw_request())
-                break
+                logging.debug(f" Vehicle allocation was not successful. Retrying with another vehicle.",
+                              extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+                # Reset Events (so far) and try again
+                self._transportation_alternatives_received = self._env.event()
+                self._transportation_alternatives_selected = self._env.event()
+                self._transportation_alternatives_not_found = self._env.event()
+                self._vehicle_allocated = self._env.event()
+
+                continue # retry again until vehicle supply is depleted
 
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
@@ -130,6 +148,36 @@ class User(Agent, DriverInterface):
         available_transportation_alternatives = self._transportation_search_service.search_for_transportation_alternatives(
             search_task)
 
+        # Vehicle Choice
+        distance = self._transport_task.origin >> self._transport_task.destination
+        tc = TripCharacteristics(distance)
+        viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
+
+        # TODO: We could move the walking distances to the config file, if needed.
+        # Filter Transportation Alternatives based on Mode Choice and Walking Distances
+        filtered_list = []
+        for alternative in available_transportation_alternatives.transportation_alternatives:
+            distance_to_vehicle = self.position >> alternative.vehicle.position
+            if alternative.vehicle.__class__.__name__ in viable_vehicle_modes:
+                if isinstance(alternative.vehicle, SharedCar) and distance_to_vehicle < 500: # See own paper
+                    filtered_list.append((distance_to_vehicle, alternative.price, alternative))
+                elif isinstance(alternative.vehicle, SharedKickScooter) and distance_to_vehicle < 200: # See Reck
+                    filtered_list.append((distance_to_vehicle, alternative.price, alternative))
+                elif isinstance(alternative.vehicle, SharedScooter) and distance_to_vehicle < 350: # See Nothing..
+                    filtered_list.append((distance_to_vehicle, alternative.price, alternative))
+
+        # Sort Vehicle List by Price and Vicinity (Customer is rational and prefers the cheapest mode
+        # and the closest vehicle, i.e., shortest walking distance)
+        # vehicle[1] price, vehicle[0] distance to vehicle
+        filtered_list.sort(key = lambda vehicle: (vehicle[1], vehicle[0]))
+
+        if filtered_list:
+            distance, price, filtered_list = zip(*filtered_list)
+            filtered_list = list(filtered_list)
+
+        # Only Consider Alternatives matching Customer needs
+        available_transportation_alternatives.transportation_alternatives = filtered_list
+
         # Trigger next event
         self._transportation_alternatives_received.succeed()
         logging.debug(f"Received transportation alternatives: {available_transportation_alternatives}.",
@@ -154,9 +202,10 @@ class User(Agent, DriverInterface):
         if len(available_transportation_alternatives.transportation_alternatives) == 0:
             # Trigger Missed Demand Event
             self._transportation_alternatives_not_found.succeed()
+
             return
 
-        # Select transportation alternative
+        # Select first transportation alternative (transportation preferences are already in place see search_for_alt method)
         selected_transportation_alternative = available_transportation_alternatives.transportation_alternatives[0]
 
         # Trigger next event

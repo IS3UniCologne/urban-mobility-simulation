@@ -3,13 +3,12 @@ import logging
 from simpy import Environment
 
 from simulation.agent import user
+from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.interface.vehicle_allocation_engine_interface import VehicleAllocationEngineInterface
-from simulation.operator.shared_vehicle_allocation_engine import SharedVehicleAllocationEngine
-from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
 from simulation.tasks.transport_task import TransportTask
 
 
@@ -18,11 +17,14 @@ class World:
     def __init__(self, env: Environment,
                  search_engine: SearchEngineInterface,
                  payment_engine: PaymentInterface,
-                 vehicle_assignment_engine: VehicleAllocationEngineInterface):
+                 vehicle_assignment_engine: VehicleAllocationEngineInterface,
+                 vehicle_choice_behavior: VehicleChoiceBehaviorInterface):
         self._env = env
         self._search_engine = search_engine # Allows users to search for vehicles
         self._payment_engine = payment_engine # Allows users to pay
         self._vehicle_assignment_engine = vehicle_assignment_engine # Allows vehicle allocations
+
+        self._vehicle_choice_behavior = vehicle_choice_behavior
 
         # Store all current users
         self._users = []
@@ -50,7 +52,8 @@ class World:
             # Generate Transportation Task
             task = TransportTask(origin_position, destination_position)
 
-            new_user = user.User(origin_position, task, self._search_engine, self._payment_engine, self._vehicle_assignment_engine, self._env)
+            new_user = user.User(origin_position, task, self._search_engine, self._payment_engine,
+                                  self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
 
             # Add user to user list
             # ToDo: not needed right now

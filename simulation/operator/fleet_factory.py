@@ -10,7 +10,7 @@ from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
 
-def generate_fleet_config(distribution, n_cars = 1000, n_scooter = 500, n_kick_scooter = 500, n_bikes = 0):
+def generate_fleet_config(distribution, n_cars = 1000, n_scooter = 500, n_kick_scooter = 500, n_bikes = 0, seed = 42):
 
     """
     Calculate vehicle distribution based on activity distribution per mode.
@@ -21,7 +21,7 @@ def generate_fleet_config(distribution, n_cars = 1000, n_scooter = 500, n_kick_s
     """
 
     # Random Number Generator
-    random = np.random.RandomState(42)
+    random = np.random.RandomState(seed)
 
     # Sample Supply Distribution for Cars
     cars_prob_arr = distribution["cars_prob"].to_numpy()
@@ -76,9 +76,9 @@ def generate_mixed_fleet(env, fleet_config):
     config = Configuration.instance()
 
     # Load Vehicle Configurations
-    c_config = config.get_vehicle_config("SHARED_CAR")
-    s_config = config.get_vehicle_config("SHARED_SCOOTER")
-    ks_config = config.get_vehicle_config("SHARED_KICK_SCOOTER")
+    c_config = config.get_vehicle_config("SharedCar")
+    s_config = config.get_vehicle_config("SharedScooter")
+    ks_config = config.get_vehicle_config("SharedKickScooter")
 
     for index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon

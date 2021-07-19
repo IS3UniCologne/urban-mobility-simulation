@@ -1,8 +1,10 @@
 from pathlib import Path
 import pandas as pd
 
-from simulation.helper.configuration.configuration import Configuration, VehicleConfig
+from simulation.helper.configuration.configuration import Configuration, VehicleConfig, ModeChoiceConfig
 from simulation.operator.fleet_factory import generate_fleet_config, generate_mixed_fleet
+from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import \
+  DistanceBasedSharedVehicleVehicleChoiceBehavior
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.world import World
@@ -55,7 +57,8 @@ env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 global_config = Configuration.init(spatial_res, temporal_res, daily_res)
 
 # Read Shared Vehicle Config and add to Global Config File
-for vehicle_type in ["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]:
+for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]):
+  vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter"]
   price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
   max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
   energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
@@ -63,7 +66,18 @@ for vehicle_type in ["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]:
   max_available_seats = parser.getint(vehicle_type, "MAX_AVAILABLE_SEATS")
 
   vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats)
-  global_config.add_vehicle_config(vehicle_type, vc)
+  global_config.add_vehicle_config(vehicle_type_classes[idx], vc)
+
+# Read Mode Choice Configuration
+mode_choice_model_path = parser.get("MODE_CHOICE_MODEL", "path_to_mode_choice_model")
+mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
+mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
+mode_choice_available_modes = parser.get("MODE_CHOICE_MODEL", "available_modes")
+mode_choice_available_modes = mode_choice_available_modes.split(',')
+
+mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary, mode_choice_available_modes, mode_choice_model_path)
+global_config.add_mode_choice_config(mc)
+
 
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
@@ -141,7 +155,7 @@ di = DemandImporter(spatial_resolution=global_config.spatial_resolution,
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 
-def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter = 0, n_kick_scooter = 0):
+def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter = 0, n_kick_scooter = 0, seed = 42, substitution = 0.1):
   # # # # # # # # # # # # # # # # # # # # # #
   #                                         #
   # Setup Simulation Environment.           #
@@ -163,7 +177,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   User.user_id = 0
   DemandFactory.counter = 0
 
-  GeodesicEnvironment.getInstance().reset_random_generator()
+  GeodesicEnvironment.getInstance().reset_random_generator(seed)
 
   # Inject Simulation Environment to Logger (such that we can log the env time)
   cf = SimulationContextFilter(filter_name='add_env', extra=env)
@@ -182,15 +196,23 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   payment_engine = search_engine
   vehicle_assignment_engine = SharedVehicleAllocationEngine(env)
 
+  # Vehicle Choice Model
+  if mode_choice_strategy == "substitution":
+    vehicle_choice_model = DistanceBasedSharedVehicleVehicleChoiceBehavior(mode_choice_model_path,
+                                                                           substitution,
+                                                                           mode_choice_available_modes)
+  else:
+    raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
+
   # World
-  world = World(env, search_engine, search_engine, vehicle_assignment_engine)
+  world = World(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model)
 
   # # # # # # # # # # # # # # # # # # # # # #
   #                                         #
   # Spawn Demand Processes.                 #
   #                                         #
   # # # # # # # # # # # # # # # # # # # # # #
-  demand_factory = DemandFactory(env, demand_profile, di, world)
+  demand_factory = DemandFactory(env, demand_profile, di, world, seed)
 
   env.process(demand_factory.generate_demand())
 
@@ -242,7 +264,16 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   print(DemandFactory.counter)
 
 # TODO: Pass seed to sub modules otherwise they are always set to 42
-run_single_simulation(end_time = 1440, n_cars = 0, n_scooter = 0, n_kick_scooter = 100)
+run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.0)
+run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
+run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
+run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)
+run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.3)
+
+# run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 1025)
+# run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 1)
+# run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 123)
+
 # run_single_simulation(end_time = 60, n_cars = 200, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 300, n_scooter = 0, n_kick_scooter = 0)
 # run_single_simulation(end_time = 60, n_cars = 400, n_scooter = 0, n_kick_scooter = 0)

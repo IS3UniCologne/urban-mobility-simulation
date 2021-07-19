@@ -91,6 +91,7 @@ dependencies:
   - shapely=1.7.1
   - simpy=4.0.1
   - six=1.16.0
+  - statsmodels=0.9.0
   - sqlite=3.35.4
   - tiledb=2.2.9
   - tk=8.6.10
