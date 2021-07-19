@@ -23,8 +23,7 @@ class GeodesicEnvironment(Environment):
         else:
             GeodesicEnvironment.__instance = self
             super(GeodesicEnvironment, self).__init__()
-            self._random = numpy.random.RandomState(42)
-
+            self._random = numpy.random.RandomState(42) # use fnc reset_rnd_gen to change seed
 
     def getLayer(self, layer_name):
         """

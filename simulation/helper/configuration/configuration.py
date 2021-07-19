@@ -19,6 +19,11 @@ class SpatialResolution(Enum):
     HEX_8 = 8
     HEX_9 = 9
 
+class ModeChoiceStrategy(Enum):
+    RANDOM = 0
+    SUBSTITUTION_AWARE = 1
+    NO_SUBSTITUTION = 2
+
 class Configuration:
     # There is only one instance of this class.
     __instance = None
@@ -51,6 +56,8 @@ class Configuration:
 
         self._vehicle_configs = {}
 
+        self._mode_choice_config = []
+
     @property
     def spatial_resolution(self):
         return self._spatial_resolution
@@ -77,6 +84,12 @@ class Configuration:
     def get_vehicle_config(self, vehicle_type_name):
         return self._vehicle_configs[vehicle_type_name]
 
+    def add_mode_choice_config(self, mode_choice_config):
+        self._mode_choice_config = mode_choice_config
+
+    def get_mode_choice_config(self):
+        return self._mode_choice_config
+
 class VehicleConfig:
     def __init__(self, price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats):
         self.price_per_min = price_per_min
@@ -84,3 +97,16 @@ class VehicleConfig:
         self.energy_consumption = energy_consumption
         self.velocity = velocity
         self.max_available_seats = max_available_seats
+
+class ModeChoiceConfig:
+    def __init__(self, mode_choice_strategy, substitution_boundary, available_modes, path_to_model):
+        if mode_choice_strategy == "random":
+            self.mode_choice_strategy = ModeChoiceStrategy.RANDOM
+        elif mode_choice_strategy == "substitution":
+            self.mode_choice_strategy = ModeChoiceStrategy.SUBSTITUTION_AWARE
+        elif mode_choice_strategy == "no_sub":
+            self.mode_choice_strategy = ModeChoiceStrategy.NO_SUBSTITUTION
+
+        self.substitution_boundary  = substitution_boundary
+        self.available_modes = available_modes
+        self.path_to_model = path_to_model
