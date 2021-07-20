@@ -3,6 +3,7 @@ import logging
 from simpy import Environment
 
 from simulation.agent import user
+from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
@@ -46,11 +47,16 @@ class World:
             origin_lat, origin_lng = geo_env.get_random_position(origin)
             destination_lat, destination_lng = geo_env.get_random_position(destination)
 
-            origin_position = GeodesicPosition(origin_lat, origin_lng)  # (Lat, Lng)
-            destination_position = GeodesicPosition(destination_lat, destination_lng)  # (Lat, Lng)
+            origin_position = GeodesicPosition(origin_lat, origin_lng, origin)  # (Lat, Lng)
+            destination_position = GeodesicPosition(destination_lat, destination_lng, destination)  # (Lat, Lng)
+
+            # Vehicle Choice
+            distance = origin_position >> destination_position
+            tc = TripCharacteristics(distance)
+            viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
             # Generate Transportation Task
-            task = TransportTask(origin_position, destination_position)
+            task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
 
             new_user = user.User(origin_position, task, self._search_engine, self._payment_engine,
                                   self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)

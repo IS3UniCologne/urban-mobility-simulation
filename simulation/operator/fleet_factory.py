@@ -93,7 +93,7 @@ def generate_mixed_fleet(env, fleet_config):
         # Add Cars
         for current_car in range(car_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             car = SharedCar(env, pos,
                             c_config.max_available_seats, c_config.max_state_of_charge,
                             c_config.energy_consumption, c_config.velocity, c_config.price_per_min)
@@ -102,7 +102,7 @@ def generate_mixed_fleet(env, fleet_config):
         # Add Scooter
         for current_scooter in range(scooter_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             scooter = SharedScooter(env, pos,
                             s_config.max_available_seats, s_config.max_state_of_charge,
                             s_config.energy_consumption, s_config.velocity, s_config.price_per_min)
@@ -111,7 +111,7 @@ def generate_mixed_fleet(env, fleet_config):
         # Add Kick Scooter
         for current_kick_scooter in range(kick_scooter_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             kick_scooter = SharedKickScooter(env, pos,
                             ks_config.max_available_seats, ks_config.max_state_of_charge,
                             ks_config.energy_consumption, ks_config.velocity, ks_config.price_per_min)
