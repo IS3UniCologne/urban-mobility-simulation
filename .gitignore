@@ -129,3 +129,7 @@ dmypy.json
 .pyre/
 
 .DS_Store
+
+data/demand/weekday_time_bucket_4h_h3_start_7.csv
+
+data/supply/vehicle_supply_distribution_hex_7.csv
