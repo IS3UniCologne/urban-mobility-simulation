@@ -26,15 +26,15 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         """
         browser = TransportationAlternativeBrowser()
 
-        hexagon_origin, _ = vehicle_search_task.agent_position.get_hexagon()
+        hexagon_origin = vehicle_search_task.agent_position.get_default_hexagon()
 
         cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = self.fleet.get_available_vehicles(hexagon_origin)
 
         origin = vehicle_search_task.transport_task.origin
         destination = vehicle_search_task.transport_task.destination
 
-        o_hex,_ = origin.get_hexagon()
-        d_hex,_ = destination.get_hexagon()
+        o_hex = origin.get_default_hexagon()
+        d_hex = destination.get_default_hexagon()
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
@@ -87,15 +87,44 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
 
         return browser
 
-    def pay_for_fulfilled_transportation_task(self, user, selected_transportation_alternative: TransportationAlternative):
+    def pay_for_fulfilled_transportation_task(self, user, transportation_task: TransportTask, selected_transportation_alternative: TransportationAlternative):
         payment = selected_transportation_alternative.price
         self.increase_total_revenue(payment)
+
+        # Add Transaction to Log
+        self._transactions.append(
+            {"origin": selected_transportation_alternative.route.origin.get_default_hexagon(),
+             "destination": selected_transportation_alternative.route.destination.get_default_hexagon(),
+             "time_start": transportation_task.time,
+             "time_end": self._env.now,
+             "price":selected_transportation_alternative.price,
+             "distance": selected_transportation_alternative.distance,
+             "duration":selected_transportation_alternative.duration,
+             "viable_vehicle_modes": transportation_task.viable_vehicle_modes,
+             "selected_vehicle_mode":selected_transportation_alternative.vehicle.__class__.__name__,
+             "state":"Fulfilled"}
+        )
 
         logging.info(f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
                       extra={"clazz": self.__class__.__name__, "oid": ""})
 
-    def withdraw_transportation_task(self, user, transportation_task : TransportTask):
+    def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         self.increase_total_missed_trips()
+
+        # Add Transaction to Log
+        self._transactions.append(
+            {"origin": transportation_task.origin.get_default_hexagon(),
+             "destination": transportation_task.destination.get_default_hexagon(),
+             "time_start": self._env.now,
+             "time_end": self._env.now,
+             "price": 0.0,
+             "distance": transportation_task.origin >> transportation_task.destination,
+             "duration": 0.0,
+             "viable_vehicle_modes": transportation_task.viable_vehicle_modes,
+             "selected_vehicle_mode":"None",
+             "state":"Missed"}
+        )
+
         logging.info(f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
                       extra={"clazz": self.__class__.__name__, "oid": ""})
 

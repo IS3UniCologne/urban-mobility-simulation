@@ -17,6 +17,15 @@ class GeodesicPosition(Position):
 
         self._geometry = Point(self._lng, self._lat)
 
+    def __init__(self, latitude, longitude, default_hexagon) -> object:
+        super(GeodesicPosition, self).__init__()
+        self._lat = latitude
+        self._lng = longitude
+
+        self._default_hexagon = default_hexagon
+
+        self._geometry = Point(self._lng, self._lat)
+
     def getExactLocation(self):
         return (self._lat, self._lng)
 
@@ -35,6 +44,13 @@ class GeodesicPosition(Position):
         :return: Haversine distance in meter.
         """
         return haversine((self._lat, self._lng), (other._lat, other._lng))*1000 # in meter
+
+    def get_default_hexagon(self):
+        """
+        Return the hexagon ID from which this point was created (to avoid recomputation)
+        :return:
+        """
+        return self._default_hexagon
 
     def get_hexagon(self, resolution = 0):
         """
