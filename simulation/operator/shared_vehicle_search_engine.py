@@ -100,9 +100,8 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
              "price":selected_transportation_alternative.price,
              "distance": selected_transportation_alternative.distance,
              "duration":selected_transportation_alternative.duration,
-             "viable_vehicle_modes": transportation_task.viable_vehicle_modes,
              "selected_vehicle_mode":selected_transportation_alternative.vehicle.__class__.__name__,
-             "state":"Fulfilled"}
+             "state":"Fulfilled", **transportation_task.viable_vehicle_modes}
         )
 
         logging.info(f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
@@ -120,9 +119,8 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
              "price": 0.0,
              "distance": transportation_task.origin >> transportation_task.destination,
              "duration": 0.0,
-             "viable_vehicle_modes": transportation_task.viable_vehicle_modes,
              "selected_vehicle_mode":"None",
-             "state":"Missed"}
+             "state":"Missed", **transportation_task.viable_vehicle_modes}
         )
 
         logging.info(f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",

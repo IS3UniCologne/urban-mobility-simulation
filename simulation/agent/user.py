@@ -158,7 +158,7 @@ class User(Agent, DriverInterface):
         filtered_list = []
         for alternative in available_transportation_alternatives.transportation_alternatives:
             distance_to_vehicle = self.position >> alternative.vehicle.position
-            if alternative.vehicle.__class__.__name__ in self._transport_task.viable_vehicle_modes:
+            if self._transport_task.viable_vehicle_modes[alternative.vehicle.__class__.__name__]:
                 if isinstance(alternative.vehicle, SharedCar) and distance_to_vehicle < 500: # See own paper
                     filtered_list.append((distance_to_vehicle, alternative.price, alternative))
                 elif isinstance(alternative.vehicle, SharedKickScooter) and distance_to_vehicle < 200: # See Reck

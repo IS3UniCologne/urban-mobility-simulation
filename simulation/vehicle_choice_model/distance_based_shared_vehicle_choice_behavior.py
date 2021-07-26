@@ -29,9 +29,10 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
         mode_choices = [1 if x >= lower_bound else 0 for x in choice_probabilities]
 
         # Return vehicles which are considered as viable means of transport
-        result = []
+        result = {}
         for idx, mode_choice in enumerate(mode_choices):
             if mode_choices[idx]:
-                result.append(self._available_vehicles[idx])
-
+                result[self._available_vehicles[idx]] = 1
+            else:
+                result[self._available_vehicles[idx]] = 0
         return result
