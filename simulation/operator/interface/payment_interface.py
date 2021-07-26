@@ -41,3 +41,23 @@ class PaymentInterface(ABC):
 
     def increase_total_missed_trips(self):
         self._total_missed_trips += 1
+
+    def get_transactions(self):
+        """
+        Return all transactions (fulfilled and missed) as a DataFrame
+
+        DataFrame has the following columns
+        "origin": Origin of Request
+        "destination": Destination of Request
+        "time_start": Trip Request Start Time
+        "time_end": Trip Request End Time
+        "price": Trip Price (0.0 if missed)
+        "distance": (Expected) distance,
+        "duration": Duration in minutes, 0.0 if missed
+        "selected_vehicle_mode": Selected Vehicle Mode
+        "state": Missed or Fulfilled
+        "viable_vehicle_modes": List of viable modes for this trip (set 1 and 0 columnwise per Vehicle)
+
+        :return: DataFrame
+        """
+        return pd.DataFrame(self._transactions)
