@@ -128,3 +128,74 @@ class MixedSharedVehicleFleet(FleetInterface):
 
     def count_total(self):
         return self.count_cars()+self.count_bikes()+self.count_scooters()+self.count_kick_scooters()
+
+    def calc_supply_per_region(self):
+        """
+        Return a list of number of vehicles in each region
+        :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
+                e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
+        """
+        available_vehicles = ["SharedKickScooter", "SharedScooter", "SharedCar"]
+        values = [0]*len(available_vehicles)
+
+        # Set counter to 0 for all vehicle types
+        vehicle_dict = dict(zip(available_vehicles, values))
+
+        supply = {}
+
+        for mode in available_vehicles:
+            if mode == "SharedKickScooter":
+                vehicle_list = self._kick_scooters
+            elif mode == "SharedScooter":
+                vehicle_list = self._scooters
+            elif mode == "SharedCar":
+                vehicle_list = self._cars
+            else:
+                raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')
+
+            for vehicle in vehicle_list:
+                hex_id = vehicle.position.get_default_hexagon()
+
+                if hex_id not in supply:
+                    supply[hex_id] = dict(zip(available_vehicles, values))
+
+                supply[hex_id][mode] += 1
+
+        return supply
+
+    def calc_vehicles_to_be_charged_per_region(self, state_of_charge_threshold):
+        """
+        Return a list of number of vehicles that need to be charged in each area.
+
+        :param state_of_charge_threshold:
+        :return: Dictionary, where key = hex_id and value is a dictionary counting the vehicles to be charged
+                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
+        """
+        available_vehicles = ["SharedKickScooter", "SharedScooter", "SharedCar"]
+        values = [0]*len(available_vehicles)
+
+        # Set counter to 0 for all vehicle types
+        vehicle_dict = dict(zip(available_vehicles, values))
+
+        low_soc_supply = {}
+
+        for mode in available_vehicles:
+            if mode == "SharedKickScooter":
+                vehicle_list = self._kick_scooters
+            elif mode == "SharedScooter":
+                vehicle_list = self._scooters
+            elif mode == "SharedCar":
+                vehicle_list = self._cars
+            else:
+                raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')
+
+            for vehicle in vehicle_list:
+                hex_id = vehicle.position.get_default_hexagon()
+
+                if hex_id not in low_soc_supply:
+                    low_soc_supply[hex_id] = dict(zip(available_vehicles, values))
+
+                if vehicle.current_state_of_charge < state_of_charge_threshold:
+                    low_soc_supply[hex_id][mode] += 1
+
+        return low_soc_supply

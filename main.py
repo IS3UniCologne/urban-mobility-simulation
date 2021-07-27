@@ -3,6 +3,7 @@ import pandas as pd
 
 from simulation.helper.configuration.configuration import Configuration, VehicleConfig, ModeChoiceConfig
 from simulation.operator.fleet_factory import generate_fleet_config, generate_mixed_fleet
+from simulation.operator.relocation_scheduler import RelocationScheduler
 from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import \
   DistanceBasedSharedVehicleVehicleChoiceBehavior
 from simulation.world.demand.demand_factory import DemandFactory
@@ -74,6 +75,11 @@ mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
 mode_choice_available_modes = parser.get("MODE_CHOICE_MODEL", "available_modes")
 mode_choice_available_modes = mode_choice_available_modes.split(',')
+
+# Output
+store_results = parser.getboolean("OUTPUT", "persist_results")
+output_folder = parser.get("OUTPUT", "output_folder")
+transaction_file   = parser.get("OUTPUT", "transaction_file")
 
 mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary, mode_choice_available_modes, mode_choice_model_path)
 global_config.add_mode_choice_config(mc)
@@ -226,20 +232,6 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   fleet_config = generate_fleet_config(supply_prob, n_cars = n_cars, n_scooter = n_scooter, n_kick_scooter= n_kick_scooter, n_bikes=0)
   mixed_fleet = generate_mixed_fleet(env, fleet_config)
 
-  # TODO: [Testing]
-  # Artifically add vehicle (see world add new user)
-  # Access to underlying geodesic environment
-  # geo_env = GeodesicEnvironment.getInstance()
-  # from simulation.environment.geodesic_position import GeodesicPosition
-  # from simulation.vehicle.shared_car import SharedCar
-  # rdm_lat, rdm_lng = geo_env.get_random_position('871f1d498ffffff')
-  #
-  # pos = GeodesicPosition(rdm_lat, rdm_lng)
-  # car = SharedCar(env, pos)
-  # car_2 = SharedCar(env, pos)
-  # mixed_fleet.add_shared_vehicle(car)
-  # mixed_fleet.add_shared_vehicle(car_2)
-
   # # # # # # # # # # # # # # # # # # # # # #
   #                                         #
   # Inject Modules.                         #
@@ -261,13 +253,20 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
 
   print("Number of Vehicles to be charged: " + str(mixed_fleet.get_all_vehicles_below_soc_level(0.1)))
 
+  transactions = payment_engine.get_transactions()
+
+  if store_results:
+    transactions.to_csv(Path(output_folder, transaction_file), index = False)
+
+  rs = RelocationScheduler()
+
+  relocation_plan = rs.compute_relocations(mixed_fleet, transactions)
+
+  if store_results:
+    relocation_plan.to_csv(Path(output_folder, "relocation_plan.csv"), index = False)
+
   print(DemandFactory.counter)
 
-  res = pd.DataFrame(payment_engine._transactions)
-  # res = res.groupby(["origin", "state"]).agg({"destination":"count"})
-  res.to_csv("test.csv")
-
-# TODO: Pass seed to sub modules otherwise they are always set to 42
 run_single_simulation(end_time = 1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
