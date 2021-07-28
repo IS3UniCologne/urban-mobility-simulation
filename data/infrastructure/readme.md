@@ -1,0 +1,1 @@
+Store data related to infrastructure elements (e.g., distance matrix)
