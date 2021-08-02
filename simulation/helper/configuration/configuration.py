@@ -54,6 +54,11 @@ class Configuration:
         self._temporal_resolution = TemporalBucket(temporal_resolution)
         self._daily_resolution = DailyResolution(daily_resolution)
 
+        self._store_results = False
+        self._output_path   = ''
+        self._transaction_file = ''
+        self._fleet_state_file = ''
+
         self._vehicle_configs = {}
 
         self._mode_choice_config = []
@@ -78,6 +83,22 @@ class Configuration:
     def daily_resolution(self):
         return self._daily_resolution
 
+    @property
+    def store_results(self):
+        return self._store_results
+
+    @property
+    def output_path(self):
+        return self._output_path
+
+    @property
+    def transaction_file(self):
+        return self._transaction_file
+
+    @property
+    def fleet_state_file(self):
+        return self._fleet_state_file
+
     def add_vehicle_config(self, vehicle_type_name, vehicle_config):
         self._vehicle_configs[vehicle_type_name] = vehicle_config
 
@@ -89,6 +110,18 @@ class Configuration:
 
     def get_mode_choice_config(self):
         return self._mode_choice_config
+
+    def set_store_results(self, store_results):
+        self._store_results = store_results
+
+    def set_output_path(self, path):
+        self._output_path = path
+
+    def set_transaction_file(self, file):
+        self._transaction_file = file
+
+    def set_fleet_state_file(self, file):
+        self._fleet_state_file = file
 
 class VehicleConfig:
     def __init__(self, price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats):
