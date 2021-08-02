@@ -82,6 +82,12 @@ mode_choice_available_modes = mode_choice_available_modes.split(',')
 store_results = parser.getboolean("OUTPUT", "persist_results")
 output_folder = parser.get("OUTPUT", "output_folder")
 transaction_file   = parser.get("OUTPUT", "transaction_file")
+fleet_state_file   = parser.get("OUTPUT", "fleet_state_file")
+
+global_config.set_store_results(store_results)
+global_config.set_output_path(output_folder)
+global_config.set_transaction_file(transaction_file)
+global_config.set_fleet_state_file(fleet_state_file)
 
 mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary, mode_choice_available_modes, mode_choice_model_path)
 global_config.add_mode_choice_config(mc)
@@ -270,76 +276,9 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   if store_results:
     transactions.to_csv(Path(output_folder, transaction_file), index = False)
 
-  rs = RelocationScheduler()
-
-  relocation_plan = rs.compute_relocations(mixed_fleet, transactions)
-
-  if store_results:
-    relocation_plan.to_csv(Path(output_folder, "relocation_plan.csv"), index = False)
-
-  # TODO: Generalize based on modes_list = ["SharedKickScooter", "SharedScooter", "SharedCar"]
-  #       for mode in modes_list: ...
   # TODO: Vehicle with Low State Of Charge
-  
-  # Final Relocation List (origin, destination, number_of_vehicles_to_be_relocated)
-  relocation_list = []
-
-  # Already Relocated Vehicles
-  hexagons = list(relocation_plan["hex_id"].unique())
-  already_relocated = dict(zip(hexagons, [0]*len(hexagons)))
-
-  for index, next_hex in relocation_plan[relocation_plan["Residual_Supply_SharedCar"]<0].iterrows():
-    """
-      Iterate through each hexagon where we expect a negative supply (i.e., demand and supply don't match)
-    """
-    next_hex_id = next_hex["hex_id"]
-    residual_supply = next_hex["Residual_Supply_SharedCar"]
-
-    # Already Relocated Vehicles into this Hexagon
-    relocated_vehicles = 0
-
-    # Get Distance To All Other Regions
-    sub_distance_matrix = distance_matrix[[next_hex_id]].reset_index()
-    sub_distance_matrix.rename(columns={"index":"hex_id"}, inplace=True)
-
-    # Merge Sub Distance Matrix of selected Region with Relocation Plan
-    # We obtain for the current hexagon a list of all hexagons along with their current vehicle supply
-    distance_to_other_hexagons = sub_distance_matrix.merge(relocation_plan, how = "inner", on = "hex_id")
-
-    # Sort by distance (in meter) (i.e., prefer neighbours first)
-    distance_to_other_hexagons = distance_to_other_hexagons.sort_values(by=[next_hex_id])
-
-    # Only consider regions having additional supply
-    distance_to_other_hexagons = distance_to_other_hexagons[distance_to_other_hexagons["Residual_Supply_SharedCar"]>0]
-    distance_to_other_hexagons["Relocate_SharedCar"] = 0
-
-    # Calculate for the current hexagon the number of vehicles to be relocated from other regions.
-    idx = []
-    local_relocation_schedule = []
-
-    for index, row in distance_to_other_hexagons.iterrows():
-      # Relocatable Vehicles = Additional Vehicles - Already (Planned) for Relocation Vehicles
-      relocatable_vehicles =  row["Residual_Supply_SharedCar"] - already_relocated[row["hex_id"]]
-      # We relocate only either the availalbe number of relocatable vehicles or missing number of vehicles
-      relocate             =  min(relocatable_vehicles, abs(residual_supply)-relocated_vehicles)
-
-      # Increment relocated vehicles counter
-      relocated_vehicles += relocate
-
-      # How many vehicles are still left in that hexagon
-      # Important for the determination of vehicle relocations for remaining regions
-      already_relocated[row["hex_id"]] += relocate
-
-      # We use lists here and append them later to the DataFrame
-      idx.append(index)
-      local_relocation_schedule.append(relocate)
-
-    # Append No. of Vehicles to be relocated
-    distance_to_other_hexagons["Relocate_SharedCar"] = pd.DataFrame(local_relocation_schedule, index = idx)
-
-    for index, row in distance_to_other_hexagons[distance_to_other_hexagons["Relocate_SharedCar"]>0].iterrows():
-      # List of (Origin, Destination, No. Vehicles to Relocate, Distance from Origin to Distance)
-      relocation_list.append((row["hex_id"], next_hex_id, row["Relocate_SharedCar"], row[next_hex_id]))
+  rs = RelocationScheduler(distance_matrix, mixed_fleet, ["SharedKickScooter", "SharedScooter", "SharedCar"])
+  res = rs.generate_relocation_plan(transactions, store_results)
 
   print(DemandFactory.counter)
 
