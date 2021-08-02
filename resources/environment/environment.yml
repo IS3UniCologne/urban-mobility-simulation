@@ -3,7 +3,10 @@ channels:
   - conda-forge
 dependencies:
   - geopandas
+  - h3-py
   - haversine
+  - notebook
+  - seaborn
   - shapely
   - simpy>=4.0.1
   - statsmodels
