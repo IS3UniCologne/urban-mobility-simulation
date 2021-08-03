@@ -114,6 +114,21 @@ class MixedSharedVehicleFleet(FleetInterface):
 
         return len(below_soc_level_vehicles)
 
+    def get_all_vehicles_below_soc_level_in_region(self, state_of_charge_threshold, region):
+        """
+        Return all vehicles that need to be refueled/recharged in a region
+        :param state_of_charge_threshold: between 0 and 1
+        :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
+        """
+        below_soc_level_vehicles = []
+        cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = self.get_all_vehicles(region)
+
+        for vehicle in [*cars_in_area, *scooters_in_area, *kick_scooters_in_area, *bikes_in_area]:
+            if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
+                below_soc_level_vehicles.append(vehicle)
+
+        return below_soc_level_vehicles
+
     def count_scooters(self):
         return len(self._scooters)
 
