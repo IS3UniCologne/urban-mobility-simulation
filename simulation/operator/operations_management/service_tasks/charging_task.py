@@ -1,3 +1,5 @@
+from simpy import Environment
+
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.infrastructure.network.edge import Edge
@@ -8,8 +10,11 @@ from simulation.vehicle.vehicle import VehicleState
 
 class ChargingTask(ServiceTask):
 
-    def __init__(self, origin, destination, number_of_vehicles_to_charge, vehicle_mode,
+    def __init__(self, env: Environment, origin, destination, number_of_vehicles_to_charge, vehicle_mode,
                  distance_to_fleet_base, vehicle_fleet, state_of_charge_threshold):
+
+        super(ChargingTask, self).__init__(env)
+
         self._origin = origin
         self._destination = destination
         self._number_of_vehicles_to_charge = number_of_vehicles_to_charge
@@ -19,7 +24,7 @@ class ChargingTask(ServiceTask):
         self._vehicle_fleet = vehicle_fleet
         self._state_of_charge_threshold = state_of_charge_threshold
 
-    def execute(self, simpy_env, *args):
+    def execute(self, *args):
         """
             Execute charging tasks
         :param simpy_env: SimPy Environment
@@ -50,12 +55,21 @@ class ChargingTask(ServiceTask):
             relocation_route = Edge(distance, Vertex(vehicle.position), Vertex(fleet_base_position))
 
             # First relocate vehicle to base
-            yield simpy_env.process(vehicle.relocate(relocation_route, 5))
+            yield self._env.process(vehicle.relocate(relocation_route, 5))
 
             # Plugin Vehicle to Charging Station
             vehicle.plug_to_charging_station()
             # Charge Vehicle
-            yield simpy_env.process(vehicle.charge(5))
+            yield self._env.process(vehicle.charge(5))
 
             # Unplug Vehicle from Charging Station
             vehicle.unplug_from_charging_station()
+
+        # Notify all
+        self._task_finished.succeed()
+
+    def __str__(self):
+        return f"Charging Task for {self._number_of_vehicles_to_charge} {self._vehicle_mode} from {self._origin} to {self._destination} (distance = {self._distance_to_fleet_base})"
+
+    def __repr__(self):
+        return self.__str__()

@@ -210,7 +210,7 @@ class MixedSharedVehicleFleet(FleetInterface):
                 if hex_id not in low_soc_supply:
                     low_soc_supply[hex_id] = dict(zip(available_vehicles, values))
 
-                if vehicle.current_state_of_charge < state_of_charge_threshold:
+                if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
                     low_soc_supply[hex_id][mode] += 1
 
         return low_soc_supply

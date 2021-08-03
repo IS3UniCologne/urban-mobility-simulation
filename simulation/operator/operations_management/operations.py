@@ -3,8 +3,8 @@ from collections import deque
 
 from simulation.operator.operations_management.service_tasks.charging_task import ChargingTask
 from simulation.operator.operations_management.service_tasks.multi_service_task import MultiServiceTask
-from simulation.operator.operations_management.service_worker import ServiceWorker, ServiceWorkerState
 
+import logging
 
 class Operations:
 
@@ -39,18 +39,19 @@ class Operations:
 
         self._state_of_charge_threshold = state_of_charge_threshold
 
-        # Init Service Workers
-        self._service_workers = []
-        self.add_service_workers(no_service_workers)
+        # Task List
+        self._scheduled_tasks = deque()
 
-    def add_service_workers(self, number_of_service_workers):
-        for i in range(number_of_service_workers):
-            self._service_workers.append(ServiceWorker(self._env))
+        # Events
+        self._scheduled_tasks_updated = env.event()
 
     @property
-    def free_service_workers(self):
-        free_service_workers = filter(lambda service_worker: service_worker.state == ServiceWorkerState.FREE, self._service_workers)
-        return list(free_service_workers)
+    def scheduled_tasks(self):
+        return self._scheduled_tasks
+
+    @property
+    def scheduled_tasks_updated(self):
+        return self._scheduled_tasks_updated
 
     def run_operations(self):
         while True:
@@ -63,39 +64,56 @@ class Operations:
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
             charging_plans, used_capacity = self._relocation_scheduler.generate_charging_plan(transactions)
 
-            # Generate Charging Tasks from Chargings Plans
-            charging_tasks = deque()
+            # We track the charging events
+            charging_events = []
 
             for mode in self._available_modes:
                 charging_plans_for_current_mode = charging_plans[mode]
 
                 for charging_plan in charging_plans_for_current_mode:
                     if len(charging_plan) > 1:
-                        multi_service_task = MultiServiceTask()
+                        multi_service_task = MultiServiceTask(self._env)
                         # Pooled Task
                         for task in charging_plan:
                             origin, destination, no_vehicle_to_charge, distance_to_base = task
 
-                            charging_task = ChargingTask(origin, destination, no_vehicle_to_charge, mode, distance_to_base,
+                            charging_task = ChargingTask(self._env, origin, destination, no_vehicle_to_charge, mode, distance_to_base,
                                          self._vehicle_fleet, self._state_of_charge_threshold)
 
                             multi_service_task.append_task(charging_task)
 
-                        charging_tasks.append(multi_service_task)
+                        # Schedule to Queue
+                        self._scheduled_tasks.append(multi_service_task)
+
+                        # Remember event for multi service tasks
+                        charging_events.append(multi_service_task.task_finished)
                     else:
                         # Single Task
                         origin, destination, no_vehicle_to_charge, distance_to_base = charging_plan[0]
 
-                        charging_task = ChargingTask(origin, destination, no_vehicle_to_charge, mode, distance_to_base,
+                        charging_task = ChargingTask(self._env, origin, destination, no_vehicle_to_charge, mode, distance_to_base,
                                                      self._vehicle_fleet, self._state_of_charge_threshold)
-                        charging_tasks.append(charging_task)
 
-            # Assign Service Workers to Charging Tasks
-            for service_worker in self.free_service_workers:
-                if len(charging_tasks)> 0:
-                    next_charging_task = charging_tasks.popleft()
-                    self._env.process(service_worker.execute_task(next_charging_task))
+                        # Schedule to Queue
+                        self._scheduled_tasks.append(charging_task)
 
+                        # Remember event for multi service tasks
+                        charging_events.append(charging_task.task_finished)
+
+            logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated.",
+                extra={"clazz": self.__class__.__name__, "oid": ""})
+
+            # Notify listeners
+            self._scheduled_tasks_updated.succeed()
+            self._scheduled_tasks_updated = self._env.event()
+
+            # Wait until all charging events are processed
+            yield self._env.all_of(charging_events)
+
+            logging.info(f"All Charging Tasks have been fulfilled. Re-Generating Relocation Plan.",
+                extra={"clazz": self.__class__.__name__, "oid": ""})
+
+            print("Okay - I waited to finish all Charging tasks")
             # Use Remaining Service Workers for Relocation Tasks
 
             # After Charging Tasks are done, use service workers for remaining relocation tasks
