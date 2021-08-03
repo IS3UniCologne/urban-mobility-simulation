@@ -14,9 +14,11 @@ import simpy
 import logging
 
 from ..vehicle.interfaces.driver_interface import DriverInterface
+from ..vehicle.interfaces.passenger_interface import PassengerInterface
 from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
+from ..vehicle.public_transit_bus import Bus
 from ..vehicle_choice_model.trip_characteristics import TripCharacteristics
 from ..vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
 
@@ -362,3 +364,38 @@ class User(Agent, DriverInterface):
 
     def __str__(self):
         return f'User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}'
+
+
+class TransitUser(Agent, PassengerInterface):
+    user_id = 0
+
+    def __init__(self, position, transport_task: TransportTask, env: simpy.Environment):
+        self._id = TransitUser.user_id  # User ID
+        TransitUser.user_id += 1  # Increment User Id
+
+        self._position = position  # Initial Position of Agent
+        # A TransitUser is identified by transport_task.viable_vehicle_modes = [Public Transit Vehicle -> Bus, ...]
+        self._transport_task = transport_task  # Objective of generated agent
+
+        # Simpy Environment
+        self._env = env  # Simulation Environment
+
+        # Events
+        # TODO: define events of a public transit user
+
+        # Initial State and Runtime
+        # TODO: define overlapping UserStates and new ones needed for a TransitUser
+        self._state = UserState.INITIALIZED  # Initial State of agent
+        logging.debug(f"Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+    def mount_vehicle(self, vehicle):
+        vehicle.mount_passenger() # TODO: vehicle.mount_passenger expects a PassengerInterface instead of a User
+
+    def unmount_vehicle(self, vehicle):
+        vehicle.unmount_passenger() # TODO: vehicle.unmount_passenger expects a PassengerInterface instead of a User
+
+    def identify_passenger(self):
+        return f'TransitUser {self._id}'
+
+    def __str__(self):
+        return f'TransitUser with id {self._id} is in state {self._state} and has transportation task {self._transport_task}'
