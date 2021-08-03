@@ -7,6 +7,7 @@ from simulation.operator.fleet_factory import generate_fleet_config, generate_mi
 from simulation.operator.operations_management.operations import Operations
 from simulation.operator.operations_management.relocation_scheduler import RelocationScheduler
 from simulation.operator.operations_management.service_worker import ServiceWorker
+from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import \
   DistanceBasedSharedVehicleVehicleChoiceBehavior
 from simulation.world.demand.demand_factory import DemandFactory
@@ -272,13 +273,14 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   available_modes_supply = [n_kick_scooter, n_scooter, n_cars]
   no_service_workers = 25
 
-  ops = Operations(env, mixed_fleet, no_service_workers, 599, rs, payment_engine, available_modes, available_modes_supply, 0.1)
+  task_queue = TaskQueue(env)
+  ops = Operations(env, mixed_fleet, no_service_workers, 599, rs, payment_engine, available_modes, available_modes_supply, 0.1, task_queue)
 
   env.process(ops.run_operations())
 
   # Create Service Workers
-  env.process(ServiceWorker(env, ops).run())
-  env.process(ServiceWorker(env, ops).run())
+  env.process(ServiceWorker(env, task_queue).run())
+  env.process(ServiceWorker(env, task_queue).run())
 
   # Create Second Service Workers
   # env.process(ServiceWorker(env, ops).run())

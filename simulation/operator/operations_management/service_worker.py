@@ -2,10 +2,12 @@ from enum import Enum
 
 from simpy import Environment
 
-from simulation.operator.operations_management.operations import Operations
 from simulation.operator.operations_management.service_tasks.service_task import ServiceTask
 
 import logging
+
+from simulation.operator.operations_management.task_queue import TaskQueue
+
 
 class ServiceWorkerState(Enum):
     FREE = 0
@@ -15,13 +17,13 @@ class ServiceWorkerState(Enum):
 class ServiceWorker:
     service_worker_id = 0
 
-    def __init__(self, env:Environment, ops: Operations):
+    def __init__(self, env:Environment, task_queue:TaskQueue):
         self._id = ServiceWorker.service_worker_id
 
         self._env = env
         self._state = ServiceWorkerState.HIBERNATE
 
-        self._ops = ops
+        self._task_queue = task_queue
 
         self._task_finished = self._env.event()
 
@@ -31,15 +33,15 @@ class ServiceWorker:
 
         while True:
             # Wait until operation management engine puts tasks into queue
-            yield self._ops.scheduled_tasks_updated
+            yield self._task_queue.task_queue_updated
 
             logging.debug(f"Waking up and searching for available jobs.",
                           extra={"clazz": self.__class__.__name__, "oid": self._id})
 
             self._state = ServiceWorkerState.FREE
 
-            while len(self._ops.scheduled_tasks) > 0:
-                next_task = self._ops.scheduled_tasks.popleft()
+            while self._task_queue.count > 0:
+                next_task = self._task_queue.popleft()
 
                 yield self._env.process(self.execute_task(next_task))
 

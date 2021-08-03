@@ -1,6 +1,3 @@
-import queue
-from collections import deque
-
 from simulation.operator.operations_management.service_tasks.charging_task import ChargingTask
 from simulation.operator.operations_management.service_tasks.multi_service_task import MultiServiceTask
 
@@ -10,7 +7,7 @@ class Operations:
 
     def __init__(self, env, vehicle_fleet, no_service_workers, time_between_operations,
                  relocation_scheduler, payment_engine, available_modes, available_modes_supply,
-                 state_of_charge_threshold):
+                 state_of_charge_threshold, task_queue):
         """
 
         :param env: SimPy Environment
@@ -40,18 +37,15 @@ class Operations:
         self._state_of_charge_threshold = state_of_charge_threshold
 
         # Task List
-        self._scheduled_tasks = deque()
+        self._task_queue = task_queue
+        self._scheduled_tasks = []
 
         # Events
-        self._scheduled_tasks_updated = env.event()
+        self._charging_plan_updated = env.event()
 
     @property
-    def scheduled_tasks(self):
-        return self._scheduled_tasks
-
-    @property
-    def scheduled_tasks_updated(self):
-        return self._scheduled_tasks_updated
+    def charging_plan_updated(self):
+        return self._charging_plan_updated
 
     def run_operations(self):
         while True:
@@ -100,20 +94,24 @@ class Operations:
                         # Remember event for multi service tasks
                         charging_events.append(charging_task.task_finished)
 
+            # Insert Tasks into Task Queue
+            self._task_queue.bulk_append(self._scheduled_tasks)
+
             logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated.",
                 extra={"clazz": self.__class__.__name__, "oid": ""})
 
             # Notify listeners
-            self._scheduled_tasks_updated.succeed()
-            self._scheduled_tasks_updated = self._env.event()
+            self._charging_plan_updated.succeed()
+            self._charging_plan_updated = self._env.event()
 
+            # Use Remaining Service Workers for Relocation Tasks
+            # TODO:
             # Wait until all charging events are processed
             yield self._env.all_of(charging_events)
 
             logging.info(f"All Charging Tasks have been fulfilled. Re-Generating Relocation Plan.",
                 extra={"clazz": self.__class__.__name__, "oid": ""})
 
-            print("Okay - I waited to finish all Charging tasks")
-            # Use Remaining Service Workers for Relocation Tasks
+            # Update Relocation Tasks based on newly available vehicles (after charging)
+            # TODO: Clean Tasks list
 
-            # After Charging Tasks are done, use service workers for remaining relocation tasks
