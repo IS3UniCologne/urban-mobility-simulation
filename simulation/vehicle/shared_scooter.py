@@ -20,7 +20,7 @@ class SharedScooter(SharedVehicle):
         super(SharedScooter, self).__init__(env, position, max_available_seats, max_state_of_charge, energy_consumption, velocity, price_per_min)
 
         # Increment Shared Car ID
-        self.car_id = SharedScooter.shared_scooter_id
+        self._scooter_id = SharedScooter.shared_scooter_id
         self._price_per_minute = price_per_min
 
         SharedScooter.shared_scooter_id += 1

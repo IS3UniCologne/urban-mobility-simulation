@@ -188,7 +188,8 @@ class Vehicle(ABC):
         self.position = new_position
 
         # Update Position of Driver
-        self._driver.position = new_position
+        if self._driver:
+            self._driver.position = new_position
 
         # Update Position of Passengers
         for passenger in self._seats:
@@ -255,6 +256,81 @@ class Vehicle(ABC):
                           extra={"clazz": self.__class__.__name__, "oid": self._id})
         else:
             raise Exception('Agent is not in vehicle.')
+
+    def relocate(self, route_segment: Edge, time):
+        """
+        Relocate vehicle independent of state of charge and availability of driver
+        :param route_segment:
+        :param time:
+        :return:
+        """
+        if self._driver is not None:
+            raise Exception(f'Vehicle {self._id} has a driver {self._driver.identify_driver()}. Unable to relocate vehicle.')
+        elif len(self._seats) > 0:
+            raise Exception(f'Vehicle {self._id} has a driver {self._driver.identify_driver()}. Unable to relocate vehicle.')
+
+        # Invoke event to notify listeners that relocation started
+        self._vehicle_relocation_started.succeed()
+        self._vehicle_relocation_started = self._env.event()
+
+        self._state = VehicleState.RELOCATING
+
+        yield self._env.timeout(time)
+
+        # Save old position for logging purposes
+        old_position = self._position
+
+        # Update new position of vehicle
+        self._update_positions(route_segment.destination.position)
+
+        # Invoke event to notify listeners that relocation ended
+        self._vehicle_relocation_finished.succeed()
+        self._vehicle_relocation_finished = self._env.event()
+
+        self._state = VehicleState.PARKING
+
+        logging.debug(f'Vehicle relocated from {old_position} to {self._position} in {time} minutes.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+    def plug_to_charging_station(self):
+        self._state = VehicleState.CHARGING
+
+        self._charging_station_plugged_in.succeed()
+        self._charging_station_plugged_in = self._env.event()
+
+        logging.debug(f'Vehicle plugged in to charging station.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+    def unplug_from_charging_station(self):
+        self._state = VehicleState.PARKING
+
+        self._charging_station_plugged_out.succeed()
+        self._charging_station_plugged_out = self._env.event()
+
+        logging.debug(f'Vehicle plugged out from charging station.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+    def charge(self, charging_time, amount = 0):
+        # Notify charging
+        self._charging_station_charging_started.succeed()
+        self._charging_station_charging_started = self._env.event()
+
+        if amount == 0:
+            amount = self._max_state_of_charge - self._current_state_of_charge
+
+        # Update Current State of Charge
+        self._current_state_of_charge += amount
+
+        # Charge
+        yield self._env.timeout(charging_time)
+
+        # Notify charging ended
+        self._charging_station_charging_finished.succeed()
+        self._charging_station_charging_finished = self._env.event()
+
+        logging.debug(f'Vehicle charged {amount} kWh and has now {self._current_state_of_charge} kWh out of {self._max_state_of_charge}.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
 
     @abstractmethod
     def __str__(self):
