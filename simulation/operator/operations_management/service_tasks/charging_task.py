@@ -41,6 +41,9 @@ class ChargingTask(ServiceTask):
         potential_vehicles_to_charge = self._vehicle_fleet.get_all_vehicles_below_soc_level_in_region(self._state_of_charge_threshold, self._origin)
         selected_vehicles_to_charge = []
 
+        # TODO: We are running to Threading issues as two serviceworker get the same vehicle object
+        # Solution: Find Thread Safe
+        # TODO: self._number_of_vehicles_to_charge not used!
         # Filter relevant vehicles
         for vehicle in potential_vehicles_to_charge:
             # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
