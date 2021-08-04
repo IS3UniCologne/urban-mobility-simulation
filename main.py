@@ -265,22 +265,31 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   #                                         #
   # # # # # # # # # # # # # # # # # # # # # #
 
-  # TODO: Vehicle with Low State Of Charge
-  rs = RelocationScheduler(distance_matrix, mixed_fleet, ["SharedKickScooter", "SharedScooter", "SharedCar"])
-  # res = rs.generate_relocation_plan(transactions, store_results)
 
-  available_modes = ["SharedKickScooter", "SharedScooter", "SharedCar"]
-  available_modes_supply = [n_kick_scooter, n_scooter, n_cars]
-  no_service_workers = 25
+  available_vehicle_modes = ["SharedKickScooter", "SharedScooter", "SharedCar"]
+  available_vehicle_modes_supply = [n_kick_scooter, n_scooter, n_cars]
+  no_service_workers = 100
+  base_region = ['871f1d488ffffff']
+  base_capacity = 10000
 
+  # Initialize Rule Based Relocation Scheduler
+  rs = RelocationScheduler(distance_matrix, mixed_fleet, available_vehicle_modes,
+                           available_vehicle_modes_supply, no_service_workers,
+                           base_region, base_capacity)
+
+  # Store Tasks which are processed by service workers
   task_queue = TaskQueue(env)
-  ops = Operations(env, mixed_fleet, no_service_workers, 599, rs, payment_engine, available_modes, available_modes_supply, 0.1, task_queue)
+
+  # Init Operations Module
+  ops = Operations(env, mixed_fleet, no_service_workers, 1440, rs,
+                   payment_engine, available_vehicle_modes,
+                   available_vehicle_modes_supply, 0.1, task_queue)
 
   env.process(ops.run_operations())
 
-  # Create Service Workers
-  env.process(ServiceWorker(env, task_queue).run())
-  env.process(ServiceWorker(env, task_queue).run())
+  # Spawn Service Workers
+  for sw in range(no_service_workers):
+    env.process(ServiceWorker(env, task_queue).run())
 
   # Create Second Service Workers
   # env.process(ServiceWorker(env, ops).run())
@@ -307,7 +316,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
 
   print(DemandFactory.counter)
 
-run_single_simulation(end_time = 650, n_cars = 10, n_scooter = 10, n_kick_scooter = 10, seed = 42, substitution = 0.1)
+run_single_simulation(end_time = 1500, n_cars = 1000, n_scooter = 100, n_kick_scooter = 100, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)
