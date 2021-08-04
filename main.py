@@ -1,11 +1,13 @@
 from pathlib import Path
 import pandas as pd
 
-from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration, VehicleConfig, ModeChoiceConfig
 from simulation.infrastructure.helper.distance_matrix_importer import DistanceMatrixImporter
 from simulation.operator.fleet_factory import generate_fleet_config, generate_mixed_fleet
-from simulation.operator.relocation_scheduler import RelocationScheduler
+from simulation.operator.operations_management.operations import Operations
+from simulation.operator.operations_management.relocation_scheduler import RelocationScheduler
+from simulation.operator.operations_management.service_worker import ServiceWorker
+from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import \
   DistanceBasedSharedVehicleVehicleChoiceBehavior
 from simulation.world.demand.demand_factory import DemandFactory
@@ -259,6 +261,33 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
 
   # # # # # # # # # # # # # # # # # # # # # #
   #                                         #
+  # Operations Management Processes         #
+  #                                         #
+  # # # # # # # # # # # # # # # # # # # # # #
+
+  # TODO: Vehicle with Low State Of Charge
+  rs = RelocationScheduler(distance_matrix, mixed_fleet, ["SharedKickScooter", "SharedScooter", "SharedCar"])
+  # res = rs.generate_relocation_plan(transactions, store_results)
+
+  available_modes = ["SharedKickScooter", "SharedScooter", "SharedCar"]
+  available_modes_supply = [n_kick_scooter, n_scooter, n_cars]
+  no_service_workers = 25
+
+  task_queue = TaskQueue(env)
+  ops = Operations(env, mixed_fleet, no_service_workers, 599, rs, payment_engine, available_modes, available_modes_supply, 0.1, task_queue)
+
+  env.process(ops.run_operations())
+
+  # Create Service Workers
+  env.process(ServiceWorker(env, task_queue).run())
+  env.process(ServiceWorker(env, task_queue).run())
+
+  # Create Second Service Workers
+  # env.process(ServiceWorker(env, ops).run())
+
+
+  # # # # # # # # # # # # # # # # # # # # # #
+  #                                         #
   # Run Simulation.                         #
   #                                         #
   # # # # # # # # # # # # # # # # # # # # # #
@@ -276,13 +305,9 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   if store_results:
     transactions.to_csv(Path(output_folder, transaction_file), index = False)
 
-  # TODO: Vehicle with Low State Of Charge
-  rs = RelocationScheduler(distance_matrix, mixed_fleet, ["SharedKickScooter", "SharedScooter", "SharedCar"])
-  res = rs.generate_relocation_plan(transactions, store_results)
-
   print(DemandFactory.counter)
 
-run_single_simulation(end_time = 1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
+run_single_simulation(end_time = 650, n_cars = 10, n_scooter = 10, n_kick_scooter = 10, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)
