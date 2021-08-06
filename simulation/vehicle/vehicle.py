@@ -19,6 +19,7 @@ class VehicleState(Enum):
     DRIVING = 2
     RELOCATING = 3
     CHARGING  = 4
+    PRE_SERVICE = 5 # Marked for Service Tasks
 
 class Vehicle(ABC):
     vehicle_id = 0
@@ -244,6 +245,11 @@ class Vehicle(ABC):
         else:
             raise Exception('Vehicle is full.')
 
+    def prepare_for_service_task(self, caller):
+        self._state == VehicleState.PRE_SERVICE
+        logging.debug(f'Marked for Service Task by {caller}.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
     def unmount_passenger(self, passenger: PassengerInterface):
         if passenger in self._seats:
             self._seats.remove(passenger)
@@ -257,11 +263,12 @@ class Vehicle(ABC):
         else:
             raise Exception('Agent is not in vehicle.')
 
-    def relocate(self, route_segment: Edge, time):
+    def relocate(self, route_segment: Edge, time, relocator):
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
         :param time:
+        :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
         :return:
         """
         if self._driver is not None:
@@ -289,7 +296,7 @@ class Vehicle(ABC):
 
         self._state = VehicleState.PARKING
 
-        logging.debug(f'Vehicle relocated from {old_position} to {self._position} in {time} minutes.',
+        logging.debug(f'Vehicle relocated by {relocator} from {old_position} to {self._position} in {time} minutes.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def plug_to_charging_station(self):

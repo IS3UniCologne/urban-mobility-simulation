@@ -110,11 +110,11 @@ class Operations:
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
 
-            logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+            logging.info(f"There are {self._state_of_charge_threshold} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""})
 
-            test = self._vehicle_fleet.get_all_vehicles_below_soc_level(0.1)
-            print("[A] Number of Vehicles to be charged: " + str(self._vehicle_fleet.get_all_vehicles_below_soc_level(0.1)))
+            logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+                extra={"clazz": self.__class__.__name__, "oid": ""})
 
             # Notify listeners
             self._charging_plan_updated.succeed()
