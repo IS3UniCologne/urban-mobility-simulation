@@ -8,7 +8,8 @@ from simulation.helper.configuration.configuration import Configuration
 
 class RelocationScheduler:
 
-    def __init__(self, distance_matrix, fleet, available_vehicle_modes):
+    def __init__(self, distance_matrix, fleet, ordered_available_vehicle_modes,
+                 ordered_max_vehicle_supply, number_of_service_units, base_regions, base_capacity):
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
 
@@ -20,25 +21,37 @@ class RelocationScheduler:
         # For example: If we observe a demand for KickScooter and Scooter, we count that
         # demand to KickScooter. This ordering is defined according to the following list
         # (from left to right)
-        self._available_vehicle_modes = available_vehicle_modes
+        self._available_vehicle_modes = ordered_available_vehicle_modes
+        self._max_vehicle_supply = ordered_max_vehicle_supply
+        self._number_of_service_units = number_of_service_units
+        self._base_regions = base_regions
+        self._base_capacity = base_capacity
 
     def generate_relocation_plan(self, transactions):
+        """
+        Return possible relocations but these are NOT - compared to charging plan - aligned with the
+        number of available service workers.
+        :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows (from PaymentEngine)
+        :return: Dict of potential relocations {"SharedCar": [(origin, destination, no, distance)], ..}
+        """
         state = self.calculate_residual_supply(self._fleet, transactions)
 
         config = Configuration.instance()
         if config.store_results:
             state.to_csv(Path(config.output_path, config.fleet_state_file), index = False)
 
-        # TODO: Collect firstly low soc vehicles and relocate to base, then charge,
-        #  update relocation plan (more supply at base)
-        # Implement function for pooled collection of vehicles, where the size of the pool is a parameter
-        # For pooling, consider the nearest neighbours if vehicle has some space.
-
         relocation_plans = self.identify_potential_relocations(state)
 
         return relocation_plans
 
     def generate_charging_plan(self, transactions):
+        """
+        Generate a rule based charging plan based on given service worker capacity
+        :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
+        :return: **charging_plan**: Dictionary with keys for vehicle modes and values with lists of multiple
+                charging tasks
+                **used_capacity**: How many service workers are planned to cope with charging needs
+        """
         # Get Current Fleet State
         state = self.calculate_residual_supply(self._fleet, transactions)
 
@@ -46,7 +59,7 @@ class RelocationScheduler:
         if config.store_results:
             state.to_csv(Path(config.output_path, config.fleet_state_file), index = False)
 
-        charging_plans, used_capacity = self.calculate_charging_plan(state, self._distance_matrix)
+        charging_plans, used_capacity = self.calculate_charging_plan(state)
 
         return charging_plans, used_capacity
 
@@ -57,17 +70,12 @@ class RelocationScheduler:
     #############################################
 
 
-    def calculate_charging_plan(self, fleet_state, distance_matrix,
-                                number_of_service_units=100,
-                                available_modes=["SharedKickScooter", "SharedScooter", "SharedCar"],
-                                max_vehicle_supply=[1000, 1000, 1000],
-                                base_regions = ['871f1d488ffffff'],
-                                base_capacity = 10000):
+    def calculate_charging_plan(self, fleet_state):
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
         :param number_of_service_units: Number of  Available Service Workers
-        :param available_modes: List of available vehicle modes
+        :param available_vehicle_modes: List of available vehicle modes
         :param max_vehicle_supply: List of number of available vehicle most (supply per mode)
         :param base_regions: Possible Fleet Base Regions for charging
                (can handle multiple bases e.g.,  base_regions = ['871f1d488ffffff','871f18b21ffffff'])
@@ -84,17 +92,17 @@ class RelocationScheduler:
         state = fleet_state
 
         # How much capacity is already "used"
-        free_base_capacity = dict(zip(base_regions, [base_capacity] * len(base_regions)))
+        free_base_capacity = dict(zip(self._base_regions, [self._base_capacity] * len(self._base_regions)))
 
         # Split available service worker resources among vehicle types
         # (prioritize vehicles where most low soc vehicles are present)
-        capacity_per_mode = self.calculate_resource_capacity_split(state, available_modes, max_vehicle_supply,
-                                                              number_of_service_units)
+        capacity_per_mode = self.calculate_resource_capacity_split(state, self._available_vehicle_modes, self._max_vehicle_supply,
+                                                              self._number_of_service_units)
 
         # We calculate for each vehicle mode dedicated charging plans based on the available resources
         all_charging_plans = {}
 
-        for i, mode in enumerate(available_modes):
+        for i, mode in enumerate(self._available_vehicle_modes):
             # Sort State by Regions with highest number of SoC (per vehicle)
             state = state.sort_values(by=[f"{mode}_Low_SoC"], ascending=False)
 
@@ -129,83 +137,89 @@ class RelocationScheduler:
                     # No more service worker capacity, stop planning
                     break
 
-                # Keep Track of how many vehicles are already scheduled for charging
-                currently_schedules_vehicles_per_unit = 0
-
                 # Get nearest fleet base region (.loc -> destination, [[]] -> Origin)
-                sorted_base_list = distance_matrix.loc[base_regions][[next_hex_id]].sort_values(by=next_hex_id,
-                                                                                                ascending=True)
+                sorted_base_list = self._distance_matrix.loc[self._base_regions][[next_hex_id]].sort_values(
+                    by=next_hex_id,
+                    ascending=True)
+
+                # How many vehicles are already schedules for pick up?
+                if next_hex_id not in already_scheduled_low_vehicles:
+                    already_scheduled_low_vehicles[next_hex_id] = 0
 
                 # Select Nearest Base
                 for index_base, row_base in sorted_base_list.iterrows():
                     selected_base = index_base
                     selected_base_distance = row_base[next_hex_id]
 
-                # How many vehicles are already schedules for pick up?
-                if next_hex_id not in already_scheduled_low_vehicles:
-                    already_scheduled_low_vehicles[next_hex_id] = 0
+                while (len(charging_plan) != number_of_service_units_per_mode and
+                       already_scheduled_low_vehicles[next_hex_id] != row[f"{mode}_Low_SoC"]):
 
-                # How many vehicles can we move to the base and charge?
-                pick_up_vehicles = min((row[f"{mode}_Low_SoC"] - already_scheduled_low_vehicles[next_hex_id]),
-                                       max_capacity_per_unit)
+                    # Keep Track of how many vehicles are already scheduled for charging
+                    currently_schedules_vehicles_per_unit = 0
 
-                # currently_schedules_vehicles_per_unit
-                currently_schedules_vehicles_per_unit += pick_up_vehicles
+                    # How many vehicles can we move to the base and charge?
+                    pick_up_vehicles = min((row[f"{mode}_Low_SoC"] - already_scheduled_low_vehicles[next_hex_id]),
+                                           max_capacity_per_unit)
 
-                # Update Already Picked Up Vehicle Dict
-                already_scheduled_low_vehicles[next_hex_id] += pick_up_vehicles
+                    # currently_schedules_vehicles_per_unit
+                    currently_schedules_vehicles_per_unit += pick_up_vehicles
 
-                # Collection of Charging Tasks per Service Worker
-                chargings_tasks = []
+                    # Update Already Picked Up Vehicle Dict
+                    already_scheduled_low_vehicles[next_hex_id] += pick_up_vehicles
 
-                # Charging Task from current region to fleet base
-                charging_task = (next_hex_id, selected_base, pick_up_vehicles, selected_base_distance)
+                    # Collection of Charging Tasks per Service Worker
+                    chargings_tasks = []
 
-                # Add main chargin task to charging tasks
-                if pick_up_vehicles > 0:
-                    chargings_tasks.append(charging_task)
+                    # Charging Task from current region to fleet base
+                    charging_task = (next_hex_id, selected_base, pick_up_vehicles, selected_base_distance)
 
-                # If we still have capacity,
-                if pick_up_vehicles < max_capacity_per_unit and pick_up_vehicles > 0:
-                    neighbours = h3.hex_range(next_hex_id, 1)
-                    neighbours.remove(next_hex_id)  # Consider only neighbours (not current region)
+                    # Add main chargin task to charging tasks
+                    if pick_up_vehicles > 0:
+                        chargings_tasks.append(charging_task)
 
-                    # Consider only Fleet State of neighbour regions
-                    neighbour_states = state[state["hex_id"].isin(neighbours)]
+                    # If we still have capacity, and no more vehicles are in the region
+                    if pick_up_vehicles < max_capacity_per_unit and pick_up_vehicles > 0:
+                        neighbours = h3.hex_range(next_hex_id, 1)
+                        neighbours.remove(next_hex_id)  # Consider only neighbours (not current region)
 
-                    for index_adjacent, row_adjacent in neighbour_states.iterrows():
-                        adjacent_hex_id = row_adjacent["hex_id"]
+                        # Consider only Fleet State of neighbour regions
+                        neighbour_states = state[state["hex_id"].isin(neighbours)]
 
-                        # How many vehicles from the adjacent regions are already schedules for pick up?
-                        if adjacent_hex_id not in already_scheduled_low_vehicles:
-                            already_scheduled_low_vehicles[adjacent_hex_id] = 0
+                        for index_adjacent, row_adjacent in neighbour_states.iterrows():
+                            adjacent_hex_id = row_adjacent["hex_id"]
 
-                        # How many vehicles can we move from the adjacent hex to the base and charge them?
-                        pick_up_vehicles_from_adjacent_region = min(
-                            (row_adjacent[f"{mode}_Low_SoC"] - already_scheduled_low_vehicles[adjacent_hex_id]),
-                            max_capacity_per_unit - currently_schedules_vehicles_per_unit)
+                            # How many vehicles from the adjacent regions are already schedules for pick up?
+                            if adjacent_hex_id not in already_scheduled_low_vehicles:
+                                already_scheduled_low_vehicles[adjacent_hex_id] = 0
 
-                        # Can we pick up any vehicles from that neighbour? If yes, append charging task
-                        if pick_up_vehicles_from_adjacent_region > 0:
-                            # currently_schedules_vehicles_per_unit
-                            currently_schedules_vehicles_per_unit += pick_up_vehicles_from_adjacent_region
+                            # How many vehicles can we move from the adjacent hex to the base and charge them?
+                            pick_up_vehicles_from_adjacent_region = min(
+                                (row_adjacent[f"{mode}_Low_SoC"] - already_scheduled_low_vehicles[adjacent_hex_id]),
+                                max_capacity_per_unit - currently_schedules_vehicles_per_unit)
 
-                            # Update Already Picked Up Vehicle Dict
-                            already_scheduled_low_vehicles[adjacent_hex_id] += pick_up_vehicles_from_adjacent_region
+                            # Can we pick up any vehicles from that neighbour? If yes, append charging task
+                            if pick_up_vehicles_from_adjacent_region > 0:
+                                # currently_schedules_vehicles_per_unit
+                                currently_schedules_vehicles_per_unit += pick_up_vehicles_from_adjacent_region
 
-                            # Distance to Neighbour
-                            distance_to_neighbour = distance_matrix.loc[adjacent_hex_id][next_hex_id]
+                                # Update Already Picked Up Vehicle Dict
+                                already_scheduled_low_vehicles[adjacent_hex_id] += pick_up_vehicles_from_adjacent_region
 
-                            # add additional charging task
-                            charging_task = (adjacent_hex_id, selected_base, pick_up_vehicles_from_adjacent_region,
-                                             distance_to_neighbour)
+                                # Distance to Neighbour
+                                distance_to_neighbour = self._distance_matrix.loc[adjacent_hex_id][next_hex_id]
 
-                            # Add to Charging Tasks list (i.e., this is a multitask object; one service workers needs to visit multiple regions)
-                            chargings_tasks.append(charging_task)
+                                # add additional charging task
+                                charging_task = (adjacent_hex_id, selected_base, pick_up_vehicles_from_adjacent_region,
+                                                 distance_to_neighbour)
 
-                # Store Charging Task
-                if len(chargings_tasks) > 0:
-                    charging_plan.append(chargings_tasks)
+                                # Add to Charging Tasks list (i.e., this is a multitask object; one service workers needs to visit multiple regions)
+                                chargings_tasks.append(charging_task)
+
+                    # Store Charging Task
+                    if len(chargings_tasks) > 0:
+                        charging_plan.append(chargings_tasks)
+
+
 
             # Save Charging Plan of Vehicle Mode
             all_charging_plans[mode] = charging_plan
@@ -218,8 +232,7 @@ class RelocationScheduler:
         return all_charging_plans, used_resources
 
 
-
-    def calculate_resource_capacity_split(self, fleet_state, available_modes, max_vehicle_supply, number_of_service_units):
+    def calculate_resource_capacity_split(self, fleet_state, available_vehicle_modes, max_vehicle_supply, number_of_service_units):
         """
             Determine Service Worker Split Between Modes (How many workers should be assigned to charge how many vehicles)
 
@@ -231,18 +244,18 @@ class RelocationScheduler:
                 3. Calculate how many service workers are assigned to charge vehicle mode i
                    capacity_i = frac_i/total_frac * number_of_service_units_i
         :param fleet_state: Resulting data frame from function calculate_residual_supply
-        :param available_modes: List of available vehicle modes (["SharedKickScooter", "SharedScooter", "SharedCar"]
-        :param max_vehicle_supply: List of maximum number of available vehicles (order is aligned with available_modes)
+        :param available_vehicle_modes: List of available vehicle modes (["SharedKickScooter", "SharedScooter", "SharedCar"]
+        :param max_vehicle_supply: List of maximum number of available vehicles (order is aligned with available_vehicle_modes)
                                 for example: [10, 5, 12] => 10 kick scooter, 5 scooter, 12 cars
         :param number_of_service_units: Available Service Worker Capacity
-        :return: List of assigned resource workers to vehicle modes (order is aligned with available_modes)
+        :return: List of assigned resource workers to vehicle modes (order is aligned with available_vehicle_modes)
                         for example: Input 25 Service Workers
                                     => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
         """
 
         current_low_soc_supply = []
 
-        for mode in available_modes:
+        for mode in self._available_vehicle_modes:
             # Service Worker Charging Capacity per Mode
             max_capacity_per_unit = self.get_max_capacity_per_unit(mode)
 
@@ -375,6 +388,12 @@ class RelocationScheduler:
                     relocation_list.append((row["hex_id"], next_hex_id, row[f"Relocate_{mode}"], row[next_hex_id]))
 
         return relocations
+
+    #############################################
+    #############################################
+    #  Fleet State Analysis                     #
+    #############################################
+    #############################################
 
     def calculate_residual_supply(self, vehicle_fleet, transactions):
         """
