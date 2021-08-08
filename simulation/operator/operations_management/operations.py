@@ -61,8 +61,15 @@ class Operations:
             # We track the charging events
             charging_events = []
 
+            # No Vehicles to be charged
+            no_vehicles_scheduled_to_charge = {}
+
             for mode in self._available_modes:
                 charging_plans_for_current_mode = charging_plans[mode]
+
+                # Set Counter to 0
+                if mode not in no_vehicles_scheduled_to_charge:
+                    no_vehicles_scheduled_to_charge[mode] = 0
 
                 for charging_plan in charging_plans_for_current_mode:
                     if len(charging_plan) > 1:
@@ -75,6 +82,9 @@ class Operations:
                                          self._vehicle_fleet, self._state_of_charge_threshold)
 
                             multi_service_task.append_task(charging_task)
+
+                            # Count Vehicles to be charged
+                            no_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
 
                         # Schedule to Queue
                         self._scheduled_tasks.append(multi_service_task)
@@ -94,10 +104,16 @@ class Operations:
                         # Remember event for multi service tasks
                         charging_events.append(charging_task.task_finished)
 
+                        # Count Vehicles to be charged
+                        no_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
+
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
 
-            logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated.",
+            logging.info(f"There are {self._state_of_charge_threshold} vehicles with low state of charge.",
+                extra={"clazz": self.__class__.__name__, "oid": ""})
+
+            logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
                 extra={"clazz": self.__class__.__name__, "oid": ""})
 
             # Notify listeners
