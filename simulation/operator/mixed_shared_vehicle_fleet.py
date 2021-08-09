@@ -1,3 +1,5 @@
+from simpy import Environment
+
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.interface.fleet_interface import FleetInterface
@@ -10,7 +12,9 @@ from simulation.vehicle.vehicle import VehicleState
 
 class MixedSharedVehicleFleet(FleetInterface):
 
-    def __init__(self):
+    def __init__(self, env: Environment):
+        super(MixedSharedVehicleFleet, self).__init__(env)
+
         self._scooters = []
         self._kick_scooters = []
         self._cars = []

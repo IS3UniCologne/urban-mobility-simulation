@@ -64,7 +64,7 @@ class ServiceWorker:
         logging.debug(f"Processing following task: {service_task}.",
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
-        yield self._env.process(service_task.execute())
+        yield self._env.process(service_task.execute(self._id))
 
         self._state = ServiceWorkerState.FREE
 
