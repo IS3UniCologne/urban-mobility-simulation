@@ -64,7 +64,7 @@ def generate_mixed_fleet(env, fleet_config):
     :return: MixedSharedVehicleFleet Object
     """
     # New Fleet Object
-    fleet = MixedSharedVehicleFleet()
+    fleet = MixedSharedVehicleFleet(env)
 
     # Access to underlying geodesic environment
     geo_env = GeodesicEnvironment.getInstance()
