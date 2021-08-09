@@ -315,6 +315,8 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     transactions.to_csv(Path(output_folder, transaction_file), index = False)
 
   print(DemandFactory.counter)
+  #TODO: Redefining the objective function
+  return payment_engine.total_revenue
 
 
 run_single_simulation(end_time = 1500, n_cars = 1000, n_scooter = 100, n_kick_scooter = 100, seed = 42, substitution = 0.1)
