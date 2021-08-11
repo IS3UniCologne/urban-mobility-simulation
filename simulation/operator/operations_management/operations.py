@@ -110,7 +110,7 @@ class Operations:
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
 
-            logging.info(f"There are {self._state_of_charge_threshold} vehicles with low state of charge.",
+            logging.info(f"There are {self._vehicle_fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""})
 
             logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
@@ -119,6 +119,8 @@ class Operations:
             # Notify listeners
             self._charging_plan_updated.succeed()
             self._charging_plan_updated = self._env.event()
+
+            relocations = self._relocation_scheduler.generate_relocation_plan(transactions)
 
             # Use Remaining Service Workers for Relocation Tasks
             # TODO:
