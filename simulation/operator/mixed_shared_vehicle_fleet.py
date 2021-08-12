@@ -103,6 +103,19 @@ class MixedSharedVehicleFleet(FleetInterface):
 
         return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
 
+    def get_all_available_vehicles(self, region):
+        """
+        Return all vehicles (mixed) in a list from passed region
+        :param region: Spatial Region
+        :return: List of all vehicle
+        """
+
+        cars, scooters, kick_scooters, bikes = self.get_available_vehicles(region)
+
+        all_vehicle_list = cars + scooters + kick_scooters + bikes
+
+        return all_vehicle_list
+
     def get_all_vehicles_below_soc_level(self, state_of_charge_threshold):
         """
         Return all vehicles that need to be refueled/recharged
