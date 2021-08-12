@@ -245,9 +245,9 @@ class Vehicle(ABC):
         else:
             raise Exception('Vehicle is full.')
 
-    def prepare_for_service_task(self, caller):
+    def prepare_for_service_task(self, caller, task):
         self._state == VehicleState.PRE_SERVICE
-        logging.debug(f'Marked for Service Task by {caller}.',
+        logging.debug(f'Marked for Service Task [{task}] by {caller}.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def unmount_passenger(self, passenger: PassengerInterface):
@@ -271,10 +271,15 @@ class Vehicle(ABC):
         :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
         :return:
         """
-        if self._driver is not None:
-            raise Exception(f'Vehicle {self._id} has a driver {self._driver.identify_driver()}. Unable to relocate vehicle.')
-        elif len(self._seats) > 0:
-            raise Exception(f'Vehicle {self._id} has a driver {self._driver.identify_driver()}. Unable to relocate vehicle.')
+        if self._driver is not None or len(self._seats) > 0:
+            logging.debug(f'Vehicle {self._id} has a driver {self._driver.identify_driver()}. Revoke relocation task.',
+                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+            yield self._env.timeout(1)
+
+            return
+
+            # raise Exception(f'Vehicle {self._id} has a driver {self._driver.identify_driver()}. Unable to relocate vehicle.')
 
         # Invoke event to notify listeners that relocation started
         self._vehicle_relocation_started.succeed()

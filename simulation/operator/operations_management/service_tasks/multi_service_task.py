@@ -14,11 +14,16 @@ class MultiServiceTask(ServiceTask):
         events = []
         for service_task in self._service_tasks:
             events.append(service_task.task_finished)
-            self._env.process(service_task.execute())
+            self._env.process(service_task.execute(args[0]))
 
         yield self._env.all_of(events)
 
+        # Notify all
         self._task_finished.succeed()
+
+        # Notify all
+        self._task_finished = self._env.event()
+
 
     def append_task(self, service_task: ServiceTask):
         self._service_tasks.append(service_task)
