@@ -107,8 +107,13 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         logging.info(f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
                       extra={"clazz": self.__class__.__name__, "oid": ""})
 
+
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         self.increase_total_missed_trips()
+
+        #TODO: Remove or align in a dynmic fashion
+        if transportation_task.viable_vehicle_modes["SharedCar"] == 1:
+            self._total_missed_car_trips += 1
 
         # Add Transaction to Log
         self._transactions.append(

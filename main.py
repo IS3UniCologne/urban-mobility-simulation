@@ -268,7 +268,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
 
   available_vehicle_modes = ["SharedKickScooter", "SharedScooter", "SharedCar"]
   available_vehicle_modes_supply = [n_kick_scooter, n_scooter, n_cars]
-  no_service_workers = 5
+  no_service_workers = 10
   base_region = ['871f1d488ffffff']
   base_capacity = 10000
 
@@ -281,19 +281,16 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   task_queue = TaskQueue(env)
 
   # Init Operations Module
-  ops = Operations(env, mixed_fleet, no_service_workers, 1440, rs,
+  ops = Operations(env, mixed_fleet, no_service_workers, 1440, 8*60, rs,
                    payment_engine, available_vehicle_modes,
                    available_vehicle_modes_supply, 0.1, task_queue)
 
+  env.process(ops.timer())
   env.process(ops.run_operations())
 
   # Spawn Service Workers
   for sw in range(no_service_workers):
     env.process(ServiceWorker(env, task_queue).run())
-
-  # Create Second Service Workers
-  # env.process(ServiceWorker(env, ops).run())
-
 
   # # # # # # # # # # # # # # # # # # # # # #
   #                                         #
@@ -302,10 +299,10 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   # # # # # # # # # # # # # # # # # # # # # #
   env.run(until = end_time)
 
-
   print("Total Revenue: " + str(payment_engine.total_revenue))
   print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
   print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
+  print("Total Missed Car Trips: " + str(payment_engine._total_missed_car_trips))
 
   print("Number of Vehicles to be charged: " + str(mixed_fleet.get_all_vehicles_below_soc_level(0.1)))
 
@@ -319,7 +316,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   return payment_engine.total_revenue
 
 
-run_single_simulation(end_time = 1500, n_cars = 1000, n_scooter = 100, n_kick_scooter = 100, seed = 42, substitution = 0.1)
+run_single_simulation(end_time = 2*1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)

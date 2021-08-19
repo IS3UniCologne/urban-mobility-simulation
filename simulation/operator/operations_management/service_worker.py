@@ -45,8 +45,6 @@ class ServiceWorker:
 
                 yield self._env.process(self.execute_task(next_task))
 
-                yield next_task.task_finished
-
             logging.debug(f"There are no more tasks for me. Going into hibernate.",
                           extra={"clazz": self.__class__.__name__, "oid": self._id})
 

@@ -54,7 +54,7 @@ class ChargingTask(ServiceTask):
                         and len(selected_vehicles_to_charge) < self._number_of_vehicles_to_charge):
                     # Mark Vehicle => Change state su
                     # ch that other service workers don't touch it!!
-                    vehicle.prepare_for_service_task(f"Service Worker {args[0]}")
+                    vehicle.prepare_for_service_task(f"Service Worker {args[0]}", self.__class__.__name__)
                     # Add to charging list
                     selected_vehicles_to_charge.append(vehicle)
 
@@ -64,11 +64,14 @@ class ChargingTask(ServiceTask):
             distance = vehicle.position >> fleet_base_position
             relocation_route = Edge(distance, Vertex(vehicle.position), Vertex(fleet_base_position))
 
+            # TODO: Adjust Cost
             # First relocate vehicle to base
             yield self._env.process(vehicle.relocate(relocation_route, 5, f"Service Worker {args[0]}"))
 
             # Plugin Vehicle to Charging Station
             vehicle.plug_to_charging_station()
+
+            # TODO: Adjust Cost
             # Charge Vehicle
             yield self._env.process(vehicle.charge(5))
 
@@ -77,6 +80,9 @@ class ChargingTask(ServiceTask):
 
         # Notify all
         self._task_finished.succeed()
+
+        # Notify all
+        self._task_finished = self._env.event()
 
     def __str__(self):
         return f"Charging Task for {self._number_of_vehicles_to_charge} {self._vehicle_mode} from {self._origin} to {self._destination} (distance = {self._distance_to_fleet_base})"
