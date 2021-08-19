@@ -13,6 +13,9 @@ class PaymentInterface(ABC):
         self._total_fulfilled_trips = 0
         self._total_missed_trips = 0
 
+        # Make this dynamic with a dictionary
+        self._total_missed_car_trips = 0
+
         self._transactions = []
 
     @abstractmethod

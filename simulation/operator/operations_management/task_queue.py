@@ -28,6 +28,9 @@ class TaskQueue:
     def popleft(self):
         return self._queue.popleft()
 
+    def clear(self):
+        self._queue.clear()
+
     @property
     def count(self):
         return len(self._queue)
