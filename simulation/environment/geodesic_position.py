@@ -10,19 +10,13 @@ from ..helper.configuration.configuration import Configuration
 
 class GeodesicPosition(Position):
 
-    def __init__(self, latitude, longitude) -> object:
+    def __init__(self, latitude, longitude, default_hexagon = None) -> object:
         super(GeodesicPosition, self).__init__()
         self._lat = latitude
         self._lng = longitude
 
-        self._geometry = Point(self._lng, self._lat)
-
-    def __init__(self, latitude, longitude, default_hexagon) -> object:
-        super(GeodesicPosition, self).__init__()
-        self._lat = latitude
-        self._lng = longitude
-
-        self._default_hexagon = default_hexagon
+        if default_hexagon is not None:
+            self._default_hexagon = default_hexagon
 
         self._geometry = Point(self._lng, self._lat)
 
@@ -35,6 +29,18 @@ class GeodesicPosition(Position):
 
     def __str__(self):
         return f'Latitude {self._lat} : Longitude {self._lng}'
+
+    # ==
+    def __eq__(self, other):
+        """
+        Test equality of two GeodesicPositions
+        :param other: GeodesicPosition
+        :return: bool
+        """
+        if not isinstance(other, GeodesicPosition):
+            return NotImplemented
+        else:
+            return self._lat == other._lat and self._lng == other._lng
 
     # >>
     def __rshift__(self, other):
