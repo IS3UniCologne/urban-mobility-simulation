@@ -13,6 +13,11 @@ from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 
 class VehicleState(Enum):
     INITIALIZED = 0
+    PARKING = 1
+    DRIVING = 2
+    RELOCATING = 3
+    CHARGING = 4
+    PRE_SERVICE = 5 # Marked for Service Tasks
 
 
 class Vehicle(ABC):
