@@ -41,7 +41,7 @@ class SharedVehicle(Vehicle, ABC):
         self._user_mounted = self._env.event()
         self._driving_started = self._env.event()
         self._driving_finished = self._env.event()
-        self._user_demounted = self._env.event()
+        self._user_unmounted = self._env.event()
 
         self._driver_mounted = self._env.event()
         self._driver_unmounted = self._env.event()

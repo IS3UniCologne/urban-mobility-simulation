@@ -15,27 +15,96 @@ class SimulationTime:
     def now(self):
         return self._env.now
 
+    def seconds(self):
+        return SimulationTimeConverter.seconds(self._env.now)
+
     def minutes(self):
-        return int(self._env.now % 60)
+        return SimulationTimeConverter.minutes(self._env.now)
 
     def hours(self):
-        return int((self._env.now / 60) % 60)
+        return SimulationTimeConverter.hours(self._env.now)
 
     def dayofweek(self):
-        return int((self._env.now % (24*60*7)) / (24*60))
+        return SimulationTimeConverter.dayofweek(self._env.now)
 
     def dayofweek_as_str(self) -> str:
-        return WEEKDAYS[self.dayofweek()]
+        return SimulationTimeConverter.dayofweek_as_str(self._env.now)
 
     def next_dayofweek_as_str(self) -> str:
-        return WEEKDAYS[(self.dayofweek() + 1) % 7]
+        return SimulationTimeConverter.next_dayofweek_as_str(self._env.now)
+
+    def last_dayofweek_as_str(self) -> str:
+        return SimulationTimeConverter.last_dayofweek_as_str(self._env.now)
 
     def now_as_str(self, strf: str = '%H:%M:%S'):
-        time = datetime.time(self.hours(), self.minutes())
-        return time.strftime(strf)
+        return SimulationTimeConverter.as_str(self._env.now, strf)
+
+    def now_as_time(self):
+        return SimulationTimeConverter.as_time(self._env.now)
 
     def convert_to_day_of_week_bucket(self):
-        if self.dayofweek() < 5:
+        return
+
+
+class SimulationTimeConverter:
+    @staticmethod
+    def seconds(time: float):
+        # seconds are not well defined, but it may happen that a time step is < 1 (minutes)
+        return int((time - int(time)) * 60)
+
+    @staticmethod
+    def minutes(time: float):
+        return int(time % 60)
+
+    @staticmethod
+    def hours(time: float):
+        return int((time / 60) % 60)
+
+    @staticmethod
+    def dayofweek(time: float):
+        return int((time % (24*60*7)) / (24*60))
+
+    @classmethod
+    def dayofweek_as_str(cls, time: float) -> str:
+        return WEEKDAYS[cls.dayofweek(time)]
+
+    @classmethod
+    def next_dayofweek_as_str(cls, time: float) -> str:
+        return WEEKDAYS[(cls.dayofweek(time) + 1) % 7]
+
+    @classmethod
+    def last_dayofweek_as_str(cls, time: float) -> str:
+        return WEEKDAYS[(cls.dayofweek(time) + 6) % 7] # add 6 instead of subtracting 1 and let modulo do the work
+
+    @classmethod
+    def as_str(cls, time: float, strf: str = '%H:%M:%S'):
+        return cls.as_time(time).strftime(strf)
+
+    @classmethod
+    def as_time(cls, time: float):
+        return datetime.time(cls.hours(time), cls.minutes(time), cls.seconds(time))
+
+    @staticmethod
+    def duration_between(start: str, end: str, strf: str = '%H:%M:%S'):
+        """
+        Gives the duration between two timestamps in minutes.
+        Assumes start <= end!
+
+        :param start: strf-formatted timestamp
+        :param end: strf-formatted timestamp
+        :param strf: strf formatting
+        :return: float - minutes
+        """
+        # TODO: cornercase of different days?
+        return (datetime.datetime.strptime(end, strf) - datetime.datetime.strptime(start, strf)).total_seconds() / 60
+
+    @classmethod
+    def convert_to_day_of_week_bucket(cls, time: float):
+        if cls.dayofweek(time) < 5:
             return False # Non_Working_Day? No => weekday
         else:
             return True  # Non_Working_Day? Yes (i.e., holidays, weekends)
+
+    @staticmethod
+    def convert_to_temporal_bucket(time: float, temporal_resolution):
+        return (time % (24 * 60)) // (temporal_resolution * 60)  # Reduce to one day, then get day of week
