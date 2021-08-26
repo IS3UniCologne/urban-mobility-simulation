@@ -107,7 +107,6 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         logging.info(f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
                       extra={"clazz": self.__class__.__name__, "oid": ""})
 
-
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         self.increase_total_missed_trips()
 

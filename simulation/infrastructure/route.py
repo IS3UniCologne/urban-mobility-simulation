@@ -38,7 +38,7 @@ class Route:
         return distance
 
 
-class PublicTransitRoute:
+class PublicTransitRoute(Route):
     """
     A PublicTransitRoute is describes deterministically by its (terminal) stops, trip segments, and
     Stop and trip segment id's are incrementally assigned and non-GTFS e.g.:
@@ -55,15 +55,22 @@ class PublicTransitRoute:
     - A "route segment" is the part of the route between two stops
     """
 
-    def __init__(self, origin: GeodesicPosition, destination: GeodesicPosition, route_id: str, trip_id: str):
-        self._origin = origin
-        self._destination = destination
+    def __init__(self, origin: GeodesicPosition, destination: GeodesicPosition, route_id: str, trip_id: str,
+                 stops: List[Stop] = None, segments: List[RouteSegment] = None):
+        super(PublicTransitRoute, self).__init__(origin, destination)
+
         self._id = route_id
         self._trip_id = trip_id
-
-        self._route_stops: List[Stop] = []
-        self._route_segments: List[RouteSegment] = []
         self._trips = None
+
+        if stops is None:
+            self._route_stops: List[Stop] = []
+        else:
+            self._route_stops = stops
+        if segments is None:
+            self._route_segments: List[RouteSegment] = []
+        else:
+            self._route_segments = segments
 
     @property
     def origin(self):
@@ -98,6 +105,17 @@ class PublicTransitRoute:
 
     def add_route_stop(self, stop: Stop):
         self._route_stops.append(stop)
+
+    def subroute(self, start: Stop, end: Stop):
+        """
+        Attention: The PublicTransitRoute that is returned does not adhere to index = stop ID!
+        This is marked by the route_id being prefixed with SUB
+        :param start: from which stop (incl.)
+        :param end: to which stop (incl.)
+        :return: PublicTransitRoute Object Stop_start -> ... -> Stop_end, which is a part of self
+        """
+        return PublicTransitRoute(self._origin, self._destination, f'SUB_{self._id}', self._trip_id,
+                                  self._route_stops[start.stop_id:end.stop_id+1], self._route_segments[start.stop_id:end.stop_id])
 
     def total_distance(self):
         return sum(self._route_segments)

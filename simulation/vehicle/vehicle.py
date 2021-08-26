@@ -8,7 +8,6 @@ from simulation.agent.agent import Agent
 import logging
 from simulation.environment.position import Position
 from simulation.infrastructure.network.edge import Edge
-from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 
 
 class VehicleState(Enum):
@@ -35,8 +34,11 @@ class Vehicle(ABC):
         # Initial State
         self._state = VehicleState.INITIALIZED
 
-
     # Properties
+    @property
+    def id(self):
+        return self._id
+
     @property
     def state(self):
         return self._state

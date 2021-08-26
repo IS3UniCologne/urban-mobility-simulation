@@ -1,7 +1,11 @@
+from simulation.agent.user import User
 from simulation.helper.configuration.configuration import Configuration
-from simulation.operator.transit_operator import TransitOperator
+from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.vehicle.public_transit_bus import Bus
+from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
+from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import PublicTransitVehicleChoiceBehavior
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
 from simulation.infrastructure.helper.timetable import Timetable
@@ -162,6 +166,10 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711):
     # Simulation Environment
     env = simpy.Environment(initial_time=start_time)
 
+    # before a new simulation run, reset everything
+    PublicTransitVehicle.public_transit_vehicle_id = 0
+    Bus.bus_id = 0
+    User.user_id = 0
     GeodesicEnvironment.getInstance().reset_random_generator(seed)
 
     # Inject Simulation Environment to Logger (such that we can log the env time)
@@ -177,7 +185,25 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711):
     # # # # # # # # # # # # # # # # # # # # # #
 
     # Operator Modules
-    operator = TransitOperator(env, timetable)
+    operator = PublicTransitOperator(env, timetable)
+    search_engine = operator
+    payment_engine = operator
+    vehicle_assignment_engine = operator
+
+    # Vehicle Choice Model
+    vehicle_choice_model = PublicTransitVehicleChoiceBehavior(['Bus'])
+
+    # World
+    world = World(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model)
+
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Spawn Demand Processes.                 #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
+    demand_factory = DemandFactory(env, demand_profile, di, world, seed)
+
+    env.process(demand_factory.generate_demand())
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -185,6 +211,15 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711):
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
     env.run(until = end_time)
+
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Benchmarks.                             #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
+    print("Total Revenue: " + str(payment_engine.total_revenue))
+    print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
+    print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
 
 
 if __name__ == '__main__':
