@@ -15,4 +15,4 @@ dependencies:
       - partridge[full]
       - peartree
       - gtfs_kit
-
+      - mlrose
