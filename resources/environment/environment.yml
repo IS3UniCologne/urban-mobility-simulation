@@ -1,5 +1,6 @@
 name: urban-mobility-simulation
 channels:
+  - defaults
   - conda-forge
 dependencies:
   - geopandas
