@@ -10,3 +10,9 @@ dependencies:
   - shapely
   - simpy>=4.0.1
   - statsmodels
+  - pip
+  - pip:
+      - partridge[full]
+      - peartree
+      - gtfs_kit
+
