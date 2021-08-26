@@ -58,8 +58,12 @@ class World:
             # Generate Transportation Task
             task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
 
-            new_user = user.User(origin_position, task, self._search_engine, self._payment_engine,
-                                  self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
+            if self._vehicle_choice_behavior.__class__.__name__ == 'PublicTransitVehicleChoiceBehavior':
+                new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
+                                            self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
+            else:
+                new_user = user.User(origin_position, task, self._search_engine, self._payment_engine,
+                                     self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
 
             # Add user to user list
             # ToDo: not needed right now
