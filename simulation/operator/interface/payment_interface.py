@@ -23,7 +23,7 @@ class PaymentInterface(ABC):
         pass
 
     @abstractmethod
-    def withdraw_transportation_task(self, transportation_task:TransportTask):
+    def withdraw_transportation_task(self, user, transportation_task:TransportTask):
         pass
 
     @property

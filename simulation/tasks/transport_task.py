@@ -19,7 +19,7 @@ class TransportTask:
         return self._origin
 
     @origin.setter
-    def trip_origin(self, position: Position):
+    def origin(self, position: Position):
         self._origin = position
 
     @property
