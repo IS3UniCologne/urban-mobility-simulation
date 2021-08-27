@@ -73,6 +73,10 @@ class PublicTransitRoute(Route):
             self._route_segments = segments
 
     @property
+    def trip_id(self):
+        return self._trip_id
+
+    @property
     def origin(self):
         return self._origin
 

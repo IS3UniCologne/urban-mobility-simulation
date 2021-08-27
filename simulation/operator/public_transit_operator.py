@@ -36,6 +36,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
         # Config
         self._config = Configuration.instance()
+        self._operator_config = self._config.transit_operator_config
 
         self._operator_process = self._env.process(self._run())
 
@@ -47,23 +48,34 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
             logging.debug(f'TransitOperator is at time {self._time.now_as_str()}',
                           extra={"clazz": self.__class__.__name__, "oid": ""})
 
-            trips = self._timetable.next_trips(self._time)
+            trips = self._timetable.next_trips(self._time, self._operator_config.planning_lookahead)
 
             if trips:  # non-empty list is True
-                for trip_id in trips:
+
+                # spawn busses only for trips that are not yet spawned
+                # TODO: can there be a case of overlapping trips with the same trip id? i.e. extreme delay?
+                for trip_id in (t for t in trips if t not in [b.route.trip_id for b in self._busses]):
                     trip = self._timetable.trip_by_id(trip_id)
                     route = self._build_route(trip)
-                    self._busses.append(self._spawn_bus(route))
+                    bus = self._spawn_bus(route)
+                    self._busses.append(bus)
+
+                    # also spawn a cleanup process that waits for completion of trip
+                    self._env.process(self._clean_up_bus(bus))
 
             yield self._env.timeout(1)
 
     def search_for_transportation_alternatives(self,
                                                transportation_search_task: TransportationSearchTask) -> TransportationAlternativeBrowser:
 
+        user_config = self._config.user_config
+
         browser = TransportationAlternativeBrowser()
         search_time = transportation_search_task.transport_task.time
 
-        for viable_transit in self._find_viable_transit(transportation_search_task, 'hexagon', 10):
+        for viable_transit in self._find_viable_transit(transportation_search_task,
+                                                        user_config.spatial_strategy,
+                                                        user_config.max_wait):
             vehicle = viable_transit['vehicle']
             subroute = viable_transit['subroute']
             walking_dist_to_start = viable_transit['initial_walking']
@@ -170,6 +182,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         # skip origin as it is already added
         for stop_id, row in enumerate(trip[1:].itertuples(index=False), start=1):
             stop = Stop(stop_id, row.stop_id, row.stop_lat, row.stop_lon, row.departure_time, row.dep_next_day)
+
             # Actual distance traveled along the associated shape, from the first stop to the stop specified in this record
             distance = row.shape_dist_traveled - total_traveled
 
@@ -187,8 +200,15 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
     def _spawn_bus(self, route: PublicTransitRoute):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
         bus = Bus(self._env, route, init_position)
-        bus.current_stop = route.origin  # TODO: move to Bus/PublicTransitVehicle?
+
         return bus
+
+    def _clean_up_bus(self, bus: Bus):
+
+        yield bus._has_reached_destination
+
+        self._busses.remove(bus)
+        # TODO: unmount all remaining passengers - though there shouldn't be any?
 
     def _find_viable_transit(self, transportation_search_task, spatial_strategy='hexagon', temporal_lookahead=10):
         search_time = transportation_search_task.transport_task.time
@@ -199,8 +219,9 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
         if not self._busses:
             # No busses are en-route, report no viable alternative
-            # TODO: fallback to planned timetable - a new bus could spawn within temporal_lookahead?
-            return viable_transit
+            # TODO: fallback to timetable if temporal_lookahead > transit operator planning window?
+            if temporal_lookahead > self._operator_config.planning_lookahead:
+                raise NotImplementedError('temporal lookahead of user > planning lookahead of operator currently not supported')
 
         for vehicle in self._busses:
             viable_stops = self._check_viable_stops(vehicle, spatial_strategy,
@@ -210,9 +231,9 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                 # check for temporal alignment
                 reachable_stops = []
                 for stop in viable_stops['origin']:
-                    reachable, distance = self._reachable(stop, vehicle, search_time,
-                                                          transportation_search_task.transport_task.origin,
-                                                          latest_departure)
+                    reachable, distance = self._reachable_in_time(stop, vehicle, search_time,
+                                                                  transportation_search_task.transport_task.origin,
+                                                                  latest_departure)
                     if reachable:
                         reachable_stops.append((stop, distance)) # tuple of (Stop, walking distance to/from)
 
@@ -283,8 +304,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
             raise NotImplementedError(f'Other strategies for aligning travel demands are not implemented.')
 
     @staticmethod
-    def _reachable(stop: Stop, vehicle: PublicTransitVehicle, current_time, current_position: GeodesicPosition,
-                   latest_departure):
+    def _reachable_in_time(stop: Stop, vehicle: PublicTransitVehicle, current_time, current_position: GeodesicPosition,
+                           latest_departure):
         walking_dist = stop >> current_position
         # reachable within the specified temporal_lookahead and depart after arrival by foot
         reachable = SimulationTimeConverter.as_str(current_time + (walking_dist / 83.33)) <= \
