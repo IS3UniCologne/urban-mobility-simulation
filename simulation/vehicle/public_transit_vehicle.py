@@ -30,7 +30,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         self._max_available_seats = max_available_seats
         self._seats = []
         self._velocity = velocity   # meter per minute (16.67m/min = 1kmh)
-        self._current_stop = None
+        self._current_stop = route.origin
         self._delay = 0 # in seconds from planned route timetable
 
         # Events

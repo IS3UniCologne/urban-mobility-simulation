@@ -63,6 +63,10 @@ class Configuration:
 
         self._mode_choice_config = []
 
+        self._user_config = None
+
+        self._transit_operator_config = None
+
     @property
     def spatial_resolution(self):
         return self._spatial_resolution
@@ -111,6 +115,20 @@ class Configuration:
     def get_mode_choice_config(self):
         return self._mode_choice_config
 
+    def add_user_config(self, user_config):
+        self._user_config = user_config
+
+    @property
+    def user_config(self):
+        return self._user_config
+
+    def add_transit_operator_config(self, transit_operator_config):
+        self._transit_operator_config = transit_operator_config
+
+    @property
+    def transit_operator_config(self):
+        return self._transit_operator_config
+
     def set_store_results(self, store_results):
         self._store_results = store_results
 
@@ -143,3 +161,14 @@ class ModeChoiceConfig:
         self.substitution_boundary  = substitution_boundary
         self.available_modes = available_modes
         self.path_to_model = path_to_model
+
+
+class UserConfig:
+    def __init__(self, spatial_strategy, max_wait):
+        self.spatial_strategy = spatial_strategy
+        self.max_wait = int(max_wait)
+
+
+class TransitOperatorConfig:
+    def __init__(self, planning_lookahead):
+        self.planning_lookahead = int(planning_lookahead)
