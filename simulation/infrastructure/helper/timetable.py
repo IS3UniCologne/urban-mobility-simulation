@@ -44,27 +44,27 @@ class Timetable:
                                                                                 self._trips['stop_lat']))
         self._trips.sort_values(by=['trip_id', 'stop_sequence'], inplace=True)
 
-    def next_trips(self, time: SimulationTime):
+    def next_trips(self, time: SimulationTime, lookahead: int):
 
-        # look ahead one minute, simulation time is in minutes
+        # look ahead 'lookahead' minutes, simulation time is in minutes
         # yield all trips that start (on this weekday) within the next minute
         weekday = time.dayofweek_as_str()
         last_weekday = time.last_dayofweek_as_str()
-        if time.minutes() == 59:
+        if time.minutes() + lookahead > 59:
             if time.hours() == 23:
                 last_weekday = weekday
                 weekday = time.next_dayofweek_as_str()
-                lookahead = datetime.time(0, 0).strftime('%H:%M:%S')
+                lookahead_strf = datetime.time(0, lookahead-1).strftime('%H:%M:%S')
             else:
-                lookahead = datetime.time(time.hours()+1, 0).strftime('%H:%M:%S')
+                lookahead_strf = datetime.time(time.hours()+1, lookahead-1).strftime('%H:%M:%S')
         else:
-            lookahead = datetime.time(time.hours(), time.minutes()+1).strftime('%H:%M:%S')
+            lookahead_strf = datetime.time(time.hours(), time.minutes()+lookahead).strftime('%H:%M:%S')
 
         trips = self._trips.loc[(((self._trips[weekday] == 1) & (~self._trips['dep_next_day'])) |
                                  ((self._trips[last_weekday] == 1) & (self._trips['dep_next_day']))) &
                                 (self._trips['stop_sequence'] == 0) &
                                 (self._trips['departure_time'] > time.now_as_str()) &
-                                (self._trips['departure_time'] <= lookahead), 'trip_id'].tolist()
+                                (self._trips['departure_time'] <= lookahead_strf), 'trip_id'].tolist()
 
         return trips
 

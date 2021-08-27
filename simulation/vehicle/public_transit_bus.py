@@ -43,31 +43,48 @@ class Bus(PublicTransitVehicle):
     def _run(self):
         """
         Bus Lifecycle
+
+        Time 12:00:00 - Departure 12:10:00 - wait
+        Time 23:59:00 - Departure 00:06:00 - next_day = True - wait
+        Time 00:03:00 - Departure 00:04:00 - next_day = False - wait
+        Time 00:03:00 - Departure 00:04:00 - next_day = True - should not happen
         """
         while self._state is not BusState.AT_TERMINAL_DESTINATION:
 
             strf = '%H:%M:%S'
+            early_arrival = (self._time.now_as_str() < self._current_stop.departure and
+                             not self._current_stop.departure_next_day) or \
+                            (self._time.now_as_str() > self._current_stop.departure and
+                             self._current_stop.departure_next_day)
 
-            # TODO: edge cases departure_next_day
-            if self._time.now_as_str() < self._current_stop.departure and not self._current_stop.departure_next_day:
-                # if the bus has reached the planned stop earlier, wait
+            if self._state is BusState.AT_TERMINAL_ORIGIN and self._time.now_as_str() < self._current_stop.departure:
+                # bus was pre-initialized by transit operator
                 wait = SimulationTimeConverter.duration_between(self._time.now_as_str(strf),
                                                                 self._current_stop.departure, strf)
+                logging.debug(f'Bus waits for scheduled departure from terminal origin',
+                              extra={"clazz": self.__class__.__name__, "oid": self._id})
+                yield self._env.timeout(wait)
+
+            elif early_arrival:
+                # if the bus has reached the planned stop earlier, wait
+                wait = SimulationTimeConverter.duration_between(self._time.now_as_str(strf),
+                                                                self._current_stop.departure, strf,
+                                                                self._current_stop.departure_next_day)
                 logging.debug(f'Bus is ahead of schedule and will wait for scheduled departure.',
                               extra={"clazz": self.__class__.__name__, "oid": self._id})
                 self._delay = 0 # reset delay
                 yield self._env.timeout(wait)
 
-            if self._time.now_as_str() > self._current_stop.departure and not self._current_stop.departure_next_day:
+            elif self._time.now_as_str() > self._current_stop.departure and not self._current_stop.departure_next_day:
                 # if the bus has reached the planned stop late, set delay
-                diff = datetime.strptime(self._time.now_as_str(strf), strf) - datetime.strptime(self._current_stop.departure, strf)
+                diff = datetime.strptime(self._time.now_as_str(strf), strf) - \
+                       datetime.strptime(self._current_stop.departure, strf)
                 self._delay = diff.total_seconds()
 
             # otherwise move on with driving
             yield self._env.process(self._move_to_next_stop())
 
-        # TODO: announce end of lifetime to operator? for e.g. analysis of passengers/time?
-        # self._has_reached_destination.succeed()
+        self._has_reached_destination.succeed()
 
     def _move_to_next_stop(self):
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
@@ -87,14 +104,17 @@ class Bus(PublicTransitVehicle):
         yield self._env.timeout(duration)
 
         self._current_stop = route_segment.end
-        logging.debug(f'Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}',
-                      extra={"clazz": self.__class__.__name__, "oid": self._id})
         self._update_positions(route_segment.end)
 
         if self._current_stop == self._route.destination:
             self._state = BusState.AT_TERMINAL_DESTINATION
+            logging.debug(f'Bus has arrived at its terminal destination - stop {self._current_stop.stop_id} '
+                          f'at time {self._time.now_as_str()}',
+                          extra={"clazz": self.__class__.__name__, "oid": self._id})
         else:
             self._state = BusState.AT_STOP
+            logging.debug(f'Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}',
+                          extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def _update_positions(self, new_position):
         # Update Vehicle Position
