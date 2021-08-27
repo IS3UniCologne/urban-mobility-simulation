@@ -9,6 +9,7 @@ class SimulationTime:
     Implements easy access to simpy's environment time.
     While simpy's time is unitless, we assume it to be minutes.
     """
+
     def __init__(self, env: Environment):
         self._env = env
 
@@ -62,7 +63,7 @@ class SimulationTimeConverter:
 
     @staticmethod
     def dayofweek(time: float):
-        return int((time % (24*60*7)) / (24*60))
+        return int((time % (24 * 60 * 7)) / (24 * 60))
 
     @classmethod
     def dayofweek_as_str(cls, time: float) -> str:
@@ -74,7 +75,7 @@ class SimulationTimeConverter:
 
     @classmethod
     def last_dayofweek_as_str(cls, time: float) -> str:
-        return WEEKDAYS[(cls.dayofweek(time) + 6) % 7] # add 6 instead of subtracting 1 and let modulo do the work
+        return WEEKDAYS[(cls.dayofweek(time) + 6) % 7]  # add 6 instead of subtracting 1 and let modulo do the work
 
     @classmethod
     def as_str(cls, time: float, strf: str = '%H:%M:%S'):
@@ -85,23 +86,32 @@ class SimulationTimeConverter:
         return datetime.time(cls.hours(time), cls.minutes(time), cls.seconds(time))
 
     @staticmethod
-    def duration_between(start: str, end: str, strf: str = '%H:%M:%S'):
+    def duration_between(start: str, end: str, strf: str = '%H:%M:%S', end_next_day=None):
         """
         Gives the duration between two timestamps in minutes.
-        Assumes start <= end!
+        Must be start <= end for end_next_day = False
 
+        :param end_next_day: bool/None
         :param start: strf-formatted timestamp
         :param end: strf-formatted timestamp
         :param strf: strf formatting
         :return: float - minutes
         """
-        # TODO: cornercase of different days?
-        return (datetime.datetime.strptime(end, strf) - datetime.datetime.strptime(start, strf)).total_seconds() / 60
+        # try to infer end_next_day if not explicitly given
+        if end_next_day is None:
+            end_next_day = end < start
+
+        if not end_next_day:
+            return (datetime.datetime.strptime(end, strf) -
+                    datetime.datetime.strptime(start, strf)).total_seconds() / 60
+        else:
+            return (datetime.datetime.strptime(end, strf) + datetime.timedelta(days=1) -
+                    datetime.datetime.strptime(start, strf)).total_seconds() / 60
 
     @classmethod
     def convert_to_day_of_week_bucket(cls, time: float):
         if cls.dayofweek(time) < 5:
-            return False # Non_Working_Day? No => weekday
+            return False  # Non_Working_Day? No => weekday
         else:
             return True  # Non_Working_Day? Yes (i.e., holidays, weekends)
 

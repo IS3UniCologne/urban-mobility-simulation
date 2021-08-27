@@ -1,5 +1,5 @@
 from simulation.agent.user import User
-from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig
 from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
@@ -51,6 +51,9 @@ supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
 transit_timetable_path = parser.get("INFRASTRUCTURE", "path_transit_timetable")
 # transit_shapes_path = parser.get("INFRASTRUCTURE", "path_transit_shapes")
 
+# Operator Config
+transit_planning_lookahead = parser.get("OPERATOR", "TRANSIT_LOOKAHEAD")
+
 # Environment files
 bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
 env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7")
@@ -59,6 +62,16 @@ env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 
 # Create Global Config File
 global_config = Configuration.init(spatial_res, temporal_res, daily_res)
+
+# User configuration
+max_waiting_time = parser.get("USER", "TRANSIT_MAX_WAIT")
+spatial_strategy = parser.get("USER", "SPATIAL_STRATEGY")
+
+user_config = UserConfig(spatial_strategy, max_waiting_time)
+transit_operator_config = TransitOperatorConfig(transit_planning_lookahead)
+
+global_config.add_user_config(user_config)
+global_config.add_transit_operator_config(transit_operator_config)
 
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
