@@ -54,6 +54,7 @@ class DemandFactory:
                     geo = json.load(f)
             except FileNotFoundError:
                 logging.warning(f'Demand modifier at "{modifier}" doesn\'t exist, skipping.')
+                continue
 
             multiplier = geo['properties']['demandMultiplier']
             hex_ids = h3.polyfill(geo['geometry'],
@@ -105,11 +106,11 @@ class DemandFactory:
             # inter_arrival_time = numpy.random.exponential(
             #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
 
-            if self._modifiers[spatial_unit] == 0:
-                # logging.debug(f'Spatial unit {spatial_unit} is removed from demand generation process')
-                break
-
             try:
+                if self._modifiers[spatial_unit] == 0:
+                    logging.debug(f'Spatial unit {spatial_unit} is removed from demand generation process')
+                    break
+
                 # TODO: is this a viable way of modifying exponential sampling using the scale factor?
                 inter_arrival_time = self._random.exponential(1.0 / poisson_lambda * self._modifiers[spatial_unit]) * \
                                      self._demand_importer._get_temporal_duration_in_hours() * 60
