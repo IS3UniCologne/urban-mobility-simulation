@@ -3,6 +3,7 @@ import logging
 from simpy import Environment
 
 from simulation.agent import user
+from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -30,6 +31,9 @@ class World:
         # Store all current users
         self._users = []
 
+        # Config
+        self._config = Configuration.instance()
+
         self._user_limit = 10_000_000
 
     def add_user(self, origin, destination):
@@ -44,8 +48,9 @@ class World:
             # Get Origin and Destination based on underlying environment
             geo_env = GeodesicEnvironment.getInstance()
 
-            origin_lat, origin_lng = geo_env.get_random_position(origin)
-            destination_lat, destination_lng = geo_env.get_random_position(destination)
+            origin_lat, origin_lng = geo_env.get_random_position(origin, f'hex_{self._config.spatial_resolution_value}')
+            destination_lat, destination_lng = geo_env\
+                .get_random_position(destination, f'hex_{self._config.spatial_resolution_value}')
 
             origin_position = GeodesicPosition(origin_lat, origin_lng, origin)  # (Lat, Lng)
             destination_position = GeodesicPosition(destination_lat, destination_lng, destination)  # (Lat, Lng)
