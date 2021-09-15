@@ -48,6 +48,7 @@ daily_res = parser.getint("WORLD", "daily_resolution")
 
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand")
+demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(',')
 
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
@@ -238,7 +239,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
   # Spawn Demand Processes.                 #
   #                                         #
   # # # # # # # # # # # # # # # # # # # # # #
-  demand_factory = DemandFactory(env, demand_profile, di, world, seed)
+  demand_factory = DemandFactory(env, demand_profile, di, world, demand_modifier_paths, seed)
 
   env.process(demand_factory.generate_demand())
 

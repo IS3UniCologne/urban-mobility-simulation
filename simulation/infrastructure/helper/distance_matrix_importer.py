@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import h3
+from haversine import haversine_vector, Unit
 import pandas as pd
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -10,7 +12,7 @@ class DistanceMatrixImporter:
     """
     Proxy Class for Distance Matrix. Either (Re-)Calculate, or load Matrix, if already existing
 
-    Distance between hexagon elements are computed using euclidean distances
+    Distance between hexagon elements are computed using haversine distances
     """
 
     def __init__(self, hexagons, resolution, data_path):
@@ -31,28 +33,30 @@ class DistanceMatrixImporter:
         if p.exists():
             distance_matrix = pd.read_csv(p, index_col = 0)
         else:
-            distance_matrix = pd.DataFrame([], index=hexagons, columns=hexagons)
 
-            geo_env = GeodesicEnvironment.getInstance()
-
-            for idx_row, hex_row in enumerate(hexagons):
-                for idx_col, hex_col in enumerate(hexagons):
-                    # Symmtery
-                    if idx_col > idx_row:
-                        lat, lng = geo_env.get_centroid(hex_row)
-                        hex_row_pos = GeodesicPosition(lat, lng, hex_row)
-
-                        lat, lng = geo_env.get_centroid(hex_col)
-                        hex_col_pos = GeodesicPosition(lat, lng, hex_col)
-
-                        distance = hex_row_pos >> hex_col_pos
-
-                        distance_matrix[hex_row][hex_col] = distance
-                        distance_matrix[hex_col][hex_row] = distance
-                    elif idx_col == idx_row:
-                        distance_matrix[hex_row][hex_col] = 0.0
-
+            hexagon_centers = [h3.h3_to_geo(x) for x in hexagons]
+            distance_matrix = pd.DataFrame(haversine_vector(hexagon_centers, hexagon_centers, comb=True, unit=Unit.METERS), index=hexagons, columns=hexagons)
             distance_matrix.to_csv(p, index = True)
+
+            # Below is the old, inefficient way of doing things
+            # geo_env = GeodesicEnvironment.getInstance()
+
+            # for idx_row, hex_row in enumerate(hexagons):
+            #     for idx_col, hex_col in enumerate(hexagons):
+            #         # Symmetry
+            #         if idx_col > idx_row:
+            #             lat, lng = geo_env.get_centroid(hex_row, f'hex_{self._resolution}')
+            #             hex_row_pos = GeodesicPosition(lat, lng, hex_row)
+            #
+            #             lat, lng = geo_env.get_centroid(hex_col, f'hex_{self._resolution}')
+            #             hex_col_pos = GeodesicPosition(lat, lng, hex_col)
+            #
+            #             distance = hex_row_pos >> hex_col_pos
+            #
+            #             distance_matrix[hex_row][hex_col] = distance
+            #             distance_matrix[hex_col][hex_row] = distance
+            #         elif idx_col == idx_row:
+            #             distance_matrix[hex_row][hex_col] = 0.0
 
         return distance_matrix
 
