@@ -3,7 +3,7 @@ import h3 as h3
 
 from .geodesic_environment import GeodesicEnvironment
 from .position import Position
-from haversine import haversine
+from haversine import haversine, Unit
 
 from ..helper.configuration.configuration import Configuration
 
@@ -49,7 +49,7 @@ class GeodesicPosition(Position):
         :param other: GeodesicPosition
         :return: Haversine distance in meter.
         """
-        return haversine((self._lat, self._lng), (other._lat, other._lng))*1000 # in meter
+        return haversine((self._lat, self._lng), (other._lat, other._lng), Unit.METERS)
 
     def get_default_hexagon(self):
         """

@@ -1,8 +1,10 @@
+import json
+import h3
 import numpy
 
 from simulation.world.demand.demand_importer import DemandImporter
 import logging
-
+from simulation.helper.configuration.configuration import Configuration
 from simulation.world.world import World
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 
@@ -10,7 +12,7 @@ from simulation.helper.time import SimulationTime, SimulationTimeConverter
 class DemandFactory:
     counter = 0
 
-    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World, seed,
+    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World, modifiers, seed,
                  maximal_demand=1_000_000):
         self._env = env
         self._time = SimulationTime(env)
@@ -29,10 +31,37 @@ class DemandFactory:
 
         self._maximal_demand = maximal_demand
 
+        self._modifier_paths = modifiers
+        self._modifiers = {}
+
         self._spatial_units = list(self._demand_profile[origin].unique())
 
-        # Randon Number Generator
+        # Random Number Generator
         self._random = numpy.random.RandomState(seed)
+
+        # Config
+        self._config = Configuration.instance()
+
+        self._load_modifiers()
+
+    def _load_modifiers(self):
+        """
+        Loads and registers per-hexagon demand modifiers (floating number multiplier) from GeoJSON
+        """
+        for modifier in self._modifier_paths:
+            try:
+                with open(modifier, 'r') as f:
+                    geo = json.load(f)
+            except FileNotFoundError:
+                logging.warning(f'Demand modifier at "{modifier}" doesn\'t exist, skipping.')
+                continue
+
+            multiplier = geo['properties']['demandMultiplier']
+            hex_ids = h3.polyfill(geo['geometry'],
+                                  res=self._config.spatial_resolution_value,
+                                  geo_json_conformant=True)
+
+            self._modifiers.update({x: multiplier for x in hex_ids})
 
     def generate_demand(self):
         """
@@ -77,8 +106,18 @@ class DemandFactory:
             # inter_arrival_time = numpy.random.exponential(
             #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
 
-            inter_arrival_time = self._random.exponential(
-                1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
+            try:
+                if self._modifiers[spatial_unit] == 0:
+                    logging.debug(f'Spatial unit {spatial_unit} is removed from demand generation process')
+                    break
+
+                # TODO: is this a viable way of modifying exponential sampling using the scale factor?
+                inter_arrival_time = self._random.exponential(1.0 / poisson_lambda * self._modifiers[spatial_unit]) * \
+                                     self._demand_importer._get_temporal_duration_in_hours() * 60
+            except KeyError:
+                # no modifier is registered for that spatial unit
+                inter_arrival_time = numpy.random.exponential(1.0 / poisson_lambda) * \
+                                     self._demand_importer._get_temporal_duration_in_hours() * 60
 
             # await next arrival
             yield self._env.timeout(inter_arrival_time)
