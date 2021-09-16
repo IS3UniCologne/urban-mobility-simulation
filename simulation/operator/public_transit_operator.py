@@ -1,10 +1,9 @@
 import logging
 import pandas as pd
-import geopandas as gpd
 
 from simpy import Environment
 
-from simulation.helper.configuration.configuration import Configuration, TemporalBucket, SpatialResolution
+from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.helper.timetable import Timetable
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.operator.data_transfer_object.transportation_alternative import TransportationAlternative
@@ -21,6 +20,7 @@ from simulation.infrastructure.transit_network.stop import Stop
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
+from simulation.world.world import World
 
 
 class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface):

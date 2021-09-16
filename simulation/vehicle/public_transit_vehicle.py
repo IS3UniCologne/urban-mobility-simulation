@@ -8,6 +8,7 @@ from .interfaces.passenger_interface import PassengerInterface
 from .vehicle import Vehicle, VehicleState
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.stop import Stop
+from simulation.agent.user import TransitUser
 from ..helper.time import SimulationTimeConverter
 
 
@@ -64,7 +65,7 @@ class PublicTransitVehicle(Vehicle, ABC):
     def available_seats(self):
         return self._available_seats
 
-    def mount_passenger(self, passenger: PassengerInterface):
+    def mount_passenger(self, passenger: TransitUser):
         if len(self._seats) < self._available_seats:
             self._seats.append(passenger)
             self._available_seats -= 1
@@ -80,7 +81,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         else:
             raise Exception('Vehicle is full.')
 
-    def unmount_passenger(self, passenger: PassengerInterface):
+    def unmount_passenger(self, passenger: TransitUser):
         if passenger in self._seats:
             self._seats.remove(passenger)
             self._available_seats += 1

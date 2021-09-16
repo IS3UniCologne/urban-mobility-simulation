@@ -99,3 +99,14 @@ class GeodesicPosition(Position):
             return True
         else:
             return False
+
+    def difference(self, other: 'GeodesicPosition'):
+        """
+        This function is meant for getting the full distance vector of the (lat, lng) coordinate system
+        of two GeodesicPositions. This might not be vastly intelligent in terms of what the result means geographically
+        but it is needed for constructing states for public vehicle agents.
+
+        :param other: GeodesicPosition
+        :return: returns a tuple of (self.lat - other.lat, self.lon - other.lon)
+        """
+        return tuple(x-y for x, y in zip(self.getExactLocation(), other.getExactLocation()))
