@@ -1,5 +1,6 @@
 import logging
 
+from numpy.random import normal
 from simpy import Environment
 
 from simulation.agent import user
@@ -16,11 +17,36 @@ from simulation.tasks.transport_task import TransportTask
 
 class World:
 
+    # There is only one instance of this class.
+    __instance = None
+
+    @staticmethod
+    def instance() -> 'World':
+        """ Static access method. """
+        if World.__instance == None:
+            raise Exception("World was not initialized")
+        else:
+            return World.__instance
+
+    @staticmethod
+    def init(self, env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior):
+        """ Static access method. """
+        if World.__instance == None:
+            World(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior)
+        return World.__instance
+
     def __init__(self, env: Environment,
                  search_engine: SearchEngineInterface,
                  payment_engine: PaymentInterface,
                  vehicle_assignment_engine: VehicleAllocationEngineInterface,
                  vehicle_choice_behavior: VehicleChoiceBehaviorInterface):
+        """ Virtually private constructor. """
+        if World.__instance != None:
+            raise Exception("This class is a singleton!")
+        else:
+            World.__instance = self
+            super(World, self).__init__()
+
         self._env = env
         self._search_engine = search_engine # Allows users to search for vehicles
         self._payment_engine = payment_engine # Allows users to pay
@@ -33,6 +59,9 @@ class World:
 
         # Config
         self._config = Configuration.instance()
+
+        # Events
+        self._changed = self._env.event()
 
         self._user_limit = 10_000_000
 
@@ -60,8 +89,11 @@ class World:
             tc = TripCharacteristics(distance)
             viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
+            # User Preferences
+            max_wait_time = normal(self._config.user_config.max_wait) # sample from normal dist centered on config
+
             # Generate Transportation Task
-            task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
+            task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes, max_wait_time)
 
             if self._vehicle_choice_behavior.__class__.__name__ == 'PublicTransitVehicleChoiceBehavior':
                 new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
@@ -71,11 +103,22 @@ class World:
                                      self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
 
             # Add user to user list
-            # ToDo: not needed right now
-            # self._users.append(new_user)
+            self._users.append(new_user)
 
             # Start Process for each new user
             self._env.process(new_user.run())
 
             if len(self._users) == self._user_limit:
                 logging.info(f'Reached User Limit of {self._user_limit}. Not adding more users to world.', extra={"clazz": self.__class__.__name__, "oid": " "})
+
+    @property
+    def users(self):
+        return self._users
+
+    @property
+    def changed(self):
+        return self._changed
+
+    @changed.setter
+    def changed(self, event):
+        self._changed = event

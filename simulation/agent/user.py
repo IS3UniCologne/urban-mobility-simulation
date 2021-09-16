@@ -19,9 +19,8 @@ from ..vehicle.interfaces.passenger_interface import PassengerInterface
 from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
-from ..vehicle.public_transit_bus import Bus
-from ..vehicle_choice_model.trip_characteristics import TripCharacteristics
 from ..vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
+from ..world.world import World
 
 
 class UserState(Enum):
@@ -92,6 +91,9 @@ class User(Agent, DriverInterface):
         self._position_changed.succeed(position)
         self._position_changed = self._env.event()
 
+    @property
+    def transport_task(self):
+        return self._transport_task
 
     def run(self):
         """
@@ -388,6 +390,12 @@ class TransitUser(User, PassengerInterface):
         self._id = TransitUser.transit_user_id  # User ID
         TransitUser.transit_user_id += 1  # Increment User Id
 
+        # TODO: modify available_time over time
+        self._available_time = self._transport_task.max_wait_time # max available walk / wait time, can change by e.g. waiting
+
+        # World Instance
+        self._world = World.instance()
+
         # Events
         self._arrived_at_last_stop = self._env.event()
 
@@ -441,6 +449,9 @@ class TransitUser(User, PassengerInterface):
     def search_for_alternatives(self):
         # Update current state
         self._state = UserState.SEARCHING_TRANSPORT_ALTERNATIVES
+
+        self._world.changed.succeed()
+        self._world.changed = self._env.event()
 
         yield self._env.timeout(.01) # TODO: this is just hacking around the expected generator, opening app is instantaneous
 
@@ -508,6 +519,10 @@ class TransitUser(User, PassengerInterface):
 
     def identify_passenger(self):
         return f'TransitUser {self._id}'
+
+    @property
+    def available_time(self):
+        return self._available_time
 
     def __str__(self):
         return f'TransitUser with id {self._id} is in state {self._state} and has transportation task {self._transport_task}'

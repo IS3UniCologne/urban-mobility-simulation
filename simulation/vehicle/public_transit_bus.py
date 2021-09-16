@@ -1,15 +1,16 @@
 import logging
-from datetime import datetime, time
+from datetime import datetime
 
 from simpy import Environment
 from enum import Enum
 
+from simulation.agent.user import TransitUserState
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
-from simulation.infrastructure.transit_network.stop import Stop
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle, PublicTransitVehicleState
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
+from simulation.world.world import World
 
 
 class BusState(PublicTransitVehicleState, Enum):
@@ -38,6 +39,10 @@ class Bus(PublicTransitVehicle):
         # Events
         self._has_reached_destination = self._env.event()
 
+        # Environment / World state
+        self._world = World.instance()
+        self._env_state = {}
+
         self._process = self._env.process(self._run())
 
     def _run(self):
@@ -50,6 +55,8 @@ class Bus(PublicTransitVehicle):
         Time 00:03:00 - Departure 00:04:00 - next_day = True - should not happen
         """
         while self._state is not BusState.AT_TERMINAL_DESTINATION:
+
+            self._env.process(self._update_env_state())
 
             strf = '%H:%M:%S'
             early_arrival = (self._time.now_as_str() < self._current_stop.departure and
@@ -128,6 +135,33 @@ class Bus(PublicTransitVehicle):
 
         logging.debug(f'Current position {self._position} in region {region_id}.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+    @property
+    def env_state(self):
+        return self._env_state
+
+    def _update_env_state(self):
+        """
+        We need:
+        - Distance to terminal destination
+        - Passengers [{distance to destination, remaining wait/walk}, ...]
+        - Demands [{distance to origin, distance to destination, wait/walk}, ...]
+        - Delay
+
+        which represents the most complete picture of the environment/world the agent has at the moment/time step
+        """
+
+        # wait for external change
+        yield self._world.changed
+
+        self._env_state['d_terminal'] = self._route.destination.difference(self._position)
+        self._env_state['passengers'] = [{'d_destination': self._position.difference(x.transport_task.destination),
+                                          'time': x.available_time} for x in self._seats]
+        self._env_state['demand'] = [{'d_origin': self._position.difference(x.transport_task.origin),
+                                      'd_destination': self._position.difference(x.transport_task.destination),
+                                      'time': x.available_time} for x in self._world.users
+                                     if x.state is TransitUserState.SEARCHING_TRANSPORT_ALTERNATIVES]
+        self._env_state['delay'] = self._delay
 
     def __str__(self):
         return f'I have {len(self._seats)} passengers on boards'
