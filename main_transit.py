@@ -1,5 +1,9 @@
+import numpy
+
+from simulation.agent.action_space import ActionSpace
 from simulation.agent.user import User
-from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig
+from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig, \
+    TransitAgentConfig
 from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
@@ -68,11 +72,17 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res)
 max_waiting_time = parser.get("USER", "TRANSIT_MAX_WAIT")
 spatial_strategy = parser.get("USER", "SPATIAL_STRATEGY")
 
+# Bus Agent Config
+actions = parser.get("BUS", "ACTION_SPACE").split(',')
+action_resolution = parser.get("BUS", "ACTION_SPACE_RESOLUTION")
+
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead)
+bus_agent_config = TransitAgentConfig(action_resolution)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
+global_config.add_transit_agent_config(bus_agent_config)
 
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
@@ -169,6 +179,16 @@ distance_matrix = dmi.load_distance_matrix()
 timetable = Timetable(transit_timetable_path)
 timetable.import_timetable()
 
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Construct Action Space (once).          #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+dim = len(actions)
+action_prob = numpy.full((dim), 1 / dim) # initialize equal probabilities
+ActionSpace.init(actions, action_prob)
+
+
 def run_single_simulation(start_time = 0, end_time = 60, seed = 4711):
 
     # # # # # # # # # # # # # # # # # # # # # #
@@ -208,7 +228,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711):
     vehicle_choice_model = PublicTransitVehicleChoiceBehavior(['Bus'])
 
     # World
-    world = World(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model)
+    world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
