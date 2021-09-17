@@ -1,3 +1,6 @@
+import math
+
+import h3
 from numpy import random
 import numpy
 
@@ -64,7 +67,6 @@ class GeodesicEnvironment(Environment):
             if geometry.contains(pnt):
                 return pnt.y, pnt.x # Latitude, Longitude
 
-
     def get_centroid(self, hex_id, layer_name="hex_7"):
         """
         Get centroid of hexagon
@@ -79,7 +81,6 @@ class GeodesicEnvironment(Environment):
         geometry = gdf.loc[hex_id].geometry
 
         return geometry.centroid.y, geometry.centroid.x # Lat, Lng
-
 
     def get_hexagon(self, hex_id, layer_name = "hex_7"):
         """
@@ -99,3 +100,44 @@ class GeodesicEnvironment(Environment):
 
     def reset_random_generator(self, seed = 42):
         self._random = numpy.random.RandomState(seed)
+
+    def move_in_layer(self, hex_id, movement):
+        """
+              ___0___
+           /           \
+         /5/          \1\
+                hex
+         \4\          /2/
+          \  ________  /
+                3
+
+        It doesn't really matter if the movement is named "up" or "left" as long as it corresponds always to the same
+        neighbor of the hexagon cell.
+
+        :param hex_id: Current hex id, this implicitly also gives the layer because it encodes the resolution
+        :param movement: one of the six sides 0...5
+        :return:
+        """
+
+        resolution = h3.h3_get_resolution(hex_id)
+        lat, lng = self.get_centroid(hex_id, f'hex_{resolution}')
+        lat_radians = math.radians(lat)
+        lng_radians = math.radians(lng)
+        edge_length = h3.edge_length(resolution, unit='km')
+        earth_radius = 6371 # in km
+        bearing = math.radians(movement / 6 * 360) # orientation, with north = 0°
+
+        # snippet below from https://stackoverflow.com/a/7835325
+
+        new_lat = math.asin(math.sin(lat_radians)*math.cos(edge_length/earth_radius) +
+                            math.cos(lat_radians)*math.sin(edge_length/earth_radius) * math.cos(bearing))
+
+        new_lng = lng_radians + math.atan2(math.sin(bearing) * math.sin(edge_length/earth_radius) * math.cos(lat_radians),
+                                   math.cos(edge_length/earth_radius) - math.sin(lat_radians) * math.sin(new_lat))
+
+        new_lat = math.degrees(new_lat)
+        new_lng = math.degrees(new_lng)
+
+        new_hex_id = h3.geo_to_h3(new_lat, new_lng, resolution)
+
+        return new_hex_id

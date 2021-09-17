@@ -67,6 +67,8 @@ class Configuration:
 
         self._transit_operator_config = None
 
+        self._transit_agent_config = None
+
     @property
     def spatial_resolution(self):
         return self._spatial_resolution
@@ -129,6 +131,13 @@ class Configuration:
     def transit_operator_config(self):
         return self._transit_operator_config
 
+    def add_transit_agent_config(self, transit_agent_config):
+        self._transit_agent_config = transit_agent_config
+
+    @property
+    def transit_agent_config(self):
+        return self._transit_agent_config
+
     def set_store_results(self, store_results):
         self._store_results = store_results
 
@@ -172,3 +181,8 @@ class UserConfig:
 class TransitOperatorConfig:
     def __init__(self, planning_lookahead):
         self.planning_lookahead = int(planning_lookahead)
+
+
+class TransitAgentConfig:
+    def __init__(self, action_resolution):
+        self.action_resolution = int(action_resolution)
