@@ -1,8 +1,10 @@
 import logging
 import pandas as pd
+import simpy
 
 from simpy import Environment
 
+from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.helper.timetable import Timetable
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
@@ -24,7 +26,7 @@ from simulation.world.world import World
 
 
 class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface):
-    def __init__(self, env: Environment, timetable: Timetable):
+    def __init__(self, env: Environment, timetable: Timetable, q_hat: ValueFunctionApproximator):
         PaymentInterface.__init__(self)
         self._timetable = timetable
         self._env = env
@@ -33,6 +35,13 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
         # Events
         self._vehicles_assigned_to_users = self._env.event()
+
+        # Agent
+        self._states = []
+        self._actions = []
+        self._rewards = []
+        self._rewards_cum = []
+        self._q_hat = q_hat
 
         # Config
         self._config = Configuration.instance()
@@ -45,25 +54,37 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         TransitOperator Lifecycle
         """
         while True:
-            logging.debug(f'TransitOperator is at time {self._time.now_as_str()}',
-                          extra={"clazz": self.__class__.__name__, "oid": ""})
+            try:
+                logging.debug(f'TransitOperator is at time {self._time.now_as_str()}',
+                              extra={"clazz": self.__class__.__name__, "oid": ""})
 
-            trips = self._timetable.next_trips(self._time, self._operator_config.planning_lookahead)
+                if len(self._busses) < self._operator_config.max_busses:
 
-            if trips:  # non-empty list is True
+                    trips = self._timetable.next_trips(self._time, self._operator_config.planning_lookahead)
 
-                # spawn busses only for trips that are not yet spawned
-                # TODO: can there be a case of overlapping trips with the same trip id? i.e. extreme delay?
-                for trip_id in (t for t in trips if t not in [b.route.trip_id for b in self._busses]):
-                    trip = self._timetable.trip_by_id(trip_id)
-                    route = self._build_route(trip)
-                    bus = self._spawn_bus(route)
-                    self._busses.append(bus)
+                    if trips:  # non-empty list is True
 
-                    # also spawn a cleanup process that waits for completion of trip
-                    self._env.process(self._clean_up_bus(bus))
+                        # spawn busses only for trips that are not yet spawned
+                        # TODO: can there be a case of overlapping trips with the same trip id? i.e. extreme delay?
+                        for trip_id in (t for t in trips if t not in [b.route.trip_id for b in self._busses]):
+                            trip = self._timetable.trip_by_id(trip_id)
+                            route = self._build_route(trip)
+                            bus = self._spawn_bus(route)
+                            self._busses.append(bus)
 
-            yield self._env.timeout(1)
+                            # spawn a process that keeps track of the bus state, action and rewards
+                            self._env.process(self._track_bus_agent(bus))
+
+                            # also spawn a cleanup process that waits for completion of trip
+                            self._env.process(self._clean_up_bus(bus))
+
+                            if len(self._busses) >= self._operator_config.max_busses:
+                                break
+
+                yield self._env.timeout(1)
+            except simpy.Interrupt:
+                # quit this process
+                break
 
     def search_for_transportation_alternatives(self,
                                                transportation_search_task: TransportationSearchTask) -> TransportationAlternativeBrowser:
@@ -199,7 +220,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
     def _spawn_bus(self, route: PublicTransitRoute):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
-        bus = Bus(self._env, route, init_position)
+        bus = Bus(self._env, route, init_position, self._q_hat)
 
         return bus
 
@@ -209,6 +230,18 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
         self._busses.remove(bus)
         # TODO: unmount all remaining passengers - though there shouldn't be any?
+
+        # TODO: this is hardcoded for one bus
+        self._operator_process.interrupt()
+
+    def _track_bus_agent(self, bus: Bus):
+
+        while True:
+            state, action, reward, reward_cum = yield bus._agent_completed_step
+            self._states.append(state)
+            self._actions.append(action)
+            self._rewards.append(reward)
+            self._rewards_cum.append(reward_cum)
 
     def _find_viable_transit(self, transportation_search_task, spatial_strategy='hexagon', temporal_lookahead=10):
         search_time = transportation_search_task.transport_task.time

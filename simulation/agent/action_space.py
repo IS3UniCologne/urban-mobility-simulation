@@ -1,6 +1,7 @@
 import logging
 from enum import Enum
 
+import numpy
 from numpy.random import choice
 
 
@@ -17,13 +18,13 @@ class ActionSpace:
             return ActionSpace.__instance
 
     @staticmethod
-    def init(actions, probabilities = None):
+    def init(actions):
         """ Static access method. """
         if ActionSpace.__instance is None:
-            ActionSpace(actions, probabilities)
+            ActionSpace(actions)
         return ActionSpace.__instance
 
-    def __init__(self, actions, probabilities):
+    def __init__(self, actions):
         """ Virtually private constructor. """
         if ActionSpace.__instance is not None:
             raise Exception("This class is a singleton!")
@@ -32,26 +33,16 @@ class ActionSpace:
             super(ActionSpace, self).__init__()
 
         self._actions = actions
-        self._probabilities = probabilities
 
     @property
     def actions(self):
         return self._actions
 
-    @property
-    def probabilities(self):
-        return self._probabilities
+    def action_as_binary_vector(self, action):
+        return numpy.array([1 if x == action else 0 for x in self._actions])
 
-    @probabilities.setter
-    def probabilities(self, probabilities):
-        self._probabilities = probabilities
-
-    def sample_action(self):
-        if self._probabilities is not None:
-            return choice(self._actions, p=self._probabilities)
-        else:
-            logging.debug(f'No action probabilities are given, sampling from uniform probability distribution')
-            self.sample_action_uniformly()
+    def binary_vector_as_action(self, vector):
+        return self._actions[numpy.argmax(vector)]
 
     def sample_action_uniformly(self):
         return choice(self._actions)
