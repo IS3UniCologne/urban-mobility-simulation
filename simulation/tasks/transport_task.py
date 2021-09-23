@@ -4,7 +4,7 @@ from simulation.environment.position import Position
 
 class TransportTask:
 
-    def __init__(self, time, origin: Position, destination: Position, viable_vehicle_modes, max_wait_time):
+    def __init__(self, time, origin: Position, destination: Position, viable_vehicle_modes, max_wait_time = None):
         self._time = time
         self._origin = origin
         self._destination = destination

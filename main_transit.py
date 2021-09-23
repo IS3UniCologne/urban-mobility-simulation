@@ -1,10 +1,18 @@
-import numpy
-from tqdm import tqdm
+from configparser import ConfigParser
+import geopandas as gpd
+import logging
 from matplotlib import pyplot as plt
+import numpy
+import os
+import pandas as pd
+from pathlib import Path
+import simpy
+import sys
+from tqdm import tqdm
 
 from simulation.agent.action_space import ActionSpace
 from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator
-from simulation.agent.user import User
+from simulation.agent.user import User # must come before DemandFactory, otherwise circular imports
 from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig, \
     TransitAgentConfig
 from simulation.operator.public_transit_operator import PublicTransitOperator
@@ -21,20 +29,11 @@ from simulation.infrastructure.helper.distance_matrix_importer import DistanceMa
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.world.world import World
 
-from pathlib import Path
-import pandas as pd
-import geopandas as gpd
-import simpy
-
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
 # Load Configuration from ini file.       #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
-
-import sys
-from configparser import ConfigParser
-import os
 
 # Change working directory to path of main.py
 working_dir = Path(__file__).parent
@@ -102,7 +101,6 @@ log_level = parser.get("SETTINGS", "log_level")
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-import logging
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
 logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -212,6 +210,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, q_hat_weig
     PublicTransitVehicle.public_transit_vehicle_id = 0
     Bus.bus_id = 0
     User.user_id = 0
+    DemandFactory.counter = 0
     GeodesicEnvironment.getInstance().reset_random_generator(seed)
 
     # Inject Simulation Environment to Logger (such that we can log the env time)
