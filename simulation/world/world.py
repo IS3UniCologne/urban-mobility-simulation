@@ -1,5 +1,6 @@
 import logging
 
+import simpy
 from numpy.random import normal
 from simpy import Environment
 
@@ -28,19 +29,20 @@ class World:
             return World.__instance
 
     @staticmethod
-    def init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior):
+    def init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior, reset=False):
         """ Static access method. """
-        if World.__instance is None:
-            World(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior)
+        if World.__instance is None or reset is True:
+            World(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior, reset)
         return World.__instance
 
     def __init__(self, env: Environment,
                  search_engine: SearchEngineInterface,
                  payment_engine: PaymentInterface,
                  vehicle_assignment_engine: VehicleAllocationEngineInterface,
-                 vehicle_choice_behavior: VehicleChoiceBehaviorInterface):
+                 vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
+                 reset: bool = False):
         """ Virtually private constructor. """
-        if World.__instance is not None:
+        if World.__instance is not None and not reset:
             raise Exception("This class is a singleton!")
         else:
             World.__instance = self

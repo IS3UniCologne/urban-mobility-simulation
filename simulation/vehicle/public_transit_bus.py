@@ -1,11 +1,13 @@
 import logging
+from copy import deepcopy
 from datetime import datetime
-
+import h3
+import simpy
 from simpy import Environment
 from enum import Enum
 
 from simulation.agent.action_space import ActionSpace
-from simulation.agent.user import TransitUserState
+from simulation.agent.episodic_semi_gradient_sarsa import reward_bus, policy, vectorize_state, ValueFunctionApproximator
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
@@ -22,10 +24,10 @@ class BusState(PublicTransitVehicleState, Enum):
 
 
 class Bus(PublicTransitVehicle):
-
     bus_id = 0
 
-    def __init__(self, env: Environment, route: PublicTransitRoute, position: GeodesicPosition, max_available_seats=100, velocity = 833.33):
+    def __init__(self, env: Environment, route: PublicTransitRoute, position: GeodesicPosition,
+                 q_hat: ValueFunctionApproximator, max_available_seats=100, velocity=833.33):
         """
 
         :param env:
@@ -41,19 +43,41 @@ class Bus(PublicTransitVehicle):
 
         # Events
         self._has_reached_destination = self._env.event()
+        self._action_taken = self._env.event()
+        self._agent_completed_step = self._env.event()
 
         # Environment / World state
         self._geodesic_env = GeodesicEnvironment.getInstance()
         self._world = World.instance()
-        self._env_state = {}
+        self._env_state = {
+            'd_terminal': self._route.destination.difference(self._position)
+            # 'passengers': [{'d_destination': self._position.difference(x.transport_task.destination),
+            #                 'time': x.available_time} for x in self._seats],
+            # 'demand': [{'d_origin': self._position.difference(x.transport_task.origin),
+            #             'd_destination': self._position.difference(x.transport_task.destination),
+            #             'time': x.available_time} for x in self._world.users
+            #            if x.state is TransitUserState.SEARCHING_TRANSPORT_ALTERNATIVES],
+            # 'delay': self._delay
+        }
 
         # Action space
         self._action_space = ActionSpace.instance()
 
+        # Rewards
+        self._reward = 0
+        self._reward_cum = 0
+
+        # Value function
+        self._q_hat = q_hat
+
         # Config
         self._config = Configuration.instance()
+        self._eps = self._config.transit_agent_config.eps  # epsilon for e-greedy action selection
+        self._gamma = self._config.transit_agent_config.gamma  # discount rate
+        self._alpha = self._config.transit_agent_config.alpha # step size for updates
 
         self._process = self._env.process(self._run_agent())
+        self._state_update_process = self._env.process(self._update_state())
 
     def _run(self):
         """
@@ -89,7 +113,7 @@ class Bus(PublicTransitVehicle):
                                                                 self._current_stop.departure_next_day)
                 logging.debug(f'Bus is ahead of schedule and will wait for scheduled departure.',
                               extra={"clazz": self.__class__.__name__, "oid": self._id})
-                self._delay = 0 # reset delay
+                self._delay = 0  # reset delay
                 yield self._env.timeout(wait)
 
             elif self._time.now_as_str() > self._current_stop.departure and not self._current_stop.departure_next_day:
@@ -104,10 +128,39 @@ class Bus(PublicTransitVehicle):
         self._has_reached_destination.succeed()
 
     def _run_agent(self):
-        while self._state is not BusState.AT_TERMINAL_DESTINATION:
 
-            self._env.process(self._update_env_state())
-            yield self._env.process(self._take_action())
+        while not self._state == BusState.AT_TERMINAL_DESTINATION:
+            # to get a value copy of a state we need to deepcopy, otherwise modifying self._env_state results in
+            # modifying the "copy" which really is just a reference
+            before_state = deepcopy(self._env_state)
+            self._env.process(self._update_reward(before_state))
+            action = yield self._env.process(self._take_action())
+
+            s = vectorize_state(before_state)
+            s_ = vectorize_state(self._env_state)
+            a = self._action_space.action_as_binary_vector(action)
+            if self._state is BusState.AT_TERMINAL_DESTINATION:
+                # update weights
+                self._q_hat.weights = self._q_hat.weights + \
+                                      self._alpha * (self._reward -
+                                                     self._q_hat.evaluate_value(s, a)) * \
+                                      self._q_hat.evaluate_gradient(s, a)
+                # and go to next episode
+                break
+
+            a_ = self._action_space.action_as_binary_vector(policy(s_, self._q_hat, self._eps))
+
+            # update weights based on semi gradient sarsa
+            self._q_hat.weights = self._q_hat.weights + \
+                                  self._alpha * (self._reward +
+                                                 self._gamma * self._q_hat.evaluate_value(s_, a_) -
+                                                 self._q_hat.evaluate_value(s, a)) * self._q_hat.evaluate_gradient(s, a)
+
+        # clean up processes
+        self._state_update_process.interrupt()
+
+        # and let the operator know
+        self._has_reached_destination.succeed()
 
     def _take_action(self):
         """
@@ -119,61 +172,51 @@ class Bus(PublicTransitVehicle):
         down-left  \ __ /  down-right
                     down
 
-        Here, and only here is the following mapping between the hex above and below guaranteed:
-              ___0___
-           /           \
-         /5/          \1\
-                hex
-         \4\          /2/
-          \  ________  /
-                3
-
-        Because h3 cells are never oriented the same way across the globe, we need to hack around the fact that there
-        are no directed neighbors. We do this by moving in one of six directions, which are equally spaced from each
-        other. We assume to be in the middle of the cell and move the current resolution's edge length in one direction.
-        This should be sufficient to "be in the next cell". To be in the exact middle of that cell we do a final geotoh3
-        and h3togeo hicky-hacky conversion. Because we do not really care if up always means up in a sense of north, as
-        long as it always goes to the same direction, the described methodology is sufficient.
-
         """
 
-        ACTION_SPACE_MAPPING = {
-            'UP': 0,
-            'UP_RIGHT': 1,
-            'DOWN_RIGHT': 2,
-            'DOWN': 3,
-            'DOWN_LEFT': 4,
-            'UP_LEFT': 5
-        }
+        new_centroid = None
 
-        action = self._action_space.sample_action()
-        logging.debug(f'Bus takes action {action}')
+        while True:
+            action = policy(vectorize_state(self._env_state), self._q_hat, self._eps)
 
-        try:
-            hex_id = self._position.get_default_hexagon()
-        except AttributeError:
-            hex_id, _ = self._position.get_hexagon(resolution=self._config.transit_agent_config.action_resolution)
+            hex_id = h3.geo_to_h3(*self._position.getExactLocation(),
+                                  resolution=self._config.transit_agent_config.action_resolution)
 
-        if action == 'STAY':
+            if action == 'STAY':
+                break
+            else:
+                new_hex = self._geodesic_env.move_in_layer(hex_id, action)
+                try:
+                    new_centroid = self._geodesic_env.get_centroid(new_hex,
+                                                                   f'hex_{self._config.transit_agent_config.action_resolution}')
+                except KeyError:
+                    # hexagon is out of layer bounding box - action is forbidden
+                    logging.debug(f'Action {action} is forbidden, sampling again',
+                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
+                    continue
+                break
+
+        logging.debug(f'Bus takes action {action}',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+        if new_centroid is None:
             yield self._env.timeout(.01)
         else:
-            try:
-                movement = ACTION_SPACE_MAPPING[action]
-            except KeyError:
-                raise Exception('non-permitted action, check action space config')
-
-            new_hex = self._geodesic_env.move_in_layer(hex_id, movement)
-            new_centroid = self._geodesic_env.get_centroid(new_hex, f'hex_{self._config.transit_agent_config.action_resolution}')
             new_position = GeodesicPosition(*new_centroid)
 
             distance = self._position >> new_position
-            duration = distance / self._velocity # in minutes
+            duration = distance / self._velocity  # in minutes
 
             self._state = BusState.EN_ROUTE_DETOUR
 
             yield self._env.timeout(duration)
 
             self._update_positions(new_position)
+
+        self._action_taken.succeed(action)
+        self._action_taken = self._env.event()
+
+        return action
 
     def _move_to_next_stop(self):
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
@@ -182,13 +225,14 @@ class Bus(PublicTransitVehicle):
     def move(self, route_segment: RouteSegment):
         # TODO: use road network speed limits?
 
-        distance = route_segment.distance # in meter
-        duration = distance / self._velocity # in minutes
+        distance = route_segment.distance  # in meter
+        duration = distance / self._velocity  # in minutes
 
         self._state = BusState.EN_ROUTE_PLANNED
 
-        logging.debug(f'Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.',
-                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+        logging.debug(
+            f'Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.',
+            extra={"clazz": self.__class__.__name__, "oid": self._id})
 
         yield self._env.timeout(duration)
 
@@ -213,7 +257,7 @@ class Bus(PublicTransitVehicle):
         for passenger in self._seats:
             passenger.position = new_position
 
-        region_id, _ = self._position.get_hexagon()
+        region_id, _ = self._position.get_hexagon(self._config.transit_agent_config.action_resolution)
 
         logging.debug(f'Current position {self._position} in region {region_id}.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
@@ -222,7 +266,7 @@ class Bus(PublicTransitVehicle):
     def env_state(self):
         return self._env_state
 
-    def _update_env_state(self):
+    def _update_state(self):
         """
         We need:
         - Distance to terminal destination
@@ -234,16 +278,53 @@ class Bus(PublicTransitVehicle):
         """
 
         # wait for external (world) or self (position) change
-        yield self._world.changed | self._position_changed
+        while True:
+            try:
+                # TODO incorporate external change here or somewhere else again
+                # yield simpy.events.AnyOf(self._env, [self._position_changed, self._world.changed])
+                yield self._position_changed
 
-        self._env_state['d_terminal'] = self._route.destination.difference(self._position)
-        self._env_state['passengers'] = [{'d_destination': self._position.difference(x.transport_task.destination),
-                                          'time': x.available_time} for x in self._seats]
-        self._env_state['demand'] = [{'d_origin': self._position.difference(x.transport_task.origin),
-                                      'd_destination': self._position.difference(x.transport_task.destination),
-                                      'time': x.available_time} for x in self._world.users
-                                     if x.state is TransitUserState.SEARCHING_TRANSPORT_ALTERNATIVES]
-        self._env_state['delay'] = self._delay
+                self._env_state['d_terminal'] = self._route.destination.difference(self._position)
+                # self._env_state['passengers'] = [{'d_destination': self._position.difference(x.transport_task.destination),
+                #                                   'time': x.available_time} for x in self._seats]
+                # self._env_state['demand'] = [{'d_origin': self._position.difference(x.transport_task.origin),
+                #                               'd_destination': self._position.difference(x.transport_task.destination),
+                #                               'time': x.available_time} for x in self._world.users
+                #                              if x.state is TransitUserState.SEARCHING_TRANSPORT_ALTERNATIVES]
+                # self._env_state['delay'] = self._delay
+
+                region_id, _ = self._position.get_hexagon(self._config.transit_agent_config.action_resolution)
+
+                if region_id == \
+                        self._route.destination.get_hexagon(self._config.transit_agent_config.action_resolution)[0]:
+                    self._state = BusState.AT_TERMINAL_DESTINATION
+                    logging.info(f'Bus has arrived at its terminal destination at time {self._time.now_as_str()}',
+                                 extra={"clazz": self.__class__.__name__, "oid": self._id})
+            except simpy.Interrupt:
+                # stop process loop
+                break
+
+    def _update_reward(self, before_state):
+
+        # wait for action
+        action = yield self._action_taken
+
+        self._reward = reward_bus(self._env_state, self._state == BusState.AT_TERMINAL_DESTINATION)
+        self._reward_cum = self._reward_cum + self._reward
+
+        logging.debug(f'Current reward: {self._reward}, overall reward: {self._reward_cum}',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+
+        self._agent_completed_step.succeed((before_state, action, self._reward, self._reward_cum))
+        self._agent_completed_step = self._env.event()
+
+    @property
+    def reward(self):
+        return self._reward
+
+    @property
+    def reward_sum(self):
+        return self._reward_cum
 
     def __str__(self):
         return f'I have {len(self._seats)} passengers on boards'
