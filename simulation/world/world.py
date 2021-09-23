@@ -90,17 +90,20 @@ class World:
             tc = TripCharacteristics(distance)
             viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
-            # User Preferences
-            max_wait_time = normal(self._config.user_config.max_wait)  # sample from normal dist centered on config
-
-            # Generate Transportation Task
-            task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes,
-                                 max_wait_time)
-
             if self._vehicle_choice_behavior.__class__.__name__ == 'PublicTransitVehicleChoiceBehavior':
+                # User Preferences
+                max_wait_time = normal(self._config.user_config.max_wait)  # sample from normal dist centered on config
+
+                # Generate Transportation Task
+                task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes,
+                                     max_wait_time)
+
                 new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
                                             self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
             else:
+                # Generate Transportation Task
+                task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
+
                 new_user = user.User(origin_position, task, self._search_engine, self._payment_engine,
                                      self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
 

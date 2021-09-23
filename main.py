@@ -9,9 +9,13 @@ from simulation.operator.operations_management.relocation_scheduler import Reloc
 from simulation.operator.operations_management.service_worker import ServiceWorker
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import \
-  DistanceBasedSharedVehicleVehicleChoiceBehavior
+    DistanceBasedSharedVehicleVehicleChoiceBehavior
+from simulation.agent.user import User # must come before DemandFactory, otherwise circular imports
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
+from simulation.vehicle.shared_car import SharedCar
+from simulation.vehicle.shared_kick_scooter import SharedKickScooter
+from simulation.vehicle.shared_scooter import SharedScooter
 from simulation.world.world import World
 pd.set_option('display.max_columns', None)
 import simpy
@@ -64,15 +68,15 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res)
 
 # Read Shared Vehicle Config and add to Global Config File
 for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]):
-  vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter"]
-  price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
-  max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
-  energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
-  velocity = parser.getfloat(vehicle_type, "VELOCITY")
-  max_available_seats = parser.getint(vehicle_type, "MAX_AVAILABLE_SEATS")
+    vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter"]
+    price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
+    max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
+    energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
+    velocity = parser.getfloat(vehicle_type, "VELOCITY")
+    max_available_seats = parser.getint(vehicle_type, "MAX_AVAILABLE_SEATS")
 
-  vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats)
-  global_config.add_vehicle_config(vehicle_type_classes[idx], vc)
+    vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats)
+    global_config.add_vehicle_config(vehicle_type_classes[idx], vc)
 
 # Read Mode Choice Configuration
 mode_choice_model_path = parser.get("MODE_CHOICE_MODEL", "path_to_mode_choice_model")
@@ -127,33 +131,33 @@ logger.addFilter(cf_init)
 # # # # # # # # # # # # # # # # # # # # # #
 
 def load_environment():
-  # Read Environment Files
-  filename = bounding_box_path
-  with open(filename) as file:
-    env_df = gpd.read_file(file)
+    # Read Environment Files
+    filename = bounding_box_path
+    with open(filename) as file:
+        env_df = gpd.read_file(file)
 
-  filename = env_layer_hex_9
-  with open(filename) as file:
-    env_df_hex_9 = gpd.read_file(file, driver= "GeoJSON")
-    env_df_hex_9.set_index('hex_id_9', inplace=True)
+    filename = env_layer_hex_9
+    with open(filename) as file:
+        env_df_hex_9 = gpd.read_file(file, driver= "GeoJSON")
+        env_df_hex_9.set_index('hex_id_9', inplace=True)
 
-  filename = env_layer_hex_8
-  with open(filename) as file:
-    env_df_hex_8 = gpd.read_file(file)
-    env_df_hex_8.set_index('hex_id_8', inplace=True)
+    filename = env_layer_hex_8
+    with open(filename) as file:
+        env_df_hex_8 = gpd.read_file(file)
+        env_df_hex_8.set_index('hex_id_8', inplace=True)
 
-  filename = env_layer_hex_7
-  with open(filename) as file:
-    env_df_hex_7 = gpd.read_file(file)
-    env_df_hex_7.set_index('hex_id_7', inplace=True)
+    filename = env_layer_hex_7
+    with open(filename) as file:
+        env_df_hex_7 = gpd.read_file(file)
+        env_df_hex_7.set_index('hex_id_7', inplace=True)
 
-  geodesic_environment = GeodesicEnvironment()
-  geodesic_environment.addLayer("bounding_box", env_df)
-  geodesic_environment.addLayer("hex_9", env_df_hex_9)
-  geodesic_environment.addLayer("hex_8", env_df_hex_8)
-  geodesic_environment.addLayer("hex_7", env_df_hex_7)
+    geodesic_environment = GeodesicEnvironment()
+    geodesic_environment.addLayer("bounding_box", env_df)
+    geodesic_environment.addLayer("hex_9", env_df_hex_9)
+    geodesic_environment.addLayer("hex_8", env_df_hex_8)
+    geodesic_environment.addLayer("hex_7", env_df_hex_7)
 
-  return geodesic_environment
+    return geodesic_environment
 
 # Load Spatial Environment
 load_environment()
@@ -183,138 +187,133 @@ dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure")
 distance_matrix = dmi.load_distance_matrix()
 
 def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter = 0, n_kick_scooter = 0, seed = 42, substitution = 0.1):
-  # # # # # # # # # # # # # # # # # # # # # #
-  #                                         #
-  # Setup Simulation Environment.           #
-  #                                         #
-  # # # # # # # # # # # # # # # # # # # # # #
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Setup Simulation Environment.           #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
 
-  # Simulation Environment
-  env = simpy.Environment(initial_time=start_time)
+    # Simulation Environment
+    env = simpy.Environment(initial_time=start_time)
 
-  from simulation.vehicle.shared_car import SharedCar
-  from simulation.vehicle.shared_kick_scooter import SharedKickScooter
-  from simulation.vehicle.shared_scooter import SharedScooter
-  from simulation.agent.user import User
+    # Before each simulation run, reset counter and random number generators
+    SharedCar.car_id = 0
+    SharedKickScooter.shared_kick_scooter_id = 0
+    SharedScooter.shared_scooter_id = 0
+    User.user_id = 0
+    DemandFactory.counter = 0
 
-  # Before each simulation run, reset counter and random number generators
-  SharedCar.car_id = 0
-  SharedKickScooter.shared_kick_scooter_id = 0
-  SharedScooter.shared_scooter_id = 0
-  User.user_id = 0
-  DemandFactory.counter = 0
+    GeodesicEnvironment.getInstance().reset_random_generator(seed)
 
-  GeodesicEnvironment.getInstance().reset_random_generator(seed)
+    # Inject Simulation Environment to Logger (such that we can log the env time)
+    cf = SimulationContextFilter(filter_name='add_env', extra=env)
+    edf = ExtraDefaultFilter(filter_name="add_default_value")
+    logger.addFilter(cf)
+    logger.addFilter(edf)
 
-  # Inject Simulation Environment to Logger (such that we can log the env time)
-  cf = SimulationContextFilter(filter_name='add_env', extra=env)
-  edf = ExtraDefaultFilter(filter_name="add_default_value")
-  logger.addFilter(cf)
-  logger.addFilter(edf)
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Init. Simulation Modules.               #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
 
-  # # # # # # # # # # # # # # # # # # # # # #
-  #                                         #
-  # Init. Simulation Modules.               #
-  #                                         #
-  # # # # # # # # # # # # # # # # # # # # # #
+    # Operator Modules
+    search_engine = SharedVehicleSearchEngine(env)
+    payment_engine = search_engine
+    vehicle_assignment_engine = SharedVehicleAllocationEngine(env)
 
-  # Operator Modules
-  search_engine = SharedVehicleSearchEngine(env)
-  payment_engine = search_engine
-  vehicle_assignment_engine = SharedVehicleAllocationEngine(env)
+    # Vehicle Choice Model
+    if mode_choice_strategy == "substitution":
+        vehicle_choice_model = DistanceBasedSharedVehicleVehicleChoiceBehavior(mode_choice_model_path,
+                                                                               substitution,
+                                                                               mode_choice_available_modes)
+    else:
+        raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
-  # Vehicle Choice Model
-  if mode_choice_strategy == "substitution":
-    vehicle_choice_model = DistanceBasedSharedVehicleVehicleChoiceBehavior(mode_choice_model_path,
-                                                                           substitution,
-                                                                           mode_choice_available_modes)
-  else:
-    raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
+    # World
+    world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model, reset=True)
 
-  # World
-  world = World(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model)
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Spawn Demand Processes.                 #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
+    demand_factory = DemandFactory(env, demand_profile, di, world, demand_modifier_paths, seed)
 
-  # # # # # # # # # # # # # # # # # # # # # #
-  #                                         #
-  # Spawn Demand Processes.                 #
-  #                                         #
-  # # # # # # # # # # # # # # # # # # # # # #
-  demand_factory = DemandFactory(env, demand_profile, di, world, demand_modifier_paths, seed)
+    env.process(demand_factory.generate_demand())
 
-  env.process(demand_factory.generate_demand())
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Load Vehicle Fleet and Place on World.  #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
+    supply_prob = pd.read_csv(supply_file_path)
 
-  # # # # # # # # # # # # # # # # # # # # # #
-  #                                         #
-  # Load Vehicle Fleet and Place on World.  #
-  #                                         #
-  # # # # # # # # # # # # # # # # # # # # # #
-  supply_prob = pd.read_csv(supply_file_path)
+    fleet_config = generate_fleet_config(supply_prob, n_cars = n_cars, n_scooter = n_scooter, n_kick_scooter= n_kick_scooter, n_bikes=0)
+    mixed_fleet = generate_mixed_fleet(env, fleet_config)
 
-  fleet_config = generate_fleet_config(supply_prob, n_cars = n_cars, n_scooter = n_scooter, n_kick_scooter= n_kick_scooter, n_bikes=0)
-  mixed_fleet = generate_mixed_fleet(env, fleet_config)
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Inject Modules.                         #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
+    search_engine.register_fleet(mixed_fleet)
 
-  # # # # # # # # # # # # # # # # # # # # # #
-  #                                         #
-  # Inject Modules.                         #
-  #                                         #
-  # # # # # # # # # # # # # # # # # # # # # #
-  search_engine.register_fleet(mixed_fleet)
-
-  # # # # # # # # # # # # # # # # # # # # # #
-  #                                         #
-  # Operations Management Processes         #
-  #                                         #
-  # # # # # # # # # # # # # # # # # # # # # #
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Operations Management Processes         #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
 
 
-  available_vehicle_modes = ["SharedKickScooter", "SharedScooter", "SharedCar"]
-  available_vehicle_modes_supply = [n_kick_scooter, n_scooter, n_cars]
-  no_service_workers = 10
-  base_region = ['871f1d488ffffff']
-  base_capacity = 10000
+    available_vehicle_modes = ["SharedKickScooter", "SharedScooter", "SharedCar"]
+    available_vehicle_modes_supply = [n_kick_scooter, n_scooter, n_cars]
+    no_service_workers = 10
+    base_region = ['871f1d488ffffff']
+    base_capacity = 10000
 
-  # Initialize Rule Based Relocation Scheduler
-  rs = RelocationScheduler(distance_matrix, mixed_fleet, available_vehicle_modes,
-                           available_vehicle_modes_supply, no_service_workers,
-                           base_region, base_capacity)
+    # Initialize Rule Based Relocation Scheduler
+    rs = RelocationScheduler(distance_matrix, mixed_fleet, available_vehicle_modes,
+                             available_vehicle_modes_supply, no_service_workers,
+                             base_region, base_capacity)
 
-  # Store Tasks which are processed by service workers
-  task_queue = TaskQueue(env)
+    # Store Tasks which are processed by service workers
+    task_queue = TaskQueue(env)
 
-  # Init Operations Module
-  ops = Operations(env, mixed_fleet, no_service_workers, 1440, 8*60, rs,
-                   payment_engine, available_vehicle_modes,
-                   available_vehicle_modes_supply, 0.1, task_queue)
+    # Init Operations Module
+    ops = Operations(env, mixed_fleet, no_service_workers, 1440, 8*60, rs,
+                     payment_engine, available_vehicle_modes,
+                     available_vehicle_modes_supply, 0.1, task_queue)
 
-  env.process(ops.timer())
-  env.process(ops.run_operations())
+    env.process(ops.timer())
+    env.process(ops.run_operations())
 
-  # Spawn Service Workers
-  for sw in range(no_service_workers):
-    env.process(ServiceWorker(env, task_queue).run())
+    # Spawn Service Workers
+    for sw in range(no_service_workers):
+        env.process(ServiceWorker(env, task_queue).run())
 
-  # # # # # # # # # # # # # # # # # # # # # #
-  #                                         #
-  # Run Simulation.                         #
-  #                                         #
-  # # # # # # # # # # # # # # # # # # # # # #
-  env.run(until = end_time)
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Run Simulation.                         #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
+    env.run(until = end_time)
 
-  print("Total Revenue: " + str(payment_engine.total_revenue))
-  print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
-  print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
-  print("Total Missed Car Trips: " + str(payment_engine._total_missed_car_trips))
+    print("Total Revenue: " + str(payment_engine.total_revenue))
+    print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
+    print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
+    print("Total Missed Car Trips: " + str(payment_engine._total_missed_car_trips))
 
-  print("Number of Vehicles to be charged: " + str(mixed_fleet.get_all_vehicles_below_soc_level(0.1)))
+    print("Number of Vehicles to be charged: " + str(mixed_fleet.get_all_vehicles_below_soc_level(0.1)))
 
-  transactions = payment_engine.get_transactions()
+    transactions = payment_engine.get_transactions()
 
-  if store_results:
-    transactions.to_csv(Path(output_folder, transaction_file), index = False)
+    if store_results:
+        transactions.to_csv(Path(output_folder, transaction_file), index = False)
 
-  print(DemandFactory.counter)
-  #TODO: Redefining the objective function
-  return payment_engine.total_revenue
+    print(DemandFactory.counter)
+    #TODO: Redefining the objective function
+    return payment_engine.total_revenue
 
 
 run_single_simulation(end_time = 2*1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
