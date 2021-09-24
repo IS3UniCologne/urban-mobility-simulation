@@ -6,11 +6,13 @@ dependencies:
   - geopandas
   - h3-py>=3.7.1
   - haversine
+  - matplotlib
   - notebook
   - seaborn
   - shapely
   - simpy>=4.0.1
   - statsmodels
+  - tqdm
   - pip
   - pip:
       - partridge[full]

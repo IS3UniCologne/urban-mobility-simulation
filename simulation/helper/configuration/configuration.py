@@ -67,6 +67,8 @@ class Configuration:
 
         self._transit_operator_config = None
 
+        self._transit_agent_config = None
+
     @property
     def spatial_resolution(self):
         return self._spatial_resolution
@@ -129,6 +131,13 @@ class Configuration:
     def transit_operator_config(self):
         return self._transit_operator_config
 
+    def add_transit_agent_config(self, transit_agent_config):
+        self._transit_agent_config = transit_agent_config
+
+    @property
+    def transit_agent_config(self):
+        return self._transit_agent_config
+
     def set_store_results(self, store_results):
         self._store_results = store_results
 
@@ -141,6 +150,7 @@ class Configuration:
     def set_fleet_state_file(self, file):
         self._fleet_state_file = file
 
+
 class VehicleConfig:
     def __init__(self, price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats):
         self.price_per_min = price_per_min
@@ -148,6 +158,7 @@ class VehicleConfig:
         self.energy_consumption = energy_consumption
         self.velocity = velocity
         self.max_available_seats = max_available_seats
+
 
 class ModeChoiceConfig:
     def __init__(self, mode_choice_strategy, substitution_boundary, available_modes, path_to_model):
@@ -170,5 +181,14 @@ class UserConfig:
 
 
 class TransitOperatorConfig:
-    def __init__(self, planning_lookahead):
+    def __init__(self, planning_lookahead, max_busses):
         self.planning_lookahead = int(planning_lookahead)
+        self.max_busses = int(max_busses)
+
+
+class TransitAgentConfig:
+    def __init__(self, action_resolution, alpha, eps, gamma):
+        self.action_resolution = int(action_resolution)
+        self.alpha = float(alpha)
+        self.eps = float(eps)
+        self.gamma = float(gamma)

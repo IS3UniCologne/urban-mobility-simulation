@@ -1,10 +1,26 @@
-from simulation.agent.user import User
-from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig
+from configparser import ConfigParser
+import geopandas as gpd
+import logging
+from matplotlib import pyplot as plt
+import numpy
+import os
+import pandas as pd
+from pathlib import Path
+import simpy
+import sys
+from tqdm import tqdm
+
+from simulation.agent.action_space import ActionSpace
+from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator
+from simulation.agent.user import User # must come before DemandFactory, otherwise circular imports
+from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig, \
+    TransitAgentConfig
 from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 from simulation.vehicle.public_transit_bus import Bus
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
+from simulation.vehicle.vehicle import Vehicle
 from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import PublicTransitVehicleChoiceBehavior
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
@@ -13,20 +29,11 @@ from simulation.infrastructure.helper.distance_matrix_importer import DistanceMa
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.world.world import World
 
-from pathlib import Path
-import pandas as pd
-import geopandas as gpd
-import simpy
-
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
 # Load Configuration from ini file.       #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
-
-import sys
-from configparser import ConfigParser
-import os
 
 # Change working directory to path of main.py
 working_dir = Path(__file__).parent
@@ -53,7 +60,8 @@ transit_timetable_path = parser.get("INFRASTRUCTURE", "path_transit_timetable")
 # transit_shapes_path = parser.get("INFRASTRUCTURE", "path_transit_shapes")
 
 # Operator Config
-transit_planning_lookahead = parser.get("OPERATOR", "TRANSIT_LOOKAHEAD")
+transit_planning_lookahead = parser.get("TRANSITOPERATOR", "TRANSIT_LOOKAHEAD")
+transit_max_busses = parser.get("TRANSITOPERATOR", "MAX_BUSSES")
 
 # Environment files
 bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
@@ -68,11 +76,21 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res)
 max_waiting_time = parser.get("USER", "TRANSIT_MAX_WAIT")
 spatial_strategy = parser.get("USER", "SPATIAL_STRATEGY")
 
+# Bus Agent Config
+actions = parser.get("BUS", "ACTION_SPACE").split(',')
+action_dim = len(actions)
+action_resolution = parser.get("BUS", "ACTION_SPACE_RESOLUTION")
+agent_alpha = parser.get("BUS", "ALPHA")
+agent_eps = parser.get("BUS", "EPS")
+agent_gamma = parser.get("BUS", "GAMMA")
+
 user_config = UserConfig(spatial_strategy, max_waiting_time)
-transit_operator_config = TransitOperatorConfig(transit_planning_lookahead)
+transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
+bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
+global_config.add_transit_agent_config(bus_agent_config)
 
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
@@ -83,7 +101,6 @@ log_level = parser.get("SETTINGS", "log_level")
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-import logging
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
 logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -125,7 +142,7 @@ def load_environment():
         env_df_hex_7 = gpd.read_file(file)
         env_df_hex_7.set_index('hex_id_7', inplace=True)
 
-    geodesic_environment = GeodesicEnvironment()
+    geodesic_environment = GeodesicEnvironment.getInstance()
     geodesic_environment.addLayer("bounding_box", env_df)
     geodesic_environment.addLayer("hex_9", env_df_hex_9)
     geodesic_environment.addLayer("hex_8", env_df_hex_8)
@@ -169,7 +186,15 @@ distance_matrix = dmi.load_distance_matrix()
 timetable = Timetable(transit_timetable_path)
 timetable.import_timetable()
 
-def run_single_simulation(start_time = 0, end_time = 60, seed = 4711):
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Construct Action Space (once).          #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+ActionSpace.init(actions)
+
+
+def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, q_hat_weights = None):
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -181,9 +206,11 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711):
     env = simpy.Environment(initial_time=start_time)
 
     # before a new simulation run, reset everything
+    Vehicle.vehicle_id = 0
     PublicTransitVehicle.public_transit_vehicle_id = 0
     Bus.bus_id = 0
     User.user_id = 0
+    DemandFactory.counter = 0
     GeodesicEnvironment.getInstance().reset_random_generator(seed)
 
     # Inject Simulation Environment to Logger (such that we can log the env time)
@@ -194,12 +221,19 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711):
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
+    # Setup Value Function Approximation      #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
+    q_hat = ValueFunctionApproximator(state_dim = 2, action_dim = 7, init_values = q_hat_weights)
+
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
     # Init. Simulation Modules.               #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
 
     # Operator Modules
-    operator = PublicTransitOperator(env, timetable)
+    operator = PublicTransitOperator(env, timetable, q_hat)
     search_engine = operator
     payment_engine = operator
     vehicle_assignment_engine = operator
@@ -208,7 +242,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711):
     vehicle_choice_model = PublicTransitVehicleChoiceBehavior(['Bus'])
 
     # World
-    world = World(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model)
+    world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model, reset=True)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -231,10 +265,23 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711):
     # Benchmarks.                             #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    print("Total Revenue: " + str(payment_engine.total_revenue))
-    print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
-    print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
+    # print("Total Revenue: " + str(payment_engine.total_revenue))
+    # print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
+    # print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
+
+    return {'states': operator._states, 'actions': operator._actions, 'rewards': operator._rewards, 'return': operator._rewards_cum, 'weights': q_hat.weights}
 
 
 if __name__ == '__main__':
-    run_single_simulation(end_time=10*60)
+    EPISODES = 200
+
+    w = [numpy.zeros(2 * action_dim)]
+    metrics = {}
+    for i in tqdm(range(EPISODES), total=EPISODES):
+        out = run_single_simulation(start_time=15*60, end_time=17*60, q_hat_weights=w[-1])
+        metrics[i] = out
+        w.append(out['weights'])
+
+    returns = pd.DataFrame.from_records([{'episode': i, 'return': x['return'][-1]} for i, x in metrics.items()])
+    returns.plot(x='episode', y='return')
+    plt.show()
