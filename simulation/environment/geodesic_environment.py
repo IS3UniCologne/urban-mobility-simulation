@@ -1,11 +1,14 @@
+import math
+
+import h3
 from numpy import random
 import numpy
 
 from shapely.geometry import Point
 from simulation.environment.environment import Environment
 
-class GeodesicEnvironment(Environment):
 
+class GeodesicEnvironment(Environment):
     # There is only one instance of this class.
     __instance = None
 
@@ -23,7 +26,7 @@ class GeodesicEnvironment(Environment):
         else:
             GeodesicEnvironment.__instance = self
             super(GeodesicEnvironment, self).__init__()
-            self._random = numpy.random.RandomState(42) # use fnc reset_rnd_gen to change seed
+            self._random = numpy.random.RandomState(42)  # use fnc reset_rnd_gen to change seed
 
     def getLayer(self, layer_name):
         """
@@ -62,8 +65,7 @@ class GeodesicEnvironment(Environment):
             y = self._random.uniform(minx, maxx)
             pnt = Point(self._random.uniform(minx, maxx), self._random.uniform(miny, maxy))
             if geometry.contains(pnt):
-                return pnt.y, pnt.x # Latitude, Longitude
-
+                return pnt.y, pnt.x  # Latitude, Longitude
 
     def get_centroid(self, hex_id, layer_name="hex_7"):
         """
@@ -78,10 +80,9 @@ class GeodesicEnvironment(Environment):
         # Get geometry of hexagon
         geometry = gdf.loc[hex_id].geometry
 
-        return geometry.centroid.y, geometry.centroid.x # Lat, Lng
+        return geometry.centroid.y, geometry.centroid.x  # Lat, Lng
 
-
-    def get_hexagon(self, hex_id, layer_name = "hex_7"):
+    def get_hexagon(self, hex_id, layer_name="hex_7"):
         """
         Get geometry of hexagon
         :param hex_id: Hexagon ID
@@ -95,7 +96,69 @@ class GeodesicEnvironment(Environment):
         # Get geometry of hexagon
         geometry = gdf.loc[hex_id].geometry
 
-        return geometry # Hexagon Geometry
+        return geometry  # Hexagon Geometry
 
-    def reset_random_generator(self, seed = 42):
+    def reset_random_generator(self, seed=42):
         self._random = numpy.random.RandomState(seed)
+
+    @staticmethod
+    def move_in_layer(hex_id, movement):
+        """
+              ___3___
+           /           \
+         /1/          \2\
+                0
+         \5\          /6/
+          \  ________  /
+                4
+
+        It doesn't really matter if the movement is named "up" or "left" as long as it corresponds always to the same
+        neighbor of the hexagon cell. Here, we use the Central Place Indexing (CPI) based on the Generalized Balanced
+        Ternary (GBT) prefix code system for aperture 7 grids, which is visualized above.
+
+        (see:
+        http://webpages.sou.edu/~sahrk/sqspc/pubs/autocarto14.pdf and https://h3geo.org/docs/core-library/h3Indexing)
+
+        Here, and only here the below mapping of "up", "down" etc is guaranteed to match the above visualization indices
+        HINT: This does not map (pun intended) to hexagons on a map because hexagons (their ijk coordinates) are rotated
+        in the Europe Icosahedron face, meaning up does rather go kind of down right...
+        HINT: This does also not hold particularly well between resolutions - an agent that learned how to move in one
+        resolution will not necessarily work well in another resolution...
+
+        Because hexagon cells are not really regular in projected space, we cannot simply move e.g. edge length "to" one
+        of the six directions. Rather we need to get all neighbors (unordered) and assign them to one of the six edges.
+        We can do this by leveraging the binary index representation of a unidirectional edge between two h3 cells.
+        Bits 5-7 indicate the edge 1-6.( see: https://h3geo.org/docs/core-library/h3Indexing#h3-unidirectional-edge-index)
+
+        :param hex_id: Current hex id
+        :param movement: one of ["UP", "DOWN", "UP_LEFT", "UP_RIGHT", "DOWN_LEFT", "DOWN_RIGHT"]
+        :return: hex id after "movement"
+        """
+
+        EDGE_MAPPING = {
+            'UP': 3,
+            'UP_RIGHT': 2,
+            'DOWN_RIGHT': 6,
+            'DOWN': 4,
+            'DOWN_LEFT': 5,
+            'UP_LEFT': 1
+        }
+
+        # create mapping of edge number -> neighbors
+        neighbors = {
+            int(f'{int(x, base=16) + 0x200:0>64b}'[5:8], base=2):
+                h3.get_destination_h3_index_from_unidirectional_edge(x)
+            for x in h3.get_h3_unidirectional_edges_from_hexagon(hex_id)
+        }
+
+        assert len(neighbors) == 6
+
+        new_hex_id = neighbors[EDGE_MAPPING[movement]]
+
+        # quick sanity check
+        assert h3.h3_get_resolution(hex_id) == h3.h3_get_resolution(new_hex_id)
+        assert h3.h3_indexes_are_neighbors(hex_id, new_hex_id) # should be neighbors
+        assert h3.h3_get_faces(hex_id) == h3.h3_get_faces(new_hex_id) # should be on the same icosahedron face
+        assert h3.h3_get_base_cell(hex_id) == h3.h3_get_base_cell(new_hex_id) # TODO: should be on the same base cell?
+
+        return new_hex_id
