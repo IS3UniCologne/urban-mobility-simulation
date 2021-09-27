@@ -65,6 +65,8 @@ class Configuration:
 
         self._user_config = None
 
+        self._shared_vehicle_operator_config = None
+
         self._transit_operator_config = None
 
         self._transit_agent_config = None
@@ -124,6 +126,13 @@ class Configuration:
     def user_config(self):
         return self._user_config
 
+    def add_shared_vehicle_operator_config(self, shared_mobility_ops_config):
+        self._shared_vehicle_operator_config = shared_mobility_ops_config
+
+    @property
+    def shared_vehicle_operator_config(self):
+        return self._shared_vehicle_operator_config
+
     def add_transit_operator_config(self, transit_operator_config):
         self._transit_operator_config = transit_operator_config
 
@@ -179,6 +188,17 @@ class UserConfig:
         self.spatial_strategy = spatial_strategy
         self.max_wait = int(max_wait)
 
+class SharedVehicleOperatorConfig:
+    def __init__(self, recharge_threshold, charging_station_power, number_of_service_worker,
+                 base_regions, base_capacity, operations_start, operations_duration, vehicle_relocation_velocity):
+        self.recharge_threshold = recharge_threshold
+        self.charging_station_power = charging_station_power
+        self.number_of_service_worker = number_of_service_worker
+        self.base_regions = base_regions
+        self.base_capacity = base_capacity
+        self.operations_start = operations_start
+        self.operations_duration = operations_duration
+        self.vehicle_relocation_velocity = vehicle_relocation_velocity
 
 class TransitOperatorConfig:
     def __init__(self, planning_lookahead, max_busses):

@@ -1,7 +1,8 @@
 from pathlib import Path
 import pandas as pd
 
-from simulation.helper.configuration.configuration import Configuration, VehicleConfig, ModeChoiceConfig
+from simulation.helper.configuration.configuration import Configuration, VehicleConfig, ModeChoiceConfig, \
+    SharedVehicleOperatorConfig
 from simulation.infrastructure.helper.distance_matrix_importer import DistanceMatrixImporter
 from simulation.operator.fleet_factory import generate_fleet_config, generate_mixed_fleet
 from simulation.operator.operations_management.operations import Operations
@@ -85,7 +86,27 @@ mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_bo
 mode_choice_available_modes = parser.get("MODE_CHOICE_MODEL", "available_modes")
 mode_choice_available_modes = mode_choice_available_modes.split(',')
 
-# Output
+mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary, mode_choice_available_modes, mode_choice_model_path)
+global_config.add_mode_choice_config(mc)
+
+# Read Shared Vehice Operator Config
+recharge_threshold = parser.getfloat("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD")
+charging_station_power = parser.getfloat("SHARED_VEHICLE_OPERATOR", "CHARGING_STATION_POWER")
+number_of_service_workers = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_SERVICE_WORKER")
+base_regions = parser.get("SHARED_VEHICLE_OPERATOR", "BASE_REGIONS")
+base_regions = base_regions.split(',')
+base_capacity = parser.getint("SHARED_VEHICLE_OPERATOR", "BASE_CAPACITY")
+operations_start = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_START")
+operations_duration = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_DURATION")
+vehicle_relocation_velocity = parser.getint("SHARED_VEHICLE_OPERATOR", "VEHICLE_RELOCATION_VELOCITY")
+
+svoc = SharedVehicleOperatorConfig(recharge_threshold, charging_station_power,
+                                   number_of_service_workers, base_regions,
+                                   base_capacity, operations_start, operations_duration,
+                                   vehicle_relocation_velocity)
+global_config.add_shared_vehicle_operator_config(svoc)
+
+# Output Configuration
 store_results = parser.getboolean("OUTPUT", "persist_results")
 output_folder = parser.get("OUTPUT", "output_folder")
 transaction_file   = parser.get("OUTPUT", "transaction_file")
@@ -96,8 +117,7 @@ global_config.set_output_path(output_folder)
 global_config.set_transaction_file(transaction_file)
 global_config.set_fleet_state_file(fleet_state_file)
 
-mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary, mode_choice_available_modes, mode_choice_model_path)
-global_config.add_mode_choice_config(mc)
+
 
 
 # Log Level
@@ -265,25 +285,25 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
 
-
     available_vehicle_modes = ["SharedKickScooter", "SharedScooter", "SharedCar"]
     available_vehicle_modes_supply = [n_kick_scooter, n_scooter, n_cars]
-    no_service_workers = 10
-    base_region = ['871f1d488ffffff']
-    base_capacity = 10000
+    no_service_workers = global_config.shared_vehicle_operator_config.number_of_service_worker
+    base_regions = global_config.shared_vehicle_operator_config.base_regions
+    base_capacity = global_config.shared_vehicle_operator_config.base_capacity
 
     # Initialize Rule Based Relocation Scheduler
     rs = RelocationScheduler(distance_matrix, mixed_fleet, available_vehicle_modes,
                              available_vehicle_modes_supply, no_service_workers,
-                             base_region, base_capacity)
+                             base_regions, base_capacity)
 
     # Store Tasks which are processed by service workers
     task_queue = TaskQueue(env)
 
     # Init Operations Module
-    ops = Operations(env, mixed_fleet, no_service_workers, 1440, 8*60, rs,
+    ops = Operations(env, mixed_fleet, no_service_workers, global_config.shared_vehicle_operator_config.operations_start,
+                     global_config.shared_vehicle_operator_config.operations_duration, rs,
                      payment_engine, available_vehicle_modes,
-                     available_vehicle_modes_supply, 0.1, task_queue)
+                     available_vehicle_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold, task_queue)
 
     env.process(ops.timer())
     env.process(ops.run_operations())
@@ -316,7 +336,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     return payment_engine.total_revenue
 
 
-run_single_simulation(end_time = 2*1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
+run_single_simulation(end_time = 1*1440+240, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)

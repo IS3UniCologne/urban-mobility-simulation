@@ -1,7 +1,7 @@
 from simpy import Environment
-
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import ServiceTask
@@ -59,9 +59,14 @@ class RelocationTask(ServiceTask):
             # Relocation Route
             relocation_route = Edge(self._distance, Vertex(vehicle.position), Vertex(vehicle_dest))
 
-            # TODO: Adjust Cost
-            # First relocate vehicle to base
-            yield self._env.process(vehicle.relocate(relocation_route, 5, f"Service Worker {args[0]}"))
+
+            # Calculate Relocation Cost based on distance, relocation velocity and number of vehicles to relocate.
+            # As in the charging task, we linearize the relocation task if multiple vehicles need to be relocated.
+            # Thus, we ensure that the total relocation cost corresponds to the parallel case.
+            vehicle_relocation_velocity = Configuration.instance().shared_vehicle_operator_config.vehicle_relocation_velocity
+            relocation_duration_per_vehicle = (relocation_route.distance/vehicle_relocation_velocity)/len(selected_vehicles_to_relocate)
+
+            yield self._env.process(vehicle.relocate(relocation_route, relocation_duration_per_vehicle, f"Service Worker {args[0]}"))
 
         # Notify all
         self._task_finished.succeed()
