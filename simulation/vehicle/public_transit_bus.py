@@ -1,5 +1,4 @@
 import logging
-from copy import deepcopy
 from datetime import datetime
 import h3
 import simpy
@@ -7,7 +6,7 @@ from simpy import Environment
 from enum import Enum
 
 from simulation.agent.action_space import ActionSpace
-from simulation.agent.episodic_semi_gradient_sarsa import reward_bus, policy, vectorize_state, ValueFunctionApproximator
+from simulation.agent.policy import Policy
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
@@ -27,7 +26,7 @@ class Bus(PublicTransitVehicle):
     bus_id = 0
 
     def __init__(self, env: Environment, route: PublicTransitRoute, position: GeodesicPosition,
-                 q_hat: ValueFunctionApproximator, max_available_seats=100, velocity=833.33):
+                 rl_agent, max_available_seats=100, velocity=833.33):
         """
 
         :param env:
@@ -63,25 +62,20 @@ class Bus(PublicTransitVehicle):
         # Action space
         self._action_space = ActionSpace.instance()
 
-        # Rewards
-        self._reward = 0
-        self._reward_cum = 0
-
-        # Value function
-        self._q_hat = q_hat
-
         # Config
         self._config = Configuration.instance()
         self._eps = self._config.transit_agent_config.eps  # epsilon for e-greedy action selection
         self._gamma = self._config.transit_agent_config.gamma  # discount rate
         self._alpha = self._config.transit_agent_config.alpha # step size for updates
 
-        self._process = self._env.process(self._run_agent())
+        self._rl_agent = rl_agent
+
+        self._process = self._env.process(self._rl_agent.run(self))
         self._state_update_process = self._env.process(self._update_state())
 
     def _run(self):
         """
-        Bus Lifecycle
+        Bus Lifecycle (with planned stops, not RL agent)
 
         Time 12:00:00 - Departure 12:10:00 - wait
         Time 23:59:00 - Departure 00:06:00 - next_day = True - wait
@@ -126,97 +120,6 @@ class Bus(PublicTransitVehicle):
             yield self._env.process(self._move_to_next_stop())
 
         self._has_reached_destination.succeed()
-
-    def _run_agent(self):
-
-        while not self._state == BusState.AT_TERMINAL_DESTINATION:
-            # to get a value copy of a state we need to deepcopy, otherwise modifying self._env_state results in
-            # modifying the "copy" which really is just a reference
-            before_state = deepcopy(self._env_state)
-            self._env.process(self._update_reward(before_state))
-            action = yield self._env.process(self._take_action())
-
-            s = vectorize_state(before_state)
-            s_ = vectorize_state(self._env_state)
-            a = self._action_space.action_as_binary_vector(action)
-            if self._state is BusState.AT_TERMINAL_DESTINATION:
-                # update weights
-                self._q_hat.weights = self._q_hat.weights + \
-                                      self._alpha * (self._reward -
-                                                     self._q_hat.evaluate_value(s, a)) * \
-                                      self._q_hat.evaluate_gradient(s, a)
-                # and go to next episode
-                break
-
-            a_ = self._action_space.action_as_binary_vector(policy(s_, self._q_hat, self._eps))
-
-            # update weights based on semi gradient sarsa
-            self._q_hat.weights = self._q_hat.weights + \
-                                  self._alpha * (self._reward +
-                                                 self._gamma * self._q_hat.evaluate_value(s_, a_) -
-                                                 self._q_hat.evaluate_value(s, a)) * self._q_hat.evaluate_gradient(s, a)
-
-        # clean up processes
-        self._state_update_process.interrupt()
-
-        # and let the operator know
-        self._has_reached_destination.succeed()
-
-    def _take_action(self):
-        """
-        Actions in hexagonal grid, stay is also allowed.
-
-                     up
-                     __
-        up-left    /    \  up-right
-        down-left  \ __ /  down-right
-                    down
-
-        """
-
-        new_centroid = None
-
-        while True:
-            action = policy(vectorize_state(self._env_state), self._q_hat, self._eps)
-
-            hex_id = h3.geo_to_h3(*self._position.getExactLocation(),
-                                  resolution=self._config.transit_agent_config.action_resolution)
-
-            if action == 'STAY':
-                break
-            else:
-                new_hex = self._geodesic_env.move_in_layer(hex_id, action)
-                try:
-                    new_centroid = self._geodesic_env.get_centroid(new_hex,
-                                                                   f'hex_{self._config.transit_agent_config.action_resolution}')
-                except KeyError:
-                    # hexagon is out of layer bounding box - action is forbidden
-                    logging.debug(f'Action {action} is forbidden, sampling again',
-                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
-                    continue
-                break
-
-        logging.debug(f'Bus takes action {action}',
-                      extra={"clazz": self.__class__.__name__, "oid": self._id})
-
-        if new_centroid is None:
-            yield self._env.timeout(.01)
-        else:
-            new_position = GeodesicPosition(*new_centroid)
-
-            distance = self._position >> new_position
-            duration = distance / self._velocity  # in minutes
-
-            self._state = BusState.EN_ROUTE_DETOUR
-
-            yield self._env.timeout(duration)
-
-            self._update_positions(new_position)
-
-        self._action_taken.succeed(action)
-        self._action_taken = self._env.event()
-
-        return action
 
     def _move_to_next_stop(self):
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
@@ -309,22 +212,15 @@ class Bus(PublicTransitVehicle):
         # wait for action
         action = yield self._action_taken
 
-        self._reward = reward_bus(self._env_state, self._state == BusState.AT_TERMINAL_DESTINATION)
-        self._reward_cum = self._reward_cum + self._reward
+        self._rl_agent.reward = self._rl_agent.reward_state(self._env_state,
+                                                            self._state == BusState.AT_TERMINAL_DESTINATION)
+        self._rl_agent.reward_sum = self._rl_agent.reward_sum + self._rl_agent.reward
 
-        logging.debug(f'Current reward: {self._reward}, overall reward: {self._reward_cum}',
+        logging.debug(f'Current reward: {self._rl_agent.reward}, overall reward: {self._rl_agent.reward_sum}',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
-        self._agent_completed_step.succeed((before_state, action, self._reward, self._reward_cum))
+        self._agent_completed_step.succeed((before_state, action, self._rl_agent.reward, self._rl_agent.reward_sum))
         self._agent_completed_step = self._env.event()
-
-    @property
-    def reward(self):
-        return self._reward
-
-    @property
-    def reward_sum(self):
-        return self._reward_cum
 
     def __str__(self):
         return f'I have {len(self._seats)} passengers on boards'
