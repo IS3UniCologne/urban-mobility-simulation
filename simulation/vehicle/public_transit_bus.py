@@ -207,6 +207,22 @@ class Bus(PublicTransitVehicle):
                 # stop process loop
                 break
 
+    def test_action(self, action):
+        hex_id = h3.geo_to_h3(*self._position.getExactLocation(),
+                              resolution=self._config.transit_agent_config.action_resolution)
+
+        if action == 'STAY':
+            return None
+        else:
+            new_hex = self._geodesic_env.move_in_layer(hex_id, action)
+            try:
+                new_centroid = self._geodesic_env.get_centroid(
+                    new_hex, f'hex_{self._config.transit_agent_config.action_resolution}')
+                return new_centroid
+            except KeyError:
+                # hexagon is out of layer bounding box - action is forbidden
+                raise NotImplementedError
+
     def _update_reward(self, before_state):
 
         # wait for action
