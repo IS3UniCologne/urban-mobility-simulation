@@ -116,7 +116,7 @@ class DemandFactory:
                                      self._demand_importer._get_temporal_duration_in_hours() * 60
             except KeyError:
                 # no modifier is registered for that spatial unit
-                inter_arrival_time = numpy.random.exponential(1.0 / poisson_lambda) * \
+                inter_arrival_time = self._random.exponential(1.0 / poisson_lambda) * \
                                      self._demand_importer._get_temporal_duration_in_hours() * 60
 
             # await next arrival
