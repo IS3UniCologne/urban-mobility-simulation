@@ -7,7 +7,6 @@ from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.tasks.transport_task import TransportTask
 from simulation.tasks.transportation_search_task import TransportationSearchTask
-from simulation.vehicle.shared_vehicle import SharedVehicle
 
 import logging
 

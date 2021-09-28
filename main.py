@@ -336,7 +336,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     return payment_engine.total_revenue
 
 
-run_single_simulation(end_time = 1*1440+240, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1, seed = 42, substitution = 0.1)
+run_single_simulation(end_time = 240, n_cars = 800, n_scooter = 1200, n_kick_scooter = 1500, seed = 142, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)
