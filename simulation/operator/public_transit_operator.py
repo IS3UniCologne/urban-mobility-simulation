@@ -4,7 +4,7 @@ import simpy
 
 from simpy import Environment
 
-from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator
+from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator, EpisodicSemiGradientSarsa
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.helper.timetable import Timetable
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
@@ -26,7 +26,7 @@ from simulation.world.world import World
 
 
 class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface):
-    def __init__(self, env: Environment, timetable: Timetable, q_hat: ValueFunctionApproximator):
+    def __init__(self, env: Environment, timetable: Timetable, rl_agent):
         PaymentInterface.__init__(self)
         self._timetable = timetable
         self._env = env
@@ -41,7 +41,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._actions = []
         self._rewards = []
         self._rewards_cum = []
-        self._q_hat = q_hat
+        self._rl_agent = rl_agent
 
         # Config
         self._config = Configuration.instance()
@@ -220,7 +220,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
     def _spawn_bus(self, route: PublicTransitRoute):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
-        bus = Bus(self._env, route, init_position, self._q_hat)
+        bus = Bus(self._env, route, init_position, self._rl_agent)
 
         return bus
 

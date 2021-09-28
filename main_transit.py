@@ -11,7 +11,8 @@ import sys
 from tqdm import tqdm
 
 from simulation.agent.action_space import ActionSpace
-from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator
+from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator, EpisodicSemiGradientSarsa
+from simulation.agent.episodic_semi_gradient_n_step_sarsa import EpisodicSemiGradientNStepSarsa
 from simulation.agent.user import User # must come before DemandFactory, otherwise circular imports
 from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig, \
     TransitAgentConfig
@@ -60,8 +61,8 @@ transit_timetable_path = parser.get("INFRASTRUCTURE", "path_transit_timetable")
 # transit_shapes_path = parser.get("INFRASTRUCTURE", "path_transit_shapes")
 
 # Operator Config
-transit_planning_lookahead = parser.get("TRANSITOPERATOR", "TRANSIT_LOOKAHEAD")
-transit_max_busses = parser.get("TRANSITOPERATOR", "MAX_BUSSES")
+transit_planning_lookahead = parser.get("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD")
+transit_max_busses = parser.get("TRANSIT_OPERATOR", "MAX_BUSSES")
 
 # Environment files
 bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
@@ -76,17 +77,20 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res)
 max_waiting_time = parser.get("USER", "TRANSIT_MAX_WAIT")
 spatial_strategy = parser.get("USER", "SPATIAL_STRATEGY")
 
-# Bus Agent Config
+# Bus RL Agent Config
+algo = parser.get("BUS", "AGENT")
+episodes = int(parser.get("BUS", "EPISODES"))
 actions = parser.get("BUS", "ACTION_SPACE").split(',')
 action_dim = len(actions)
 action_resolution = parser.get("BUS", "ACTION_SPACE_RESOLUTION")
 agent_alpha = parser.get("BUS", "ALPHA")
 agent_eps = parser.get("BUS", "EPS")
 agent_gamma = parser.get("BUS", "GAMMA")
+agent_n = parser.get("BUS", "N")
 
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
-bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma)
+bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma, agent_n)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -225,6 +229,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, q_hat_weig
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
     q_hat = ValueFunctionApproximator(state_dim = 2, action_dim = 7, init_values = q_hat_weights)
+    rl_agent = eval(algo+"(env, q_hat)") # this must be one of the worst ways to switch classes, mea culpa
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -233,7 +238,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, q_hat_weig
     # # # # # # # # # # # # # # # # # # # # # #
 
     # Operator Modules
-    operator = PublicTransitOperator(env, timetable, q_hat)
+    operator = PublicTransitOperator(env, timetable, rl_agent)
     search_engine = operator
     payment_engine = operator
     vehicle_assignment_engine = operator
@@ -273,11 +278,10 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, q_hat_weig
 
 
 if __name__ == '__main__':
-    EPISODES = 200
 
     w = [numpy.zeros(2 * action_dim)]
     metrics = {}
-    for i in tqdm(range(EPISODES), total=EPISODES):
+    for i in tqdm(range(episodes), total=episodes):
         out = run_single_simulation(start_time=15*60, end_time=17*60, q_hat_weights=w[-1])
         metrics[i] = out
         w.append(out['weights'])
