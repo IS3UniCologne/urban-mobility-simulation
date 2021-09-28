@@ -126,17 +126,12 @@ class EpisodicSemiGradientSarsa(RLAgent):
         while True:
             action = Policy.decide(self._vectorize_state(bus._env_state), self._q_hat, self._eps)
 
-            hex_id = h3.geo_to_h3(*bus.position.getExactLocation(),
-                                  resolution=self._config.transit_agent_config.action_resolution)
-
             if action == 'STAY':
                 break
             else:
-                new_hex = bus._geodesic_env.move_in_layer(hex_id, action)
                 try:
-                    new_centroid = bus._geodesic_env.get_centroid(
-                        new_hex, f'hex_{self._config.transit_agent_config.action_resolution}')
-                except KeyError:
+                    new_centroid = bus.test_action(action)
+                except NotImplementedError:
                     # hexagon is out of layer bounding box - action is forbidden
                     logging.debug(f'Action {action} is forbidden, sampling again',
                                   extra={"clazz": self.__class__.__name__, "oid": bus.id})
