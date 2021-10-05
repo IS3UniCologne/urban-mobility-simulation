@@ -117,9 +117,6 @@ global_config.set_output_path(output_folder)
 global_config.set_transaction_file(transaction_file)
 global_config.set_fleet_state_file(fleet_state_file)
 
-
-
-
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
 
@@ -319,13 +316,21 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     # # # # # # # # # # # # # # # # # # # # # #
     env.run(until = end_time)
 
+    # Daily Total Cost (CAPEX+OPEX) (cost derived from RevCalc excel in iCloud folder)
+    total_cost_per_day =(29.86*n_cars+7.66*n_scooter+10.72*n_kick_scooter)*(end_time/1440)
+
     print("Total Revenue: " + str(payment_engine.total_revenue))
+    print("Total Costs: " + str(total_cost_per_day))
+    print("Profit: " + str(payment_engine.total_revenue-total_cost_per_day))
+
     print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
     print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
-    print("Total Missed Car Trips: " + str(payment_engine._total_missed_car_trips))
+    print("Total Missed Revenue: " + str(payment_engine.total_missed_revenue))
 
-    print("Number of Vehicles to be charged: " + str(mixed_fleet.get_all_vehicles_below_soc_level(0.1)))
+    print("Number of Vehicles to be charged: " + str(mixed_fleet.get_all_vehicles_below_soc_level(global_config.shared_vehicle_operator_config.recharge_threshold)))
 
+    # Final Objective Function for Heuristic Search
+    print("Objective Function:" + str(payment_engine.total_revenue-total_cost_per_day-payment_engine.total_missed_revenue))
     transactions = payment_engine.get_transactions()
 
     if store_results:
@@ -336,7 +341,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     return payment_engine.total_revenue
 
 
-run_single_simulation(end_time = 240, n_cars = 800, n_scooter = 1200, n_kick_scooter = 1500, seed = 142, substitution = 0.05)
+run_single_simulation(end_time = 1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 142, substitution = 0.10)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)
