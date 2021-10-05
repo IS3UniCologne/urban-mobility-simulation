@@ -159,6 +159,9 @@ class Configuration:
     def set_fleet_state_file(self, file):
         self._fleet_state_file = file
 
+    def get_available_vehicle_types(self):
+        return list(self._vehicle_configs.keys())
+
 
 class VehicleConfig:
     def __init__(self, price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats):

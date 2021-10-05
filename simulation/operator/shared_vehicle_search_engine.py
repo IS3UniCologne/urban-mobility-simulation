@@ -1,4 +1,5 @@
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative import TransportationAlternative
 from simulation.operator.data_transfer_object.transportation_alternative_browser import TransportationAlternativeBrowser
@@ -107,11 +108,20 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
                       extra={"clazz": self.__class__.__name__, "oid": ""})
 
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
-        self.increase_total_missed_trips()
 
-        #TODO: Remove or align in a dynmic fashion
-        if transportation_task.viable_vehicle_modes["SharedCar"] == 1:
-            self._total_missed_car_trips += 1
+        # Get available vehicle types
+        vehicle_types = Configuration.instance().get_available_vehicle_types()
+
+        # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
+        # We count the lost revenue for the "cheapest" mode
+        for vehicle_type in vehicle_types:
+            if vehicle_type in transportation_task.viable_vehicle_modes and transportation_task.viable_vehicle_modes[vehicle_type] == 1:
+                distance = transportation_task.origin >> transportation_task.destination
+                velocity = Configuration.instance().get_vehicle_config("SharedCar").velocity
+                price_per_min = Configuration.instance().get_vehicle_config("SharedCar").price_per_min
+                missed_trip_cost = distance / velocity * price_per_min
+
+        self.increase_total_missed_trips(missed_trip_cost)
 
         # Add Transaction to Log
         self._transactions.append(

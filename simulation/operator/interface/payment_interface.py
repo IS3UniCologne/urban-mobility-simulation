@@ -12,9 +12,7 @@ class PaymentInterface(ABC):
         self._total_revenue = 0
         self._total_fulfilled_trips = 0
         self._total_missed_trips = 0
-
-        # Make this dynamic with a dictionary
-        self._total_missed_car_trips = 0
+        self._total_missed_revenue = 0
 
         self._transactions = []
 
@@ -38,11 +36,16 @@ class PaymentInterface(ABC):
     def total_missed_trips(self):
         return self._total_missed_trips
 
+    @property
+    def total_missed_revenue(self):
+        return self._total_missed_revenue
+
     def increase_total_revenue(self, additional_revenue):
         self._total_fulfilled_trips += 1
         self._total_revenue += additional_revenue
 
-    def increase_total_missed_trips(self):
+    def increase_total_missed_trips(self, missed_revenue):
+        self._total_missed_revenue += missed_revenue
         self._total_missed_trips += 1
 
     def get_transactions(self):
