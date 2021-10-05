@@ -317,7 +317,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     env.run(until = end_time)
 
     # Daily Total Cost (CAPEX+OPEX) (cost derived from RevCalc excel in iCloud folder)
-    total_cost_per_day =(29.86*n_cars+7.66*n_scooter+10.72*n_kick_scooter)*(end_time/1440)
+    total_cost_per_day =(29.86*n_cars+7.66*n_scooter+11.51*n_kick_scooter)*(end_time/1440)
 
     print("Total Revenue: " + str(payment_engine.total_revenue))
     print("Total Costs: " + str(total_cost_per_day))
