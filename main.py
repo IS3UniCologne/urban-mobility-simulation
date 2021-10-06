@@ -75,8 +75,10 @@ for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK
     energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
     velocity = parser.getfloat(vehicle_type, "VELOCITY")
     max_available_seats = parser.getint(vehicle_type, "MAX_AVAILABLE_SEATS")
+    max_walking_distance = parser.getint(vehicle_type, "WALKING_DISTANCE")
+    daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
 
-    vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats)
+    vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats, max_walking_distance, daily_total_cost)
     global_config.add_vehicle_config(vehicle_type_classes[idx], vc)
 
 # Read Mode Choice Configuration
@@ -317,7 +319,9 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     env.run(until = end_time)
 
     # Daily Total Cost (CAPEX+OPEX) (cost derived from RevCalc excel in iCloud folder)
-    total_cost_per_day =(29.86*n_cars+7.66*n_scooter+11.51*n_kick_scooter)*(end_time/1440)
+    total_cost_per_day =(global_config.get_vehicle_config("SharedCar").daily_total_cost*n_cars
+                         +global_config.get_vehicle_config("SharedScooter").daily_total_cost*n_scooter
+                         +global_config.get_vehicle_config("SharedKickScooter").daily_total_cost*n_kick_scooter)*(end_time/1440)
 
     print("Total Revenue: " + str(payment_engine.total_revenue))
     print("Total Costs: " + str(total_cost_per_day))
@@ -327,21 +331,26 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
     print("Total Missed Revenue: " + str(payment_engine.total_missed_revenue))
 
-    print("Number of Vehicles to be charged: " + str(mixed_fleet.get_all_vehicles_below_soc_level(global_config.shared_vehicle_operator_config.recharge_threshold)))
+    no_vehicles_to_be_charged = mixed_fleet.get_all_vehicles_below_soc_level(global_config.shared_vehicle_operator_config.recharge_threshold)
+
+    print("Number of Vehicles to be charged: " + str(no_vehicles_to_be_charged))
 
     # Final Objective Function for Heuristic Search
-    print("Objective Function:" + str(payment_engine.total_revenue-total_cost_per_day-payment_engine.total_missed_revenue))
+    func_objective = payment_engine.total_revenue-total_cost_per_day-payment_engine.total_missed_revenue
+    print("Objective Function:" + str(func_objective))
     transactions = payment_engine.get_transactions()
 
     if store_results:
         transactions.to_csv(Path(output_folder, transaction_file), index = False)
 
     print(DemandFactory.counter)
-    #TODO: Redefining the objective function
-    return payment_engine.total_revenue
+    return (payment_engine.total_revenue, total_cost_per_day,
+            payment_engine.total_revenue-total_cost_per_day,
+            payment_engine.total_fulfilled_trips, payment_engine.total_missed_trips,
+            payment_engine.total_missed_revenue, no_vehicles_to_be_charged, func_objective)
 
 
-run_single_simulation(end_time = 1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 142, substitution = 0.10)
+run_single_simulation(end_time = 2*1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 142, substitution = 0.10)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)
@@ -353,7 +362,7 @@ run_single_simulation(end_time = 1440, n_cars = 1000, n_scooter = 1000, n_kick_s
 
 # run_single_simulation(end_time = 60, n_cars = 200, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 300, n_scooter = 0, n_kick_scooter = 0)
-# run_single_simulation(end_time = 60, n_cars = 400, n_scooter = 0, n_kick_scooter = 0)
+#run_single_simulation(end_time = 60, n_cars = 400, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 500, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 600, n_scooter = 0, n_kick_scooter = 0)
 #run_single_simulation(end_time = 60, n_cars = 700, n_scooter = 0, n_kick_scooter = 0)
