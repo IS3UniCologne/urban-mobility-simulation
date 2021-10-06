@@ -164,12 +164,15 @@ class Configuration:
 
 
 class VehicleConfig:
-    def __init__(self, price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats):
+    def __init__(self, price_per_min, max_state_of_charge, energy_consumption,
+                 velocity, max_available_seats, max_walking_distance, daily_total_cost):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
         self.energy_consumption = energy_consumption
         self.velocity = velocity
         self.max_available_seats = max_available_seats
+        self.max_walking_distance = max_walking_distance
+        self.daily_total_cost = daily_total_cost
 
 
 class ModeChoiceConfig:
