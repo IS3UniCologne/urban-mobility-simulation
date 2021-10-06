@@ -13,6 +13,7 @@ from tqdm import tqdm
 from simulation.agent.action_space import ActionSpace
 from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator, EpisodicSemiGradientSarsa
 from simulation.agent.episodic_semi_gradient_n_step_sarsa import EpisodicSemiGradientNStepSarsa
+from simulation.agent.deep_q_learning import DQN
 from simulation.agent.user import User # must come before DemandFactory, otherwise circular imports
 from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig, \
     TransitAgentConfig
@@ -86,11 +87,11 @@ action_resolution = parser.get("BUS", "ACTION_SPACE_RESOLUTION")
 agent_alpha = parser.get("BUS", "ALPHA")
 agent_eps = parser.get("BUS", "EPS")
 agent_gamma = parser.get("BUS", "GAMMA")
-agent_n = parser.get("BUS", "N")
+bootstrap_agent_n = parser.get("BUS", "N")
 
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
-bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma, agent_n)
+bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma, bootstrap_agent_n)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -198,7 +199,7 @@ timetable.import_timetable()
 ActionSpace.init(actions)
 
 
-def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, q_hat_weights = None):
+def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = None, replay_buffer = None):
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -228,8 +229,9 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, q_hat_weig
     # Setup Value Function Approximation      #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    q_hat = ValueFunctionApproximator(state_dim = 2, action_dim = 7, init_values = q_hat_weights)
-    rl_agent = eval(algo+"(env, q_hat)") # this must be one of the worst ways to switch classes, mea culpa
+    # q_hat = ValueFunctionApproximator(state_dim = 2, action_dim = 7, init_values = weights)
+    # rl_agent = eval(algo+"(env, q_hat)") # this must be one of the worst ways to switch classes, mea culpa
+    # rl_agent = DQN(env, weights)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -238,7 +240,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, q_hat_weig
     # # # # # # # # # # # # # # # # # # # # # #
 
     # Operator Modules
-    operator = PublicTransitOperator(env, timetable, rl_agent)
+    operator = PublicTransitOperator(env, timetable, weights, replay_buffer)
     search_engine = operator
     payment_engine = operator
     vehicle_assignment_engine = operator
@@ -274,18 +276,20 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, q_hat_weig
     # print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
     # print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
 
-    return {'states': operator._states, 'actions': operator._actions, 'rewards': operator._rewards, 'return': operator._rewards_cum, 'weights': q_hat.weights}
+    return {'return': operator._rewards_cum, 'weights': operator._rl_agent_weights, 'replay_buffer': operator._rl_agent_replay_buffer}
 
 
 if __name__ == '__main__':
 
-    w = [numpy.zeros(2 * action_dim)]
-    metrics = {}
+    w = None # weights
+    b = None # replay buffer
+    episode_returns = {}
     for i in tqdm(range(episodes), total=episodes):
-        out = run_single_simulation(start_time=15*60, end_time=17*60, q_hat_weights=w[-1])
-        metrics[i] = out
-        w.append(out['weights'])
+        out = run_single_simulation(start_time=15*60, end_time=17*60, weights=w, replay_buffer=b)
+        episode_returns[i] = out
+        w = out['weights']
+        b = out['replay_buffer']
 
-    returns = pd.DataFrame.from_records([{'episode': i, 'return': x['return'][-1]} for i, x in metrics.items()])
+    returns = pd.DataFrame.from_records([{'episode': i, 'return': x['return'][-1]} for i, x in episode_returns.items()])
     returns.plot(x='episode', y='return')
     plt.show()

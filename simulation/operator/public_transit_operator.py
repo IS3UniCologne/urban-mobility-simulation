@@ -4,7 +4,8 @@ import simpy
 
 from simpy import Environment
 
-from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator, EpisodicSemiGradientSarsa
+from simulation.agent.deep_q_learning import DQN
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.helper.timetable import Timetable
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
@@ -26,12 +27,16 @@ from simulation.world.world import World
 
 
 class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface):
-    def __init__(self, env: Environment, timetable: Timetable, rl_agent):
+    def __init__(self, env: Environment, timetable: Timetable, rl_agent_weights, rl_agent_replay_buffer):
         PaymentInterface.__init__(self)
         self._timetable = timetable
         self._env = env
         self._time = SimulationTime(env)
         self._busses = []
+
+        # Environment
+        self._geodesic_env = GeodesicEnvironment.getInstance()
+        self._world = None # defer loading to run process, otherwise circular dependency
 
         # Events
         self._vehicles_assigned_to_users = self._env.event()
@@ -41,7 +46,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._actions = []
         self._rewards = []
         self._rewards_cum = []
-        self._rl_agent = rl_agent
+        self._rl_agent_weights = rl_agent_weights
+        self._rl_agent_replay_buffer = rl_agent_replay_buffer
 
         # Config
         self._config = Configuration.instance()
@@ -53,6 +59,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         """
         TransitOperator Lifecycle
         """
+        self._world = World.instance()
+
         while True:
             try:
                 logging.debug(f'TransitOperator is at time {self._time.now_as_str()}',
@@ -71,6 +79,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                             route = self._build_route(trip)
                             bus = self._spawn_bus(route)
                             self._busses.append(bus)
+                            self._world.add_vehicle(bus)
 
                             # spawn a process that keeps track of the bus state, action and rewards
                             self._env.process(self._track_bus_agent(bus))
@@ -220,16 +229,25 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
     def _spawn_bus(self, route: PublicTransitRoute):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
-        bus = Bus(self._env, route, init_position, self._rl_agent)
+        corridor = self._geodesic_env.corridor(route.origin.get_hexagon_id(),
+                                               route.destination.get_hexagon_id(), k=2)
+        corridor_dim = len(corridor)
+        agent = DQN(self._env, (corridor_dim, corridor_dim, 2),
+                    self._rl_agent_weights, self._rl_agent_replay_buffer)
+        bus = Bus(self._env, route, init_position, agent)
 
         return bus
 
     def _clean_up_bus(self, bus: Bus):
 
-        yield bus._has_reached_destination
+        (weights, replay_buffer) = yield bus._has_reached_destination
 
         self._busses.remove(bus)
+        self._world.remove_vehicle(bus)
         # TODO: unmount all remaining passengers - though there shouldn't be any?
+
+        self._rl_agent_weights = weights
+        self._rl_agent_replay_buffer = replay_buffer
 
         # TODO: this is hardcoded for one bus
         self._operator_process.interrupt()

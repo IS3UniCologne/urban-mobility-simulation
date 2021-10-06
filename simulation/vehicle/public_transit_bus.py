@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 import h3
+import numpy as np
 import simpy
 from simpy import Environment
 from enum import Enum
@@ -38,6 +39,7 @@ class Bus(PublicTransitVehicle):
 
         self._id = Bus.bus_id
         self._time = SimulationTime(self._env)
+        self._spawned = float(SimulationTime(self._env).now())
         Bus.bus_id += 1
 
         # Events
@@ -45,28 +47,35 @@ class Bus(PublicTransitVehicle):
         self._action_taken = self._env.event()
         self._agent_completed_step = self._env.event()
 
-        # Environment / World state
-        self._geodesic_env = GeodesicEnvironment.getInstance()
-        self._world = World.instance()
-        self._env_state = {
-            'd_terminal': self._route.destination.difference(self._position)
-            # 'passengers': [{'d_destination': self._position.difference(x.transport_task.destination),
-            #                 'time': x.available_time} for x in self._seats],
-            # 'demand': [{'d_origin': self._position.difference(x.transport_task.origin),
-            #             'd_destination': self._position.difference(x.transport_task.destination),
-            #             'time': x.available_time} for x in self._world.users
-            #            if x.state is TransitUserState.SEARCHING_TRANSPORT_ALTERNATIVES],
-            # 'delay': self._delay
-        }
-
-        # Action space
-        self._action_space = ActionSpace.instance()
-
         # Config
         self._config = Configuration.instance()
         self._eps = self._config.transit_agent_config.eps  # epsilon for e-greedy action selection
         self._gamma = self._config.transit_agent_config.gamma  # discount rate
-        self._alpha = self._config.transit_agent_config.alpha # step size for updates
+        self._alpha = self._config.transit_agent_config.alpha  # step size for updates
+
+        # Action space
+        self._action_space = ActionSpace.instance()
+        self._action_res = self._config.transit_agent_config.action_resolution
+
+        # Environment / World state
+        self._geodesic_env = GeodesicEnvironment.getInstance()
+        self._world = World.instance()
+        self._corridor = self._geodesic_env.corridor(self.route.origin.get_hexagon_id(),
+                                                     self.route.destination.get_hexagon_id(), k=2)
+        self._corridor_dim = len(self._corridor)
+        self._corridor_sorted = sorted(self._corridor)
+
+        self._env_state = {}
+        # build position matrix: m[start hex][end hex] = 1 if bus is at hex start = end
+        # a 1d vector of corridor_dim would be sufficient, but we want to have the same format to
+        # bake the position into the input tensor as a secondary channel
+        position = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
+        pos = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
+        position[pos][pos] = 1
+        self._env_state['position'] = position
+        self._env_state['demands'] = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
+
+        self._dropoffs = 0
 
         self._rl_agent = rl_agent
 
@@ -160,7 +169,7 @@ class Bus(PublicTransitVehicle):
         for passenger in self._seats:
             passenger.position = new_position
 
-        region_id, _ = self._position.get_hexagon(self._config.transit_agent_config.action_resolution)
+        region_id, _ = self._position.get_hexagon(self._action_res)
 
         logging.debug(f'Current position {self._position} in region {region_id}.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
@@ -171,13 +180,7 @@ class Bus(PublicTransitVehicle):
 
     def _update_state(self):
         """
-        We need:
-        - Distance to terminal destination
-        - Passengers [{distance to destination, remaining wait/walk}, ...]
-        - Demands [{distance to origin, distance to destination, wait/walk}, ...]
-        - Delay
-
-        which represents the most complete picture of the environment/world the agent has at the moment
+        This updates the state which represents the most complete picture of the environment/world the agent has at the moment
         """
 
         # wait for external (world) or self (position) change
@@ -187,19 +190,36 @@ class Bus(PublicTransitVehicle):
                 # yield simpy.events.AnyOf(self._env, [self._position_changed, self._world.changed])
                 yield self._position_changed
 
-                self._env_state['d_terminal'] = self._route.destination.difference(self._position)
-                # self._env_state['passengers'] = [{'d_destination': self._position.difference(x.transport_task.destination),
-                #                                   'time': x.available_time} for x in self._seats]
-                # self._env_state['demand'] = [{'d_origin': self._position.difference(x.transport_task.origin),
-                #                               'd_destination': self._position.difference(x.transport_task.destination),
-                #                               'time': x.available_time} for x in self._world.users
-                #                              if x.state is TransitUserState.SEARCHING_TRANSPORT_ALTERNATIVES]
-                # self._env_state['delay'] = self._delay
+                demands = self._geodesic_env.filter_demands_by_corridor([x.transport_task for x in self._world.users],
+                                                                        self._corridor)
 
-                region_id, _ = self._position.get_hexagon(self._config.transit_agent_config.action_resolution)
+                # build OD matrix: m[start hex][end hex] = OD count for all currently known demands
+                m = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
+                for d in demands:
+                    start = self._corridor_sorted.index(d.origin.get_hexagon_id(self._action_res))
+                    end = self._corridor_sorted.index(d.destination.get_hexagon_id(self._action_res))
+                    m[start][end] += 1
+
+                # also build "OD-demands" for each passenger in the bus:
+                # origin = current position, destination = drop-off
+                for p in self._seats:
+                    start = self._position.get_hexagon_id(self._action_res)
+                    end = p.transport_task.destination.get_hexagon_id(self._action_res)
+                    m[start][end] += 1
+
+                # build position matrix: m[start hex][end hex] = 1 if bus is at hex start = end
+                # a 1d vector of corridor_dim would be sufficient, but we want to have the same format to
+                # bake the position into the input tensor as a secondary channel
+                position = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
+                pos = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
+                position[pos][pos] = 1
+                self._env_state['position'] = position
+                self._env_state['demands'] = m
+
+                region_id, _ = self._position.get_hexagon(self._action_res)
 
                 if region_id == \
-                        self._route.destination.get_hexagon(self._config.transit_agent_config.action_resolution)[0]:
+                        self._route.destination.get_hexagon_id(self._action_res):
                     self._state = BusState.AT_TERMINAL_DESTINATION
                     logging.info(f'Bus has arrived at its terminal destination at time {self._time.now_as_str()}',
                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
@@ -207,17 +227,21 @@ class Bus(PublicTransitVehicle):
                 # stop process loop
                 break
 
-    def test_action(self, action):
+    def test_action(self, action: str, corridor=None):
         hex_id = h3.geo_to_h3(*self._position.getExactLocation(),
-                              resolution=self._config.transit_agent_config.action_resolution)
+                              resolution=self._action_res)
 
         if action == 'STAY':
             return None
         else:
             new_hex = self._geodesic_env.move_in_layer(hex_id, action)
+            if corridor is not None:
+                if not new_hex in corridor:
+                    # hexagon is out of corridor
+                    raise NotImplementedError
             try:
                 new_centroid = self._geodesic_env.get_centroid(
-                    new_hex, f'hex_{self._config.transit_agent_config.action_resolution}')
+                    new_hex, f'hex_{self._action_res}')
                 return new_centroid
             except KeyError:
                 # hexagon is out of layer bounding box - action is forbidden

@@ -1,6 +1,7 @@
 from .agent import Agent
 from ..environment.geodesic_position import GeodesicPosition
 from ..environment.position import Position
+from ..helper.configuration.configuration import Configuration
 from ..operator.data_transfer_object.transportation_alternative import TransportationAlternative
 from ..operator.data_transfer_object.transportation_alternative_browser import TransportationAlternativeBrowser
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
@@ -19,6 +20,7 @@ from ..vehicle.interfaces.passenger_interface import PassengerInterface
 from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
+from ..vehicle.vehicle import Vehicle
 from ..vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
 from ..world.world import World
 
@@ -384,11 +386,19 @@ class TransitUser(User, PassengerInterface):
     def __init__(self, position: GeodesicPosition, transport_task: TransportTask,
                  transportation_search_service: SearchEngineInterface,
                  payment_service: PaymentInterface, vehicle_assignment_service: VehicleAllocationEngineInterface,
-                 vehicle_choice_behavior: VehicleChoiceBehaviorInterface, env: simpy.Environment):
+                 vehicle_choice_behavior: VehicleChoiceBehaviorInterface, env: simpy.Environment, passive=False):
         super(TransitUser, self).__init__(position, transport_task, transportation_search_service, payment_service,
                                           vehicle_assignment_service, vehicle_choice_behavior, env)
         self._id = TransitUser.transit_user_id  # User ID
         TransitUser.transit_user_id += 1  # Increment User Id
+
+        # if the user is "passive", no vehicle allocation happens, rather the user opportunistically
+        # boards transit that happens to move through the same hexagon. Another word for passive could be dumb.
+        self._passive = passive
+
+        # Config
+        self._config = Configuration.instance()
+        self._bus_res = self._config.transit_agent_config.action_resolution
 
         # TODO: modify available_time over time
         self._available_time = self._transport_task.max_wait_time # max available walk / wait time, can change by e.g. waiting
@@ -406,43 +416,56 @@ class TransitUser(User, PassengerInterface):
         """
 
         while self._state != TransitUserState.FULFILLED and self._state != TransitUserState.MISSED:
-            # Retrieve available transportation alternatives
-            available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
+            if not self._passive:
+                # Retrieve available transportation alternatives
+                available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
 
-            # Select Alternative
-            selected_transportation_alternative = yield self._env.process(
-                self.select_transportation_alternative(available_transportation_alternatives))
+                # Select Alternative
+                selected_transportation_alternative = yield self._env.process(
+                    self.select_transportation_alternative(available_transportation_alternatives))
 
-            # Withdraw Request since no vehicle is available matching my needs
-            if not selected_transportation_alternative:
-                yield self._env.process(self.withdraw_request())
-                break
+                # Withdraw Request since no vehicle is available matching my needs
+                if not selected_transportation_alternative:
+                    yield self._env.process(self.withdraw_request())
+                    break
 
-            # Vehicle Found and allocated?
-            vehicle_allocation = yield self._env.process(self.allocate_vehicle(selected_transportation_alternative))
+                # Vehicle Found and allocated?
+                vehicle_allocation = yield self._env.process(self.allocate_vehicle(selected_transportation_alternative))
 
-            # If not allocated, retry.
-            if not vehicle_allocation:
-                logging.debug(f" Vehicle allocation was not successful. Retrying with another vehicle.",
-                              extra={"clazz": self.__class__.__name__, "oid": self._id})
+                # If not allocated, retry.
+                if not vehicle_allocation:
+                    logging.debug(f" Vehicle allocation was not successful. Retrying with another vehicle.",
+                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
 
-                # Reset Events (so far) and try again
-                self._transportation_alternatives_received = self._env.event()
-                self._transportation_alternatives_selected = self._env.event()
-                self._transportation_alternatives_not_found = self._env.event()
-                self._vehicle_allocated = self._env.event()
+                    # Reset Events (so far) and try again
+                    self._transportation_alternatives_received = self._env.event()
+                    self._transportation_alternatives_selected = self._env.event()
+                    self._transportation_alternatives_not_found = self._env.event()
+                    self._vehicle_allocated = self._env.event()
 
-                continue # retry again until vehicle supply is depleted
+                    continue # retry again until vehicle supply is depleted
 
-            yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
+                yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
-            yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
+                yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
 
-            yield self._env.process(self.start_transit(vehicle_allocation))
+                yield self._env.process(self.start_transit(vehicle_allocation))
 
-            yield self._env.process((self.move_to_destination()))
+                yield self._env.process((self.move_to_destination()))
 
-            self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task, selected_transportation_alternative)
+                self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task, selected_transportation_alternative)
+            else:
+                # wait for some transit to spawn
+                if not self._world.vehicles:
+                    yield self._env.timeout(1)
+                    continue
+
+                vehicle = self._world.vehicles[0] # in this case, only one bus exists TODO: generalize?
+                # just wait for forever to be picked up hopefully
+                yield self._env.process(self.wait_for_transit(vehicle))
+                yield self._env.process(self.start_passive_transit(vehicle))
+                vehicle._dropoffs += 1
+                yield self._env.process((self.move_to_destination()))
 
             yield self._env.process(self.stop())
 
@@ -498,6 +521,23 @@ class TransitUser(User, PassengerInterface):
 
         self._arrived_at_last_stop.succeed()
 
+    def start_passive_transit(self, vehicle: Vehicle):
+        # Wait for event
+        yield self._assigned_vehicle_arrived
+
+        # Update current state
+        self._state = TransitUserState.IN_TRANSPORT
+
+        self.mount_vehicle(vehicle)
+        # drive in vehicle until destination hexagon is reached, this might not happen at all
+        while (self.transport_task.destination.get_hexagon_id(self._bus_res) !=
+               vehicle.position.get_hexagon_id(self._bus_res)):
+            yield vehicle._position_changed
+
+        self.unmount_vehicle(vehicle)
+
+        self._arrived_at_last_stop.succeed()
+
     def move_to_destination(self):
         # Wait for event
         yield self._arrived_at_last_stop
@@ -510,6 +550,15 @@ class TransitUser(User, PassengerInterface):
 
         # Trigger next event
         self._arrived_at_destination.succeed()
+
+    def wait_for_transit(self, vehicle: Vehicle):
+
+        # wait indefinitely for transit pick up
+        while self.position.get_hexagon_id(self._bus_res) != vehicle.position.get_hexagon_id(self._bus_res):
+            yield vehicle._position_changed
+
+        self._assigned_vehicle_arrived.succeed()
+        self._assigned_vehicle_arrived = self._env.event()
 
     def mount_vehicle(self, vehicle):
         vehicle.mount_passenger(self)
