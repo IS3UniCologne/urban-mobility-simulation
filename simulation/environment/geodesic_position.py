@@ -94,6 +94,18 @@ class GeodesicPosition(Position):
 
         return hex_id, geometry
 
+    def get_hexagon_id(self, resolution = 0):
+        """
+        Return h3 hexagon id based on current position (lng, lat)
+        :param resolution: H3 Resolution (res = 0 <=> default => use global setting)
+        :return: hex_id:   String
+        """
+        # If resolution is set to default, use global settings
+        if resolution == 0:
+            resolution = Configuration.instance().spatial_resolution_value
+
+        return h3.geo_to_h3(self._lat, self._lng, resolution)
+
     def is_in_geometry(self, geometry):
         if self._geometry.intersects(geometry):
             return True

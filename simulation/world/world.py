@@ -6,6 +6,7 @@ from simpy import Environment
 
 from simulation.agent import user
 from simulation.helper.configuration.configuration import Configuration
+from simulation.vehicle.vehicle import Vehicle
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -58,6 +59,9 @@ class World:
         # Store all current users
         self._users = []
 
+        # Store all current vehicles
+        self._vehicles = []
+
         # Config
         self._config = Configuration.instance()
 
@@ -99,7 +103,8 @@ class World:
                                      max_wait_time)
 
                 new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
-                                            self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
+                                            self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env,
+                                            passive=True)
             else:
                 # Generate Transportation Task
                 task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
@@ -117,9 +122,19 @@ class World:
                 logging.info(f'Reached User Limit of {self._user_limit}. Not adding more users to world.',
                              extra={"clazz": self.__class__.__name__, "oid": " "})
 
+    def add_vehicle(self, vehicle: Vehicle):
+        self._vehicles.append(vehicle)
+
+    def remove_vehicle(self, vehicle: Vehicle):
+        self._vehicles.remove(vehicle)
+
     @property
     def users(self):
         return self._users
+
+    @property
+    def vehicles(self):
+        return self._vehicles
 
     @property
     def changed(self):

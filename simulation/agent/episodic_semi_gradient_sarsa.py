@@ -103,7 +103,7 @@ class EpisodicSemiGradientSarsa(RLAgent):
             # update weights
             self._update_policy(s, a, s_, a_)
 
-            # clean up processes
+        # clean up processes
         bus._state_update_process.interrupt()
 
         # and let the operator know

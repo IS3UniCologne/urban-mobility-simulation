@@ -4,7 +4,7 @@ import h3
 from numpy import random
 import numpy
 
-from shapely.geometry import Point
+from shapely.geometry import Point, Polygon
 from simulation.environment.environment import Environment
 
 
@@ -162,3 +162,35 @@ class GeodesicEnvironment(Environment):
         assert h3.h3_get_base_cell(hex_id) == h3.h3_get_base_cell(new_hex_id) # TODO: should be on the same base cell?
 
         return new_hex_id
+
+    @staticmethod
+    def corridor(start, end, k):
+        """
+        Given a start and end hexagon id (with same resolution), return a straight line of hexagons between them
+        plus (optionally for k>0) a buffer of k hex-cells around it.
+
+        :param start: start hexagon id
+        :param end: end hexagon id
+        :param k: k-hex buffer
+        :return: set of hexagon ids
+        """
+        straight = h3.h3_line(start, end)
+        return {item for sublist in [h3.k_ring(h, k) for h in straight] for item in sublist}
+
+    @staticmethod
+    def filter_demands_by_corridor(demands, corridor):
+        """
+        :param demands: [{origin: GeodesicPosition, destination: GeodesicPosition}, ...]
+        :param corridor: set of hexagon cell ids
+        :return: list of demands which have both origin and destination within the corridor
+        """
+
+        poly_corridor = Polygon(h3.h3_set_to_multi_polygon(corridor, geo_json=False)[0][0])
+
+        filtered = []
+        for d in demands:
+            if (Point(d.origin.getExactLocation()).within(poly_corridor) and
+                    Point(d.destination.getExactLocation()).within(poly_corridor)):
+                filtered.append(d)
+
+        return filtered
