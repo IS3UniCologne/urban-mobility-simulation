@@ -1,15 +1,18 @@
-from abc import ABC, abstractmethod
-from enum import Enum
+from __future__ import annotations
 
+from abc import ABC
+from enum import Enum
 import logging
 from simpy import Environment
+from typing import TYPE_CHECKING
 
-from .interfaces.passenger_interface import PassengerInterface
-from .vehicle import Vehicle, VehicleState
-from simulation.infrastructure.route import PublicTransitRoute
+from simulation.vehicle.vehicle import Vehicle, VehicleState
+from simulation.helper.time import SimulationTimeConverter
 from simulation.infrastructure.transit_network.stop import Stop
-from simulation.agent.user import TransitUser
-from ..helper.time import SimulationTimeConverter
+
+if TYPE_CHECKING:
+    from simulation.infrastructure.route import PublicTransitRoute
+    from simulation.agent.user import TransitUser
 
 
 class PublicTransitVehicleState(VehicleState, Enum):

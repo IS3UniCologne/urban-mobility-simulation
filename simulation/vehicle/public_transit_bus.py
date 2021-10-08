@@ -43,7 +43,7 @@ class Bus(PublicTransitVehicle):
         Bus.bus_id += 1
 
         # Events
-        self._has_reached_destination = self._env.event()
+        self._has_reached_terminal = self._env.event()
         self._action_taken = self._env.event()
         self._agent_completed_step = self._env.event()
 
@@ -74,6 +74,7 @@ class Bus(PublicTransitVehicle):
         position[pos][pos] = 1
         self._env_state['position'] = position
         self._env_state['demands'] = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
+        self._env_state['drivingtime'] = np.full((self._corridor_dim, self._corridor_dim), 0)
 
         self._dropoffs = 0
 
@@ -128,7 +129,7 @@ class Bus(PublicTransitVehicle):
             # otherwise move on with driving
             yield self._env.process(self._move_to_next_stop())
 
-        self._has_reached_destination.succeed()
+        self._has_reached_terminal.succeed()
 
     def _move_to_next_stop(self):
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
@@ -203,18 +204,24 @@ class Bus(PublicTransitVehicle):
                 # also build "OD-demands" for each passenger in the bus:
                 # origin = current position, destination = drop-off
                 for p in self._seats:
-                    start = self._position.get_hexagon_id(self._action_res)
-                    end = p.transport_task.destination.get_hexagon_id(self._action_res)
+                    start = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
+                    end = self._corridor_sorted.index(p.transport_task.destination.get_hexagon_id(self._action_res))
                     m[start][end] += 1
 
                 # build position matrix: m[start hex][end hex] = 1 if bus is at hex start = end
                 # a 1d vector of corridor_dim would be sufficient, but we want to have the same format to
                 # bake the position into the input tensor as a secondary channel
+                # TODO: this is a sparse representation, one could also propagate the sorted corridor index to a full matrix
                 position = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
                 pos = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
                 position[pos][pos] = 1
+
+                # build scalar-filled matrix of driving time
+                driving_time = np.full((self._corridor_dim, self._corridor_dim), self._time.now()-self._spawned, dtype=int)
+
                 self._env_state['position'] = position
                 self._env_state['demands'] = m
+                self._env_state['drivingtime'] = driving_time
 
                 region_id, _ = self._position.get_hexagon(self._action_res)
 
@@ -232,20 +239,13 @@ class Bus(PublicTransitVehicle):
                               resolution=self._action_res)
 
         if action == 'STAY':
-            return None
+            return True
         else:
             new_hex = self._geodesic_env.move_in_layer(hex_id, action)
             if corridor is not None:
-                if not new_hex in corridor:
-                    # hexagon is out of corridor
-                    raise NotImplementedError
-            try:
-                new_centroid = self._geodesic_env.get_centroid(
-                    new_hex, f'hex_{self._action_res}')
-                return new_centroid
-            except KeyError:
-                # hexagon is out of layer bounding box - action is forbidden
-                raise NotImplementedError
+                return True if new_hex in corridor else False
+            else:
+                return self._geodesic_env.is_in_layer(new_hex, f'hex_{self._action_res}')
 
     def _update_reward(self, before_state):
 

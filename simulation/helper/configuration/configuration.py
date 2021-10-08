@@ -207,9 +207,10 @@ class TransitOperatorConfig:
 
 
 class TransitAgentConfig:
-    def __init__(self, action_resolution, alpha, eps, gamma, n):
+    def __init__(self, action_resolution, alpha, eps, gamma, n, tensorboard):
         self.action_resolution = int(action_resolution)
         self.alpha = float(alpha)
         self.eps = float(eps)
         self.gamma = float(gamma)
         self.n = int(n)
+        self.tensorboard = tensorboard

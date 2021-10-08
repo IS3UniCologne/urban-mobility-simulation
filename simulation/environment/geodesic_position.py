@@ -20,8 +20,11 @@ class GeodesicPosition(Position):
 
         self._geometry = Point(self._lng, self._lat)
 
-    def getExactLocation(self):
-        return (self._lat, self._lng)
+    def getExactLocation(self, geojson=False):
+        if geojson:
+            return (self._lng, self._lat)
+        else:
+            return (self._lat, self._lng)
 
     @property
     def geometry(self):

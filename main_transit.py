@@ -1,4 +1,8 @@
+import configparser
+import datetime
 from configparser import ConfigParser
+from copy import deepcopy
+
 import geopandas as gpd
 import logging
 from matplotlib import pyplot as plt
@@ -8,12 +12,15 @@ import pandas as pd
 from pathlib import Path
 import simpy
 import sys
+
+import tensorflow as tf
+from tensorboard import program
 from tqdm import tqdm
 
 from simulation.agent.action_space import ActionSpace
 from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator, EpisodicSemiGradientSarsa
 from simulation.agent.episodic_semi_gradient_n_step_sarsa import EpisodicSemiGradientNStepSarsa
-from simulation.agent.deep_q_learning import DQN
+from simulation.agent.deep_q_learning import DQN, ModifiedTensorBoard
 from simulation.agent.user import User # must come before DemandFactory, otherwise circular imports
 from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig, \
     TransitAgentConfig
@@ -61,6 +68,9 @@ supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
 transit_timetable_path = parser.get("INFRASTRUCTURE", "path_transit_timetable")
 # transit_shapes_path = parser.get("INFRASTRUCTURE", "path_transit_shapes")
 
+# Output Config
+output_folder = parser.get("OUTPUT", "output_folder")
+
 # Operator Config
 transit_planning_lookahead = parser.get("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD")
 transit_max_busses = parser.get("TRANSIT_OPERATOR", "MAX_BUSSES")
@@ -80,6 +90,10 @@ spatial_strategy = parser.get("USER", "SPATIAL_STRATEGY")
 
 # Bus RL Agent Config
 algo = parser.get("BUS", "AGENT")
+try:
+    nn_weights = parser.get("BUS", "WEIGHTS_PATH")
+except configparser.NoOptionError:
+    nn_weights = None
 episodes = int(parser.get("BUS", "EPISODES"))
 actions = parser.get("BUS", "ACTION_SPACE").split(',')
 action_dim = len(actions)
@@ -89,9 +103,14 @@ agent_eps = parser.get("BUS", "EPS")
 agent_gamma = parser.get("BUS", "GAMMA")
 bootstrap_agent_n = parser.get("BUS", "N")
 
+# Custom tensorboard object
+logdir = f'./data/output/logs/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
+tensorboard = ModifiedTensorBoard(log_dir=logdir)
+tf.debugging.experimental.enable_dump_debug_info(logdir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
+
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
-bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma, bootstrap_agent_n)
+bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma, bootstrap_agent_n, tensorboard)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -276,20 +295,42 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     # print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
     # print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
 
-    return {'return': operator._rewards_cum, 'weights': operator._rl_agent_weights, 'replay_buffer': operator._rl_agent_replay_buffer}
+    return operator
 
 
 if __name__ == '__main__':
 
-    w = None # weights
-    b = None # replay buffer
-    episode_returns = {}
-    for i in tqdm(range(episodes), total=episodes):
-        out = run_single_simulation(start_time=15*60, end_time=17*60, weights=w, replay_buffer=b)
-        episode_returns[i] = out
-        w = out['weights']
-        b = out['replay_buffer']
+    logging.info(f'Tensorboard logdir: {logdir}',
+                 extra={"clazz": __name__, "oid": ""})
 
-    returns = pd.DataFrame.from_records([{'episode': i, 'return': x['return'][-1]} for i, x in episode_returns.items()])
+    w = nn_weights # weights
+    b = None # replay buffer
+    episode_returns = []
+
+    for i in tqdm(range(episodes), total=episodes):
+
+        operator = run_single_simulation(start_time=15*60, end_time=16.1*60, weights=w, replay_buffer=b)
+
+        if len(operator._rl_agent_replay_buffer) >= 1000:
+            logging.info(f'Episode {str(i)}: Training happened.')
+
+        episode_returns.append(deepcopy({'episode': i, 'return': operator._rewards_sum[-1]}))
+        w = operator._rl_agent_weights
+        b = operator._rl_agent_replay_buffer
+
+    operator._rl_agent_model.save_weights(
+        os.path.join(output_folder,
+                     f'{str(episodes)}_episodes_weights_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.keras')
+    )
+
+    returns = pd.DataFrame.from_records(episode_returns)
     returns.plot(x='episode', y='return')
     plt.show()
+
+# TODO: DRAW WORLD
+# to_draw = []
+# to_draw.append({'type': 'vehicle', 'color': 'red', 'alpha': 1, 'geometry': world.vehicles[0].position.get_hexagon()[1]})
+# to_draw.extend([{'type': 'demand', 'color': 'green', 'alpha': 1, 'geometry': LineString([u.transport_task.origin.geometry, u.transport_task.destination.geometry])} for u in world.users])
+# to_draw.append({'type': 'boundary', 'color': 'lightblue', 'alpha': .5, 'geometry': Polygon(h3.h3_set_to_multi_polygon(world.vehicles[0]._corridor, geo_json=True)[0][0])})
+# g = gpd.GeoDataFrame.from_records(to_draw)
+# g.plot(color=g['color'], alpha=g['alpha'])
