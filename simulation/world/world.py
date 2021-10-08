@@ -4,7 +4,7 @@ import simpy
 from numpy.random import normal
 from simpy import Environment
 
-from simulation.agent import user
+import simulation.agent.user as user
 from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle.vehicle import Vehicle
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics

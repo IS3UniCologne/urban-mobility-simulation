@@ -107,7 +107,7 @@ class EpisodicSemiGradientSarsa(RLAgent):
         bus._state_update_process.interrupt()
 
         # and let the operator know
-        bus._has_reached_destination.succeed()
+        bus._has_reached_terminal.succeed()
 
     def _take_action(self, bus):
         """

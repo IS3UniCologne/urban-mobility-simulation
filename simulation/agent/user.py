@@ -1,4 +1,12 @@
+from __future__ import annotations
+
+from enum import Enum
+import logging
+import simpy
+from typing import TYPE_CHECKING
+
 from .agent import Agent
+from ..environment.geodesic_environment import GeodesicEnvironment
 from ..environment.geodesic_position import GeodesicPosition
 from ..environment.position import Position
 from ..helper.configuration.configuration import Configuration
@@ -10,11 +18,6 @@ from ..operator.interface.payment_interface import PaymentInterface
 from ..operator.interface.vehicle_allocation_engine_interface import VehicleAllocationEngineInterface
 from ..tasks.transport_task import TransportTask
 from ..tasks.transportation_search_task import TransportationSearchTask
-from enum import Enum
-import simpy
-
-import logging
-
 from ..vehicle.interfaces.driver_interface import DriverInterface
 from ..vehicle.interfaces.passenger_interface import PassengerInterface
 from ..vehicle.shared_car import SharedCar
@@ -22,7 +25,10 @@ from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
 from ..vehicle.vehicle import Vehicle
 from ..vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
-from ..world.world import World
+import simulation.world.world as world
+
+if TYPE_CHECKING:
+    from ..vehicle.public_transit_bus import Bus
 
 
 class UserState(Enum):
@@ -403,8 +409,9 @@ class TransitUser(User, PassengerInterface):
         # TODO: modify available_time over time
         self._available_time = self._transport_task.max_wait_time # max available walk / wait time, can change by e.g. waiting
 
-        # World Instance
-        self._world = World.instance()
+        # World / Environment Instance
+        self._world = world.World.instance()
+        self._geodesic_env = GeodesicEnvironment.getInstance()
 
         # Events
         self._arrived_at_last_stop = self._env.event()
@@ -462,10 +469,17 @@ class TransitUser(User, PassengerInterface):
 
                 vehicle = self._world.vehicles[0] # in this case, only one bus exists TODO: generalize?
                 # just wait for forever to be picked up hopefully
-                yield self._env.process(self.wait_for_transit(vehicle))
-                yield self._env.process(self.start_passive_transit(vehicle))
-                vehicle._dropoffs += 1
-                yield self._env.process((self.move_to_destination()))
+                # TODO: user will board and unboard bus within the same hex if OD is within the same hex - does this count?
+                if not self._demand_aligns(vehicle):
+                    yield self._env.process(self.withdraw_request())
+                    logging.debug(f'User demand is not aligned with routing corridor of bus {vehicle.id}, ',
+                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
+                    break
+                else:
+                    yield self._env.process(self.wait_for_transit(vehicle))
+                    yield self._env.process(self.start_passive_transit(vehicle))
+                    vehicle._dropoffs += 1
+                    yield self._env.process((self.move_to_destination()))
 
             yield self._env.process(self.stop())
 
@@ -521,6 +535,13 @@ class TransitUser(User, PassengerInterface):
 
         self._arrived_at_last_stop.succeed()
 
+    def _demand_aligns(self, vehicle: Bus):
+        if not self._geodesic_env.filter_demands_by_corridor([self.transport_task], vehicle._corridor):
+            # empty list = demand does not align
+            return False
+        else:
+            return True
+
     def start_passive_transit(self, vehicle: Vehicle):
         # Wait for event
         yield self._assigned_vehicle_arrived
@@ -557,8 +578,9 @@ class TransitUser(User, PassengerInterface):
         while self.position.get_hexagon_id(self._bus_res) != vehicle.position.get_hexagon_id(self._bus_res):
             yield vehicle._position_changed
 
+
+
         self._assigned_vehicle_arrived.succeed()
-        self._assigned_vehicle_arrived = self._env.event()
 
     def mount_vehicle(self, vehicle):
         vehicle.mount_passenger(self)

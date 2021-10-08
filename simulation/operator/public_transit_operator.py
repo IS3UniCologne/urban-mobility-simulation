@@ -45,7 +45,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._states = []
         self._actions = []
         self._rewards = []
-        self._rewards_cum = []
+        self._rewards_sum = []
         self._rl_agent_weights = rl_agent_weights
         self._rl_agent_replay_buffer = rl_agent_replay_buffer
 
@@ -232,7 +232,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         corridor = self._geodesic_env.corridor(route.origin.get_hexagon_id(),
                                                route.destination.get_hexagon_id(), k=2)
         corridor_dim = len(corridor)
-        agent = DQN(self._env, (corridor_dim, corridor_dim, 2),
+        agent = DQN(self._env, (corridor_dim, corridor_dim, 3),
                     self._rl_agent_weights, self._rl_agent_replay_buffer)
         bus = Bus(self._env, route, init_position, agent)
 
@@ -240,13 +240,14 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
     def _clean_up_bus(self, bus: Bus):
 
-        (weights, replay_buffer) = yield bus._has_reached_destination
+        (model, replay_buffer) = yield bus._has_reached_terminal
 
         self._busses.remove(bus)
         self._world.remove_vehicle(bus)
-        # TODO: unmount all remaining passengers - though there shouldn't be any?
+        # TODO: unmount all remaining passengers - is there a need for this?
 
-        self._rl_agent_weights = weights
+        self._rl_agent_model = model
+        self._rl_agent_weights = model.get_weights()
         self._rl_agent_replay_buffer = replay_buffer
 
         # TODO: this is hardcoded for one bus
@@ -255,11 +256,12 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
     def _track_bus_agent(self, bus: Bus):
 
         while True:
-            state, action, reward, reward_cum = yield bus._agent_completed_step
-            self._states.append(state)
-            self._actions.append(action)
-            self._rewards.append(reward)
-            self._rewards_cum.append(reward_cum)
+            # state, action, reward, reward_sum = yield bus._agent_completed_step
+            reward_sum = yield bus._agent_completed_step
+            # self._states.append(state)
+            # self._actions.append(action)
+            # self._rewards.append(reward)
+            self._rewards_sum.append(reward_sum)
 
     def _find_viable_transit(self, transportation_search_task, spatial_strategy='hexagon', temporal_lookahead=10):
         search_time = transportation_search_task.transport_task.time

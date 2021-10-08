@@ -82,6 +82,9 @@ class GeodesicEnvironment(Environment):
 
         return geometry.centroid.y, geometry.centroid.x  # Lat, Lng
 
+    def is_in_layer(self, hex_id, layer_name="hex_7"):
+        return hex_id in self.layer[layer_name].index
+
     def get_hexagon(self, hex_id, layer_name="hex_7"):
         """
         Get geometry of hexagon
