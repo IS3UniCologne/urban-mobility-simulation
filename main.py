@@ -356,7 +356,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
             payment_engine.total_missed_revenue, no_vehicles_to_be_charged, func_objective)
 
 
-run_single_simulation(end_time = 2*1440, n_cars = 100, n_scooter = 100, n_kick_scooter = 100, seed = 142, substitution = 0.10)
+run_single_simulation(end_time = 1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 142, substitution = 0.10)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)
