@@ -606,7 +606,11 @@ class RelocationScheduler:
         # Happens very rarely
         residual = number_of_service_units - sum(capacity)
 
-        while residual > 0:
+        # Residual ensures that we deplete all available service workers
+        # the second condition ensures that we only do this until we have reached "needed" capacity to do operations.
+        # For example: If we have very low number of vehicles, but a high number of service workers,
+        #              we will have a lot residuals but we don't need them as capacity is already equal max_unit_assignment.
+        while residual > 0 and sum(capacity) < sum(max_unit_assignment):
             for idx, elem in enumerate(capacity):
                 if residual > 0:
                     if capacity[idx] < max_unit_assignment[idx]:
