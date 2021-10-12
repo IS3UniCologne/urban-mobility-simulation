@@ -316,7 +316,13 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     # Run Simulation.                         #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
+    logging.warning(f"Starting Simulation.",
+                    extra={"clazz": "main", "oid": ""})
+
     env.run(until = end_time)
+
+    logging.warning(f"Simulation Finished.",
+                    extra={"clazz": "main", "oid": ""})
 
     # Daily Total Cost (CAPEX+OPEX) (cost derived from RevCalc excel in iCloud folder)
     total_cost_per_day =(global_config.get_vehicle_config("SharedCar").daily_total_cost*n_cars
@@ -350,7 +356,7 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
             payment_engine.total_missed_revenue, no_vehicles_to_be_charged, func_objective)
 
 
-run_single_simulation(end_time = 2*1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 142, substitution = 0.10)
+run_single_simulation(end_time = 2*1440, n_cars = 100, n_scooter = 100, n_kick_scooter = 100, seed = 142, substitution = 0.10)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
 # run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)

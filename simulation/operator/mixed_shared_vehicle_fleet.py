@@ -85,20 +85,21 @@ class MixedSharedVehicleFleet(FleetInterface):
         geo_env  = GeodesicEnvironment.getInstance()
         geometry = geo_env.get_hexagon(region)
 
+
         for car in self._cars:
-            if car.position.is_in_geometry(geometry) and car.state == VehicleState.PARKING:
+            if car.position.get_default_hexagon() == region and car.state == VehicleState.PARKING:
                 cars_in_area.append(car)
 
         for scooter in self._scooters:
-            if scooter.position.is_in_geometry(geometry) and scooter.state == VehicleState.PARKING:
+            if scooter.position.get_default_hexagon() == region and scooter.state == VehicleState.PARKING:
                 scooters_in_area.append(scooter)
 
         for kick_scooter in self._kick_scooters:
-            if kick_scooter.position.is_in_geometry(geometry) and kick_scooter.state == VehicleState.PARKING:
+            if kick_scooter.position.get_default_hexagon() == region and kick_scooter.state == VehicleState.PARKING:
                 kick_scooters_in_area.append(kick_scooter)
 
         for bike in self._bikes:
-            if bike.position.is_in_geometry(geometry) and bike.state == VehicleState.PARKING:
+            if bike.position.get_default_hexagon() == region and bike.state == VehicleState.PARKING:
                 bikes_in_area.append(bike)
 
         return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
