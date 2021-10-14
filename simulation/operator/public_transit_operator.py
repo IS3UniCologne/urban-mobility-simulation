@@ -52,6 +52,20 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         # Config
         self._config = Configuration.instance()
         self._operator_config = self._config.transit_operator_config
+        self._action_res = self._config.transit_agent_config.action_resolution
+
+        # Tracking
+        self._timestamped_position = {
+            'type': 'Feature',
+            'geometry': {
+                'type': 'LineString',
+                'coordinates': [],
+            },
+            'properties': {
+                'times': [],
+                'color': 'black'
+            }
+        }
 
         self._operator_process = self._env.process(self._run())
 
@@ -75,6 +89,12 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                         # spawn busses only for trips that are not yet spawned
                         # TODO: can there be a case of overlapping trips with the same trip id? i.e. extreme delay?
                         for trip_id in (t for t in trips if t not in [b.route.trip_id for b in self._busses]):
+
+                            # TODO: in case of only one bus (DQN problem), how are we sure, we always spawn the same one
+                            if trip_id != 163296946:
+                                logging.error(f'Different trip than before!',
+                                              extra={"clazz": self.__class__.__name__, "oid": ""})
+
                             trip = self._timetable.trip_by_id(trip_id)
                             route = self._build_route(trip)
                             bus = self._spawn_bus(route)
@@ -229,10 +249,11 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
     def _spawn_bus(self, route: PublicTransitRoute):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
-        corridor = self._geodesic_env.corridor(route.origin.get_hexagon_id(),
-                                               route.destination.get_hexagon_id(), k=2)
+        corridor = self._geodesic_env.corridor(route.origin.get_hexagon_id(resolution=self._action_res),
+                                               route.destination.get_hexagon_id(resolution=self._action_res), k=2)
         corridor_dim = len(corridor)
-        agent = DQN(self._env, (corridor_dim, corridor_dim, 3),
+        # input dim for DQN model: corridor dim * corridor dim + corridor dim + 1
+        agent = DQN(self._env, corridor_dim * corridor_dim + corridor_dim + 1,
                     self._rl_agent_weights, self._rl_agent_replay_buffer)
         bus = Bus(self._env, route, init_position, agent)
 
@@ -249,6 +270,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._rl_agent_model = model
         self._rl_agent_weights = model.get_weights()
         self._rl_agent_replay_buffer = replay_buffer
+        self._rewards_sum.append(bus._rl_agent._reward_sum)
 
         # TODO: this is hardcoded for one bus
         self._operator_process.interrupt()
@@ -256,12 +278,20 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
     def _track_bus_agent(self, bus: Bus):
 
         while True:
+            # the code block below is for SARSA and similar agents
             # state, action, reward, reward_sum = yield bus._agent_completed_step
-            reward_sum = yield bus._agent_completed_step
             # self._states.append(state)
             # self._actions.append(action)
             # self._rewards.append(reward)
-            self._rewards_sum.append(reward_sum)
+            # self._rewards_sum.append(reward_sum)
+
+            # the code block below is for visualization
+            position, demands = yield bus._agent_completed_step
+
+            # ... build TimeStampedGeoJSON feature ...
+            self._timestamped_position['geometry']['coordinates'].append(position.getExactLocation(geojson=True))
+            self._timestamped_position['properties']['times'].append(int(self._time.now()))
+
 
     def _find_viable_transit(self, transportation_search_task, spatial_strategy='hexagon', temporal_lookahead=10):
         search_time = transportation_search_task.transport_task.time
