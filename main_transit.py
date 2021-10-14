@@ -5,6 +5,7 @@ from copy import deepcopy
 
 import geopandas as gpd
 import logging
+
 from matplotlib import pyplot as plt
 import numpy
 import os
@@ -16,6 +17,7 @@ import sys
 import tensorflow as tf
 from tensorboard import program
 from tqdm import tqdm
+
 
 from simulation.agent.action_space import ActionSpace
 from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator, EpisodicSemiGradientSarsa
@@ -106,7 +108,7 @@ bootstrap_agent_n = parser.get("BUS", "N")
 # Custom tensorboard object
 logdir = f'./data/output/logs/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
 tensorboard = ModifiedTensorBoard(log_dir=logdir)
-tf.debugging.experimental.enable_dump_debug_info(logdir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
+# tf.debugging.experimental.enable_dump_debug_info(logdir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
 
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
@@ -115,6 +117,8 @@ bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps,
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
 global_config.add_transit_agent_config(bus_agent_config)
+
+track = parser.getboolean("OUTPUT", "TRACK_AGENT")
 
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
@@ -295,7 +299,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     # print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
     # print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
 
-    return operator
+    return operator, world
 
 
 if __name__ == '__main__':
@@ -309,14 +313,30 @@ if __name__ == '__main__':
 
     for i in tqdm(range(episodes), total=episodes):
 
-        operator = run_single_simulation(start_time=15*60, end_time=16.1*60, weights=w, replay_buffer=b)
+        operator, world = run_single_simulation(start_time=15*60, end_time=16.1*60, weights=w, replay_buffer=b)
 
         if len(operator._rl_agent_replay_buffer) >= 1000:
-            logging.info(f'Episode {str(i)}: Training happened.')
+            logging.debug(f'Episode {str(i)}: Training happened.')
 
         episode_returns.append(deepcopy({'episode': i, 'return': operator._rewards_sum[-1]}))
         w = operator._rl_agent_weights
         b = operator._rl_agent_replay_buffer
+
+        if track:
+            import folium
+            from folium.plugins import TimestampedGeoJson
+
+            t = TimestampedGeoJson({
+                'type': 'FeatureCollection',
+                'features': [
+                    operator._timestamped_position
+                ]
+            }, loop=False)
+
+            m = folium.Map(location=[52.52, 13.40])
+
+            t.add_to(m)
+            m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}.html'))
 
     operator._rl_agent_model.save_weights(
         os.path.join(output_folder,

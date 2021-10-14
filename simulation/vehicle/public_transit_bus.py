@@ -5,6 +5,7 @@ import numpy as np
 import simpy
 from simpy import Environment
 from enum import Enum
+import tensorflow as tf
 
 from simulation.agent.action_space import ActionSpace
 from simulation.agent.policy import Policy
@@ -60,8 +61,9 @@ class Bus(PublicTransitVehicle):
         # Environment / World state
         self._geodesic_env = GeodesicEnvironment.getInstance()
         self._world = World.instance()
-        self._corridor = self._geodesic_env.corridor(self.route.origin.get_hexagon_id(),
-                                                     self.route.destination.get_hexagon_id(), k=2)
+        self._corridor = self._geodesic_env.corridor(self.route.origin.get_hexagon_id(resolution=self._action_res),
+                                                     self.route.destination.get_hexagon_id(resolution=self._action_res),
+                                                     k=2)
         self._corridor_dim = len(self._corridor)
         self._corridor_sorted = sorted(self._corridor)
 
@@ -69,12 +71,12 @@ class Bus(PublicTransitVehicle):
         # build position matrix: m[start hex][end hex] = 1 if bus is at hex start = end
         # a 1d vector of corridor_dim would be sufficient, but we want to have the same format to
         # bake the position into the input tensor as a secondary channel
-        position = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
+        position = np.zeros(self._corridor_dim, dtype=int)
         pos = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
-        position[pos][pos] = 1
+        position[pos] = 1
         self._env_state['position'] = position
         self._env_state['demands'] = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
-        self._env_state['drivingtime'] = np.full((self._corridor_dim, self._corridor_dim), 0)
+        self._env_state['drivingtime'] = 0
 
         self._dropoffs = 0
 
@@ -179,6 +181,10 @@ class Bus(PublicTransitVehicle):
     def env_state(self):
         return self._env_state
 
+    def get_viable_demands(self):
+        return self._geodesic_env.filter_demands_by_corridor([x.transport_task for x in self._world.users],
+                                                             self._corridor)
+
     def _update_state(self):
         """
         This updates the state which represents the most complete picture of the environment/world the agent has at the moment
@@ -191,8 +197,7 @@ class Bus(PublicTransitVehicle):
                 # yield simpy.events.AnyOf(self._env, [self._position_changed, self._world.changed])
                 yield self._position_changed
 
-                demands = self._geodesic_env.filter_demands_by_corridor([x.transport_task for x in self._world.users],
-                                                                        self._corridor)
+                demands = self.get_viable_demands()
 
                 # build OD matrix: m[start hex][end hex] = OD count for all currently known demands
                 m = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
@@ -208,20 +213,14 @@ class Bus(PublicTransitVehicle):
                     end = self._corridor_sorted.index(p.transport_task.destination.get_hexagon_id(self._action_res))
                     m[start][end] += 1
 
-                # build position matrix: m[start hex][end hex] = 1 if bus is at hex start = end
-                # a 1d vector of corridor_dim would be sufficient, but we want to have the same format to
-                # bake the position into the input tensor as a secondary channel
-                # TODO: this is a sparse representation, one could also propagate the sorted corridor index to a full matrix
-                position = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
+                # build position vector v[hex] =1 if bus is at hex, else 0
+                position = np.zeros(self._corridor_dim, dtype=int)
                 pos = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
-                position[pos][pos] = 1
-
-                # build scalar-filled matrix of driving time
-                driving_time = np.full((self._corridor_dim, self._corridor_dim), self._time.now()-self._spawned, dtype=int)
+                position[pos] = 1
 
                 self._env_state['position'] = position
                 self._env_state['demands'] = m
-                self._env_state['drivingtime'] = driving_time
+                self._env_state['drivingtime'] = int(self._time.now() - self._spawned)
 
                 region_id, _ = self._position.get_hexagon(self._action_res)
 

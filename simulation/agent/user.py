@@ -478,7 +478,6 @@ class TransitUser(User, PassengerInterface):
                 else:
                     yield self._env.process(self.wait_for_transit(vehicle))
                     yield self._env.process(self.start_passive_transit(vehicle))
-                    vehicle._dropoffs += 1
                     yield self._env.process((self.move_to_destination()))
 
             yield self._env.process(self.stop())
@@ -536,6 +535,10 @@ class TransitUser(User, PassengerInterface):
         self._arrived_at_last_stop.succeed()
 
     def _demand_aligns(self, vehicle: Bus):
+        if self.transport_task.origin.get_hexagon_id() == self.transport_task.destination.get_hexagon_id():
+            # we don't want to service demands that board and unboard at the same station, they can walk
+            return False
+
         if not self._geodesic_env.filter_demands_by_corridor([self.transport_task], vehicle._corridor):
             # empty list = demand does not align
             return False
@@ -556,6 +559,7 @@ class TransitUser(User, PassengerInterface):
             yield vehicle._position_changed
 
         self.unmount_vehicle(vehicle)
+        vehicle._dropoffs += 1
 
         self._arrived_at_last_stop.succeed()
 
