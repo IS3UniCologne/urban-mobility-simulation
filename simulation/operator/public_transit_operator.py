@@ -1,3 +1,4 @@
+import ast
 import logging
 import pandas as pd
 import simpy
@@ -27,7 +28,7 @@ from simulation.world.world import World
 
 
 class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface):
-    def __init__(self, env: Environment, timetable: Timetable, rl_agent_weights, rl_agent_replay_buffer):
+    def __init__(self, env: Environment, timetable: Timetable, rl_agent_weights, rl_agent_replay_buffer, rl_agent_update_counter):
         PaymentInterface.__init__(self)
         self._timetable = timetable
         self._env = env
@@ -48,6 +49,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._rewards_sum = []
         self._rl_agent_weights = rl_agent_weights
         self._rl_agent_replay_buffer = rl_agent_replay_buffer
+        self._rl_agent_update_counter = rl_agent_update_counter
 
         # Config
         self._config = Configuration.instance()
@@ -249,27 +251,33 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
     def _spawn_bus(self, route: PublicTransitRoute):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
-        corridor = self._geodesic_env.corridor(route.origin.get_hexagon_id(resolution=self._action_res),
-                                               route.destination.get_hexagon_id(resolution=self._action_res), k=2)
+        if self._config.transit_agent_config.corridor is None:
+            corridor = self._geodesic_env.corridor(route.origin.get_hexagon_id(resolution=self._action_res),
+                                                   route.destination.get_hexagon_id(resolution=self._action_res), k=2)
+        else:
+            with open(self._config.transit_agent_config.corridor,'r') as f:
+                corridor = ast.literal_eval(f.read())
+
         corridor_dim = len(corridor)
         # input dim for DQN model: corridor dim * corridor dim + corridor dim + 1
         agent = DQN(self._env, corridor_dim * corridor_dim + corridor_dim + 1,
-                    self._rl_agent_weights, self._rl_agent_replay_buffer)
-        bus = Bus(self._env, route, init_position, agent)
+                    self._rl_agent_weights, self._rl_agent_replay_buffer, self._rl_agent_update_counter)
+        bus = Bus(self._env, route, init_position, agent, corridor)
 
         return bus
 
     def _clean_up_bus(self, bus: Bus):
 
-        (model, replay_buffer) = yield bus._has_reached_terminal
+        (model, target_model, replay_buffer, update_counter) = yield bus._has_reached_terminal
 
         self._busses.remove(bus)
         self._world.remove_vehicle(bus)
         # TODO: unmount all remaining passengers - is there a need for this?
 
-        self._rl_agent_model = model
-        self._rl_agent_weights = model.get_weights()
+        self._rl_agent_model = target_model
+        self._rl_agent_weights = (model.get_weights(), target_model.get_weights())
         self._rl_agent_replay_buffer = replay_buffer
+        self._rl_agent_update_counter = update_counter
         self._rewards_sum.append(bus._rl_agent._reward_sum)
 
         # TODO: this is hardcoded for one bus

@@ -44,6 +44,14 @@ class DemandFactory:
 
         self._load_modifiers()
 
+    def _register_modifier(self, geomodifier):
+        multiplier = geomodifier['properties']['demandMultiplier']
+        hex_ids = h3.polyfill(geomodifier['geometry'],
+                              res=self._config.spatial_resolution_value,
+                              geo_json_conformant=True)
+
+        self._modifiers.update({x: multiplier for x in hex_ids})
+
     def _load_modifiers(self):
         """
         Loads and registers per-hexagon demand modifiers (floating number multiplier) from GeoJSON
@@ -56,12 +64,13 @@ class DemandFactory:
                 logging.warning(f'Demand modifier at "{modifier}" doesn\'t exist, skipping.')
                 continue
 
-            multiplier = geo['properties']['demandMultiplier']
-            hex_ids = h3.polyfill(geo['geometry'],
-                                  res=self._config.spatial_resolution_value,
-                                  geo_json_conformant=True)
+            featurecollection = True if 'features' in geo else False
 
-            self._modifiers.update({x: multiplier for x in hex_ids})
+            if featurecollection:
+                for feature in geo['features']:
+                    self._register_modifier(feature)
+            else:
+                self._register_modifier(geo)
 
     def generate_demand(self):
         """

@@ -59,7 +59,7 @@ class ModifiedTensorBoard(TensorBoard):
 
 
 class DQN(RLAgent):
-    def __init__(self, env: simpy.Environment, state_dims, weights, replay_buffer):
+    def __init__(self, env: simpy.Environment, state_dims, weights: tuple, replay_buffer, target_net_update_counter):
         super(DQN, self).__init__(env)
 
         # Configuration
@@ -74,7 +74,8 @@ class DQN(RLAgent):
         self._min_experience = 1000 # steps in replay buffer before training starts
         self._learning_rate = 0.001
         self._minibatch_size = 128
-        # self._target_net_update_threshold = 5
+        self._target_net_update_counter = target_net_update_counter
+        self._target_net_update_threshold = 200 # steps before eval net weights are propagated to target net
         self._timelimit = 60
 
         # Random Number Generator
@@ -82,24 +83,29 @@ class DQN(RLAgent):
         self._random = np.random.default_rng()
 
         # Neural Nets
-        self._eval_net = self._create_model(state_dims)
-        self._target_net = self._create_model(state_dims)
+        self._q_net = self._create_model(state_dims)
+        self._target_q_net = self._create_model(state_dims)
         if weights is not None:
             if type(weights) is str:
                 # filepath is given
                 logging.info(f'Loading weights from {weights} ...',
                              extra={"clazz": self.__class__.__name__, "oid": ""})
-                self._eval_net.load_weights(weights)
-                self._target_net.load_weights(weights)
+                self._q_net.load_weights(weights)
+                self._target_q_net.load_weights(weights)
             else:
                 # weights array from previous episode is given
-                # so we propagate weights from eval net to target net every episode
-                self._eval_net.set_weights(weights)
-                self._target_net.set_weights(weights)
-        else:
-            self._target_net.set_weights(self._eval_net.get_weights())
+                # so we propagate weights from q net to target q net every episode
+                eval_weights, target_weights = weights
+                self._q_net.set_weights(eval_weights)
 
-        # self._eval_net_updates = 0 # we update each episode nevertheless, so don't additionally update
+                if self._target_net_update_counter >= self._target_net_update_threshold:
+                    self._target_q_net.set_weights(eval_weights)
+                    self._target_net_update_counter = 0
+                else:
+                    self._target_q_net.set_weights(target_weights)
+        else:
+            # in the first episode, initialize target q net weights = q net weights
+            self._target_q_net.set_weights(self._q_net.get_weights())
 
         # Experience Replay
         if replay_buffer is not None:
@@ -114,15 +120,17 @@ class DQN(RLAgent):
         # Input
         # model.add(layers.Conv2D(filters=256, kernel_size=(5, 5), input_shape=input_dims))
         # model.add(layers.Flatten(input_shape=input_dims))
+        model.add(layers.Dense(32, input_dim=input_dims, activation='relu', kernel_initializer='he_uniform'))
 
         # Hidden Layers
-        model.add(layers.Dense(32, input_dim=input_dims, activation='relu', kernel_initializer='he_uniform'))
+        model.add(layers.Dense(32, activation='relu', kernel_initializer='he_uniform'))
         # model.add(layers.Dense(32))
 
         # Output
         model.add(layers.Dense(self._action_space.dimensionality(), activation='linear'))
         # model.compile(loss=tf.keras.losses.Huber(), optimizer='sgd', metrics=['accuracy'])
-        model.compile(loss=Huber(), optimizer=Adam(learning_rate=self._learning_rate), metrics=['accuracy'])
+        model.compile(loss=Huber(), optimizer=Adam(learning_rate=self._learning_rate),
+                      metrics=['accuracy', "mae", tf.keras.metrics.RootMeanSquaredError()])
         return model
 
     def run(self, bus: Bus):
@@ -173,7 +181,10 @@ class DQN(RLAgent):
 
         # clean up processes
         bus._state_update_process.interrupt()
-        bus._has_reached_terminal.succeed((self._eval_net, self._replay_buffer))
+        bus._has_reached_terminal.succeed((self._q_net,
+                                           self._target_q_net,
+                                           self._replay_buffer,
+                                           self._target_net_update_counter))
 
     def _track(self, bus: Bus):
 
@@ -191,7 +202,13 @@ class DQN(RLAgent):
             q_values_t = self._eval_predict(states_t).numpy()
 
             states_tp1 = np.array([transition[3] for transition in minibatch]) # s1
-            q_values_tp1 = self._target_predict(states_tp1).numpy()
+
+            # Vanilla DQN with target network
+            # q_values_tp1 = self._target_predict(states_tp1).numpy()
+
+            # Double Q-learning
+            q_values_tp1 = self._eval_predict(states_tp1).numpy()
+            q_values_tp1_t = self._target_predict(states_tp1).numpy()
 
             X = []
             y = []
@@ -200,7 +217,8 @@ class DQN(RLAgent):
                 if terminal:
                     target_q = r
                 else:
-                    target_q = r + self._gamma * tf.math.reduce_max(q_values_tp1[i])
+                    # target_q = r + self._gamma * tf.math.reduce_max(q_values_tp1[i]) # vanilla DQN with target network
+                    target_q = r + self._gamma * q_values_tp1_t[i][tf.math.argmax(q_values_tp1[i])] # double Q-learning
 
                 q_values = q_values_t[i]
                 q_values[a] = target_q
@@ -214,23 +232,22 @@ class DQN(RLAgent):
             # except tf.errors.InvalidArgumentError:
             #     pass
 
-            self._eval_net.fit(np.array(X), np.array(y), batch_size=self._minibatch_size, verbose=0, shuffle=False,
-                               callbacks=[self._tensorboard] if terminal_state else None)
+            self._q_net.fit(np.array(X), np.array(y), batch_size=self._minibatch_size, verbose=0, shuffle=False,
+                            callbacks=[self._tensorboard] if terminal_state else None)
 
-            # if terminal_state:
-            #     self._eval_net_updates += 1
-            #
-            # if self._eval_net_updates >= self._target_net_update_threshold:
-            #     self._target_net.set_weights(self._eval_net.get_weights())
-            #     self._eval_net_updates = 0
+            self._target_net_update_counter += 1
+
+            if self._target_net_update_counter >= self._target_net_update_threshold:
+                self._target_q_net.set_weights(self._q_net.get_weights())
+                self._target_net_update_counter = 0
 
     @tf.function
     def _target_predict(self, state):
-        return self._target_net(state, training=False)
+        return self._target_q_net(state, training=False)
 
     @tf.function
     def _eval_predict(self, state):
-        return self._eval_net(state, training=False)
+        return self._q_net(state, training=False)
 
     def _decide_next_action(self, bus: Bus, state):
         while True:
@@ -242,7 +259,7 @@ class DQN(RLAgent):
             else:
                 a = self._action_space.sample_action_uniformly()
 
-            if not bus.test_action(a, bus._corridor):
+            if not bus.test_action(a, corridor=True):
                 # hexagon is out of layer bounding box - action is forbidden
                 logging.debug(f'Action {a} is forbidden, sampling again',
                               extra={"clazz": self.__class__.__name__, "oid": bus.id})
