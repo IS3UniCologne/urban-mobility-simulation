@@ -28,7 +28,7 @@ class Bus(PublicTransitVehicle):
     bus_id = 0
 
     def __init__(self, env: Environment, route: PublicTransitRoute, position: GeodesicPosition,
-                 rl_agent, max_available_seats=100, velocity=833.33):
+                 rl_agent, corridor: set, max_available_seats=100, velocity=833.33):
         """
 
         :param env:
@@ -61,9 +61,7 @@ class Bus(PublicTransitVehicle):
         # Environment / World state
         self._geodesic_env = GeodesicEnvironment.getInstance()
         self._world = World.instance()
-        self._corridor = self._geodesic_env.corridor(self.route.origin.get_hexagon_id(resolution=self._action_res),
-                                                     self.route.destination.get_hexagon_id(resolution=self._action_res),
-                                                     k=2)
+        self._corridor = corridor
         self._corridor_dim = len(self._corridor)
         self._corridor_sorted = sorted(self._corridor)
 
@@ -233,7 +231,7 @@ class Bus(PublicTransitVehicle):
                 # stop process loop
                 break
 
-    def test_action(self, action: str, corridor=None):
+    def test_action(self, action: str, corridor=False):
         hex_id = h3.geo_to_h3(*self._position.getExactLocation(),
                               resolution=self._action_res)
 
@@ -241,8 +239,8 @@ class Bus(PublicTransitVehicle):
             return True
         else:
             new_hex = self._geodesic_env.move_in_layer(hex_id, action)
-            if corridor is not None:
-                return True if new_hex in corridor else False
+            if corridor:
+                return True if new_hex in self._corridor else False
             else:
                 return self._geodesic_env.is_in_layer(new_hex, f'hex_{self._action_res}')
 

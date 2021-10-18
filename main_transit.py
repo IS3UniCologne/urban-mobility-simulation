@@ -96,6 +96,10 @@ try:
     nn_weights = parser.get("BUS", "WEIGHTS_PATH")
 except configparser.NoOptionError:
     nn_weights = None
+try:
+    corridor = parser.get("BUS", "CORRIDOR_PATH")
+except configparser.NoOptionError:
+    corridor = None
 episodes = int(parser.get("BUS", "EPISODES"))
 actions = parser.get("BUS", "ACTION_SPACE").split(',')
 action_dim = len(actions)
@@ -112,7 +116,8 @@ tensorboard = ModifiedTensorBoard(log_dir=logdir)
 
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
-bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma, bootstrap_agent_n, tensorboard)
+bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma, bootstrap_agent_n,
+                                      tensorboard, corridor)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -222,7 +227,7 @@ timetable.import_timetable()
 ActionSpace.init(actions)
 
 
-def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = None, replay_buffer = None):
+def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = None, replay_buffer = None, target_net_update_counter = 0):
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -263,7 +268,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     # # # # # # # # # # # # # # # # # # # # # #
 
     # Operator Modules
-    operator = PublicTransitOperator(env, timetable, weights, replay_buffer)
+    operator = PublicTransitOperator(env, timetable, weights, replay_buffer, target_net_update_counter)
     search_engine = operator
     payment_engine = operator
     vehicle_assignment_engine = operator
@@ -309,11 +314,13 @@ if __name__ == '__main__':
 
     w = nn_weights # weights
     b = None # replay buffer
+    c = 0 # update counter
     episode_returns = []
 
     for i in tqdm(range(episodes), total=episodes):
 
-        operator, world = run_single_simulation(start_time=15*60, end_time=16.1*60, weights=w, replay_buffer=b)
+        operator, world = run_single_simulation(
+            start_time=15*60, end_time=16.1*60, weights=w, replay_buffer=b, target_net_update_counter=c)
 
         if len(operator._rl_agent_replay_buffer) >= 1000:
             logging.debug(f'Episode {str(i)}: Training happened.')
@@ -321,6 +328,7 @@ if __name__ == '__main__':
         episode_returns.append(deepcopy({'episode': i, 'return': operator._rewards_sum[-1]}))
         w = operator._rl_agent_weights
         b = operator._rl_agent_replay_buffer
+        c = operator._rl_agent_update_counter
 
         if track:
             import folium
@@ -331,7 +339,7 @@ if __name__ == '__main__':
                 'features': [
                     operator._timestamped_position
                 ]
-            }, loop=False)
+            }, loop=False, period='PT1M')
 
             m = folium.Map(location=[52.52, 13.40])
 
@@ -346,11 +354,3 @@ if __name__ == '__main__':
     returns = pd.DataFrame.from_records(episode_returns)
     returns.plot(x='episode', y='return')
     plt.show()
-
-# TODO: DRAW WORLD
-# to_draw = []
-# to_draw.append({'type': 'vehicle', 'color': 'red', 'alpha': 1, 'geometry': world.vehicles[0].position.get_hexagon()[1]})
-# to_draw.extend([{'type': 'demand', 'color': 'green', 'alpha': 1, 'geometry': LineString([u.transport_task.origin.geometry, u.transport_task.destination.geometry])} for u in world.users])
-# to_draw.append({'type': 'boundary', 'color': 'lightblue', 'alpha': .5, 'geometry': Polygon(h3.h3_set_to_multi_polygon(world.vehicles[0]._corridor, geo_json=True)[0][0])})
-# g = gpd.GeoDataFrame.from_records(to_draw)
-# g.plot(color=g['color'], alpha=g['alpha'])
