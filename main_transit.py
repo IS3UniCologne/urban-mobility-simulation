@@ -307,8 +307,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     return operator, world
 
 
-if __name__ == '__main__':
-
+def run(experiment_id=None):
     logging.info(f'Tensorboard logdir: {logdir}',
                  extra={"clazz": __name__, "oid": ""})
 
@@ -344,7 +343,10 @@ if __name__ == '__main__':
             m = folium.Map(location=[52.52, 13.40])
 
             t.add_to(m)
-            m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}.html'))
+            if experiment_id is None:
+                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}.html'))
+            else:
+                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}_experiment_{str(experiment_id)}.html'))
 
     operator._rl_agent_model.save_weights(
         os.path.join(output_folder,
@@ -352,5 +354,11 @@ if __name__ == '__main__':
     )
 
     returns = pd.DataFrame.from_records(episode_returns)
-    returns.plot(x='episode', y='return')
+    returns.plot(x='episode', y='return', title=f'Experiment {str(experiment_id)}')
     plt.show()
+
+    return returns
+
+
+if __name__ == '__main__':
+    run()
