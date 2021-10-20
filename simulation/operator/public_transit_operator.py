@@ -2,7 +2,6 @@ import ast
 import logging
 import pandas as pd
 import simpy
-
 from simpy import Environment
 
 from simulation.agent.deep_q_learning import DQN
@@ -68,6 +67,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                 'color': 'black'
             }
         }
+        self._tracked_demands = set()
 
         self._operator_process = self._env.process(self._run())
 
@@ -298,8 +298,11 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
             # ... build TimeStampedGeoJSON feature ...
             self._timestamped_position['geometry']['coordinates'].append(position.getExactLocation(geojson=True))
-            self._timestamped_position['properties']['times'].append(int(self._time.now()))
+            self._timestamped_position['properties']['times'].append(int(self._time.now() * 60000)) # TODO: beautify for animation
 
+            for d in demands:
+                self._tracked_demands.add((d.origin.getExactLocation(geojson=True),
+                                           d.destination.getExactLocation(geojson=True)))
 
     def _find_viable_transit(self, transportation_search_task, spatial_strategy='hexagon', temporal_lookahead=10):
         search_time = transportation_search_task.transport_task.time

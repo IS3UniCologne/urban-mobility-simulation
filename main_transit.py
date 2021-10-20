@@ -6,6 +6,7 @@ from copy import deepcopy
 import geopandas as gpd
 import logging
 
+from folium import GeoJson
 from matplotlib import pyplot as plt
 import numpy
 import os
@@ -340,8 +341,25 @@ def run(experiment_id=None):
                 ]
             }, loop=False, period='PT1M')
 
+            template = """{
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'LineString',
+                    'coordinates': c,
+                },
+                'properties': {
+                    'color': 'red'
+                }
+            }"""
+
+            d = GeoJson({
+                'type': 'FeatureCollection',
+                'features':[eval(template) for c in operator._tracked_demands]
+            }, style_function=lambda x:{'color': 'red'})
+
             m = folium.Map(location=[52.52, 13.40])
 
+            d.add_to(m)
             t.add_to(m)
             if experiment_id is None:
                 m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}.html'))
