@@ -215,7 +215,7 @@ class GeodesicEnvironment(Environment):
             demand_direction_norm = (demand_direction + 360) % 360
             if route_direction_norm[0] > route_direction_norm[1]:
                 # +90° was above 360°
-                if demand_direction_norm <= route_direction_norm[0] or demand_direction_norm >= route_direction_norm[1]:
+                if demand_direction_norm >= route_direction_norm[0] or demand_direction_norm <= route_direction_norm[1]:
                     filtered.append(d)
             elif route_direction_norm[0] <= demand_direction_norm <= route_direction_norm[1]:
                 filtered.append(d)
