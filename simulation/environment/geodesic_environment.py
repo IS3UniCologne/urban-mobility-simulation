@@ -4,8 +4,10 @@ import h3
 from numpy import random
 import numpy
 
+import pyproj
 from shapely.geometry import Point, Polygon
 from simulation.environment.environment import Environment
+from simulation.vehicle.vehicle import Vehicle
 
 
 class GeodesicEnvironment(Environment):
@@ -26,6 +28,8 @@ class GeodesicEnvironment(Environment):
         else:
             GeodesicEnvironment.__instance = self
             super(GeodesicEnvironment, self).__init__()
+
+            self._geodesic = pyproj.Geod(ellps='WGS84')
             self._random = numpy.random.RandomState(42)  # use fnc reset_rnd_gen to change seed
 
     def getLayer(self, layer_name):
@@ -194,6 +198,26 @@ class GeodesicEnvironment(Environment):
         for d in demands:
             if (Point(d.origin.getExactLocation()).within(poly_corridor) and
                     Point(d.destination.getExactLocation()).within(poly_corridor)):
+                filtered.append(d)
+
+        return filtered
+
+    def filter_demands_by_direction(self, demands, vehicle: Vehicle):
+        route_direction, _, _ = self._geodesic.inv(*vehicle.position.getExactLocation(geojson=True),
+                                             *vehicle.route.destination.getExactLocation(geojson=True))
+        route_direction_range = (route_direction-90, route_direction+90)
+        route_direction_norm = [(x+360)%360 for x in route_direction_range]
+
+        filtered = []
+        for d in demands:
+            demand_direction, _, _ = self._geodesic.inv(*d.origin.getExactLocation(geojson=True),
+                                                  *d.destination.getExactLocation(geojson=True))
+            demand_direction_norm = (demand_direction + 360) % 360
+            if route_direction_norm[0] > route_direction_norm[1]:
+                # +90° was above 360°
+                if demand_direction_norm <= route_direction_norm[0] or demand_direction_norm >= route_direction_norm[1]:
+                    filtered.append(d)
+            elif route_direction_norm[0] <= demand_direction_norm <= route_direction_norm[1]:
                 filtered.append(d)
 
         return filtered

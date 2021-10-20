@@ -180,8 +180,10 @@ class Bus(PublicTransitVehicle):
         return self._env_state
 
     def get_viable_demands(self):
-        return self._geodesic_env.filter_demands_by_corridor([x.transport_task for x in self._world.users],
-                                                             self._corridor)
+        demands_corridor = self._geodesic_env.filter_demands_by_corridor([x.transport_task for x in self._world.users],
+                                                                         self._corridor)
+        demands_direction = self._geodesic_env.filter_demands_by_direction(demands_corridor, self)
+        return demands_direction
 
     def _update_state(self):
         """

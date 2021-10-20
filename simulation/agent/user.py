@@ -469,7 +469,7 @@ class TransitUser(User, PassengerInterface):
 
                 vehicle = self._world.vehicles[0] # in this case, only one bus exists TODO: generalize?
                 # just wait for forever to be picked up hopefully
-                # TODO: user will board and unboard bus within the same hex if OD is within the same hex - does this count?
+
                 if not self._demand_aligns(vehicle):
                     yield self._env.process(self.withdraw_request())
                     logging.debug(f'User demand is not aligned with routing corridor of bus {vehicle.id}, ',
@@ -539,8 +539,10 @@ class TransitUser(User, PassengerInterface):
             # we don't want to service demands that board and unboard at the same station, they can walk
             return False
 
-        if not self._geodesic_env.filter_demands_by_corridor([self.transport_task], vehicle._corridor):
-            # empty list = demand does not align
+        incorridor = False if not self._geodesic_env.filter_demands_by_corridor([self.transport_task], vehicle._corridor) else True
+        indirection = False if not self._geodesic_env.filter_demands_by_direction([self.transport_task], vehicle) else True
+
+        if not incorridor or not indirection:
             return False
         else:
             return True
