@@ -75,7 +75,7 @@ class DQN(RLAgent):
         self._learning_rate = 0.001
         self._minibatch_size = 128
         self._target_net_update_counter = target_net_update_counter
-        self._target_net_update_threshold = 200 # steps before eval net weights are propagated to target net
+        self._target_net_update_threshold = 1000 # steps before eval net weights are propagated to target net
         self._timelimit = 60
 
         # Random Number Generator

@@ -19,4 +19,5 @@ dependencies:
       - peartree
       - gtfs_kit
       - mlrose
+      - pqdm
       - tensorflow
