@@ -109,6 +109,7 @@ agent_alpha = parser.get("BUS", "ALPHA")
 agent_eps = parser.get("BUS", "EPS")
 agent_gamma = parser.get("BUS", "GAMMA")
 bootstrap_agent_n = parser.get("BUS", "N")
+agent_penalty = int(parser.get("BUS", "PENALTY"))
 
 # Custom tensorboard object
 logdir = f'./data/output/logs/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
@@ -118,7 +119,7 @@ tensorboard = ModifiedTensorBoard(log_dir=logdir)
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
 bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma, bootstrap_agent_n,
-                                      tensorboard, corridor)
+                                      tensorboard, corridor, agent_penalty)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -308,7 +309,17 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     return operator, world
 
 
-def run(experiment_id=None):
+def run(**kwargs):
+    if not kwargs:
+        # empty kwargs
+        pass
+    else:
+        for k, v in kwargs.items():
+            if k == 'penalty':
+                logging.info(f'Agent Penalty set to {str(v)}',
+                             extra={"clazz": __name__, "oid": ""})
+                bus_agent_config.penalty = v
+
     logging.info(f'Tensorboard logdir: {logdir}',
                  extra={"clazz": __name__, "oid": ""})
 
@@ -325,7 +336,12 @@ def run(experiment_id=None):
         if len(operator._rl_agent_replay_buffer) >= 1000:
             logging.debug(f'Episode {str(i)}: Training happened.')
 
-        episode_returns.append(deepcopy({'episode': i, 'return': operator._rewards_sum[-1]}))
+        if not kwargs:
+            episode_returns.append(deepcopy({'episode': i, 'return': operator._rewards_sum[-1]}))
+        else:
+            # extend return by experiment parameters
+            episode_returns.append({**kwargs,
+                                    **deepcopy({'episode': i, 'return': operator._rewards_sum[-1]})})
         w = operator._rl_agent_weights
         b = operator._rl_agent_replay_buffer
         c = operator._rl_agent_update_counter
@@ -361,10 +377,10 @@ def run(experiment_id=None):
 
             d.add_to(m)
             t.add_to(m)
-            if experiment_id is None:
+            if not kwargs:
                 m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}.html'))
             else:
-                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}_experiment_{str(experiment_id)}.html'))
+                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}_experiment_{str(kwargs)}.html'))
 
     operator._rl_agent_model.save_weights(
         os.path.join(output_folder,
@@ -372,7 +388,10 @@ def run(experiment_id=None):
     )
 
     returns = pd.DataFrame.from_records(episode_returns)
-    returns.plot(x='episode', y='return', title=f'Experiment {str(experiment_id)}')
+    if not kwargs:
+        returns.plot(x='episode', y='return', title='Total Reward over Episodes')
+    else:
+        returns.plot(x='episode', y='return', title=f'Experiment {str(kwargs)}')
     plt.show()
 
     return returns

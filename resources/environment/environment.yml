@@ -23,4 +23,5 @@ dependencies:
       - mlrose
       - line-profiler-pycharm
       - pqdm
+      - psutil
       - tensorflow

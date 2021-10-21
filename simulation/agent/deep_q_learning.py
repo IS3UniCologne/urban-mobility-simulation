@@ -67,6 +67,7 @@ class DQN(RLAgent):
         self._gamma = self._config.transit_agent_config.gamma
         self._eps = self._config.transit_agent_config.eps
         self._tensorboard = self._config.transit_agent_config.tensorboard
+        self._penalty = self._config.transit_agent_config.penalty
         # TODO: put values below in config?
         self._eps_decay = 0.995
         self._eps_min = 0.001
@@ -330,7 +331,7 @@ class DQN(RLAgent):
                           extra={"clazz": self.__class__.__name__, "oid": ""})
 
         if (reached_timelimit and not reached_destination) or unreachable_destination:
-            self._reward -= 100
+            self._reward -= self._penalty
 
         self._reward_sum = self._reward_sum + self._reward
 
