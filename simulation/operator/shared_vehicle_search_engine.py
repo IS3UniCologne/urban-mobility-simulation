@@ -52,7 +52,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
             price = duration*car.price_per_minute
 
             # Put together
-            transportation_alternative = TransportationAlternative(car, route, price, duration, distance)
+            transportation_alternative = TransportationAlternative(car, route, price, duration, distance, 3)
 
             if car.has_enough_state_of_charge(distance):
                 browser.add_transportation_alternative(transportation_alternative)
@@ -66,7 +66,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
             price = duration*scooter.price_per_minute
 
             # Put together
-            transportation_alternative = TransportationAlternative(scooter, route, price, duration, distance)
+            transportation_alternative = TransportationAlternative(scooter, route, price, duration, distance, 2)
 
             if scooter.has_enough_state_of_charge(distance):
                 browser.add_transportation_alternative(transportation_alternative)
@@ -80,7 +80,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
             price = duration * kick_scooter.price_per_minute + 1.0 # 1€ Unlock Fee
 
             # Put together
-            transportation_alternative = TransportationAlternative(kick_scooter, route, price, duration, distance)
+            transportation_alternative = TransportationAlternative(kick_scooter, route, price, duration, distance, 1)
 
             if kick_scooter.has_enough_state_of_charge(distance):
                 browser.add_transportation_alternative(transportation_alternative)

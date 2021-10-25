@@ -17,6 +17,7 @@ from simulation.world.demand.demand_importer import DemandImporter
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
+from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 pd.set_option('display.max_columns', None)
 import simpy
@@ -205,7 +206,7 @@ hexagons = geodesic_environment.getLayer(f"hex_{spatial_res}").index.tolist()
 dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure")
 distance_matrix = dmi.load_distance_matrix()
 
-def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter = 0, n_kick_scooter = 0, seed = 42, substitution = 0.1):
+def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter = 0, n_kick_scooter = 0, seed = 42, substitution = 0.1, price_sensitive_pop_prob = 0.0):
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Setup Simulation Environment.           #
@@ -249,8 +250,11 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
     else:
         raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
+    # Population Type
+    population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
+
     # World
-    world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model, reset=True)
+    world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model, population_factory, reset=True)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
