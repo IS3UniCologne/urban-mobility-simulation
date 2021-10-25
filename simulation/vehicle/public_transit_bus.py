@@ -94,8 +94,6 @@ class Bus(PublicTransitVehicle):
         """
         while self._state is not BusState.AT_TERMINAL_DESTINATION:
 
-            self._env.process(self._update_env_state())
-
             strf = '%H:%M:%S'
             early_arrival = (self._time.now_as_str() < self._current_stop.departure and
                              not self._current_stop.departure_next_day) or \

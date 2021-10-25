@@ -58,6 +58,7 @@ class World:
 
         # Store all current users
         self._users = []
+        self._user_processes = []
 
         # Store all current vehicles
         self._vehicles = []
@@ -116,7 +117,7 @@ class World:
             self._users.append(new_user)
 
             # Start Process for each new user
-            self._env.process(new_user.run())
+            self._user_processes.append(self._env.process(new_user.run()))
 
             if len(self._users) == self._user_limit:
                 logging.info(f'Reached User Limit of {self._user_limit}. Not adding more users to world.',

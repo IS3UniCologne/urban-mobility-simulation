@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from enum import Enum
 import logging
+
+import numpy
 import simpy
 from typing import TYPE_CHECKING
 
@@ -10,6 +12,7 @@ from ..environment.geodesic_environment import GeodesicEnvironment
 from ..environment.geodesic_position import GeodesicPosition
 from ..environment.position import Position
 from ..helper.configuration.configuration import Configuration
+from ..infrastructure.route import PublicTransitRoute
 from ..operator.data_transfer_object.transportation_alternative import TransportationAlternative
 from ..operator.data_transfer_object.transportation_alternative_browser import TransportationAlternativeBrowser
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
@@ -423,64 +426,84 @@ class TransitUser(User, PassengerInterface):
         """
 
         while self._state != TransitUserState.FULFILLED and self._state != TransitUserState.MISSED:
-            if not self._passive:
-                # Retrieve available transportation alternatives
-                available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
+            try:
+                if not self._passive:
+                    # Retrieve available transportation alternatives
+                    available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
 
-                # Select Alternative
-                selected_transportation_alternative = yield self._env.process(
-                    self.select_transportation_alternative(available_transportation_alternatives))
+                    # Select Alternative
+                    selected_transportation_alternative = yield self._env.process(
+                        self.select_transportation_alternative(available_transportation_alternatives))
 
-                # Withdraw Request since no vehicle is available matching my needs
-                if not selected_transportation_alternative:
-                    yield self._env.process(self.withdraw_request())
-                    break
+                    # Withdraw Request since no vehicle is available matching my needs
+                    if not selected_transportation_alternative:
+                        yield self._env.process(self.withdraw_request())
+                        break
 
-                # Vehicle Found and allocated?
-                vehicle_allocation = yield self._env.process(self.allocate_vehicle(selected_transportation_alternative))
+                    # Vehicle Found and allocated?
+                    vehicle_allocation = yield self._env.process(self.allocate_vehicle(selected_transportation_alternative))
 
-                # If not allocated, retry.
-                if not vehicle_allocation:
-                    logging.debug(f" Vehicle allocation was not successful. Retrying with another vehicle.",
-                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
+                    # If not allocated, retry.
+                    if not vehicle_allocation:
+                        logging.debug(f" Vehicle allocation was not successful. Retrying with another vehicle.",
+                                      extra={"clazz": self.__class__.__name__, "oid": self._id})
 
-                    # Reset Events (so far) and try again
-                    self._transportation_alternatives_received = self._env.event()
-                    self._transportation_alternatives_selected = self._env.event()
-                    self._transportation_alternatives_not_found = self._env.event()
-                    self._vehicle_allocated = self._env.event()
+                        # Reset Events (so far) and try again
+                        self._transportation_alternatives_received = self._env.event()
+                        self._transportation_alternatives_selected = self._env.event()
+                        self._transportation_alternatives_not_found = self._env.event()
+                        self._vehicle_allocated = self._env.event()
 
-                    continue # retry again until vehicle supply is depleted
+                        continue # retry again until vehicle supply is depleted
 
-                yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
+                    yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
-                yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
+                    yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
 
-                yield self._env.process(self.start_transit(vehicle_allocation))
+                    yield self._env.process(self.start_transit(vehicle_allocation))
 
-                yield self._env.process((self.move_to_destination()))
-
-                self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task, selected_transportation_alternative)
-            else:
-                # wait for some transit to spawn
-                if not self._world.vehicles:
-                    yield self._env.timeout(1)
-                    continue
-
-                vehicle = self._world.vehicles[0] # in this case, only one bus exists TODO: generalize?
-                # just wait for forever to be picked up hopefully
-
-                if not self._demand_aligns(vehicle):
-                    yield self._env.process(self.withdraw_request())
-                    logging.debug(f'User demand is not aligned with routing corridor of bus {vehicle.id}, ',
-                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
-                    break
-                else:
-                    yield self._env.process(self.wait_for_transit(vehicle))
-                    yield self._env.process(self.start_passive_transit(vehicle))
                     yield self._env.process((self.move_to_destination()))
 
-            yield self._env.process(self.stop())
+                    self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task, selected_transportation_alternative)
+                else:
+                    # wait for some transit to spawn
+                    if not self._world.vehicles:
+                        yield self._env.timeout(1)
+                        continue
+
+                    vehicle = self._world.vehicles[0] # in this case, only one bus exists TODO: generalize?
+                    # just wait for forever to be picked up hopefully
+
+                    if not self._demand_aligns(vehicle):
+                        self._state = TransitUserState.MISSED
+                        self._payment_service.withdraw_transportation_task(self, self._transport_task)
+                        logging.debug(f'User demand is not aligned with routing corridor of bus {vehicle.id}, ',
+                                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+                        break
+                    else:
+                        yield self._env.process(self.wait_for_transit(vehicle))
+                        yield self._env.process(self.start_passive_transit(vehicle))
+                        yield self._env.process((self.move_to_destination()))
+                        selected_alternative = TransportationAlternative(
+                            vehicle,
+                            PublicTransitRoute(
+                                self._transport_task.origin,
+                                self._transport_task.destination,
+                                vehicle.route._id,
+                                vehicle.route.trip_id),
+                            price=0,
+                            duration=numpy.inf,
+                            distance=self._transport_task.origin >> self._transport_task.destination
+                        )
+                        self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task, selected_alternative)
+
+                yield self._env.process(self.stop())
+
+            except simpy.Interrupt:
+                self._state = TransitUserState.MISSED
+                self._payment_service.withdraw_transportation_task(self, self._transport_task)
+                logging.debug(f'User was not serviced before bus reached terminal destination.',
+                              extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def search_for_alternatives(self):
         # Update current state
@@ -583,8 +606,6 @@ class TransitUser(User, PassengerInterface):
         # wait indefinitely for transit pick up
         while self.position.get_hexagon_id(self._bus_res) != vehicle.position.get_hexagon_id(self._bus_res):
             yield vehicle._position_changed
-
-
 
         self._assigned_vehicle_arrived.succeed()
 

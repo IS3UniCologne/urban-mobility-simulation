@@ -182,6 +182,14 @@ class DQN(RLAgent):
 
         # clean up processes
         bus._state_update_process.interrupt()
+        # clean up user demands
+        for u in bus._world._user_processes:
+            try:
+                u.interrupt()
+            except RuntimeError:
+                # already terminated
+                pass
+
         bus._has_reached_terminal.succeed((self._q_net,
                                            self._target_q_net,
                                            self._replay_buffer,

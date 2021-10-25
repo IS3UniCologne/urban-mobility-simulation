@@ -114,6 +114,7 @@ agent_penalty = int(parser.get("BUS", "PENALTY"))
 # Custom tensorboard object
 logdir = f'./data/output/logs/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
 tensorboard = ModifiedTensorBoard(log_dir=logdir)
+# debugging slows down tensorflow a lot, so be careful
 # tf.debugging.experimental.enable_dump_debug_info(logdir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
 
 user_config = UserConfig(spatial_strategy, max_waiting_time)
@@ -149,6 +150,9 @@ logging.getLogger("fiona").setLevel(logging.WARNING)
 # Add Custom Init Filters (which work without the ENV obj)
 cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
 logger.addFilter(cf_init)
+
+logging.info(f'Tensorboard logdir: {logdir}',
+             extra={"clazz": __name__, "oid": ""})
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -302,26 +306,39 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     # Benchmarks.                             #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    # print("Total Revenue: " + str(payment_engine.total_revenue))
-    # print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
-    # print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
+    print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
+    print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
+    try:
+        service_level = payment_engine.total_fulfilled_trips / \
+                        (payment_engine.total_missed_trips+payment_engine.total_fulfilled_trips)
+    except ZeroDivisionError:
+        service_level = 0
+    print("Service Level: " + str(service_level))
 
-    return operator, world
+    return operator, world, service_level
 
 
-def run(**kwargs):
-    if not kwargs:
-        # empty kwargs
-        pass
-    else:
+# the experiment=None hack is to ensure a range works as well for pqdm
+def run(experiment=None, **kwargs):
+    if kwargs:
         for k, v in kwargs.items():
             if k == 'penalty':
                 logging.info(f'Agent Penalty set to {str(v)}',
                              extra={"clazz": __name__, "oid": ""})
                 bus_agent_config.penalty = v
 
-    logging.info(f'Tensorboard logdir: {logdir}',
-                 extra={"clazz": __name__, "oid": ""})
+        # list experiment params for paths
+        experiments = "_".join([str(k)+"="+str(v) for k,v in kwargs.items()])
+
+        logdir_ = f'{logdir}/{experiments}'
+        tensorboard_ = ModifiedTensorBoard(log_dir=logdir_)
+        bus_agent_config.tensorboard = tensorboard_
+
+    if experiment is not None:
+        # average experiment is running
+        logdir_ = f'{logdir}/run{experiment}'
+        tensorboard_ = ModifiedTensorBoard(log_dir=logdir_)
+        bus_agent_config.tensorboard = tensorboard_
 
     w = nn_weights # weights
     b = None # replay buffer
@@ -330,18 +347,22 @@ def run(**kwargs):
 
     for i in tqdm(range(episodes), total=episodes):
 
-        operator, world = run_single_simulation(
+        operator, world, service_level = run_single_simulation(
             start_time=15*60, end_time=16.1*60, weights=w, replay_buffer=b, target_net_update_counter=c)
 
         if len(operator._rl_agent_replay_buffer) >= 1000:
             logging.debug(f'Episode {str(i)}: Training happened.')
 
         if not kwargs:
-            episode_returns.append(deepcopy({'episode': i, 'return': operator._rewards_sum[-1]}))
+            episode_returns.append(deepcopy({'episode': i,
+                                             'return': operator._rewards_sum[-1],
+                                             'service_level': service_level}))
         else:
             # extend return by experiment parameters
             episode_returns.append({**kwargs,
-                                    **deepcopy({'episode': i, 'return': operator._rewards_sum[-1]})})
+                                    **deepcopy({'episode': i,
+                                                'return': operator._rewards_sum[-1],
+                                                'service_level': service_level})})
         w = operator._rl_agent_weights
         b = operator._rl_agent_replay_buffer
         c = operator._rl_agent_update_counter
@@ -380,18 +401,29 @@ def run(**kwargs):
             if not kwargs:
                 m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}.html'))
             else:
-                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}_experiment_{str(kwargs)}.html'))
+                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}_{experiments}.html'))
+
+    if not kwargs:
+        weights_path = f'{str(episodes)}_episodes_weights_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.keras'
+    else:
+        weights_path = f'{str(episodes)}_episodes_{experiments}_experiment_weights_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.keras'
 
     operator._rl_agent_model.save_weights(
-        os.path.join(output_folder,
-                     f'{str(episodes)}_episodes_weights_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.keras')
+        os.path.join(output_folder, weights_path)
     )
 
     returns = pd.DataFrame.from_records(episode_returns)
+    returns = returns.set_index(returns['episode'])[['return', 'service_level']]
     if not kwargs:
-        returns.plot(x='episode', y='return', title='Total Reward over Episodes')
+        returns.plot(secondary_y=['service_level'],
+                     alpha=.5,
+                     color=['black', 'green'],
+                     title='Total Reward and Service Level over Episodes')
     else:
-        returns.plot(x='episode', y='return', title=f'Experiment {str(kwargs)}')
+        returns.plot(secondary_y=['service_level'],
+                     alpha=.5,
+                     color=['black', 'green'],
+                     title=f'Experiment: {experiments}')
     plt.show()
 
     return returns
