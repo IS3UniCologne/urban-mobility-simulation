@@ -1,7 +1,5 @@
 import logging
-
-import simpy
-from numpy.random import normal
+from numpy.random import normal, seed
 from simpy import Environment
 
 from simulation.agent import user
@@ -14,6 +12,7 @@ from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.interface.vehicle_allocation_engine_interface import VehicleAllocationEngineInterface
 from simulation.tasks.transport_task import TransportTask
+from simulation.world.population.PopulationFactory import PopulationType, PopulationFactory
 
 
 class World:
@@ -29,17 +28,19 @@ class World:
             return World.__instance
 
     @staticmethod
-    def init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior, reset=False):
+    def init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior, population_factory, reset=False):
         """ Static access method. """
         if World.__instance is None or reset is True:
-            World(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior, reset)
+            World(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior, population_factory, reset)
         return World.__instance
+
 
     def __init__(self, env: Environment,
                  search_engine: SearchEngineInterface,
                  payment_engine: PaymentInterface,
                  vehicle_assignment_engine: VehicleAllocationEngineInterface,
                  vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
+                 population_factory: PopulationFactory,
                  reset: bool = False):
         """ Virtually private constructor. """
         if World.__instance is not None and not reset:
@@ -60,6 +61,9 @@ class World:
 
         # Config
         self._config = Configuration.instance()
+
+        # Add Population Factory
+        self._population_factory = population_factory
 
         # Events
         self._changed = self._env.event()
@@ -104,8 +108,11 @@ class World:
                 # Generate Transportation Task
                 task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
 
+                # Determine Consumer Type
+                population_type = self._population_factory.generatePopulationType()
+
                 new_user = user.User(origin_position, task, self._search_engine, self._payment_engine,
-                                     self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
+                                     self._vehicle_assignment_engine, self._vehicle_choice_behavior, population_type, self._env)
 
             # Add user to user list
             self._users.append(new_user)
