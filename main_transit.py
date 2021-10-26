@@ -6,7 +6,6 @@ from copy import deepcopy
 import geopandas as gpd
 import logging
 
-from folium import GeoJson
 from matplotlib import pyplot as plt
 import numpy
 import os
@@ -369,6 +368,7 @@ def run(experiment=None, **kwargs):
 
         if track:
             import folium
+            from folium import GeoJson
             from folium.plugins import TimestampedGeoJson
 
             t = TimestampedGeoJson({

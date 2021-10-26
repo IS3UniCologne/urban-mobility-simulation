@@ -259,9 +259,10 @@ class DQN(RLAgent):
         return self._q_net(state, training=False)
 
     def _decide_next_action(self, bus: Bus, state):
+        rand = True if np.random.rand() <= self._eps else False
+
         while True:
-            if np.random.rand() > self._eps:
-                # q_values = self._target_net.predict(self._single_tensor_to_batch(state))[0]
+            if not rand:
                 q_values = self._target_predict(tf.expand_dims(state, axis=0))
                 max_q = Policy.argmax_rand(q_values)
                 a = self._action_space.actions[max_q]
