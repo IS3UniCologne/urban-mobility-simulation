@@ -206,7 +206,18 @@ hexagons = geodesic_environment.getLayer(f"hex_{spatial_res}").index.tolist()
 dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure")
 distance_matrix = dmi.load_distance_matrix()
 
-def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter = 0, n_kick_scooter = 0, seed = 42, substitution = 0.1, price_sensitive_pop_prob = 0.0):
+def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter = 0, n_kick_scooter = 0, seed = 42, substitution = 0.1, price_sensitive_pop_prob = 0.0, returnDataFrame = False):
+    """
+    :param start_time:
+    :param end_time:
+    :param n_cars:
+    :param n_scooter:
+    :param n_kick_scooter:
+    :param seed:
+    :param substitution:
+    :param price_sensitive_pop_prob: 1.0 means only price sensitive users, 0.0 means only sustainable users
+    :return:
+    """
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Setup Simulation Environment.           #
@@ -333,49 +344,78 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
                          +global_config.get_vehicle_config("SharedScooter").daily_total_cost*n_scooter
                          +global_config.get_vehicle_config("SharedKickScooter").daily_total_cost*n_kick_scooter)*(end_time/1440)
 
-    print("Total Revenue: " + str(payment_engine.total_revenue))
-    print("Total Costs: " + str(total_cost_per_day))
-    print("Profit: " + str(payment_engine.total_revenue-total_cost_per_day))
+    #print("Total Revenue: " + str(payment_engine.total_revenue))
+    #print("Total Costs: " + str(total_cost_per_day))
+    #print("Profit: " + str(payment_engine.total_revenue-total_cost_per_day))
 
-    print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
-    print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
-    print("Total Missed Revenue: " + str(payment_engine.total_missed_revenue))
+    #print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
+    #print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
+    #print("Total Missed Revenue: " + str(payment_engine.total_missed_revenue))
 
     no_vehicles_to_be_charged = mixed_fleet.get_all_vehicles_below_soc_level(global_config.shared_vehicle_operator_config.recharge_threshold)
 
-    print("Number of Vehicles to be charged: " + str(no_vehicles_to_be_charged))
+    #print("Number of Vehicles to be charged: " + str(no_vehicles_to_be_charged))
 
     # Final Objective Function for Heuristic Search
     func_objective = payment_engine.total_revenue-total_cost_per_day-payment_engine.total_missed_revenue
-    print("Objective Function:" + str(func_objective))
+    #print("Objective Function:" + str(func_objective))
     transactions = payment_engine.get_transactions()
 
     if store_results:
         transactions.to_csv(Path(output_folder, transaction_file), index = False)
 
-    print(DemandFactory.counter)
-    return (payment_engine.total_revenue, total_cost_per_day,
-            payment_engine.total_revenue-total_cost_per_day,
-            payment_engine.total_fulfilled_trips, payment_engine.total_missed_trips,
-            payment_engine.total_missed_revenue, no_vehicles_to_be_charged, func_objective)
+    # print(DemandFactory.counter)
+
+    if returnDataFrame:
+        # Persist Results
+        result = {
+            "n_cars":[n_cars],
+            "n_scooter":[n_scooter],
+            "n_kick_scooter":[n_kick_scooter],
+            "subs_bandwidth":[substitution],
+            "price_sensitive_pop_prob":[price_sensitive_pop_prob],
+            "seed":[seed],
+            "total_revenue":[payment_engine.total_revenue],
+            "total_cost_per_day":[total_cost_per_day],
+            "total_profit":[payment_engine.total_revenue-total_cost_per_day],
+            "total_fulfilled_trips":[payment_engine.total_fulfilled_trips],
+            "total_missed_trips":[payment_engine.total_missed_trips],
+            "total_missed_revenue":[payment_engine.total_missed_revenue],
+            "vehicles_to_be_charged":[no_vehicles_to_be_charged]
+        }
+
+        # Count Trips by Vehicle Type
+        overall_rentals = pd.DataFrame(result)
+        for mode in available_vehicle_modes:
+            rentals = transactions[transactions["selected_vehicle_mode"]==mode].groupby("state").agg({"SharedCar":"sum", "SharedScooter":"sum", "SharedKickScooter":"sum"}).reset_index(drop=True)
+            rentals = rentals.add_prefix('{}_'.format(mode))
+            overall_rentals = pd.concat([overall_rentals, rentals], axis=1)
+
+        return overall_rentals
+    else:
+        return (payment_engine.total_revenue, total_cost_per_day,
+                payment_engine.total_revenue-total_cost_per_day,
+                payment_engine.total_fulfilled_trips, payment_engine.total_missed_trips,
+                payment_engine.total_missed_revenue, no_vehicles_to_be_charged, func_objective)
 
 
-run_single_simulation(end_time = 1440, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 142, substitution = 0.10)
-# run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.05)
-# run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.1)
-# run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.2)
-# run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 42, substitution = 0.3)
 
-# run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 1025)
-# run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 1)
-# run_single_simulation(end_time = 600, n_cars = 1000, n_scooter = 1000, n_kick_scooter = 1000, seed = 123)
+# Random Variables for our Monte Carlo Run
+import random
+random.seed(42)
+seeds = random.sample(range(10000), 100)
 
-# run_single_simulation(end_time = 60, n_cars = 200, n_scooter = 0, n_kick_scooter = 0)
-#run_single_simulation(end_time = 60, n_cars = 300, n_scooter = 0, n_kick_scooter = 0)
-#run_single_simulation(end_time = 60, n_cars = 400, n_scooter = 0, n_kick_scooter = 0)
-#run_single_simulation(end_time = 60, n_cars = 500, n_scooter = 0, n_kick_scooter = 0)
-#run_single_simulation(end_time = 60, n_cars = 600, n_scooter = 0, n_kick_scooter = 0)
-#run_single_simulation(end_time = 60, n_cars = 700, n_scooter = 0, n_kick_scooter = 0)
-#run_single_simulation(end_time = 60, n_cars = 800, n_scooter = 0, n_kick_scooter = 0)
+# Store all simulation results in this data frame
+all_simulations = pd.DataFrame()
 
-# run_single_simulation(end_time = 60, n_cars = 200, n_scooter = 0, n_kick_scooter = 0)
+for idx, seed in enumerate(seeds[0:50]):
+    for pop_prob in [0.0, 1.0]:
+        for sub_bandwidth in [0.0, 0.05, 0.1, 0.2]:
+            sim_res = run_single_simulation(end_time = 1440, n_cars = 1500, n_scooter = 1500, n_kick_scooter = 1500, seed = seed, substitution = sub_bandwidth, price_sensitive_pop_prob = pop_prob, returnDataFrame = True)
+            all_simulations = pd.concat([all_simulations, sim_res], axis = 0)
+            print("seed: {}, idx: {}, pop_prob: {}, sub: {}".format(seed, idx, pop_prob, sub_bandwidth))
+
+    # After each seed save
+    all_simulations.to_csv('all_simulation_results.csv')
+
+print("FINISHED")
