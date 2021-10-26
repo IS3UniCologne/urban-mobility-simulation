@@ -136,3 +136,5 @@ data/supply/vehicle_supply_distribution_hex_7.csv
 
 data/output/*.csv
 resources/scripts/.Rhistory
+
+*.pdf
