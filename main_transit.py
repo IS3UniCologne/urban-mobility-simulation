@@ -1,3 +1,4 @@
+import ast
 import configparser
 import datetime
 from configparser import ConfigParser
@@ -109,6 +110,7 @@ agent_eps = parser.get("BUS", "EPS")
 agent_gamma = parser.get("BUS", "GAMMA")
 bootstrap_agent_n = parser.get("BUS", "N")
 agent_penalty = int(parser.get("BUS", "PENALTY"))
+q_net_layers = ast.literal_eval(parser.get("BUS", "DQN_LAYERS"))
 
 # Custom tensorboard object
 logdir = f'./data/output/logs/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
@@ -119,7 +121,7 @@ tensorboard = ModifiedTensorBoard(log_dir=logdir)
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
 bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma, bootstrap_agent_n,
-                                      tensorboard, corridor, agent_penalty)
+                                      tensorboard, corridor, agent_penalty, q_net_layers)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -325,9 +327,13 @@ def run(experiment=None, **kwargs):
                 logging.info(f'Agent Penalty set to {str(v)}',
                              extra={"clazz": __name__, "oid": ""})
                 bus_agent_config.penalty = v
+            if k == 'q_net_layer':
+                logging.info(f'DQN layer configuration set to {str(v)}',
+                             extra={"clazz": __name__, "oid": ""})
+                bus_agent_config.q_net_layer = v
 
         # list experiment params for paths
-        experiments = "_".join([str(k)+"="+str(v) for k,v in kwargs.items()])
+        experiments = "_".join([str(k)+"="+str(v) for k, v in kwargs.items()])
 
         logdir_ = f'{logdir}/{experiments}'
         tensorboard_ = ModifiedTensorBoard(log_dir=logdir_)
