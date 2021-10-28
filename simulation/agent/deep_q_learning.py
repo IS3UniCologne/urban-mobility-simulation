@@ -68,16 +68,21 @@ class DQN(RLAgent):
         self._eps = self._config.transit_agent_config.eps
         self._tensorboard = self._config.transit_agent_config.tensorboard
         self._penalty = self._config.transit_agent_config.penalty
+
+        # tuple of dim (1, n hidden layers+1 for input layer),
+        # output layer is fixed to n actions
+        self._q_net_layer = self._config.transit_agent_config.q_net_layer
+
         # TODO: put values below in config?
-        self._eps_decay = 0.995
+        self._eps_decay = 0.99
         self._eps_min = 0.001
-        self._replay_buffer_size = 100000
+        self._replay_buffer_size = 10000
         self._min_experience = 1000 # steps in replay buffer before training starts
-        self._learning_rate = 0.001
-        self._minibatch_size = 128
+        self._learning_rate = 0.001 # adam learning rate (default: 0.001)
+        self._minibatch_size = 100 # training minibatch size
         self._target_net_update_counter = target_net_update_counter
         self._target_net_update_threshold = 1000 # steps before eval net weights are propagated to target net
-        self._timelimit = 60
+        self._timelimit = 60 # timelimit for dynamic route in minutes
 
         # Random Number Generator
         # TODO: seed?
@@ -105,6 +110,9 @@ class DQN(RLAgent):
                 else:
                     self._target_q_net.set_weights(target_weights)
         else:
+            logging.debug(self._q_net.summary(),
+                          extra={"clazz": self.__class__.__name__, "oid": ""})
+
             # in the first episode, initialize target q net weights = q net weights
             self._target_q_net.set_weights(self._q_net.get_weights())
 
@@ -118,20 +126,21 @@ class DQN(RLAgent):
 
     def _create_model(self, input_dims):
         model = keras.Sequential()
+
         # Input
-        # model.add(layers.Conv2D(filters=256, kernel_size=(5, 5), input_shape=input_dims))
-        # model.add(layers.Flatten(input_shape=input_dims))
-        model.add(layers.Dense(32, input_dim=input_dims, activation='relu', kernel_initializer='he_uniform'))
+        model.add(layers.Dense(self._q_net_layer[0],
+                               input_dim=input_dims, activation='relu', kernel_initializer='he_uniform'))
 
         # Hidden Layers
-        model.add(layers.Dense(32, activation='relu', kernel_initializer='he_uniform'))
-        # model.add(layers.Dense(32))
+        for layernodes in self._q_net_layer[1:]:
+            model.add(layers.Dense(layernodes, activation='relu', kernel_initializer='he_uniform'))
 
         # Output
         model.add(layers.Dense(self._action_space.dimensionality(), activation='linear'))
         # model.compile(loss=tf.keras.losses.Huber(), optimizer='sgd', metrics=['accuracy'])
         model.compile(loss=Huber(), optimizer=Adam(learning_rate=self._learning_rate),
                       metrics=['accuracy', "mae", tf.keras.metrics.RootMeanSquaredError()])
+
         return model
 
     def run(self, bus: Bus):
@@ -264,8 +273,10 @@ class DQN(RLAgent):
         while True:
             if not rand:
                 q_values = self._target_predict(tf.expand_dims(state, axis=0))
+                # TODO: normalize / probabilities instead of argmax?
                 max_q = Policy.argmax_rand(q_values)
                 a = self._action_space.actions[max_q]
+                rand = True # otherwise this blocks forever when a is forbidden
             else:
                 a = self._action_space.sample_action_uniformly()
 

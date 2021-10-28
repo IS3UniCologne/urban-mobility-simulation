@@ -26,20 +26,31 @@ if __name__ == "__main__":
     Use number of physical cores available to run parallel experiments
     either a grid search (by kwargs, see below) or an averaging benchmark
     (by range, see below)
+    
+    Constrained by memory: A full (100,000) replay buffer takes about 31GB or RAM.
     """
 
     # define experiments with kwargs
     # experiments = [
     #     {'penalty': 45},
     #     {'penalty': 45},
-    #     {'penalty': 40},
-    #     {'penalty': 40},
     #     {'penalty': 35},
     #     {'penalty': 35},
-    #     {'penalty': 30},
-    #     {'penalty': 30},
     #     {'penalty': 25},
-    #     {'penalty': 25}
+    #     {'penalty': 25},
+    #     {'penalty': 20},
+    #     {'penalty': 20},
+    #     {'penalty': 15},
+    #     {'penalty': 15}
+    # ]
+
+    # experiments = [
+    #     {'q_net_layer': (32,32)},
+    #     {'q_net_layer': (32,16)},
+    #     {'q_net_layer': (64, 32)},
+    #     {'q_net_layer': (64, 16)},
+    #     {'q_net_layer': (16, 16)},
+    #     {'q_net_layer': (16, 8)}
     # ]
 
     # or just run average experiments by using range with the number you like
@@ -55,7 +66,10 @@ if __name__ == "__main__":
         path = f'average_{str(len(experiments))}_experiments_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
 
         collected = pd.concat(results).groupby('episode').mean()
-        collected.plot(ylabel='average return', legend=False, title=f'{str(len(results))} Experiments averaged returns')
+        collected.plot(secondary_y=['service_level'],
+                       alpha=.5,
+                       color=['black', 'green'],
+                       title=f'{str(len(results))} Experiments averaged Returns and Service Level')
         plt.show()
     else:
         results = pqdm(experiments,
