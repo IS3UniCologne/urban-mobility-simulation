@@ -384,12 +384,22 @@ def run_single_simulation(start_time = 0, end_time = 20, n_cars = 0, n_scooter =
             "vehicles_to_be_charged":[no_vehicles_to_be_charged]
         }
 
+        # Calculate performance indicators per mode
+        indicators_per_mode = transactions[transactions["selected_vehicle_mode"]!='None'].groupby(["selected_vehicle_mode"]).agg({"price":"sum", "duration":"sum", "distance":"sum", "energy_consumption":"sum"})
+
         # Count Trips by Vehicle Type
         overall_rentals = pd.DataFrame(result)
         for mode in available_vehicle_modes:
             rentals = transactions[transactions["selected_vehicle_mode"]==mode].groupby("state").agg({"SharedCar":"sum", "SharedScooter":"sum", "SharedKickScooter":"sum"}).reset_index(drop=True)
             rentals = rentals.add_prefix('{}_'.format(mode))
             overall_rentals = pd.concat([overall_rentals, rentals], axis=1)
+
+            # Prepare KPI per Mode (Distance, Duration, Revenue)
+            kpi_for_mode = indicators_per_mode.loc[[mode]].reset_index(drop=True)
+            kpi_for_mode.rename(columns={"price":"revenue"}, inplace=True) # to avoid future confusion
+            kpi_for_mode = kpi_for_mode.add_prefix('{}_'.format(mode))
+            overall_rentals = pd.concat([overall_rentals, kpi_for_mode], axis=1)
+
 
         return overall_rentals
     else:
@@ -408,12 +418,20 @@ seeds = random.sample(range(10000), 100)
 # Store all simulation results in this data frame
 all_simulations = pd.DataFrame()
 
-for idx, seed in enumerate(seeds[0:50]):
-    for pop_prob in [0.0, 1.0]:
-        for sub_bandwidth in [0.0, 0.05, 0.1, 0.2]:
-            sim_res = run_single_simulation(end_time = 1440, n_cars = 1500, n_scooter = 1500, n_kick_scooter = 1500, seed = seed, substitution = sub_bandwidth, price_sensitive_pop_prob = pop_prob, returnDataFrame = True)
+
+# End Time
+T = 1440
+
+# Real Run
+pop_probs = [0.0, 1.0]
+sub_bandwidths = [0.0, 0.05, 0.1, 0.2]
+
+for idx, seed in enumerate(seeds):
+    for pop_prob in pop_probs:
+        for sub_bandwidth in sub_bandwidths:
+            sim_res = run_single_simulation(end_time = T, n_cars = 1500, n_scooter = 1500, n_kick_scooter = 1500, seed = seed, substitution = sub_bandwidth, price_sensitive_pop_prob = pop_prob, returnDataFrame = True)
             all_simulations = pd.concat([all_simulations, sim_res], axis = 0)
-            print("seed: {}, idx: {}, pop_prob: {}, sub: {}".format(seed, idx, pop_prob, sub_bandwidth))
+            logging.warning("seed: {}, idx: {}, pop_prob: {}, sub: {}".format(seed, idx, pop_prob, sub_bandwidth),extra={"clazz": "main", "oid": ""})
 
     # After each seed save
     all_simulations.to_csv('all_simulation_results.csv')
