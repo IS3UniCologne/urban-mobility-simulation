@@ -315,6 +315,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     except ZeroDivisionError:
         service_level = 0
     print("Service Level: " + str(service_level))
+    print("Passengers still in Bus (not dropped off): " + str(operator.unserved_passengers))
 
     return operator, world, service_level
 

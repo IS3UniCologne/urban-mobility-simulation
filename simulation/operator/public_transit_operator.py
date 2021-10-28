@@ -273,6 +273,9 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._busses.remove(bus)
         self._world.remove_vehicle(bus)
         # TODO: unmount all remaining passengers - is there a need for this?
+        logging.debug(f'There are still {str(len(bus._seats))} passengers onboard the bus',
+                      extra={"clazz": self.__class__.__name__, "oid": ""})
+        self._unserved_passengers = len(bus._seats)
 
         self._rl_agent_model = target_model
         self._rl_agent_weights = (model.get_weights(), target_model.get_weights())
@@ -301,6 +304,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
             self._timestamped_position['properties']['times'].append(int(self._time.now() * 60000)) # TODO: beautify for animation
 
             for d in demands:
+                # TODO: mark succesfully served demands
                 self._tracked_demands.add((d.origin.getExactLocation(geojson=True),
                                            d.destination.getExactLocation(geojson=True)))
 

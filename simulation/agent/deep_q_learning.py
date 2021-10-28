@@ -81,7 +81,7 @@ class DQN(RLAgent):
         self._learning_rate = 0.001 # adam learning rate (default: 0.001)
         self._minibatch_size = 100 # training minibatch size
         self._target_net_update_counter = target_net_update_counter
-        self._target_net_update_threshold = 1000 # steps before eval net weights are propagated to target net
+        self._target_net_update_threshold = 1_000 # steps before eval net weights are propagated to target net
         self._timelimit = 60 # timelimit for dynamic route in minutes
 
         # Random Number Generator
