@@ -100,7 +100,8 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
              "price":selected_transportation_alternative.price,
              "distance": selected_transportation_alternative.distance,
              "duration":selected_transportation_alternative.duration,
-             "selected_vehicle_mode":selected_transportation_alternative.vehicle.__class__.__name__,
+             "energy_consumption": selected_transportation_alternative.energy_consumed,
+             "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__,
              "state":"Fulfilled", **transportation_task.viable_vehicle_modes}
         )
 
@@ -134,6 +135,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
              "price": 0.0,
              "distance": transportation_task.origin >> transportation_task.destination,
              "duration": 0.0,
+             "energy_consumption": 0.0,
              "selected_vehicle_mode":"None",
              "state":"Missed", **transportation_task.viable_vehicle_modes}
         )

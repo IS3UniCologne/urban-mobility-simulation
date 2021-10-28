@@ -312,10 +312,12 @@ class User(Agent, DriverInterface):
 
         # Mount Vehicle and Start Driving
         self.mount_vehicle_as_driver(vehicle_allocation.vehicle)
-        yield self._env.process(self.drive_vehicle(vehicle_allocation.vehicle, vehicle_allocation.associated_transportation_alternative.route))
+        energy_consumed = yield self._env.process(self.drive_vehicle(vehicle_allocation.vehicle, vehicle_allocation.associated_transportation_alternative.route))
         self.park_vehicle(vehicle_allocation.vehicle)
         self.unmount_vehicle_as_driver(vehicle_allocation.vehicle)
 
+        # Update Trip Information
+        vehicle_allocation.associated_transportation_alternative.set_energy_consumed(energy_consumed)
         # Trigger next event
         self._arrived_at_destination.succeed()
         logging.debug(f"Arrived at destination.", extra={"clazz": self.__class__.__name__, "oid": self._id})
@@ -364,6 +366,9 @@ class User(Agent, DriverInterface):
     def drive_vehicle(self, vehicle, route):
         vehicle.start_driving()
 
+        # State of Charge before driving
+        vehicle_soc_before_driving = vehicle.current_state_of_charge
+
         for route_segment in route.route_segments:
             distance = route_segment.distance
             velocity = vehicle.velocity
@@ -372,7 +377,15 @@ class User(Agent, DriverInterface):
             # yield self._env.timeout(time)
             yield self._env.process(vehicle.move(route_segment))
 
+        # State of Charge after driving
+        vehicle_soc_after_driving = vehicle.current_state_of_charge
+
+        # Consumed Energy (kWh)
+        user_energy_consumption = vehicle_soc_before_driving - vehicle_soc_after_driving
         vehicle.stop_driving()
+
+        # Return how much energy we consumed (and other factors if needed such as time)
+        return user_energy_consumption
 
     def park_vehicle(self, vehicle):
         vehicle.park()
