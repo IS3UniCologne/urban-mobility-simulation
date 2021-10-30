@@ -49,6 +49,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._rl_agent_weights = rl_agent_weights
         self._rl_agent_replay_buffer = rl_agent_replay_buffer
         self._rl_agent_update_counter = rl_agent_update_counter
+        self._unserved_passengers = 0
 
         # Config
         self._config = Configuration.instance()
@@ -94,23 +95,25 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
                             # TODO: in case of only one bus (DQN problem), how are we sure, we always spawn the same one
                             if trip_id != 163296946:
-                                logging.error(f'Different trip than before!',
-                                              extra={"clazz": self.__class__.__name__, "oid": ""})
+                                # logging.error(f'Different trip than before!',
+                                #               extra={"clazz": self.__class__.__name__, "oid": ""})
+                                pass
 
-                            trip = self._timetable.trip_by_id(trip_id)
-                            route = self._build_route(trip)
-                            bus = self._spawn_bus(route)
-                            self._busses.append(bus)
-                            self._world.add_vehicle(bus)
+                            else:
+                                trip = self._timetable.trip_by_id(trip_id)
+                                route = self._build_route(trip)
+                                bus = self._spawn_bus(route)
+                                self._busses.append(bus)
+                                self._world.add_vehicle(bus)
 
-                            # spawn a process that keeps track of the bus state, action and rewards
-                            self._env.process(self._track_bus_agent(bus))
+                                # spawn a process that keeps track of the bus state, action and rewards
+                                self._env.process(self._track_bus_agent(bus))
 
-                            # also spawn a cleanup process that waits for completion of trip
-                            self._env.process(self._clean_up_bus(bus))
+                                # also spawn a cleanup process that waits for completion of trip
+                                self._env.process(self._clean_up_bus(bus))
 
-                            if len(self._busses) >= self._operator_config.max_busses:
-                                break
+                                if len(self._busses) >= self._operator_config.max_busses:
+                                    break
 
                 yield self._env.timeout(1)
             except simpy.Interrupt:

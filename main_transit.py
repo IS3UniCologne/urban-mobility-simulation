@@ -315,9 +315,9 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     except ZeroDivisionError:
         service_level = 0
     print("Service Level: " + str(service_level))
-    print("Passengers still in Bus (not dropped off): " + str(operator.unserved_passengers))
+    print("Passengers still in Bus (not dropped off): " + str(operator._unserved_passengers))
 
-    return operator, world, service_level
+    return operator, world, payment_engine, service_level
 
 
 # the experiment=None hack is to ensure a range works as well for pqdm
@@ -353,8 +353,8 @@ def run(experiment=None, **kwargs):
 
     for i in tqdm(range(episodes), total=episodes):
 
-        operator, world, service_level = run_single_simulation(
-            start_time=15*60, end_time=16.1*60, weights=w, replay_buffer=b, target_net_update_counter=c)
+        operator, world, payment_engine, service_level = run_single_simulation(
+            start_time=15*60, end_time=17*60, weights=w, replay_buffer=b, target_net_update_counter=c)
 
         if len(operator._rl_agent_replay_buffer) >= 1000:
             logging.debug(f'Episode {str(i)}: Training happened.')
@@ -396,14 +396,15 @@ def run(experiment=None, **kwargs):
                 }
             }"""
 
-            d = GeoJson({
-                'type': 'FeatureCollection',
-                'features':[eval(template) for c in operator._tracked_demands]
-            }, style_function=lambda x:{'color': 'red'})
-
             m = folium.Map(location=[52.52, 13.40])
 
-            d.add_to(m)
+            if operator._tracked_demands:
+                d = GeoJson({
+                    'type': 'FeatureCollection',
+                    'features':[eval(template) for c in operator._tracked_demands]
+                }, style_function=lambda x:{'color': 'red'})
+
+                d.add_to(m)
             t.add_to(m)
             if not kwargs:
                 m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}.html'))

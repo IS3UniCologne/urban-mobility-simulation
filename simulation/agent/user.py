@@ -476,7 +476,7 @@ class TransitUser(User, PassengerInterface):
 
                     if not self._demand_aligns(vehicle):
                         self._state = TransitUserState.MISSED
-                        self._payment_service.withdraw_transportation_task(self, self._transport_task)
+                        # self._payment_service.withdraw_transportation_task(self, self._transport_task)
                         logging.debug(f'User demand is not aligned with routing corridor of bus {vehicle.id}, ',
                                       extra={"clazz": self.__class__.__name__, "oid": self._id})
                         break
