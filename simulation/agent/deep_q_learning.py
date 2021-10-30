@@ -74,12 +74,12 @@ class DQN(RLAgent):
         self._q_net_layer = self._config.transit_agent_config.q_net_layer
 
         # TODO: put values below in config?
-        self._eps_decay = 0.99
+        self._eps_decay = 0.995
         self._eps_min = 0.001
-        self._replay_buffer_size = 10000
+        self._replay_buffer_size = 20000
         self._min_experience = 1000 # steps in replay buffer before training starts
         self._learning_rate = 0.001 # adam learning rate (default: 0.001)
-        self._minibatch_size = 100 # training minibatch size
+        self._minibatch_size = 50 # training minibatch size
         self._target_net_update_counter = target_net_update_counter
         self._target_net_update_threshold = 1_000 # steps before eval net weights are propagated to target net
         self._timelimit = 60 # timelimit for dynamic route in minutes
