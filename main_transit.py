@@ -402,7 +402,7 @@ def run(experiment=None, **kwargs):
                 d = GeoJson({
                     'type': 'FeatureCollection',
                     'features':[eval(template) for d in operator._tracked_demands]
-                }, style_function=lambda x:{'color': 'green'} if x.properties.serviced else {'color': 'red'})
+                }, style_function=lambda x:{'color': 'green'} if x['properties']['serviced'] else {'color': 'red'})
 
                 d.add_to(m)
             t.add_to(m)
