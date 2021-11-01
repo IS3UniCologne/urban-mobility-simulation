@@ -54,7 +54,7 @@ if __name__ == "__main__":
     # ]
 
     # or just run average experiments by using range with the number you like
-    experiments = range(10)
+    experiments = range(5)
 
     if type(experiments) is range:
         results = pqdm(experiments,
