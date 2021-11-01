@@ -178,7 +178,8 @@ class DQN(RLAgent):
             # TODO: this is still optimistic, bus needs to move between hexagons, not euclidean/haversine
             remaining_time = self._timelimit - (self._env.now - bus._spawned)
             timeto_destination = (bus.position >> bus.route.destination) / bus._velocity
-            unreachable_destination = True if remaining_time < timeto_destination else False
+            # unreachable_destination = True if remaining_time < timeto_destination else False
+            unreachable_destination = False # JUST FOR DEBUGGING
 
             terminal = reached_timelimit or reached_destination or unreachable_destination
 
