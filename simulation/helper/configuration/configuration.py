@@ -218,3 +218,4 @@ class TransitAgentConfig:
         self.corridor = corridor
         self.penalty = penalty
         self.q_net_layer = q_net_layer
+        self.optimizer = None

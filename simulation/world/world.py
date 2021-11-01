@@ -56,6 +56,8 @@ class World:
 
         self._vehicle_choice_behavior = vehicle_choice_behavior
 
+        self._demand_processes = []
+
         # Store all current users
         self._users = []
         self._user_processes = []
@@ -70,6 +72,15 @@ class World:
         self._changed = self._env.event()
 
         self._user_limit = 10_000_000
+
+    @property
+    def user_processes(self):
+        return self._user_processes
+
+    @property
+    def demand_processes(self):
+        return self._demand_processes
+
 
     def add_user(self, origin, destination):
         """

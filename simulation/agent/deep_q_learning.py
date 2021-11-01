@@ -60,7 +60,7 @@ class ModifiedTensorBoard(TensorBoard):
 
 
 class DQN(RLAgent):
-    def __init__(self, env: simpy.Environment, state_dims, weights: tuple, replay_buffer, target_net_update_counter):
+    def __init__(self, env: simpy.Environment, state_dims, weights: tuple, replay_buffer, target_net_update_counter, step=0):
         super(DQN, self).__init__(env)
 
         # Configuration
@@ -79,6 +79,11 @@ class DQN(RLAgent):
         self._eps_min = 0.001
         self._replay_buffer_size = 25000
         self._min_experience = 5000 # steps in replay buffer before training starts
+        self._minibatch_size = 32 # training minibatch size
+        self._target_net_update_counter = target_net_update_counter
+        self._target_net_update_threshold = 2000 # steps before eval net weights are propagated to target net
+        self._timelimit = 60 # timelimit for dynamic route in minutes
+
         # self._learning_rate = 0.001 # adam learning rate (default: 0.001)
         # decay exponentially from 0.01 to ~0.001 over 50k steps (~ 1000 episodes)
         self._learning_rate = ExponentialDecay(
@@ -86,10 +91,10 @@ class DQN(RLAgent):
             decay_steps=50000,
             decay_rate=0.05
         )
-        self._minibatch_size = 32 # training minibatch size
-        self._target_net_update_counter = target_net_update_counter
-        self._target_net_update_threshold = 2000 # steps before eval net weights are propagated to target net
-        self._timelimit = 60 # timelimit for dynamic route in minutes
+        if self._config.transit_agent_config.optimizer is None:
+            self._optimizer = Adam(learning_rate=self._learning_rate)
+        else:
+            self._optimizer = self._config.transit_agent_config.optimizer
 
         # Random Number Generator
         # TODO: seed?
@@ -145,7 +150,7 @@ class DQN(RLAgent):
         # Output
         model.add(layers.Dense(self._action_space.dimensionality(), activation='linear'))
         # model.compile(loss=tf.keras.losses.Huber(), optimizer='sgd', metrics=['accuracy'])
-        model.compile(loss=Huber(), optimizer=Adam(learning_rate=self._learning_rate),
+        model.compile(loss=Huber(), optimizer=self._optimizer,
                       metrics=['accuracy', "mae", tf.keras.metrics.RootMeanSquaredError()])
 
         return model
@@ -181,11 +186,10 @@ class DQN(RLAgent):
 
             self._train(terminal)
 
-            if self._eps > self._eps_min:
-                self._eps *= self._eps_decay
-                self._eps = max(self._eps_min, self._eps)
-
             if terminal:
+                if self._eps > self._eps_min:
+                    self._eps *= self._eps_decay
+                    self._eps = max(self._eps_min, self._eps)
                 break
 
         # retain decayed epsilon
@@ -193,13 +197,27 @@ class DQN(RLAgent):
         logging.debug(f'Saving decayed epsilon into config: {str(self._eps)}',
                       extra={"clazz": self.__class__.__name__, "oid": bus.id})
 
+        # retain optimizer steps for decayed learning rate
+        self._config.transit_agent_config.optimizer = self._optimizer
+        logging.debug(f'Saving decayed learning rate into config: {str(self._learning_rate(self._optimizer.iterations))}',
+                      extra={"clazz": self.__class__.__name__, "oid": bus.id})
+
         logging.debug(f'Current Replay Buffer size: {str(len(self._replay_buffer))}',
                       extra={"clazz": self.__class__.__name__, "oid": bus.id})
 
         # clean up processes
         bus._state_update_process.interrupt()
+
+        # stop demand generation
+        for d in bus._world.demand_processes:
+            try:
+                d.interrupt()
+            except RuntimeError:
+                # already terminated
+                pass
+
         # clean up user demands
-        for u in bus._world._user_processes:
+        for u in bus._world.user_processes:
             try:
                 u.interrupt()
             except RuntimeError:
