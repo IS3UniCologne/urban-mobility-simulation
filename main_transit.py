@@ -389,10 +389,10 @@ def run(experiment=None, **kwargs):
                 'type': 'Feature',
                 'geometry': {
                     'type': 'LineString',
-                    'coordinates': c,
+                    'coordinates': (d[0], d[1]),
                 },
                 'properties': {
-                    'color': 'red'
+                    'serviced': d[2]
                 }
             }"""
 
@@ -401,8 +401,8 @@ def run(experiment=None, **kwargs):
             if operator._tracked_demands:
                 d = GeoJson({
                     'type': 'FeatureCollection',
-                    'features':[eval(template) for c in operator._tracked_demands]
-                }, style_function=lambda x:{'color': 'red'})
+                    'features':[eval(template) for d in operator._tracked_demands]
+                }, style_function=lambda x:{'color': 'green'} if x.properties.serviced else {'color': 'red'})
 
                 d.add_to(m)
             t.add_to(m)

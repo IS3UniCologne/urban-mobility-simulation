@@ -495,12 +495,18 @@ class TransitUser(User, PassengerInterface):
                             duration=numpy.inf,
                             distance=self._transport_task.origin >> self._transport_task.destination
                         )
+                        self._payment_service._tracked_demands.add((self._transport_task.origin.getExactLocation(geojson=True),
+                                                                   self._transport_task.destination.getExactLocation(geojson=True),
+                                                                    True))
                         self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task, selected_alternative)
 
                 yield self._env.process(self.stop())
 
             except simpy.Interrupt:
                 self._state = TransitUserState.MISSED
+                self._payment_service._tracked_demands.add((self._transport_task.origin.getExactLocation(geojson=True),
+                                                            self._transport_task.destination.getExactLocation(geojson=True),
+                                                            False))
                 self._payment_service.withdraw_transportation_task(self, self._transport_task)
                 logging.debug(f'User was not serviced before bus reached terminal destination.',
                               extra={"clazz": self.__class__.__name__, "oid": self._id})

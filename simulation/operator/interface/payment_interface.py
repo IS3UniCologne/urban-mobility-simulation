@@ -18,6 +18,9 @@ class PaymentInterface(ABC):
 
         self._transactions = []
 
+        # only for bus tracking
+        self._tracked_demands = set()
+
     @abstractmethod
     def pay_for_fulfilled_transportation_task(self, user, transportation_task: TransportTask, selected_transportation_alternative: TransportationAlternative):
         pass
