@@ -8,6 +8,7 @@ import numpy as np
 import random
 import simpy
 import tensorflow as tf
+from keras.optimizer_v2.learning_rate_schedule import ExponentialDecay
 from tensorflow import keras
 from tensorflow.keras import layers
 from keras.callbacks import TensorBoard
@@ -66,6 +67,7 @@ class DQN(RLAgent):
         self._alpha = self._config.transit_agent_config.alpha
         self._gamma = self._config.transit_agent_config.gamma
         self._eps = self._config.transit_agent_config.eps
+        self._eps_decay = self._config.transit_agent_config.eps_decay
         self._tensorboard = self._config.transit_agent_config.tensorboard
         self._penalty = self._config.transit_agent_config.penalty
 
@@ -74,14 +76,19 @@ class DQN(RLAgent):
         self._q_net_layer = self._config.transit_agent_config.q_net_layer
 
         # TODO: put values below in config?
-        self._eps_decay = 0.999
         self._eps_min = 0.001
         self._replay_buffer_size = 25000
         self._min_experience = 5000 # steps in replay buffer before training starts
-        self._learning_rate = 0.001 # adam learning rate (default: 0.001)
-        self._minibatch_size = 100 # training minibatch size
+        # self._learning_rate = 0.001 # adam learning rate (default: 0.001)
+        # decay exponentially from 0.01 to ~0.001 over 50k steps (~ 1000 episodes)
+        self._learning_rate = ExponentialDecay(
+            initial_learning_rate=0.01,
+            decay_steps=50000,
+            decay_rate=0.05
+        )
+        self._minibatch_size = 32 # training minibatch size
         self._target_net_update_counter = target_net_update_counter
-        self._target_net_update_threshold = 1_000 # steps before eval net weights are propagated to target net
+        self._target_net_update_threshold = 2000 # steps before eval net weights are propagated to target net
         self._timelimit = 60 # timelimit for dynamic route in minutes
 
         # Random Number Generator

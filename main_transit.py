@@ -107,6 +107,7 @@ action_dim = len(actions)
 action_resolution = parser.get("BUS", "ACTION_SPACE_RESOLUTION")
 agent_alpha = parser.get("BUS", "ALPHA")
 agent_eps = parser.get("BUS", "EPS")
+agent_eps_decay = parser.get("BUS", "EPS_DECAY")
 agent_gamma = parser.get("BUS", "GAMMA")
 bootstrap_agent_n = parser.get("BUS", "N")
 agent_penalty = int(parser.get("BUS", "PENALTY"))
@@ -120,8 +121,8 @@ tensorboard = ModifiedTensorBoard(log_dir=logdir)
 
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
-bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_gamma, bootstrap_agent_n,
-                                      tensorboard, corridor, agent_penalty, q_net_layers)
+bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_gamma,
+                                      bootstrap_agent_n, tensorboard, corridor, agent_penalty, q_net_layers)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
