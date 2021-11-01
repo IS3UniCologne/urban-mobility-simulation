@@ -121,7 +121,7 @@ class DemandFactory:
                     break
 
                 # TODO: is this a viable way of modifying exponential sampling using the scale factor?
-                inter_arrival_time = self._random.exponential(1.0 / poisson_lambda * self._modifiers[spatial_unit]) * \
+                inter_arrival_time = self._random.exponential(1.0 / (poisson_lambda * self._modifiers[spatial_unit])) * \
                                      self._demand_importer._get_temporal_duration_in_hours() * 60
             except KeyError:
                 # no modifier is registered for that spatial unit
