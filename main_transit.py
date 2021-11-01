@@ -308,15 +308,15 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     # Benchmarks.                             #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
-    print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
     try:
         service_level = payment_engine.total_fulfilled_trips / \
                         (payment_engine.total_missed_trips+payment_engine.total_fulfilled_trips)
     except ZeroDivisionError:
         service_level = 0
-    print("Service Level: " + str(service_level))
-    print("Passengers still in Bus (not dropped off): " + str(operator._unserved_passengers))
+    # print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
+    # print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
+    # print("Service Level: " + str(service_level))
+    # print("Passengers still in Bus (not dropped off): " + str(operator._unserved_passengers))
 
     return operator, world, payment_engine, service_level
 
