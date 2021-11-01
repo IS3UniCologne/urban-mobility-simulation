@@ -248,11 +248,11 @@ class DQN(RLAgent):
             states_tp1 = np.array([transition[3] for transition in minibatch]) # s1
 
             # Vanilla DQN with target network
-            # q_values_tp1 = self._target_predict(states_tp1).numpy()
+            q_values_tp1 = self._target_predict(states_tp1).numpy()
 
             # Double Q-learning
-            q_values_tp1 = self._eval_predict(states_tp1).numpy()
-            q_values_tp1_t = self._target_predict(states_tp1).numpy()
+            # q_values_tp1 = self._eval_predict(states_tp1).numpy()
+            # q_values_tp1_t = self._target_predict(states_tp1).numpy()
 
             X = []
             y = []
@@ -261,20 +261,14 @@ class DQN(RLAgent):
                 if terminal:
                     target_q = r
                 else:
-                    # target_q = r + self._gamma * tf.math.reduce_max(q_values_tp1[i]) # vanilla DQN with target network
-                    target_q = r + self._gamma * q_values_tp1_t[i][tf.math.argmax(q_values_tp1[i])] # double Q-learning
+                    target_q = r + self._gamma * tf.math.reduce_max(q_values_tp1[i]) # vanilla DQN with target network
+                    # target_q = r + self._gamma * q_values_tp1_t[i][tf.math.argmax(q_values_tp1[i])] # double Q-learning
 
                 q_values = q_values_t[i]
                 q_values[a] = target_q
 
                 X.append(s0)
                 y.append(q_values)
-
-            # try:
-            #     X=tf.debugging.check_numerics(X,'X is nan')
-            #     y=tf.debugging.check_numerics(y,'y is nan')
-            # except tf.errors.InvalidArgumentError:
-            #     pass
 
             self._q_net.fit(np.array(X), np.array(y), batch_size=self._minibatch_size, verbose=0, shuffle=False,
                             callbacks=[self._tensorboard] if terminal_state else None)
@@ -365,7 +359,8 @@ class DQN(RLAgent):
         # TODO: this is still optimistic, bus needs to move between hexagons, not euclidean/haversine
         remaining_time = self._timelimit - (self._env.now - bus._spawned)
         timeto_destination = (bus.position >> bus.route.destination) / bus._velocity
-        unreachable_destination = True if remaining_time < timeto_destination else False
+        # unreachable_destination = True if remaining_time < timeto_destination else False
+        unreachable_destination = False # JUST FOR DEBUGGING
         if unreachable_destination:
             logging.info(f'Episode is cancelled, destination is unreachable within time limit',
                          extra={"clazz": self.__class__.__name__, "oid": ""})
