@@ -27,7 +27,7 @@ from simulation.world.world import World
 
 
 class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface):
-    def __init__(self, env: Environment, timetable: Timetable, rl_agent_weights, rl_agent_replay_buffer, rl_agent_update_counter):
+    def __init__(self, env: Environment, timetable: Timetable, rl_agent_weights, rl_agent_replay_buffer, rl_agent_episode):
         PaymentInterface.__init__(self)
         self._timetable = timetable
         self._env = env
@@ -48,7 +48,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._rewards_sum = []
         self._rl_agent_weights = rl_agent_weights
         self._rl_agent_replay_buffer = rl_agent_replay_buffer
-        self._rl_agent_update_counter = rl_agent_update_counter
+        self._rl_agent_episode = rl_agent_episode
         self._unserved_passengers = 0
 
         # Config
@@ -262,7 +262,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         corridor_dim = len(corridor)
         # input dim for DQN model: corridor dim * corridor dim + corridor dim + 1
         agent = DQN(self._env, corridor_dim * corridor_dim + corridor_dim + 1,
-                    self._rl_agent_weights, self._rl_agent_replay_buffer, self._rl_agent_update_counter)
+                    self._rl_agent_weights, self._rl_agent_replay_buffer, self._rl_agent_episode)
         bus = Bus(self._env, route, init_position, agent, corridor)
 
         self._timestamped_position['geometry']['coordinates'].append(init_position.getExactLocation(geojson=True))
@@ -272,7 +272,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
     def _clean_up_bus(self, bus: Bus):
 
-        (model, target_model, replay_buffer, update_counter) = yield bus._has_reached_terminal
+        (model, target_model, replay_buffer, episode) = yield bus._has_reached_terminal
 
         self._busses.remove(bus)
         self._world.remove_vehicle(bus)
@@ -284,7 +284,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._rl_agent_model = target_model
         self._rl_agent_weights = (model.get_weights(), target_model.get_weights())
         self._rl_agent_replay_buffer = replay_buffer
-        self._rl_agent_update_counter = update_counter
+        self._rl_agent_episode = episode
         self._rewards_sum.append(bus._rl_agent._reward_sum)
 
         # TODO: this is hardcoded for one bus

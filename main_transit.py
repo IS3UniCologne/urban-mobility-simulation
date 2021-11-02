@@ -235,7 +235,7 @@ timetable.import_timetable()
 ActionSpace.init(actions)
 
 
-def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = None, replay_buffer = None, target_net_update_counter = 0):
+def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = None, replay_buffer = None, episode = 1):
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -276,7 +276,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     # # # # # # # # # # # # # # # # # # # # # #
 
     # Operator Modules
-    operator = PublicTransitOperator(env, timetable, weights, replay_buffer, target_net_update_counter)
+    operator = PublicTransitOperator(env, timetable, weights, replay_buffer, episode)
     search_engine = operator
     payment_engine = operator
     vehicle_assignment_engine = operator
@@ -349,30 +349,28 @@ def run(experiment=None, **kwargs):
 
     w = nn_weights # weights
     b = None # replay buffer
-    c = 0 # update counter
+    e = 1 # episode counter
     episode_returns = []
 
     for i in tqdm(range(episodes), total=episodes):
 
         operator, world, payment_engine, service_level = run_single_simulation(
-            start_time=15*60, end_time=17*60, weights=w, replay_buffer=b, target_net_update_counter=c)
+            start_time=15*60, end_time=17*60, weights=w, replay_buffer=b, episode=e)
 
-        if len(operator._rl_agent_replay_buffer) >= 1000:
-            logging.debug(f'Episode {str(i)}: Training happened.')
+        w = operator._rl_agent_weights
+        b = operator._rl_agent_replay_buffer
+        e = operator._rl_agent_episode
 
         if not kwargs:
-            episode_returns.append(deepcopy({'episode': i,
+            episode_returns.append(deepcopy({'episode': e,
                                              'return': operator._rewards_sum[-1],
                                              'service_level': service_level}))
         else:
             # extend return by experiment parameters
             episode_returns.append({**kwargs,
-                                    **deepcopy({'episode': i,
+                                    **deepcopy({'episode': e,
                                                 'return': operator._rewards_sum[-1],
                                                 'service_level': service_level})})
-        w = operator._rl_agent_weights
-        b = operator._rl_agent_replay_buffer
-        c = operator._rl_agent_update_counter
 
         if track:
             import folium
@@ -408,9 +406,9 @@ def run(experiment=None, **kwargs):
                 d.add_to(m)
             t.add_to(m)
             if not kwargs:
-                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}.html'))
+                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(e)}.html'))
             else:
-                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}_{experiments}.html'))
+                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(e)}_{experiments}.html'))
 
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 

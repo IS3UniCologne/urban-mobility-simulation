@@ -60,8 +60,11 @@ class ModifiedTensorBoard(TensorBoard):
 
 
 class DQN(RLAgent):
-    def __init__(self, env: simpy.Environment, state_dims, weights: tuple, replay_buffer, target_net_update_counter):
+    def __init__(self, env: simpy.Environment, state_dims, weights: tuple, replay_buffer, episode = 1):
         super(DQN, self).__init__(env)
+
+        self._episode = episode # starting from 1
+        self._action_space = ActionSpace.instance()
 
         # Configuration
         self._alpha = self._config.transit_agent_config.alpha
@@ -77,16 +80,15 @@ class DQN(RLAgent):
 
         # TODO: put values below in config?
         self._eps_min = 0.001
-        self._replay_buffer_size = 50000
-        self._min_experience = 5000 # steps in replay buffer before training starts
+        self._replay_buffer_size = 500 # size in episodes
+        self._min_experience = 100 # episodes in replay buffer before training starts
         self._minibatch_size = 50 # training minibatch size
-        self._target_net_update_counter = target_net_update_counter
-        self._target_net_update_threshold = 1000 # steps before eval net weights are propagated to target net
+        self._target_net_update_threshold = 1000 # training steps before q net weights are propagated to target q net
         self._timelimit = 60 # timelimit for dynamic route in minutes
 
-        # self._learning_rate = 0.001 # adam learning rate (default: 0.001)
         # decay exponentially from 0.01 to ~0.001 over 50k steps (~ 1000 episodes)
         # initial_learning_rate * decay_rate ^ (step / decay_steps)
+        # self._learning_rate = 0.001 # adam learning rate (default: 0.001)
         self._learning_rate = ExponentialDecay(
             initial_learning_rate=0.01,
             decay_steps=50000,
@@ -113,15 +115,9 @@ class DQN(RLAgent):
                 self._target_q_net.load_weights(weights)
             else:
                 # weights array from previous episode is given
-                # so we propagate weights from q net to target q net every episode
                 eval_weights, target_weights = weights
                 self._q_net.set_weights(eval_weights)
-
-                if self._target_net_update_counter >= self._target_net_update_threshold:
-                    self._target_q_net.set_weights(eval_weights)
-                    self._target_net_update_counter = 0
-                else:
-                    self._target_q_net.set_weights(target_weights)
+                self._target_q_net.set_weights(target_weights)
         else:
             logging.debug(self._q_net.summary(),
                           extra={"clazz": self.__class__.__name__, "oid": ""})
@@ -131,11 +127,16 @@ class DQN(RLAgent):
 
         # Experience Replay
         if replay_buffer is not None:
-            self._replay_buffer = replay_buffer
+            if isinstance(replay_buffer, deque):
+                self._replay_buffer = replay_buffer
+            else:
+                # use list as long as buffer size is not reached, then use deque
+                if self._episode <= self._replay_buffer_size:
+                    self._replay_buffer = replay_buffer
+                else:
+                    self._replay_buffer = deque(replay_buffer, maxlen=len(replay_buffer))
         else:
-            self._replay_buffer = deque(maxlen=self._replay_buffer_size)
-
-        self._action_space = ActionSpace.instance()
+            self._replay_buffer = []
 
     def _create_model(self, input_dims):
         model = keras.Sequential()
@@ -190,22 +191,22 @@ class DQN(RLAgent):
 
             if terminal:
                 if self._eps > self._eps_min:
-                    self._eps *= self._eps_decay
+                    self._eps *= self._eps_decay # decay epsilon at end of episode
                     self._eps = max(self._eps_min, self._eps)
                 break
 
         # retain decayed epsilon
         self._config.transit_agent_config.eps = self._eps
         logging.debug(f'Saving decayed epsilon into config: {str(self._eps)}',
-                      extra={"clazz": self.__class__.__name__, "oid": bus.id})
+                      extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})
 
         # retain optimizer steps for decayed learning rate
         self._config.transit_agent_config.optimizer = self._optimizer
         logging.debug(f'Saving decayed learning rate into config: {str(self._learning_rate(self._optimizer.iterations))}',
-                      extra={"clazz": self.__class__.__name__, "oid": bus.id})
+                      extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})
 
         logging.debug(f'Current Replay Buffer size: {str(len(self._replay_buffer))}',
-                      extra={"clazz": self.__class__.__name__, "oid": bus.id})
+                      extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})
 
         # clean up processes
         bus._state_update_process.interrupt()
@@ -226,10 +227,11 @@ class DQN(RLAgent):
                 # already terminated
                 pass
 
+        # retain parameters
         bus._has_reached_terminal.succeed((self._q_net,
                                            self._target_q_net,
                                            self._replay_buffer,
-                                           self._target_net_update_counter))
+                                           self._episode + 1))
 
     def _track(self, bus: Bus):
 
@@ -239,7 +241,7 @@ class DQN(RLAgent):
         bus._agent_completed_step = self._env.event()
 
     def _train(self, terminal_state: bool):
-        if len(self._replay_buffer) >= self._min_experience:
+        if self._episode >= self._min_experience:
             minibatch = random.sample(self._replay_buffer, self._minibatch_size)
             # minibatch = self._random.choice(self._replay_buffer, self._minibatch_size, replace=False)
 
@@ -274,11 +276,8 @@ class DQN(RLAgent):
             self._q_net.fit(np.array(X), np.array(y), batch_size=self._minibatch_size, verbose=0, shuffle=False,
                             callbacks=[self._tensorboard] if terminal_state else None)
 
-            self._target_net_update_counter += 1
-
-            if self._target_net_update_counter >= self._target_net_update_threshold:
+            if self._optimizer.iterations % self._target_net_update_threshold == 0:
                 self._target_q_net.set_weights(self._q_net.get_weights())
-                self._target_net_update_counter = 0
 
     @tf.function
     def _target_predict(self, state):
