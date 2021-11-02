@@ -31,18 +31,19 @@ if __name__ == "__main__":
     """
 
     # define experiments with kwargs
-    # experiments = [
-    #     {'penalty': 45},
-    #     {'penalty': 45},
-    #     {'penalty': 35},
-    #     {'penalty': 35},
+    experiments = [
+        {'penalty': 0},
+        {'penalty': 5},
+        {'penalty': 10},
+        {'penalty': 15},
+        {'penalty': 20}
     #     {'penalty': 25},
     #     {'penalty': 25},
     #     {'penalty': 20},
     #     {'penalty': 20},
     #     {'penalty': 15},
     #     {'penalty': 15}
-    # ]
+    ]
 
     # experiments = [
     #     {'q_net_layer': (32,32)},
@@ -54,7 +55,7 @@ if __name__ == "__main__":
     # ]
 
     # or just run average experiments by using range with the number you like
-    experiments = range(5)
+    # experiments = range(5)
 
     if type(experiments) is range:
         results = pqdm(experiments,
