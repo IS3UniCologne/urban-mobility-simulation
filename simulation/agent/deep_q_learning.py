@@ -60,7 +60,7 @@ class ModifiedTensorBoard(TensorBoard):
 
 
 class DQN(RLAgent):
-    def __init__(self, env: simpy.Environment, state_dims, weights: tuple, replay_buffer, target_net_update_counter, step=0):
+    def __init__(self, env: simpy.Environment, state_dims, weights: tuple, replay_buffer, target_net_update_counter):
         super(DQN, self).__init__(env)
 
         # Configuration
@@ -77,15 +77,16 @@ class DQN(RLAgent):
 
         # TODO: put values below in config?
         self._eps_min = 0.001
-        self._replay_buffer_size = 25000
+        self._replay_buffer_size = 50000
         self._min_experience = 5000 # steps in replay buffer before training starts
-        self._minibatch_size = 32 # training minibatch size
+        self._minibatch_size = 50 # training minibatch size
         self._target_net_update_counter = target_net_update_counter
-        self._target_net_update_threshold = 2000 # steps before eval net weights are propagated to target net
+        self._target_net_update_threshold = 1000 # steps before eval net weights are propagated to target net
         self._timelimit = 60 # timelimit for dynamic route in minutes
 
         # self._learning_rate = 0.001 # adam learning rate (default: 0.001)
         # decay exponentially from 0.01 to ~0.001 over 50k steps (~ 1000 episodes)
+        # initial_learning_rate * decay_rate ^ (step / decay_steps)
         self._learning_rate = ExponentialDecay(
             initial_learning_rate=0.01,
             decay_steps=50000,
@@ -178,8 +179,8 @@ class DQN(RLAgent):
             # TODO: this is still optimistic, bus needs to move between hexagons, not euclidean/haversine
             remaining_time = self._timelimit - (self._env.now - bus._spawned)
             timeto_destination = (bus.position >> bus.route.destination) / bus._velocity
-            # unreachable_destination = True if remaining_time < timeto_destination else False
-            unreachable_destination = False # JUST FOR DEBUGGING
+            unreachable_destination = True if remaining_time < timeto_destination else False
+            # unreachable_destination = False # JUST FOR DEBUGGING
 
             terminal = reached_timelimit or reached_destination or unreachable_destination
 
@@ -359,8 +360,8 @@ class DQN(RLAgent):
         # TODO: this is still optimistic, bus needs to move between hexagons, not euclidean/haversine
         remaining_time = self._timelimit - (self._env.now - bus._spawned)
         timeto_destination = (bus.position >> bus.route.destination) / bus._velocity
-        # unreachable_destination = True if remaining_time < timeto_destination else False
-        unreachable_destination = False # JUST FOR DEBUGGING
+        unreachable_destination = True if remaining_time < timeto_destination else False
+        # unreachable_destination = False # JUST FOR DEBUGGING
         if unreachable_destination:
             logging.info(f'Episode is cancelled, destination is unreachable within time limit',
                          extra={"clazz": self.__class__.__name__, "oid": ""})

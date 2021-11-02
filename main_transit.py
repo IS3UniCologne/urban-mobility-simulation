@@ -433,6 +433,12 @@ def run(experiment=None, **kwargs):
                      alpha=.5,
                      color=['black', 'green'],
                      title=f'Experiment: {experiments}')
+        try:
+            for k, v in kwargs.items():
+                returns[k] = v
+        except Exception as e:
+            print('cant append experiment params to returns DF')
+            print(e)
     plt.show()
 
     return returns
