@@ -412,10 +412,12 @@ def run(experiment=None, **kwargs):
             else:
                 m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(i)}_{experiments}.html'))
 
+    strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
     if not kwargs:
-        weights_path = f'{str(episodes)}_episodes_weights_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.keras'
+        weights_path = f'{str(episodes)}_episodes_weights_{strf}.keras'
     else:
-        weights_path = f'{str(episodes)}_episodes_{experiments}_experiment_weights_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.keras'
+        weights_path = f'{str(episodes)}_episodes_{experiments}_experiment_weights_{strf}.keras'
 
     operator._rl_agent_model.save_weights(
         os.path.join(output_folder, weights_path)
@@ -423,6 +425,8 @@ def run(experiment=None, **kwargs):
 
     returns = pd.DataFrame.from_records(episode_returns)
     returns = returns.set_index(returns['episode'])[['return', 'service_level']]
+    returns.to_csv(os.path.join(output_folder, f'{str(episodes)}_episodes_returns_{strf}.csv'))
+
     if not kwargs:
         returns.plot(secondary_y=['service_level'],
                      alpha=.5,
