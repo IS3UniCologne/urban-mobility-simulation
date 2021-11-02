@@ -265,6 +265,9 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                     self._rl_agent_weights, self._rl_agent_replay_buffer, self._rl_agent_update_counter)
         bus = Bus(self._env, route, init_position, agent, corridor)
 
+        self._timestamped_position['geometry']['coordinates'].append(init_position.getExactLocation(geojson=True))
+        self._timestamped_position['properties']['times'].append(int(self._time.now() * 60000))
+
         return bus
 
     def _clean_up_bus(self, bus: Bus):
