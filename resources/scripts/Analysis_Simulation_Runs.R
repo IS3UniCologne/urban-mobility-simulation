@@ -5,7 +5,7 @@ library(dplyr)
 library(tidyr)
 
 # Read Data
-data_path = "/Users/demircanm/Desktop/all_simulation_results.csv"
+data_path = "/Users/demircanm/sciebo/IS3/Research_Projects/HeterogeneousFleetManagement/01_Fleet_Sizing/3_Figures/ECIS_Sim_Results/all_simulation_results_ec_0_99_.csv"
 data <- read.csv(data_path)
 
 # Scale Distance and Duration
@@ -49,65 +49,65 @@ summary
 
 # Format String to Latex Table
 total_revenue_str <- "Exp. Total Revenue (€) & %s & %s & %s & %s && %s & %s & %s &%s \\\\"
-total_ks_revenue_str <- "\\hspace{3.5ex}Exp. Kick Scooter Revenue (€) & %s & %s & %s & %s && %s & %s & %s &%s \\\\"
-total_s_revenue_str <- "\\hspace{3.5ex}Exp. Scooter Revenue (€) & %s & %s & %s & %s && %s & %s & %s &%s \\\\"
-total_c_revenue_str <- "\\hspace{3.5ex}Exp. Car Revenue (€) & %s & %s & %s & %s && %s & %s & %s &%s \\\\"
+total_ks_revenue_str <- "\\hspace{3.5ex}By Kick Scooter (€) & %s & %s & %s & %s && %s & %s & %s &%s \\\\"
+total_s_revenue_str <- "\\hspace{3.5ex}By Scooter (€) & %s & %s & %s & %s && %s & %s & %s &%s \\\\"
+total_c_revenue_str <- "\\hspace{3.5ex}By Car (€) & %s & %s & %s & %s && %s & %s & %s &%s \\\\"
 total_profit_str <- "Exp. Total Profit (€) & %s & %s & %s & %s && %s & %s & %s &%s \\\\"
 service_qual_str <- "Exp. Service Quality & %s & %s & %s & %s && %s & %s & %s &%s \\\\"
 
 # Revenue
-total_revenue_str_fr <- sprintf(total_revenue_str, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_total_revenue,0),
-        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_total_revenue,0),
-        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_total_revenue,0),
-        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_total_revenue,0),
-        round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_total_revenue,0),
-        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_total_revenue,0),
-        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_total_revenue,0),
-        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_total_revenue,0)
-        )
+total_revenue_str_fr <- sprintf(total_revenue_str, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_total_revenue,0),nsmall=0, big.mark=","),
+                                format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_total_revenue,0),nsmall=0, big.mark=","),
+                                format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_total_revenue,0),nsmall=0, big.mark=","),
+                                format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_total_revenue,0),nsmall=0, big.mark=","),
+                                format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_total_revenue,0),nsmall=0, big.mark=","),
+                                format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_total_revenue,0),nsmall=0, big.mark=","),
+                                format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_total_revenue,0),nsmall=0, big.mark=","),
+                                format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_total_revenue,0), nsmall=0, big.mark=",")
+)
 
 # Kick Scooter Revenue
-total_ks_revenue_str_fr <- sprintf(total_ks_revenue_str, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_rev_ks,0),
-                                round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_rev_ks,0),
-                                round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_rev_ks,0),
-                                round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_rev_ks,0),
-                                round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_rev_ks,0),
-                                round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_rev_ks,0),
-                                round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_rev_ks,0),
-                                round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_rev_ks,0)
+total_ks_revenue_str_fr <- sprintf(total_ks_revenue_str, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_rev_ks,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_rev_ks,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_rev_ks,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_rev_ks,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_rev_ks,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_rev_ks,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_rev_ks,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_rev_ks,0),nsmall=0, big.mark=",")
 )
 
 # Scooter Revenue
-total_s_revenue_str_fr <- sprintf(total_s_revenue_str, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_rev_s,0),
-                                  round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_rev_s,0),
-                                  round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_rev_s,0),
-                                  round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_rev_s,0),
-                                  round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_rev_s,0),
-                                  round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_rev_s,0),
-                                  round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_rev_s,0),
-                                  round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_rev_s,0)
+total_s_revenue_str_fr <- sprintf(total_s_revenue_str, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_rev_s,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_rev_s,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_rev_s,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_rev_s,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_rev_s,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_rev_s,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_rev_s,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_rev_s,0),nsmall=0, big.mark=",")
 )
 
 # Car Revenue
-total_c_revenue_str_fr <- sprintf(total_c_revenue_str, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_rev_c,0),
-                                  round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_rev_c,0),
-                                  round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_rev_c,0),
-                                  round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_rev_c,0),
-                                  round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_rev_c,0),
-                                  round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_rev_c,0),
-                                  round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_rev_c,0),
-                                  round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_rev_c,0)
+total_c_revenue_str_fr <- sprintf(total_c_revenue_str, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_rev_c,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_rev_c,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_rev_c,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_rev_c,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_rev_c,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_rev_c,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_rev_c,0),nsmall=0, big.mark=","),
+                                  format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_rev_c,0),nsmall=0, big.mark=",")
 )
 
 # Profit
-total_profit_str_fr <- sprintf(total_profit_str, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_total_profit,0),
-                                round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_total_profit,0),
-                                round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_total_profit,0),
-                                round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_total_profit,0),
-                                round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_total_profit,0),
-                                round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_total_profit,0),
-                                round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_total_profit,0),
-                                round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_total_profit,0)
+total_profit_str_fr <- sprintf(total_profit_str, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_total_profit,0), nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_total_profit,0), nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_total_profit,0), nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_total_profit,0), nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_total_profit,0),nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_total_profit,0),nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_total_profit,0),nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_total_profit,0), nsmall=0, big.mark=",")
 )
 
 # Service Quality
@@ -120,7 +120,7 @@ service_qual_str_fr<- sprintf(service_qual_str, round(summary %>% filter(subs_ba
                                round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_service_quality,2),
                                round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_service_quality,2)
 )
-
+service_qual_str_fr
 # Copy this output to latex file
 out <- paste(total_revenue_str_fr,total_ks_revenue_str_fr, total_s_revenue_str_fr, total_c_revenue_str_fr, total_profit_str_fr, service_qual_str_fr)
 # Output for Latex (removes espacing char e.g., backslash)
@@ -161,126 +161,126 @@ exp_dur_s = "\\hspace{3.5ex}Scooter Trip Duration & %s & %s & %s & %s && %s & %s
 exp_dur_c = "\\hspace{3.5ex}Car Trip Duration & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
 
 # Total Trips
-exp_daily_trips_fr <- sprintf(exp_daily_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_total_trips,0),
-                                round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_total_trips,0),
-                                round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_total_trips,0),
-                                round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_total_trips,0),
-                                round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_total_trips,0),
-                                round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_total_trips,0),
-                                round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_total_trips,0),
-                                round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_total_trips,0)
+exp_daily_trips_fr <- sprintf(exp_daily_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_total_trips,0), nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_total_trips,0), nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_total_trips,0), nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_total_trips,0), nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_total_trips,0), nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_total_trips,0), nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_total_trips,0), nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_total_trips,0), nsmall=0, big.mark=",")
 )
 
 # Total Missed Trips
-exp_daily_missed_trips_fr <- sprintf(exp_daily_missed_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_total_missed_trips,0),
-                              round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_total_missed_trips,0),
-                              round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_total_missed_trips,0),
-                              round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_total_missed_trips,0),
-                              round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_total_missed_trips,0),
-                              round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_total_missed_trips,0),
-                              round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_total_missed_trips,0),
-                              round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_total_missed_trips,0)
+exp_daily_missed_trips_fr <- sprintf(exp_daily_missed_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_total_missed_trips,0), nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_total_missed_trips,0),nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_total_missed_trips,0),nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_total_missed_trips,0),nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_total_missed_trips,0),nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_total_missed_trips,0),nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_total_missed_trips,0),nsmall=0, big.mark=","),
+                              format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_total_missed_trips,0),nsmall=0, big.mark=",")
 )
 
 #####################
 # Kick Scooter Trips
 #####################
-exp_ks_trips_fr <- sprintf(exp_ks_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_ks_ks,0),
-                                     round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ks_ks,0),
-                                     round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ks_ks,0),
-                                     round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ks_ks,0),
-                                     round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ks_ks,0),
-                                     round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ks_ks,0),
-                                     round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ks_ks,0),
-                                     round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ks_ks,0)
+exp_ks_trips_fr <- sprintf(exp_ks_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_ks_ks,0),nsmall=0, big.mark=","),
+                                     format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ks_ks,0),nsmall=0, big.mark=","),
+                                     format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ks_ks,0),nsmall=0, big.mark=","),
+                                     format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ks_ks,0),nsmall=0, big.mark=","),
+                                     format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ks_ks,0),nsmall=0, big.mark=","),
+                                     format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ks_ks,0),nsmall=0, big.mark=","),
+                                     format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ks_ks,0),nsmall=0, big.mark=","),
+                                     format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ks_ks,0),nsmall=0, big.mark=",")
 )
 
 # KS trips that have been done with Scooter
-exp_ks_s_trips_fr <- sprintf(exp_ks_s_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_ks_s,0),
-                             round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ks_s,0),
-                             round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ks_s,0),
-                             round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ks_s,0),
-                             round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ks_s,0),
-                             round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ks_s,0),
-                             round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ks_s,0),
-                             round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ks_s,0)
+exp_ks_s_trips_fr <- sprintf(exp_ks_s_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_ks_s,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ks_s,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ks_s,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ks_s,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ks_s,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ks_s,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ks_s,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ks_s,0),nsmall=0, big.mark=",")
 )
 
 # KS trips that have been done with Scooter
-exp_ks_c_trips_fr <- sprintf(exp_ks_c_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_ks_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ks_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ks_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ks_c,0),
-                             round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ks_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ks_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ks_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ks_c,0)
+exp_ks_c_trips_fr <- sprintf(exp_ks_c_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_ks_c,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ks_c,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ks_c,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ks_c,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ks_c,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ks_c,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ks_c,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ks_c,0),nsmall=0, big.mark=",")
 )
 
 #####################
 # Scooter Trips
 #####################
-exp_s_trips_fr <- sprintf(exp_s_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_s_s,0),
-                           round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_s_s,0),
-                           round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_s_s,0),
-                           round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_s_s,0),
-                           round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_s_s,0),
-                           round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_s_s,0),
-                           round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_s_s,0),
-                           round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_s_s,0)
+exp_s_trips_fr <- sprintf(exp_s_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_s_s,0),nsmall=0, big.mark=","),
+                           format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_s_s,0),nsmall=0, big.mark=","),
+                           format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_s_s,0),nsmall=0, big.mark=","),
+                           format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_s_s,0),nsmall=0, big.mark=","),
+                           format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_s_s,0),nsmall=0, big.mark=","),
+                           format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_s_s,0),nsmall=0, big.mark=","),
+                           format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_s_s,0),nsmall=0, big.mark=","),
+                           format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_s_s,0),nsmall=0, big.mark=",")
 )
 
-exp_s_ks_trips_fr <- sprintf(exp_s_ks_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_s_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_s_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_s_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_s_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_s_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_s_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_s_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_s_ks,0)
+exp_s_ks_trips_fr <- sprintf(exp_s_ks_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_s_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_s_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_s_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_s_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_s_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_s_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_s_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_s_ks,0),nsmall=0, big.mark=",")
 )
 
-exp_s_c_trips_fr <- sprintf(exp_s_c_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_s_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_s_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_s_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_s_c,0),
-                             round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_s_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_s_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_s_c,0),
-                             round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_s_c,0)
+exp_s_c_trips_fr <- sprintf(exp_s_c_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_s_c,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_s_c,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_s_c,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_s_c,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_s_c,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_s_c,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_s_c,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_s_c,0),nsmall=0, big.mark=",")
 )
 
 #####################
 # Car Trips
 #####################
-exp_c_trips_fr <- sprintf(exp_c_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_c_c,0),
-                          round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_c_c,0),
-                          round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_c_c,0),
-                          round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_c_c,0),
-                          round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_c_c,0),
-                          round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_c_c,0),
-                          round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_c_c,0),
-                          round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_c_c,0)
+exp_c_trips_fr <- sprintf(exp_c_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_c_c,0),nsmall=0, big.mark=","),
+                          format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_c_c,0),nsmall=0, big.mark=","),
+                          format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_c_c,0),nsmall=0, big.mark=","),
+                          format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_c_c,0),nsmall=0, big.mark=","),
+                          format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_c_c,0),nsmall=0, big.mark=","),
+                          format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_c_c,0),nsmall=0, big.mark=","),
+                          format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_c_c,0),nsmall=0, big.mark=","),
+                                 format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_c_c,0),nsmall=0, big.mark=",")
 )
 
-exp_c_ks_trips_fr <- sprintf(exp_c_ks_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_c_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_c_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_c_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_c_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_c_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_c_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_c_ks,0),
-                             round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_c_ks,0)
+exp_c_ks_trips_fr <- sprintf(exp_c_ks_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_c_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_c_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_c_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_c_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_c_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_c_ks,0),nsmall=0, big.mark=","),
+                             format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_c_ks,0),nsmall=0, big.mark=","),
+                                    format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_c_ks,0),nsmall=0, big.mark=",")
 )
 
-exp_c_s_trips_fr <- sprintf(exp_c_s_trips, round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_c_s,0),
-                            round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_c_s,0),
-                            round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_c_s,0),
-                            round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_c_s,0),
-                            round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_c_s,0),
-                            round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_c_s,0),
-                            round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_c_s,0),
-                            round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_c_s,0)
+exp_c_s_trips_fr <- sprintf(exp_c_s_trips, format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 1) %>% .$exp_c_s,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_c_s,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_c_s,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_c_s,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_c_s,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_c_s,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_c_s,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_c_s,0),nsmall=0, big.mark=",")
 )
 
 ### Duration 
@@ -289,44 +289,44 @@ exp_dur_ks = "\\hspace{3.5ex}By Kick Scooter & %s & %s & %s & %s && %s & %s & %s
 exp_dur_s = "\\hspace{3.5ex}By Scooter & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
 exp_dur_c = "\\hspace{3.5ex}By Car & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
 
-exp_dur_total_fr <- sprintf(exp_dur_total, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dur_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dur_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dur_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dur_total,0),
-                            round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dur_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dur_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dur_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dur_total,0)
+exp_dur_total_fr <- sprintf(exp_dur_total, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dur_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dur_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dur_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dur_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dur_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dur_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dur_total,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dur_total,0),nsmall=0, big.mark=",")
 )
 
-exp_dur_ks_fr <- sprintf(exp_dur_ks, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dur_ks,0),
-                            round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dur_ks,0),
-                            round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dur_ks,0),
-                            round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dur_ks,0),
-                            round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dur_ks,0),
-                            round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dur_ks,0),
-                            round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dur_ks,0),
-                            round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dur_ks,0)
+exp_dur_ks_fr <- sprintf(exp_dur_ks, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dur_ks,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dur_ks,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dur_ks,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dur_ks,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dur_ks,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dur_ks,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dur_ks,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dur_ks,0),nsmall=0, big.mark=",")
 )
 
-exp_dur_s_fr <- sprintf(exp_dur_s, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dur_s,0),
-                         round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dur_s,0),
-                         round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dur_s,0),
-                         round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dur_s,0),
-                         round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dur_s,0),
-                         round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dur_s,0),
-                         round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dur_s,0),
-                         round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dur_s,0)
+exp_dur_s_fr <- sprintf(exp_dur_s, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dur_s,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dur_s,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dur_s,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dur_s,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dur_s,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dur_s,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dur_s,0),nsmall=0, big.mark=","),
+                                format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dur_s,0),nsmall=0, big.mark=",")
 )
 
-exp_dur_c_fr <- sprintf(exp_dur_c, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dur_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dur_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dur_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dur_c,0),
-                        round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dur_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dur_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dur_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dur_c,0)
+exp_dur_c_fr <- sprintf(exp_dur_c, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dur_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dur_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dur_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dur_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dur_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dur_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dur_c,0),nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dur_c,0),nsmall=0, big.mark=",")
 )
 
 ### Distance 
@@ -335,46 +335,45 @@ exp_dis_ks = "\\hspace{3.5ex}By Kick Scooter & %s & %s & %s & %s && %s & %s & %s
 exp_dis_s = "\\hspace{3.5ex}By Scooter & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
 exp_dis_c = "\\hspace{3.5ex}By Car & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
 
-exp_dis_total_fr <- sprintf(exp_dis_total, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dis_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dis_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dis_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dis_total,0),
-                            round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dis_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dis_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dis_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dis_total,0)
+exp_dis_total_fr <- sprintf(exp_dis_total, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dis_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dis_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dis_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dis_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dis_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dis_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dis_total,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dis_total,0),nsmall=0, big.mark=",")
 )
 
-exp_dis_ks_fr <- sprintf(exp_dis_ks, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dis_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dis_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dis_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dis_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dis_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dis_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dis_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dis_ks,0)
+exp_dis_ks_fr <- sprintf(exp_dis_ks, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dis_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dis_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dis_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dis_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dis_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dis_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dis_ks,0),nsmall=0, big.mark=","),
+                                format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dis_ks,0),nsmall=0, big.mark=",")
 )
 
-exp_dis_s_fr <- sprintf(exp_dis_s, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dis_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dis_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dis_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dis_s,0),
-                        round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dis_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dis_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dis_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dis_s,0)
+exp_dis_s_fr <- sprintf(exp_dis_s, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dis_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dis_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dis_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dis_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dis_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dis_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dis_s,0),nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dis_s,0),nsmall=0, big.mark=",")
 )
 
-exp_dis_c_fr <- sprintf(exp_dis_c, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dis_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dis_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dis_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dis_c,0),
-                        round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dis_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dis_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dis_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dis_c,0)
+exp_dis_c_fr <- sprintf(exp_dis_c, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_dis_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_dis_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_dis_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_dis_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_dis_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_dis_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_dis_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dis_c,0),nsmall=0, big.mark=",")
 )
-
 
 ### Energy Consumption 
 exp_ec_total = " Total Energy Consumption (kWh) & %s &  %s &  %s &  %s &&  %s &  %s & %s & %s \\\\"
@@ -382,44 +381,44 @@ exp_ec_ks = "\\hspace{3.5ex}By Kick Scooter & %s & %s & %s & %s && %s & %s & %s 
 exp_ec_s = "\\hspace{3.5ex}By Scooter & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
 exp_ec_c = "\\hspace{3.5ex}By Car & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
 
-exp_ec_total_fr <- sprintf(exp_ec_total, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_ec_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ec_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ec_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ec_total,0),
-                            round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ec_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ec_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ec_total,0),
-                            round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ec_total,0)
+exp_ec_total_fr <- sprintf(exp_ec_total, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_ec_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ec_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ec_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ec_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ec_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ec_total,0),nsmall=0, big.mark=","),
+                            format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ec_total,0),nsmall=0, big.mark=","),
+                                   format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ec_total,0),nsmall=0, big.mark=",")
 )
 
-exp_ec_ks_fr <- sprintf(exp_ec_ks, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_ec_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ec_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ec_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ec_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ec_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ec_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ec_ks,0),
-                         round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ec_ks,0)
+exp_ec_ks_fr <- sprintf(exp_ec_ks, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_ec_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ec_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ec_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ec_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ec_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ec_ks,0),nsmall=0, big.mark=","),
+                         format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ec_ks,0),nsmall=0, big.mark=","),
+                                format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ec_ks,0),nsmall=0, big.mark=",")
 )
 
-exp_ec_s_fr <- sprintf(exp_ec_s, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_ec_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ec_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ec_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ec_s,0),
-                        round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ec_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ec_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ec_s,0),
-                        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ec_s,0)
+exp_ec_s_fr <- sprintf(exp_ec_s, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_ec_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ec_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ec_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ec_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ec_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ec_s,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ec_s,0),nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ec_s,0), nsmall=0, big.mark=",")
 )
 
-exp_ec_c_fr <- sprintf(exp_ec_c, round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_ec_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ec_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ec_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ec_c,0),
-                        round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ec_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ec_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ec_c,0),
-                        round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ec_c,0)
+exp_ec_c_fr <- sprintf(exp_ec_c, format(round(summary %>% filter(subs_bandwidth== 0, price_sensitive_pop_prob == 1) %>% .$exp_ec_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 1) %>% .$exp_ec_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 1) %>% .$exp_ec_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 1) %>% .$exp_ec_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0, price_sensitive_pop_prob == 0) %>% .$exp_ec_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.05, price_sensitive_pop_prob == 0) %>% .$exp_ec_c,0),nsmall=0, big.mark=","),
+                        format(round(summary %>% filter(subs_bandwidth==0.1, price_sensitive_pop_prob == 0) %>% .$exp_ec_c,0),nsmall=0, big.mark=","),
+                               format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_ec_c,0),nsmall=0, big.mark=",")
 )
 
 # Concat Partial Strings
@@ -439,14 +438,13 @@ cat(out)
 
 data$subs_bandwidth_adj <- data$subs_bandwidth*100
 
-revenue_reg <- lm(log(total_revenue) ~ subs_bandwidth_adj*price_sensitive_pop_prob, data)
-sq_reg <- lm(log(service_quality) ~ subs_bandwidth_adj*price_sensitive_pop_prob, data)
-cars_reg <- lm(log(SharedCar_SharedCar) ~ subs_bandwidth_adj*price_sensitive_pop_prob, data)
-ks_reg <- lm(log(SharedKickScooter_SharedKickScooter) ~ subs_bandwidth_adj*price_sensitive_pop_prob, data)
-s_reg <- lm(log(SharedScooter_SharedScooter) ~ subs_bandwidth_adj*price_sensitive_pop_prob, data)
+data$subs_pop_factor <- 1.0-data$price_sensitive_pop_prob
 
+revenue_reg <- lm(log(total_revenue) ~ subs_bandwidth_adj*subs_pop_factor, data)
+sq_reg <- lm(log(service_quality) ~ subs_bandwidth_adj*subs_pop_factor, data)
+energy_consum_reg <- lm(log(energy_consumption_total) ~ subs_bandwidth_adj*subs_pop_factor, data)
 
-stargazer(revenue_reg, sq_reg, ks_reg, s_reg, cars_reg, column.labels = c("Economic","Environmental"),column.separate = c(2,3),
-          title="Regression Results", dep.var.labels=c("Revenue","Service Quality", "Kick Scooter Trips", "Scooter Trips", "Car Trips"),
-          covariate.labels=c("Substitution Boundary (SB)","Price-Sensitive Population (PSP)", "SB * PSP"),
+stargazer(revenue_reg, sq_reg, energy_consum_reg, column.labels = c("Economic","Environmental"),column.separate = c(2,1),
+          title="Regression Results", dep.var.labels=c("Revenue","Service Quality", "Energy Consumption"),
+          covariate.labels=c("Substitution Boundary (SB)","Sustainable Population (SUS)", "SB * SUS"),
           type="latex")
