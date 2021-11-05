@@ -81,7 +81,6 @@ class World:
     def demand_processes(self):
         return self._demand_processes
 
-
     def add_user(self, origin, destination):
         """
             Add a user agent to the world with an origin and a destination.
@@ -155,3 +154,20 @@ class World:
     @changed.setter
     def changed(self, event):
         self._changed = event
+
+    def stop_processes(self):
+        # stop demand generation
+        for d in self.demand_processes:
+            try:
+                d.interrupt()
+            except RuntimeError:
+                # already terminated
+                pass
+
+        # clean up user demands
+        for u in self.user_processes:
+            try:
+                u.interrupt()
+            except RuntimeError:
+                # already terminated
+                pass

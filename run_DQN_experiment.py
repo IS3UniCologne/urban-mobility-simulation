@@ -9,7 +9,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from pqdm.processes import pqdm
 import multiprocessing as mp
-from main_transit import run
+from main_transit import learn_agent
 
 # Change working directory to path of this file
 working_dir = Path(__file__).parent
@@ -31,19 +31,19 @@ if __name__ == "__main__":
     """
 
     # define experiments with kwargs
-    experiments = [
-        {'penalty': 0},
-        {'penalty': 5},
-        {'penalty': 10},
-        {'penalty': 15},
-        {'penalty': 20}
+    # experiments = [
+    #     {'penalty': 0},
+    #     {'penalty': 5},
+    #     {'penalty': 10},
+    #     {'penalty': 15},
+    #     {'penalty': 20}
     #     {'penalty': 25},
     #     {'penalty': 25},
     #     {'penalty': 20},
     #     {'penalty': 20},
     #     {'penalty': 15},
     #     {'penalty': 15}
-    ]
+    # ]
 
     # experiments = [
     #     {'q_net_layer': (32,32)},
@@ -55,11 +55,11 @@ if __name__ == "__main__":
     # ]
 
     # or just run average experiments by using range with the number you like
-    # experiments = range(5)
+    experiments = range(5)
 
     if type(experiments) is range:
         results = pqdm(experiments,
-                       run,
+                       learn_agent,
                        n_jobs=min(psutil.cpu_count(logical=False), len(experiments)),
                        mp_context=mp.get_context('spawn'))
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
         plt.show()
     else:
         results = pqdm(experiments,
-                       run,
+                       learn_agent,
                        argument_type='kwargs',
                        n_jobs=min(psutil.cpu_count(logical=False), len(experiments)),
                        mp_context=mp.get_context('spawn'))

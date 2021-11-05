@@ -62,26 +62,31 @@ class Bus(PublicTransitVehicle):
         self._geodesic_env = GeodesicEnvironment.getInstance()
         self._world = World.instance()
         self._corridor = corridor
-        self._corridor_dim = len(self._corridor)
-        self._corridor_sorted = sorted(self._corridor)
-
-        self._env_state = {}
-        # build position matrix: m[start hex][end hex] = 1 if bus is at hex start = end
-        # a 1d vector of corridor_dim would be sufficient, but we want to have the same format to
-        # bake the position into the input tensor as a secondary channel
-        position = np.zeros(self._corridor_dim, dtype=int)
-        pos = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
-        position[pos] = 1
-        self._env_state['position'] = position
-        self._env_state['demands'] = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
-        self._env_state['drivingtime'] = 0
 
         self._dropoffs = 0
 
         self._rl_agent = rl_agent
 
-        self._process = self._env.process(self._rl_agent.run(self))
-        self._state_update_process = self._env.process(self._update_state())
+        if rl_agent is None:
+            # use planned route logic
+            self._process = self._env.process(self._run())
+        else:
+            self._corridor_dim = len(self._corridor)
+            self._corridor_sorted = sorted(self._corridor)
+
+            self._env_state = {}
+            # build position matrix: m[start hex][end hex] = 1 if bus is at hex start = end
+            # a 1d vector of corridor_dim would be sufficient, but we want to have the same format to
+            # bake the position into the input tensor as a secondary channel
+            position = np.zeros(self._corridor_dim, dtype=int)
+            pos = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
+            position[pos] = 1
+            self._env_state['position'] = position
+            self._env_state['demands'] = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
+            self._env_state['drivingtime'] = 0
+
+            self._process = self._env.process(self._rl_agent.run(self))
+            self._state_update_process = self._env.process(self._update_state())
 
     def _run(self):
         """
@@ -127,7 +132,11 @@ class Bus(PublicTransitVehicle):
             # otherwise move on with driving
             yield self._env.process(self._move_to_next_stop())
 
-        self._has_reached_terminal.succeed()
+        # TODO: rework such that simulation is not halted when working outside of benchmark runs
+        # stop demand generation
+        self._world.stop_processes()
+
+        self._has_reached_terminal.succeed((None,)*4)
 
     def _move_to_next_stop(self):
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)

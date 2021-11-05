@@ -7,6 +7,7 @@ from copy import deepcopy
 import geopandas as gpd
 import logging
 
+import multiprocessing as mp
 from matplotlib import pyplot as plt
 import numpy
 import os
@@ -16,15 +17,15 @@ import simpy
 import sys
 
 import tensorflow as tf
+from pqdm.processes import pqdm
 from tensorboard import program
 from tqdm import tqdm
-
 
 from simulation.agent.action_space import ActionSpace
 from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator, EpisodicSemiGradientSarsa
 from simulation.agent.episodic_semi_gradient_n_step_sarsa import EpisodicSemiGradientNStepSarsa
 from simulation.agent.deep_q_learning import DQN, ModifiedTensorBoard
-from simulation.agent.user import User # must come before DemandFactory, otherwise circular imports
+from simulation.agent.user import User  # must come before DemandFactory, otherwise circular imports
 from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig, \
     TransitAgentConfig
 from simulation.operator.public_transit_operator import PublicTransitOperator
@@ -56,7 +57,7 @@ parser = ConfigParser()
 parser.read(sys.argv[1])
 
 # World Config
-spatial_res  = parser.getint("WORLD", "SPATIAL_RESOLUTION")
+spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
 temporal_res = parser.getint("WORLD", "TEMPORAL_RESOLUTION")
 daily_res = parser.getint("WORLD", "daily_resolution")
 
@@ -108,6 +109,7 @@ action_resolution = parser.get("BUS", "ACTION_SPACE_RESOLUTION")
 agent_alpha = parser.get("BUS", "ALPHA")
 agent_eps = parser.get("BUS", "EPS")
 agent_eps_decay = parser.get("BUS", "EPS_DECAY")
+agent_eps_min = parser.get("BUS", "EPS_MIN")
 agent_gamma = parser.get("BUS", "GAMMA")
 bootstrap_agent_n = parser.get("BUS", "N")
 agent_penalty = int(parser.get("BUS", "PENALTY"))
@@ -121,8 +123,9 @@ tensorboard = ModifiedTensorBoard(log_dir=logdir)
 
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
-bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_gamma,
-                                      bootstrap_agent_n, tensorboard, corridor, agent_penalty, q_net_layers)
+bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_eps_min,
+                                      agent_gamma, bootstrap_agent_n, tensorboard, corridor, agent_penalty,
+                                      q_net_layers)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -141,7 +144,8 @@ log_level = parser.get("SETTINGS", "log_level")
 
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p')
 
 logger = logging.getLogger()
 logger.setLevel(log_level)
@@ -155,6 +159,7 @@ logger.addFilter(cf_init)
 
 logging.info(f'Tensorboard logdir: {logdir}',
              extra={"clazz": __name__, "oid": ""})
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -170,7 +175,7 @@ def load_environment():
 
     filename = env_layer_hex_9
     with open(filename) as file:
-        env_df_hex_9 = gpd.read_file(file, driver= "GeoJSON")
+        env_df_hex_9 = gpd.read_file(file, driver="GeoJSON")
         env_df_hex_9.set_index('hex_id_9', inplace=True)
 
     filename = env_layer_hex_8
@@ -190,6 +195,7 @@ def load_environment():
     geodesic_environment.addLayer("hex_7", env_df_hex_7)
 
     return geodesic_environment
+
 
 # Load Spatial Environment
 load_environment()
@@ -235,8 +241,7 @@ timetable.import_timetable()
 ActionSpace.init(actions)
 
 
-def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = None, replay_buffer = None, episode = 1):
-
+def run_single_simulation(start_time=0, end_time=60, seed=4711, weights=None, replay_buffer=None, episode=1):
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Setup Simulation Environment.           #
@@ -301,7 +306,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     # Run Simulation.                         #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    env.run(until = end_time)
+    env.run(until=end_time)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -310,7 +315,7 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     # # # # # # # # # # # # # # # # # # # # # #
     try:
         service_level = payment_engine.total_fulfilled_trips / \
-                        (payment_engine.total_missed_trips+payment_engine.total_fulfilled_trips)
+                        (payment_engine.total_missed_trips + payment_engine.total_fulfilled_trips)
     except ZeroDivisionError:
         service_level = 0
     # print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
@@ -321,8 +326,42 @@ def run_single_simulation(start_time = 0, end_time = 60, seed = 4711, weights = 
     return operator, world, payment_engine, service_level
 
 
+def benchmark_agent(nn_weights = None, runs=100):
+
+    if nn_weights is None:
+        bus_agent_config.dumb = True
+    else:
+        bus_agent_config.evaluation = True
+
+    w = nn_weights  # weights
+    b = None  # replay buffer
+    e = 1  # episode counter
+    episode_returns = []
+
+    for i in tqdm(range(runs), total=runs):
+
+        operator, world, payment_engine, service_level = run_single_simulation(
+            start_time=15 * 60, end_time=17 * 60, weights=w, replay_buffer=b, episode=e)
+
+        if nn_weights is None:
+            episode_returns.append(deepcopy({'episode': e,
+                                             'type': 'benchmark (planned)',
+                                             'reached_destination': True,
+                                             'service_level': service_level}))
+        else:
+            episode_returns.append(deepcopy({'episode': e,
+                                             'type': 'DQN',
+                                             'reached_destination': True if operator._rewards_sum[-1] >= 0 else False,
+                                             'service_level': service_level}))
+
+        e += 1
+
+    returns = pd.DataFrame.from_records(episode_returns)
+    return returns
+
+
 # the experiment=None hack is to ensure a range works as well for pqdm
-def run(experiment=None, **kwargs):
+def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
     if kwargs:
         for k, v in kwargs.items():
             if k == 'penalty':
@@ -335,7 +374,7 @@ def run(experiment=None, **kwargs):
                 bus_agent_config.q_net_layer = v
 
         # list experiment params for paths
-        experiments = "_".join([str(k)+"="+str(v) for k, v in kwargs.items()])
+        experiments = "_".join([str(k) + "=" + str(v) for k, v in kwargs.items()])
 
         logdir_ = f'{logdir}/{experiments}'
         tensorboard_ = ModifiedTensorBoard(log_dir=logdir_)
@@ -347,15 +386,15 @@ def run(experiment=None, **kwargs):
         tensorboard_ = ModifiedTensorBoard(log_dir=logdir_)
         bus_agent_config.tensorboard = tensorboard_
 
-    w = nn_weights # weights
-    b = None # replay buffer
-    e = 1 # episode counter
+    w = nn_weights  # weights
+    b = None  # replay buffer
+    e = 1  # episode counter
     episode_returns = []
 
     for i in tqdm(range(episodes), total=episodes):
 
         operator, world, payment_engine, service_level = run_single_simulation(
-            start_time=15*60, end_time=17*60, weights=w, replay_buffer=b, episode=e)
+            start_time=15 * 60, end_time=17 * 60, weights=w, replay_buffer=b, episode=e)
 
         w = operator._rl_agent_weights
         b = operator._rl_agent_replay_buffer
@@ -400,8 +439,8 @@ def run(experiment=None, **kwargs):
             if operator._tracked_demands:
                 d = GeoJson({
                     'type': 'FeatureCollection',
-                    'features':[eval(template) for d in operator._tracked_demands]
-                }, style_function=lambda x:{'color': 'green'} if x['properties']['serviced'] else {'color': 'red'})
+                    'features': [eval(template) for d in operator._tracked_demands]
+                }, style_function=lambda x: {'color': 'green'} if x['properties']['serviced'] else {'color': 'red'})
 
                 d.add_to(m)
             t.add_to(m)
@@ -409,6 +448,8 @@ def run(experiment=None, **kwargs):
                 m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(e)}.html'))
             else:
                 m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(e)}_{experiments}.html'))
+
+            e += 1
 
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -443,8 +484,26 @@ def run(experiment=None, **kwargs):
             print(e)
     plt.show()
 
+    if prepare_benchmark:
+        return w
     return returns
 
 
 if __name__ == '__main__':
-    run()
+    # weights = learn_agent(prepare_benchmark=True)
+    weights = './data/output/5000_episodes_weights_20211102-204110.keras'
+    runs = 100
+    benchmark = [
+        {'nn_weights': None, 'runs': runs},
+        {'nn_weights': weights, 'runs': runs}
+    ]
+
+    results = pqdm(benchmark, benchmark_agent, n_jobs=2, argument_type='kwargs', mp_context=mp.get_context('spawn'))
+    results = pd.concat(results, ignore_index=False)
+
+    # results = benchmark_agent()
+    # nn_weights = './data/output/5000_episodes_weights_20211102-204110.keras'
+    # results = benchmark_agent(nn_weights)
+
+    strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    results.to_csv(os.path.join(output_folder, f'{str(runs)}_episodes_benchmark_{strf}.csv'))
