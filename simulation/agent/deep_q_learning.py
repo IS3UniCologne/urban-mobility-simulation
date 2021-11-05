@@ -69,8 +69,13 @@ class DQN(RLAgent):
         # Configuration
         self._alpha = self._config.transit_agent_config.alpha
         self._gamma = self._config.transit_agent_config.gamma
-        self._eps = self._config.transit_agent_config.eps
+        if self._config.transit_agent_config.evaluation:
+            self._eps = self._eps_min = 0
+        else:
+            self._eps_min = self._config.transit_agent_config.eps_min
+            self._eps = self._config.transit_agent_config.eps
         self._eps_decay = self._config.transit_agent_config.eps_decay
+        self._eps_min = self._config.transit_agent_config.eps_min
         self._tensorboard = self._config.transit_agent_config.tensorboard
         self._penalty = self._config.transit_agent_config.penalty
 
@@ -79,9 +84,8 @@ class DQN(RLAgent):
         self._q_net_layer = self._config.transit_agent_config.q_net_layer
 
         # TODO: put values below in config?
-        self._eps_min = 0.001
-        self._replay_buffer_size = 500 # size in episodes
-        self._min_experience = 100 # episodes in replay buffer before training starts
+        self._replay_buffer_size = 50 # size in episodes
+        self._min_experience = 5 # episodes in replay buffer before training starts
         self._minibatch_size = 50 # training minibatch size
         self._target_net_update_threshold = 1000 # training steps before q net weights are propagated to target q net
         self._timelimit = 60 # timelimit for dynamic route in minutes
@@ -187,7 +191,8 @@ class DQN(RLAgent):
 
             self._replay_buffer.append((state_processed, action_processed, reward, next_state_processed, terminal))
 
-            self._train(terminal)
+            if not self._config.transit_agent_config.evaluation:
+                self._train(terminal)
 
             if terminal:
                 if self._eps > self._eps_min:
@@ -212,26 +217,14 @@ class DQN(RLAgent):
         bus._state_update_process.interrupt()
 
         # stop demand generation
-        for d in bus._world.demand_processes:
-            try:
-                d.interrupt()
-            except RuntimeError:
-                # already terminated
-                pass
-
-        # clean up user demands
-        for u in bus._world.user_processes:
-            try:
-                u.interrupt()
-            except RuntimeError:
-                # already terminated
-                pass
+        bus._world.stop_processes()
 
         # retain parameters
+        # TODO: update target weights a last time?
         bus._has_reached_terminal.succeed((self._q_net,
                                            self._target_q_net,
                                            self._replay_buffer,
-                                           self._episode + 1))
+                                           self._episode))
 
     def _track(self, bus: Bus):
 

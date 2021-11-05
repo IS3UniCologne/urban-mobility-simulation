@@ -100,12 +100,13 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                             else:
                                 trip = self._timetable.trip_by_id(trip_id)
                                 route = self._build_route(trip)
-                                bus = self._spawn_bus(route)
+                                bus = self._spawn_bus(route, dumb = self._config.transit_agent_config.dumb)
                                 self._busses.append(bus)
                                 self._world.add_vehicle(bus)
 
-                                # spawn a process that keeps track of the bus state, action and rewards
-                                self._env.process(self._track_bus_agent(bus))
+                                if not self._config.transit_agent_config.dumb:
+                                    # spawn a process that keeps track of the bus state, action and rewards
+                                    self._env.process(self._track_bus_agent(bus))
 
                                 # also spawn a cleanup process that waits for completion of trip
                                 self._env.process(self._clean_up_bus(bus))
@@ -250,7 +251,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
         return route
 
-    def _spawn_bus(self, route: PublicTransitRoute):
+    def _spawn_bus(self, route: PublicTransitRoute, dumb=False):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
         if self._config.transit_agent_config.corridor is None:
             corridor = self._geodesic_env.corridor(route.origin.get_hexagon_id(resolution=self._action_res),
@@ -259,11 +260,14 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
             with open(self._config.transit_agent_config.corridor,'r') as f:
                 corridor = ast.literal_eval(f.read())
 
-        corridor_dim = len(corridor)
-        # input dim for DQN model: corridor dim * corridor dim + corridor dim + 1
-        agent = DQN(self._env, corridor_dim * corridor_dim + corridor_dim + 1,
-                    self._rl_agent_weights, self._rl_agent_replay_buffer, self._rl_agent_episode)
-        bus = Bus(self._env, route, init_position, agent, corridor)
+        if dumb:
+            bus = Bus(self._env, route, init_position, rl_agent=None, corridor=corridor)
+        else:
+            corridor_dim = len(corridor)
+            # input dim for DQN model: corridor dim * corridor dim + corridor dim + 1
+            agent = DQN(self._env, corridor_dim * corridor_dim + corridor_dim + 1,
+                        self._rl_agent_weights, self._rl_agent_replay_buffer, self._rl_agent_episode)
+            bus = Bus(self._env, route, init_position, agent, corridor)
 
         self._timestamped_position['geometry']['coordinates'].append(init_position.getExactLocation(geojson=True))
         self._timestamped_position['properties']['times'].append(int(self._time.now() * 60000))
@@ -281,11 +285,13 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                       extra={"clazz": self.__class__.__name__, "oid": ""})
         self._unserved_passengers = len(bus._seats)
 
-        self._rl_agent_model = target_model
-        self._rl_agent_weights = (model.get_weights(), target_model.get_weights())
+        dumb = self._config.transit_agent_config.dumb
+
+        self._rl_agent_model = target_model if not dumb else None
+        self._rl_agent_weights = (model.get_weights(), target_model.get_weights()) if not dumb else (None,)*2
         self._rl_agent_replay_buffer = replay_buffer
         self._rl_agent_episode = episode
-        self._rewards_sum.append(bus._rl_agent._reward_sum)
+        self._rewards_sum.append(bus._rl_agent._reward_sum if not dumb else None)
 
         # TODO: this is hardcoded for one bus
         self._operator_process.interrupt()
