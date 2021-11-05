@@ -76,18 +76,17 @@ class DQN(RLAgent):
             self._eps = self._config.transit_agent_config.eps
         self._eps_decay = self._config.transit_agent_config.eps_decay
         self._eps_min = self._config.transit_agent_config.eps_min
-        self._tensorboard = self._config.transit_agent_config.tensorboard
         self._penalty = self._config.transit_agent_config.penalty
+        self._replay_buffer_size = self._config.transit_agent_config.buffersize # size in episodes
+        self._min_experience = self._config.transit_agent_config.min_experience # episodes in replay buffer before training starts
+        self._minibatch_size = self._config.transit_agent_config.batchsize # training minibatch size
+        self._target_net_update_threshold = self._config.transit_agent_config.target_update_threshold # training steps before q net weights are propagated to target q net
 
         # tuple of dim (1, n hidden layers+1 for input layer),
         # output layer is fixed to n actions
         self._q_net_layer = self._config.transit_agent_config.q_net_layer
 
         # TODO: put values below in config?
-        self._replay_buffer_size = 50 # size in episodes
-        self._min_experience = 5 # episodes in replay buffer before training starts
-        self._minibatch_size = 50 # training minibatch size
-        self._target_net_update_threshold = 1000 # training steps before q net weights are propagated to target q net
         self._timelimit = 60 # timelimit for dynamic route in minutes
 
         # decay exponentially from 0.01 to ~0.001 over 50k steps (~ 1000 episodes)
@@ -102,6 +101,8 @@ class DQN(RLAgent):
             self._optimizer = Adam(learning_rate=self._learning_rate)
         else:
             self._optimizer = self._config.transit_agent_config.optimizer
+
+        self._tensorboard = self._config.transit_agent_config.tensorboard
 
         # Random Number Generator
         # TODO: seed?
