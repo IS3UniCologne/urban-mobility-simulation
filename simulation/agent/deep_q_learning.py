@@ -81,6 +81,7 @@ class DQN(RLAgent):
         self._min_experience = self._config.transit_agent_config.min_experience # episodes in replay buffer before training starts
         self._minibatch_size = self._config.transit_agent_config.batchsize # training minibatch size
         self._target_net_update_threshold = self._config.transit_agent_config.target_update_threshold # training steps before q net weights are propagated to target q net
+        self._tau = self._config.transit_agent_config.tau
 
         # tuple of dim (1, n hidden layers+1 for input layer),
         # output layer is fixed to n actions
@@ -271,7 +272,19 @@ class DQN(RLAgent):
                             callbacks=[self._tensorboard] if terminal_state else None)
 
             if self._optimizer.iterations % self._target_net_update_threshold == 0:
-                self._target_q_net.set_weights(self._q_net.get_weights())
+                if self._tau is not None:
+                    # do soft updates
+                    theta = self._q_net.get_weights()
+                    target_theta = self._target_q_net.get_weights()
+                    for i, (w, w_t) in enumerate(zip(theta, target_theta)):
+                        w_t = w * self._tau + w_t * (1-self._tau)
+                        assert len(target_theta[i]) == len(w_t)
+                        target_theta[i] = w_t
+                    assert len(target_theta) == len(self._target_q_net.get_weights())
+                    self._target_q_net.set_weights(target_theta)
+                else:
+                    # do hard updates
+                    self._target_q_net.set_weights(self._q_net.get_weights())
 
     @tf.function
     def _target_predict(self, state):

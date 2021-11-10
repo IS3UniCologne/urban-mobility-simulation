@@ -27,7 +27,7 @@ if __name__ == "__main__":
     either a grid search (by kwargs, see below) or an averaging benchmark
     (by range, see below)
     
-    Constrained by memory: A full (100,000) replay buffer takes about 31GB or RAM.
+    Constrained by memory: A 100,000 experiences replay buffer takes about 31GB of RAM.
     """
 
     # define experiments with kwargs
@@ -54,8 +54,26 @@ if __name__ == "__main__":
     #     {'q_net_layer': (16, 8)}
     # ]
 
+    # experiments = [
+    #     {'q_net_layer': (22,22)},
+    #     {'q_net_layer': (22,11)},
+    #     {'q_net_layer': (22,)},
+    #     {'q_net_layer': (11, 11)},
+    #     {'q_net_layer': (11,)},
+    #     {'q_net_layer': (6,)}
+    # ]
+
+    experiments = [
+        {'buffersize': 500},
+        {'buffersize': 1000},
+        {'buffersize': 2000}
+    ]
+
+    # how many parallel runs of each experiment should be done and then averaged?
+    average_experiments = 5
+
     # or just run average experiments by using range with the number you like
-    experiments = range(5)
+    # experiments = range(5)
 
     if type(experiments) is range:
         results = pqdm(experiments,
@@ -73,21 +91,27 @@ if __name__ == "__main__":
                        title=f'{str(len(results))} Experiments averaged Returns and Service Level')
         plt.show()
     else:
+        if average_experiments > 1:
+            # repeat each experiment average_experiments times
+            experiments = [e for e in experiments for _ in range(average_experiments)]
+
         results = pqdm(experiments,
                        learn_agent,
                        argument_type='kwargs',
                        n_jobs=min(psutil.cpu_count(logical=False), len(experiments)),
                        mp_context=mp.get_context('spawn'))
 
-        path = f'search_{list(experiments[0])[0]}_experiments_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
-
-        # don't plot, is plotted individually in run function
-        collected = pd.concat(results)
-        # collected.plot(by='penalty', legend=True)
+        if average_experiments > 1:
+            collected = pd.concat(results).groupby([*experiments[0].keys(), 'episode']).mean().reset_index()
+            path = f'search_{list(experiments[0])[0]}_experiments_averaged_{average_experiments}_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
+        else:
+            collected = pd.concat(results)
+            path = f'search_{list(experiments[0])[0]}_experiments_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
 
     collected.to_csv(
         os.path.join(
             output_folder,
             path
-        )
+        ),
+        index = False
     )

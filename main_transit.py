@@ -113,6 +113,7 @@ agent_eps_min = parser.get("BUS", "EPS_MIN")
 buffersize = int(parser.get("BUS", "BUFFERSIZE"))
 min_experience = int(parser.get("BUS", "MIN_EXPERIENCE"))
 target_update_threshold = int(parser.get("BUS", "TARGET_UPDATE_THRESHOLD"))
+tau = parser.get("BUS", "TAU")
 agent_gamma = parser.get("BUS", "GAMMA")
 bootstrap_agent_n = parser.get("BUS", "N")
 agent_penalty = int(parser.get("BUS", "PENALTY"))
@@ -128,7 +129,7 @@ tensorboard = ModifiedTensorBoard(log_dir=logdir)
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
 bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_eps_min,
-                                      buffersize, min_experience, target_update_threshold,
+                                      buffersize, min_experience, target_update_threshold, tau,
                                       agent_gamma, bootstrap_agent_n, tensorboard, corridor, agent_penalty,
                                       q_net_layers, batchsize)
 
@@ -333,6 +334,10 @@ def run_single_simulation(start_time=0, end_time=60, seed=4711, weights=None, re
 
 def benchmark_agent(nn_weights = None, runs=100):
 
+    global demand_modifier_paths
+    demand_modifier_paths = demand_modifier_paths[:-1]
+    demand_modifier_paths.append('./data/demand/line200bufferBENCHMARK.geojson')
+
     if nn_weights is None:
         bus_agent_config.dumb = True
     else:
@@ -377,6 +382,14 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
                 logging.info(f'DQN layer configuration set to {str(v)}',
                              extra={"clazz": __name__, "oid": ""})
                 bus_agent_config.q_net_layer = v
+            if k == 'batchsize':
+                logging.info(f'Batchsize set to {str(v)}',
+                             extra={"clazz": __name__, "oid": ""})
+                bus_agent_config.batchsize = v
+            if k == 'buffersize':
+                logging.info(f'Experience replay buffer size set to {str(v)}',
+                             extra={"clazz": __name__, "oid": ""})
+                bus_agent_config.buffersize = v
 
         # list experiment params for paths
         experiments = "_".join([str(k) + "=" + str(v) for k, v in kwargs.items()])
@@ -454,7 +467,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
             else:
                 m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(e)}_{experiments}.html'))
 
-            e += 1
+        e += 1
 
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -483,7 +496,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
                      title=f'Experiment: {experiments}')
         try:
             for k, v in kwargs.items():
-                returns[k] = v
+                returns[k] = str(v)
         except Exception as e:
             print('cant append experiment params to returns DF')
             print(e)
@@ -495,8 +508,8 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
 
 if __name__ == '__main__':
-    # weights = learn_agent(prepare_benchmark=True)
-    weights = './data/output/5000_episodes_weights_20211102-204110.keras'
+    weights = learn_agent(prepare_benchmark=True)
+    # weights = './data/output/5000_episodes_weights_20211105-205907.keras'
     runs = 100
     benchmark = [
         {'nn_weights': None, 'runs': runs},
@@ -506,9 +519,5 @@ if __name__ == '__main__':
     results = pqdm(benchmark, benchmark_agent, n_jobs=2, argument_type='kwargs', mp_context=mp.get_context('spawn'))
     results = pd.concat(results, ignore_index=False)
 
-    # results = benchmark_agent()
-    # nn_weights = './data/output/5000_episodes_weights_20211102-204110.keras'
-    # results = benchmark_agent(nn_weights)
-
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    results.to_csv(os.path.join(output_folder, f'{str(runs)}_episodes_benchmark_{strf}.csv'))
+    results.to_csv(os.path.join(output_folder, f'{str(runs)}_episodes_benchmark_{strf}.csv'), index=False)
