@@ -440,11 +440,11 @@ data$subs_bandwidth_adj <- data$subs_bandwidth*100
 
 data$subs_pop_factor <- 1.0-data$price_sensitive_pop_prob
 
-revenue_reg <- lm(log(total_revenue) ~ subs_bandwidth_adj*subs_pop_factor, data)
+total_profit_reg <- lm(log(total_profit) ~ subs_bandwidth_adj*subs_pop_factor, data)
 sq_reg <- lm(log(service_quality) ~ subs_bandwidth_adj*subs_pop_factor, data)
 energy_consum_reg <- lm(log(energy_consumption_total) ~ subs_bandwidth_adj*subs_pop_factor, data)
 
-stargazer(revenue_reg, sq_reg, energy_consum_reg, column.labels = c("Economic","Environmental"),column.separate = c(2,1),
-          title="Regression Results", dep.var.labels=c("Revenue","Service Quality", "Energy Consumption"),
+stargazer(total_profit_reg, sq_reg, energy_consum_reg, column.labels = c("Economic","Environmental"),column.separate = c(2,1),
+          title="Regression Results", dep.var.labels=c("Total Profit","Service Quality", "Energy Consumption"),
           covariate.labels=c("Substitution Boundary (SB)","Sustainable Population (SUS)", "SB * SUS"),
           type="latex")
