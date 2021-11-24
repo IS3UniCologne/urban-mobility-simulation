@@ -119,6 +119,7 @@ bootstrap_agent_n = parser.get("BUS", "N")
 agent_penalty = int(parser.get("BUS", "PENALTY"))
 q_net_layers = ast.literal_eval(parser.get("BUS", "DQN_LAYERS"))
 batchsize = int(parser.get("BUS", "BATCHSIZE"))
+velocity = float(parser.get("BUS", "VELOCITY"))
 
 # Custom tensorboard object
 logdir = f'./data/output/logs/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
@@ -131,7 +132,7 @@ transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, tran
 bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_eps_min,
                                       buffersize, min_experience, target_update_threshold, tau,
                                       agent_gamma, bootstrap_agent_n, tensorboard, corridor, agent_penalty,
-                                      q_net_layers, batchsize)
+                                      q_net_layers, batchsize, velocity)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
