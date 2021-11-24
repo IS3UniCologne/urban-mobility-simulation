@@ -260,14 +260,16 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
             with open(self._config.transit_agent_config.corridor,'r') as f:
                 corridor = ast.literal_eval(f.read())
 
+        velocity = self._config.transit_agent_config.velocity
+
         if dumb:
-            bus = Bus(self._env, route, init_position, rl_agent=None, corridor=corridor)
+            bus = Bus(self._env, route, init_position, rl_agent=None, corridor=corridor, velocity=velocity)
         else:
             corridor_dim = len(corridor)
             # input dim for DQN model: corridor dim * corridor dim + corridor dim + 1
             agent = DQN(self._env, corridor_dim * corridor_dim + corridor_dim + 1,
                         self._rl_agent_weights, self._rl_agent_replay_buffer, self._rl_agent_episode)
-            bus = Bus(self._env, route, init_position, agent, corridor)
+            bus = Bus(self._env, route, init_position, agent, corridor, velocity=velocity)
 
         self._timestamped_position['geometry']['coordinates'].append(init_position.getExactLocation(geojson=True))
         self._timestamped_position['properties']['times'].append(int(self._time.now() * 60000))

@@ -332,7 +332,10 @@ class DQN(RLAgent):
         """
 
         if action == 'STAY':
-            yield self._env.timeout(.01)
+            # even though the bus does not move, timeout for the average movement duration
+            # otherwise the action does have no consequence, when another action immediately follows
+            yield self._env.timeout(h3.edge_length(resolution=self._config.transit_agent_config.action_resolution,
+                                                   unit='m') / bus._velocity)
         else:
             hex_id = h3.geo_to_h3(*bus.position.getExactLocation(),
                                   resolution=self._config.transit_agent_config.action_resolution)

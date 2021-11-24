@@ -34,7 +34,7 @@ class Bus(PublicTransitVehicle):
         :param env:
         :param position: GeodesicPosition
         :param max_available_seats: depends on type of bus - TODO: see SVG busses
-        :param velocity: 16.67 m/min * 50 (city limit)
+        :param velocity: e.g. 16.67 m/min * 50 (city limit)
         """
         super(Bus, self).__init__(env, route, position, max_available_seats, velocity)
 
