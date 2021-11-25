@@ -102,6 +102,7 @@ try:
     corridor = parser.get("BUS", "CORRIDOR_PATH")
 except configparser.NoOptionError:
     corridor = None
+# TODO: refactor casting around of values here and in Config, use parser.getint etc instead
 episodes = int(parser.get("BUS", "EPISODES"))
 actions = parser.get("BUS", "ACTION_SPACE").split(',')
 action_dim = len(actions)
@@ -119,6 +120,7 @@ bootstrap_agent_n = parser.get("BUS", "N")
 agent_penalty = int(parser.get("BUS", "PENALTY"))
 q_net_layers = ast.literal_eval(parser.get("BUS", "DQN_LAYERS"))
 batchsize = int(parser.get("BUS", "BATCHSIZE"))
+lr_decay = parser.getboolean("BUS", "LR_DECAY")
 velocity = float(parser.get("BUS", "VELOCITY"))
 
 # Custom tensorboard object
@@ -132,7 +134,7 @@ transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, tran
 bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_eps_min,
                                       buffersize, min_experience, target_update_threshold, tau,
                                       agent_gamma, bootstrap_agent_n, tensorboard, corridor, agent_penalty,
-                                      q_net_layers, batchsize, velocity)
+                                      q_net_layers, batchsize, lr_decay, velocity)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -391,11 +393,19 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
                 logging.info(f'Experience replay buffer size set to {str(v)}',
                              extra={"clazz": __name__, "oid": ""})
                 bus_agent_config.buffersize = v
+            if k == 'action_space':
+                logging.info(f'Action space set to {str(v)}',
+                             extra={"clazz": __name__, "oid": ""})
+                ActionSpace.init(v, reset=True)
+            if k == 'lr_decay':
+                logging.info(f'Learning rate decay set to {str(v)}',
+                             extra={"clazz": __name__, "oid": ""})
+                bus_agent_config.lr_decay = v
 
         # list experiment params for paths
         experiments = "_".join([str(k) + "=" + str(v) for k, v in kwargs.items()])
 
-        logdir_ = f'{logdir}/{experiments}'
+        logdir_ = f'{logdir}/{experiments}' # TODO: this might differ some seconds and not use the same dir
         tensorboard_ = ModifiedTensorBoard(log_dir=logdir_)
         bus_agent_config.tensorboard = tensorboard_
 

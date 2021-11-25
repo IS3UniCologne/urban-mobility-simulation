@@ -82,6 +82,7 @@ class DQN(RLAgent):
         self._minibatch_size = self._config.transit_agent_config.batchsize # training minibatch size
         self._target_net_update_threshold = self._config.transit_agent_config.target_update_threshold # training steps before q net weights are propagated to target q net
         self._tau = self._config.transit_agent_config.tau
+        self._learning_rate = None
 
         # tuple of dim (1, n hidden layers+1 for input layer),
         # output layer is fixed to n actions
@@ -92,12 +93,15 @@ class DQN(RLAgent):
 
         # decay exponentially from 0.01 to ~0.001 over 50k steps (~ 1000 episodes)
         # initial_learning_rate * decay_rate ^ (step / decay_steps)
-        # self._learning_rate = 0.001 # adam learning rate (default: 0.001)
-        self._learning_rate = ExponentialDecay(
-            initial_learning_rate=0.01,
-            decay_steps=50000,
-            decay_rate=0.05
-        )
+        if self._config.transit_agent_config.lr_decay:
+            self._learning_rate = ExponentialDecay(
+                initial_learning_rate=0.01,
+                decay_steps=50000,
+                decay_rate=0.05
+            )
+        else:
+            self._learning_rate = 0.001 # adam learning rate (default: 0.001)
+
         if self._config.transit_agent_config.optimizer is None:
             self._optimizer = Adam(learning_rate=self._learning_rate)
         else:
@@ -209,8 +213,9 @@ class DQN(RLAgent):
 
         # retain optimizer steps for decayed learning rate
         self._config.transit_agent_config.optimizer = self._optimizer
-        logging.debug(f'Saving decayed learning rate into config: {str(self._learning_rate(self._optimizer.iterations))}',
-                      extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})
+        if self._config.transit_agent_config.lr_decay:
+            logging.debug(f'Saving decayed learning rate into config: {str(self._learning_rate(self._optimizer.iterations))}',
+                          extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})
 
         logging.debug(f'Current Replay Buffer size: {str(len(self._replay_buffer))}',
                       extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})

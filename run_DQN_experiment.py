@@ -63,17 +63,29 @@ if __name__ == "__main__":
     #     {'q_net_layer': (6,)}
     # ]
 
+    # experiments = [
+    #     {'buffersize': 500},
+    #     {'buffersize': 1000},
+    #     {'buffersize': 250}
+    # ]
+
+    # experiments = [
+    #     {'action_space': ["UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]},
+    #     {'action_space': ["STAY","UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]}
+    # ]
+
     experiments = [
-        {'buffersize': 500},
-        {'buffersize': 1000},
-        {'buffersize': 2000}
+        {'lr_decay': True},
+        {'lr_decay': False}
     ]
 
     # how many parallel runs of each experiment should be done and then averaged?
-    average_experiments = 5
+    average_experiments = 10
+    # keep raw returns of all experiments, i.e. do not average?
+    keepraw = True
 
     # or just run average experiments by using range with the number you like
-    # experiments = range(5)
+    # experiments = range(10)
 
     if type(experiments) is range:
         results = pqdm(experiments,
@@ -84,7 +96,7 @@ if __name__ == "__main__":
         # compute and plot average returns
         path = f'average_{str(len(experiments))}_experiments_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
 
-        collected = pd.concat(results).groupby('episode').mean()
+        collected = pd.concat(results).groupby('episode', as_index=True).mean()
         collected.plot(secondary_y=['service_level'],
                        alpha=.5,
                        color=['black', 'green'],
@@ -101,7 +113,7 @@ if __name__ == "__main__":
                        n_jobs=min(psutil.cpu_count(logical=False), len(experiments)),
                        mp_context=mp.get_context('spawn'))
 
-        if average_experiments > 1:
+        if average_experiments > 1 and not keepraw:
             collected = pd.concat(results).groupby([*experiments[0].keys(), 'episode']).mean().reset_index()
             path = f'search_{list(experiments[0])[0]}_experiments_averaged_{average_experiments}_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
         else:
@@ -113,5 +125,5 @@ if __name__ == "__main__":
             output_folder,
             path
         ),
-        index = False
+        index = True if type(experiments) is range or keepraw else False
     )
