@@ -74,10 +74,10 @@ if __name__ == "__main__":
     #     {'action_space': ["STAY","UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]}
     # ]
 
-    experiments = [
-        {'lr_decay': True},
-        {'lr_decay': False}
-    ]
+    # experiments = [
+    #     {'lr_decay': True},
+    #     {'lr_decay': False}
+    # ]
 
     # how many parallel runs of each experiment should be done and then averaged?
     average_experiments = 10
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     keepraw = True
 
     # or just run average experiments by using range with the number you like
-    # experiments = range(10)
+    experiments = range(10)
 
     if type(experiments) is range:
         results = pqdm(experiments,

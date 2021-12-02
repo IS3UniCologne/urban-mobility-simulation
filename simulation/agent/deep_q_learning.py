@@ -77,6 +77,7 @@ class DQN(RLAgent):
         self._eps_decay = self._config.transit_agent_config.eps_decay
         self._eps_min = self._config.transit_agent_config.eps_min
         self._penalty = self._config.transit_agent_config.penalty
+        self._reward = self._config.transit_agent_config.reward
         self._replay_buffer_size = self._config.transit_agent_config.buffersize # size in episodes
         self._min_experience = self._config.transit_agent_config.min_experience # episodes in replay buffer before training starts
         self._minibatch_size = self._config.transit_agent_config.batchsize # training minibatch size
@@ -180,7 +181,7 @@ class DQN(RLAgent):
             # let public transit operator track bus for visualization
             self._track(bus)
 
-            reward = self._reward # R_t
+            reward = self._latest_reward # R_t
             next_state = deepcopy(bus._env_state) # S_t, as dict
             next_state_processed = self._state_to_numpy(next_state) # S_t, as numpy 3d matrix
 
@@ -381,23 +382,23 @@ class DQN(RLAgent):
                          extra={"clazz": self.__class__.__name__, "oid": ""})
 
         # reward is service level (1 drop off = +1 reward)
-        self._reward = bus._dropoffs # TODO: parametrize?
-        if self._reward > 0:
-            logging.debug(f'Service Level was increased by {str(self._reward)}',
+        self._latest_reward = bus._dropoffs * self._reward
+        if self._latest_reward > 0:
+            logging.debug(f'Service Level was increased by {str(self._latest_reward)}',
                           extra={"clazz": self.__class__.__name__, "oid": ""})
 
         if (reached_timelimit and not reached_destination) or unreachable_destination:
-            self._reward -= self._penalty
+            self._latest_reward -= self._penalty
 
-        self._reward_sum = self._reward_sum + self._reward
+        self._reward_sum = self._reward_sum + self._latest_reward
 
-        logging.debug(f'Current reward: {self._reward}, overall reward: {self._reward_sum}',
+        logging.debug(f'Current reward: {self._latest_reward}, overall reward: {self._reward_sum}',
                       extra={"clazz": self.__class__.__name__, "oid": bus.id})
 
         # reset drop offs
         bus._dropoffs = 0
 
-        # bus._agent_completed_step.succeed((before_state, action, self._reward, self._reward_sum))
+        # bus._agent_completed_step.succeed((before_state, action, self._latest_reward, self._reward_sum))
         # bus._agent_completed_step.succeed(self._reward_sum)
 
     def _state_to_tensor(self, state: dict):
