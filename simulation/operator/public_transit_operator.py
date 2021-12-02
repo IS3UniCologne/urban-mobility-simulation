@@ -278,7 +278,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
     def _clean_up_bus(self, bus: Bus):
 
-        (model, target_model, replay_buffer, episode) = yield bus._has_reached_terminal
+        (model, target_model, replay_buffer, episode, learning_rate) = yield bus._has_reached_terminal
 
         self._busses.remove(bus)
         self._world.remove_vehicle(bus)
@@ -293,6 +293,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._rl_agent_weights = (model.get_weights(), target_model.get_weights()) if not dumb else (None,)*2
         self._rl_agent_replay_buffer = replay_buffer
         self._rl_agent_episode = episode
+        self._rl_agent_lr = learning_rate
         self._rewards_sum.append(bus._rl_agent._reward_sum if not dumb else None)
 
         # TODO: this is hardcoded for one bus

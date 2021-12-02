@@ -79,13 +79,18 @@ if __name__ == "__main__":
     #     {'lr_decay': False}
     # ]
 
+    experiments = [
+        {'reward': 1},
+        {'reward': 2}
+    ]
+
     # how many parallel runs of each experiment should be done and then averaged?
     average_experiments = 10
     # keep raw returns of all experiments, i.e. do not average?
     keepraw = True
 
     # or just run average experiments by using range with the number you like
-    experiments = range(10)
+    # experiments = range(10)
 
     if type(experiments) is range:
         results = pqdm(experiments,

@@ -76,7 +76,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         return self._available_seats
 
     def mount_passenger(self, passenger: TransitUser):
-        if len(self._seats) < self._available_seats:
+        if self._available_seats > 0:
             self._seats.append(passenger)
             self._available_seats -= 1
 

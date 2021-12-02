@@ -588,7 +588,10 @@ class TransitUser(User, PassengerInterface):
         # Update current state
         self._state = TransitUserState.IN_TRANSPORT
 
-        self.mount_vehicle(vehicle)
+        try:
+            self.mount_vehicle(vehicle)
+        except PublicTransitVehicleFull:
+            raise
         # drive in vehicle until destination hexagon is reached, this might not happen at all
         while (self.transport_task.destination.get_hexagon_id(self._bus_res) !=
                vehicle.position.get_hexagon_id(self._bus_res)):
@@ -621,8 +624,10 @@ class TransitUser(User, PassengerInterface):
         self._assigned_vehicle_arrived.succeed()
 
     def mount_vehicle(self, vehicle):
-        vehicle.mount_passenger(self)
-
+        try:
+            vehicle.mount_passenger(self)
+        except PublicTransitVehicleFull:
+            raise
     def unmount_vehicle(self, vehicle):
         vehicle.unmount_passenger(self)
 
