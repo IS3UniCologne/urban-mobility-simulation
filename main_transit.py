@@ -118,6 +118,7 @@ tau = parser.get("BUS", "TAU")
 agent_gamma = parser.get("BUS", "GAMMA")
 bootstrap_agent_n = parser.get("BUS", "N")
 agent_penalty = int(parser.get("BUS", "PENALTY"))
+agent_reward = parser.getint("BUS", "REWARD")
 q_net_layers = ast.literal_eval(parser.get("BUS", "DQN_LAYERS"))
 batchsize = int(parser.get("BUS", "BATCHSIZE"))
 lr_decay = parser.getboolean("BUS", "LR_DECAY")
@@ -133,7 +134,7 @@ user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
 bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_eps_min,
                                       buffersize, min_experience, target_update_threshold, tau,
-                                      agent_gamma, bootstrap_agent_n, tensorboard, corridor, agent_penalty,
+                                      agent_gamma, bootstrap_agent_n, tensorboard, corridor, agent_penalty, agent_reward,
                                       q_net_layers, batchsize, lr_decay, velocity)
 
 global_config.add_user_config(user_config)

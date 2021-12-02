@@ -23,6 +23,7 @@ from ..tasks.transport_task import TransportTask
 from ..tasks.transportation_search_task import TransportationSearchTask
 from ..vehicle.interfaces.driver_interface import DriverInterface
 from ..vehicle.interfaces.passenger_interface import PassengerInterface
+from ..vehicle.public_transit_vehicle import PublicTransitVehicleFull
 from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
@@ -502,14 +503,18 @@ class TransitUser(User, PassengerInterface):
 
                 yield self._env.process(self.stop())
 
-            except simpy.Interrupt:
+            except (simpy.Interrupt, PublicTransitVehicleFull) as e:
                 self._state = TransitUserState.MISSED
                 self._payment_service._tracked_demands.add((self._transport_task.origin.getExactLocation(geojson=True),
                                                             self._transport_task.destination.getExactLocation(geojson=True),
                                                             False))
                 self._payment_service.withdraw_transportation_task(self, self._transport_task)
-                logging.debug(f'User was not serviced before bus reached terminal destination.',
-                              extra={"clazz": self.__class__.__name__, "oid": self._id})
+                if isinstance(e, simpy.Interrupt):
+                    logging.debug(f'User was not serviced before bus reached terminal destination.',
+                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
+                elif isinstance(e, PublicTransitVehicleFull):
+                    logging.debug(f'User was not able to board vehicle, vehicle is full.',
+                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def search_for_alternatives(self):
         # Update current state

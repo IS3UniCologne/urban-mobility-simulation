@@ -208,7 +208,7 @@ class TransitOperatorConfig:
 
 class TransitAgentConfig:
     def __init__(self, action_resolution, alpha, eps, eps_decay, eps_min, buffersize, min_experience,
-                 target_update_threshold, tau, gamma, n, tensorboard, corridor, penalty, q_net_layer, batchsize,
+                 target_update_threshold, tau, gamma, n, tensorboard, corridor, penalty, reward, q_net_layer, batchsize,
                  lr_decay, velocity):
         self.dumb = False # a dumb bus moves as planned without agent rerouting
         self.action_resolution = int(action_resolution)
@@ -225,6 +225,7 @@ class TransitAgentConfig:
         self.tensorboard = tensorboard
         self.corridor = corridor
         self.penalty = penalty
+        self.reward = reward
         self.q_net_layer = q_net_layer
         self.batchsize = batchsize
         self.optimizer = None
