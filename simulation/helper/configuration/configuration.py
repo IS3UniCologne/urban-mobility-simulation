@@ -209,7 +209,7 @@ class TransitOperatorConfig:
 class TransitAgentConfig:
     def __init__(self, action_resolution, alpha, eps, eps_decay, eps_min, buffersize, min_experience,
                  target_update_threshold, tau, gamma, n, tensorboard, corridor, penalty, reward, q_net_layer, batchsize,
-                 lr_decay, velocity):
+                 lr_decay, lr_decay_steps, velocity):
         self.dumb = False # a dumb bus moves as planned without agent rerouting
         self.action_resolution = int(action_resolution)
         self.alpha = float(alpha)
@@ -230,5 +230,6 @@ class TransitAgentConfig:
         self.batchsize = batchsize
         self.optimizer = None
         self.lr_decay = lr_decay
+        self.lr_decay_steps = lr_decay_steps
         self.evaluation = False # on an evaluation run, no training happens and eps = 0
         self.velocity = velocity

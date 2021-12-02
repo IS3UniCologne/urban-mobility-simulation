@@ -122,6 +122,7 @@ agent_reward = parser.getint("BUS", "REWARD")
 q_net_layers = ast.literal_eval(parser.get("BUS", "DQN_LAYERS"))
 batchsize = int(parser.get("BUS", "BATCHSIZE"))
 lr_decay = parser.getboolean("BUS", "LR_DECAY")
+lr_decay_steps = parser.getint("BUS", "LR_DECAY_STEPS")
 velocity = float(parser.get("BUS", "VELOCITY"))
 
 # Custom tensorboard object
@@ -135,7 +136,7 @@ transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, tran
 bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_eps_min,
                                       buffersize, min_experience, target_update_threshold, tau,
                                       agent_gamma, bootstrap_agent_n, tensorboard, corridor, agent_penalty, agent_reward,
-                                      q_net_layers, batchsize, lr_decay, velocity)
+                                      q_net_layers, batchsize, lr_decay, lr_decay_steps, velocity)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -402,6 +403,10 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
                 logging.info(f'Learning rate decay set to {str(v)}',
                              extra={"clazz": __name__, "oid": ""})
                 bus_agent_config.lr_decay = v
+            if k == 'reward':
+                logging.info(f'Reward set to {str(v)}',
+                             extra={"clazz": __name__, "oid": ""})
+                bus_agent_config.reward = v
 
         # list experiment params for paths
         experiments = "_".join([str(k) + "=" + str(v) for k, v in kwargs.items()])
@@ -429,17 +434,18 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
         w = operator._rl_agent_weights
         b = operator._rl_agent_replay_buffer
         e = operator._rl_agent_episode
+        lr = operator._rl_agent_lr
+
+        episode = deepcopy({'episode': e,
+                            'return': operator._rewards_sum[-1],
+                            'service_level': service_level,
+                            'lr': lr})
 
         if not kwargs:
-            episode_returns.append(deepcopy({'episode': e,
-                                             'return': operator._rewards_sum[-1],
-                                             'service_level': service_level}))
+            episode_returns.append(episode)
         else:
             # extend return by experiment parameters
-            episode_returns.append({**kwargs,
-                                    **deepcopy({'episode': e,
-                                                'return': operator._rewards_sum[-1],
-                                                'service_level': service_level})})
+            episode_returns.append({**kwargs, **episode})
 
         if track:
             import folium

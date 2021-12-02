@@ -84,6 +84,7 @@ class DQN(RLAgent):
         self._target_net_update_threshold = self._config.transit_agent_config.target_update_threshold # training steps before q net weights are propagated to target q net
         self._tau = self._config.transit_agent_config.tau
         self._learning_rate = None
+        self._learning_rate_decay_steps = self._config.transit_agent_config.lr_decay_steps
 
         # tuple of dim (1, n hidden layers+1 for input layer),
         # output layer is fixed to n actions
@@ -92,16 +93,16 @@ class DQN(RLAgent):
         # TODO: put values below in config?
         self._timelimit = 60 # timelimit for dynamic route in minutes
 
-        # decay exponentially from 0.01 to ~0.001 over 50k steps (~ 1000 episodes)
-        # initial_learning_rate * decay_rate ^ (step / decay_steps)
+        # decay exponentially from initial_learning_rate to initial_learning_rate * decay_rate over decay_steps steps
+        # lr = initial_learning_rate * decay_rate ^ (step / decay_steps)
         if self._config.transit_agent_config.lr_decay:
             self._learning_rate = ExponentialDecay(
                 initial_learning_rate=0.01,
-                decay_steps=50000,
-                decay_rate=0.05
+                decay_steps=self._decay_steps,
+                decay_rate=0.1
             )
         else:
-            self._learning_rate = 0.001 # adam learning rate (default: 0.001)
+            self._learning_rate = 0.001 # adam default learning rate
 
         if self._config.transit_agent_config.optimizer is None:
             self._optimizer = Adam(learning_rate=self._learning_rate)
@@ -232,7 +233,8 @@ class DQN(RLAgent):
         bus._has_reached_terminal.succeed((self._q_net,
                                            self._target_q_net,
                                            self._replay_buffer,
-                                           self._episode))
+                                           self._episode,
+                                           self._learning_rate(self._optimizer.iterations) if self._config.transit_agent_config.lr_decay else 0.001))
 
     def _track(self, bus: Bus):
 
