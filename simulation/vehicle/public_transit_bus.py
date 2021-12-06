@@ -136,7 +136,7 @@ class Bus(PublicTransitVehicle):
         # stop demand generation
         self._world.stop_processes()
 
-        self._has_reached_terminal.succeed((None,)*5)
+        self._has_reached_terminal.succeed((None,)*6)
 
     def _move_to_next_stop(self):
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)

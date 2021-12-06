@@ -107,6 +107,7 @@ episodes = int(parser.get("BUS", "EPISODES"))
 actions = parser.get("BUS", "ACTION_SPACE").split(',')
 action_dim = len(actions)
 action_resolution = parser.get("BUS", "ACTION_SPACE_RESOLUTION")
+timelimit_multiplier = parser.getfloat("BUS", "TIMELIMIT")
 agent_alpha = parser.get("BUS", "ALPHA")
 agent_eps = parser.get("BUS", "EPS")
 agent_eps_decay = parser.get("BUS", "EPS_DECAY")
@@ -134,7 +135,7 @@ tensorboard = ModifiedTensorBoard(log_dir=logdir)
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
 bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_eps_min,
-                                      buffersize, min_experience, target_update_threshold, tau,
+                                      buffersize, min_experience, timelimit_multiplier, target_update_threshold, tau,
                                       agent_gamma, bootstrap_agent_n, tensorboard, corridor, agent_penalty, agent_reward,
                                       q_net_layers, batchsize, lr_decay, lr_decay_steps, velocity)
 
@@ -429,17 +430,19 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
     for i in tqdm(range(episodes), total=episodes):
 
         operator, world, payment_engine, service_level = run_single_simulation(
-            start_time=15 * 60, end_time=17 * 60, weights=w, replay_buffer=b, episode=e)
+            start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e)
 
         w = operator._rl_agent_weights
         b = operator._rl_agent_replay_buffer
         e = operator._rl_agent_episode
         lr = operator._rl_agent_lr
+        t = operator._rl_agent_reached_destination
 
         episode = deepcopy({'episode': e,
                             'return': operator._rewards_sum[-1],
                             'service_level': service_level,
-                            'lr': lr})
+                            'lr': lr,
+                            'reached_destination': t})
 
         if not kwargs:
             episode_returns.append(episode)
@@ -499,7 +502,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
     )
 
     returns = pd.DataFrame.from_records(episode_returns)
-    returns = returns.set_index(returns['episode'])[['return', 'service_level']]
+    returns = returns.set_index('episode')
     returns.to_csv(os.path.join(output_folder, f'{str(episodes)}_episodes_returns_{strf}.csv'))
 
     if not kwargs:
