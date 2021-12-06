@@ -92,7 +92,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                         for trip_id in (t for t in trips if t not in [b.route.trip_id for b in self._busses]):
 
                             # TODO: in case of only one bus (DQN problem), how are we sure, we always spawn the same one
-                            if trip_id != 163296946:
+                            if trip_id != 163297125:
                                 # logging.error(f'Different trip than before!',
                                 #               extra={"clazz": self.__class__.__name__, "oid": ""})
                                 pass
@@ -278,7 +278,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
     def _clean_up_bus(self, bus: Bus):
 
-        (model, target_model, replay_buffer, episode, learning_rate) = yield bus._has_reached_terminal
+        (model, target_model, replay_buffer, episode, learning_rate, reached_destination) = yield bus._has_reached_terminal
 
         self._busses.remove(bus)
         self._world.remove_vehicle(bus)
@@ -294,6 +294,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._rl_agent_replay_buffer = replay_buffer
         self._rl_agent_episode = episode
         self._rl_agent_lr = learning_rate
+        self._rl_agent_reached_destination = reached_destination
         self._rewards_sum.append(bus._rl_agent._reward_sum if not dumb else None)
 
         # TODO: this is hardcoded for one bus

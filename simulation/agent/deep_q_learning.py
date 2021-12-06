@@ -19,6 +19,7 @@ from simulation.agent.action_space import ActionSpace
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.time import SimulationTimeConverter
 from simulation.vehicle.public_transit_bus import BusState, Bus
 
 from line_profiler_pycharm import profile
@@ -89,9 +90,6 @@ class DQN(RLAgent):
         # tuple of dim (1, n hidden layers+1 for input layer),
         # output layer is fixed to n actions
         self._q_net_layer = self._config.transit_agent_config.q_net_layer
-
-        # TODO: put values below in config?
-        self._timelimit = 60 # timelimit for dynamic route in minutes
 
         # decay exponentially from initial_learning_rate to initial_learning_rate * decay_rate over decay_steps steps
         # lr = initial_learning_rate * decay_rate ^ (step / decay_steps)
@@ -170,6 +168,11 @@ class DQN(RLAgent):
         return model
 
     def run(self, bus: Bus):
+        # set timelimit to multiplier specified in config * planned route total time
+        route_duration = SimulationTimeConverter.duration_between(bus.route.origin.departure, bus.route.destination.departure)
+        self._timelimit = self._config.transit_agent_config.timelimit_multiplier * route_duration
+        # self._timelimit = 60
+
         # Deep Q Learning with Experience Replay as in mnih2013 (deepmind atari paper)
         while True:
             state = deepcopy(bus._env_state) # S_t, as dict
@@ -230,11 +233,13 @@ class DQN(RLAgent):
 
         # retain parameters
         # TODO: update target weights a last time?
+        # TODO: refactor such that weights etc are retained through config instead of being passed around?
         bus._has_reached_terminal.succeed((self._q_net,
                                            self._target_q_net,
                                            self._replay_buffer,
                                            self._episode,
-                                           self._learning_rate(self._optimizer.iterations) if self._config.transit_agent_config.lr_decay else 0.001))
+                                           self._learning_rate(self._optimizer.iterations) if self._config.transit_agent_config.lr_decay else 0.001,
+                                           reached_destination))
 
     def _track(self, bus: Bus):
 
