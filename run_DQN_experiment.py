@@ -79,10 +79,15 @@ if __name__ == "__main__":
     #     {'lr_decay': False}
     # ]
 
+    # experiments = [
+    #     {'reward': 1},
+    #     {'reward': 2},
+    #     {'reward': 3}
+    # ]
+
     experiments = [
-        {'reward': 1},
-        {'reward': 2},
-        {'reward': 3}
+        {'doubleQ': True},
+        {'doubleQ': False}
     ]
 
     # how many parallel runs of each experiment should be done and then averaged?

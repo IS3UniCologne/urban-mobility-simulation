@@ -114,6 +114,7 @@ agent_eps_decay = parser.get("BUS", "EPS_DECAY")
 agent_eps_min = parser.get("BUS", "EPS_MIN")
 buffersize = int(parser.get("BUS", "BUFFERSIZE"))
 min_experience = int(parser.get("BUS", "MIN_EXPERIENCE"))
+double_q = parser.getboolean("BUS", "USE_DOUBLE_Q")
 target_update_threshold = int(parser.get("BUS", "TARGET_UPDATE_THRESHOLD"))
 tau = parser.get("BUS", "TAU")
 agent_gamma = parser.get("BUS", "GAMMA")
@@ -137,7 +138,7 @@ transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, tran
 bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_eps_min,
                                       buffersize, min_experience, timelimit_multiplier, target_update_threshold, tau,
                                       agent_gamma, bootstrap_agent_n, tensorboard, corridor, agent_penalty, agent_reward,
-                                      q_net_layers, batchsize, lr_decay, lr_decay_steps, velocity)
+                                      q_net_layers, batchsize, lr_decay, lr_decay_steps, double_q, velocity)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -408,6 +409,10 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
                 logging.info(f'Reward set to {str(v)}',
                              extra={"clazz": __name__, "oid": ""})
                 bus_agent_config.reward = v
+            if k == 'doubleQ':
+                logging.info(f'Usage of Double Q set to {str(v)}',
+                             extra={"clazz": __name__, "oid": ""})
+                bus_agent_config.double_q = v
 
         # list experiment params for paths
         experiments = "_".join([str(k) + "=" + str(v) for k, v in kwargs.items()])
