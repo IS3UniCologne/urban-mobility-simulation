@@ -32,7 +32,7 @@ from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 from simulation.vehicle.public_transit_bus import Bus
-from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
+from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle, PublicTransitVehicleFull
 from simulation.vehicle.vehicle import Vehicle
 from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import PublicTransitVehicleChoiceBehavior
 from simulation.world.demand.demand_factory import DemandFactory
@@ -429,8 +429,11 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
     for i in tqdm(range(episodes), total=episodes):
 
-        operator, world, payment_engine, service_level = run_single_simulation(
-            start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e)
+        try:
+            operator, world, payment_engine, service_level = run_single_simulation(
+                start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e)
+        except PublicTransitVehicleFull as e:
+            pass
 
         w = operator._rl_agent_weights
         b = operator._rl_agent_replay_buffer

@@ -25,6 +25,7 @@ class PublicTransitVehicleState(VehicleState, Enum):
 class PublicTransitVehicleException(Exception):
     pass
 
+
 class PublicTransitVehicleFull(PublicTransitVehicleException):
     pass
 
@@ -89,7 +90,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         elif passenger in self._seats:
             raise Exception('Passenger is already in vehicle.')
         else:
-            raise PublicTransitVehicleFull()
+            raise PublicTransitVehicleFull
 
     def unmount_passenger(self, passenger: TransitUser):
         if passenger in self._seats:

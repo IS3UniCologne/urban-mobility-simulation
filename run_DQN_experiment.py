@@ -86,7 +86,7 @@ if __name__ == "__main__":
     ]
 
     # how many parallel runs of each experiment should be done and then averaged?
-    average_experiments = 10
+    average_experiments = 5
     # keep raw returns of all experiments, i.e. do not average?
     keepraw = True
 

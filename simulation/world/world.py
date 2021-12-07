@@ -127,7 +127,7 @@ class World:
             self._users.append(new_user)
 
             # Start Process for each new user
-            self._user_processes.append(self._env.process(new_user.run()))
+            self._user_processes.append({'id': new_user.id, 'proc': self._env.process(new_user.run())})
 
             if len(self._users) == self._user_limit:
                 logging.info(f'Reached User Limit of {self._user_limit}. Not adding more users to world.',
@@ -167,7 +167,11 @@ class World:
         # clean up user demands
         for u in self.user_processes:
             try:
-                u.interrupt()
+                u['proc'].interrupt()
             except RuntimeError:
                 # already terminated
                 pass
+
+    def user_process_by_id(self, user_id):
+         procs = [p for p in self._user_processes if p["id"] == user_id]
+         return procs[0] # TODO: what about some error handling

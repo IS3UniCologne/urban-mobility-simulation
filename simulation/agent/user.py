@@ -585,13 +585,15 @@ class TransitUser(User, PassengerInterface):
         # Wait for event
         yield self._assigned_vehicle_arrived
 
-        # Update current state
-        self._state = TransitUserState.IN_TRANSPORT
-
-        try:
+        if not vehicle.available_seats > 0:
+            # Interrupt this user's process
+            proc = self._world.user_process_by_id(self._id)['proc']
+            proc.interrupt()
+        else:
+            # Update current state
+            self._state = TransitUserState.IN_TRANSPORT
             self.mount_vehicle(vehicle)
-        except PublicTransitVehicleFull:
-            raise
+
         # drive in vehicle until destination hexagon is reached, this might not happen at all
         while (self.transport_task.destination.get_hexagon_id(self._bus_res) !=
                vehicle.position.get_hexagon_id(self._bus_res)):
@@ -624,10 +626,8 @@ class TransitUser(User, PassengerInterface):
         self._assigned_vehicle_arrived.succeed()
 
     def mount_vehicle(self, vehicle):
-        try:
-            vehicle.mount_passenger(self)
-        except PublicTransitVehicleFull:
-            raise
+        vehicle.mount_passenger(self)
+
     def unmount_vehicle(self, vehicle):
         vehicle.unmount_passenger(self)
 
