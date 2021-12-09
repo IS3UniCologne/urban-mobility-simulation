@@ -510,6 +510,7 @@ class TransitUser(User, PassengerInterface):
                                                             False))
                 self._payment_service.withdraw_transportation_task(self, self._transport_task)
                 if isinstance(e, simpy.Interrupt):
+                    # can also be interrupt from vehicle full
                     logging.debug(f'User was not serviced before bus reached terminal destination.',
                                   extra={"clazz": self.__class__.__name__, "oid": self._id})
                 elif isinstance(e, PublicTransitVehicleFull):
@@ -589,6 +590,7 @@ class TransitUser(User, PassengerInterface):
             # Interrupt this user's process
             proc = self._world.user_process_by_id(self._id)['proc']
             proc.interrupt()
+            return
         else:
             # Update current state
             self._state = TransitUserState.IN_TRANSPORT
