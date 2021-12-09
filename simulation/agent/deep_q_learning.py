@@ -81,6 +81,7 @@ class DQN(RLAgent):
         self._reward = self._config.transit_agent_config.reward
         self._replay_buffer_size = self._config.transit_agent_config.buffersize # size in episodes
         self._min_experience = self._config.transit_agent_config.min_experience # episodes in replay buffer before training starts
+        self._use_double_q = self._config.transit_agent_config.double_q # usage of Double Q Learning (Hasselt 2016)
         self._minibatch_size = self._config.transit_agent_config.batchsize # training minibatch size
         self._target_net_update_threshold = self._config.transit_agent_config.target_update_threshold # training steps before q net weights are propagated to target q net
         self._tau = self._config.transit_agent_config.tau
@@ -96,7 +97,7 @@ class DQN(RLAgent):
         if self._config.transit_agent_config.lr_decay:
             self._learning_rate = ExponentialDecay(
                 initial_learning_rate=0.01,
-                decay_steps=self._decay_steps,
+                decay_steps=self._learning_rate_decay_steps,
                 decay_rate=0.1
             )
         else:
@@ -258,12 +259,13 @@ class DQN(RLAgent):
 
             states_tp1 = np.array([transition[3] for transition in minibatch]) # s1
 
-            # Vanilla DQN with target network
-            q_values_tp1 = self._target_predict(states_tp1).numpy()
-
-            # Double Q-learning
-            # q_values_tp1 = self._eval_predict(states_tp1).numpy()
-            # q_values_tp1_t = self._target_predict(states_tp1).numpy()
+            if self._use_double_q:
+                # Double Q-learning
+                q_values_tp1 = self._eval_predict(states_tp1).numpy()
+                q_values_tp1_t = self._target_predict(states_tp1).numpy()
+            else:
+                # Vanilla DQN with target network
+                q_values_tp1 = self._target_predict(states_tp1).numpy()
 
             X = []
             y = []
@@ -272,8 +274,10 @@ class DQN(RLAgent):
                 if terminal:
                     target_q = r
                 else:
-                    target_q = r + self._gamma * tf.math.reduce_max(q_values_tp1[i]) # vanilla DQN with target network
-                    # target_q = r + self._gamma * q_values_tp1_t[i][tf.math.argmax(q_values_tp1[i])] # double Q-learning
+                    if self._use_double_q:
+                        target_q = r + self._gamma * q_values_tp1_t[i][tf.math.argmax(q_values_tp1[i])] # double Q-learning
+                    else:
+                        target_q = r + self._gamma * tf.math.reduce_max(q_values_tp1[i]) # vanilla DQN with target network
 
                 q_values = q_values_t[i]
                 q_values[a] = target_q
