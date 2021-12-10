@@ -53,6 +53,9 @@ class Bus(PublicTransitVehicle):
         self._eps = self._config.transit_agent_config.eps  # epsilon for e-greedy action selection
         self._gamma = self._config.transit_agent_config.gamma  # discount rate
         self._alpha = self._config.transit_agent_config.alpha  # step size for updates
+        # set timelimit to multiplier specified in config * planned route total time
+        route_duration = SimulationTimeConverter.duration_between(self.route.origin.departure, self.route.destination.departure)
+        self._timelimit = self._config.transit_agent_config.timelimit_multiplier * route_duration
 
         # Action space
         self._action_space = ActionSpace.instance()
@@ -83,7 +86,8 @@ class Bus(PublicTransitVehicle):
             position[pos] = 1
             self._env_state['position'] = position
             self._env_state['demands'] = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
-            self._env_state['drivingtime'] = 0
+            # self._env_state['drivingtime'] = 0
+            self._env_state['remaining_time'] = int(self._timelimit - (self._env.now - self._spawned))
 
             self._process = self._env.process(self._rl_agent.run(self))
             self._state_update_process = self._env.process(self._update_state())
@@ -227,7 +231,8 @@ class Bus(PublicTransitVehicle):
 
                 self._env_state['position'] = position
                 self._env_state['demands'] = m
-                self._env_state['drivingtime'] = int(self._time.now() - self._spawned)
+                # self._env_state['drivingtime'] = int(self._time.now() - self._spawned)
+                self._env_state['remaining_time'] = int(self._timelimit - (self._env.now - self._spawned))
 
                 region_id, _ = self._position.get_hexagon(self._action_res)
 

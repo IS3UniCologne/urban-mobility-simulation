@@ -497,7 +497,8 @@ class TransitUser(User, PassengerInterface):
                             distance=self._transport_task.origin >> self._transport_task.destination
                         )
                         self._payment_service._tracked_demands.add((self._transport_task.origin.getExactLocation(geojson=True),
-                                                                   self._transport_task.destination.getExactLocation(geojson=True),
+                                                                    self._transport_task.destination.getExactLocation(geojson=True),
+                                                                    int(self._transport_task.time * 60000),
                                                                     True))
                         self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task, selected_alternative)
 
@@ -507,6 +508,7 @@ class TransitUser(User, PassengerInterface):
                 self._state = TransitUserState.MISSED
                 self._payment_service._tracked_demands.add((self._transport_task.origin.getExactLocation(geojson=True),
                                                             self._transport_task.destination.getExactLocation(geojson=True),
+                                                            int(self._transport_task.time * 60000),
                                                             False))
                 self._payment_service.withdraw_transportation_task(self, self._transport_task)
                 if isinstance(e, simpy.Interrupt):
