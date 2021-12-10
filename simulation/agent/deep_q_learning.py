@@ -164,7 +164,7 @@ class DQN(RLAgent):
         model.add(layers.Dense(self._action_space.dimensionality(), activation='linear'))
         # model.compile(loss=tf.keras.losses.Huber(), optimizer='sgd', metrics=['accuracy'])
         model.compile(loss=Huber(), optimizer=self._optimizer,
-                      metrics=['accuracy', "mae", tf.keras.metrics.RootMeanSquaredError()])
+                      metrics=['accuracy'])
 
         return model
 
@@ -233,7 +233,6 @@ class DQN(RLAgent):
         bus._world.stop_processes()
 
         # retain parameters
-        # TODO: update target weights a last time?
         # TODO: refactor such that weights etc are retained through config instead of being passed around?
         bus._has_reached_terminal.succeed((self._q_net,
                                            self._target_q_net,
@@ -420,9 +419,9 @@ class DQN(RLAgent):
     @staticmethod
     def _state_to_numpy(state: dict):
         # ndarray of corridor dim * corridor dim + corridor dim + 1
-        # 1) OD demands (matrix) 2) agent position (one hot vector), 3) driving time (scalar)
+        # 1) OD demands (matrix) 2) agent position (one hot vector), 3) remaining driving time (scalar)
         # TODO: add "dtype=int" to concatenate call when numpy >= 1.20.0 in environment
-        return np.concatenate((state['demands'].reshape(-1), state['position'], [state['drivingtime']]))
+        return np.concatenate((state['demands'].reshape(-1), state['position'], [state['remaining_time']]))
 
     @staticmethod
     def _single_tensor_to_batch(tensor):

@@ -463,33 +463,39 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
             from folium import GeoJson
             from folium.plugins import TimestampedGeoJson
 
-            t = TimestampedGeoJson({
-                'type': 'FeatureCollection',
-                'features': [
-                    operator._timestamped_position
-                ]
-            }, loop=False, period='PT1M')
-
             template = """{
                 'type': 'Feature',
                 'geometry': {
                     'type': 'LineString',
-                    'coordinates': (d[0], d[1]),
+                    'coordinates': [d[0], d[1]]
                 },
                 'properties': {
-                    'serviced': d[2]
+                    'times': [d[2], d[2]],
+                    'icon': 'circle', # circle denotes DESTINATION of travel demand
+                    'iconcolor': 'grey', # doesn't work
+                    'color': 'green' if d[3] else 'red'
                 }
             }"""
 
             m = folium.Map(location=[52.52, 13.40])
 
             if operator._tracked_demands:
-                d = GeoJson({
+                t = TimestampedGeoJson({
                     'type': 'FeatureCollection',
-                    'features': [eval(template) for d in operator._tracked_demands]
-                }, style_function=lambda x: {'color': 'green'} if x['properties']['serviced'] else {'color': 'red'})
+                    'features': [
+                        operator._timestamped_position
+                    ] + [eval(template) for d in operator._tracked_demands]
+                }, loop=False, period='PT1M')
+                # , style_function=lambda x: {'color': 'green'} if x['properties']['serviced'] else {'color': 'red'}
 
-                d.add_to(m)
+            else:
+                t = TimestampedGeoJson({
+                    'type': 'FeatureCollection',
+                    'features': [
+                        operator._timestamped_position
+                    ]
+                }, loop=False, period='PT1M')
+
             t.add_to(m)
             if not kwargs:
                 m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(e)}.html'))
