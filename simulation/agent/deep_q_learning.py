@@ -154,11 +154,11 @@ class DQN(RLAgent):
 
         # Input
         model.add(layers.Dense(self._q_net_layer[0],
-                               input_dim=input_dims, activation='relu', kernel_initializer='he_uniform'))
+                               input_dim=input_dims, activation='tanh', kernel_initializer='glorot_uniform'))
 
         # Hidden Layers
         for layernodes in self._q_net_layer[1:]:
-            model.add(layers.Dense(layernodes, activation='relu', kernel_initializer='he_uniform'))
+            model.add(layers.Dense(layernodes, activation='tanh', kernel_initializer='glorot_uniform'))
 
         # Output
         model.add(layers.Dense(self._action_space.dimensionality(), activation='linear'))
