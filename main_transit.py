@@ -341,10 +341,6 @@ def run_single_simulation(start_time=0, end_time=60, seed=4711, weights=None, re
 
 def benchmark_agent(nn_weights = None, runs=100):
 
-    global demand_modifier_paths
-    demand_modifier_paths = demand_modifier_paths[:-1]
-    demand_modifier_paths.append('./data/demand/line200bufferBENCHMARK.geojson')
-
     if nn_weights is None:
         bus_agent_config.dumb = True
     else:
@@ -358,7 +354,7 @@ def benchmark_agent(nn_weights = None, runs=100):
     for i in tqdm(range(runs), total=runs):
 
         operator, world, payment_engine, service_level = run_single_simulation(
-            start_time=15 * 60, end_time=17 * 60, weights=w, replay_buffer=b, episode=e)
+            start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e)
 
         if nn_weights is None:
             episode_returns.append(deepcopy({'episode': e,
