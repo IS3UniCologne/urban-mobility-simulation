@@ -358,7 +358,7 @@ def benchmark_agent(nn_weights = None, runs=100):
     for i in tqdm(range(runs), total=runs):
 
         operator, world, payment_engine, service_level = run_single_simulation(
-            start_time=15 * 60, end_time=17 * 60, weights=w, replay_buffer=b, episode=e)
+            start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e)
 
         if nn_weights is None:
             episode_returns.append(deepcopy({'episode': e,
@@ -543,8 +543,8 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
 
 if __name__ == '__main__':
-    weights = learn_agent(prepare_benchmark=True)
-    # weights = './data/output/5000_episodes_weights_20211105-205907.keras'
+    # weights = learn_agent(prepare_benchmark=True)
+    weights = './data/output/5000_episodes_reward=3_experiment_weights_20211210-055700.keras'
     runs = 100
     benchmark = [
         {'nn_weights': None, 'runs': runs},
