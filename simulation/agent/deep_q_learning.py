@@ -234,12 +234,17 @@ class DQN(RLAgent):
 
         # retain parameters
         # TODO: refactor such that weights etc are retained through config instead of being passed around?
+
+        duration = self._env.now - bus._spawned if reached_destination else None # None if episode is canceled
+        distance = bus._dist_traveled if reached_destination else None
         bus._has_reached_terminal.succeed((self._q_net,
                                            self._target_q_net,
                                            self._replay_buffer,
                                            self._episode,
                                            self._learning_rate(self._optimizer.iterations) if self._config.transit_agent_config.lr_decay else 0.001,
-                                           reached_destination))
+                                           reached_destination,
+                                           distance,
+                                           duration))
 
     def _track(self, bus: Bus):
 
@@ -362,6 +367,7 @@ class DQN(RLAgent):
             new_position = GeodesicPosition(*new_centroid)
 
             distance = bus.position >> new_position
+            bus._dist_traveled += distance # add to overall travel distance
             duration = distance / bus._velocity  # in minutes
 
             self._state = BusState.EN_ROUTE_DETOUR

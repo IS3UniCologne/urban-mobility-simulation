@@ -67,6 +67,7 @@ class Bus(PublicTransitVehicle):
         self._corridor = corridor
 
         self._dropoffs = 0
+        self._dist_traveled = 0
 
         self._rl_agent = rl_agent
 
@@ -140,7 +141,7 @@ class Bus(PublicTransitVehicle):
         # stop demand generation
         self._world.stop_processes()
 
-        self._has_reached_terminal.succeed((None,)*6)
+        self._has_reached_terminal.succeed((None,)*8)
 
     def _move_to_next_stop(self):
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
