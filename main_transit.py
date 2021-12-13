@@ -441,12 +441,16 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
         e = operator._rl_agent_episode
         lr = operator._rl_agent_lr
         t = operator._rl_agent_reached_destination
+        dis = operator._rl_agent_distance
+        dur = operator._rl_agent_duration
 
         episode = deepcopy({'episode': e,
                             'return': operator._rewards_sum[-1],
                             'service_level': service_level,
                             'lr': lr,
-                            'reached_destination': t})
+                            'reached_destination': t,
+                            'distance': dis,
+                            'duration': dur})
 
         if not kwargs:
             episode_returns.append(episode)
