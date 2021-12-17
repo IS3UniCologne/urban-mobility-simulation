@@ -356,16 +356,24 @@ def benchmark_agent(nn_weights = None, runs=100):
         operator, world, payment_engine, service_level = run_single_simulation(
             start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e)
 
+        t = operator._rl_agent_reached_destination
+        dis = operator._rl_agent_distance
+        dur = operator._rl_agent_duration
+
         if nn_weights is None:
             episode_returns.append(deepcopy({'episode': e,
                                              'type': 'benchmark (planned)',
                                              'reached_destination': True,
-                                             'service_level': service_level}))
+                                             'service_level': service_level,
+                                             'distance': dis,
+                                             'duration': dur}))
         else:
             episode_returns.append(deepcopy({'episode': e,
                                              'type': 'DQN',
-                                             'reached_destination': True if operator._rewards_sum[-1] >= 0 else False,
-                                             'service_level': service_level}))
+                                             'reached_destination': t,
+                                             'service_level': service_level,
+                                             'distance': dis,
+                                             'duration': dur}))
 
         e += 1
 
@@ -409,6 +417,10 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
                 logging.info(f'Usage of Double Q set to {str(v)}',
                              extra={"clazz": __name__, "oid": ""})
                 bus_agent_config.double_q = v
+            if k == 'eps_decay':
+                logging.info(f'Epsilon decay set to {str(v)}',
+                             extra={"clazz": __name__, "oid": ""})
+                bus_agent_config.eps_decay = v
 
         # list experiment params for paths
         experiments = "_".join([str(k) + "=" + str(v) for k, v in kwargs.items()])
@@ -441,16 +453,13 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
         e = operator._rl_agent_episode
         lr = operator._rl_agent_lr
         t = operator._rl_agent_reached_destination
-        dis = operator._rl_agent_distance
-        dur = operator._rl_agent_duration
 
         episode = deepcopy({'episode': e,
                             'return': operator._rewards_sum[-1],
                             'service_level': service_level,
                             'lr': lr,
-                            'reached_destination': t,
-                            'distance': dis,
-                            'duration': dur})
+                            'reached_destination': t
+                            })
 
         if not kwargs:
             episode_returns.append(episode)
@@ -520,15 +529,15 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
     returns.to_csv(os.path.join(output_folder, f'{str(episodes)}_episodes_returns_{strf}.csv'))
 
     if not kwargs:
-        returns.plot(secondary_y=['service_level'],
-                     alpha=.5,
-                     color=['black', 'green'],
-                     title='Total Reward and Service Level over Episodes')
+        returns[['return', 'service_level']].plot(secondary_y=['service_level'],
+                                                             alpha=.5,
+                                                             color=['black', 'green'],
+                                                             title='Total Reward and Service Level over Episodes')
     else:
-        returns.plot(secondary_y=['service_level'],
-                     alpha=.5,
-                     color=['black', 'green'],
-                     title=f'Experiment: {experiments}')
+        returns[['return', 'service_level']].plot(secondary_y=['service_level'],
+                                                             alpha=.5,
+                                                             color=['black', 'green'],
+                                                             title=f'Experiment: {experiments}')
         try:
             for k, v in kwargs.items():
                 returns[k] = str(v)
@@ -544,7 +553,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
 if __name__ == '__main__':
     # weights = learn_agent(prepare_benchmark=True)
-    weights = './data/output/5000_episodes_reward=3_experiment_weights_20211210-055700.keras'
+    weights = './data/output/5000_episodes_eps_decay=0.9996_buffersize=500_experiment_weights_20211217-075000.keras'
     runs = 100
     benchmark = [
         {'nn_weights': None, 'runs': runs},
