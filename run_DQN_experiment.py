@@ -90,11 +90,18 @@ if __name__ == "__main__":
     #     {'doubleQ': False}
     # ]
 
+    # experiments = [
+    #     {'reward': 2, 'penalty': 20},
+    #     {'reward': 3, 'penalty': 20},
+    #     {'reward': 2, 'penalty': 30},
+    #     {'reward': 3, 'penalty': 30}
+    # ]
+
     experiments = [
-        {'reward': 2, 'penalty': 20},
-        {'reward': 3, 'penalty': 20},
-        {'reward': 2, 'penalty': 30},
-        {'reward': 3, 'penalty': 30}
+        {'eps_decay': 0.99925, 'buffersize': 500},
+        {'eps_decay': 0.99925, 'buffersize': 1000},
+        {'eps_decay': 0.9996, 'buffersize': 500},
+        {'eps_decay': 0.9996, 'buffersize': 1000}
     ]
 
     # how many parallel runs of each experiment should be done and then averaged?

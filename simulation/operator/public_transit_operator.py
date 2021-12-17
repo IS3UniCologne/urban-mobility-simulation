@@ -92,7 +92,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                         for trip_id in (t for t in trips if t not in [b.route.trip_id for b in self._busses]):
 
                             # TODO: in case of only one bus (DQN problem), how are we sure, we always spawn the same one
-                            if trip_id != 163297125:
+                            if trip_id != 163296942:
                                 # logging.error(f'Different trip than before!',
                                 #               extra={"clazz": self.__class__.__name__, "oid": ""})
                                 pass
@@ -295,8 +295,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._rl_agent_episode = episode
         self._rl_agent_lr = learning_rate
         self._rl_agent_reached_destination = reached_destination
-        self._rl_agent_distance = distance
-        self._rl_agent_duration = duration
+        self._rl_agent_distance = distance if not dumb else bus.route.total_distance()
+        self._rl_agent_duration = duration if not dumb else bus.route.planned_duration() # TODO: replace with actual duration when introducin road networks
         self._rewards_sum.append(bus._rl_agent._reward_sum if not dumb else None)
 
         # TODO: this is hardcoded for one bus

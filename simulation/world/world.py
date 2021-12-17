@@ -113,6 +113,9 @@ class World:
                 task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes,
                                      max_wait_time)
 
+                # new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
+                #                             self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env,
+                #                             passive=True if not self._config.transit_agent_config.dumb else False)
                 new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
                                             self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env,
                                             passive=True)
