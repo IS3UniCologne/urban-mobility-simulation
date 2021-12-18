@@ -97,11 +97,18 @@ if __name__ == "__main__":
     #     {'reward': 3, 'penalty': 30}
     # ]
 
+    # experiments = [
+    #     {'eps_decay': 0.99925, 'buffersize': 500},
+    #     {'eps_decay': 0.99925, 'buffersize': 1000},
+    #     {'eps_decay': 0.9996, 'buffersize': 500},
+    #     {'eps_decay': 0.9996, 'buffersize': 1000}
+    # ]
+
     experiments = [
-        {'eps_decay': 0.99925, 'buffersize': 500},
-        {'eps_decay': 0.99925, 'buffersize': 1000},
-        {'eps_decay': 0.9996, 'buffersize': 500},
-        {'eps_decay': 0.9996, 'buffersize': 1000}
+        {'doubleQ': True, 'tau': None},
+        {'doubleQ': False, 'tau': None},
+        {'doubleQ': True, 'tau': 0.001},
+        {'doubleQ': False, 'tau': 0.001},
     ]
 
     # how many parallel runs of each experiment should be done and then averaged?
@@ -128,6 +135,9 @@ if __name__ == "__main__":
                        title=f'{str(len(results))} Experiments averaged Returns and Service Level')
         plt.show()
     else:
+        # list experiment params for paths
+        experiments_strf = "_".join([str(k) for k, v in experiments[0].items()])
+
         if average_experiments > 1:
             # repeat each experiment average_experiments times
             experiments = [e for e in experiments for _ in range(average_experiments)]
@@ -140,14 +150,15 @@ if __name__ == "__main__":
 
         if average_experiments > 1 and not keepraw:
             collected = pd.concat(results).groupby([*experiments[0].keys(), 'episode']).mean().reset_index()
-            path = f'search_{list(experiments[0])[0]}_experiments_averaged_{average_experiments}_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
+            path = f'search_{experiments_strf}_experiments_averaged_{average_experiments}_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
         else:
             collected = pd.concat(results)
-            path = f'search_{list(experiments[0])[0]}_experiments_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
+            path = f'search_{experiments_strf}_experiments_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
 
     collected.to_csv(
         os.path.join(
             output_folder,
+            'returns',
             path
         ),
         index = True if type(experiments) is range or keepraw else False

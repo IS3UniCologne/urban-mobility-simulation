@@ -115,7 +115,7 @@ agent_eps_min = parser.get("BUS", "EPS_MIN")
 buffersize = int(parser.get("BUS", "BUFFERSIZE"))
 min_experience = int(parser.get("BUS", "MIN_EXPERIENCE"))
 double_q = parser.getboolean("BUS", "USE_DOUBLE_Q")
-target_update_threshold = int(parser.get("BUS", "TARGET_UPDATE_THRESHOLD"))
+target_update_threshold = parser.getint("BUS", "TARGET_UPDATE_THRESHOLD")
 tau = parser.get("BUS", "TAU")
 agent_gamma = parser.get("BUS", "GAMMA")
 bootstrap_agent_n = parser.get("BUS", "N")
@@ -421,6 +421,17 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
                 logging.info(f'Epsilon decay set to {str(v)}',
                              extra={"clazz": __name__, "oid": ""})
                 bus_agent_config.eps_decay = v
+            if k == 'tau':
+                if v is None:
+                    logging.info(f'Using hard updates of target Q-network',
+                                 extra={"clazz": __name__, "oid": ""})
+                    bus_agent_config.tau = None
+                else:
+                    logging.info(f'Using soft updates of target Q-network with tau of {str(v)}',
+                                 extra={"clazz": __name__, "oid": ""})
+                    bus_agent_config.tau = v
+                    # to complete a "full" update in the same number of steps as hard updates
+                    bus_agent_config.target_update_threshold = int(bus_agent_config.target_update_threshold * v)
 
         # list experiment params for paths
         experiments = "_".join([str(k) + "=" + str(v) for k, v in kwargs.items()])
@@ -434,6 +445,22 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
         logdir_ = f'{logdir}/run{experiment}'
         tensorboard_ = ModifiedTensorBoard(log_dir=logdir_)
         bus_agent_config.tensorboard = tensorboard_
+
+    # use same timestamp for all paths to group one run
+    strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    if not kwargs:
+        weights_path = f'{str(episodes)}_episodes_weights_{strf}.keras'
+    else:
+        weights_path = f'{str(episodes)}_episodes_{experiments}_weights_{strf}.keras'
+
+    return_path = weights_path.replace('weights', 'returns').replace('keras', 'csv')
+
+    if track:
+        track_path = return_path.replace('returns', 'movements')
+        track_dir = os.path.join(output_folder, 'tracking', track_path.replace('.csv', '/'))
+        os.makedirs(os.path.dirname(track_dir), exist_ok=True)
+        tracks = []
 
     w = nn_weights  # weights
     b = None  # replay buffer
@@ -468,6 +495,19 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
             episode_returns.append({**kwargs, **episode})
 
         if track:
+            # collect movements
+            ms = None
+            for coordinates in operator._timestamped_position['geometry']['coordinates']:
+                if ms is None:
+                    # first movement
+                    ms = coordinates
+                    continue
+                else:
+                    me = coordinates
+                    tracks.append({'episode': e, 'move_start': ms, 'move_end': me})
+                    ms = coordinates
+
+            # map position over time (and possibly demands over time)
             import folium
             from folium import GeoJson
             from folium.plugins import TimestampedGeoJson
@@ -506,27 +546,22 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
                 }, loop=False, period='PT1M')
 
             t.add_to(m)
-            if not kwargs:
-                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(e)}.html'))
-            else:
-                m.save(os.path.join(output_folder, 'tracking', f'bus_movement_episode_{str(e)}_{experiments}.html'))
+            m.save(os.path.join(track_dir, f'bus_movement_episode_{str(e)}.html'))
 
         e += 1
 
-    strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-
-    if not kwargs:
-        weights_path = f'{str(episodes)}_episodes_weights_{strf}.keras'
-    else:
-        weights_path = f'{str(episodes)}_episodes_{experiments}_experiment_weights_{strf}.keras'
-
     operator._rl_agent_model.save_weights(
-        os.path.join(output_folder, weights_path)
+        os.path.join(output_folder, 'weights', weights_path)
     )
 
     returns = pd.DataFrame.from_records(episode_returns)
     returns = returns.set_index('episode')
-    returns.to_csv(os.path.join(output_folder, f'{str(episodes)}_episodes_returns_{strf}.csv'))
+    returns.to_csv(os.path.join(output_folder, 'returns', return_path))
+
+    if track:
+        tracks = pd.DataFrame.from_records(tracks)
+        tracks = tracks.set_index('episode')
+        tracks.to_csv(os.path.join(output_folder, 'tracking', track_path))
 
     if not kwargs:
         returns[['return', 'service_level']].plot(secondary_y=['service_level'],
@@ -552,8 +587,8 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
 
 if __name__ == '__main__':
-    # weights = learn_agent(prepare_benchmark=True)
-    weights = './data/output/5000_episodes_eps_decay=0.9996_buffersize=500_experiment_weights_20211217-075000.keras'
+    weights = learn_agent(prepare_benchmark=True)
+    # weights = './data/output/5000_episodes_eps_decay=0.9996_buffersize=500_experiment_weights_20211217-075000.keras'
     runs = 100
     benchmark = [
         {'nn_weights': None, 'runs': runs},
