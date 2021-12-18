@@ -1,6 +1,8 @@
 import ast
 import configparser
 import datetime
+import random
+import time
 from configparser import ConfigParser
 from copy import deepcopy
 
@@ -446,18 +448,16 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
         tensorboard_ = ModifiedTensorBoard(log_dir=logdir_)
         bus_agent_config.tensorboard = tensorboard_
 
-    # use same timestamp for all paths to group one run
-    strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-
-    if not kwargs:
-        weights_path = f'{str(episodes)}_episodes_weights_{strf}.keras'
-    else:
-        weights_path = f'{str(episodes)}_episodes_{experiments}_weights_{strf}.keras'
-
-    return_path = weights_path.replace('weights', 'returns').replace('keras', 'csv')
-
     if track:
-        track_path = return_path.replace('returns', 'movements')
+        # for tracking dirs, we need to hack around the fact that all directories would be named the same
+        # this is why you should not use grid search experiments and tracking at the same time...
+        time.sleep(random.random())
+        strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+        if not kwargs:
+            track_path = f'{str(episodes)}_episodes_movements_{strf}.csv'
+        else:
+            track_path = f'{str(episodes)}_episodes_{experiments}_movements_{strf}.csv'
+
         track_dir = os.path.join(output_folder, 'tracking', track_path.replace('.csv', '/'))
         os.makedirs(os.path.dirname(track_dir), exist_ok=True)
         tracks = []
@@ -549,6 +549,16 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
             m.save(os.path.join(track_dir, f'bus_movement_episode_{str(e)}.html'))
 
         e += 1
+
+    # use same timestamp for all paths to group one run
+    strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    if not kwargs:
+        weights_path = f'{str(episodes)}_episodes_weights_{strf}.keras'
+    else:
+        weights_path = f'{str(episodes)}_episodes_{experiments}_weights_{strf}.keras'
+
+    return_path = weights_path.replace('weights', 'returns').replace('keras', 'csv')
 
     operator._rl_agent_model.save_weights(
         os.path.join(output_folder, 'weights', weights_path)
