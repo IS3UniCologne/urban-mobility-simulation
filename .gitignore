@@ -136,4 +136,4 @@ data/supply/vehicle_supply_distribution_hex_7.csv
 
 data/output/*.csv
 data/output/*.keras
-data/output/logs/*
+/data/output/figures/
