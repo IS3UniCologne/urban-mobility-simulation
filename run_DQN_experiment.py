@@ -69,10 +69,10 @@ if __name__ == "__main__":
     #     {'buffersize': 250}
     # ]
 
-    # experiments = [
-    #     {'action_space': ["UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]},
-    #     {'action_space': ["STAY","UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]}
-    # ]
+    experiments = [
+        {'action_space': ["UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]},
+        {'action_space': ["STAY","UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]}
+    ]
 
     # experiments = [
     #     {'lr_decay': True},
@@ -90,12 +90,12 @@ if __name__ == "__main__":
     #     {'doubleQ': False}
     # ]
 
-    experiments = [
-        {'reward': 2, 'penalty': 20},
-        {'reward': 3, 'penalty': 20},
-        {'reward': 2, 'penalty': 30},
-        {'reward': 3, 'penalty': 30}
-    ]
+    # experiments = [
+    #     {'reward': 2, 'penalty': 20},
+    #     {'reward': 3, 'penalty': 20},
+    #     {'reward': 2, 'penalty': 30},
+    #     {'reward': 3, 'penalty': 30}
+    # ]
 
     # experiments = [
     #     {'eps_decay': 0.99925, 'buffersize': 500},
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     # ]
 
     # how many parallel runs of each experiment should be done and then averaged?
-    average_experiments = 5
+    average_experiments = 10
     # keep raw returns of all experiments, i.e. do not average?
     keepraw = True
 

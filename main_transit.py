@@ -496,16 +496,8 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
         if track:
             # collect movements
-            ms = None
             for coordinates in operator._timestamped_position['geometry']['coordinates']:
-                if ms is None:
-                    # first movement
-                    ms = coordinates
-                    continue
-                else:
-                    me = coordinates
-                    tracks.append({'episode': e, 'move_start': ms, 'move_end': me})
-                    ms = coordinates
+                tracks.append({'episode': e, 'position': coordinates})
 
             # map position over time (and possibly demands over time)
             import folium
@@ -598,7 +590,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
 if __name__ == '__main__':
     weights = learn_agent(prepare_benchmark=True)
-    # weights = './data/output/5000_episodes_eps_decay=0.9996_buffersize=500_experiment_weights_20211217-075000.keras'
+    # weights = './data/output/5000_episodes_doubleQ=True_tau=0.001_experiment_weights_20211219-065148.keras'
     runs = 100
     benchmark = [
         {'nn_weights': None, 'runs': runs},
@@ -609,4 +601,4 @@ if __name__ == '__main__':
     results = pd.concat(results, ignore_index=False)
 
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    results.to_csv(os.path.join(output_folder, f'{str(runs)}_episodes_benchmark_{strf}.csv'), index=False)
+    results.to_csv(os.path.join(output_folder, 'benchmarks', f'{str(runs)}_episodes_benchmark_{strf}.csv'), index=False)
