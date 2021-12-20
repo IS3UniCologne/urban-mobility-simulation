@@ -64,6 +64,7 @@ class DQN(RLAgent):
     def __init__(self, env: simpy.Environment, state_dims, weights: tuple, replay_buffer, episode = 1):
         super(DQN, self).__init__(env)
 
+        self._total_episodes = self._config.transit_agent_config.episodes
         self._episode = episode # starting from 1
         self._action_space = ActionSpace.instance()
 
@@ -75,6 +76,7 @@ class DQN(RLAgent):
         else:
             self._eps_min = self._config.transit_agent_config.eps_min
             self._eps = self._config.transit_agent_config.eps
+        self._eps_decay_strategy = self._config.transit_agent_config.eps_decay_strategy
         self._eps_decay = self._config.transit_agent_config.eps_decay
         self._eps_min = self._config.transit_agent_config.eps_min
         self._penalty = self._config.transit_agent_config.penalty
@@ -206,9 +208,15 @@ class DQN(RLAgent):
             if not self._config.transit_agent_config.evaluation:
                 self._train(terminal)
 
-            if terminal:
+            if terminal and self._eps_decay_strategy != 'none':
+                # decay epsilon at end of episode
                 if self._eps > self._eps_min:
-                    self._eps *= self._eps_decay # decay epsilon at end of episode
+                    if self._eps_decay_strategy == 'exp':
+                        # actually a power law function decay
+                        self._eps *= self._eps_decay
+                    elif self._eps_decay_strategy == 'linear':
+                        # decay linearly from 1 to 0 over all episodes
+                        self._eps = 1 - (1/self._total_episodes) * self._episode
                     self._eps = max(self._eps_min, self._eps)
                 break
 

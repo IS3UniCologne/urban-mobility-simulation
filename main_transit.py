@@ -112,6 +112,7 @@ action_resolution = parser.get("BUS", "ACTION_SPACE_RESOLUTION")
 timelimit_multiplier = parser.getfloat("BUS", "TIMELIMIT")
 agent_alpha = parser.get("BUS", "ALPHA")
 agent_eps = parser.get("BUS", "EPS")
+agent_eps_decay_strategy = parser.get("BUS", "EPS_DECAY_STRATEGY")
 agent_eps_decay = parser.get("BUS", "EPS_DECAY")
 agent_eps_min = parser.get("BUS", "EPS_MIN")
 buffersize = int(parser.get("BUS", "BUFFERSIZE"))
@@ -137,10 +138,11 @@ tensorboard = ModifiedTensorBoard(log_dir=logdir)
 
 user_config = UserConfig(spatial_strategy, max_waiting_time)
 transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
-bus_agent_config = TransitAgentConfig(action_resolution, agent_alpha, agent_eps, agent_eps_decay, agent_eps_min,
-                                      buffersize, min_experience, timelimit_multiplier, target_update_threshold, tau,
-                                      agent_gamma, bootstrap_agent_n, tensorboard, corridor, agent_penalty, agent_reward,
-                                      q_net_layers, batchsize, lr_decay, lr_decay_steps, double_q, velocity)
+bus_agent_config = TransitAgentConfig(episodes, action_resolution, agent_alpha, agent_eps, agent_eps_decay_strategy,
+                                      agent_eps_decay, agent_eps_min, buffersize, min_experience, timelimit_multiplier,
+                                      target_update_threshold, tau, agent_gamma, bootstrap_agent_n, tensorboard,
+                                      corridor, agent_penalty, agent_reward, q_net_layers, batchsize, lr_decay,
+                                      lr_decay_steps, double_q, velocity)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -368,7 +370,7 @@ def benchmark_agent(nn_weights = None, runs=100):
 
         if nn_weights is None:
             episode_returns.append(deepcopy({'episode': e,
-                                             'type': 'benchmark (planned)',
+                                             'type': 'BVG',
                                              'reached_destination': True,
                                              'service_level': service_level,
                                              'distance': dis,
@@ -457,6 +459,10 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
                     bus_agent_config.tau = v
                     # to complete a "full" update in the same number of steps as hard updates
                     bus_agent_config.target_update_threshold = int(bus_agent_config.target_update_threshold * v)
+            if k == 'eps_decay_strategy':
+                logging.info(f'Epsilon decay strategy set to {str(v)}',
+                             extra={"clazz": __name__, "oid": ""})
+                bus_agent_config.eps_decay_strategy = v
 
         # list experiment params for paths
         experiments = "_".join([str(k) + "=" + str(v) for k, v in kwargs.items()])
@@ -612,8 +618,8 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
 
 if __name__ == '__main__':
-    # weights = learn_agent(prepare_benchmark=True)
-    weights = "./data/output/weights/5000_episodes_action_space=['UP', 'DOWN', 'UP_LEFT', 'UP_RIGHT', 'DOWN_LEFT', 'DOWN_RIGHT']_weights_20211220-093336.keras"
+    weights = learn_agent(prepare_benchmark=True)
+    # weights = "./data/output/weights/5000_episodes_action_space=['UP', 'DOWN', 'UP_LEFT', 'UP_RIGHT', 'DOWN_LEFT', 'DOWN_RIGHT']_weights_20211220-093336.keras"
     runs = 100
     benchmark = [
         {'nn_weights': None, 'runs': runs},

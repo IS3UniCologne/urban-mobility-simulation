@@ -207,14 +207,17 @@ class TransitOperatorConfig:
 
 
 class TransitAgentConfig:
-    def __init__(self, action_resolution, alpha, eps, eps_decay, eps_min, buffersize, min_experience, timelimit_multiplier,
-                 target_update_threshold, tau, gamma, n, tensorboard, corridor, penalty, reward, q_net_layer, batchsize,
-                 lr_decay, lr_decay_steps, double_q, velocity):
+    # TODO: its really bad practice to use that many positional arguments > use kwargs instead
+    def __init__(self, episodes, action_resolution, alpha, eps, eps_decay_strategy, eps_decay, eps_min, buffersize,
+                 min_experience, timelimit_multiplier, target_update_threshold, tau, gamma, n, tensorboard, corridor,
+                 penalty, reward, q_net_layer, batchsize, lr_decay, lr_decay_steps, double_q, velocity):
         self.dumb = False # a dumb bus moves as planned without agent rerouting
+        self.episodes = episodes
         self.action_resolution = int(action_resolution)
         self.timelimit_multiplier = timelimit_multiplier
         self.alpha = float(alpha)
         self.eps = float(eps)
+        self.eps_decay_strategy = eps_decay_strategy
         self.eps_decay = float(eps_decay)
         self.eps_min = float(eps_min)
         self.buffersize = buffersize
