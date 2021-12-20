@@ -208,16 +208,17 @@ class DQN(RLAgent):
             if not self._config.transit_agent_config.evaluation:
                 self._train(terminal)
 
-            if terminal and self._eps_decay_strategy != 'none':
-                # decay epsilon at end of episode
-                if self._eps > self._eps_min:
-                    if self._eps_decay_strategy == 'exp':
-                        # actually a power law function decay
-                        self._eps *= self._eps_decay
-                    elif self._eps_decay_strategy == 'linear':
-                        # decay linearly from 1 to 0 over all episodes
-                        self._eps = 1 - (1/self._total_episodes) * self._episode
-                    self._eps = max(self._eps_min, self._eps)
+            if terminal:
+                if self._eps_decay_strategy != 'none':
+                    # decay epsilon at end of episode
+                    if self._eps > self._eps_min:
+                        if self._eps_decay_strategy == 'exp':
+                            # actually a power law function decay
+                            self._eps *= self._eps_decay
+                        elif self._eps_decay_strategy == 'linear':
+                            # decay linearly from 1 to 0 over all episodes
+                            self._eps = 1 - (1/self._total_episodes) * self._episode
+                        self._eps = max(self._eps_min, self._eps)
                 break
 
         # retain decayed epsilon
