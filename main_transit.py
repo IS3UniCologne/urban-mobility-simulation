@@ -353,6 +353,10 @@ def benchmark_agent(nn_weights = None, runs=100):
     e = 1  # episode counter
     episode_returns = []
 
+    if track and nn_weights is not None:
+        tracks = []
+
+
     for i in tqdm(range(runs), total=runs):
 
         operator, world, payment_engine, service_level = run_single_simulation(
@@ -377,7 +381,26 @@ def benchmark_agent(nn_weights = None, runs=100):
                                              'distance': dis,
                                              'duration': dur}))
 
+            if track:
+                # collect movements
+                ms = None
+                for coordinates in operator._timestamped_position['geometry']['coordinates']:
+                    if ms is None:
+                        # first movement
+                        ms = coordinates
+                        continue
+                    else:
+                        me = coordinates
+                        tracks.append({'episode': e, 'move_start': ms, 'move_end': me})
+                        ms = coordinates
+
         e += 1
+
+    if track and nn_weights is not None:
+        tracks = pd.DataFrame.from_records(tracks)
+        tracks = tracks.set_index('episode')
+        strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        tracks.to_csv(os.path.join(output_folder, 'tracking', f'{str(runs)}_benchmark_agent_movements_{strf}.csv'))
 
     returns = pd.DataFrame.from_records(episode_returns)
     return returns
@@ -589,8 +612,8 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
 
 if __name__ == '__main__':
-    weights = learn_agent(prepare_benchmark=True)
-    # weights = './data/output/5000_episodes_doubleQ=True_tau=0.001_experiment_weights_20211219-065148.keras'
+    # weights = learn_agent(prepare_benchmark=True)
+    weights = "./data/output/weights/5000_episodes_action_space=['UP', 'DOWN', 'UP_LEFT', 'UP_RIGHT', 'DOWN_LEFT', 'DOWN_RIGHT']_weights_20211220-093336.keras"
     runs = 100
     benchmark = [
         {'nn_weights': None, 'runs': runs},
