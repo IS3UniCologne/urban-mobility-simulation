@@ -75,6 +75,10 @@ class Configuration:
     def spatial_resolution(self):
         return self._spatial_resolution
 
+    @spatial_resolution.setter
+    def spatial_resolution(self, spatial_resolution: int):
+        self._spatial_resolution = SpatialResolution(spatial_resolution)
+
     @property
     def spatial_resolution_value(self):
         return self._spatial_resolution.value
