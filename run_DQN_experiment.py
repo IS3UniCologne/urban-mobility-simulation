@@ -69,10 +69,10 @@ if __name__ == "__main__":
     #     {'buffersize': 250}
     # ]
 
-    experiments = [
-        {'action_space': ["UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]},
-        {'action_space': ["STAY","UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]}
-    ]
+    # experiments = [
+    #     {'action_space': ["UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]},
+    #     {'action_space': ["STAY","UP","DOWN","UP_LEFT","UP_RIGHT","DOWN_LEFT","DOWN_RIGHT"]}
+    # ]
 
     # experiments = [
     #     {'lr_decay': True},
@@ -111,13 +111,24 @@ if __name__ == "__main__":
     #     {'doubleQ': False, 'tau': 0.001},
     # ]
 
+    # experiments = [
+    #     {'eps_decay': 0.9996, 'eps_decay_strategy': 'exp'},
+    #     {'eps_decay_strategy': 'linear'}
+    # ]
+
+    # experiments = [
+    #     {'buffersize': 500},
+    #     {'buffersize': 750},
+    #     {'buffersize': 1000}
+    # ]
+
     # how many parallel runs of each experiment should be done and then averaged?
     average_experiments = 10
     # keep raw returns of all experiments, i.e. do not average?
     keepraw = True
 
     # or just run average experiments by using range with the number you like
-    # experiments = range(10)
+    experiments = range(20)
 
     if type(experiments) is range:
         results = pqdm(experiments,
@@ -128,12 +139,15 @@ if __name__ == "__main__":
         # compute and plot average returns
         path = f'average_{str(len(experiments))}_experiments_{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.csv'
 
-        collected = pd.concat(results).groupby('episode', as_index=True).mean()
-        collected.plot(secondary_y=['service_level'],
-                       alpha=.5,
-                       color=['black', 'green'],
-                       title=f'{str(len(results))} Experiments averaged Returns and Service Level')
-        plt.show()
+        if not keepraw:
+            collected = pd.concat(results).groupby('episode', as_index=True).mean()
+            collected.plot(secondary_y=['service_level'],
+                           alpha=.5,
+                           color=['black', 'green'],
+                           title=f'{str(len(results))} Experiments averaged Returns and Service Level')
+            plt.show()
+        else:
+            collected = pd.concat(results)
     else:
         # list experiment params for paths
         experiments_strf = "_".join([str(k) for k, v in experiments[0].items()])

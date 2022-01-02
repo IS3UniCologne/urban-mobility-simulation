@@ -343,7 +343,8 @@ def run_single_simulation(start_time=0, end_time=60, seed=4711, weights=None, re
     return operator, world, payment_engine, service_level
 
 
-def benchmark_agent(nn_weights = None, runs=100):
+def benchmark_agent(nn_weights = None, runs=100, demand_res=7):
+    global global_config
 
     if nn_weights is None:
         bus_agent_config.dumb = True
@@ -358,6 +359,23 @@ def benchmark_agent(nn_weights = None, runs=100):
     if track and nn_weights is not None:
         tracks = []
 
+    if demand_res != global_config.spatial_resolution_value:
+        global demand_profile
+        global distance_matrix
+        global di
+
+        # switch world resolution and re-run demand importer
+        global_config.spatial_resolution = demand_res
+        di = DemandImporter(spatial_resolution=global_config.spatial_resolution,
+                            temporal_resolution=global_config.temporal_resolution,
+                            daily_resolution=global_config.daily_resolution)
+
+        demand_profile = di.extract_spatio_temporal_demand_estimates(p)
+
+        geodesic_environment = GeodesicEnvironment.getInstance()
+        hexagons = geodesic_environment.getLayer(f"hex_{demand_res}").index.tolist()
+        dmi = DistanceMatrixImporter(hexagons, demand_res, "./data/infrastructure")
+        distance_matrix = dmi.load_distance_matrix()
 
     for i in tqdm(range(runs), total=runs):
 
@@ -371,6 +389,7 @@ def benchmark_agent(nn_weights = None, runs=100):
         if nn_weights is None:
             episode_returns.append(deepcopy({'episode': e,
                                              'type': 'BVG',
+                                             'spatial_res': demand_res,
                                              'reached_destination': True,
                                              'service_level': service_level,
                                              'distance': dis,
@@ -378,6 +397,7 @@ def benchmark_agent(nn_weights = None, runs=100):
         else:
             episode_returns.append(deepcopy({'episode': e,
                                              'type': 'DQN',
+                                             'spatial_res': demand_res,
                                              'reached_destination': t,
                                              'service_level': service_level,
                                              'distance': dis,
@@ -458,7 +478,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
                                  extra={"clazz": __name__, "oid": ""})
                     bus_agent_config.tau = v
                     # to complete a "full" update in the same number of steps as hard updates
-                    bus_agent_config.target_update_threshold = int(bus_agent_config.target_update_threshold * v)
+                    bus_agent_config.target_update_threshold = max(1, int(bus_agent_config.target_update_threshold * v))
             if k == 'eps_decay_strategy':
                 logging.info(f'Epsilon decay strategy set to {str(v)}',
                              extra={"clazz": __name__, "oid": ""})
@@ -618,15 +638,17 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
 
 if __name__ == '__main__':
-    weights = learn_agent(prepare_benchmark=True)
-    # weights = "./data/output/weights/5000_episodes_action_space=['UP', 'DOWN', 'UP_LEFT', 'UP_RIGHT', 'DOWN_LEFT', 'DOWN_RIGHT']_weights_20211220-093336.keras"
+    # weights = learn_agent(prepare_benchmark=True)
+    weights = "./data/output/weights/5000_episodes_weights_20220101-083224.keras"
     runs = 100
     benchmark = [
-        {'nn_weights': None, 'runs': runs},
-        {'nn_weights': weights, 'runs': runs}
+        {'nn_weights': None, 'runs': runs, 'demand_res': 7},
+        {'nn_weights': weights, 'runs': runs, 'demand_res': 7},
+        {'nn_weights': None, 'runs': runs, 'demand_res': 8},
+        {'nn_weights': weights, 'runs': runs, 'demand_res': 8},
     ]
 
-    results = pqdm(benchmark, benchmark_agent, n_jobs=2, argument_type='kwargs', mp_context=mp.get_context('spawn'))
+    results = pqdm(benchmark, benchmark_agent, n_jobs=len(benchmark), argument_type='kwargs', mp_context=mp.get_context('spawn'))
     results = pd.concat(results, ignore_index=False)
 
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
