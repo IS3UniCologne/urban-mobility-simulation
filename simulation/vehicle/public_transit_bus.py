@@ -214,9 +214,15 @@ class Bus(PublicTransitVehicle):
                 # build OD matrix: m[start hex][end hex] = OD count for all currently known demands
                 m = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
                 for d in demands:
-                    start = self._corridor_sorted.index(d.origin.get_hexagon_id(self._action_res))
-                    end = self._corridor_sorted.index(d.destination.get_hexagon_id(self._action_res))
-                    m[start][end] += 1
+                    try:
+                        start = self._corridor_sorted.index(d.origin.get_hexagon_id(self._action_res))
+                        end = self._corridor_sorted.index(d.destination.get_hexagon_id(self._action_res))
+                        m[start][end] += 1
+                    except ValueError as e:
+                        logging.debug(f'Bus update state: Encountered demand at edge of hexagon: {e}',
+                                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+                        # for now we are skipping it. I don't see a good way to solve the geometry inconsistency
+                        continue
 
                 # also build "OD-demands" for each passenger in the bus:
                 # origin = current position, destination = drop-off
