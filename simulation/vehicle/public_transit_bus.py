@@ -227,9 +227,19 @@ class Bus(PublicTransitVehicle):
                 # also build "OD-demands" for each passenger in the bus:
                 # origin = current position, destination = drop-off
                 for p in self._seats:
-                    start = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
-                    end = self._corridor_sorted.index(p.transport_task.destination.get_hexagon_id(self._action_res))
-                    m[start][end] += 1
+                    try:
+                        start = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
+                        end = self._corridor_sorted.index(p.transport_task.destination.get_hexagon_id(self._action_res))
+                        m[start][end] += 1
+                    except ValueError as e:
+                        # TODO: think about below
+                        # if a passenger is already in the bus, the edge case must be the destination
+                        # because the passenger can never be dropped of at the destination (with vicinity=hexagon)
+                        # this demand should be pruned before even becoming a passenger
+                        logging.debug(f'Bus update state: Encountered passenger demand at edge of hexagon: {e}',
+                                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+                        # for now we are skipping it. I don't see a good way to solve the geometry inconsistency
+                        continue
 
                 # build position vector v[hex] =1 if bus is at hex, else 0
                 position = np.zeros(self._corridor_dim, dtype=int)
