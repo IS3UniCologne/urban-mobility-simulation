@@ -343,7 +343,7 @@ def run_single_simulation(start_time=0, end_time=60, seed=4711, weights=None, re
     return operator, world, payment_engine, service_level
 
 
-def benchmark_agent(nn_weights = None, runs=100, demand_res=7):
+def benchmark_agent(nn_weights = None, runs=100, demand_res=7, seed=None):
     global global_config
 
     if nn_weights is None:
@@ -353,11 +353,11 @@ def benchmark_agent(nn_weights = None, runs=100, demand_res=7):
 
     w = nn_weights  # weights
     b = None  # replay buffer
-    e = 1  # episode counter
     episode_returns = []
 
     if track and nn_weights is not None:
         tracks = []
+        demands = []
 
     if demand_res != global_config.spatial_resolution_value:
         global demand_profile
@@ -373,21 +373,27 @@ def benchmark_agent(nn_weights = None, runs=100, demand_res=7):
         demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
         geodesic_environment = GeodesicEnvironment.getInstance()
+        # geodesic_environment.reset_random_generator(seed=seed) # is reset in every call to run_single_simulation
         hexagons = geodesic_environment.getLayer(f"hex_{demand_res}").index.tolist()
         dmi = DistanceMatrixImporter(hexagons, demand_res, "./data/infrastructure")
         distance_matrix = dmi.load_distance_matrix()
 
     for i in tqdm(range(runs), total=runs):
 
+        # mutate motherseed that all processes were given to generate new randomness in new run
+        # because in the first run the multiplicator is 0, this has the nice side effect
+        # of making this one run comparable across all benchmarks
+        run_seed = seed * i
+
         operator, world, payment_engine, service_level = run_single_simulation(
-            start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e)
+            start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=i+1, seed=run_seed)
 
         t = operator._rl_agent_reached_destination
         dis = operator._rl_agent_distance
         dur = operator._rl_agent_duration
 
         if nn_weights is None:
-            episode_returns.append(deepcopy({'episode': e,
+            episode_returns.append(deepcopy({'run': i+1,
                                              'type': 'BVG',
                                              'spatial_res': demand_res,
                                              'reached_destination': True,
@@ -395,7 +401,7 @@ def benchmark_agent(nn_weights = None, runs=100, demand_res=7):
                                              'distance': dis,
                                              'duration': dur}))
         else:
-            episode_returns.append(deepcopy({'episode': e,
+            episode_returns.append(deepcopy({'run': i+1,
                                              'type': 'DQN',
                                              'spatial_res': demand_res,
                                              'reached_destination': t,
@@ -405,24 +411,30 @@ def benchmark_agent(nn_weights = None, runs=100, demand_res=7):
 
             if track:
                 # collect movements
-                ms = None
-                for coordinates in operator._timestamped_position['geometry']['coordinates']:
+                ms = None # movement start
+                for coordinates, time in zip(operator._timestamped_position['geometry']['coordinates'], operator._timestamped_position['properties']['times']):
                     if ms is None:
                         # first movement
                         ms = coordinates
                         continue
                     else:
-                        me = coordinates
-                        tracks.append({'episode': e, 'move_start': ms, 'move_end': me})
+                        me = coordinates # movement end
+                        tracks.append({'run': i+1, 'move_start': ms, 'move_end': me, 'time(ms)': time})
                         ms = coordinates
 
-        e += 1
+                # collect tracked demands
+                # > convert set to list
+                # > and append run number at front of all tuples
+                demands.extend([(i+1,)+x for x in operator._tracked_demands])
 
     if track and nn_weights is not None:
         tracks = pd.DataFrame.from_records(tracks)
-        tracks = tracks.set_index('episode')
+        tracks = tracks.set_index('run')
+        demands = pd.DataFrame.from_records(demands, columns=['run', 'origin', 'destination', 'time(ms)', 'fulfilled'])
+
         strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         tracks.to_csv(os.path.join(output_folder, 'tracking', f'{str(runs)}_benchmark_agent_movements_{strf}.csv'))
+        demands.to_csv(os.path.join(output_folder, 'tracking', f'{str(runs)}_benchmark_demands_hex{demand_res}_{strf}.csv'), index=False)
 
     returns = pd.DataFrame.from_records(episode_returns)
     return returns
@@ -520,7 +532,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
         try:
             operator, world, payment_engine, service_level = run_single_simulation(
-                start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e)
+                start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e, seed=None)
         except PublicTransitVehicleFull as e:
             pass
 
@@ -639,13 +651,16 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
 if __name__ == '__main__':
     # weights = learn_agent(prepare_benchmark=True)
-    weights = "./data/output/weights/5000_episodes_weights_20220101-083224.keras"
+    weights = "./data/output/weights/5000_episodes_weights_20220104-031036.keras"
     runs = 100
+    motherseed = random.randint(1,1000) # use the same seed for all 4 parallel runs
+    # in each process, multiple that "motherseed" with the run number to achieve randomness between runs but not processes
+
     benchmark = [
-        {'nn_weights': None, 'runs': runs, 'demand_res': 7},
-        {'nn_weights': weights, 'runs': runs, 'demand_res': 7},
-        {'nn_weights': None, 'runs': runs, 'demand_res': 8},
-        {'nn_weights': weights, 'runs': runs, 'demand_res': 8},
+        {'nn_weights': None, 'runs': runs, 'demand_res': 7, 'seed': motherseed},
+        {'nn_weights': weights, 'runs': runs, 'demand_res': 7, 'seed': motherseed},
+        {'nn_weights': None, 'runs': runs, 'demand_res': 8, 'seed': motherseed},
+        {'nn_weights': weights, 'runs': runs, 'demand_res': 8, 'seed': motherseed},
     ]
 
     results = pqdm(benchmark, benchmark_agent, n_jobs=len(benchmark), argument_type='kwargs', mp_context=mp.get_context('spawn'))
