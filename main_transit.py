@@ -163,7 +163,7 @@ log_level = parser.get("SETTINGS", "log_level")
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
 logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p')
-
+logging.raiseExceptions = False
 logger = logging.getLogger()
 logger.setLevel(log_level)
 
