@@ -506,10 +506,12 @@ class TransitUser(User, PassengerInterface):
                 yield self._env.process(self.stop())
 
             except (simpy.Interrupt, PublicTransitVehicleFull) as e:
+                novehicle = False
                 if self._state == UserState.MOVING_TO_DESTINATION:
                     # user is interrupted on his way from last stop to final destination, count as fulfilled
                     # it is already counted towards the agents reward so it must be represented in service level as well
                     try:
+                        self._state = UserState.FULFILLED
                         selected_alternative = TransportationAlternative(
                             vehicle,
                             PublicTransitRoute(
@@ -531,7 +533,7 @@ class TransitUser(User, PassengerInterface):
                     except NameError:
                         # vehicle was not assigned
                         novehicle = True
-                elif self._state != UserState.MOVING_TO_DESTINATION or novehicle:
+                if self._state != UserState.MOVING_TO_DESTINATION or novehicle:
                     self._state = UserState.MISSED
                     self._payment_service._tracked_demands.add((self._transport_task.origin.getExactLocation(geojson=True),
                                                                 self._transport_task.destination.getExactLocation(geojson=True),
@@ -643,7 +645,11 @@ class TransitUser(User, PassengerInterface):
         self._state = UserState.MOVING_TO_DESTINATION
 
         # walk to final destination
-        yield self._env.process(self.walk(self._position, self._transport_task.destination))
+        try:
+            yield self._env.process(self.walk(self._position, self._transport_task.destination))
+        except simpy.Interrupt:
+            # user process should handle this
+            return
 
         # Trigger next event
         self._arrived_at_destination.succeed()
