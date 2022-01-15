@@ -441,7 +441,7 @@ def benchmark_agent(nn_weights = None, runs=100, demand_res=7, seed=None):
 
 
 # the experiment=None hack is to ensure a range works as well for pqdm
-def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
+def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
     if kwargs:
         for k, v in kwargs.items():
             if k == 'penalty':
@@ -532,7 +532,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, **kwargs):
 
         try:
             operator, world, payment_engine, service_level = run_single_simulation(
-                start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e, seed=None)
+                start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e, seed=seed)
         except PublicTransitVehicleFull as e:
             pass
 
