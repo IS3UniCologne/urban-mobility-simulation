@@ -47,9 +47,8 @@ class UserState(Enum):
     FULFILLED = 8
     CANCELLED = 9
     MISSED = 10
-
-
-class TransitUserState(UserState, Enum):
+    
+    # transit user specifics
     IN_TRANSPORT = 101
     MOVING_TO_DESTINATION = 102 # walk after last transit stop
 
@@ -426,7 +425,7 @@ class TransitUser(User, PassengerInterface):
         :return:
         """
 
-        while self._state != TransitUserState.FULFILLED and self._state != TransitUserState.MISSED:
+        while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
             try:
                 if not self._passive:
                     # Retrieve available transportation alternatives
@@ -467,6 +466,8 @@ class TransitUser(User, PassengerInterface):
 
                     self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task, selected_transportation_alternative)
                 else:
+                    # TODO: even this opportunistic user should just walk in certain scenarios and withdraw its demand
+
                     # wait for some transit to spawn
                     if not self._world.vehicles:
                         yield self._env.timeout(1)
@@ -476,7 +477,7 @@ class TransitUser(User, PassengerInterface):
                     # just wait for forever to be picked up hopefully
 
                     if not self._demand_aligns(vehicle):
-                        self._state = TransitUserState.MISSED
+                        self._state = UserState.MISSED
                         # self._payment_service.withdraw_transportation_task(self, self._transport_task)
                         logging.debug(f'User demand is not aligned with routing corridor of bus {vehicle.id}, ',
                                       extra={"clazz": self.__class__.__name__, "oid": self._id})
@@ -505,19 +506,45 @@ class TransitUser(User, PassengerInterface):
                 yield self._env.process(self.stop())
 
             except (simpy.Interrupt, PublicTransitVehicleFull) as e:
-                self._state = TransitUserState.MISSED
-                self._payment_service._tracked_demands.add((self._transport_task.origin.getExactLocation(geojson=True),
-                                                            self._transport_task.destination.getExactLocation(geojson=True),
-                                                            int(self._transport_task.time * 60000),
-                                                            False))
-                self._payment_service.withdraw_transportation_task(self, self._transport_task)
-                if isinstance(e, simpy.Interrupt):
-                    # can also be interrupt from vehicle full
-                    logging.debug(f'User was not serviced before bus reached terminal destination.',
-                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
-                elif isinstance(e, PublicTransitVehicleFull):
-                    logging.debug(f'User was not able to board vehicle, vehicle is full.',
-                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
+                if self._state == UserState.MOVING_TO_DESTINATION:
+                    # user is interrupted on his way from last stop to final destination, count as fulfilled
+                    # it is already counted towards the agents reward so it must be represented in service level as well
+                    try:
+                        selected_alternative = TransportationAlternative(
+                            vehicle,
+                            PublicTransitRoute(
+                                self._transport_task.origin,
+                                self._transport_task.destination,
+                                vehicle.route._id,
+                                vehicle.route.trip_id),
+                            price=0,
+                            duration=numpy.inf,
+                            distance=self._transport_task.origin >> self._transport_task.destination
+                        )
+                        self._payment_service._tracked_demands.add(
+                            (self._transport_task.origin.getExactLocation(geojson=True),
+                             self._transport_task.destination.getExactLocation(geojson=True),
+                             int(self._transport_task.time * 60000),
+                             True))
+                        self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task,
+                                                                                    selected_alternative)
+                    except NameError:
+                        # vehicle was not assigned
+                        novehicle = True
+                elif self._state != UserState.MOVING_TO_DESTINATION or novehicle:
+                    self._state = UserState.MISSED
+                    self._payment_service._tracked_demands.add((self._transport_task.origin.getExactLocation(geojson=True),
+                                                                self._transport_task.destination.getExactLocation(geojson=True),
+                                                                int(self._transport_task.time * 60000),
+                                                                False))
+                    self._payment_service.withdraw_transportation_task(self, self._transport_task)
+                    if isinstance(e, simpy.Interrupt):
+                        # can also be interrupt from vehicle full
+                        logging.debug(f'User was not serviced before bus reached terminal destination.',
+                                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+                    elif isinstance(e, PublicTransitVehicleFull):
+                        logging.debug(f'User was not able to board vehicle, vehicle is full.',
+                                      extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def search_for_alternatives(self):
         # Update current state
@@ -558,7 +585,7 @@ class TransitUser(User, PassengerInterface):
         yield self._assigned_vehicle_arrived
 
         # Update current state
-        self._state = TransitUserState.IN_TRANSPORT
+        self._state = UserState.IN_TRANSPORT
 
         vehicle = vehicle_allocation.vehicle
         route = vehicle_allocation.associated_transportation_alternative.route
@@ -595,7 +622,7 @@ class TransitUser(User, PassengerInterface):
             return
         else:
             # Update current state
-            self._state = TransitUserState.IN_TRANSPORT
+            self._state = UserState.IN_TRANSPORT
             self.mount_vehicle(vehicle)
 
         # drive in vehicle until destination hexagon is reached, this might not happen at all
@@ -613,7 +640,7 @@ class TransitUser(User, PassengerInterface):
         yield self._arrived_at_last_stop
 
         # Update current state
-        self._state = TransitUserState.MOVING_TO_DESTINATION
+        self._state = UserState.MOVING_TO_DESTINATION
 
         # walk to final destination
         yield self._env.process(self.walk(self._position, self._transport_task.destination))
