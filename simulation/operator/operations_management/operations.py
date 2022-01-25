@@ -62,9 +62,10 @@ class Operations:
             yield self._env.timeout(self._time_between_operations)
             self._operations_started.succeed()
             self._operations_started = self._env.event()
+            logging.warning(f"Operations started.",
+                         extra={"clazz": self.__class__.__name__, "oid": ""})
 
     def run_operations(self):
-
         while True:
             # Operations begin after first day
             yield self._operations_started

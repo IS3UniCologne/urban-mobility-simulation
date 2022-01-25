@@ -1,6 +1,7 @@
 from .agent import Agent
 from ..environment.geodesic_position import GeodesicPosition
 from ..environment.position import Position
+from ..helper.configuration.configuration import Configuration
 from ..operator.data_transfer_object.transportation_alternative import TransportationAlternative
 from ..operator.data_transfer_object.transportation_alternative_browser import TransportationAlternativeBrowser
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
@@ -20,6 +21,7 @@ from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
 from ..vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
+from ..world.population.PopulationFactory import PopulationType
 from ..world.world import World
 
 
@@ -41,13 +43,13 @@ class TransitUserState(UserState, Enum):
     IN_TRANSPORT = 101
     MOVING_TO_DESTINATION = 102 # walk after last transit stop
 
-
 class User(Agent, DriverInterface):
     user_id = 0
 
     def __init__(self, position, transport_task: TransportTask, transportation_search_service: SearchEngineInterface,
                  payment_service: PaymentInterface, vehicle_assignment_service: VehicleAllocationEngineInterface,
-                 vehicle_choice_behavior: VehicleChoiceBehaviorInterface, env: simpy.Environment):
+                 vehicle_choice_behavior: VehicleChoiceBehaviorInterface, population_type: PopulationType,
+                 env: simpy.Environment):
         self._id = User.user_id  # User ID
         User.user_id += 1  # Increment User Id
 
@@ -58,6 +60,9 @@ class User(Agent, DriverInterface):
         self._transportation_search_service = transportation_search_service  # Register Transport Search Service
         self._vehicle_assignment_service = vehicle_assignment_service  # Register Vehicle Assignment Service
         self._payment_service = payment_service # Register Payment Service
+
+        # Consumer Type of User
+        self._population_type = population_type
 
         # Simpy Environment
         self._env = env  # Simulation Environment
@@ -163,26 +168,37 @@ class User(Agent, DriverInterface):
         # tc = TripCharacteristics(distance)
         # viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
-        # TODO: We could move the walking distances to the config file, if needed.
+        # Load Config File
+        config = Configuration.instance()
+
         # Filter Transportation Alternatives based on Mode Choice and Walking Distances
         filtered_list = []
         for alternative in available_transportation_alternatives.transportation_alternatives:
             distance_to_vehicle = self.position >> alternative.vehicle.position
             if self._transport_task.viable_vehicle_modes[alternative.vehicle.__class__.__name__]:
-                if isinstance(alternative.vehicle, SharedCar) and distance_to_vehicle < 500: # See own paper
-                    filtered_list.append((distance_to_vehicle, alternative.price, alternative))
-                elif isinstance(alternative.vehicle, SharedKickScooter) and distance_to_vehicle < 200: # See Reck
-                    filtered_list.append((distance_to_vehicle, alternative.price, alternative))
-                elif isinstance(alternative.vehicle, SharedScooter) and distance_to_vehicle < 350: # See Nothing..
-                    filtered_list.append((distance_to_vehicle, alternative.price, alternative))
+                if isinstance(alternative.vehicle, SharedCar) and distance_to_vehicle < config.get_vehicle_config(alternative.vehicle.__class__.__name__).max_walking_distance: # See own paper
+                    filtered_list.append((distance_to_vehicle, alternative.price, alternative.convenience, alternative))
+                elif isinstance(alternative.vehicle, SharedKickScooter) and distance_to_vehicle < config.get_vehicle_config(alternative.vehicle.__class__.__name__).max_walking_distance: # See Reck
+                    filtered_list.append((distance_to_vehicle, alternative.price, alternative.convenience, alternative))
+                elif isinstance(alternative.vehicle, SharedScooter) and distance_to_vehicle < config.get_vehicle_config(alternative.vehicle.__class__.__name__).max_walking_distance: # See Nothing..
+                    filtered_list.append((distance_to_vehicle, alternative.price, alternative.convenience, alternative))
 
-        # Sort Vehicle List by Price and Vicinity (Customer is rational and prefers the cheapest mode
-        # and the closest vehicle, i.e., shortest walking distance)
-        # vehicle[1] price, vehicle[0] distance to vehicle
-        filtered_list.sort(key = lambda vehicle: (vehicle[1], vehicle[0]))
+
+        # Determine Vehicle Preference based on Population Type
+        # a) Price Sensitive Users will prefer cheapest option
+        # b) Convenience/Sustainable Users prefer slightly more expensive option
+        if self._population_type == PopulationType.PRICE_SENSITIVE:
+            # Sort Vehicle List by Price and Vicinity (Customer is rational and prefers the cheapest mode
+            # and the closest vehicle, i.e., shortest walking distance)
+            # vehicle[1] price, vehicle[0] distance to vehicle
+            filtered_list.sort(key = lambda vehicle: (vehicle[1], vehicle[0]))
+        elif self._population_type == PopulationType.CONVENIENCE_SEEKER:
+            # Sort based on Convenience Score => The lower the score, the better
+            # KS = 1, Scooter = 2, Car = 3 (could also be regarded as a sustainability score)
+            filtered_list.sort(key = lambda vehicle: (vehicle[2], vehicle[0]))
 
         if filtered_list:
-            distance, price, filtered_list = zip(*filtered_list)
+            distance, price, convenience_ranking, filtered_list = zip(*filtered_list)
             filtered_list = list(filtered_list)
 
         # Only Consider Alternatives matching Customer needs
@@ -296,10 +312,12 @@ class User(Agent, DriverInterface):
 
         # Mount Vehicle and Start Driving
         self.mount_vehicle_as_driver(vehicle_allocation.vehicle)
-        yield self._env.process(self.drive_vehicle(vehicle_allocation.vehicle, vehicle_allocation.associated_transportation_alternative.route))
+        energy_consumed = yield self._env.process(self.drive_vehicle(vehicle_allocation.vehicle, vehicle_allocation.associated_transportation_alternative.route))
         self.park_vehicle(vehicle_allocation.vehicle)
         self.unmount_vehicle_as_driver(vehicle_allocation.vehicle)
 
+        # Update Trip Information
+        vehicle_allocation.associated_transportation_alternative.set_energy_consumed(energy_consumed)
         # Trigger next event
         self._arrived_at_destination.succeed()
         logging.debug(f"Arrived at destination.", extra={"clazz": self.__class__.__name__, "oid": self._id})
@@ -348,6 +366,9 @@ class User(Agent, DriverInterface):
     def drive_vehicle(self, vehicle, route):
         vehicle.start_driving()
 
+        # State of Charge before driving
+        vehicle_soc_before_driving = vehicle.current_state_of_charge
+
         for route_segment in route.route_segments:
             distance = route_segment.distance
             velocity = vehicle.velocity
@@ -356,7 +377,15 @@ class User(Agent, DriverInterface):
             # yield self._env.timeout(time)
             yield self._env.process(vehicle.move(route_segment))
 
+        # State of Charge after driving
+        vehicle_soc_after_driving = vehicle.current_state_of_charge
+
+        # Consumed Energy (kWh)
+        user_energy_consumption = vehicle_soc_before_driving - vehicle_soc_after_driving
         vehicle.stop_driving()
+
+        # Return how much energy we consumed (and other factors if needed such as time)
+        return user_energy_consumption
 
     def park_vehicle(self, vehicle):
         vehicle.park()

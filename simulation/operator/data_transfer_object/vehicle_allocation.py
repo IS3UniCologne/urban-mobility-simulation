@@ -10,7 +10,6 @@ class VehicleAllocation:
         self._pick_up_position       = pick_up_position                         # Pick up position of user for vehicle
         self._pick_up_time           = pick_up_time                             #  Pick up time (i.e., when will be the vehicle be at pickup pos)
 
-
     @property
     def user(self):
         return self._user
