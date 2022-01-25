@@ -111,10 +111,10 @@ if __name__ == "__main__":
     #     {'doubleQ': False, 'tau': 0.001},
     # ]
 
-    # experiments = [
-    #     {'eps_decay': 0.9996, 'eps_decay_strategy': 'exp'},
-    #     {'eps_decay_strategy': 'linear'}
-    # ]
+    experiments = [
+        {'eps_decay': 0.9996, 'eps_decay_strategy': 'exp'},
+        {'eps_decay_strategy': 'linear'}
+    ]
 
     # experiments = [
     #     {'buffersize': 500},
@@ -123,12 +123,12 @@ if __name__ == "__main__":
     # ]
 
     # how many parallel runs of each experiment should be done and then averaged?
-    average_experiments = 10
+    average_experiments = 1
     # keep raw returns of all experiments, i.e. do not average?
     keepraw = True
 
     # or just run average experiments by using range with the number you like
-    experiments = range(20)
+    # experiments = range(20)
 
     if type(experiments) is range:
         results = pqdm(experiments,

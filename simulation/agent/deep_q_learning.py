@@ -20,7 +20,7 @@ from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.time import SimulationTimeConverter
-from simulation.vehicle.public_transit_bus import BusState, Bus
+from simulation.vehicle.public_transit_bus import PublicTransitVehicleState, Bus
 
 from line_profiler_pycharm import profile
 
@@ -192,7 +192,7 @@ class DQN(RLAgent):
             next_state = deepcopy(bus._env_state) # S_t, as dict
             next_state_processed = self._state_to_numpy(next_state) # S_t, as numpy 3d matrix
 
-            reached_destination = True if bus.state is BusState.AT_TERMINAL_DESTINATION else False
+            reached_destination = True if bus.state is PublicTransitVehicleState.AT_TERMINAL_DESTINATION else False
             reached_timelimit = True if self._env.now - bus._spawned > self._timelimit else False
 
             # TODO: this is still optimistic, bus needs to move between hexagons, not euclidean/haversine
@@ -379,7 +379,7 @@ class DQN(RLAgent):
             bus._dist_traveled += distance # add to overall travel distance
             duration = distance / bus._velocity  # in minutes
 
-            self._state = BusState.EN_ROUTE_DETOUR
+            self._state = PublicTransitVehicleState.EN_ROUTE_DETOUR
 
             yield self._env.timeout(duration)
 
@@ -394,7 +394,7 @@ class DQN(RLAgent):
         yield bus._action_taken
         bus._action_taken = self._env.event() # only reset it after we have entered the method
 
-        reached_destination = True if bus.state is BusState.AT_TERMINAL_DESTINATION else False
+        reached_destination = True if bus.state is PublicTransitVehicleState.AT_TERMINAL_DESTINATION else False
         reached_timelimit = True if self._env.now - bus._spawned > self._timelimit else False
 
         # TODO: this is still optimistic, bus needs to move between hexagons, not euclidean/haversine

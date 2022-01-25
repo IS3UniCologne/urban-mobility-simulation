@@ -228,7 +228,7 @@ class TransitAgentConfig:
         self.min_experience = min_experience
         self.double_q = double_q
         self.target_update_threshold = target_update_threshold
-        self.tau = float(tau)
+        self.tau = tau
         self.gamma = float(gamma)
         self.n = int(n)
         self.tensorboard = tensorboard

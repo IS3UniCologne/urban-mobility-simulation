@@ -5,6 +5,7 @@ import random
 import time
 from configparser import ConfigParser
 from copy import deepcopy
+from memory_profiler import profile
 
 import geopandas as gpd
 import logging
@@ -119,7 +120,10 @@ buffersize = int(parser.get("BUS", "BUFFERSIZE"))
 min_experience = int(parser.get("BUS", "MIN_EXPERIENCE"))
 double_q = parser.getboolean("BUS", "USE_DOUBLE_Q")
 target_update_threshold = parser.getint("BUS", "TARGET_UPDATE_THRESHOLD")
-tau = parser.get("BUS", "TAU")
+try:
+    tau = parser.getfloat("BUS", "TAU")
+except configparser.NoOptionError:
+    tau = None
 agent_gamma = parser.get("BUS", "GAMMA")
 bootstrap_agent_n = parser.get("BUS", "N")
 agent_penalty = int(parser.get("BUS", "PENALTY"))
@@ -342,7 +346,7 @@ def run_single_simulation(start_time=0, end_time=60, seed=4711, weights=None, re
 
     return operator, world, payment_engine, service_level
 
-
+@profile
 def benchmark_agent(nn_weights = None, runs=100, demand_res=7, seed=None):
     global global_config
 
@@ -650,8 +654,8 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
 
 
 if __name__ == '__main__':
-    # weights = learn_agent(prepare_benchmark=True)
-    weights = "./data/output/weights/5000_episodes_weights_20220104-031036.keras"
+    # weights = learn_agent(prepare_benchmark=True, seed=4711)
+    weights = "./data/output/weights/10000_episodes_buffersize=1000_eps_decay_strategy=linear_weights_20220117-213313.keras"
     runs = 100
     motherseed = random.randint(1,1000) # use the same seed for all 4 parallel runs
     # in each process, multiple that "motherseed" with the run number to achieve randomness between runs but not processes
