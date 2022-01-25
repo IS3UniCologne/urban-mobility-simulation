@@ -19,6 +19,11 @@ class PublicTransitVehicleState(VehicleState, Enum):
     AT_TERMINAL_ORIGIN = 2001
     AT_TERMINAL_DESTINATION = 2002
     AT_STOP = 2003
+
+    # bus specific
+    EN_ROUTE_PLANNED = 2011
+    EN_ROUTE_DETOUR = 2012
+
     UNKNOWN = 2999
 
 

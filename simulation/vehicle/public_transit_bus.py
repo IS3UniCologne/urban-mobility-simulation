@@ -19,11 +19,6 @@ from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.world.world import World
 
 
-class BusState(PublicTransitVehicleState, Enum):
-    EN_ROUTE_PLANNED = 2011
-    EN_ROUTE_DETOUR = 2012
-
-
 class Bus(PublicTransitVehicle):
     bus_id = 0
 
@@ -102,7 +97,7 @@ class Bus(PublicTransitVehicle):
         Time 00:03:00 - Departure 00:04:00 - next_day = False - wait
         Time 00:03:00 - Departure 00:04:00 - next_day = True - should not happen
         """
-        while self._state is not BusState.AT_TERMINAL_DESTINATION:
+        while self._state is not PublicTransitVehicleState.AT_TERMINAL_DESTINATION:
 
             strf = '%H:%M:%S'
             early_arrival = (self._time.now_as_str() < self._current_stop.departure and
@@ -110,7 +105,7 @@ class Bus(PublicTransitVehicle):
                             (self._time.now_as_str() > self._current_stop.departure and
                              self._current_stop.departure_next_day)
 
-            if self._state is BusState.AT_TERMINAL_ORIGIN and self._time.now_as_str() < self._current_stop.departure:
+            if self._state is PublicTransitVehicleState.AT_TERMINAL_ORIGIN and self._time.now_as_str() < self._current_stop.departure:
                 # bus was pre-initialized by transit operator
                 wait = SimulationTimeConverter.duration_between(self._time.now_as_str(strf),
                                                                 self._current_stop.departure, strf)
@@ -153,7 +148,7 @@ class Bus(PublicTransitVehicle):
         distance = route_segment.distance  # in meter
         duration = distance / self._velocity  # in minutes
 
-        self._state = BusState.EN_ROUTE_PLANNED
+        self._state = PublicTransitVehicleState.EN_ROUTE_PLANNED
 
         logging.debug(
             f'Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.',
@@ -165,12 +160,12 @@ class Bus(PublicTransitVehicle):
         self._update_positions(route_segment.end)
 
         if self._current_stop == self._route.destination:
-            self._state = BusState.AT_TERMINAL_DESTINATION
+            self._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
             logging.debug(f'Bus has arrived at its terminal destination - stop {self._current_stop.stop_id} '
                           f'at time {self._time.now_as_str()}',
                           extra={"clazz": self.__class__.__name__, "oid": self._id})
         else:
-            self._state = BusState.AT_STOP
+            self._state = PublicTransitVehicleState.AT_STOP
             logging.debug(f'Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}',
                           extra={"clazz": self.__class__.__name__, "oid": self._id})
 
@@ -255,7 +250,7 @@ class Bus(PublicTransitVehicle):
 
                 if region_id == \
                         self._route.destination.get_hexagon_id(self._action_res):
-                    self._state = BusState.AT_TERMINAL_DESTINATION
+                    self._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
                     logging.info(f'Bus has arrived at its terminal destination at time {self._time.now_as_str()}',
                                  extra={"clazz": self.__class__.__name__, "oid": self._id})
             except simpy.Interrupt:
@@ -281,7 +276,7 @@ class Bus(PublicTransitVehicle):
         action = yield self._action_taken
 
         self._rl_agent.reward = self._rl_agent.reward_state(self._env_state,
-                                                            self._state == BusState.AT_TERMINAL_DESTINATION)
+                                                            self._state == PublicTransitVehicleState.AT_TERMINAL_DESTINATION)
         self._rl_agent.reward_sum = self._rl_agent.reward_sum + self._rl_agent.reward
 
         logging.debug(f'Current reward: {self._rl_agent.reward}, overall reward: {self._rl_agent.reward_sum}',
