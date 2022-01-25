@@ -1,9 +1,12 @@
 import logging
-from numpy.random import normal, seed
+
+import simpy
+from numpy.random import normal
 from simpy import Environment
 
-from simulation.agent import user
+import simulation.agent.user as user
 from simulation.helper.configuration.configuration import Configuration
+from simulation.vehicle.vehicle import Vehicle
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -56,8 +59,14 @@ class World:
 
         self._vehicle_choice_behavior = vehicle_choice_behavior
 
+        self._demand_processes = []
+
         # Store all current users
         self._users = []
+        self._user_processes = []
+
+        # Store all current vehicles
+        self._vehicles = []
 
         # Config
         self._config = Configuration.instance()
@@ -69,6 +78,14 @@ class World:
         self._changed = self._env.event()
 
         self._user_limit = 10_000_000
+
+    @property
+    def user_processes(self):
+        return self._user_processes
+
+    @property
+    def demand_processes(self):
+        return self._demand_processes
 
     def add_user(self, origin, destination):
         """
@@ -102,31 +119,42 @@ class World:
                 task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes,
                                      max_wait_time)
 
+                # new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
+                #                             self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env,
+                #                             passive=True if not self._config.transit_agent_config.dumb else False)
                 new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
-                                            self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
+                                            self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env,
+                                            passive=True)
             else:
                 # Generate Transportation Task
                 task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
 
-                # Determine Consumer Type
-                population_type = self._population_factory.generatePopulationType()
-
                 new_user = user.User(origin_position, task, self._search_engine, self._payment_engine,
-                                     self._vehicle_assignment_engine, self._vehicle_choice_behavior, population_type, self._env)
+                                     self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
 
             # Add user to user list
             self._users.append(new_user)
 
             # Start Process for each new user
-            self._env.process(new_user.run())
+            self._user_processes.append({'id': new_user.id, 'proc': self._env.process(new_user.run())})
 
             if len(self._users) == self._user_limit:
                 logging.info(f'Reached User Limit of {self._user_limit}. Not adding more users to world.',
                              extra={"clazz": self.__class__.__name__, "oid": " "})
 
+    def add_vehicle(self, vehicle: Vehicle):
+        self._vehicles.append(vehicle)
+
+    def remove_vehicle(self, vehicle: Vehicle):
+        self._vehicles.remove(vehicle)
+
     @property
     def users(self):
         return self._users
+
+    @property
+    def vehicles(self):
+        return self._vehicles
 
     @property
     def changed(self):
@@ -135,3 +163,24 @@ class World:
     @changed.setter
     def changed(self, event):
         self._changed = event
+
+    def stop_processes(self):
+        # stop demand generation
+        for d in self.demand_processes:
+            try:
+                d.interrupt()
+            except RuntimeError:
+                # already terminated
+                pass
+
+        # clean up user demands
+        for u in self.user_processes:
+            try:
+                u['proc'].interrupt()
+            except RuntimeError:
+                # already terminated
+                pass
+
+    def user_process_by_id(self, user_id):
+         procs = [p for p in self._user_processes if p["id"] == user_id]
+         return procs[0] # TODO: what about some error handling
