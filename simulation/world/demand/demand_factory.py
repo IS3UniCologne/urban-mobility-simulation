@@ -1,6 +1,7 @@
 import json
 import h3
 import numpy
+import simpy
 
 from simulation.world.demand.demand_importer import DemandImporter
 import logging
@@ -44,6 +45,14 @@ class DemandFactory:
 
         self._load_modifiers()
 
+    def _register_modifier(self, geomodifier):
+        multiplier = geomodifier['properties']['demandMultiplier']
+        hex_ids = h3.polyfill(geomodifier['geometry'],
+                              res=self._config.spatial_resolution_value,
+                              geo_json_conformant=True)
+
+        self._modifiers.update({x: multiplier for x in hex_ids})
+
     def _load_modifiers(self):
         """
         Loads and registers per-hexagon demand modifiers (floating number multiplier) from GeoJSON
@@ -56,12 +65,13 @@ class DemandFactory:
                 logging.warning(f'Demand modifier at "{modifier}" doesn\'t exist, skipping.')
                 continue
 
-            multiplier = geo['properties']['demandMultiplier']
-            hex_ids = h3.polyfill(geo['geometry'],
-                                  res=self._config.spatial_resolution_value,
-                                  geo_json_conformant=True)
+            featurecollection = True if 'features' in geo else False
 
-            self._modifiers.update({x: multiplier for x in hex_ids})
+            if featurecollection:
+                for feature in geo['features']:
+                    self._register_modifier(feature)
+            else:
+                self._register_modifier(geo)
 
     def generate_demand(self):
         """
@@ -70,7 +80,7 @@ class DemandFactory:
         spawned = self._env.event()
 
         for unit in self._spatial_units:
-            self._env.process(self.spawn_demand_process(unit))
+            self._world.demand_processes.append(self._env.process(self.spawn_demand_process(unit)))
 
         yield spawned.succeed()
 
@@ -86,58 +96,65 @@ class DemandFactory:
 
         # Run until simulation ends
         while (DemandFactory.counter < self._maximal_demand):
-            # Transform current time to temporal buckets as defined in the demand profile
-            time_bucket = SimulationTimeConverter.\
-                convert_to_temporal_bucket(self._time.now(), self._demand_importer._get_temporal_duration_in_hours())
-            non_working_day = SimulationTimeConverter.convert_to_day_of_week_bucket(self._time.now())
-
-            # Filter demand profile on current time
-            demand_slice = local_demand_profile[(local_demand_profile[self._temporal_column] == time_bucket)
-                                                & (local_demand_profile[
-                                                       self._day_of_week_column] == non_working_day)
-                                                ]
-            if (demand_slice.shape[0] == 0):
-                print(f"Hex: {spatial_unit}  Time: {time_bucket}  Date:{non_working_day}  Env Time: {self._time.now()}")
-
-            # Extract Poisson Estimate for given spatio-temporal cell
-            poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
-
-            # Based on Poisson Estimate sample next arrival time (in minutes)
-            # inter_arrival_time = numpy.random.exponential(
-            #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
-
             try:
-                if self._modifiers[spatial_unit] == 0:
-                    logging.debug(f'Spatial unit {spatial_unit} is removed from demand generation process')
-                    break
+                # Transform current time to temporal buckets as defined in the demand profile
+                time_bucket = SimulationTimeConverter.\
+                    convert_to_temporal_bucket(self._time.now(), self._demand_importer._get_temporal_duration_in_hours())
+                non_working_day = SimulationTimeConverter.convert_to_day_of_week_bucket(self._time.now())
 
-                # TODO: is this a viable way of modifying exponential sampling using the scale factor?
-                inter_arrival_time = self._random.exponential(1.0 / poisson_lambda * self._modifiers[spatial_unit]) * \
-                                     self._demand_importer._get_temporal_duration_in_hours() * 60
-            except KeyError:
-                # no modifier is registered for that spatial unit
-                inter_arrival_time = self._random.exponential(1.0 / poisson_lambda) * \
-                                     self._demand_importer._get_temporal_duration_in_hours() * 60
+                # Filter demand profile on current time
+                demand_slice = local_demand_profile[(local_demand_profile[self._temporal_column] == time_bucket)
+                                                    & (local_demand_profile[
+                                                           self._day_of_week_column] == non_working_day)
+                                                    ]
+                if (demand_slice.shape[0] == 0):
+                    print(f"Hex: {spatial_unit}  Time: {time_bucket}  Date:{non_working_day}  Env Time: {self._time.now()}")
 
-            # await next arrival
-            yield self._env.timeout(inter_arrival_time)
+                # Extract Poisson Estimate for given spatio-temporal cell
+                poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
 
-            # Sample Destination
-            prob_array = demand_slice["od_multinom_p_est"].to_numpy()
+                # Based on Poisson Estimate sample next arrival time (in minutes)
+                # inter_arrival_time = numpy.random.exponential(
+                #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
 
-            # TODO: rename - this has nothing to do with low SOC
-            low_soc_vehicle_sample = self._random.multinomial(1, prob_array)  # No of vehicles to be charged
+                try:
+                    if self._modifiers[spatial_unit] == 0:
+                        logging.debug(f'Spatial unit {spatial_unit} is removed from demand generation process')
+                        break
 
-            idx = low_soc_vehicle_sample.argmax()
+                    # TODO: is this a viable way of modifying exponential sampling using the scale factor?
+                    inter_arrival_time = self._random.exponential(1.0 / (poisson_lambda * self._modifiers[spatial_unit])) * \
+                                         self._demand_importer._get_temporal_duration_in_hours() * 60
+                except KeyError:
+                    # no modifier is registered for that spatial unit
+                    inter_arrival_time = self._random.exponential(1.0 / poisson_lambda) * \
+                                         self._demand_importer._get_temporal_duration_in_hours() * 60
 
-            destination = demand_slice.iloc[idx][self._destination_column]
+                # await next arrival
+                yield self._env.timeout(inter_arrival_time)
 
-            # Append Arrival to World
-            # create agent or similar consumers
-            logging.debug(f'Demand generated from hexagon {spatial_unit} to {destination}.',
-                          extra={"clazz": self.__class__.__name__, "oid": ""})
+                # Sample Destination
+                prob_array = demand_slice["od_multinom_p_est"].to_numpy()
 
-            self._world.add_user(spatial_unit, destination)
+                # TODO: rename - this has nothing to do with low SOC
+                low_soc_vehicle_sample = self._random.multinomial(1, prob_array)  # No of vehicles to be charged
 
-            # Increase global counter (not thread safe)
-            DemandFactory.counter += 1
+                idx = low_soc_vehicle_sample.argmax()
+
+                destination = demand_slice.iloc[idx][self._destination_column]
+
+                # Append Arrival to World
+                # create agent or similar consumers
+                logging.debug(f'Demand generated from hexagon {spatial_unit} to {destination}.',
+                              extra={"clazz": self.__class__.__name__, "oid": ""})
+
+                self._world.add_user(spatial_unit, destination)
+
+                # Increase global counter (not thread safe)
+                DemandFactory.counter += 1
+            except simpy.Interrupt:
+                break
+
+    def stop(self):
+        for demand_process in self._world.demand_processes:
+            demand_process.interrupt()

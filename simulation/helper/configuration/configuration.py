@@ -75,6 +75,10 @@ class Configuration:
     def spatial_resolution(self):
         return self._spatial_resolution
 
+    @spatial_resolution.setter
+    def spatial_resolution(self, spatial_resolution: int):
+        self._spatial_resolution = SpatialResolution(spatial_resolution)
+
     @property
     def spatial_resolution_value(self):
         return self._spatial_resolution.value
@@ -213,9 +217,34 @@ class TransitOperatorConfig:
 
 
 class TransitAgentConfig:
-    def __init__(self, action_resolution, alpha, eps, gamma, n):
+    # TODO: its really bad practice to use that many positional arguments > use kwargs instead
+    def __init__(self, episodes, action_resolution, alpha, eps, eps_decay_strategy, eps_decay, eps_min, buffersize,
+                 min_experience, timelimit_multiplier, target_update_threshold, tau, gamma, n, tensorboard, corridor,
+                 penalty, reward, q_net_layer, batchsize, lr_decay, lr_decay_steps, double_q, velocity):
+        self.dumb = False # a dumb bus moves as planned without agent rerouting
+        self.episodes = episodes
         self.action_resolution = int(action_resolution)
+        self.timelimit_multiplier = timelimit_multiplier
         self.alpha = float(alpha)
         self.eps = float(eps)
+        self.eps_decay_strategy = eps_decay_strategy
+        self.eps_decay = float(eps_decay)
+        self.eps_min = float(eps_min)
+        self.buffersize = buffersize
+        self.min_experience = min_experience
+        self.double_q = double_q
+        self.target_update_threshold = target_update_threshold
+        self.tau = tau
         self.gamma = float(gamma)
         self.n = int(n)
+        self.tensorboard = tensorboard
+        self.corridor = corridor
+        self.penalty = penalty
+        self.reward = reward
+        self.q_net_layer = q_net_layer
+        self.batchsize = batchsize
+        self.optimizer = None
+        self.lr_decay = lr_decay
+        self.lr_decay_steps = lr_decay_steps
+        self.evaluation = False # on an evaluation run, no training happens and eps = 0
+        self.velocity = velocity
