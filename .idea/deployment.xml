@@ -1,22 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="mdemircan@134.95.119.102:22 agent" remoteFilesAllowedToDisappearOnAutoupload="false">
-    <serverData>
-      <paths name="134.95.119.102">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/urban-mobility-simulation" local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="mdemircan@134.95.119.102:22 agent">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/home/mdemircan/Development/urban-mobility-simulation" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-    </serverData>
+  <component name="PublishConfigData" autoUpload="Always" remoteFilesAllowedToDisappearOnAutoupload="false">
     <option name="myAutoUpload" value="ALWAYS" />
   </component>
 </project>
