@@ -11,7 +11,7 @@ from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
-from simulation.vehicle.public_transit_bus import BusState
+from simulation.vehicle.public_transit_bus import PublicTransitVehicleState
 
 
 class ValueFunctionApproximator:
@@ -82,7 +82,7 @@ class EpisodicSemiGradientSarsa(RLAgent):
         self._q_hat = q_hat
 
     def run(self, bus):
-        while not bus.state == BusState.AT_TERMINAL_DESTINATION:
+        while not bus.state == PublicTransitVehicleState.AT_TERMINAL_DESTINATION:
             # to get a value copy of a state we need to deepcopy, otherwise modifying self._env_state results in
             # modifying the "copy" which really is just a reference
             before_state = deepcopy(bus._env_state)
@@ -92,7 +92,7 @@ class EpisodicSemiGradientSarsa(RLAgent):
             s = self._vectorize_state(before_state)
             s_ = self._vectorize_state(bus._env_state)
             a = self._action_space.action_as_binary_vector(action)
-            if bus.state is BusState.AT_TERMINAL_DESTINATION:
+            if bus.state is PublicTransitVehicleState.AT_TERMINAL_DESTINATION:
                 # update weights
                 self._update_policy(s, a, terminal=True)
                 # and go to next episode
@@ -103,11 +103,11 @@ class EpisodicSemiGradientSarsa(RLAgent):
             # update weights
             self._update_policy(s, a, s_, a_)
 
-            # clean up processes
+        # clean up processes
         bus._state_update_process.interrupt()
 
         # and let the operator know
-        bus._has_reached_destination.succeed()
+        bus._has_reached_terminal.succeed()
 
     def _take_action(self, bus):
         """
@@ -149,7 +149,7 @@ class EpisodicSemiGradientSarsa(RLAgent):
             distance = bus.position >> new_position
             duration = distance / bus._velocity  # in minutes
 
-            self._state = BusState.EN_ROUTE_DETOUR
+            self._state = PublicTransitVehicleState.EN_ROUTE_DETOUR
 
             yield self._env.timeout(duration)
 

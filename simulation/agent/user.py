@@ -48,7 +48,7 @@ class UserState(Enum):
     FULFILLED = 8
     CANCELLED = 9
     MISSED = 10
-    
+
     # transit user specifics
     IN_TRANSPORT = 101
     MOVING_TO_DESTINATION = 102 # walk after last transit stop
@@ -615,6 +615,43 @@ class TransitUser(User, PassengerInterface):
         while vehicle.current_stop != route.destination:
             yield vehicle._position_changed
         self.unmount_vehicle(vehicle)
+
+        self._arrived_at_last_stop.succeed()
+
+    def _demand_aligns(self, vehicle: Bus):
+        if self.transport_task.origin.get_hexagon_id() == self.transport_task.destination.get_hexagon_id():
+            # we don't want to service demands that board and unboard at the same station, they can walk
+            return False
+
+        incorridor = False if not self._geodesic_env.filter_demands_by_corridor([self.transport_task], vehicle._corridor) else True
+        indirection = False if not self._geodesic_env.filter_demands_by_direction([self.transport_task], vehicle) else True
+
+        if not incorridor or not indirection:
+            return False
+        else:
+            return True
+
+    def start_passive_transit(self, vehicle: Vehicle):
+        # Wait for event
+        yield self._assigned_vehicle_arrived
+
+        if not vehicle.available_seats > 0:
+            # Interrupt this user's process
+            proc = self._world.user_process_by_id(self._id)['proc']
+            proc.interrupt()
+            return
+        else:
+            # Update current state
+            self._state = UserState.IN_TRANSPORT
+            self.mount_vehicle(vehicle)
+
+        # drive in vehicle until destination hexagon is reached, this might not happen at all
+        while (self.transport_task.destination.get_hexagon_id(self._bus_res) !=
+               vehicle.position.get_hexagon_id(self._bus_res)):
+            yield vehicle._position_changed
+
+        self.unmount_vehicle(vehicle)
+        vehicle._dropoffs += 1
 
         self._arrived_at_last_stop.succeed()
 

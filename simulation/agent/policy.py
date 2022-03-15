@@ -15,8 +15,10 @@ class Policy:
         :return: Index of max value in arr, with ties broken randomly
         """
         # break ties randomly, np.argmax() always picks first max
-        return np.random.choice(np.flatnonzero(arr == np.max(arr)))
-
+        try:
+            return np.random.choice(np.flatnonzero(arr == np.max(arr)))
+        except ValueError:
+            raise Exception("possible NaNs in NN encountered")
     @classmethod
     def decide(cls, state, q_hat, eps):
         """

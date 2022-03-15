@@ -18,15 +18,15 @@ class ActionSpace:
             return ActionSpace.__instance
 
     @staticmethod
-    def init(actions):
-        """ Static access method. """
-        if ActionSpace.__instance is None:
-            ActionSpace(actions)
+    def init(actions: list, reset=False):
+        """ Public constructor """
+        if ActionSpace.__instance is None or reset is True:
+            ActionSpace(actions, reset)
         return ActionSpace.__instance
 
-    def __init__(self, actions):
+    def __init__(self, actions: list, reset: bool = False):
         """ Virtually private constructor. """
-        if ActionSpace.__instance is not None:
+        if ActionSpace.__instance is not None and not reset:
             raise Exception("This class is a singleton!")
         else:
             ActionSpace.__instance = self
@@ -37,6 +37,12 @@ class ActionSpace:
     @property
     def actions(self):
         return self._actions
+
+    def dimensionality(self):
+        return len(self._actions)
+
+    def index(self, action):
+        return self._actions.index(action)
 
     def action_as_binary_vector(self, action):
         return numpy.array([1 if x == action else 0 for x in self._actions])
