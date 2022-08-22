@@ -7,18 +7,20 @@ import logging
 from simulation.helper.configuration.configuration import Configuration
 from simulation.world.world import World
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
+import numpy as np
 
 
 class DemandFactory:
     counter = 0
 
-    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World, modifiers, seed,
+    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World, modifiers, seed, mode,
                  maximal_demand=1_000_000):
         self._env = env
         self._time = SimulationTime(env)
         self._demand_profile = demand_profile
         self._demand_importer = demand_importer
         self._world = world
+        self._mode = mode
 
         origin, destination = demand_importer._get_spatial_column()
         temporal = demand_importer._get_temporal_column()
@@ -102,6 +104,13 @@ class DemandFactory:
             # Extract Poisson Estimate for given spatio-temporal cell
             poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
 
+            # TODO: to define the target fleet
+            random_number = np.random.random(1)
+            if random_number < 0.5:
+                fleet = 0
+            else:
+                fleet = 1
+
             # Based on Poisson Estimate sample next arrival time (in minutes)
             # inter_arrival_time = numpy.random.exponential(
             #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
@@ -134,10 +143,10 @@ class DemandFactory:
 
             # Append Arrival to World
             # create agent or similar consumers
-            logging.debug(f'Demand generated from hexagon {spatial_unit} to {destination}.',
+            logging.debug(f'Demand for fleet {fleet} generated from hexagon {spatial_unit} to {destination}.',
                           extra={"clazz": self.__class__.__name__, "oid": ""})
 
-            self._world.add_user(spatial_unit, destination)
+            self._world.add_user(self._mode, fleet, spatial_unit, destination)
 
             # Increase global counter (not thread safe)
             DemandFactory.counter += 1

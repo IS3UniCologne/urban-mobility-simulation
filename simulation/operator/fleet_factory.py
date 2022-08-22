@@ -4,14 +4,17 @@ import pandas as pd
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import SpatialResolution, Configuration
+from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+from simulation.vehicle.ride_hailing_car import RideHailingCar
 
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
 
-def generate_fleet_config(distribution, n_cars = 1000, n_scooter = 500, n_kick_scooter = 500, n_bikes = 0, seed = 42):
 
+def generate_fleet_config(distribution, n_cars=1000, n_scooter=500, n_kick_scooter=500, n_bikes=0, seed=42,
+                          allocation_method='historical', allocation = np.random.randint(low=20,high=50,size=213)):
     """
     Calculate vehicle distribution based on activity distribution per mode.
 
@@ -19,42 +22,141 @@ def generate_fleet_config(distribution, n_cars = 1000, n_scooter = 500, n_kick_s
     :param distribution: DataFrame consisting of five columns ["hex_id", "cars_prob", "scooters_prob", "kick_scooters_prob", "bikes_prob"]
     :return: Fleet Configuration (i.e., where are how many vehciles distributed)
     """
-
     # Random Number Generator
     random = np.random.RandomState(seed)
+    if allocation_method == 'historical':
 
-    # Sample Supply Distribution for Cars
-    cars_prob_arr = distribution["cars_prob"].to_numpy()
-    car_cnt = pd.DataFrame(random.multinomial(n_cars, cars_prob_arr, size=1).transpose(), columns=["car_count"])
-    car_cnt.index = distribution.index
-    distribution["cars"] = car_cnt["car_count"]
+        # Sample Supply Distribution for Cars
+        cars_prob_arr = distribution["cars_prob"].to_numpy()
+        car_cnt = pd.DataFrame(random.multinomial(n_cars, cars_prob_arr, size=1).transpose(), columns=["car_count"])
+        car_cnt.index = distribution.index
+        distribution["cars"] = car_cnt["car_count"]
 
-    # Sample Supply Distribution for Cars
-    scooters_prob_arr = distribution["scooters_prob"].to_numpy()
-    scooters_cnt = pd.DataFrame(random.multinomial(n_scooter, scooters_prob_arr, size=1).transpose(),
-                                columns=["scooters_count"])
-    scooters_cnt.index = distribution.index
-    distribution["scooters"] = scooters_cnt["scooters_count"]
+        # Sample Supply Distribution for Cars
+        scooters_prob_arr = distribution["scooters_prob"].to_numpy()
+        scooters_cnt = pd.DataFrame(random.multinomial(n_scooter, scooters_prob_arr, size=1).transpose(),
+                                    columns=["scooters_count"])
+        scooters_cnt.index = distribution.index
+        distribution["scooters"] = scooters_cnt["scooters_count"]
 
-    # Sample Supply Distribution for Cars
-    kick_scooters_prob_arr = distribution["kick_scooters_prob"].to_numpy()
-    kick_scooters_cnt = pd.DataFrame(random.multinomial(n_kick_scooter, kick_scooters_prob_arr, size=1).transpose(), columns = ["kick_scooters_count"])
-    kick_scooters_cnt.index = distribution.index
-    distribution["kick_scooters"] = kick_scooters_cnt["kick_scooters_count"]
+        # Sample Supply Distribution for Cars
+        kick_scooters_prob_arr = distribution["kick_scooters_prob"].to_numpy()
+        kick_scooters_cnt = pd.DataFrame(random.multinomial(n_kick_scooter, kick_scooters_prob_arr, size=1).transpose(),
+                                         columns=["kick_scooters_count"])
+        kick_scooters_cnt.index = distribution.index
+        distribution["kick_scooters"] = kick_scooters_cnt["kick_scooters_count"]
 
-    # Sample Supply Distribution for Cars
-    bikes_prob_arr = distribution["bikes_prob"].to_numpy()
-    bikes_cnt = pd.DataFrame(random.multinomial(n_bikes, bikes_prob_arr, size=1).transpose(), columns = ["bikes_count"])
-    bikes_cnt.index = distribution.index
-    distribution["bikes"] = bikes_cnt["bikes_count"]
+        # Sample Supply Distribution for Cars
+        bikes_prob_arr = distribution["bikes_prob"].to_numpy()
+        bikes_cnt = pd.DataFrame(random.multinomial(n_bikes, bikes_prob_arr, size=1).transpose(),
+                                 columns=["bikes_count"])
+        bikes_cnt.index = distribution.index
+        distribution["bikes"] = bikes_cnt["bikes_count"]
 
-    hex_column = Configuration.instance().spatial_resolution_column
+        hex_column = Configuration.instance().spatial_resolution_column
 
-    # Slice fleet config
-    fleet_config = distribution[[hex_column, "cars", "scooters", "kick_scooters", "bikes"]]
+        # Slice fleet config
+        fleet_config = distribution[[hex_column, "cars", "scooters", "kick_scooters", "bikes"]]
+    if allocation_method == 'optimization':
+        car_cnt = pd.DataFrame(allocation[0:71], columns=["car_count"])
+        car_cnt.index = distribution.index
+        distribution["cars"] = car_cnt["car_count"]
 
+        # Sample Supply Distribution for Cars
+        scooters_cnt = pd.DataFrame(allocation[71:142],
+                                    columns=["scooters_count"])
+        scooters_cnt.index = distribution.index
+        distribution["scooters"] = scooters_cnt["scooters_count"]
+
+        # Sample Supply Distribution for Cars
+        kick_scooters_cnt = pd.DataFrame(allocation[142:213],
+                                         columns=["kick_scooters_count"])
+        kick_scooters_cnt.index = distribution.index
+        distribution["kick_scooters"] = kick_scooters_cnt["kick_scooters_count"]
+
+        # Sample Supply Distribution for Cars
+        bikes_prob_arr = distribution["bikes_prob"].to_numpy()
+        bikes_cnt = pd.DataFrame(random.multinomial(n_bikes, bikes_prob_arr, size=1).transpose(),
+                                 columns=["bikes_count"])
+        bikes_cnt.index = distribution.index
+        distribution["bikes"] = bikes_cnt["bikes_count"]
+
+        hex_column = Configuration.instance().spatial_resolution_column
+
+        # Slice fleet config
+        fleet_config = distribution[[hex_column, "cars", "scooters", "kick_scooters", "bikes"]]
     return fleet_config
 
+
+def generate_mixed_ride_hailing_fleet(env, fleet_config):
+    """
+    Generate a mixed shared vehicle fleet based on given fleet config.
+    :param env: SimPy Environment (passed to vehicles)
+    :param fleet_config: DataFrame with following 5 columns hex_id, cars, scooters, kick_scooters, bikes
+    :return: MixedSharedVehicleFleet Object
+    """
+    # New Fleet Object
+    fleet = MixedRideHailingFleet(env)
+
+    # Access to underlying geodesic environment
+    geo_env = GeodesicEnvironment.getInstance()
+
+    # Get Column Identifier for current resolution (e.g., hex_id_7)
+    hex_column = Configuration.instance().spatial_resolution_column
+
+    # Global Config File (values from config ini files)
+    config = Configuration.instance()
+
+    # Load Vehicle Configurations
+    c_config = config.get_vehicle_config("SharedCar")
+    s_config = config.get_vehicle_config("SharedScooter")
+    ks_config = config.get_vehicle_config("SharedKickScooter")
+
+    for index, row in fleet_config.iterrows():
+        # We need to spawn vehicles in this hexagon
+        hex_id = row[hex_column]
+
+        # We need to spawn vehicles according to
+        car_count = row["cars"]
+        scooter_count = row["scooters"]
+        kick_scooter_count = row["kick_scooters"]
+        bike_count = row["bikes"]
+
+        # Add Cars
+        for current_car in range(car_count):
+            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
+            car = RideHailingCar(env, pos,
+                            c_config.max_available_seats, c_config.max_state_of_charge,
+                            c_config.energy_consumption, c_config.velocity, c_config.price_per_min)
+            fleet.add_shared_vehicle(car)
+
+        # Add Scooter
+        for current_scooter in range(scooter_count):
+            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
+            scooter = SharedScooter(env, pos,
+                                    s_config.max_available_seats, s_config.max_state_of_charge,
+                                    s_config.energy_consumption, s_config.velocity, s_config.price_per_min)
+            fleet.add_shared_vehicle(scooter)
+
+        # Add Kick Scooter
+        for current_kick_scooter in range(kick_scooter_count):
+            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
+            kick_scooter = SharedKickScooter(env, pos,
+                                             ks_config.max_available_seats, ks_config.max_state_of_charge,
+                                             ks_config.energy_consumption, ks_config.velocity, ks_config.price_per_min)
+            fleet.add_shared_vehicle(kick_scooter)
+
+        # Add Bikes
+        # for current_bike in range(bike_count):
+        #    rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
+        #    pos = GeodesicPosition(rdm_lat, rdm_lng)
+        #    bike = SharedBike(env, pos)
+        #    fleet.add_shared_vehicle(kick_scooter)
+
+    return fleet
 
 def generate_mixed_fleet(env, fleet_config):
     """
@@ -104,8 +206,8 @@ def generate_mixed_fleet(env, fleet_config):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             scooter = SharedScooter(env, pos,
-                            s_config.max_available_seats, s_config.max_state_of_charge,
-                            s_config.energy_consumption, s_config.velocity, s_config.price_per_min)
+                                    s_config.max_available_seats, s_config.max_state_of_charge,
+                                    s_config.energy_consumption, s_config.velocity, s_config.price_per_min)
             fleet.add_shared_vehicle(scooter)
 
         # Add Kick Scooter
@@ -113,12 +215,12 @@ def generate_mixed_fleet(env, fleet_config):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             kick_scooter = SharedKickScooter(env, pos,
-                            ks_config.max_available_seats, ks_config.max_state_of_charge,
-                            ks_config.energy_consumption, ks_config.velocity, ks_config.price_per_min)
+                                             ks_config.max_available_seats, ks_config.max_state_of_charge,
+                                             ks_config.energy_consumption, ks_config.velocity, ks_config.price_per_min)
             fleet.add_shared_vehicle(kick_scooter)
 
         # Add Bikes
-        #for current_bike in range(bike_count):
+        # for current_bike in range(bike_count):
         #    rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
         #    pos = GeodesicPosition(rdm_lat, rdm_lng)
         #    bike = SharedBike(env, pos)

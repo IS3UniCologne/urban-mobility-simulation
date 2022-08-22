@@ -16,7 +16,7 @@ def f(i):
     global experience
     experience = experience.append(new_experience)
     #print(experience)
-    objective = float((run_single_simulation(end_time=1400, allocation=i, seed=42,
+    objective = - float((run_single_simulation(end_time=1400, allocation=i, seed=42,
                                               substitution=0.1)[-1]))
     print(objective)
     # experience.loc[
@@ -28,7 +28,7 @@ def f(i):
 
 varbound=np.array([0,50]*213).reshape(213,2)
 algorithm_param = {'max_num_iteration': 20,\
-                   'population_size':20,\
+                   'population_size':40,\
                    'mutation_probability':0.5,\
                    'elit_ratio': 0.01,\
                    'crossover_probability': 0.5,\
