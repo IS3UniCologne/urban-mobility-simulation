@@ -46,6 +46,7 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
 
         selected_vehicle = selected_transportation_alternative.vehicle
 
+
         # No Vehicle Allocation
         if selected_vehicle.reserved_for_user != user:
             return None

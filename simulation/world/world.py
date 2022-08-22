@@ -1,7 +1,6 @@
 import logging
 from numpy.random import normal, seed
 from simpy import Environment
-
 from simulation.agent import user
 from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
@@ -70,9 +69,11 @@ class World:
 
         self._user_limit = 10_000_000
 
-    def add_user(self, origin, destination):
+    def add_user(self, mode, fleet, origin, destination):
         """
             Add a user agent to the world with an origin and a destination.
+        :param type: which type of request
+        :param fleet: which fleet
         :param origin: Spatial Unit ID (e.g., hex_id)
         :param destination: Spatial Unit ID (e.g., hex_id)
         :return: None
@@ -102,17 +103,32 @@ class World:
                 task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes,
                                      max_wait_time)
 
-                new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
-                                            self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
+                new_user = user.TransitUser(origin_position, task, self._search_engine['shared_vehicle'], self._payment_engine['shared_vehicle'],
+                                            self._vehicle_assignment_engine['shared_vehicle'], self._vehicle_choice_behavior, self._env)
             else:
-                # Generate Transportation Task
-                task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
+                if mode == 'shared_vehicle':
+                    # Generate Transportation Task
+                    task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
 
-                # Determine Consumer Type
-                population_type = self._population_factory.generatePopulationType()
+                    # Determine Consumer Type
+                    population_type = self._population_factory.generatePopulationType()
 
-                new_user = user.User(origin_position, task, self._search_engine, self._payment_engine,
-                                     self._vehicle_assignment_engine, self._vehicle_choice_behavior, population_type, self._env)
+                    new_user = user.User(fleet, origin_position, task, self._search_engine['shared_vehicle'], self._payment_engine['shared_vehicle'],
+                                         self._vehicle_assignment_engine['shared_vehicle'], self._vehicle_choice_behavior, population_type, self._env)
+                    logging.debug(f" Shared-vehicle user {new_user.user_id} starts searching for fleet {fleet} at {self._env.now}.",
+                                  extra={"clazz": self.__class__.__name__, "oid": " "})
+                if mode == 'ride_hailing':
+                    task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
+
+                    # Determine Consumer Type
+                    population_type = self._population_factory.generatePopulationType()
+
+                    new_user = user.RideHailingUser(fleet, origin_position, task, self._search_engine['ride_hailing'],
+                                                    self._payment_engine['ride_hailing'],
+                                         self._vehicle_assignment_engine['ride_hailing'], self._vehicle_choice_behavior,
+                                         population_type, self._env)
+                    logging.debug(f"Ride-hailing user {new_user.user_id} request a vehicle from fleet {fleet} at {self._env.now}.",
+                                  extra={"clazz": self.__class__.__name__, "oid": " "})
 
             # Add user to user list
             self._users.append(new_user)

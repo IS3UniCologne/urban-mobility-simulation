@@ -1,18 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="mdemircan@134.95.119.102:22 agent" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="rahadi@134.95.119.102:22 password (22)" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
       <paths name="134.95.119.102">
         <serverdata>
           <mappings>
-            <mapping deploy="/urban-mobility-simulation" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/PycharmProjects/ssh/Multi_modal" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
-      <paths name="mdemircan@134.95.119.102:22 agent">
+      <paths name="rahadi@134.95.119.102:22">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/mdemircan/Development/urban-mobility-simulation" local="$PROJECT_DIR$" />
+            <mapping deploy="/PycharmProjects/ssh/Multi_modal" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="rahadi@134.95.119.102:22 key">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/PycharmProjects/ssh/Multi_modal" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="rahadi@134.95.119.108:22 (4)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/rahadi/Projects/urban-mobility-simulation" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
