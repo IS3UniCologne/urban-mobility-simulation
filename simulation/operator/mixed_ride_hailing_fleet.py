@@ -5,10 +5,6 @@ from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.interface.fleet_interface import FleetInterface
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
-from simulation.vehicle.shared_car import SharedCar
-from simulation.vehicle.shared_kick_scooter import SharedKickScooter
-from simulation.vehicle.shared_scooter import SharedScooter
-from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle.vehicle import VehicleState
 
 
@@ -16,22 +12,12 @@ class MixedRideHailingFleet(FleetInterface):
 
     def __init__(self, env: Environment):
         super(MixedRideHailingFleet, self).__init__(env)
-
-        self._scooters = []
-        self._kick_scooters = []
         self._cars = []
-        self._bikes = []
 
 
     def add_shared_vehicle(self, vehicle: RideHailingVehicle):
         if isinstance(vehicle, RideHailingCar):
             self._cars.append(vehicle)
-        elif isinstance(vehicle, SharedScooter):
-            self._scooters.append(vehicle)
-        elif isinstance(vehicle, SharedKickScooter):
-            self._kick_scooters.append(vehicle)
-        else:
-            self._bikes.append(vehicle)
 
     def get_all_vehicles(self, region):
         """
@@ -44,9 +30,6 @@ class MixedRideHailingFleet(FleetInterface):
         :return: Lists of vehicles in area
         """
         cars_in_area = []
-        scooters_in_area = []
-        kick_scooters_in_area = []
-        bikes_in_area = []
 
         geo_env  = GeodesicEnvironment.getInstance()
         config   = Configuration.instance()
@@ -56,19 +39,7 @@ class MixedRideHailingFleet(FleetInterface):
             if car.position.is_in_geometry(geometry):
                 cars_in_area.append(car)
 
-        for scooter in self._scooters:
-            if scooter.position.is_in_geometry(geometry):
-                scooters_in_area.append(scooter)
-
-        for kick_scooter in self._kick_scooters:
-            if kick_scooter.position.is_in_geometry(geometry):
-                kick_scooters_in_area.append(kick_scooter)
-
-        for bike in self._bikes:
-            if bike.position.is_in_geometry(geometry):
-                bikes_in_area.append(bike)
-
-        return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
+        return cars_in_area
 
     def get_available_vehicles(self, region):
         """
@@ -81,9 +52,6 @@ class MixedRideHailingFleet(FleetInterface):
         :return: Lists of vehicles in area
         """
         cars_in_area = []
-        scooters_in_area = []
-        kick_scooters_in_area = []
-        bikes_in_area = []
 
         geo_env  = GeodesicEnvironment.getInstance()
         geometry = geo_env.get_hexagon(region)
@@ -93,19 +61,7 @@ class MixedRideHailingFleet(FleetInterface):
             if car.position.get_default_hexagon() == region and car.state == VehicleState.PARKING:
                 cars_in_area.append(car)
 
-        for scooter in self._scooters:
-            if scooter.position.get_default_hexagon() == region and scooter.state == VehicleState.PARKING:
-                scooters_in_area.append(scooter)
-
-        for kick_scooter in self._kick_scooters:
-            if kick_scooter.position.get_default_hexagon() == region and kick_scooter.state == VehicleState.PARKING:
-                kick_scooters_in_area.append(kick_scooter)
-
-        for bike in self._bikes:
-            if bike.position.get_default_hexagon() == region and bike.state == VehicleState.PARKING:
-                bikes_in_area.append(bike)
-
-        return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
+        return cars_in_area
 
     def get_all_available_vehicles(self, region):
         """
@@ -114,9 +70,9 @@ class MixedRideHailingFleet(FleetInterface):
         :return: List of all vehicle
         """
 
-        cars, scooters, kick_scooters, bikes = self.get_available_vehicles(region)
+        cars = self.get_available_vehicles(region)
 
-        all_vehicle_list = cars + scooters + kick_scooters + bikes
+        all_vehicle_list = cars
 
         return all_vehicle_list
 
@@ -127,7 +83,7 @@ class MixedRideHailingFleet(FleetInterface):
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
         below_soc_level_vehicles = []
-        all_vehicle_list = self._cars + self._scooters + self._kick_scooters + self._bikes
+        all_vehicle_list = self._cars
 
         for vehicle in all_vehicle_list:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
@@ -142,28 +98,22 @@ class MixedRideHailingFleet(FleetInterface):
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
         below_soc_level_vehicles = []
-        cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = self.get_all_vehicles(region)
+        cars_in_area = self.get_all_vehicles(region)
 
-        for vehicle in [*cars_in_area, *scooters_in_area, *kick_scooters_in_area, *bikes_in_area]:
+        for vehicle in [*cars_in_area]:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
                 below_soc_level_vehicles.append(vehicle)
 
         return below_soc_level_vehicles
 
-    def count_scooters(self):
-        return len(self._scooters)
 
-    def count_kick_scooters(self):
-        return len(self._kick_scooters)
 
     def count_cars(self):
         return len(self._cars)
 
-    def count_bikes(self):
-        return len(self._bikes)
 
     def count_total(self):
-        return self.count_cars()+self.count_bikes()+self.count_scooters()+self.count_kick_scooters()
+        return self.count_cars()
 
     def calc_supply_per_region(self):
         """
@@ -171,7 +121,7 @@ class MixedRideHailingFleet(FleetInterface):
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-        available_vehicles = ["SharedKickScooter", "SharedScooter", "SharedCar"]
+        available_vehicles = ["RideHailingCar"]
         values = [0]*len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
@@ -180,11 +130,7 @@ class MixedRideHailingFleet(FleetInterface):
         supply = {}
 
         for mode in available_vehicles:
-            if mode == "SharedKickScooter":
-                vehicle_list = self._kick_scooters
-            elif mode == "SharedScooter":
-                vehicle_list = self._scooters
-            elif mode == "SharedCar":
+            if mode == "RideHailingCar":
                 vehicle_list = self._cars
             else:
                 raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')
@@ -207,7 +153,7 @@ class MixedRideHailingFleet(FleetInterface):
         :return: Dictionary, where key = hex_id and value is a dictionary counting the vehicles to be charged
                  e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-        available_vehicles = ["SharedKickScooter", "SharedScooter", "SharedCar"]
+        available_vehicles = ["RideHailingCar"]
         values = [0]*len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
@@ -216,11 +162,7 @@ class MixedRideHailingFleet(FleetInterface):
         low_soc_supply = {}
 
         for mode in available_vehicles:
-            if mode == "SharedKickScooter":
-                vehicle_list = self._kick_scooters
-            elif mode == "SharedScooter":
-                vehicle_list = self._scooters
-            elif mode == "SharedCar":
+            if mode == "RideHailingCar":
                 vehicle_list = self._cars
             else:
                 raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')

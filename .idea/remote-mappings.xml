@@ -18,6 +18,13 @@
             </list>
           </settings>
         </remote-mappings>
+        <remote-mappings server-id="python@sftp://rahadi@134.95.119.108:22/home/rahadi/venvs/EVCC/bin/python3.9">
+          <settings>
+            <list>
+              <mapping local-root="$PROJECT_DIR$" remote-root="/home/rahadi/Projects/urban-mobility-simulation" />
+            </list>
+          </settings>
+        </remote-mappings>
       </list>
     </list>
   </component>

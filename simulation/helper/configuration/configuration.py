@@ -67,6 +67,8 @@ class Configuration:
 
         self._shared_vehicle_operator_config = None
 
+        self._charging_infrastructure_config = None
+
         self._transit_operator_config = None
 
         self._transit_agent_config = None
@@ -128,6 +130,9 @@ class Configuration:
 
     def add_shared_vehicle_operator_config(self, shared_mobility_ops_config):
         self._shared_vehicle_operator_config = shared_mobility_ops_config
+
+    def add_charging_infrastructure_config(self, charging_infrastructure_ops_config):
+        self._charging_infrastructure_config = charging_infrastructure_ops_config
 
     @property
     def shared_vehicle_operator_config(self):
@@ -205,6 +210,13 @@ class SharedVehicleOperatorConfig:
         self.operations_start = operations_start
         self.operations_duration = operations_duration
         self.vehicle_relocation_velocity = vehicle_relocation_velocity
+
+class ChargingInfrastructureConfig:
+    def __init__(self, location, power, capacity):
+        self.location = location
+        self.power = power
+        self.capacity = capacity
+
 
 class TransitOperatorConfig:
     def __init__(self, planning_lookahead, max_busses):
