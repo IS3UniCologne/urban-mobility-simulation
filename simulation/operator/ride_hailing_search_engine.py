@@ -28,7 +28,7 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
 
         hexagon_origin = vehicle_search_task.agent_position.get_default_hexagon()
 
-        cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = self.fleet[vehicle_search_task.fleet].get_available_vehicles(hexagon_origin)
+        cars_in_area = self.fleet.get_available_vehicles(hexagon_origin)
 
         origin = vehicle_search_task.transport_task.origin
         destination = vehicle_search_task.transport_task.destination
@@ -82,21 +82,14 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
 
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         # Get available vehicle types
-        vehicle_types = Configuration.instance().get_available_vehicle_types()
 
         # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
         # We count the lost revenue for the "cheapest" mode
-        for vehicle_type in vehicle_types:
-            if vehicle_type in transportation_task.viable_vehicle_modes and transportation_task.viable_vehicle_modes[vehicle_type] == 1:
-                distance = transportation_task.origin >> transportation_task.destination
-                velocity = Configuration.instance().get_vehicle_config(vehicle_type).velocity
-                price_per_min = Configuration.instance().get_vehicle_config(vehicle_type).price_per_min
-                missed_trip_cost = distance / velocity * price_per_min
 
-                if vehicle_type == "SharedKickScooter":
-                    missed_trip_cost += 1.0 # Unlock Fee
+        distance = transportation_task.origin >> transportation_task.destination
+        #TODO: define price of the trip
 
-        self.increase_total_missed_trips(missed_trip_cost)
+        self.increase_total_missed_trips(1)
 
         # Add Transaction to Log
         self._transactions.append(

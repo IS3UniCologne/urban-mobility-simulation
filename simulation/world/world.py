@@ -27,10 +27,12 @@ class World:
             return World.__instance
 
     @staticmethod
-    def init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior, population_factory, reset=False):
+    def init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior,
+             population_factory, charging_infrastructure, reset=False):
         """ Static access method. """
         if World.__instance is None or reset is True:
-            World(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior, population_factory, reset)
+            World(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior
+                  , population_factory, charging_infrastructure, reset)
         return World.__instance
 
 
@@ -40,6 +42,7 @@ class World:
                  vehicle_assignment_engine: VehicleAllocationEngineInterface,
                  vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
                  population_factory: PopulationFactory,
+                 charging_infrastructure,
                  reset: bool = False):
         """ Virtually private constructor. """
         if World.__instance is not None and not reset:
@@ -58,6 +61,8 @@ class World:
         # Store all current users
         self._users = []
 
+        self._charging_infrastructure = charging_infrastructure
+
         # Config
         self._config = Configuration.instance()
 
@@ -68,6 +73,7 @@ class World:
         self._changed = self._env.event()
 
         self._user_limit = 10_000_000
+
 
     def add_user(self, mode, fleet, origin, destination):
         """
@@ -143,6 +149,10 @@ class World:
     @property
     def users(self):
         return self._users
+
+    @property
+    def charging_infrastructure(self):
+        return self._charging_infrastructure
 
     @property
     def changed(self):

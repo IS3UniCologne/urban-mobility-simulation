@@ -12,7 +12,13 @@ from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
 
 
-class RideHailingVehicleState(VehicleState, Enum):
+class RideHailingVehicleState(Enum):
+    INITIALIZED = 0
+    PARKING = 1
+    DRIVING = 2
+    RELOCATING = 3
+    CHARGING = 4
+    PRE_SERVICE = 5
     SOME_STATE = 1002
     RESERVED = 1001
     MOVING_TO_PICK_UP_POS = 1003

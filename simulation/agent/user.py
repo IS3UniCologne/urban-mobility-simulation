@@ -136,7 +136,6 @@ class User(Agent, DriverInterface):
                 self._vehicle_allocated = self._env.event()
 
                 continue # retry again until vehicle supply is depleted
-
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
             yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
@@ -210,6 +209,7 @@ class User(Agent, DriverInterface):
         self._transportation_alternatives_received.succeed()
         logging.debug(f"Received transportation alternatives: {available_transportation_alternatives}.",
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
+
         return available_transportation_alternatives
 
     def select_transportation_alternative(self,
@@ -239,6 +239,7 @@ class User(Agent, DriverInterface):
         self._transportation_alternatives_selected.succeed(selected_transportation_alternative)
         logging.debug(f"Selected transportation alternative: {selected_transportation_alternative}.",
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
+
         return selected_transportation_alternative
 
     def allocate_vehicle(self, selected_transportation_alternative: TransportationAlternative) -> VehicleAllocation:
@@ -498,11 +499,10 @@ class RideHailingUser(Agent, DriverInterface):
                 self._vehicle_allocated = self._env.event()
 
                 continue  # retry again until vehicle supply is depleted
-            #TODO: do we need yield here for ride_hailing?
+            #TODO : For ridehailing the vehicle should relocate to the user and ...
             self._env.process(self.wait_for_vehicle(vehicle_allocation))
             yield self._env.process(vehicle_allocation.vehicle.move_to_pick_up_position(vehicle_allocation))
             yield self._env.process(self.start_driving(vehicle_allocation))
-
             self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task,
                                                                         selected_transportation_alternative)
 

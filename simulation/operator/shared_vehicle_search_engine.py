@@ -28,7 +28,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
 
         hexagon_origin = vehicle_search_task.agent_position.get_default_hexagon()
 
-        cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = self.fleet[vehicle_search_task.fleet].get_available_vehicles(hexagon_origin)
+        cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = self.fleet.get_available_vehicles(hexagon_origin)
 
         origin = vehicle_search_task.transport_task.origin
         destination = vehicle_search_task.transport_task.destination
