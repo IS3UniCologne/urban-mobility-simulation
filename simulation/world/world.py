@@ -67,6 +67,7 @@ class World:
 
         # Store all current vehicles
         self._vehicles = []
+        self._vehicle_processes = []
 
         # Config
         self._config = Configuration.instance()
@@ -86,6 +87,10 @@ class World:
     @property
     def demand_processes(self):
         return self._demand_processes
+
+    @property
+    def vehicle_processes(self):
+        return self._vehicle_processes
 
     def add_user(self, origin, destination):
         """
@@ -111,6 +116,9 @@ class World:
             tc = TripCharacteristics(distance)
             viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
+            # Determine Consumer Type
+            population_type = self._population_factory.generatePopulationType()
+
             if self._vehicle_choice_behavior.__class__.__name__ == 'PublicTransitVehicleChoiceBehavior':
                 # User Preferences
                 max_wait_time = normal(self._config.user_config.max_wait)  # sample from normal dist centered on config
@@ -123,14 +131,15 @@ class World:
                 #                             self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env,
                 #                             passive=True if not self._config.transit_agent_config.dumb else False)
                 new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
-                                            self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env,
-                                            passive=True)
+                                            self._vehicle_assignment_engine, self._vehicle_choice_behavior,
+                                            population_type, self._env, passive=True)
             else:
                 # Generate Transportation Task
                 task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
 
                 new_user = user.User(origin_position, task, self._search_engine, self._payment_engine,
-                                     self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env)
+                                     self._vehicle_assignment_engine, self._vehicle_choice_behavior, population_type,
+                                     self._env)
 
             # Add user to user list
             self._users.append(new_user)
@@ -164,7 +173,7 @@ class World:
     def changed(self, event):
         self._changed = event
 
-    def stop_processes(self):
+    def stop_all_processes(self):
         # stop demand generation
         for d in self.demand_processes:
             try:
