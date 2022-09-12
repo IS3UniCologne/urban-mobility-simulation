@@ -2,15 +2,12 @@ import logging
 from copy import deepcopy
 from math import sqrt
 
-import h3
 import numpy as np
 import simpy
 
-from simulation.agent.action_space import ActionSpace
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle.public_transit_bus import PublicTransitVehicleState
 
 

@@ -22,8 +22,6 @@ from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.time import SimulationTimeConverter
 from simulation.vehicle.public_transit_bus import PublicTransitVehicleState, Bus
 
-from line_profiler_pycharm import profile
-
 
 class ModifiedTensorBoard(TensorBoard):
 
@@ -239,7 +237,7 @@ class DQN(RLAgent):
         bus._state_update_process.interrupt()
 
         # stop demand generation
-        bus._world.stop_processes()
+        bus._world.stop_all_processes()
 
         # retain parameters
         # TODO: refactor such that weights etc are retained through config instead of being passed around?
