@@ -413,9 +413,10 @@ class TransitUser(User, PassengerInterface):
     def __init__(self, position: GeodesicPosition, transport_task: TransportTask,
                  transportation_search_service: SearchEngineInterface,
                  payment_service: PaymentInterface, vehicle_assignment_service: VehicleAllocationEngineInterface,
-                 vehicle_choice_behavior: VehicleChoiceBehaviorInterface, env: simpy.Environment, passive=False):
+                 vehicle_choice_behavior: VehicleChoiceBehaviorInterface, population_type: PopulationType,
+                 env: simpy.Environment, passive=False):
         super(TransitUser, self).__init__(position, transport_task, transportation_search_service, payment_service,
-                                          vehicle_assignment_service, vehicle_choice_behavior, env)
+                                          vehicle_assignment_service, vehicle_choice_behavior, population_type, env)
         self._id = TransitUser.transit_user_id  # User ID
         TransitUser.transit_user_id += 1  # Increment User Id
 
@@ -513,7 +514,8 @@ class TransitUser(User, PassengerInterface):
                                 vehicle.route.trip_id),
                             price=0,
                             duration=numpy.inf,
-                            distance=self._transport_task.origin >> self._transport_task.destination
+                            distance=self._transport_task.origin >> self._transport_task.destination,
+                            convenience=0 # TODO: only a placeholder
                         )
                         self._payment_service._tracked_demands.add((self._transport_task.origin.getExactLocation(geojson=True),
                                                                     self._transport_task.destination.getExactLocation(geojson=True),
@@ -539,7 +541,8 @@ class TransitUser(User, PassengerInterface):
                                 vehicle.route.trip_id),
                             price=0,
                             duration=numpy.inf,
-                            distance=self._transport_task.origin >> self._transport_task.destination
+                            distance=self._transport_task.origin >> self._transport_task.destination,
+                            convenience=0 # TODO: only a placeholder
                         )
                         self._payment_service._tracked_demands.add(
                             (self._transport_task.origin.getExactLocation(geojson=True),

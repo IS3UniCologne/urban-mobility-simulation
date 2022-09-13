@@ -134,7 +134,7 @@ class Bus(PublicTransitVehicle):
 
         # TODO: rework such that simulation is not halted when working outside of benchmark runs
         # stop demand generation
-        self._world.stop_processes()
+        self._world.stop_all_processes()
 
         self._has_reached_terminal.succeed((None,)*8)
 

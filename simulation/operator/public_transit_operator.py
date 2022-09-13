@@ -49,6 +49,10 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._rl_agent_weights = rl_agent_weights
         self._rl_agent_replay_buffer = rl_agent_replay_buffer
         self._rl_agent_episode = rl_agent_episode
+        self._rl_agent_lr = None
+        self._rl_agent_reached_destination = None
+        self._rl_agent_distance = None
+        self._rl_agent_duration = None
         self._unserved_passengers = 0
 
         # Config
@@ -143,7 +147,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                                                                 vehicle.prognose_arrival(subroute.destination)) + \
                                                                (walking_dist_to_destination / 83.33)
 
-            transportation_alternative = TransportationAlternative(vehicle, subroute, price, duration, distance)
+            # TODO: convenience=0 is only a placeholder
+            transportation_alternative = TransportationAlternative(vehicle, subroute, price, duration, distance, 0)
             browser.add_transportation_alternative(transportation_alternative)
 
         return browser
@@ -195,7 +200,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                      extra={"clazz": self.__class__.__name__, "oid": ""})
 
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
-        self.increase_total_missed_trips()
+        self.increase_total_missed_trips(0)
 
         # Add Transaction to Log
         self._transactions.append(
