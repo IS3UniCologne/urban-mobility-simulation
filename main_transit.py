@@ -43,6 +43,7 @@ from simulation.world.demand.demand_importer import DemandImporter
 from simulation.infrastructure.helper.timetable import Timetable
 from simulation.infrastructure.helper.distance_matrix_importer import DistanceMatrixImporter
 from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -262,7 +263,7 @@ timetable.import_timetable()
 ActionSpace.init(actions)
 
 
-def run_single_simulation(start_time=0, end_time=60, seed=4711, weights=None, replay_buffer=None, episode=1):
+def run_single_simulation(start_time=0, end_time=60, price_sensitive_pop_prob = 0.0, seed=4711, weights=None, replay_buffer=None, episode=1):
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Setup Simulation Environment.           #
@@ -310,8 +311,11 @@ def run_single_simulation(start_time=0, end_time=60, seed=4711, weights=None, re
     # Vehicle Choice Model
     vehicle_choice_model = PublicTransitVehicleChoiceBehavior(['Bus'])
 
+    # Population Type
+    population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
+
     # World
-    world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model, reset=True)
+    world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model, population_factory, reset=True)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -654,8 +658,8 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
 
 
 if __name__ == '__main__':
-    # weights = learn_agent(prepare_benchmark=True, seed=4711)
-    weights = "./data/output/weights/10000_episodes_buffersize=1000_eps_decay_strategy=linear_weights_20220117-213313.keras"
+    weights = learn_agent(prepare_benchmark=True, seed=4711)
+    # weights = "./data/output/weights/10000_episodes_buffersize=1000_eps_decay_strategy=linear_weights_20220117-213313.keras"
     runs = 100
     motherseed = random.randint(1,1000) # use the same seed for all 4 parallel runs
     # in each process, multiple that "motherseed" with the run number to achieve randomness between runs but not processes

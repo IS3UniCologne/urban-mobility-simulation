@@ -27,7 +27,8 @@ if __name__ == "__main__":
     either a grid search (by kwargs, see below) or an averaging benchmark
     (by range, see below)
     
-    Constrained by memory: A 100,000 experiences replay buffer takes about 31GB of RAM.
+    Constrained by memory: A 100,000 experiences 
+    replay buffer takes about 31GB of RAM.
     """
 
     # define experiments with kwargs
