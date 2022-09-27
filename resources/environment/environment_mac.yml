@@ -19,7 +19,7 @@ dependencies:
   - tensorflow-deps
   - pip>20.3
   - pip:
-      - h3>=3.7.1
+      - h3>=3.7.1,<4
       - partridge[full]
       - peartree
       - gtfs_kit

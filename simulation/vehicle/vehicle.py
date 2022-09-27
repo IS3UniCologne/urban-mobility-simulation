@@ -25,7 +25,7 @@ class Vehicle(ABC):
 
     def __init__(self, env: Environment, position):
         self._id = Vehicle.vehicle_id
-        Vehicle.vehicle_id += 1  # Increment User Id
+        Vehicle.vehicle_id += 1  # Increment Vehicle Id
         self._env = env
         self._position = position
 

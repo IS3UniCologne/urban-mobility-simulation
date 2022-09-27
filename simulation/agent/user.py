@@ -426,7 +426,7 @@ class TransitUser(User, PassengerInterface):
 
         # Config
         self._config = Configuration.instance()
-        self._bus_res = self._config.transit_agent_config.action_resolution
+        self._bus_res = self._config.dynamic_routing_config.action_resolution
 
         # TODO: modify available_time over time
         self._available_time = self._transport_task.max_wait_time # max available walk / wait time, can change by e.g. waiting
@@ -626,44 +626,9 @@ class TransitUser(User, PassengerInterface):
             # we don't want to service demands that board and unboard at the same station, they can walk
             return False
 
-        incorridor = False if not self._geodesic_env.filter_demands_by_corridor([self.transport_task], vehicle._corridor) else True
-        indirection = False if not self._geodesic_env.filter_demands_by_direction([self.transport_task], vehicle) else True
-
-        if not incorridor or not indirection:
-            return False
-        else:
-            return True
-
-    def start_passive_transit(self, vehicle: Vehicle):
-        # Wait for event
-        yield self._assigned_vehicle_arrived
-
-        if not vehicle.available_seats > 0:
-            # Interrupt this user's process
-            proc = self._world.user_process_by_id(self._id)['proc']
-            proc.interrupt()
-            return
-        else:
-            # Update current state
-            self._state = UserState.IN_TRANSPORT
-            self.mount_vehicle(vehicle)
-
-        # drive in vehicle until destination hexagon is reached, this might not happen at all
-        while (self.transport_task.destination.get_hexagon_id(self._bus_res) !=
-               vehicle.position.get_hexagon_id(self._bus_res)):
-            yield vehicle._position_changed
-
-        self.unmount_vehicle(vehicle)
-        vehicle._dropoffs += 1
-
-        self._arrived_at_last_stop.succeed()
-
-    def _demand_aligns(self, vehicle: Bus):
-        if self.transport_task.origin.get_hexagon_id() == self.transport_task.destination.get_hexagon_id():
-            # we don't want to service demands that board and unboard at the same station, they can walk
-            return False
-
-        incorridor = False if not self._geodesic_env.filter_demands_by_corridor([self.transport_task], vehicle._corridor) else True
+        # TODO: this is coupled deep with the DynamicRouting problem, too much hardcoded
+        incorridor = False if not self._geodesic_env.filter_demands_by_corridor(
+            [self.transport_task], self._config.dynamic_routing_config.corridor) else True
         indirection = False if not self._geodesic_env.filter_demands_by_direction([self.transport_task], vehicle) else True
 
         if not incorridor or not indirection:

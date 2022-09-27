@@ -6,7 +6,7 @@ dependencies:
   - python=3.7.10
   - ipython
   - geopandas
-  - h3-py>=3.7.1
+  - h3-py>=3.7.1,<4
   - haversine
   - matplotlib
   - notebook
