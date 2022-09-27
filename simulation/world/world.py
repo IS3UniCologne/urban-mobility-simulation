@@ -1,6 +1,4 @@
 import logging
-
-import simpy
 from numpy.random import normal
 from simpy import Environment
 
@@ -144,6 +142,8 @@ class World:
             # Add user to user list
             self._users.append(new_user)
 
+            # TODO: register user with tracking
+
             # Start Process for each new user
             self._user_processes.append({'id': new_user.id, 'proc': self._env.process(new_user.run())})
 
@@ -154,8 +154,12 @@ class World:
     def add_vehicle(self, vehicle: Vehicle):
         self._vehicles.append(vehicle)
 
+        # TODO: register vehicle with tracking
+
     def remove_vehicle(self, vehicle: Vehicle):
         self._vehicles.remove(vehicle)
+
+        # TODO: de-register vehicle with tracking
 
     @property
     def users(self):
@@ -186,6 +190,8 @@ class World:
         for u in self.user_processes:
             try:
                 u['proc'].interrupt()
+
+                # TODO: de-register user with tracking?
             except RuntimeError:
                 # already terminated
                 pass

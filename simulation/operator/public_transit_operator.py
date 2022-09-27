@@ -1,10 +1,8 @@
-import ast
 import logging
 import pandas as pd
 import simpy
 from simpy import Environment
 
-from simulation.agent.deep_q_learning import DQN
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.helper.timetable import Timetable
@@ -24,10 +22,11 @@ from simulation.infrastructure.transit_network.route_segment import RouteSegment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 from simulation.world.world import World
+from tracking.tracking import Tracking
 
 
 class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface):
-    def __init__(self, env: Environment, timetable: Timetable, rl_agent_weights, rl_agent_replay_buffer, rl_agent_episode):
+    def __init__(self, env: Environment, timetable: Timetable):
         PaymentInterface.__init__(self)
         self._timetable = timetable
         self._env = env
@@ -36,42 +35,22 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
         # Environment
         self._geodesic_env = GeodesicEnvironment.getInstance()
-        self._world = None # defer loading to run process, otherwise circular dependency
+        self._world = None  # defer loading to run process, otherwise circular dependency
 
         # Events
         self._vehicles_assigned_to_users = self._env.event()
 
-        # Agent
-        self._states = []
-        self._actions = []
-        self._rewards = []
-        self._rewards_sum = []
-        self._rl_agent_weights = rl_agent_weights
-        self._rl_agent_replay_buffer = rl_agent_replay_buffer
-        self._rl_agent_episode = rl_agent_episode
-        self._rl_agent_lr = None
-        self._rl_agent_reached_destination = None
-        self._rl_agent_distance = None
-        self._rl_agent_duration = None
+        # Agent TODO: move to learning?
         self._unserved_passengers = 0
 
         # Config
         self._config = Configuration.instance()
         self._operator_config = self._config.transit_operator_config
-        self._action_res = self._config.transit_agent_config.action_resolution
 
         # Tracking
-        self._timestamped_position = {
-            'type': 'Feature',
-            'geometry': {
-                'type': 'LineString',
-                'coordinates': [],
-            },
-            'properties': {
-                'times': []
-            }
-        }
+        self._tracking = None # defer loading to run process, otherwise circular dependency
 
+        # Process
         self._operator_process = self._env.process(self._run())
 
     def _run(self):
@@ -79,6 +58,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         TransitOperator Lifecycle
         """
         self._world = World.instance()
+        self._tracking = Tracking.instance()
 
         while True:
             try:
@@ -104,13 +84,13 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                             else:
                                 trip = self._timetable.trip_by_id(trip_id)
                                 route = self._build_route(trip)
-                                bus = self._spawn_bus(route, dumb = self._config.transit_agent_config.dumb)
-                                self._busses.append(bus)
-                                self._world.add_vehicle(bus)
+                                bus = self._spawn_bus(route,
+                                                      use_learning_agent=
+                                                      self._config.dynamic_routing_config.use_learning_agent)
 
-                                if not self._config.transit_agent_config.dumb:
-                                    # spawn a process that keeps track of the bus state, action and rewards
-                                    self._env.process(self._track_bus_agent(bus))
+                                # if not self._config.dynamic_routing_config.use_learning_agent:
+                                #     # spawn a process that keeps track of the bus state, action and rewards
+                                #     self._env.process(self._track_bus_agent(bus))
 
                                 # also spawn a cleanup process that waits for completion of trip
                                 self._env.process(self._clean_up_bus(bus))
@@ -145,7 +125,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
             # from search to arrival + walk to final destination
             duration = SimulationTimeConverter.duration_between(SimulationTimeConverter.as_str(search_time),
                                                                 vehicle.prognose_arrival(subroute.destination)) + \
-                                                               (walking_dist_to_destination / 83.33)
+                       (walking_dist_to_destination / 83.33)
 
             # TODO: convenience=0 is only a placeholder
             transportation_alternative = TransportationAlternative(vehicle, subroute, price, duration, distance, 0)
@@ -163,7 +143,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         """
         selected_vehicle = selected_transportation_alternative.vehicle
 
-        yield self._env.timeout(.01) # TODO: this is just hacking around the expected generator
+        yield self._env.timeout(.01)  # TODO: this is just hacking around the expected generator
 
         if selected_vehicle.available_seats > 0:
             return VehicleAllocation(user, selected_vehicle, selected_transportation_alternative,
@@ -189,15 +169,16 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
              "destination": selected_transportation_alternative.route.destination.get_hexagon(),
              "time_start": transportation_task.time,
              "time_end": self._env.now,
-             "price":selected_transportation_alternative.price,
+             "price": selected_transportation_alternative.price,
              "distance": selected_transportation_alternative.distance,
-             "duration":selected_transportation_alternative.duration,
-             "selected_vehicle_mode":selected_transportation_alternative.vehicle.__class__.__name__,
-             "state":"Fulfilled", **transportation_task.viable_vehicle_modes}
+             "duration": selected_transportation_alternative.duration,
+             "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__,
+             "state": "Fulfilled", **transportation_task.viable_vehicle_modes}
         )
 
-        logging.debug(f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
-                     extra={"clazz": self.__class__.__name__, "oid": ""})
+        logging.debug(
+            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
+            extra={"clazz": self.__class__.__name__, "oid": ""})
 
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         self.increase_total_missed_trips(0)
@@ -211,12 +192,13 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
              "price": 0.0,
              "distance": transportation_task.origin >> transportation_task.destination,
              "duration": 0.0,
-             "selected_vehicle_mode":"None",
-             "state":"Missed", **transportation_task.viable_vehicle_modes}
+             "selected_vehicle_mode": "None",
+             "state": "Missed", **transportation_task.viable_vehicle_modes}
         )
 
-        logging.debug(f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
-                     extra={"clazz": self.__class__.__name__, "oid": ""})
+        logging.debug(
+            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
+            extra={"clazz": self.__class__.__name__, "oid": ""})
 
     def _build_route(self, trip: pd.DataFrame) -> PublicTransitRoute:
         origin_row = trip.iloc[0]
@@ -256,73 +238,75 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
         return route
 
-    def _spawn_bus(self, route: PublicTransitRoute, dumb=False):
+    def _spawn_bus(self, route: PublicTransitRoute, use_learning_agent=False):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
-        if self._config.transit_agent_config.corridor is None:
-            corridor = self._geodesic_env.corridor(route.origin.get_hexagon_id(resolution=self._action_res),
-                                                   route.destination.get_hexagon_id(resolution=self._action_res), k=2)
-        else:
-            with open(self._config.transit_agent_config.corridor,'r') as f:
-                corridor = ast.literal_eval(f.read())
+        # TODO: remove when everything works
+        # if self._config.transit_agent_config.corridor is None:
+        #     corridor = self._geodesic_env.corridor(route.origin.get_hexagon_id(resolution=self._action_res),
+        #                                            route.destination.get_hexagon_id(resolution=self._action_res), k=2)
+        # else:
+        #     with open(self._config.transit_agent_config.corridor,'r') as f:
+        #         corridor = ast.literal_eval(f.read())
 
-        velocity = self._config.transit_agent_config.velocity
+        # TODO: remove when everything works
+        # input dim for DQN model: corridor dim * corridor dim + corridor dim + 1
+        # agent = DQN(self._env, corridor_dim * corridor_dim + corridor_dim + 1,
+        #             self._rl_agent_weights, self._rl_agent_replay_buffer, self._rl_agent_episode)
+        bus = Bus(
+            env=self._env,
+            route=route,
+            position=init_position,
+            use_learning_agent=use_learning_agent
+        )
 
-        if dumb:
-            bus = Bus(self._env, route, init_position, rl_agent=None, corridor=corridor, velocity=velocity)
-        else:
-            corridor_dim = len(corridor)
-            # input dim for DQN model: corridor dim * corridor dim + corridor dim + 1
-            agent = DQN(self._env, corridor_dim * corridor_dim + corridor_dim + 1,
-                        self._rl_agent_weights, self._rl_agent_replay_buffer, self._rl_agent_episode)
-            bus = Bus(self._env, route, init_position, agent, corridor, velocity=velocity)
+        self._busses.append(bus)
+        self._world.add_vehicle(bus)
 
-        self._timestamped_position['geometry']['coordinates'].append(init_position.getExactLocation(geojson=True))
-        self._timestamped_position['properties']['times'].append(int(self._time.now() * 60000))
+        # now add the correct reference of the bus to the problem LearningInterface and do deferred init
+        self._config.dynamic_routing_config.problem.bus = bus
+        self._config.dynamic_routing_config.problem.problem_init()
+
+        # TODO: move to tracking
+        # self._timestamped_position['geometry']['coordinates'].append(init_position.getExactLocation(geojson=True))
+        # self._timestamped_position['properties']['times'].append(int(self._time.now() * 60000))
+
+        self._tracking.register(bus)
 
         return bus
 
     def _clean_up_bus(self, bus: Bus):
-
-        (model, target_model, replay_buffer, episode, learning_rate, reached_destination, distance, duration) = yield bus._has_reached_terminal
+        yield bus._has_reached_terminal
 
         self._busses.remove(bus)
         self._world.remove_vehicle(bus)
+        self._tracking.unregister_by_obj(bus)
+
         # TODO: unmount all remaining passengers - is there a need for this?
         logging.debug(f'There are still {str(len(bus._seats))} passengers onboard the bus',
                       extra={"clazz": self.__class__.__name__, "oid": ""})
         self._unserved_passengers = len(bus._seats)
 
-        dumb = self._config.transit_agent_config.dumb
+        # TODO: this is hardcoded for one learning bus
+        if self._config.dynamic_routing_config.use_learning_agent:
+            self._operator_process.interrupt()
 
-        self._rl_agent_model = target_model if not dumb else None
-        self._rl_agent_weights = (model.get_weights(), target_model.get_weights()) if not dumb else (None,)*2
-        self._rl_agent_replay_buffer = replay_buffer
-        self._rl_agent_episode = episode
-        self._rl_agent_lr = learning_rate
-        self._rl_agent_reached_destination = reached_destination
-        self._rl_agent_distance = distance if not dumb else bus.route.total_distance()
-        self._rl_agent_duration = duration if not dumb else bus.route.planned_duration() # TODO: replace with actual duration when introducin road networks
-        self._rewards_sum.append(bus._rl_agent._reward_sum if not dumb else None)
-
-        # TODO: this is hardcoded for one bus
-        self._operator_process.interrupt()
-
-    def _track_bus_agent(self, bus: Bus):
-
-        while True:
-            # the code block below is for SARSA and similar agents
-            # state, action, reward, reward_sum = yield bus._agent_completed_step
-            # self._states.append(state)
-            # self._actions.append(action)
-            # self._rewards.append(reward)
-            # self._rewards_sum.append(reward_sum)
-
-            # the code block below is for visualization
-            position, demands = yield bus._agent_completed_step
-
-            # ... build TimeStampedGeoJSON feature ...
-            self._timestamped_position['geometry']['coordinates'].append(position.getExactLocation(geojson=True))
-            self._timestamped_position['properties']['times'].append(int(self._time.now() * 60000)) # TODO: beautify for animation
+    # def _track_bus_agent(self, bus: Bus):
+    #
+    #     while True:
+    #         # the code block below is for SARSA and similar agents
+    #         # state, action, reward, reward_sum = yield bus._agent_completed_step
+    #         # self._states.append(state)
+    #         # self._actions.append(action)
+    #         # self._rewards.append(reward)
+    #         # self._rewards_sum.append(reward_sum)
+    #
+    #         # the code block below is for visualization
+    #         position, demands = yield bus._agent_completed_step
+    #
+    #         # ... build TimeStampedGeoJSON feature ...
+    #         self._timestamped_position['geometry']['coordinates'].append(position.getExactLocation(geojson=True))
+    #         self._timestamped_position['properties']['times'].append(
+    #             int(self._time.now() * 60000))
 
     def _find_viable_transit(self, transportation_search_task, spatial_strategy='hexagon', temporal_lookahead=10):
         search_time = transportation_search_task.transport_task.time
@@ -335,7 +319,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
             # No busses are en-route, report no viable alternative
             # TODO: fallback to timetable if temporal_lookahead > transit operator planning window?
             if temporal_lookahead > self._operator_config.planning_lookahead:
-                raise NotImplementedError('temporal lookahead of user > planning lookahead of operator currently not supported')
+                raise NotImplementedError(
+                    'temporal lookahead of user > planning lookahead of operator currently not supported')
 
         for vehicle in self._busses:
             viable_stops = self._check_viable_stops(vehicle, spatial_strategy,
@@ -349,7 +334,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                                                                   transportation_search_task.transport_task.origin,
                                                                   latest_departure)
                     if reachable:
-                        reachable_stops.append((stop, distance)) # tuple of (Stop, walking distance to/from)
+                        reachable_stops.append((stop, distance))  # tuple of (Stop, walking distance to/from)
 
                 if reachable_stops:
                     logging.debug(f'Bus {vehicle.id} is a viable transport alternative from '
@@ -367,7 +352,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                             subroute = vehicle.route.subroute(start, end)
                             walk_from_end = end >> transportation_search_task.transport_task.destination
 
-                            if walk_to_start >= walk_alternative or walk_from_end >= walk_alternative or (walk_to_start + walk_from_end) >= walk_alternative:
+                            if walk_to_start >= walk_alternative or walk_from_end >= walk_alternative or (
+                                    walk_to_start + walk_from_end) >= walk_alternative:
                                 # if any one or the sum of both walking distances is larger than the alternative
                                 # of walking the complete distance of the transport demand, then it's unlogical
                                 # i.e. you are better off walking ;)
