@@ -12,13 +12,13 @@ from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
 
 
-class RideHailingVehicleState(Enum):
-    INITIALIZED = 0
-    PARKING = 1
-    DRIVING = 2
-    RELOCATING = 3
-    CHARGING = 4
-    PRE_SERVICE = 5
+class RideHailingVehicleState(VehicleState, Enum):
+    # INITIALIZED = 0
+    # PARKING = 1
+    # DRIVING = 2
+    # RELOCATING = 3
+    # CHARGING = 4
+    # PRE_SERVICE = 5
     SOME_STATE = 1002
     RESERVED = 1001
     MOVING_TO_PICK_UP_POS = 1003
@@ -27,7 +27,7 @@ class RideHailingVehicleState(Enum):
 class RideHailingVehicle(Vehicle, ABC):
     ride_hailing_vehicle_id = 0
 
-    def __init__(self, env: Environment, position, max_available_seats = 1, max_state_of_charge=1, energy_consumption = 0.01, velocity = 166.7, price_per_min = 1, driver: DriverInterface = None):
+    def __init__(self, env: Environment, position, max_available_seats = 1, max_state_of_charge=1, energy_consumption = 0.01, velocity = 166.7, price_per_min = 1, driver: DriverInterface = None, electric_vehicle=True):
         super(RideHailingVehicle, self).__init__(env, position)
 
         self._id = RideHailingVehicle.ride_hailing_vehicle_id
@@ -37,11 +37,16 @@ class RideHailingVehicle(Vehicle, ABC):
         self._seats = []
         self._driver = None
         self._velocity = velocity   # meter per minute (16.67m/min = 1kmh)
+        self._electric_vehicle = electric_vehicle
+        self.travel_costs = 0
+        self.charging_costs = 0
 
         # State Of Charge
         self._max_state_of_charge = max_state_of_charge # in kWh
-        self._current_state_of_charge = max_state_of_charge # in kWh
+        self._current_state_of_charge = max_state_of_charge * 0.80 # in kWh #TODO: hard coded
         self._energy_consumption = energy_consumption # in kWh/km
+        if not self._electric_vehicle:
+            self._energy_consumption = energy_consumption * 0.8 #TODO: hard coded
 
         #### Vehicle Events
         # Driving Events
@@ -131,24 +136,21 @@ class RideHailingVehicle(Vehicle, ABC):
         return self._velocity
 
     def move(self, route_segment: Edge):
-        # TODO: use route
-        if route_segment == None:
-            distance = self._vehicle_assignment.vehicle._position >> self._vehicle_assignment.user._position
-            time = distance / 83.33
-        else:
-            distance = route_segment.distance
-            velocity = self._velocity
-            time = distance / velocity
+
+        distance = route_segment.distance
+        velocity = self._velocity
+        time = distance / velocity
 
         if not self.has_enough_state_of_charge(distance):
             raise RuntimeError(f"{str(self.__class__.__name__)} {self._id} has been tried to move but has not enough state of charge.")
 
         yield self._env.timeout(time)
-        if route_segment == None:
-            self._update_positions(self._vehicle_assignment.user._position)
-        else:
+        try:
+            self._update_positions(route_segment.destination)
+        except:
             self._update_positions(route_segment.destination.position)
         self._update_state_of_charge(distance)
+        self.travel_costs += distance/1000*0.53 #TODO: hard coded
 
     def move_to_pick_up_position(self, vehicle_assignment: VehicleAllocation):
         # Wait for event
@@ -157,8 +159,21 @@ class RideHailingVehicle(Vehicle, ABC):
         # Set current state
         self._state = RideHailingVehicleState.MOVING_TO_PICK_UP_POS
 
+        ###
+        vehicle_soc_before_driving = self.current_state_of_charge
+        route_segment = vehicle_assignment.associated_transportation_alternative.route_to_pickup
+
+
         # Calculate route to pick up position, and update user's position
-        yield self._env.process(self.move(None))
+        yield self._env.process(self.move(route_segment))
+
+        # State of Charge after driving
+        vehicle_soc_after_driving = self.current_state_of_charge
+
+        # Consumed Energy (kWh)
+        user_energy_consumption = vehicle_soc_before_driving - vehicle_soc_after_driving
+
+        vehicle_assignment.associated_transportation_alternative.set_energy_consumed(user_energy_consumption)
 
         # Trigger next event
         self._arrived_at_pick_up_position.succeed()
@@ -370,6 +385,7 @@ class RideHailingVehicle(Vehicle, ABC):
 
         # Update Current State of Charge
         self._current_state_of_charge += amount
+        self.charging_costs += amount*0.23 # TODO: hard coded
 
         # Charge
         yield self._env.timeout(charging_time)
@@ -382,4 +398,4 @@ class RideHailingVehicle(Vehicle, ABC):
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def __str__(self):
-        return f'I have {len(self.available_seats)} passengers on boards'
+        return f'I have {self.available_seats} passengers on boards'

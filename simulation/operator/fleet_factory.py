@@ -6,6 +6,7 @@ from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import SpatialResolution, Configuration
 from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+from simulation.vehicle.autonomous_car import AutonomousCar
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 
 from simulation.vehicle.shared_car import SharedCar
@@ -59,7 +60,7 @@ def generate_fleet_config(distribution, n_cars=1000, n_scooter=500, n_kick_scoot
     return fleet_config
 
 
-def generate_ridehailing_fleet_config(distribution, n_cars=1000, n_scooter=500, n_kick_scooter=500, n_bikes=0, seed=42,
+def generate_ridehailing_fleet_config(distribution, n_cars=1000, n_AVs=500, seed=42,
                           allocation_method='historical', allocation = np.random.randint(low=20,high=50,size=213)):
     """
     Calculate vehicle distribution based on activity distribution per mode.
@@ -72,6 +73,14 @@ def generate_ridehailing_fleet_config(distribution, n_cars=1000, n_scooter=500, 
     # Random Number Generator
     random = np.random.RandomState(seed)
 
+    config = Configuration.instance()
+    EV_peneteration = config.get_EV_penetration()
+    AV_peneteration = config.get_AV_penetration()
+    n_AVs = int(AV_peneteration * n_cars)
+    n_non_AVs = int((1 - AV_peneteration) * n_cars)
+    n_EVs = int(EV_peneteration * n_non_AVs)
+    n_cars = int((1 - EV_peneteration) * n_non_AVs)
+
     # Sample Supply Distribution for Cars
     cars_prob_arr = distribution["cars_prob"].to_numpy()
     car_cnt = pd.DataFrame(random.multinomial(n_cars, cars_prob_arr, size=1).transpose(), columns=["car_count"])
@@ -79,10 +88,21 @@ def generate_ridehailing_fleet_config(distribution, n_cars=1000, n_scooter=500, 
     distribution["cars"] = car_cnt["car_count"]
 
     # Sample Supply Distribution for Cars
+    cars_prob_arr = distribution["cars_prob"].to_numpy()
+    car_cnt = pd.DataFrame(random.multinomial(n_EVs, cars_prob_arr, size=1).transpose(), columns=["car_count"])
+    car_cnt.index = distribution.index
+    distribution["EVs"] = car_cnt["car_count"]
+
+    cars_prob_arr = distribution["cars_prob"].to_numpy()
+    car_cnt = pd.DataFrame(random.multinomial(n_AVs, cars_prob_arr, size=1).transpose(), columns=["car_count"])
+    car_cnt.index = distribution.index
+    distribution["AVs"] = car_cnt["car_count"]
+
+    # Sample Supply Distribution for Cars
     hex_column = Configuration.instance().spatial_resolution_column
 
     # Slice fleet config
-    fleet_config = distribution[[hex_column, "cars"]]
+    fleet_config = distribution[[hex_column, "cars", "EVs", "AVs"]]
 
     return fleet_config
 
@@ -115,9 +135,11 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
 
         # We need to spawn vehicles according to
         car_count = row["cars"]
+        EV_count = row["EVs"]
+        AVs_count = row["AVs"]
 
-        # Add Cars
-        for current_car in range(car_count):
+        # Add EV Ridehailing
+        for current_car in range(EV_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             car = RideHailingCar(env, pos,
@@ -125,6 +147,23 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                             c_config.energy_consumption, c_config.velocity, c_config.price_per_min)
             fleet.add_shared_vehicle(car)
 
+        # Add Regular Ridehailing
+        for current_car in range(car_count):
+            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
+            car = RideHailingCar(env, pos,
+                            c_config.max_available_seats, c_config.max_state_of_charge,
+                            c_config.energy_consumption, c_config.velocity, c_config.price_per_min, electric_vehicle=False)
+            fleet.add_shared_vehicle(car)
+
+        # Add AVs
+        for current_AV in range(AVs_count):
+            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
+            autonomous_car = AutonomousCar(env, pos,
+                                    c_config.max_available_seats, c_config.max_state_of_charge,
+                                    c_config.energy_consumption, c_config.velocity, c_config.price_per_min)
+            fleet.add_shared_vehicle(autonomous_car)
 
     return fleet
 

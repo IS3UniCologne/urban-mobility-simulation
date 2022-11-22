@@ -109,6 +109,28 @@ class Configuration:
     def fleet_state_file(self):
         return self._fleet_state_file
 
+    def add_ride_hailing_info(self, driver_payment_share):
+        self._driver_payment_share = driver_payment_share
+
+    def get_driver_payment_share(self):
+        return self._driver_payment_share
+
+    def get_distance_threshold_to_user(self):
+        return 2000
+
+    def get_AV_price_reduction(self):
+        return 0.9
+
+    def add_tech_penetration(self, EV_penetration, AV_penetration):
+        self._EV_penetration = EV_penetration
+        self._AV_penetration = AV_penetration
+
+    def get_EV_penetration(self):
+        return self._EV_penetration
+
+    def get_AV_penetration(self):
+        return self._AV_penetration
+
     def add_vehicle_config(self, vehicle_type_name, vehicle_config):
         self._vehicle_configs[vehicle_type_name] = vehicle_config
 

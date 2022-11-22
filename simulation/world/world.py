@@ -101,6 +101,7 @@ class World:
             tc = TripCharacteristics(distance)
             viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
+
             if self._vehicle_choice_behavior.__class__.__name__ == 'PublicTransitVehicleChoiceBehavior':
                 # User Preferences
                 max_wait_time = normal(self._config.user_config.max_wait)  # sample from normal dist centered on config
@@ -127,13 +128,13 @@ class World:
                     task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
 
                     # Determine Consumer Type
-                    population_type = self._population_factory.generatePopulationType()
+                    population_type = self._population_factory.generatePopulationTypeRideHailing()
 
                     new_user = user.RideHailingUser(fleet, origin_position, task, self._search_engine['ride_hailing'],
                                                     self._payment_engine['ride_hailing'],
                                          self._vehicle_assignment_engine['ride_hailing'], self._vehicle_choice_behavior,
                                          population_type, self._env)
-                    logging.debug(f"Ride-hailing user {new_user.user_id} request a vehicle from fleet {fleet} at {self._env.now}.",
+                    logging.debug(f"Ride-hailing user {new_user.user_id, population_type} request a vehicle at {self._env.now}.",
                                   extra={"clazz": self.__class__.__name__, "oid": " "})
 
             # Add user to user list

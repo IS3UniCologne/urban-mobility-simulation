@@ -1,7 +1,7 @@
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.route import Route
-from simulation.operator.data_transfer_object.transportation_alternative import TransportationAlternative
+from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import TransportationAlternativeRideHailing
 from simulation.operator.data_transfer_object.transportation_alternative_browser import TransportationAlternativeBrowser
 from simulation.operator.interface.fleet_interface import FleetInterface
 from simulation.operator.interface.payment_interface import PaymentInterface
@@ -10,6 +10,7 @@ from simulation.tasks.transport_task import TransportTask
 from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 import logging
+from line_profiler_pycharm import profile
 
 class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
 
@@ -17,7 +18,10 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
         PaymentInterface.__init__(self)
         self._env = env
         self._fleet = None
+        self._driver_payment_share = Configuration.instance().get_driver_payment_share()
+        self._AV_price_reduction = Configuration.instance().get_AV_price_reduction()
 
+    @profile
     def search_for_transportation_alternatives(self, vehicle_search_task: TransportationSearchTask) -> TransportationAlternativeBrowser:
         """
         Spot all available vehicles to user
@@ -28,40 +32,75 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
 
         hexagon_origin = vehicle_search_task.agent_position.get_default_hexagon()
 
-        cars_in_area = self.fleet.get_available_vehicles(hexagon_origin)
-
         origin = vehicle_search_task.transport_task.origin
+
+        cars_in_area = self.fleet.get_available_vehicles_to_user(origin)
+
         destination = vehicle_search_task.transport_task.destination
 
-        o_hex = origin.get_default_hexagon()
-        d_hex = destination.get_default_hexagon()
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
         route = Route(origin, destination)
 
+
         # Calc Distance
         distance = route.distance  # Euclidean Distance
 
         # Add all available cars to alternative browser
-        for car in cars_in_area:
-            # Calc Duration
-            duration = distance/car.velocity
+        AVs_in_area = [car for car in cars_in_area if car.__class__.__name__ == 'AutonomousCar']
+        CVs_in_area = [car for car in cars_in_area if car.__class__.__name__ == 'RideHailingCar']
+        if vehicle_search_task.transport_task.viable_vehicle_modes['RideHailingCar'] == 1:
+            for car in CVs_in_area:
+                # Calc waiting time
+                route_to_pick_up = Route(car.position, origin)
+                distance_to_pick_up = route_to_pick_up.distance
 
-            # Calc Price
-            price = duration*car.price_per_minute
+                # Calc Duration
+                trip_duration = distance/car.velocity
 
-            # Put together
-            transportation_alternative = TransportationAlternative(car, route, price, duration, distance, 3)
+                # Calc Price
+                # TODO: hard_coded
+                price = max(2 + trip_duration*car.price_per_minute + distance/1000 * 1.3, 5)
 
-            if car.has_enough_state_of_charge(distance):
-                browser.add_transportation_alternative(transportation_alternative)
+
+                # Put together
+                transportation_alternative = TransportationAlternativeRideHailing(car, route, price, trip_duration, distance, 3, route_to_pick_up)
+
+                total_distance = distance+distance_to_pick_up
+                if car.has_enough_state_of_charge(total_distance):
+                    browser.add_transportation_alternative(transportation_alternative)
+
+        if vehicle_search_task.transport_task.viable_vehicle_modes['AutonomousCar'] == 1:
+            for car in AVs_in_area:
+                # Calc waiting time
+                route_to_pick_up = Route(car.position, origin)
+                distance_to_pick_up = route_to_pick_up.distance
+
+                # Calc Duration
+                trip_duration = distance / car.velocity
+
+                # Calc Price
+                # TODO: update the price for ride-hailing
+                price = max(2 + trip_duration*car.price_per_minute + distance/1000 * 1.3, 5) * self._AV_price_reduction
+
+                # Put together
+                transportation_alternative = TransportationAlternativeRideHailing(car, route, price, trip_duration,
+                                                                                  distance, 3, route_to_pick_up)
+
+                total_distance = distance + distance_to_pick_up
+                if car.has_enough_state_of_charge(total_distance):
+                    browser.add_transportation_alternative(transportation_alternative)
 
         return browser
 
-    def pay_for_fulfilled_transportation_task(self, user, transportation_task: TransportTask, selected_transportation_alternative: TransportationAlternative):
+    def pay_for_fulfilled_transportation_task(self, user, transportation_task: TransportTask, selected_transportation_alternative: TransportationAlternativeRideHailing):
         payment = selected_transportation_alternative.price
-        self.increase_total_revenue(payment)
+        if selected_transportation_alternative.vehicle.__class__.__name__== 'RideHailingCar':
+            self.increase_total_revenue(payment*(1-self._driver_payment_share))
+        else:
+            self.increase_total_revenue(payment)
+
 
         # Add Transaction to Log
         self._transactions.append(
@@ -73,7 +112,10 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
              "distance": selected_transportation_alternative.distance,
              "duration":selected_transportation_alternative.duration,
              "energy_consumption": selected_transportation_alternative.energy_consumed,
-             "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__,
+             "waiting_time": selected_transportation_alternative.waiting_time,
+             "pick_up_time": selected_transportation_alternative.pick_up_time,
+             "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__ + '_' + str(selected_transportation_alternative.vehicle._electric_vehicle),
+             "selected_vehicle_EV": selected_transportation_alternative.vehicle._electric_vehicle,
              "state":"Fulfilled", **transportation_task.viable_vehicle_modes}
         )
 
@@ -101,7 +143,10 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
              "distance": transportation_task.origin >> transportation_task.destination,
              "duration": 0.0,
              "energy_consumption": 0.0,
+             "waiting_time": user._waiting_time,
+             "pick_up_time": 0.0,
              "selected_vehicle_mode":"None",
+             "selected_vehicle_EV": "None",
              "state":"Missed", **transportation_task.viable_vehicle_modes}
         )
 
