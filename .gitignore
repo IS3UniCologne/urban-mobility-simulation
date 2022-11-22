@@ -131,6 +131,8 @@ dmypy.json
 # mac stuff
 .DS_Store
 
+#VSCode
+.vscode/
 # R stuff
 .Rhistory
 
@@ -206,17 +208,13 @@ fabric.properties
 # Editor-based Rest Client
 .idea/httpRequests
 
-# Android studio 3.1+ serialized cache file
-.idea/caches/build_file_checksums.ser
-
-# Webservers
-.idea/webServers.xml
-
 # Data
 /data/output/
 !/data/output/README.md
 /data/demand/
 !/data/demand/README.md
+/data/supply/
+!/data/supply/README.md
 /data/environment/*.*
 !/data/environment/README.md
 /data/infrastructure/
