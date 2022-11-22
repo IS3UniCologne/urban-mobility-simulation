@@ -2,16 +2,8 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-import h3
-import numpy as np
-import simpy
 from simpy import Environment
-from enum import Enum
-import tensorflow as tf
 
-from simulation.agent.action_space import ActionSpace
-from simulation.agent.policy import Policy
-from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
@@ -47,11 +39,10 @@ class Bus(PublicTransitVehicle, TrackingInterface):
 
         # Events
         self._has_reached_terminal = self._env.event()
-        # self._action_taken = self._env.event()
-        # self._agent_completed_step = self._env.event()
 
         # Config
         self._config = Configuration.instance()
+        self._problem_config = self._config.dynamic_checkpoint_routing_config
 
         # Environment / World state
         self._geodesic_env = GeodesicEnvironment.getInstance()
@@ -68,7 +59,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
             self._process = self._env.process(self._run())
         else:
             # use learning agent
-            self._process = self._env.process(self._config.dynamic_routing_config.learning_agent.run())
+            self._process = self._env.process(self._problem_config.learning_agent.run())
 
     def _run(self):
         """

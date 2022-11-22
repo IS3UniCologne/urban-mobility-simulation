@@ -45,6 +45,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
         # Config
         self._config = Configuration.instance()
+        # TODO: somehow this must be decoupled
+        self._problem_config = self._config.dynamic_checkpoint_routing_config
         self._operator_config = self._config.transit_operator_config
 
         # Tracking
@@ -86,11 +88,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                                 route = self._build_route(trip)
                                 bus = self._spawn_bus(route,
                                                       use_learning_agent=
-                                                      self._config.dynamic_routing_config.use_learning_agent)
-
-                                # if not self._config.dynamic_routing_config.use_learning_agent:
-                                #     # spawn a process that keeps track of the bus state, action and rewards
-                                #     self._env.process(self._track_bus_agent(bus))
+                                                      self._problem_config.use_learning_agent)
 
                                 # also spawn a cleanup process that waits for completion of trip
                                 self._env.process(self._clean_up_bus(bus))
@@ -240,18 +238,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
 
     def _spawn_bus(self, route: PublicTransitRoute, use_learning_agent=False):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
-        # TODO: remove when everything works
-        # if self._config.transit_agent_config.corridor is None:
-        #     corridor = self._geodesic_env.corridor(route.origin.get_hexagon_id(resolution=self._action_res),
-        #                                            route.destination.get_hexagon_id(resolution=self._action_res), k=2)
-        # else:
-        #     with open(self._config.transit_agent_config.corridor,'r') as f:
-        #         corridor = ast.literal_eval(f.read())
 
-        # TODO: remove when everything works
-        # input dim for DQN model: corridor dim * corridor dim + corridor dim + 1
-        # agent = DQN(self._env, corridor_dim * corridor_dim + corridor_dim + 1,
-        #             self._rl_agent_weights, self._rl_agent_replay_buffer, self._rl_agent_episode)
         bus = Bus(
             env=self._env,
             route=route,
@@ -263,12 +250,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._world.add_vehicle(bus)
 
         # now add the correct reference of the bus to the problem LearningInterface and do deferred init
-        self._config.dynamic_routing_config.problem.bus = bus
-        self._config.dynamic_routing_config.problem.problem_init()
-
-        # TODO: move to tracking
-        # self._timestamped_position['geometry']['coordinates'].append(init_position.getExactLocation(geojson=True))
-        # self._timestamped_position['properties']['times'].append(int(self._time.now() * 60000))
+        self._problem_config.problem.bus = bus
+        self._problem_config.problem.problem_init()
 
         self._tracking.register(bus)
 
@@ -287,26 +270,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._unserved_passengers = len(bus._seats)
 
         # TODO: this is hardcoded for one learning bus
-        if self._config.dynamic_routing_config.use_learning_agent:
+        if self._problem_config.use_learning_agent:
             self._operator_process.interrupt()
-
-    # def _track_bus_agent(self, bus: Bus):
-    #
-    #     while True:
-    #         # the code block below is for SARSA and similar agents
-    #         # state, action, reward, reward_sum = yield bus._agent_completed_step
-    #         # self._states.append(state)
-    #         # self._actions.append(action)
-    #         # self._rewards.append(reward)
-    #         # self._rewards_sum.append(reward_sum)
-    #
-    #         # the code block below is for visualization
-    #         position, demands = yield bus._agent_completed_step
-    #
-    #         # ... build TimeStampedGeoJSON feature ...
-    #         self._timestamped_position['geometry']['coordinates'].append(position.getExactLocation(geojson=True))
-    #         self._timestamped_position['properties']['times'].append(
-    #             int(self._time.now() * 60000))
 
     def _find_viable_transit(self, transportation_search_task, spatial_strategy='hexagon', temporal_lookahead=10):
         search_time = transportation_search_task.transport_task.time
