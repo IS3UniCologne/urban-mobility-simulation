@@ -3,6 +3,7 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.interface.fleet_interface import FleetInterface
+from simulation.vehicle.autonomous_car import AutonomousCar
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.vehicle import VehicleState
@@ -12,11 +13,16 @@ class MixedRideHailingFleet(FleetInterface):
 
     def __init__(self, env: Environment):
         super(MixedRideHailingFleet, self).__init__(env)
+        self._env = env
         self._cars = []
+        self._distance_threshold_to_user = Configuration.instance().get_distance_threshold_to_user()
 
 
     def add_shared_vehicle(self, vehicle: RideHailingVehicle):
         if isinstance(vehicle, RideHailingCar):
+            self._cars.append(vehicle)
+
+        elif isinstance(vehicle, AutonomousCar):
             self._cars.append(vehicle)
 
     def get_all_vehicles(self, region):
@@ -53,12 +59,28 @@ class MixedRideHailingFleet(FleetInterface):
         """
         cars_in_area = []
 
-        geo_env  = GeodesicEnvironment.getInstance()
-        geometry = geo_env.get_hexagon(region)
+        parking_cars = [car for car in self._cars if car.state == VehicleState.PARKING]
+        for car in parking_cars:
+            if car.position.get_default_hexagon() == region:
+                cars_in_area.append(car)
 
+        return cars_in_area
 
-        for car in self._cars:
-            if car.position.get_default_hexagon() == region and car.state == VehicleState.PARKING:
+    def get_available_vehicles_to_user(self, origin):
+        """
+        Return all vehicles which are located in a region
+
+        Example
+        cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
+
+        :param region: Hexagon ID
+        :return: Lists of vehicles in area
+        """
+        cars_in_area = []
+
+        parking_cars = [car for car in self._cars if car.state == VehicleState.PARKING]
+        for car in parking_cars:
+            if car.position >> origin <= self._distance_threshold_to_user:
                 cars_in_area.append(car)
 
         return cars_in_area
@@ -84,12 +106,21 @@ class MixedRideHailingFleet(FleetInterface):
         """
         below_soc_level_vehicles = []
         all_vehicle_list = self._cars
-
+        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+        state_of_charge_threshold = state_of_charge_threshold[hour]
         for vehicle in all_vehicle_list:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
                 below_soc_level_vehicles.append(vehicle)
 
         return len(below_soc_level_vehicles)
+
+    def get_operational_costs(self):
+        operational_costs = 0
+        all_vehicle_list = self._cars
+        for vehicle in all_vehicle_list:
+            if isinstance(vehicle, AutonomousCar):
+                operational_costs += vehicle.travel_costs + vehicle.charging_costs
+        return operational_costs
 
     def get_all_vehicles_below_soc_level_in_region(self, state_of_charge_threshold, region):
         """
@@ -105,7 +136,6 @@ class MixedRideHailingFleet(FleetInterface):
                 below_soc_level_vehicles.append(vehicle)
 
         return below_soc_level_vehicles
-
 
 
     def count_cars(self):
@@ -164,6 +194,7 @@ class MixedRideHailingFleet(FleetInterface):
         for mode in available_vehicles:
             if mode == "RideHailingCar":
                 vehicle_list = self._cars
+
             else:
                 raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')
 
@@ -175,5 +206,34 @@ class MixedRideHailingFleet(FleetInterface):
 
                 if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
                     low_soc_supply[hex_id][mode] += 1
+
+        return low_soc_supply
+
+    def mark_vehicles_to_be_charged(self, state_of_charge_threshold):
+        """
+        Return a list of number of vehicles that need to be charged in each area.
+
+        :param state_of_charge_threshold:
+        :return: List, vehicles with low SoC}
+        """
+        available_vehicles = ["RideHailingCar"]
+        values = [0]*len(available_vehicles)
+
+        # Set counter to 0 for all vehicle types
+        vehicle_dict = dict(zip(available_vehicles, values))
+
+        low_soc_supply = []
+        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+        state_of_charge_threshold = state_of_charge_threshold[hour]
+        for mode in available_vehicles:
+            if mode == "RideHailingCar":
+                vehicle_list = self._cars
+            else:
+                raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')
+
+            for vehicle in vehicle_list:
+
+                if vehicle.current_relative_state_of_charge < state_of_charge_threshold and vehicle.state == VehicleState.PARKING:
+                    low_soc_supply.append(vehicle)
 
         return low_soc_supply
