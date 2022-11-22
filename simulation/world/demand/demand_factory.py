@@ -109,25 +109,35 @@ class DemandFactory:
                                                     ]
                 if (demand_slice.shape[0] == 0):
                     print(f"Hex: {spatial_unit}  Time: {time_bucket}  Date:{non_working_day}  Env Time: {self._time.now()}")
+                    #no lambda for given demand slice means there were no arrivals in the sample (lambda was zero)
+                    poisson_lambda=0
+                else:
+                    # Extract Poisson Estimate for given spatio-temporal cell
+                    poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
 
-                # Extract Poisson Estimate for given spatio-temporal cell
-                poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
+                    # Based on Poisson Estimate sample next arrival time (in minutes)
+                    # inter_arrival_time = numpy.random.exponential(
+                    #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
 
-                # Based on Poisson Estimate sample next arrival time (in minutes)
-                # inter_arrival_time = numpy.random.exponential(
-                #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
+                if(poisson_lambda==0):
+                         #lambda is zero, waiting until next timebucket is reached
+                        bucket_in_minutes=(self._demand_importer._get_temporal_duration_in_hours()*60)
+                        time_to_next_bucket=(bucket_in_minutes-(self._time.now()%bucket_in_minutes))
+                        yield self._env.timeout(time_to_next_bucket)
+                        continue
+                else:
+                    try:
+                        if self._modifiers[spatial_unit] == 0:
+                            logging.debug(f'Spatial unit {spatial_unit} is removed from demand generation process')
+                            break
 
-                try:
-                    if self._modifiers[spatial_unit] == 0:
-                        logging.debug(f'Spatial unit {spatial_unit} is removed from demand generation process')
-                        break
-
-                    inter_arrival_time = self._random.exponential(1.0 / (poisson_lambda * self._modifiers[spatial_unit])) * \
-                                         self._demand_importer._get_temporal_duration_in_hours() * 60
-                except KeyError:
-                    # no modifier is registered for that spatial unit
-                    inter_arrival_time = self._random.exponential(1.0 / poisson_lambda) * \
-                                         self._demand_importer._get_temporal_duration_in_hours() * 60
+                        # TODO: is this a viable way of modifying exponential sampling using the scale factor?
+                        inter_arrival_time = self._random.exponential(1.0 / poisson_lambda * self._modifiers[spatial_unit]) * \
+                                            self._demand_importer._get_temporal_duration_in_hours() * 60
+                    except KeyError:
+                        # no modifier is registered for that spatial unit
+                        inter_arrival_time = self._random.exponential(1.0 / poisson_lambda) * \
+                                            self._demand_importer._get_temporal_duration_in_hours() * 60
 
                 # await next arrival
                 yield self._env.timeout(inter_arrival_time)
