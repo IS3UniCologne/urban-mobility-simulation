@@ -14,6 +14,7 @@ from simulation.operator.interface.search_engine_interface import SearchEngineIn
 from simulation.operator.interface.vehicle_allocation_engine_interface import VehicleAllocationEngineInterface
 from simulation.tasks.transport_task import TransportTask
 from simulation.world.population.PopulationFactory import PopulationType, PopulationFactory
+from tracking.tracking import Tracking
 
 
 class World:
@@ -66,6 +67,9 @@ class World:
         # Store all current vehicles
         self._vehicles = []
         self._vehicle_processes = []
+
+        # tracking
+        self._tracking = Tracking.instance()
 
         # Config
         self._config = Configuration.instance()
@@ -142,14 +146,23 @@ class World:
             # Add user to user list
             self._users.append(new_user)
 
-            # TODO: register user with tracking
+            # register user with tracking
+            new_user_uid = self._tracking.register(new_user)
 
             # Start Process for each new user
             self._user_processes.append({'id': new_user.id, 'proc': self._env.process(new_user.run())})
 
+            # Spawn cleanup process for that user
+            self._env.process(self._cleanup_user(new_user, new_user_uid))
+
             if len(self._users) == self._user_limit:
                 logging.info(f'Reached User Limit of {self._user_limit}. Not adding more users to world.',
                              extra={"clazz": self.__class__.__name__, "oid": " "})
+
+    def _cleanup_user(self, user, user_uid):
+        yield user.process_finished
+
+        self._tracking.unregister_by_uid(user_uid)
 
     def add_vehicle(self, vehicle: Vehicle):
         self._vehicles.append(vehicle)
@@ -190,8 +203,6 @@ class World:
         for u in self.user_processes:
             try:
                 u['proc'].interrupt()
-
-                # TODO: de-register user with tracking?
             except RuntimeError:
                 # already terminated
                 pass

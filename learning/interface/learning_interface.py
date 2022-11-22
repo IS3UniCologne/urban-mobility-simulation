@@ -1,5 +1,8 @@
+import logging
 from abc import ABC, abstractmethod
 import simpy
+
+from learning.spaces.action_space import ActionForbidden
 
 
 class LearningInterface(ABC):
@@ -14,6 +17,7 @@ class LearningInterface(ABC):
         self._problem_config = None
         self._state_size_flattened = None
         self._initialized = self.env.event()
+        self._step_executed = self.env.event()
 
     @property
     def initialized(self):
@@ -27,6 +31,28 @@ class LearningInterface(ABC):
     def state_size_flattened(self):
         return self._state_size_flattened
 
+    def step(self, action):
+        """
+        This method directly interacts with the simulation, the expected behavior of receiving an action instruction
+        must thus be implemented in the receiving agent in the simulation!
+
+        :param action: A
+        :return: S, R, T
+        """
+        if not self._test_action(action):
+            logging.debug(f'Action {action} is forbidden, sampling again',
+                          extra={"clazz": self.__class__.__name__, "oid": ""})
+            raise ActionForbidden
+
+        yield self.env.process(self._take_action(action))
+        logging.debug(f'Agent takes action {action}',
+                      extra={"clazz": self.__class__.__name__, "oid": ""})
+
+        self._step_executed.succeed()
+        self._step_executed = self.env.event()
+
+        return self.state(), self._get_reward(), self._check_terminal()
+
     @abstractmethod
     def state(self):
         """
@@ -38,12 +64,18 @@ class LearningInterface(ABC):
         pass
 
     @abstractmethod
-    def step(self, action):
-        """
-        This method directly interacts with the simulation, the expected behavior of receiving an action instruction
-        must thus be implemented in the receiving agent in the simulation!
-
-        :param action: A
-        :return: S, R, T
-        """
+    def _check_terminal(self):
         pass
+
+    @abstractmethod
+    def _get_reward(self):
+        pass
+
+    @abstractmethod
+    def _take_action(self, action):
+        pass
+
+    @abstractmethod
+    def _test_action(self, action):
+        pass
+

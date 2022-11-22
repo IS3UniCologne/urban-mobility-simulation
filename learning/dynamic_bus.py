@@ -152,20 +152,6 @@ class DynamicBusProblem(LearningInterface):
         # 1) OD demands (matrix) 2) agent position (one hot vector), 3) remaining driving time (scalar)
         return np.concatenate((state['demands'].reshape(-1), state['position'], [state['remaining_time']]), dtype=int)
 
-    def step(self, action):
-        if not self._test_action(action):
-            # hexagon is out of layer bounding box - action is forbidden
-            logging.debug(f'Action {action} is forbidden, sampling again',
-                          extra={"clazz": self.__class__.__name__, "oid": ""})
-            raise ActionForbidden
-
-        yield self.env.process(self._take_action(action))
-        logging.debug(f'Bus takes action {action}',
-                      extra={"clazz": self.__class__.__name__, "oid": self.bus.id})
-        # reward = yield self.env.process(self._get_reward())
-
-        return self.state(), self._get_reward(), self._check_terminal()
-
     def _take_action(self, action=None):
         """
         Actions in hexagonal grid, stay is also allowed.
@@ -228,6 +214,7 @@ class DynamicBusProblem(LearningInterface):
         if action == 'STAY':
             return True
         else:
+            # check if hexagon is out of corridor - action is forbidden
             new_hex = self._geodesic_env.move_in_layer(hex_id, action)
             return True if new_hex in self._corridor else False
 
@@ -258,7 +245,7 @@ class DynamicBusProblem(LearningInterface):
 
         return reward
 
-    def _check_terminal(self, return_cause=False):
+    def _check_terminal(self):
         self.reached_destination = True if self.bus.state is PublicTransitVehicleState.AT_TERMINAL_DESTINATION else False
         self._reached_timelimit = True if self.env.now - self.bus._spawned > self._timelimit else False
 
@@ -270,9 +257,7 @@ class DynamicBusProblem(LearningInterface):
 
         terminal = self._reached_timelimit or self.reached_destination or self._unreachable_destination
 
-        if return_cause and terminal:
-            return self.reached_destination, self._reached_timelimit, self._unreachable_destination
-        elif terminal:
+        if terminal:
             return True
         else:
             return False
@@ -281,7 +266,7 @@ class DynamicBusProblem(LearningInterface):
         users = self._tracking.list_tracked('TransitUser')
         transport_tasks = [self._tracking.get(x, 'transport_task') for x in users]
 
-        demands_in_corridor = self._geodesic_env.filter_demands_by_corridor(transport_tasks, self._corridor)
+        demands_in_corridor = self._geodesic_env.filter_demands_by_area(transport_tasks, self._corridor)
         demands_in_direction = self._geodesic_env.filter_demands_by_direction(demands_in_corridor, self.bus)
 
         return demands_in_direction
