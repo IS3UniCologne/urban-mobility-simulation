@@ -9,6 +9,7 @@ from shapely.geometry import Polygon
 from simpy import Environment
 
 from learning.interface.learning_interface import LearningInterface
+from learning.spaces.action_space import ForbiddenAction, BadAction
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
@@ -127,7 +128,6 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # let learning agent know
         self._initialized.succeed()
 
-    @profile
     def state(self):
         """
         We need:
@@ -233,7 +233,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # reset drop offs
         self.bus._dropoffs = 0
 
-        return reward
+        return np.float32(reward) # for tensors later on
 
     def _take_action(self, action):
         """
@@ -289,6 +289,12 @@ class DynamicBusCheckpointProblem(LearningInterface):
         self._problem_config.direction = self._get_direction(self.bus.route.route_stop_by_id(self._next_checkpoint))
 
     def _test_action(self, action):
+        """
+
+        :param evaluation:
+        :param action: the action to test
+        :return: bool
+        """
         hex_id = h3.geo_to_h3(*self.bus._position.getExactLocation(),
                               resolution=self._action_res)
 
@@ -296,19 +302,30 @@ class DynamicBusCheckpointProblem(LearningInterface):
         new_hex = self._geodesic_env.move_in_layer(hex_id, action)
         incorridor = True if new_hex in self._corridor else False
 
+        if not incorridor:
+            raise ForbiddenAction
+
         # check if the direction of the action is target towards the next checkpoint
         allowed_direction = self._problem_config.direction
         lat, lng = h3.h3_to_geo(new_hex)
         projected_direction = self._get_direction(GeodesicPosition(lat, lng))
         indirection = self._geodesic_env.direction_aligns(projected_direction, allowed_direction)
 
-        return incorridor and indirection
+        if not indirection:
+            raise BadAction
+
+    def _handle_bad_action(self, action):
+        # with 50/50 reject the bad action or execute it with penalty
+        reject = True if np.random.rand() <= .5 else False
+        if reject:
+            return self._problem_config.penalty_goingback
+        else:
+            raise ForbiddenAction
 
     def _get_direction(self, destination: GeodesicPosition):
         return self._geodesic_env.get_bearing(*self.bus.position.getExactLocation(),
                                               *destination.getExactLocation())
 
-    @profile
     def _get_viable_demands(self):
         users = self._tracking.list_tracked('TransitUser')
         transport_tasks = [self._tracking.get(x, 'transport_task')[1] for x in users]
@@ -318,7 +335,6 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
         return demands_in_direction
 
-    @profile
     def _demands_in_corridor(self, transport_tasks):
         d = []
         task_keys = [(x.origin.getExactLocation(), x.destination.getExactLocation()) for x in transport_tasks]

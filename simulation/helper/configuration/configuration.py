@@ -280,8 +280,9 @@ class DynamicRoutingConfig:
 
 class DynamicCheckpointRoutingConfig:
     def __init__(self, action_space: DiscreteActionSpace, action_resolution: int, checkpoints, corridor,
-                 penalty_checkpoints: Union[int, float], penalty_unreachable: Union[int, float],
-                 reward: Union[int, float], timelimit_multiplier: float, use_learning_agent: bool):
+                 penalty_checkpoints: Union[int, float], penalty_goingback: Union[int, float],
+                 penalty_unreachable: Union[int, float], periodic_testing: Optional[int], reward: Union[int, float],
+                 timelimit_multiplier: float, use_learning_agent: bool):
         self.action_resolution = action_resolution
         self.action_space = action_space
         # a bus that doesn't use a learning agent moves as planned without rerouting
@@ -294,7 +295,9 @@ class DynamicCheckpointRoutingConfig:
         self.alignment_cell_cache = None # defer initialization
         self.direction = None # defer initialization
         self.penalty_checkpoints = penalty_checkpoints
+        self.penalty_goingback = penalty_goingback
         self.penalty_unreachable = penalty_unreachable
+        self.periodic_testing = periodic_testing
         self.problem = None  # defer initialization
         self.reward = reward
         self.timelimit_multiplier = timelimit_multiplier

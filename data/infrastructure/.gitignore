@@ -1,0 +1,7 @@
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore
+!distance_matrix_hex_7.csv
+!distance_matrix_hex_8.csv
+!README.md

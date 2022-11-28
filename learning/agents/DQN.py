@@ -17,7 +17,7 @@ from line_profiler_pycharm import profile
 from learning.interface.learning_interface import LearningInterface
 from learning.helper.policy import Policy
 from learning.agents.rl_agent import RLAgent
-from learning.spaces.action_space import ActionForbidden
+from learning.spaces.action_space import ForbiddenAction
 
 
 class DQN(RLAgent):
@@ -156,7 +156,7 @@ class DQN(RLAgent):
             action = self.policy(state)  # A_t, string such as "DOWN"
             try:
                 _, reward, finished = yield self.problem.env.process(self.problem.step(action))
-            except ActionForbidden:
+            except ForbiddenAction:
                 continue
             if finished:
                 break
@@ -188,7 +188,7 @@ class DQN(RLAgent):
                 next_state, reward, finished = yield self.problem.env.process(self.problem.step(action))
                 actions_tried.clear()
                 step += 1
-            except ActionForbidden:
+            except ForbiddenAction:
                 if len(actions_tried) == self._action_space.num_choices():
                     logging.error(f'Deadlock encountered! All actions tried, all forbidden!',
                           extra={"clazz": self.__class__.__name__, "oid": ""})

@@ -158,7 +158,9 @@ dynamic_checkpoint_routing_config = DynamicCheckpointRoutingConfig(
     checkpoints=[int(x) for x in parser.get("DYNAMIC_CHECKPOINT_ROUTING", "CHECKPOINTS").split(',')],
     corridor=corridor,
     penalty_checkpoints=parser.getfloat("DYNAMIC_CHECKPOINT_ROUTING", "PENALTY_CHECKPOINTS"),
+    penalty_goingback=parser.getint("DYNAMIC_CHECKPOINT_ROUTING", "PENALTY_GOINGBACK"),
     penalty_unreachable=parser.getint("DYNAMIC_CHECKPOINT_ROUTING", "PENALTY_UNREACHABLE"),
+    periodic_testing=parser.getint("DYNAMIC_CHECKPOINT_ROUTING", "PERIODIC_TESTING", fallback=None),
     reward=parser.getint("DYNAMIC_CHECKPOINT_ROUTING", "REWARD"),
     timelimit_multiplier=parser.getfloat("DYNAMIC_CHECKPOINT_ROUTING", "TIMELIMIT"),
     use_learning_agent=True,
@@ -359,9 +361,15 @@ episodes = []
 for e in tqdm(range(DQN_config.episodes)):
     logging.debug(f"Starting Episode {DQN_config.episode}",
                  extra={"clazz": "Main Routine"})
+
+    if (dynamic_checkpoint_routing_config.periodic_testing is not None
+            and DQN_config.episode % dynamic_checkpoint_routing_config.periodic_testing == 0):
+        DQN_config.evaluation = True
+
     reached_destination, distance, duration, service_level = run_simulation(start_time=14*60, end_time=16*60)
 
     episode = deepcopy({'episode': DQN_config.episode,
+                        'evaluation': DQN_config.evaluation,
                         'return': dynamic_checkpoint_routing_config.learning_agent._cumulative_reward,
                         'service_level': service_level,
                         'reached_destination': reached_destination,
@@ -369,6 +377,9 @@ for e in tqdm(range(DQN_config.episodes)):
                         'duration': duration
                         })
     episodes.append(episode)
+
+    # reset, just in case
+    DQN_config.evaluation = False
 
     if DQN_config.episode == DQN_config.episodes:
         break
@@ -384,12 +395,12 @@ logging.info(f'Tensorboard logdir: {logdir}', extra={"clazz": "Main Routine"})
 logging.info(f"Episode Returns: {f'./data/output/returns/{logtime}.csv'}", extra={"clazz": "Main Routine"})
 
 fig, ax = plt.subplots()
-ax.plot(episodes.index, episodes['return'])
+ax.plot(episodes.index, episodes['return'], alpha=.5, color='lightblue')
+ax.plot(episodes[episodes['evaluation']].index, episodes[episodes['evaluation']]['return'], color='darkblue')
 ax2 = ax.twinx()
-ax2.plot(episodes.index, episodes['service_level'], alpha=.5)
+ax2.plot(episodes.index, episodes['service_level'], alpha=.5, color='lightgreen')
+ax2.plot(episodes[episodes['evaluation']].index, episodes[episodes['evaluation']]['service_level'], color='darkgreen')
 plt.show()
 
-pass
-
-# with open(f'replaybuffer_{logtime}.pkl', 'wb') as f:
+# with open(f'replaybuffer_torch_500.pkl', 'wb') as f:
 #     pickle.dump(DQN_config.replaybuffer, f, protocol=pickle.HIGHEST_PROTOCOL)

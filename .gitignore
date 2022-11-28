@@ -208,17 +208,8 @@ fabric.properties
 # Editor-based Rest Client
 .idea/httpRequests
 
+# Ignore everything in .idea
+.idea/
+
 # Data
-/data/output/
-!/data/output/README.md
-/data/demand/
-!/data/demand/README.md
-/data/supply/
-!/data/supply/README.md
-/data/environment/*.*
-!/data/environment/README.md
-/data/infrastructure/
-!/data/infrastructure/README.md
-!/data/infrastructure/distance_matrix_hex_7.csv
-!/data/infrastructure/distance_matrix_hex_8.csv
 *.pdf
