@@ -2,6 +2,8 @@ import logging
 import sys
 from collections import deque
 from copy import deepcopy
+from typing import List
+
 import numpy as np
 import random
 import torch
@@ -11,7 +13,7 @@ from torch import optim
 from learning.interface.learning_interface import LearningInterface
 from learning.helper.policy import Policy
 from learning.agents.rl_agent import RLAgent
-from learning.spaces.action_space import ActionForbidden
+from learning.spaces.action_space import ForbiddenAction
 from simulation.helper.configuration.configuration import Configuration
 
 
@@ -147,6 +149,8 @@ class DQN(RLAgent):
             self._optimizer.load_state_dict(self._config.DQN_config.optimizer)
 
     def run(self):
+        yield self._init_process
+
         if self._config.DQN_config.evaluation:
             yield self.problem.env.process(self.use())
         else:
@@ -154,43 +158,46 @@ class DQN(RLAgent):
 
     def use(self):
         # Deep Q Learning with Experience Replay as in mnih2013 (deepmind atari paper)
+        forbidden_actions = set()
         while True:
-            state = torch.from_numpy(self.problem.state()).to(self._device) # S_t, as numpy 3d matrix -> torch tensor
-            action = self.policy(state)  # A_t, string such as "DOWN"
+            state = self.problem.state() # S_t, as numpy ndarray
+            action = self.policy(state, list(forbidden_actions), exploit=True)  # A_t, string such as "DOWN"
             try:
-                _, reward, finished = yield self.problem.env.process(self.problem.step(action))
-            except ActionForbidden:
+                _, reward, finished = yield self.problem.env.process(self.problem.step(action, evaluation=True))
+            except ForbiddenAction:
+                forbidden_actions.add(self._action_space.index(action))
+                if len(forbidden_actions) == self._action_space.num_choices():
+                    logging.error(f'Deadlock encountered! All actions tried, all forbidden!',
+                                  extra={"clazz": self.__class__.__name__, "oid": ""})
+                    sys.exit(1)
                 continue
+
             if finished:
                 break
+
+        self._cumulative_reward += reward
+        logging.debug(f'Current reward: {reward}, overall reward: {self._cumulative_reward}',
+                      extra={"clazz": self.__class__.__name__, "oid": ""})
+
+        self.problem.reset()
 
     def learn(self):
 
         # Deep Q Learning with Experience Replay as in mnih2013 (deepmind atari paper)
-        actions_tried = set()
+        forbidden_actions = set()
         while True:
 
-            state = torch.from_numpy(self.problem.state()).to(self._device) # S_t, as numpy 3d matrix -> torch tensor
-            try:
-                action = self.policy(state)  # A_t, string such as "DOWN"
-            except TypeError as e:
-                # logging.error(e)
-                # TODO: q net does not get initialized at times
-                # self.problem._initialized = self.problem.env.event()
-                # self.problem.initialized.succeed()
-
-                # a simple "try that again" will work
-                continue
-            if action in actions_tried:
-                continue
-            actions_tried.add(action)
+            # state = torch.from_numpy(self.problem.state()).to(self._device) # S_t, as numpy 3d matrix -> torch tensor
+            state = self.problem.state()
+            action = self.policy(state, list(forbidden_actions))  # A_t, string such as "DOWN"
             action_index = self._action_space.index(action)  # A_t, index of action in action space
 
             try:
                 next_state, reward, finished = yield self.problem.env.process(self.problem.step(action))
-                actions_tried.clear()
-            except ActionForbidden:
-                if len(actions_tried) == self._action_space.num_choices():
+                forbidden_actions.clear()
+            except ForbiddenAction:
+                forbidden_actions.add(self._action_space.index(action))
+                if len(forbidden_actions) == self._action_space.num_choices():
                     logging.error(f'Deadlock encountered! All actions tried, all forbidden!',
                           extra={"clazz": self.__class__.__name__, "oid": ""})
                     sys.exit(1)
@@ -201,9 +208,9 @@ class DQN(RLAgent):
                           extra={"clazz": self.__class__.__name__, "oid": ""})
 
             # -> torch tensor
-            action_index = torch.tensor(action_index).to(self._device)
-            next_state = torch.from_numpy(next_state).to(self._device)
-            reward = torch.tensor(reward).to(self._device)
+            # action_index = torch.tensor(action_index).to(self._device)
+            # next_state = torch.from_numpy(next_state).to(self._device)
+            # reward = torch.tensor(reward).to(self._device)
 
             self._replaybuffer.append((state, action_index, reward, next_state, finished))
             if self._episode >= self._min_experience:
@@ -260,13 +267,24 @@ class DQN(RLAgent):
 
         self.problem.reset()
 
-    def policy(self, state):
+    def policy(self, state, forbidden: List[int], exploit=False):
+        """
+
+        :param state: state representation
+        :param forbidden: list of action space indices, that are forbidden in the current state
+        :param exploit: if True, greedy instead of epsilon-greedy
+        :return: action from action space
+        """
         rand = True if np.random.rand() <= self._eps else False
 
-        if not rand:
+        if not rand or exploit:
             with torch.no_grad():
-                q_values = self._q_net(state)
-            a = self._action_space.actions[q_values.argmax()] # TODO: tiebreak instead of choosing first argmax
+                q_values = self._q_net(torch.from_numpy(state).to(self._device))
+
+            # TODO: tiebreak instead of choosing first argmax
+            if forbidden:
+                q_values[forbidden] = np.NINF
+            a = self._action_space.actions[q_values.argmax()]
         else:
             a = self._action_space.sample_action_uniformly()
 
@@ -276,8 +294,15 @@ class DQN(RLAgent):
         minibatch = random.sample(self._replaybuffer, self._minibatch_size)
 
         # Q(s,a) using policy net
-        states_t = torch.stack([transition[0] for transition in minibatch])  # s0
-        actions_t = torch.vstack([transition[1] for transition in minibatch]) # a0
+
+        # replay buffer has tensors (should be faster)
+        # states_t = torch.stack([transition[0] for transition in minibatch])  # s0
+        # actions_t = torch.vstack([transition[1] for transition in minibatch]) # a0
+        # q_values = self._q_net(states_t).gather(1, actions_t)
+
+        # replay buffer has values (currently the only option to warm-start the replay buffer)
+        states_t = torch.from_numpy(np.array([transition[0] for transition in minibatch])).to(self._device)
+        actions_t = torch.from_numpy(np.array([[transition[1]] for transition in minibatch])).to(self._device)
         q_values = self._q_net(states_t).gather(1, actions_t)
 
         if self._use_double_q:
@@ -286,8 +311,14 @@ class DQN(RLAgent):
         else:
             # Vanilla DQN using target net
 
-            states_tp1 = torch.stack([transition[3] for transition in minibatch])  # s1
-            rewards = torch.stack([transition[2] for transition in minibatch]) # r
+            # replay buffer has tensors
+            # states_tp1 = torch.stack([transition[3] for transition in minibatch])  # s1
+            # rewards = torch.stack([transition[2] for transition in minibatch]) # r
+
+            # replay buffer has values
+            states_tp1 = torch.from_numpy(np.array([transition[3] for transition in minibatch])).to(self._device)
+            rewards = torch.from_numpy(np.array([transition[2] for transition in minibatch])).to(self._device)
+
             q_values_tp1 = self._target_q_net(states_tp1).max(dim=1)[0].detach() # best next Q
 
             # # r * \gammma * argmax(a in A) Q(s',A)

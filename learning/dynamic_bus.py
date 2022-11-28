@@ -6,7 +6,7 @@ import numpy as np
 from simpy import Environment
 
 from learning.interface.learning_interface import LearningInterface
-from learning.spaces.action_space import ActionForbidden
+from learning.spaces.action_space import ForbiddenAction
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
@@ -207,7 +207,7 @@ class DynamicBusProblem(LearningInterface):
         # rather this halts the simulation such that a new run can be started from the outer routine
         self._world.stop_all_processes() # this stops demand generation
 
-    def _test_action(self, action: str):
+    def _test_action(self, action: str, evaluation):
         hex_id = h3.geo_to_h3(*self.bus._position.getExactLocation(),
                               resolution=self._action_res)
 
