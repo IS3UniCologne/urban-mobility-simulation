@@ -164,6 +164,7 @@ class DQN(RLAgent):
             action = self.policy(state, list(forbidden_actions), exploit=True)  # A_t, string such as "DOWN"
             try:
                 _, reward, finished = yield self.problem.env.process(self.problem.step(action, evaluation=True))
+                forbidden_actions.clear()
             except ForbiddenAction:
                 forbidden_actions.add(self._action_space.index(action))
                 if len(forbidden_actions) == self._action_space.num_choices():
