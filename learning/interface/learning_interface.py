@@ -111,3 +111,13 @@ class LearningInterface(ABC):
         """
         pass
 
+    @abstractmethod
+    def reset(self):
+        """
+        In its current form, tell the simulation that the episode is finished, i.e. halt it
+        TODO: gym-compatible?
+
+        :return:
+        """
+        pass
+

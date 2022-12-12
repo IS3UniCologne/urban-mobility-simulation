@@ -1,17 +1,15 @@
-import logging
-import sys
 from collections import deque
-from copy import deepcopy
+import logging
+import random
+import sys
 from typing import List
 
 import numpy as np
-import random
 import torch
 from torch import nn
 from torch import optim
 
 from learning.interface.learning_interface import LearningInterface
-from learning.helper.policy import Policy
 from learning.agents.rl_agent import RLAgent
 from learning.spaces.action_space import ForbiddenAction
 from simulation.helper.configuration.configuration import Configuration
@@ -41,10 +39,10 @@ class DQN(RLAgent):
 
         # Get cpu or gpu device for training.
         self._device = "cpu"
-        if torch.cuda.is_available():
-            self._device = "cuda"
-        elif torch.backends.mps.is_available():
-            self._device = "mps"
+        # if torch.cuda.is_available():
+        #     self._device = "cuda"
+        # elif torch.backends.mps.is_available():
+        #     self._device = "mps"
         logging.debug(f"Using {self._device} device",
                       extra={"clazz": self.__class__.__name__, "oid": ""})
 
@@ -53,7 +51,6 @@ class DQN(RLAgent):
 
         # Configuration
         self._action_space = self._problem_config.action_space
-        self._alpha = self._config.DQN_config.alpha
         self._total_episodes = self._config.DQN_config.episodes
         self._episode = self._config.DQN_config.episode  # starting from 1
         if self._config.DQN_config.evaluation:
@@ -63,6 +60,7 @@ class DQN(RLAgent):
             self._eps = self._config.DQN_config.eps
         self._eps_decay_strategy = self._config.DQN_config.eps_decay_strategy
         self._eps_decay = self._config.DQN_config.eps_decay
+        self._eps_max = self._config.DQN_config.eps_max
         self._eps_min = self._config.DQN_config.eps_min
         self._gamma = self._config.DQN_config.gamma
 
@@ -99,7 +97,7 @@ class DQN(RLAgent):
         else:
             self._learning_rate = 0.001  # adam default learning rate
 
-        self._loss_fn = nn.SmoothL1Loss()
+        self._loss_fn = nn.HuberLoss()
 
         self._tensorboard = self._config.DQN_config.tensorboard
 
@@ -218,8 +216,9 @@ class DQN(RLAgent):
                 self._train()
 
             if finished:
-                if self._episode >= self._min_experience and self._episode % self._target_net_update_threshold == 0:
-                    # propagate parameters to target network
+                if self._episode >= self._min_experience and \
+                        (self._episode % self._target_net_update_threshold == 0 or self._tau is not None):
+                    # propagate parameters to target network, either every n-th episode or incrementally every episode
                     if self._tau is not None:
                         # do soft updates
                         for target_param, param in zip(self._target_q_net.parameters(), self._q_net.parameters()):
@@ -237,7 +236,6 @@ class DQN(RLAgent):
                         elif self._eps_decay_strategy == 'linear':
                             # decay linearly from 1 to 0 over all episodes
                             self._eps = 1 - (1 / self._total_episodes) * self._episode
-                        self._eps = max(self._eps_min, self._eps)
                 break
 
         # retain decayed epsilon
@@ -276,7 +274,7 @@ class DQN(RLAgent):
         :param exploit: if True, greedy instead of epsilon-greedy
         :return: action from action space
         """
-        rand = True if np.random.rand() <= self._eps else False
+        rand = True if np.random.rand() <= max(self._eps_min, min(self._eps_max, self._eps)) else False
 
         if not rand or exploit:
             with torch.no_grad():
@@ -333,6 +331,7 @@ class DQN(RLAgent):
         loss = self._loss_fn(q_values, q_estimates)
 
         self._tensorboard.add_scalar('loss', loss, f'{self._episode}{int(self.problem.env.now)}')
+        self._tensorboard.add_scalar('epsilon', max(self._eps_min, min(self._eps_max, self._eps)), f'{self._episode}{int(self.problem.env.now)}')
 
         self._optimizer.zero_grad()
         loss.backward()
