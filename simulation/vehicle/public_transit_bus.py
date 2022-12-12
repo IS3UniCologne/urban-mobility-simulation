@@ -49,6 +49,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         self._world = World.instance()
 
         self._dropoffs = 0
+        self._pickups = 0
         self._dist_traveled = 0
 
         # optionally, inject the run routine of a RL agent

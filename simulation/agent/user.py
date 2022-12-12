@@ -687,6 +687,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             # Update current state
             self._state = UserState.IN_TRANSPORT
             self.mount_vehicle(vehicle)
+            vehicle._pickups += 1
 
         while True:
             yield vehicle._position_changed

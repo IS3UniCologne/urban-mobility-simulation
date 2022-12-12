@@ -402,5 +402,5 @@ ax2.plot(episodes.index, episodes['service_level'], alpha=.5, color='lightgreen'
 ax2.plot(episodes[episodes['evaluation']].index, episodes[episodes['evaluation']]['service_level'], color='darkgreen')
 plt.show()
 
-# with open(f'replaybuffer_torch_500.pkl', 'wb') as f:
+# with open(f'replaybuffer_torch_500_goingback.pkl', 'wb') as f:
 #     pickle.dump(DQN_config.replaybuffer, f, protocol=pickle.HIGHEST_PROTOCOL)

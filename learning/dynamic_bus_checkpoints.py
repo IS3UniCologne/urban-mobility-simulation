@@ -208,8 +208,8 @@ class DynamicBusCheckpointProblem(LearningInterface):
     def _get_reward(self):
         self._check_terminal()
 
-        # reward is service level (1 drop off = +1 reward)
-        reward = self.bus._dropoffs * self._problem_config.reward
+        # reward is service level (1 pick-up = +1 reward)
+        reward = self.bus._pickups * self._problem_config.reward
 
         if reward > 0:
             logging.debug(f'Service Level was increased by {str(reward)}',
@@ -230,8 +230,11 @@ class DynamicBusCheckpointProblem(LearningInterface):
         reward += min(0, (self._timelimits[self._checkpoints.index(self._next_checkpoint)] - (
                     self.env.now - self.bus._spawned))) * self._problem_config.penalty_checkpoints
 
-        # reset drop offs
+        # TODO: penalize non-dropped of passengers?
+
+        # reset drop offs and pickups
         self.bus._dropoffs = 0
+        self.bus._pickups = 0
 
         return np.float32(reward) # for tensors later on
 
