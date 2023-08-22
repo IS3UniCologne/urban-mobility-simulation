@@ -1,5 +1,5 @@
 from simulation.infrastructure.route import Route
-from simulation.vehicle.vehicle import Vehicle
+from simulation.vehicle.vehicle import Vehicle, VehicleState
 
 
 class TransportationAlternativeRideHailing:
@@ -14,13 +14,25 @@ class TransportationAlternativeRideHailing:
         self._convenience = convenience # the ranking (the lower, the better)
         self._environment = self.set_environment()
         self._technology_skeptical = self.set_technology_skeptical()
+        self._electric_vehicle = self.set_environment()
+        self._autonomous_vehicle = self.set_autonomous_vehicle()
         self._route_to_pickup = route_to_pickup
         self._distance_to_pickup = route_to_pickup.distance
-        self._pick_up_time = self._distance_to_pickup / self.vehicle.velocity
+        self._pick_up_time = self.set_pick_up_time()
+        self._utility = 0.0
 
         self._waiting_time = 0.0 # Is set after successful allocation
         self._energy_consumed = 0.0 # Is set after successful trip
 
+
+
+    def set_pick_up_time(self):
+        if self.vehicle.state == VehicleState.PARKING:
+            return self._distance_to_pickup / self.vehicle.velocity
+
+        elif self.vehicle.state == VehicleState.DRIVING:
+            return self._distance_to_pickup / self.vehicle.velocity + \
+                   self.vehicle.estimated_completion_time - self.vehicle._env.now
 
     def set_environment(self):
         if self._vehicle.electric_vehicle:
@@ -34,9 +46,27 @@ class TransportationAlternativeRideHailing:
         else:
             return 1
 
+    def set_autonomous_vehicle(self):
+        if self._vehicle_type == 'AutonomousCar':
+            return 0
+        else:
+            return 1
+
     @property
     def environment(self):
         return self._environment
+
+    @property
+    def electric_vehicle(self):
+        return self._electric_vehicle
+
+    @property
+    def autonomous_vehicle(self):
+        return self._autonomous_vehicle
+
+    @property
+    def utility(self):
+        return self._utility
 
     @property
     def technology_skeptical(self):

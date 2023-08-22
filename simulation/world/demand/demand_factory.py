@@ -85,7 +85,7 @@ class DemandFactory:
 
         # Filter data on spatial unit such that we don't need to filter on the entire demand profile
         local_demand_profile = self._demand_profile[(self._demand_profile[self._origin_column] == spatial_unit)]
-        local_demand_profile.loc[:,'o_poisson_est'] /= 2
+        local_demand_profile.loc[:,'o_poisson_est'] /= 4
         # Run until simulation ends
         while (DemandFactory.counter < self._maximal_demand):
             # Transform current time to temporal buckets as defined in the demand profile

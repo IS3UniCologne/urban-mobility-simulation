@@ -11,9 +11,9 @@ from simulation.vehicle.interfaces.driver_interface import DriverInterface
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 
 
-class SharedVehicleState(VehicleState, Enum):
-    SOME_STATE = 1002
-    RESERVED = 1001
+# class SharedVehicleState(VehicleState, Enum):
+#     SOME_STATE = 1002
+#     RESERVED = 1001
 
 
 class SharedVehicle(Vehicle, ABC):

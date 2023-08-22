@@ -2,6 +2,13 @@
 <project version="4">
   <component name="PublishConfigData" autoUpload="Always" serverName="rahadi@134.95.119.108:22 agent (3)" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
+      <paths name="rahadi@134.95.119.102:22 password (1)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/rahadi/PycharmProjects/ssh/UBS_Chicago" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="rahadi@134.95.119.108:22 agent (3)">
         <serverdata>
           <mappings>

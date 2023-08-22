@@ -146,6 +146,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                             c_config.max_available_seats, c_config.max_state_of_charge,
                             c_config.energy_consumption, c_config.velocity, c_config.price_per_min)
             fleet.add_shared_vehicle(car)
+            car._fleet = fleet
 
         # Add Regular Ridehailing
         for current_car in range(car_count):
@@ -155,6 +156,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                             c_config.max_available_seats, c_config.max_state_of_charge,
                             c_config.energy_consumption, c_config.velocity, c_config.price_per_min, electric_vehicle=False)
             fleet.add_shared_vehicle(car)
+            car._fleet = fleet
 
         # Add AVs
         for current_AV in range(AVs_count):
@@ -164,6 +166,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                                     c_config.max_available_seats, c_config.max_state_of_charge,
                                     c_config.energy_consumption, c_config.velocity, c_config.price_per_min)
             fleet.add_shared_vehicle(autonomous_car)
+            autonomous_car._fleet = fleet
 
     return fleet
 
