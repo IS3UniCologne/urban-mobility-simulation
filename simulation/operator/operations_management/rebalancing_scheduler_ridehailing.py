@@ -112,17 +112,21 @@ class RebalancingSchedulerRidehailing:
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
                         available_charging_stations = [x for x in self._charging_stations if len(x.plugs.queue) <= 0]
-                        selected_charging_station = \
-                            [x for x in available_charging_stations if x.location == selected_base][0]
-                        selected_base_distance = row_base[hex]
+                        if len(available_charging_stations) > 0:
+                            selected_charging_station = \
+                                [x for x in available_charging_stations if x.location == selected_base][0]
+                            selected_base_distance = row_base[hex]
+                            break
 
                 if not vehicle.electric_vehicle:
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
                         available_charging_stations = [x for x in self._charging_stations if len(x.plugs.queue) <= 0]
-                        selected_charging_station = \
-                        [x for x in available_charging_stations if x.location == selected_base][0]
-                        selected_base_distance = row_base[hex]
+                        if len(available_charging_stations) > 0:
+                            selected_charging_station = \
+                                [x for x in available_charging_stations if x.location == selected_base][0]
+                            selected_base_distance = row_base[hex]
+                            break
 
                 # Keep Track of how many vehicles are already scheduled for charging
                 currently_schedules_vehicles_per_unit = 0

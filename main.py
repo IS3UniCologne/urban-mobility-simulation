@@ -54,10 +54,10 @@ import os
 # scenario_5: [0.0,1.0,0.0,0.0]
 SHARES = [[1.0,0.0,0.0,0.0], [0.75,0.25,0.0,0.0], [0.50,0.50,0.0,0.0], [0.25,0.75,0.0,0.0], [0.0,1.0,0.0,0.0],
           [0.0,0.0,1.0,0.0], [0.0,0.0,0.75,0.25], [0.0,0.0,0.50,0.50], [0.0,0.0,0.25,0.75], [0.0,0.0,0.0,1.0]]
-fleet_size = 250
+fleet_size = 1000
 scenario = 5
 print(f'scenario={scenario}')
-sim_days = 1
+sim_days = 5
 scenario_name = f'scenario_{scenario}_{fleet_size}'
 USER_SHARES = SHARES[scenario-1]
 
@@ -107,6 +107,11 @@ for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK
 # Read EV penetration for RideHailingCars
 EV_penetration = parser.getfloat('SUPPLY', "EV_penetration")
 AV_penetration = parser.getfloat('SUPPLY', "AV_penetration")
+
+# Read drivers availability distribution
+drivers_availability = parser.get('SUPPLY', "RH_availability").split(',')
+drivers_availability = [round(float(x)*fleet_size*(1-AV_penetration)) for x in drivers_availability]
+global_config.add_driver_availability_vector(drivers_availability)
 
 # Read ride-hailing related parameters
 driver_payment_share = parser.getfloat('RIDE_HAILING', "DRIVER_PAYMENT_SHARE")
@@ -255,7 +260,7 @@ distance_matrix = dmi.load_distance_matrix()
 
 
 def run_single_simulation(start_time=0, end_time=20, n_cars=0, n_scooter=0, n_kick_scooter=0, seed=42, phase=1, substitution=0.1,
-                          price_sensitive_pop_prob=0.0, allocation=None, EV_penetration=1.0, AV_penetration=1, returnDataFrame=False):
+                          pop_prob=0.0, allocation=None, EV_penetration=1.0, AV_penetration=1, returnDataFrame=False):
     """
     :param start_time:
     :param end_time:
@@ -264,7 +269,7 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=0, n_scooter=0, n_ki
     :param n_kick_scooter:
     :param seed:
     :param substitution:
-    :param price_sensitive_pop_prob: 1.0 means only price sensitive users, 0.0 means only sustainable users
+    :param pop_prob: 1.0 means only price sensitive users, 0.0 means only sustainable users
     :return:
     """
     # # # # # # # # # # # # # # # # # # # # # #
@@ -318,7 +323,7 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=0, n_scooter=0, n_ki
         raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
     # Population Type
-    population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
+    population_factory = PopulationFactory(pop_prob, seed)
 
     # Charging Infrastructure
     charging_infrastructure = ChargingInfrastructure(env, charging_location_list, charging_power_list,
@@ -549,10 +554,12 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=0, n_scooter=0, n_ki
                 no_vehicles_to_be_charged['ride_hailing'],
                 func_objective['ride_hailing'])
 
+TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
+a = run_single_simulation(end_time=1400, n_cars=fleet_size, n_scooter=0, n_kick_scooter=0, seed=42, substitution=0.1,
+                          pop_prob=USER_SHARES, EV_penetration=TECH_SHARE[1],
+                          AV_penetration=TECH_SHARE[1], returnDataFrame=False)
 
-# a = run_single_simulation(end_time=1400*2, n_cars=500, n_scooter=0, n_kick_scooter=0, seed=42, substitution=0.1,
-#                           price_sensitive_pop_prob=[0.70, 0.30, 0.0, 0.0])
-# print(a)
+print(a)
 
 ### Random Variables for our Monte Carlo Run
 import random
@@ -568,21 +575,21 @@ T = 1440 * sim_days
 # Real Run
 pop_probs = [0.0, 1.0]
 # sub_bandwidths = [0.0, 0.05, 0.1, 0.2]
-TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
-phases = [0,1,2,3]
-for idx, seed in enumerate(seeds):
-    for phase in phases:
-        sim_res = run_single_simulation(end_time=T, n_cars=fleet_size, n_scooter=0, n_kick_scooter=0, seed=seed, phase=phase,
-                                        substitution=0.1, price_sensitive_pop_prob=USER_SHARES,
-                                        EV_penetration=TECH_SHARE[phase], AV_penetration=TECH_SHARE[phase],
-                                        returnDataFrame=True)
-        # print(sim_res['total_revenue_ride_hailing'])
-        # sim_res = run_single_simulation(end_time = T, n_cars = 1500, n_scooter = 1500, n_kick_scooter = 1500, seed = seed, substitution = sub_bandwidth, price_sensitive_pop_prob = pop_prob, returnDataFrame = True)
-        all_simulations = pd.concat([all_simulations, sim_res], axis=0)
-        logging.error("seed: {}, idx: {}".format(seed, idx),
-                        extra={"clazz": "main", "oid": ""})
-
-    # After each seed save
-    all_simulations.to_csv(Path(output_folder, scenario_name + '_all_simulation_results.csv'), index=False)
-
-print("FINISHED")
+# TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
+# phases = [0,1,2,3]
+# for idx, seed in enumerate(seeds):
+#     for phase in phases:
+#         sim_res = run_single_simulation(end_time=T, n_cars=fleet_size, n_scooter=0, n_kick_scooter=0, seed=seed, phase=phase,
+#                                         substitution=0.1, price_sensitive_pop_prob=USER_SHARES,
+#                                         EV_penetration=TECH_SHARE[phase], AV_penetration=TECH_SHARE[phase],
+#                                         returnDataFrame=True)
+#         # print(sim_res['total_revenue_ride_hailing'])
+#         # sim_res = run_single_simulation(end_time = T, n_cars = 1500, n_scooter = 1500, n_kick_scooter = 1500, seed = seed, substitution = sub_bandwidth, price_sensitive_pop_prob = pop_prob, returnDataFrame = True)
+#         all_simulations = pd.concat([all_simulations, sim_res], axis=0)
+#         logging.error("seed: {}, idx: {}".format(seed, idx),
+#                         extra={"clazz": "main", "oid": ""})
+#
+#     # After each seed save
+#     all_simulations.to_csv(Path(output_folder, scenario_name + '_all_simulation_results.csv'), index=False)
+#
+# print("FINISHED")

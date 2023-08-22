@@ -1,4 +1,5 @@
 from simpy import Environment
+import logging
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
@@ -15,15 +16,23 @@ class MixedRideHailingFleet(FleetInterface):
         super(MixedRideHailingFleet, self).__init__(env)
         self._env = env
         self._cars = []
+        self._ridehailing_cars = []
+        self._autonomous_cars = []
         self._distance_threshold_to_user = Configuration.instance().get_distance_threshold_to_user()
+        self._driver_availability_vector = Configuration.instance().get_driver_availability_vector()
+        self._env.process(self.fleet_size_monitor())
+
+
 
 
     def add_shared_vehicle(self, vehicle: RideHailingVehicle):
         if isinstance(vehicle, RideHailingCar):
             self._cars.append(vehicle)
+            self._ridehailing_cars.append(vehicle)
 
         elif isinstance(vehicle, AutonomousCar):
             self._cars.append(vehicle)
+            self._autonomous_cars.append(vehicle)
 
     def get_all_vehicles(self, region):
         """
@@ -80,7 +89,14 @@ class MixedRideHailingFleet(FleetInterface):
 
         parking_cars = [car for car in self._cars if car.state == VehicleState.PARKING]
         for car in parking_cars:
-            if car.position >> origin <= self._distance_threshold_to_user:
+            if car.position >> origin <= self._distance_threshold_to_user and not car._suggested:
+                cars_in_area.append(car)
+
+        serving_cars = [car for car in self._cars if car.state == VehicleState.DRIVING]
+        for car in serving_cars:
+            distance_to_current_destination = (car.estimated_completion_time - self._env.now) * car.velocity
+            if (car.destination.position >> origin) + distance_to_current_destination <= \
+                    self._distance_threshold_to_user and not car._suggested:
                 cars_in_area.append(car)
 
         return cars_in_area
@@ -141,6 +157,8 @@ class MixedRideHailingFleet(FleetInterface):
     def count_cars(self):
         return len(self._cars)
 
+    def driver_availability_vector(self):
+        return self._driver_availability_vector
 
     def count_total(self):
         return self.count_cars()
@@ -237,3 +255,38 @@ class MixedRideHailingFleet(FleetInterface):
                     low_soc_supply.append(vehicle)
 
         return low_soc_supply
+
+    def get_online_vehicles(self):
+        """
+        Return all vehicles which are online
+
+        :param
+        :return: Lists of online vehicles
+        """
+
+        online_vehicles = [car for car in self._ridehailing_cars if car.state != VehicleState.OFFLINE]
+
+        return online_vehicles
+
+    def get_offline_vehicles(self):
+        """
+        Return all vehicles which are online
+
+        :param
+        :return: Lists of online vehicles
+        """
+
+        online_vehicles = [car for car in self._ridehailing_cars if car.state == VehicleState.OFFLINE]
+
+        return online_vehicles
+
+    def fleet_size_monitor(self):
+        """
+        Monitoring the number of online vehicles
+        :return:
+        """
+        while True:
+            number_of_online_vehicles = len(self.get_online_vehicles())
+            logging.info(f'Fleet has {number_of_online_vehicles} online vehicles',
+                          extra={"clazz": self.__class__.__name__})
+            yield self._env.timeout(60)

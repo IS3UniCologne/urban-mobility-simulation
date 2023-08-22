@@ -12,16 +12,16 @@ from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
 
 
-class RideHailingVehicleState(VehicleState, Enum):
-    # INITIALIZED = 0
-    # PARKING = 1
-    # DRIVING = 2
-    # RELOCATING = 3
-    # CHARGING = 4
-    # PRE_SERVICE = 5
-    SOME_STATE = 1002
-    RESERVED = 1001
-    MOVING_TO_PICK_UP_POS = 1003
+# class RideHailingVehicleState(Enum):
+#     INITIALIZED = 0
+#     PARKING = 1
+#     DRIVING = 2
+#     RELOCATING = 3
+#     CHARGING = 4
+#     PRE_SERVICE = 5
+#     SOME_STATE = 1002
+#     RESERVED = 1001
+#     MOVING_TO_PICK_UP_POS = 1003
 
 
 class RideHailingVehicle(Vehicle, ABC):
@@ -38,6 +38,7 @@ class RideHailingVehicle(Vehicle, ABC):
         self._driver = None
         self._velocity = velocity   # meter per minute (16.67m/min = 1kmh)
         self._electric_vehicle = electric_vehicle
+        self._fleet = None
         self.travel_costs = 0
         self.charging_costs = 0
 
@@ -72,16 +73,22 @@ class RideHailingVehicle(Vehicle, ABC):
         self._charging_station_plugged_out = self._env.event()
 
         # Initial State
-        self._state = RideHailingVehicleState.PARKING
+        self._state = VehicleState.PARKING
 
         # Vehicle Reservation
         self._reserved_for_user = None
+        self._suggested = False
 
         # Driver Interface
         if driver is not None:
             self.mount_driver(driver)
 
+        # Estimation information for finishing the current task
+        self._estimated_completion_time = 0
+        self._destination = None
+
         RideHailingVehicle.ride_hailing_vehicle_id += 1
+
 
     @property
     def id(self):
@@ -94,6 +101,7 @@ class RideHailingVehicle(Vehicle, ABC):
     @price_per_minute.setter
     def price_per_minute(self, price_per_minute):
         self._price_per_minute = price_per_minute
+
 
     @property
     def reserved_for_user(self):
@@ -135,11 +143,34 @@ class RideHailingVehicle(Vehicle, ABC):
     def velocity(self):
         return self._velocity
 
+    @property
+    def fleet(self):
+        return self._fleet
+
+    @property
+    def estimated_completion_time(self):
+        return self._estimated_completion_time
+
+    @estimated_completion_time.setter
+    def estimated_completion_time(self, estimated_completion_time):
+        self._estimated_completion_time = estimated_completion_time
+
+    @property
+    def destination(self):
+        return self._destination
+
+    @destination.setter
+    def destination(self, destination):
+        self._destination = destination
+
     def move(self, route_segment: Edge):
 
         distance = route_segment.distance
         velocity = self._velocity
         time = distance / velocity
+        self.estimated_completion_time = self._env.now + time
+        self.destination = route_segment.destination
+
 
         if not self.has_enough_state_of_charge(distance):
             raise RuntimeError(f"{str(self.__class__.__name__)} {self._id} has been tried to move but has not enough state of charge.")
@@ -151,13 +182,14 @@ class RideHailingVehicle(Vehicle, ABC):
             self._update_positions(route_segment.destination.position)
         self._update_state_of_charge(distance)
         self.travel_costs += distance/1000*0.53 #TODO: hard coded
+        self.estimated_completion_time = 0
 
     def move_to_pick_up_position(self, vehicle_assignment: VehicleAllocation):
         # Wait for event
         yield vehicle_assignment.user._vehicle_allocated
         self._vehicle_assignment = vehicle_assignment
         # Set current state
-        self._state = RideHailingVehicleState.MOVING_TO_PICK_UP_POS
+        self._state = VehicleState.MOVING_TO_PICK_UP_POS
 
         ###
         vehicle_soc_before_driving = self.current_state_of_charge
@@ -182,13 +214,15 @@ class RideHailingVehicle(Vehicle, ABC):
         self._arrived_at_pick_up_position = self._env.event()
 
     def start_driving(self):
-        self.state = RideHailingVehicleState.DRIVING
+        self._suggested = False
+        self.state = VehicleState.DRIVING
 
         logging.debug(f'Driving started.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def stop_driving(self):
-        self.state = RideHailingVehicleState.PARKING
+
+        self.state = VehicleState.PARKING
 
         logging.debug(f'Driving stopped.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
@@ -196,15 +230,17 @@ class RideHailingVehicle(Vehicle, ABC):
     def park(self):
         # Lift reservation
         self._reserved_for_user = None
-
+        self._driving_finished.succeed()
+        self._driving_finished = self._env.event()
+        # self._suggested = False
         # Make vehicle available for others again
-        self.state = RideHailingVehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         logging.debug(f'Parked.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def reserve(self, user):
-        self.state = RideHailingVehicleState.RESERVED
+        self.state = VehicleState.RESERVED
 
         self._reserved_for_user = user
 
@@ -272,7 +308,7 @@ class RideHailingVehicle(Vehicle, ABC):
         if(self._driver is None):
             raise Exception('Vehicle has no driver to unmount.')
 
-        tmp_driver_id=self._driver.identify_driver()
+        tmp_driver_id = self._driver.identify_driver()
         self._driver = None
         self._driver_unmounted.succeed()
         self._driver_unmounted = self._env.event()
@@ -396,6 +432,7 @@ class RideHailingVehicle(Vehicle, ABC):
 
         logging.debug(f'Vehicle charged {amount} kWh and has now {self._current_state_of_charge} kWh out of {self._max_state_of_charge}.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
+
 
     def __str__(self):
         return f'I have {self.available_seats} passengers on boards'

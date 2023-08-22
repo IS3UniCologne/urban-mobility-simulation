@@ -2,11 +2,10 @@ from enum import Enum
 import numpy
 
 class PopulationType(Enum):
-    PRICE_SENSITIVE = 0
-    # CONVENIENCE_SEEKER = 1 # or Sustainanble
-    WAITING_TIME_SENSITIVE = 1
-    ENVIRONMENTAL_CONSCIOUS = 2
-    TECHNOLOGICALLY_SKEPTICAL = 3
+    CLUSTER_0 = 0
+    CLUSTER_1 = 1
+    CLUSTER_2 = 2
+    CLUSTER_3 = 3
 
 
 class PopulationFactory():
@@ -31,10 +30,10 @@ class PopulationFactory():
 
         pop_type = self._random.multinomial(1, self._prob)
         if pop_type.argmax() == 0:
-            return PopulationType.PRICE_SENSITIVE
+            return PopulationType.CLUSTER_0
         elif pop_type.argmax() == 1:
-            return PopulationType.WAITING_TIME_SENSITIVE
+            return PopulationType.CLUSTER_1
         elif pop_type.argmax() == 2:
-            return PopulationType.ENVIRONMENTAL_CONSCIOUS
+            return PopulationType.CLUSTER_2
         else:
-            return PopulationType.TECHNOLOGICALLY_SKEPTICAL
+            return PopulationType.CLUSTER_3

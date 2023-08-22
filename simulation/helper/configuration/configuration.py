@@ -1,5 +1,5 @@
 from enum import Enum
-
+import numpy as np
 
 class TemporalBucket(Enum):
     HOURLY_BUCKETS = 1
@@ -65,9 +65,17 @@ class Configuration:
 
         self._user_config = None
 
+        # [cst_AV, cst_HV, price, waiting_time, EV, trip_duration, trust]
+        self._MoD_coefficients = np.array([[10, 10, -0.5, -0.3, 0.05, 0.5, 0.5],
+                                           [10, 10, -0.5, -0.3, 0.05, 0.5, 0.5],
+                                           [10, 10, -0.5, -0.3, 0.05, 0.5, 0.5],
+                                           [10, 10, -0.5, -0.3, 0.05, 0.5, 0.5]]) #TODO: read it from a dataet
+
         self._shared_vehicle_operator_config = None
 
         self._charging_infrastructure_config = None
+
+        self._add_driver_availability_vector = None
 
         self._transit_operator_config = None
 
@@ -116,7 +124,7 @@ class Configuration:
         return self._driver_payment_share
 
     def get_distance_threshold_to_user(self):
-        return 2000
+        return 10000
 
     def get_AV_price_reduction(self):
         return 0.9
@@ -130,6 +138,12 @@ class Configuration:
 
     def get_AV_penetration(self):
         return self._AV_penetration
+
+    def get_driver_availability_vector(self):
+        return self._add_driver_availability_vector
+
+    def add_driver_availability_vector(self, availability_vector):
+        self._add_driver_availability_vector = availability_vector
 
     def add_vehicle_config(self, vehicle_type_name, vehicle_config):
         self._vehicle_configs[vehicle_type_name] = vehicle_config
@@ -149,6 +163,10 @@ class Configuration:
     @property
     def user_config(self):
         return self._user_config
+
+    @property
+    def MoD_coefficients(self):
+        return self._MoD_coefficients
 
     def add_shared_vehicle_operator_config(self, shared_mobility_ops_config):
         self._shared_vehicle_operator_config = shared_mobility_ops_config

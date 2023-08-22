@@ -96,8 +96,11 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
 
     def pay_for_fulfilled_transportation_task(self, user, transportation_task: TransportTask, selected_transportation_alternative: TransportationAlternativeRideHailing):
         payment = selected_transportation_alternative.price
-        if selected_transportation_alternative.vehicle.__class__.__name__== 'RideHailingCar':
+        vehicle = selected_transportation_alternative.vehicle
+        if vehicle.__class__.__name__== 'RideHailingCar':
             self.increase_total_revenue(payment*(1-self._driver_payment_share))
+            vehicle.update_earned_money(payment)
+
         else:
             self.increase_total_revenue(payment)
 

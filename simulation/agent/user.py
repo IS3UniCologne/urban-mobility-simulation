@@ -1,3 +1,5 @@
+import numpy as np
+
 from .agent import Agent
 from ..environment.geodesic_position import GeodesicPosition
 from ..environment.position import Position
@@ -5,6 +7,7 @@ from ..helper.configuration.configuration import Configuration
 from ..operator.data_transfer_object.transportation_alternative import TransportationAlternative
 from ..operator.data_transfer_object.transportation_alternative_browser import TransportationAlternativeBrowser
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from ..operator.data_transfer_object.transportation_alternative_ridehailing import TransportationAlternativeRideHailing
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
 from ..operator.interface.payment_interface import PaymentInterface
 from ..operator.interface.vehicle_allocation_engine_interface import VehicleAllocationEngineInterface
@@ -21,6 +24,7 @@ from ..vehicle.ride_hailing_car import RideHailingCar
 from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
+from ..vehicle.vehicle import VehicleState
 from ..vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
 from ..world.population.PopulationFactory import PopulationType
 from ..world.world import World
@@ -40,14 +44,15 @@ class UserState(Enum):
     MISSED = 10
 
 
-class TransitUserState(UserState, Enum):
-    IN_TRANSPORT = 101
-    MOVING_TO_DESTINATION = 102 # walk after last transit stop
+# class TransitUserState(UserState, Enum):
+#     IN_TRANSPORT = 101
+#     MOVING_TO_DESTINATION = 102 # walk after last transit stop
 
 class User(Agent, DriverInterface):
     user_id = 0
 
-    def __init__(self, fleet, position, transport_task: TransportTask, transportation_search_service: SearchEngineInterface,
+    def __init__(self, fleet, position, transport_task: TransportTask,
+                 transportation_search_service: SearchEngineInterface,
                  payment_service: PaymentInterface, vehicle_assignment_service: VehicleAllocationEngineInterface,
                  vehicle_choice_behavior: VehicleChoiceBehaviorInterface, population_type: PopulationType,
                  env: simpy.Environment):
@@ -61,7 +66,7 @@ class User(Agent, DriverInterface):
         # Operator Interfaces
         self._transportation_search_service = transportation_search_service  # Register Transport Search Service
         self._vehicle_assignment_service = vehicle_assignment_service  # Register Vehicle Assignment Service
-        self._payment_service = payment_service # Register Payment Service
+        self._payment_service = payment_service  # Register Payment Service
 
         # Consumer Type of User
         self._population_type = population_type
@@ -135,14 +140,15 @@ class User(Agent, DriverInterface):
                 self._transportation_alternatives_not_found = self._env.event()
                 self._vehicle_allocated = self._env.event()
 
-                continue # retry again until vehicle supply is depleted
+                continue  # retry again until vehicle supply is depleted
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
             yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
 
             yield self._env.process(self.start_driving(vehicle_allocation))
 
-            self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task, selected_transportation_alternative)
+            self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task,
+                                                                        selected_transportation_alternative)
 
             yield self._env.process(self.stop())
 
@@ -177,13 +183,16 @@ class User(Agent, DriverInterface):
         for alternative in available_transportation_alternatives.transportation_alternatives:
             distance_to_vehicle = self.position >> alternative.vehicle.position
             if self._transport_task.viable_vehicle_modes[alternative.vehicle.__class__.__name__]:
-                if isinstance(alternative.vehicle, SharedCar) and distance_to_vehicle < config.get_vehicle_config(alternative.vehicle.__class__.__name__).max_walking_distance: # See own paper
+                if isinstance(alternative.vehicle, SharedCar) and distance_to_vehicle < config.get_vehicle_config(
+                        alternative.vehicle.__class__.__name__).max_walking_distance:  # See own paper
                     filtered_list.append((distance_to_vehicle, alternative.price, alternative.convenience, alternative))
-                elif isinstance(alternative.vehicle, SharedKickScooter) and distance_to_vehicle < config.get_vehicle_config(alternative.vehicle.__class__.__name__).max_walking_distance: # See Reck
+                elif isinstance(alternative.vehicle,
+                                SharedKickScooter) and distance_to_vehicle < config.get_vehicle_config(
+                    alternative.vehicle.__class__.__name__).max_walking_distance:  # See Reck
                     filtered_list.append((distance_to_vehicle, alternative.price, alternative.convenience, alternative))
-                elif isinstance(alternative.vehicle, SharedScooter) and distance_to_vehicle < config.get_vehicle_config(alternative.vehicle.__class__.__name__).max_walking_distance: # See Nothing..
+                elif isinstance(alternative.vehicle, SharedScooter) and distance_to_vehicle < config.get_vehicle_config(
+                        alternative.vehicle.__class__.__name__).max_walking_distance:  # See Nothing..
                     filtered_list.append((distance_to_vehicle, alternative.price, alternative.convenience, alternative))
-
 
         # Determine Vehicle Preference based on Population Type
         # a) Price Sensitive Users will prefer cheapest option
@@ -192,11 +201,11 @@ class User(Agent, DriverInterface):
             # Sort Vehicle List by Price and Vicinity (Customer is rational and prefers the cheapest mode
             # and the closest vehicle, i.e., shortest walking distance)
             # vehicle[1] price, vehicle[0] distance to vehicle
-            filtered_list.sort(key = lambda vehicle: (vehicle[1], vehicle[0]))
+            filtered_list.sort(key=lambda vehicle: (vehicle[1], vehicle[0]))
         elif self._population_type == PopulationType.CONVENIENCE_SEEKER:
             # Sort based on Convenience Score => The lower the score, the better
             # KS = 1, Scooter = 2, Car = 3 (could also be regarded as a sustainability score)
-            filtered_list.sort(key = lambda vehicle: (vehicle[2], vehicle[0]))
+            filtered_list.sort(key=lambda vehicle: (vehicle[2], vehicle[0]))
 
         if filtered_list:
             distance, price, convenience_ranking, filtered_list = zip(*filtered_list)
@@ -313,7 +322,8 @@ class User(Agent, DriverInterface):
 
         # Mount Vehicle and Start Driving
         self.mount_vehicle_as_driver(vehicle_allocation.vehicle)
-        energy_consumed = yield self._env.process(self.drive_vehicle(vehicle_allocation.vehicle, vehicle_allocation.associated_transportation_alternative.route))
+        energy_consumed = yield self._env.process(self.drive_vehicle(vehicle_allocation.vehicle,
+                                                                     vehicle_allocation.associated_transportation_alternative.route))
         self.park_vehicle(vehicle_allocation.vehicle)
         self.unmount_vehicle_as_driver(vehicle_allocation.vehicle)
 
@@ -353,13 +363,14 @@ class User(Agent, DriverInterface):
 
         # duration = RoutePlanner.calculateDuration(user.position, vehicle_assignment.pick_up_position, Strategy.Walking)
         distance = origin >> destination
-        duration = distance / 83.33 # 83.33 m/min (average agent speed = 5km/h)
+        duration = distance / 83.33  # 83.33 m/min (average agent speed = 5km/h)
         yield self._env.timeout(duration)
         self._position = destination
 
     """
         Implementation of DriverInterface to navigate the as driver mounted vehicle
     """
+
     def mount_vehicle_as_driver(self, vehicle):
         # Mount Vehicle
         vehicle.mount_driver(self)
@@ -373,7 +384,7 @@ class User(Agent, DriverInterface):
         for route_segment in route.route_segments:
             distance = route_segment.distance
             velocity = vehicle.velocity
-            time = distance/velocity
+            time = distance / velocity
 
             # yield self._env.timeout(time)
             yield self._env.process(vehicle.move(route_segment))
@@ -400,6 +411,7 @@ class User(Agent, DriverInterface):
     """
         Auxiliary Functions
     """
+
     @property
     def id(self):
         return self._id
@@ -416,6 +428,7 @@ class RideHailingUser(Agent, DriverInterface):
                  payment_service: PaymentInterface, vehicle_assignment_service: VehicleAllocationEngineInterface,
                  vehicle_choice_behavior: VehicleChoiceBehaviorInterface, population_type: PopulationType,
                  env: simpy.Environment):
+
         self._id = RideHailingUser.user_id  # User ID
         RideHailingUser.user_id += 1  # Increment User Id
 
@@ -436,6 +449,9 @@ class RideHailingUser(Agent, DriverInterface):
 
         # Vehicle Choice Model
         self._vehicle_choice_behavior = vehicle_choice_behavior
+        self._mode_choice_coefficients = Configuration.instance().MoD_coefficients[population_type.value]
+        # self._mode_choice_constant = Configuration.instance().MoD_coefficients[population_type.value][1]
+        self._AV_truster = 1  # TODO hard coded
 
         # Events
         self._transportation_alternatives_received = self._env.event()
@@ -477,7 +493,7 @@ class RideHailingUser(Agent, DriverInterface):
             ## Retrieve available transportation alternatives
             available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
             # Select Alternative
-            selected_transportation_alternative = yield self._env.process\
+            selected_transportation_alternative = yield self._env.process \
                 (self.select_transportation_alternative(available_transportation_alternatives))
             # Withdraw Request since no vehicle is available matching my needs
             if not selected_transportation_alternative:
@@ -526,49 +542,27 @@ class RideHailingUser(Agent, DriverInterface):
 
             available_transportation_alternatives = self._transportation_search_service.search_for_transportation_alternatives(
                 search_task)
-            # Vehicle Choice (moved to World Add User Function)
-            # distance = self._transport_task.origin >> self._transport_task.destination
-            # tc = TripCharacteristics(distance)
-            # viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
-            # Filter Transportation Alternatives based on Mode Choice and Walking Distances
+            # Filter Transportation Alternatives based on Mode Choice
             filtered_list = []
             for alternative in available_transportation_alternatives.transportation_alternatives:
-                # if self._transport_task.viable_vehicle_modes[alternative.vehicle.__class__.__name__]: if
-                # isinstance(alternative.vehicle, RideHailingCar) and distance_to_vehicle <
-                # config.get_vehicle_config( alternative.vehicle.__class__.__name__).max_walking_distance:  # See own
-                # paper
-                filtered_list.append((alternative.distance_to_pickup, alternative.price, alternative.convenience,
-                                      alternative.environment, alternative.technology_skeptical, alternative))
+                filtered_list.append((alternative.pick_up_time, alternative.price, alternative.convenience,
+                                      alternative.environment, alternative.autonomous_vehicle, alternative))
+            # Here we only determine two transportation alternatives (one AV and one HV)
+            final_filtered_list = []
+            autonomous_filtered_list = [alt for alt in filtered_list if alt[4] == 1]
+            human_driven_filtered_list = [alt for alt in filtered_list if alt[4] == 0]
+            if len(autonomous_filtered_list) > 0:
+                closest_AV = sorted(autonomous_filtered_list, key=lambda alt: alt[0])[0]
+                final_filtered_list.append(closest_AV)
+            if len(human_driven_filtered_list) > 0:
+                closest_HV = sorted(human_driven_filtered_list, key=lambda alt: alt[0])[0]
+                final_filtered_list.append(closest_HV)
 
-            # Determine Vehicle Preference based on Population Type
-            # a) Price Sensitive Users will prefer cheapest option
-            # b) Convenience/Sustainable Users prefer slightly more expensive option
-            if self._population_type == PopulationType.PRICE_SENSITIVE:
-                # Sort Vehicle List by Price and Vicinity (Customer is rational and prefers the cheapest mode
-                # and the closest vehicle, i.e., shortest walking distance)
-                # vehicle[1] price, vehicle[0] distance to vehicle
-                filtered_list.sort(key=lambda vehicle: (vehicle[1], vehicle[0]))
-            elif self._population_type == PopulationType.WAITING_TIME_SENSITIVE:
-                # Sort based on Convenience Score => The lower the score, the better
-                # KS = 1, Scooter = 2, Car = 3 (could also be regarded as a sustainability score)
-                filtered_list.sort(key=lambda vehicle: (vehicle[0]))
-            elif self._population_type == PopulationType.ENVIRONMENTAL_CONSCIOUS:
-                # Sort based on Convenience Score => The lower the score, the better
-                # KS = 1, Scooter = 2, Car = 3 (could also be regarded as a sustainability score)
-                # filtered_list = [x for x in filtered_list if x[3] == 1]
-                filtered_list.sort(key=lambda vehicle: (vehicle[0]))
-            elif self._population_type == PopulationType.TECHNOLOGICALLY_SKEPTICAL:
-                # Sort based on Convenience Score => The lower the score, the better
-                # KS = 1, Scooter = 2, Car = 3 (could also be regarded as a sustainability score)
-                # filtered_list = [x for x in filtered_list if x[4] == 1]
-                filtered_list.sort(key=lambda vehicle: (vehicle[0]))
-
-
-
-            if filtered_list:
-                distance, price, convenience_ranking, environment_ranking, technology_skeptical_ranking, filtered_list = zip(*filtered_list)
-                filtered_list = list(filtered_list)
+            if final_filtered_list:
+                distance, price, convenience_ranking, environment_ranking, technology_skeptical_ranking, final_filtered_list = zip(
+                    *final_filtered_list)
+                filtered_list = list(final_filtered_list)
 
             # Only Consider Alternatives matching Customer needs
             available_transportation_alternatives.transportation_alternatives = filtered_list
@@ -589,12 +583,38 @@ class RideHailingUser(Agent, DriverInterface):
         self._transportation_alternatives_received.succeed()
         return available_transportation_alternatives
 
+    def transportation_alternative_utility_function(self, alternative: TransportationAlternativeRideHailing):
+        """
+            This is a mode choice utility function for each alternative
+        :param a transportation alternative:
+        :return: a single scalar utility
+        """
+        coefficients = self._mode_choice_coefficients
+        independent_variables = np.array([alternative.autonomous_vehicle, 1 - alternative.autonomous_vehicle,
+                                          alternative.price, alternative.waiting_time, alternative.electric_vehicle,
+                                          alternative.duration, self._AV_truster])
+        utility = np.dot(coefficients, independent_variables)
+        return utility
+
+    def get_utility_for_transportation_alternative(self,
+                                                   available_transportation_alternatives:
+                                                   TransportationAlternativeBrowser):
+        """
+            Each user has different utilities for each alternative
+        :param available_transportation_alternatives:
+        :return: a dictionary of utilities
+        """
+        for transportation_alternative in available_transportation_alternatives.transportation_alternatives:
+            transportation_alternative._utility = \
+                self.transportation_alternative_utility_function(transportation_alternative)
+
     def select_transportation_alternative(self,
-                                          available_transportation_alternatives: TransportationAlternativeBrowser) -> TransportationAlternative:
+                                          available_transportation_alternatives:
+                                          TransportationAlternativeBrowser) -> TransportationAlternativeRideHailing:
         """
             User selects transportation alternative
         :param available_transportation_alternatives:
-        :return:
+        :return: a selected transportation alternative
         """
 
         # Wait for event
@@ -609,19 +629,51 @@ class RideHailingUser(Agent, DriverInterface):
             self._transportation_alternatives_not_found.succeed()
 
             return
-        if self._population_type == PopulationType.ENVIRONMENTAL_CONSCIOUS:
-            if not available_transportation_alternatives.transportation_alternatives[0].environment:
-                return
-        if self._population_type == PopulationType.TECHNOLOGICALLY_SKEPTICAL:
-            if not available_transportation_alternatives.transportation_alternatives[0].technology_skeptical:
-                return
+        self.get_utility_for_transportation_alternative(available_transportation_alternatives)
+        utilities = np.append(np.array([alt.utility for alt in available_transportation_alternatives.
+                                                    transportation_alternatives]), np.zeros(1))
 
-                        # Select first transportation alternative (transportation preferences are already in place see search_for_alt method)
-        selected_transportation_alternative = available_transportation_alternatives.transportation_alternatives[0]
+        # Here we consider the rejection of alternatives: if the utilities are lower than the based alternatives' utility
+        # TODO: specify why the user is missed.
+
+        # Calculate choice probabilities using the logit formula
+        choice_probabilities = np.exp(utilities) / np.sum(np.exp(utilities))
+
+        # Normalize choice probabilities
+        normalized_probabilities = choice_probabilities / np.sum(choice_probabilities)
+
+        # Choose the mode with the highest choice probability
+        chosen_mode_index = np.argmax(normalized_probabilities)
+
+        # if all(x < 10 for x in utilities):
+        if chosen_mode_index == 3:
+            self._transportation_alternatives_not_found.succeed()
+            print('user chooses no option')
+            return
+        else:
+            selected_transportation_alternative = \
+                available_transportation_alternatives.transportation_alternatives[chosen_mode_index]
+        # TODO: use logit model
+
+        # sorted_alternative_based_on_utility = \
+        #     sorted(available_transportation_alternatives.transportation_alternatives,
+        #            key=lambda alternative: alternative.utility)
+        #
+        # selected_transportation_alternative = sorted_alternative_based_on_utility[0]
+        selected_transportation_alternative.vehicle._suggested = True
+
+
+        # if self._population_type == PopulationType.TECHNOLOGICALLY_SKEPTICAL:
+        #     if not available_transportation_alternatives.transportation_alternatives[0].technology_skeptical:
+        #         return
+
+        # Select first transportation alternative (transportation preferences are already in place see search_for_alt method)
+        # selected_transportation_alternative = available_transportation_alternatives.transportation_alternatives[0]
+
         selected_transportation_alternative.set_waiting_time(self._waiting_time)
         # Trigger next event
         self._transportation_alternatives_selected.succeed(selected_transportation_alternative)
-        logging.debug(f"Selected transportation alternative: {selected_transportation_alternative}.",
+        logging.debug(f"Selected transportation alternative: {selected_transportation_alternative.vehicle.state}.",
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
         return selected_transportation_alternative
 
@@ -632,6 +684,9 @@ class RideHailingUser(Agent, DriverInterface):
         # Set current state
         self._state = UserState.ALLOCATING_VEHICLE
 
+        # if the selected vehicle is serving a user we need to wait until the service is over and then allocate it
+        if selected_transportation_alternative.vehicle.state == VehicleState.DRIVING:
+            yield selected_transportation_alternative.vehicle._driving_finished
         # Get Vehicle Allocation
         vehicle_allocation = yield self._env.process(
             self._vehicle_assignment_service.request_vehicle_allocation(self, selected_transportation_alternative))
@@ -649,9 +704,9 @@ class RideHailingUser(Agent, DriverInterface):
             return None
 
     def wait_for_vehicle(self, vehicle_assignment: VehicleAllocation):
-        #TODO: fix this, it does not wait
+        # TODO: fix this, it does not wait
         # Wait for event
-        #yield self._arrived_at_pick_up_position
+        # yield self._arrived_at_pick_up_position
 
         # Waiting time (after arrival)
         start_waiting = self._env.now
