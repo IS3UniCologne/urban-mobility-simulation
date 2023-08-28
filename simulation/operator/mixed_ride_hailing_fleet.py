@@ -20,6 +20,7 @@ class MixedRideHailingFleet(FleetInterface):
         self._autonomous_cars = []
         self._distance_threshold_to_user = Configuration.instance().get_distance_threshold_to_user()
         self._driver_availability_vector = Configuration.instance().get_driver_availability_vector()
+        self._recharging_threshold = Configuration.instance().get_recharging_threshold()
         self._env.process(self.fleet_size_monitor())
 
 
@@ -97,7 +98,10 @@ class MixedRideHailingFleet(FleetInterface):
             distance_to_current_destination = (car.estimated_completion_time - self._env.now) * car.velocity
             if (car.destination.position >> origin) + distance_to_current_destination <= \
                     self._distance_threshold_to_user and not car._suggested:
-                cars_in_area.append(car)
+                hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+                state_of_charge_threshold = self._recharging_threshold[hour]
+                if car.current_relative_state_of_charge > state_of_charge_threshold + 5:
+                    cars_in_area.append(car)
 
         return cars_in_area
 
@@ -243,16 +247,12 @@ class MixedRideHailingFleet(FleetInterface):
         low_soc_supply = []
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
-        for mode in available_vehicles:
-            if mode == "RideHailingCar":
-                vehicle_list = self._cars
-            else:
-                raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')
 
-            for vehicle in vehicle_list:
+        vehicle_list = self._cars
 
-                if vehicle.current_relative_state_of_charge < state_of_charge_threshold and vehicle.state == VehicleState.PARKING:
-                    low_soc_supply.append(vehicle)
+        for vehicle in vehicle_list:
+            if vehicle.current_relative_state_of_charge < state_of_charge_threshold and vehicle.state == VehicleState.PARKING:
+                low_soc_supply.append(vehicle)
 
         return low_soc_supply
 

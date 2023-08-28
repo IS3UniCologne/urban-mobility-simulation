@@ -47,7 +47,7 @@ class RebalancingSchedulerRidehailing:
 
         return relocation_plans
 
-    def generate_charging_plan(self, transactions):
+    def generate_charging_plan(self):
         """
         Generate a rule based charging plan based on given service worker capacity
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
@@ -93,65 +93,64 @@ class RebalancingSchedulerRidehailing:
         # Fleet State
 
         # We calculate for each vehicle mode dedicated charging plans based on the available resources
-        all_charging_plans = {}
 
-        for i, mode in enumerate(self._available_vehicle_modes):
+        charging_plan = []
 
-            charging_plan = []
+        for vehicle in vehicles_to_charge:
+            hex = vehicle.position.get_default_hexagon()
 
-            for vehicle in vehicles_to_charge:
-                hex = vehicle.position.get_default_hexagon()
+            # Get nearest fleet base region (.loc -> destination, [[]] -> Origin)
+            sorted_base_list = self._distance_matrix.loc[self._base_regions][[hex]].sort_values(
+                by=hex,
+                ascending=True)
 
-                # Get nearest fleet base region (.loc -> destination, [[]] -> Origin)
-                sorted_base_list = self._distance_matrix.loc[self._base_regions][[hex]].sort_values(
-                    by=hex,
-                    ascending=True)
-
-                # Select Nearest Base
-                if vehicle.electric_vehicle:
-                    for index_base, row_base in sorted_base_list.iterrows():
-                        selected_base = index_base
-                        available_charging_stations = [x for x in self._charging_stations if len(x.plugs.queue) <= 0]
-                        if len(available_charging_stations) > 0:
-                            selected_charging_station = \
-                                [x for x in available_charging_stations if x.location == selected_base][0]
+            # Select Nearest Base
+            if vehicle.electric_vehicle:
+                for index_base, row_base in sorted_base_list.iterrows():
+                    selected_base = index_base
+                    available_charging_stations = [x for x in self._charging_stations if len(x.plugs.queue) <= 0]
+                    if len(available_charging_stations) > 0:
+                        selected_charging_station = \
+                            [x for x in available_charging_stations if x.location == selected_base]
+                        if len(selected_charging_station) > 0:
+                            selected_charging_station = selected_charging_station[0]
                             selected_base_distance = row_base[hex]
                             break
 
-                if not vehicle.electric_vehicle:
-                    for index_base, row_base in sorted_base_list.iterrows():
-                        selected_base = index_base
-                        available_charging_stations = [x for x in self._charging_stations if len(x.plugs.queue) <= 0]
-                        if len(available_charging_stations) > 0:
-                            selected_charging_station = \
-                                [x for x in available_charging_stations if x.location == selected_base][0]
-                            selected_base_distance = row_base[hex]
-                            break
+            if not vehicle.electric_vehicle:
+                for index_base, row_base in sorted_base_list.iterrows():
+                    selected_base = index_base
+                    available_charging_stations = [x for x in self._charging_stations]
+                    if len(available_charging_stations) > 0:
+                        selected_charging_station = \
+                            [x for x in available_charging_stations if x.location == selected_base][0]
+                        selected_base_distance = row_base[hex]
+                        break
 
-                # Keep Track of how many vehicles are already scheduled for charging
-                currently_schedules_vehicles_per_unit = 0
+            # Keep Track of how many vehicles are already scheduled for charging
+            currently_schedules_vehicles_per_unit = 0
 
-                # How many vehicles can we move to the base and charge?
-                pick_up_vehicles = 1
+            # How many vehicles can we move to the base and charge?
+            pick_up_vehicles = 1
 
-                # Collection of Charging Tasks per Service Worker
-                chargings_tasks = []
+            # Collection of Charging Tasks per Service Worker
+            chargings_tasks = []
 
-                # Charging Task from current region to fleet base
-                charging_task = (hex, selected_base, pick_up_vehicles, selected_base_distance, selected_charging_station, vehicle)
+            # Charging Task from current region to fleet base
+            charging_task = (hex, selected_base, pick_up_vehicles, selected_base_distance, selected_charging_station, vehicle)
 
-                # Add main chargin task to charging tasks
-                if pick_up_vehicles > 0:
-                    chargings_tasks.append(charging_task)
+            # Add main chargin task to charging tasks
+            if pick_up_vehicles > 0:
+                chargings_tasks.append(charging_task)
 
-                # Store Charging Task
-                if len(chargings_tasks) > 0:
-                    charging_plan.append(chargings_tasks)
+            # Store Charging Task
+            if len(chargings_tasks) > 0:
+                charging_plan.append(chargings_tasks)
 
             # Save Charging Plan of Vehicle Mode
-            all_charging_plans[mode] = charging_plan
 
-        return all_charging_plans
+
+        return charging_plan
 
 
     def calculate_resource_capacity_split_for_charging(self, fleet_state, available_vehicle_modes, max_vehicle_supply, number_of_service_units):

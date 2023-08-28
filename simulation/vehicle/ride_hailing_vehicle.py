@@ -352,7 +352,7 @@ class RideHailingVehicle(Vehicle, ABC):
         else:
             raise Exception('Agent is not in vehicle.')
 
-    def relocate(self, route_segment: Edge, time, relocator):
+    def relocate(self, route_segment: Edge, time):
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
@@ -368,7 +368,7 @@ class RideHailingVehicle(Vehicle, ABC):
 
             return
 
-            # raise Exception(f'Vehicle {self._id} has a driver {self._driver.identify_driver()}. Unable to relocate vehicle.')
+            raise Exception(f'Vehicle {self._id} has a driver {self._driver.identify_driver()}. Unable to relocate vehicle.')
 
         # Invoke event to notify listeners that relocation started
         self._vehicle_relocation_started.succeed()
@@ -390,7 +390,7 @@ class RideHailingVehicle(Vehicle, ABC):
 
         self._state = VehicleState.PARKING
 
-        logging.debug(f'Vehicle relocated by {relocator} from {old_position} to {self._position} in {time} minutes.',
+        logging.debug(f'Vehicle relocated from {old_position} to {self._position} in {time} minutes.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def plug_to_charging_station(self):

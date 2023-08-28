@@ -97,6 +97,7 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
     def pay_for_fulfilled_transportation_task(self, user, transportation_task: TransportTask, selected_transportation_alternative: TransportationAlternativeRideHailing):
         payment = selected_transportation_alternative.price
         vehicle = selected_transportation_alternative.vehicle
+        # we need to pay the driver costs
         if vehicle.__class__.__name__== 'RideHailingCar':
             self.increase_total_revenue(payment*(1-self._driver_payment_share))
             vehicle.update_earned_money(payment)
@@ -125,7 +126,7 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
         logging.info(f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
                       extra={"clazz": self.__class__.__name__, "oid": ""})
 
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask):
+    def withdraw_transportation_task(self, user, transportation_task: TransportTask, state = None):
         # Get available vehicle types
 
         # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
@@ -150,7 +151,7 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
              "pick_up_time": 0.0,
              "selected_vehicle_mode":"None",
              "selected_vehicle_EV": "None",
-             "state":"Missed", **transportation_task.viable_vehicle_modes}
+             "state": state, **transportation_task.viable_vehicle_modes}
         )
 
         logging.info(f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",

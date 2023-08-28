@@ -17,11 +17,12 @@ class VehicleState(Enum):
     RELOCATING = 3
     CHARGING = 4
     PRE_SERVICE = 5
+    ONLINE = 6  # When the driver is online
+    OFFLINE = 7  # When the driver is offline
     SOME_STATE = 1002
     RESERVED = 1001
     MOVING_TO_PICK_UP_POS = 1003
-    ONLINE = 6  # When the driver is online
-    OFFLINE = 7  # When the driver is offline
+
 
 
 class Vehicle(ABC):
