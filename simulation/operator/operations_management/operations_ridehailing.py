@@ -68,12 +68,12 @@ class OperationsRidehailing:
     def run_operations(self):
         while True:
             # Operations begin after first day
+            self._scheduled_tasks = []
             yield self._operations_started
 
             # Retrieve Vehicle Transactions
-            transactions = self._payment_engine.get_transactions()
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-            charging_plans = self._relocation_scheduler.generate_charging_plan(transactions)
+            charging_plans = self._relocation_scheduler.generate_charging_plan()
 
             # We track the charging events
             charging_events = []
@@ -81,29 +81,23 @@ class OperationsRidehailing:
             # No Vehicles to be charged
             no_vehicles_scheduled_to_charge = {}
 
-            for mode in self._available_modes:
-                charging_plans_for_current_mode = charging_plans[mode]
 
-                # Set Counter to 0
-                if mode not in no_vehicles_scheduled_to_charge:
-                    no_vehicles_scheduled_to_charge[mode] = 0
+            for charging_plan in charging_plans:
 
-                for charging_plan in charging_plans_for_current_mode:
+                origin, destination, no_vehicle_to_charge, distance_to_base, charging_station, vehicle = \
+                    charging_plan[0]
 
-                    origin, destination, no_vehicle_to_charge, distance_to_base, charging_station, vehicle = \
-                        charging_plan[0]
+                charging_task = ChargingTaskRidehailing(self._env, origin, destination, no_vehicle_to_charge,
+                                                        distance_to_base, self._vehicle_fleet,
+                                                        self._state_of_charge_threshold, charging_station, vehicle)
 
-                    charging_task = ChargingTaskRidehailing(self._env, origin, destination, no_vehicle_to_charge, mode,
-                                                            distance_to_base, self._vehicle_fleet,
-                                                            self._state_of_charge_threshold, charging_station, vehicle)
+                # Schedule to Queue
+                self._scheduled_tasks.append(charging_task)
+                # Remember event for multi service tasks
+                charging_events.append(charging_task.task_finished)
 
-                    # Schedule to Queue
-                    self._scheduled_tasks.append(charging_task)
-                    # Remember event for multi service tasks
-                    charging_events.append(charging_task.task_finished)
-
-                    # Count Vehicles to be charged
-                    no_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
+                # Count Vehicles to be charged
+                # no_vehicles_scheduled_to_charge['a'] += no_vehicle_to_charge
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
 
@@ -122,5 +116,6 @@ class OperationsRidehailing:
                               extra={"clazz": self.__class__.__name__})
                 # TODO: we do not need a service ID here
                 self._env.process(next_task.execute(0))
+
 
             # ### TODO: activate relocation for ridehailing later

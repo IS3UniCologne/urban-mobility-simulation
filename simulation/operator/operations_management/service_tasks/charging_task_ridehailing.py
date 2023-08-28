@@ -11,8 +11,9 @@ from simulation.vehicle.vehicle import VehicleState
 
 class ChargingTaskRidehailing(ServiceTask):
 
-    def __init__(self, env: Environment, origin, destination, number_of_vehicles_to_charge, vehicle_mode,
-                 distance_to_fleet_base, vehicle_fleet, state_of_charge_threshold, charging_station=None, vehicle=None):
+    def __init__(self, env: Environment, origin, destination, number_of_vehicles_to_charge,
+                 distance_to_fleet_base, vehicle_fleet, state_of_charge_threshold,
+                 charging_station=None, vehicle=None, vehicle_mode=None):
 
         super(ChargingTaskRidehailing, self).__init__(env)
 
@@ -47,14 +48,11 @@ class ChargingTaskRidehailing(ServiceTask):
         selected_vehicles_to_charge = []
         # TODO: remove the need for service worker to relocate
         # Filter relevant vehicles
+
         for vehicle in potential_vehicles_to_charge:
             # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
-            if (vehicle.__class__.__name__ == self._vehicle_mode
-                    and vehicle.state == VehicleState.PARKING
+            if (vehicle.state == VehicleState.PARKING
                     and len(selected_vehicles_to_charge) < self._number_of_vehicles_to_charge):
-                # Mark Vehicle => Change state su
-                # ch that other service workers don't touch it!!
-                vehicle.prepare_for_service_task(f"Service Worker {args[0]}", self.__class__.__name__)
                 # Add to charging list
                 selected_vehicles_to_charge.append(vehicle)
 
@@ -65,33 +63,27 @@ class ChargingTaskRidehailing(ServiceTask):
             distance = vehicle.position >> fleet_base_position
             relocation_route = Edge(distance, Vertex(vehicle.position), Vertex(fleet_base_position))
 
-            # Note, we divide the duration by the number of vehicles to "linearize" the service time
-            # In the real world, these processes would be in parallel rather than in a linear fashion
-            # However, the total duration of both approaches (parallel, linearized) coincides.
-            # Thus, we ensure that the service workers spends the same amount of time as in the parallel case.
             vehicle_relocation_velocity = Configuration.instance().shared_vehicle_operator_config.vehicle_relocation_velocity
             relocation_duration_per_vehicle = (distance/vehicle_relocation_velocity)/len(selected_vehicles_to_charge)
 
             # First relocate vehicle to base
-            yield self._env.process(vehicle.relocate(relocation_route, relocation_duration_per_vehicle, f"Service Worker {args[0]}"))
+            yield self._env.process(vehicle.relocate(relocation_route, relocation_duration_per_vehicle))
 
             if vehicle._electric_vehicle:
+                vehicle._state = VehicleState.PRE_SERVICE
                 with self._charging_station.plugs.request() as req:
-                    """Multiple Service Workers (within same hexagon) cannot access the vehicle list in parallel"""
-                    # We mark vehilces which are already scheduled using (prepare_for_service_task) in a thread safe way
                     yield req
 
-            # Plugin Vehicle to Charging Station
-            vehicle.plug_to_charging_station()
+                    # Plugin Vehicle to Charging Station
+                    vehicle.plug_to_charging_station()
 
-            if vehicle._electric_vehicle:
-                # Charge Vehicle
-                vehicle_charging_power = Configuration.instance().shared_vehicle_operator_config.charging_station_power
-                # Note: See text regarding linearization
-                # *60 as state of charge is in kWh => kWmin
-                charging_duration_per_vehicles = ((vehicle._max_state_of_charge / vehicle_charging_power)*60)/len(selected_vehicles_to_charge)
+                    # Charge Vehicle
+                    vehicle_charging_power = Configuration.instance().shared_vehicle_operator_config.charging_station_power
+                    # Note: See text regarding linearization
+                    # *60 as state of charge is in kWh => kWmin
+                    charging_duration_per_vehicles = ((vehicle._max_state_of_charge / vehicle_charging_power)*60)/len(selected_vehicles_to_charge)
 
-                yield self._env.process(vehicle.charge(charging_duration_per_vehicles))
+                    yield self._env.process(vehicle.charge(charging_duration_per_vehicles))
             else:
                 yield self._env.process(vehicle.charge(charging_time=0))
             # Unplug Vehicle from Charging Station
@@ -102,7 +94,7 @@ class ChargingTaskRidehailing(ServiceTask):
         self._task_finished = self._env.event()
 
     def __str__(self):
-        return f"Charging Task for {self._number_of_vehicles_to_charge} {self._vehicle_mode} from {self._origin} to {self._destination} (distance = {self._distance_to_fleet_base})"
+        return f"Charging Task for {self._number_of_vehicles_to_charge} from {self._origin} to {self._destination} (distance = {self._distance_to_fleet_base})"
 
     def __repr__(self):
         return self.__str__()

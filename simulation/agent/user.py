@@ -42,6 +42,7 @@ class UserState(Enum):
     FULFILLED = 8
     CANCELLED = 9
     MISSED = 10
+    REFUSED = 11
 
 
 # class TransitUserState(UserState, Enum):
@@ -457,6 +458,7 @@ class RideHailingUser(Agent, DriverInterface):
         self._transportation_alternatives_received = self._env.event()
         self._transportation_alternatives_selected = self._env.event()
         self._transportation_alternatives_not_found = self._env.event()
+        self._transportation_alternatives_refused = self._env.event()
         self._vehicle_allocated = self._env.event()
         self._arrived_at_pick_up_position = self._env.event()
         self._assigned_vehicle_arrived = self._env.event()
@@ -489,9 +491,12 @@ class RideHailingUser(Agent, DriverInterface):
         :return:
         """
         while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
-            ### TODO: Define a probability rejection instead of a harsh waiting_threshold
+            ### TODO: Define a probability rejection instead of a strict waiting_threshold
             ## Retrieve available transportation alternatives
             available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
+            # Always complete the list #TODO: to be updated
+            # available_transportation_alternatives = self.\
+            #     complete_available_transportation_alternatives(available_transportation_alternatives)
             # Select Alternative
             selected_transportation_alternative = yield self._env.process \
                 (self.select_transportation_alternative(available_transportation_alternatives))
@@ -510,6 +515,7 @@ class RideHailingUser(Agent, DriverInterface):
                 # Reset Events (so far) and try again
                 self._transportation_alternatives_received = self._env.event()
                 self._transportation_alternatives_selected = self._env.event()
+                self._transportation_alternatives_refused = self._env.event()
                 self._transportation_alternatives_not_found = self._env.event()
                 self._vehicle_allocated = self._env.event()
 
@@ -583,6 +589,20 @@ class RideHailingUser(Agent, DriverInterface):
         self._transportation_alternatives_received.succeed()
         return available_transportation_alternatives
 
+    def complete_available_transportation_alternatives(self, alternatives):
+        """
+        This function ensures that there are always either two alternatives or zero
+        :return:
+        """
+
+        if len(alternatives) == 1:
+            alternative = alternatives[0]
+            mutual_alternative = alternative.copy()
+            if alternative.vehicle_type == 'AutonomousCar':
+                pass
+
+        return alternatives
+
     def transportation_alternative_utility_function(self, alternative: TransportationAlternativeRideHailing):
         """
             This is a mode choice utility function for each alternative
@@ -590,9 +610,11 @@ class RideHailingUser(Agent, DriverInterface):
         :return: a single scalar utility
         """
         coefficients = self._mode_choice_coefficients
-        independent_variables = np.array([alternative.autonomous_vehicle, 1 - alternative.autonomous_vehicle,
-                                          alternative.price, alternative.waiting_time, alternative.electric_vehicle,
-                                          alternative.duration, self._AV_truster])
+        independent_variables = np.array([1, alternative.price, alternative.waiting_time, alternative.electric_vehicle,
+                                          alternative.duration, alternative.autonomous_vehicle,
+                                          (1 - alternative.autonomous_vehicle),
+                                          alternative.autonomous_vehicle * self._AV_truster,
+                                          (1 - alternative.autonomous_vehicle) * self._AV_truster])
         utility = np.dot(coefficients, independent_variables)
         return utility
 
@@ -646,9 +668,9 @@ class RideHailingUser(Agent, DriverInterface):
         chosen_mode_index = np.argmax(normalized_probabilities)
 
         # if all(x < 10 for x in utilities):
-        if chosen_mode_index == 3:
-            self._transportation_alternatives_not_found.succeed()
-            print('user chooses no option')
+        if chosen_mode_index == len(utilities)-1:
+            # self._transportation_alternatives_not_found.succeed()
+            self._transportation_alternatives_refused.succeed()
             return
         else:
             selected_transportation_alternative = \
@@ -761,15 +783,23 @@ class RideHailingUser(Agent, DriverInterface):
         :return:
         """
         # Wait for missed demand event
-        yield self._transportation_alternatives_not_found
+        events = yield self._transportation_alternatives_not_found | self._transportation_alternatives_refused
 
         # Update current state
-        self._state = UserState.MISSED
+        if self._transportation_alternatives_not_found in events:
+            self._state = UserState.MISSED
 
-        self._payment_service.withdraw_transportation_task(self, self._transport_task)
+            self._payment_service.withdraw_transportation_task(self, self._transport_task, state='MISSED')
 
-        logging.debug(f"Transport request of user {self._id} has been withdrawn due to lack of vehicles.",
-                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+            logging.debug(f"Transport request of user {self._id} has been withdrawn due to lack of vehicles.",
+                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+        elif self._transportation_alternatives_refused:
+            self._state = UserState.REFUSED
+
+            self._payment_service.withdraw_transportation_task(self, self._transport_task, state='REFUSED')
+
+            logging.debug(f"Transport request of user {self._id} has been refused.",
+                          extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def walk(self, origin: GeodesicPosition, destination: GeodesicPosition):
 

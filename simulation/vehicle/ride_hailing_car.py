@@ -2,12 +2,10 @@ import random
 
 from simpy import Environment
 import logging
-from enum import Enum
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.vehicle import VehicleState
-from test.Logistic_regression import driver_on_off_model
 
 
 # class RideHailingCarState(Enum):
