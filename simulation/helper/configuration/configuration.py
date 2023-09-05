@@ -70,7 +70,7 @@ class Configuration:
 
         self._user_config = None
 
-        # [cst, price, waiting_time, EV, trip_duration, trust_AV, trust_HV, cst_AV, cst_HV]
+        # [cst, price, waiting_time, EV, trip_duration, cst_AV, cst_HV, trust_AV, trust_HV]
         MoD_coefficients = np.array([[-0.273671504, -0.353911557, -0.103573505, -1.128132785, 0.150429623,
                                             -0.576113819, 7.297866296, 0.631438368, -1.011643365],
                                            [-0.318885388, -1.281672341, -0.454985255, 0.123860882, 1.060810562,
@@ -88,6 +88,8 @@ class Configuration:
         MoD_significant[MoD_significant != 1] = 0
 
         self._MoD_coefficients = MoD_coefficients * MoD_significant
+
+        self._AV_trust = None
 
         self._shared_vehicle_operator_config = None
 
@@ -189,6 +191,13 @@ class Configuration:
     def MoD_coefficients(self):
         return self._MoD_coefficients
 
+    @property
+    def AV_trust(self):
+        return self._AV_trust
+
+    def add_AV_trust(self, AV_trust):
+        self._AV_trust = np.array(AV_trust)
+
     def add_shared_vehicle_operator_config(self, shared_mobility_ops_config):
         self._shared_vehicle_operator_config = shared_mobility_ops_config
 
@@ -237,7 +246,7 @@ class Configuration:
 
 class VehicleConfig:
     def __init__(self, price_per_min, max_state_of_charge, energy_consumption,
-                 velocity, max_available_seats, max_walking_distance, daily_total_cost):
+                 velocity, max_available_seats, max_walking_distance, daily_total_cost, initial_SoC):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
         self.energy_consumption = energy_consumption
@@ -245,6 +254,7 @@ class VehicleConfig:
         self.max_available_seats = max_available_seats
         self.max_walking_distance = max_walking_distance
         self.daily_total_cost = daily_total_cost
+        self.initial_SoC = initial_SoC
 
 
 class ModeChoiceConfig:

@@ -12,6 +12,9 @@ from simulation.tasks.transportation_search_task import TransportationSearchTask
 import logging
 from line_profiler_pycharm import profile
 
+from simulation.vehicle.vehicle import VehicleState
+
+
 class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
 
     def __init__(self, env):
@@ -50,47 +53,47 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
         # Add all available cars to alternative browser
         AVs_in_area = [car for car in cars_in_area if car.__class__.__name__ == 'AutonomousCar']
         CVs_in_area = [car for car in cars_in_area if car.__class__.__name__ == 'RideHailingCar']
-        if vehicle_search_task.transport_task.viable_vehicle_modes['RideHailingCar'] == 1:
-            for car in CVs_in_area:
-                # Calc waiting time
-                route_to_pick_up = Route(car.position, origin)
-                distance_to_pick_up = route_to_pick_up.distance
+        # if vehicle_search_task.transport_task.viable_vehicle_modes['RideHailingCar'] == 1:
+        for car in CVs_in_area:
+            # Calc waiting time
+            route_to_pick_up = Route(car.position, origin)
+            distance_to_pick_up = route_to_pick_up.distance
 
-                # Calc Duration
-                trip_duration = distance/car.velocity
+            # Calc Duration
+            trip_duration = distance/car.velocity
 
-                # Calc Price
-                # TODO: hard_coded
-                price = max(2 + trip_duration*car.price_per_minute + distance/1000 * 1.3, 5)
+            # Calc Price
+            # TODO: hard_coded
+            price = max(2 + trip_duration*car.price_per_minute + distance/1000 * 1.3, 5)
 
 
-                # Put together
-                transportation_alternative = TransportationAlternativeRideHailing(car, route, price, trip_duration, distance, 3, route_to_pick_up)
+            # Put together
+            transportation_alternative = TransportationAlternativeRideHailing(car, route, price, trip_duration, distance, 3, route_to_pick_up)
 
-                total_distance = distance+distance_to_pick_up
-                if car.has_enough_state_of_charge(total_distance):
-                    browser.add_transportation_alternative(transportation_alternative)
+            total_distance = distance+distance_to_pick_up
+            if car.has_enough_state_of_charge(total_distance) and car.state in [VehicleState.PARKING, VehicleState.DRIVING]:
+                browser.add_transportation_alternative(transportation_alternative)
 
-        if vehicle_search_task.transport_task.viable_vehicle_modes['AutonomousCar'] == 1:
-            for car in AVs_in_area:
-                # Calc waiting time
-                route_to_pick_up = Route(car.position, origin)
-                distance_to_pick_up = route_to_pick_up.distance
+        # if vehicle_search_task.transport_task.viable_vehicle_modes['AutonomousCar'] == 1:
+        for car in AVs_in_area:
+            # Calc waiting time
+            route_to_pick_up = Route(car.position, origin)
+            distance_to_pick_up = route_to_pick_up.distance
 
-                # Calc Duration
-                trip_duration = distance / car.velocity
+            # Calc Duration
+            trip_duration = distance / car.velocity
 
-                # Calc Price
-                # TODO: update the price for ride-hailing
-                price = max(2 + trip_duration*car.price_per_minute + distance/1000 * 1.3, 5) * self._AV_price_reduction
+            # Calc Price
+            # TODO: update the price for ride-hailing
+            price = max(2 + trip_duration*car.price_per_minute + distance/1000 * 1.3, 5) * self._AV_price_reduction
 
-                # Put together
-                transportation_alternative = TransportationAlternativeRideHailing(car, route, price, trip_duration,
-                                                                                  distance, 3, route_to_pick_up)
+            # Put together
+            transportation_alternative = TransportationAlternativeRideHailing(car, route, price, trip_duration,
+                                                                              distance, 3, route_to_pick_up)
 
-                total_distance = distance + distance_to_pick_up
-                if car.has_enough_state_of_charge(total_distance):
-                    browser.add_transportation_alternative(transportation_alternative)
+            total_distance = distance + distance_to_pick_up
+            if car.has_enough_state_of_charge(total_distance) and car.state in [VehicleState.PARKING, VehicleState.DRIVING]:
+                browser.add_transportation_alternative(transportation_alternative)
 
         return browser
 

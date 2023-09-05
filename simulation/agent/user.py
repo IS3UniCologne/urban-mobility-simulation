@@ -451,8 +451,7 @@ class RideHailingUser(Agent, DriverInterface):
         # Vehicle Choice Model
         self._vehicle_choice_behavior = vehicle_choice_behavior
         self._mode_choice_coefficients = Configuration.instance().MoD_coefficients[population_type.value]
-        # self._mode_choice_constant = Configuration.instance().MoD_coefficients[population_type.value][1]
-        self._AV_truster = 1  # TODO hard coded
+        self._AV_truster = Configuration.instance().AV_trust[population_type.value]
 
         # Events
         self._transportation_alternatives_received = self._env.event()

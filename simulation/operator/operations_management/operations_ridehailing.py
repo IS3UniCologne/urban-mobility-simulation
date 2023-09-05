@@ -52,6 +52,7 @@ class OperationsRidehailing:
         # Shift Duration (OM shift duration)
         self._duration_of_operations = operation_duration # mins
         self._charging_stations = charging_stations
+        self._counter = 0
 
     @property
     def charging_plan_updated(self):
@@ -116,6 +117,7 @@ class OperationsRidehailing:
                               extra={"clazz": self.__class__.__name__})
                 # TODO: we do not need a service ID here
                 self._env.process(next_task.execute(0))
+                self._counter += 1
 
 
             # ### TODO: activate relocation for ridehailing later
