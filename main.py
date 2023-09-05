@@ -1,6 +1,9 @@
 from pathlib import Path
 import random
 import pandas as pd
+from pqdm.processes import pqdm
+import multiprocessing as mp
+import numpy as np
 from simulation.agent.user import User  # must come before DemandFactory, otherwise circular imports
 from simulation.helper.configuration.configuration import Configuration, VehicleConfig, ModeChoiceConfig, \
     SharedVehicleOperatorConfig, ChargingInfrastructureConfig
@@ -40,22 +43,6 @@ import sys
 from configparser import ConfigParser
 import os
 
-# scenario_1: [1.0,0.0,0.0,0.0]
-# scenario_2: [0.75,0.25,0.0,0.0]
-# scenario_3: [0.50,0.50,0.0,0.0]
-# scenario_4: [0.25,0.75,0.0,0.0]
-# scenario_5: [0.0,1.0,0.0,0.0]
-SHARES = [[0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325],
-          [0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325],
-          [0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325],
-          [0.247, 0.237, 0.19, 0.325]]
-fleet_size = 500
-scenario = 5
-print(f'scenario={scenario}')
-sim_days = 1
-scenario_name = f'scenario_{scenario}_{fleet_size}'
-USER_SHARES = SHARES[scenario - 1]
-
 # Change working directory to path of main.py
 working_dir = Path(__file__).parent
 os.chdir(working_dir)
@@ -86,8 +73,8 @@ env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 global_config = Configuration.init(spatial_res, temporal_res, daily_res)
 
 # Read Shared Vehicle Config and add to Global Config File
-for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]):
-    vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter"]
+for idx, vehicle_type in enumerate(["SHARED_CAR"]):
+    vehicle_type_classes = ["SharedCar"]
     price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
     max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
     energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
@@ -95,18 +82,15 @@ for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK
     max_available_seats = parser.getint(vehicle_type, "MAX_AVAILABLE_SEATS")
     max_walking_distance = parser.getint(vehicle_type, "WALKING_DISTANCE")
     daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
+    initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
+
     vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats,
-                       max_walking_distance, daily_total_cost)
+                       max_walking_distance, daily_total_cost, initial_SoC)
     global_config.add_vehicle_config(vehicle_type_classes[idx], vc)
 
 # Read EV penetration for RideHailingCars
 EV_penetration = parser.getfloat('SUPPLY', "EV_penetration")
 AV_penetration = parser.getfloat('SUPPLY', "AV_penetration")
-
-# Read drivers availability distribution
-drivers_availability = parser.get('SUPPLY', "RH_availability").split(',')
-drivers_availability = [round(float(x) * fleet_size * (1 - AV_penetration)) for x in drivers_availability]
-global_config.add_driver_availability_vector(drivers_availability)
 
 # Read ride-hailing related parameters
 driver_payment_share = parser.getfloat('RIDE_HAILING', "DRIVER_PAYMENT_SHARE")
@@ -118,12 +102,14 @@ mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
 mode_choice_available_modes = parser.get("MODE_CHOICE_MODEL", "available_modes")
 mode_choice_available_modes = mode_choice_available_modes.split(',')
+AV_trust = parser.get("MODE_CHOICE_MODEL", "AV_trust").split(',')
+AV_trust = [float(x) for x in AV_trust]
 
 mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary, mode_choice_available_modes,
                       mode_choice_model_path)
 global_config.add_mode_choice_config(mc)
 
-# Read Shared Vehice Operator Config
+# Read Shared Vehicle Operator Config
 # recharge_threshold = parser.getfloat("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD")
 recharge_threshold = parser.get("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD").split(',')
 recharge_threshold = [float(x) / 100 for x in recharge_threshold]
@@ -143,15 +129,6 @@ svoc = SharedVehicleOperatorConfig(recharge_threshold, charging_station_power,
                                    base_capacity, operations_start, operations_duration,
                                    vehicle_relocation_velocity)
 global_config.add_shared_vehicle_operator_config(svoc)
-
-# Read Charging Infrastructure Config
-charging_location_list = parser.get("Charging_Infrastructure", "BASE_REGIONS").split(',')
-charging_power_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_POWER").split(',')
-charging_power_list = [float(x) for x in charging_power_list]
-charging_capacity_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_CAPACITY").split(',')
-charging_capacity_list = [float(x) for x in charging_capacity_list]
-sic = ChargingInfrastructureConfig(charging_location_list, charging_power_list, charging_capacity_list)
-global_config.add_charging_infrastructure_config(sic)
 
 # Output Configuration
 store_results = parser.getboolean("OUTPUT", "persist_results")
@@ -194,7 +171,7 @@ file_handler.setLevel(log_level)
 # Add Custom Init Filters (which work without the ENV obj)
 cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
 logger.addFilter(cf_init)
-logger.addHandler(file_handler)
+# logger.addHandler(file_handler)
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -261,9 +238,9 @@ dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure")
 distance_matrix = dmi.load_distance_matrix()
 
 
-def run_single_simulation(start_time=0, end_time=20, n_cars=0, n_scooter=0, n_kick_scooter=0, seed=42, phase=1,
-                          substitution=0.1,
-                          pop_prob=0.0, allocation=None, EV_penetration=1.0, AV_penetration=1, returnDataFrame=False):
+def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=1, AV_trust=AV_trust,
+                          pop_prob=0.0, allocation=None, EV_penetration=1.0, AV_penetration=1, returnDataFrame=False,
+                          charging_capacity=20, charging_power=50):
     """
     :param start_time:
     :param end_time:
@@ -312,9 +289,14 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=0, n_scooter=0, n_ki
                                  'ride_hailing': RideHailingAllocationEngine(env)}
     ### Technology penetration
     global_config.add_tech_penetration(EV_penetration, AV_penetration)
+    global_config.add_AV_trust(AV_trust)
+
+    # Read drivers availability distribution
+    drivers_availability = parser.get('SUPPLY', "RH_availability").split(',')
+    drivers_availability = [round(float(x) * n_cars * (1 - AV_penetration)) for x in drivers_availability]
+    global_config.add_driver_availability_vector(drivers_availability)
 
     # Vehicle Choice Model
-    # TODO: define separately for Ride-hailing
     if mode_choice_strategy == "substitution":
         vehicle_choice_model = OnlyCarVehicleChoiceBehavior(['RideHailingCar', 'AutonomousCar'])
 
@@ -325,6 +307,16 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=0, n_scooter=0, n_ki
     population_factory = PopulationFactory(pop_prob, seed)
 
     # Charging Infrastructure
+    charging_location_list = parser.get("Charging_Infrastructure", "BASE_REGIONS").split(',')
+    ### Activate it if there are specific capacity for charging stations
+    # charging_power_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_POWER").split(',')
+    # charging_power_list = [float(x) for x in charging_power_list]
+    # charging_capacity_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_CAPACITY").split(',')
+    # charging_capacity_list = [float(x) for x in charging_capacity_list]
+    charging_power_list = list(np.zeros(len(charging_location_list)) + charging_power)
+    charging_capacity_list = list(np.zeros(len(charging_location_list)) + charging_capacity)
+    sic = ChargingInfrastructureConfig(charging_location_list, charging_power_list, charging_capacity_list)
+    global_config.add_charging_infrastructure_config(sic)
     charging_infrastructure = ChargingInfrastructure(env, charging_location_list, charging_power_list,
                                                      charging_capacity_list, reset=True)
 
@@ -438,8 +430,11 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=0, n_scooter=0, n_ki
         # Persist Results
         result = {
 
-            "n_cars_ride_hailing_fleet": [n_cars],
+            "fleet_size": [n_cars],
+            "charging_capacity": [charging_capacity],
+            "charging_power": [charging_power],
             "pop_prob": [pop_prob],
+            "AV_trust": [AV_trust],
             "AV_penetration": [AV_penetration],
             "seed": [seed],
             "phase": [phase],
@@ -494,41 +489,150 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=0, n_scooter=0, n_ki
                 func_objective['ride_hailing'])
 
 
-# TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
-# a = run_single_simulation(end_time=1400, n_cars=fleet_size, n_scooter=0, n_kick_scooter=0, seed=42, substitution=0.1,
-#                           pop_prob=USER_SHARES, EV_penetration=TECH_SHARE[1],
-#                           AV_penetration=TECH_SHARE[1], returnDataFrame=False)
+TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
+USER_SHARES = [0.247, 0.237, 0.19, 0.325]
+random.seed(42)
+seeds = random.sample(range(1000), 10)
+phase = 2
+for seed in seeds[1:]:
+    a = run_single_simulation(end_time=1400 * 5, n_cars=500, seed=seed, phase=phase,
+                              pop_prob=USER_SHARES, EV_penetration=TECH_SHARE[phase], charging_capacity=20,
+                              AV_penetration=TECH_SHARE[phase], returnDataFrame=False, charging_power=22)
 
-# print(a)
+    print(a)
 
-### Random Variables for our Monte Carlo Run
+
+# Simulation Experiments
+# Random Variables for our Monte Carlo Run
 
 
 random.seed(42)
-seeds = random.sample(range(200), 1)
+seeds = random.sample(range(1000), 10)
 
 # Store all simulation results in this data frame
 all_simulations = pd.DataFrame()
 
-# End Time
-T = 1440 * sim_days
-# Real Run
-pop_probs = [0.0, 1.0]
-sub_bandwidths = [0.0, 0.05, 0.1, 0.2]
+# scenario_1: [1.0,0.0,0.0,0.0]
+# scenario_2: [0.75,0.25,0.0,0.0]
+# scenario_3: [0.50,0.50,0.0,0.0]
+# scenario_4: [0.25,0.75,0.0,0.0]
+# scenario_5: [0.0,1.0,0.0,0.0]
+SHARES = [[0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325],
+          [0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325],
+          [0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325], [0.247, 0.237, 0.19, 0.325],
+          [0.247, 0.237, 0.19, 0.325]]
+fleet_size = 500
+scenario = 5
+sim_days = 1
+scenario_name = f'charging_capacity_analysis'  # AV_trust_analysis, population_analysis, fleet_size_analysis, charging_capacity_analysis
+USER_SHARES = SHARES[scenario - 1]
 TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
 phases = [0, 1, 2, 3]
-for idx, seed in enumerate(seeds):
-    for phase in [phases[1]]:
-        sim_res = run_single_simulation(end_time=T, n_cars=fleet_size, n_scooter=0, n_kick_scooter=0, seed=seed,
-                                        phase=phase,
-                                        substitution=0.1, pop_prob=USER_SHARES,
-                                        EV_penetration=TECH_SHARE[phase], AV_penetration=TECH_SHARE[phase],
-                                        returnDataFrame=True)
-        all_simulations = pd.concat([all_simulations, sim_res], axis=0)
-        logging.error("seed: {}, idx: {}".format(seed, idx),
-                      extra={"clazz": "main", "oid": ""})
 
-    # After each seed save
-    all_simulations.to_csv(Path(output_folder, scenario_name + '_all_simulation_results.csv'), index=False)
+# Real Run
 
-print("FINISHED")
+if __name__ == '__main__':
+    T = 1440 * sim_days
+    ### This is for analysing different proportion of user population
+    # for pop_type in range(4):
+    #     for user_share in range(11):
+    #
+    #         POP_PROB = [(10 - user_share) / 3 * 0.1, (10 - user_share) / 3 * 0.1, (10 - user_share) / 3 * 0.1,
+    #                     (10 - user_share) / 3 * 0.1]
+    #         POP_PROB[pop_type] = user_share * 0.1
+    #         for phase in phases:
+    #             data = []
+    #             for idx, seed in enumerate(seeds):
+    #                 data.append({'end_time': T, 'n_cars': fleet_size, 'seed': seed,
+    #                              'phase': phase, 'pop_prob': POP_PROB,
+    #                              'EV_penetration': TECH_SHARE[phase],
+    #                              'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True})
+    #             sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+    #                            mp_context=mp.get_context('spawn'))
+    #             for i in range(len(sim_res)):
+    #                 all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+    #             logging.error("seed: {}, idx: {}".format(seed, idx),
+    #                           extra={"clazz": "main", "oid": ""})
+    #
+    #             # After each seed save
+    #             all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+    #
+    # print("FINISHED")
+
+    ### This is for analysing different AV_trust values
+    # POP_PROB = SHARES[0]
+    # # for pop_type in range(4):
+    # for a_1 in [2, 4, 6, 8]:
+    #     for a_2 in [2, 4, 6, 8]:
+    #         for a_3 in [2, 4, 6, 8]:
+    #             for a_4 in [2, 4, 6, 8]:
+    #                 # AV_TRUST = [(10 - av_trust) / 3, (10 - av_trust) / 3, (10 - av_trust) / 3,
+    #                 #             (10 - av_trust) / 3]
+    #                 # AV_TRUST[pop_type] = av_trust
+    #                 AV_TRUST = [a_1, a_2, a_3, a_4]
+    #                 for phase in phases:
+    #                     data = []
+    #                     for idx, seed in enumerate(seeds):
+    #                         data.append({'end_time': T, 'n_cars': fleet_size, 'seed': seed,
+    #                                      'phase': phase, 'pop_prob': POP_PROB, "AV_trust": AV_TRUST,
+    #                                      'EV_penetration': TECH_SHARE[phase],
+    #                                      'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True})
+    #                     sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+    #                                    mp_context=mp.get_context('spawn'))
+    #                     for i in range(len(sim_res)):
+    #                         all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+    #                     logging.error("seed: {}, idx: {}".format(seed, idx),
+    #                                   extra={"clazz": "main", "oid": ""})
+    #
+    #                     # After each seed save
+    #                     all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'),
+    #                                            index=False)
+    #
+    # print("FINISHED")
+
+    ### This is for analysing different fleet sizes
+
+    # POP_PROB = SHARES[0]
+    # for fleet_size in [200, 300, 400, 500, 600, 700, 800, 1000]:
+    #     for phase in phases:
+    #         data = []
+    #         for idx, seed in enumerate(seeds):
+    #             data.append({'end_time': T, 'n_cars': fleet_size, 'seed': seed,
+    #                          'phase': phase, 'pop_prob': POP_PROB,
+    #                          'EV_penetration': TECH_SHARE[phase],
+    #                          'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True})
+    #         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+    #                        mp_context=mp.get_context('spawn'))
+    #         for i in range(len(sim_res)):
+    #             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+    #         logging.error("seed: {}, idx: {}".format(seed, idx),
+    #                       extra={"clazz": "main", "oid": ""})
+    #
+    #         # After each seed save
+    #         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+    #
+    # print("FINISHED")
+
+    ### This is for analysing different charging power
+    # fleet_size = 500
+    # POP_PROB = SHARES[0]
+    # for charging_power in [5, 10, 22, 50]:
+    #     for phase in phases:
+    #         data = []
+    #         for idx, seed in enumerate(seeds):
+    #             data.append({'end_time': T, 'n_cars': fleet_size, 'seed': seed,
+    #                          'phase': phase, 'pop_prob': POP_PROB,
+    #                          'EV_penetration': TECH_SHARE[phase],
+    #                          'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True,
+    #                          'charging_power': charging_power})
+    #         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+    #                        mp_context=mp.get_context('spawn'))
+    #         for i in range(len(sim_res)):
+    #             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+    #         logging.error("seed: {}, idx: {}".format(seed, idx),
+    #                       extra={"clazz": "main", "oid": ""})
+    #
+    #         # After each seed save
+    #         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+    #
+    # print("FINISHED")

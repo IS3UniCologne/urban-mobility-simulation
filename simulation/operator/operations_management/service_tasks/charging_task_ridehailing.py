@@ -70,7 +70,8 @@ class ChargingTaskRidehailing(ServiceTask):
             yield self._env.process(vehicle.relocate(relocation_route, relocation_duration_per_vehicle))
 
             if vehicle._electric_vehicle:
-                vehicle._state = VehicleState.PRE_SERVICE
+                vehicle.waiting_for_charging()
+
                 with self._charging_station.plugs.request() as req:
                     yield req
 
@@ -79,13 +80,16 @@ class ChargingTaskRidehailing(ServiceTask):
 
                     # Charge Vehicle
                     vehicle_charging_power = Configuration.instance().shared_vehicle_operator_config.charging_station_power
+                    charging_power = min(vehicle_charging_power, self._charging_station.power)
                     # Note: See text regarding linearization
                     # *60 as state of charge is in kWh => kWmin
-                    charging_duration_per_vehicles = ((vehicle._max_state_of_charge / vehicle_charging_power)*60)/len(selected_vehicles_to_charge)
+                    charging_duration_per_vehicles = (vehicle.max_state_of_charge - vehicle.current_state_of_charge) / charging_power*60
 
                     yield self._env.process(vehicle.charge(charging_duration_per_vehicles))
             else:
-                yield self._env.process(vehicle.charge(charging_time=0))
+                vehicle._state = VehicleState.PRE_SERVICE
+                vehicle.plug_to_charging_station()
+                yield self._env.process(vehicle.charge(charging_time=5))
             # Unplug Vehicle from Charging Station
             vehicle.unplug_from_charging_station()
         # Notify all

@@ -48,9 +48,9 @@ class TransportationAlternativeRideHailing:
 
     def set_autonomous_vehicle(self):
         if self._vehicle_type == 'AutonomousCar':
-            return 0
-        else:
             return 1
+        else:
+            return 0
 
     @property
     def environment(self):

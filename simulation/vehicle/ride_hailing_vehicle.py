@@ -9,6 +9,7 @@ from simulation.environment.position import Position
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
+from ..helper.configuration.configuration import Configuration
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
 
 
@@ -44,7 +45,8 @@ class RideHailingVehicle(Vehicle, ABC):
 
         # State Of Charge
         self._max_state_of_charge = max_state_of_charge # in kWh
-        self._current_state_of_charge = max_state_of_charge * 0.80 # in kWh #TODO: hard coded
+        initial_state_of_charge_percentage = Configuration.instance()._vehicle_configs['SharedCar'].initial_SoC
+        self._current_state_of_charge = max_state_of_charge * initial_state_of_charge_percentage # in kWh #
         self._energy_consumption = energy_consumption # in kWh/km
         if not self._electric_vehicle:
             self._energy_consumption = energy_consumption * 0.8 #TODO: hard coded
@@ -240,11 +242,12 @@ class RideHailingVehicle(Vehicle, ABC):
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def reserve(self, user):
+        previous_state = self.state
         self.state = VehicleState.RESERVED
 
         self._reserved_for_user = user
 
-        logging.debug(f'Reserved to {user.id}.',
+        logging.debug(f'Reserved to {user.id} and previous state was {previous_state}.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def has_enough_state_of_charge(self, distance):
@@ -392,6 +395,14 @@ class RideHailingVehicle(Vehicle, ABC):
 
         logging.debug(f'Vehicle relocated from {old_position} to {self._position} in {time} minutes.',
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
+    def waiting_for_charging(self):
+        self._state = VehicleState.PRE_SERVICE
+
+        # self._charging_station_plugged_in.succeed()
+        # self._charging_station_plugged_in = self._env.event()
+
+        logging.debug(f'Vehicle started waiting in the queue.',
+                      extra={"clazz": self.__class__.__name__, "oid": self._id})
 
     def plug_to_charging_station(self):
         self._state = VehicleState.CHARGING
@@ -413,6 +424,7 @@ class RideHailingVehicle(Vehicle, ABC):
 
     def charge(self, charging_time, amount = 0):
         # Notify charging
+        self._state = VehicleState.CHARGING
         self._charging_station_charging_started.succeed()
         self._charging_station_charging_started = self._env.event()
 
@@ -421,7 +433,7 @@ class RideHailingVehicle(Vehicle, ABC):
 
         # Update Current State of Charge
         self._current_state_of_charge += amount
-        self.charging_costs += amount*0.23 # TODO: hard coded
+        self.charging_costs += amount * 0.23 # TODO: hard coded
 
         # Charge
         yield self._env.timeout(charging_time)

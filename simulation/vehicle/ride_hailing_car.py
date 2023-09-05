@@ -52,11 +52,12 @@ class RideHailingCar(RideHailingVehicle):
         self._shift_end_time = 0
         self._driver_cluster = 5 #TODO We need to generate it later using our data
         self._driver_payment_share = Configuration.instance().get_driver_payment_share()
-        self._env.process(self.run_shift_check_process())
         self._state = VehicleState.OFFLINE #TODO: update it using the data
         self._online_event = self._env.event()
         self._offline_event = self._env.event()
         RideHailingCar.ride_hailing_car_id += 1
+
+        self._env.process(self.run_shift_check_process())
     @property
     def total_earn(self):
         return self._total_earn
@@ -185,7 +186,7 @@ class RideHailingCar(RideHailingVehicle):
                 if go_online:
                     self.get_online()
             # If the driver is online we check the decision of getting offline
-            else:
+            elif self.state in [VehicleState.PARKING]:
                 self.update_offline_duration()
                 go_offline = self.decide_to_get_offline()
                 if go_offline:
@@ -199,4 +200,4 @@ class RideHailingCar(RideHailingVehicle):
                               | self._charging_station_plugged_out
                         self.get_offline()
             # we check driver decisions every one hour
-            yield self._env.timeout(60)
+            yield self._env.timeout(15)

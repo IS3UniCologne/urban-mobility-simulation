@@ -15,6 +15,6 @@ class ChargingStation:
         self.plugs = simpy.PriorityResource(self.env, capacity=capacity)
         self.id = id
         self.location = location
-        self.power = power  # kwh/min
+        self.power = power  # kwh/hr
         self.queue = []
         # self.position = self.location.find_zone(zones)
