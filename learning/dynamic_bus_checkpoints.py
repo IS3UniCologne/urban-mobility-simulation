@@ -216,6 +216,8 @@ class DynamicBusCheckpointProblem(LearningInterface):
                           extra={"clazz": self.__class__.__name__, "oid": self.bus._id})
 
         if self._unreachable_destination:
+            if self.reached_destination:
+                pass
             logging.info(f'Episode is cancelled, destination is unreachable within time limit',
                          extra={"clazz": self.__class__.__name__, "oid": ""})
             self.duration = None
@@ -318,12 +320,13 @@ class DynamicBusCheckpointProblem(LearningInterface):
             raise BadAction
 
     def _handle_bad_action(self, action):
-        # with 50/50 reject the bad action or execute it with penalty
-        reject = True if np.random.rand() <= .5 else False
-        if reject:
-            return self._problem_config.penalty_goingback
-        else:
-            raise ForbiddenAction
+        # # with 50/50 reject the bad action or execute it with penalty
+        # reject = True if np.random.rand() <= .5 else False
+        # if reject:
+        #     return self._problem_config.penalty_goingback
+        # else:
+        #     raise ForbiddenAction
+        return 0
 
     def _get_direction(self, destination: GeodesicPosition):
         return self._geodesic_env.get_bearing(*self.bus.position.getExactLocation(),
