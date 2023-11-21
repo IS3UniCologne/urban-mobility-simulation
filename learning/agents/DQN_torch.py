@@ -216,6 +216,8 @@ class DQN(RLAgent):
                 self._train()
 
             if finished:
+                # if self.problem.reached_destination:
+                #     print(self.problem.reached_destination)
                 if self._episode >= self._min_experience and \
                         (self._episode % self._target_net_update_threshold == 0 or self._tau is not None):
                     # propagate parameters to target network, either every n-th episode or incrementally every episode
