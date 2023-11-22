@@ -50,9 +50,8 @@ class RideHailingCar(RideHailingVehicle):
         self._offline_duration = 0
         self._shift_start_time = None
         self._shift_end_time = 0
-        self._driver_cluster = 5 #TODO We need to generate it later using our data
         self._driver_payment_share = Configuration.instance().get_driver_payment_share()
-        self._state = VehicleState.OFFLINE #TODO: update it using the data
+        self._state = VehicleState.OFFLINE
         self._online_event = self._env.event()
         self._offline_event = self._env.event()
         RideHailingCar.ride_hailing_car_id += 1

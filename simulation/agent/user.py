@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 from .agent import Agent
 from ..environment.geodesic_position import GeodesicPosition
 from ..environment.position import Position
@@ -450,8 +450,15 @@ class RideHailingUser(Agent, DriverInterface):
 
         # Vehicle Choice Model
         self._vehicle_choice_behavior = vehicle_choice_behavior
-        self._mode_choice_coefficients = Configuration.instance().MoD_coefficients[population_type.value]
-        self._AV_truster = Configuration.instance().AV_trust[population_type.value]
+        # # use it if you want to consider deterministic coefficients
+        # self._mode_choice_coefficients = Configuration.instance().MoD_coefficients[population_type.value]
+
+        # # use it if you want to consider a random coefficient between the lower and the upper bounds
+        self._mode_choice_coefficients = Configuration.instance().generate_mode_choice_coefficient \
+            (population_type.value)
+        # # use it if you want to consider deterministic trust values
+        # self._AV_truster = Configuration.instance().AV_trust[population_type.value]
+        self._AV_truster = Configuration.instance().generate_AV_trust(population_type.value)
 
         # Events
         self._transportation_alternatives_received = self._env.event()
@@ -493,7 +500,7 @@ class RideHailingUser(Agent, DriverInterface):
             ### TODO: Define a probability rejection instead of a strict waiting_threshold
             ## Retrieve available transportation alternatives
             available_transportation_alternatives = yield self._env.process(self.search_for_alternatives())
-            # Always complete the list #TODO: to be updated
+            # Always complete the list
             # available_transportation_alternatives = self.\
             #     complete_available_transportation_alternatives(available_transportation_alternatives)
             # Select Alternative
@@ -522,7 +529,6 @@ class RideHailingUser(Agent, DriverInterface):
             # We do not yield the following process again
             self._env.process(self.wait_for_vehicle(vehicle_allocation))
             yield self._env.process(vehicle_allocation.vehicle.move_to_pick_up_position(vehicle_allocation))
-            # TODO: define the driving process as a function of the vehicle
             yield self._env.process(self.start_driving(vehicle_allocation))
             self._payment_service.pay_for_fulfilled_transportation_task(self, self._transport_task,
                                                                         selected_transportation_alternative)
@@ -652,10 +658,9 @@ class RideHailingUser(Agent, DriverInterface):
             return
         self.get_utility_for_transportation_alternative(available_transportation_alternatives)
         utilities = np.append(np.array([alt.utility for alt in available_transportation_alternatives.
-                                                    transportation_alternatives]), np.zeros(1))
+                                       transportation_alternatives]), np.zeros(1))
 
         # Here we consider the rejection of alternatives: if the utilities are lower than the based alternatives' utility
-        # TODO: specify why the user is missed.
 
         # Calculate choice probabilities using the logit formula
         choice_probabilities = np.exp(utilities) / np.sum(np.exp(utilities))
@@ -667,7 +672,7 @@ class RideHailingUser(Agent, DriverInterface):
         chosen_mode_index = np.argmax(normalized_probabilities)
 
         # if all(x < 10 for x in utilities):
-        if chosen_mode_index == len(utilities)-1:
+        if chosen_mode_index == len(utilities) - 1:
             # self._transportation_alternatives_not_found.succeed()
             self._transportation_alternatives_refused.succeed()
             return
@@ -682,7 +687,6 @@ class RideHailingUser(Agent, DriverInterface):
         #
         # selected_transportation_alternative = sorted_alternative_based_on_utility[0]
         selected_transportation_alternative.vehicle._suggested = True
-
 
         # if self._population_type == PopulationType.TECHNOLOGICALLY_SKEPTICAL:
         #     if not available_transportation_alternatives.transportation_alternatives[0].technology_skeptical:
@@ -725,7 +729,6 @@ class RideHailingUser(Agent, DriverInterface):
             return None
 
     def wait_for_vehicle(self, vehicle_assignment: VehicleAllocation):
-        # TODO: fix this, it does not wait
         # Wait for event
         # yield self._arrived_at_pick_up_position
 

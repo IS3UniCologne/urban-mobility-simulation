@@ -49,7 +49,7 @@ class RideHailingVehicle(Vehicle, ABC):
         self._current_state_of_charge = max_state_of_charge * initial_state_of_charge_percentage # in kWh #
         self._energy_consumption = energy_consumption # in kWh/km
         if not self._electric_vehicle:
-            self._energy_consumption = energy_consumption * 0.8 #TODO: hard coded
+            self._energy_consumption = energy_consumption * Configuration.instance()._vehicle_configs['SharedCar'].EV_relative_energy_consumption
 
         #### Vehicle Events
         # Driving Events
@@ -88,6 +88,10 @@ class RideHailingVehicle(Vehicle, ABC):
         # Estimation information for finishing the current task
         self._estimated_completion_time = 0
         self._destination = None
+
+        #costs
+        self._cost_km = Configuration.instance()._vehicle_configs['SharedCar'].cost_per_km
+        self._charging_cost_per_kWh = Configuration.instance()._vehicle_configs['SharedCar'].charging_cost_per_kWh
 
         RideHailingVehicle.ride_hailing_vehicle_id += 1
 
@@ -183,7 +187,7 @@ class RideHailingVehicle(Vehicle, ABC):
         except:
             self._update_positions(route_segment.destination.position)
         self._update_state_of_charge(distance)
-        self.travel_costs += distance/1000*0.53 #TODO: hard coded
+        self.travel_costs += distance/1000 * self._cost_km
         self.estimated_completion_time = 0
 
     def move_to_pick_up_position(self, vehicle_assignment: VehicleAllocation):
@@ -433,7 +437,7 @@ class RideHailingVehicle(Vehicle, ABC):
 
         # Update Current State of Charge
         self._current_state_of_charge += amount
-        self.charging_costs += amount * 0.23 # TODO: hard coded
+        self.charging_costs += amount * self._charging_cost_per_kWh
 
         # Charge
         yield self._env.timeout(charging_time)

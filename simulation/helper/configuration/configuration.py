@@ -1,5 +1,6 @@
 from enum import Enum
 import numpy as np
+import random
 
 
 class TemporalBucket(Enum):
@@ -41,13 +42,13 @@ class Configuration:
         return Configuration.__instance
 
     @staticmethod
-    def init(spatial_resolution, temporal_resolution, daily_resolution):
+    def init(spatial_resolution, temporal_resolution, daily_resolution, city):
         """ Static access method. """
         if Configuration.__instance == None:
-            Configuration(spatial_resolution, temporal_resolution, daily_resolution)
+            Configuration(spatial_resolution, temporal_resolution, daily_resolution, city)
         return Configuration.__instance
 
-    def __init__(self, spatial_resolution: int, temporal_resolution: int, daily_resolution: int):
+    def __init__(self, spatial_resolution: int, temporal_resolution: int, daily_resolution: int, city: str):
         """ Virtually private constructor. """
         if Configuration.__instance != None:
             raise Exception("This class is a singleton!")
@@ -58,6 +59,7 @@ class Configuration:
         self._spatial_resolution = SpatialResolution(spatial_resolution)
         self._temporal_resolution = TemporalBucket(temporal_resolution)
         self._daily_resolution = DailyResolution(daily_resolution)
+        self._city = city
 
         self._store_results = False
         self._output_path = ''
@@ -72,22 +74,34 @@ class Configuration:
 
         # [cst, price, waiting_time, EV, trip_duration, cst_AV, cst_HV, trust_AV, trust_HV]
         MoD_coefficients = np.array([[-0.273671504, -0.353911557, -0.103573505, -1.128132785, 0.150429623,
-                                            -0.576113819, 7.297866296, 0.631438368, -1.011643365],
-                                           [-0.318885388, -1.281672341, -0.454985255, 0.123860882, 1.060810562,
-                                            5.74223911, 12.76153448, 0.579730247, -0.746119133],
-                                           [-0.529871517, -0.176603082, -0.624049182, -0.094335042, -0.07608058,
-                                            6.357501057, 3.73756425, 1.017193094, 1.048363966],
-                                           [0.00, -0.228709544, -0.161649449, -0.069096605, 0.133775179, -0.802892154,
-                                            7.325820705, 0.729678667, -0.735175789]])  # TODO: read it from a dataet
+                                      -0.576113819, 7.297866296, 0.631438368, -1.011643365],
+                                     [-0.318885388, -1.281672341, -0.454985255, 0.123860882, 1.060810562,
+                                      5.74223911, 12.76153448, 0.579730247, -0.746119133],
+                                     [-0.529871517, -0.176603082, -0.624049182, -0.094335042, -0.07608058,
+                                      6.357501057, 3.73756425, 1.017193094, 1.048363966],
+                                     [0.00, -0.228709544, -0.161649449, -0.069096605, 0.133775179, -0.802892154,
+                                      7.325820705, 0.729678667, -0.735175789]])  # TODO: read it from a dataet
+        self._MoD_coefficients_ci_lower = np.array(
+            [[-0.670, -0.463, -0.198, -1.721, 0.083, -1.960, 5.347, 0.409, -1.415],
+             [-0.695, -1.702, -0.601, -0.588, 0.278, -0.573, 6.894, -0.175, -1.747],
+             [-0.941, -0.320, -0.805, -0.917, -0.205, 3.597, 0.648, 0.498, 0.447],
+             [0.000, -0.307, -0.237, -0.425, 0.068, -2.626, 5.734, 0.330, -1.036]])
+        self._MoD_coefficients_ci_upper = np.array([[0.122, -0.245, -0.009, -0.535, 0.218, 0.808, 9.248, 0.853, -0.608],
+                                                    [0.057, -0.862, -0.309, 0.835, 1.844, 12.057, 18.629, 1.335, 0.254],
+                                                    [-0.119, -0.033, -0.443, 0.729, 0.053, 9.118, 6.827, 1.537, 1.650],
+                                                    [0.000, -0.150, -0.086, 0.286, 0.199, 1.019, 8.917, 1.129, -0.434]])
         self._MoD_p_values = np.array([[0.00, 0.03, 0.00, 0.00, 0.42, 0.00, 0.00, 0.00, 0.18],
                                        [0.00, 0.00, 0.73, 0.01, 0.08, 0.00, 0.13, 0.14, 0.10],
                                        [0.02, 0.00, 0.82, 0.25, 0.00, 0.02, 0.00, 0.00, 0.01],
                                        [0.00, 0.00, 0.70, 0.00, 0.39, 0.00, 0.00, 0.00, 0.00]])
         MoD_significant = self._MoD_p_values.copy()
+
         MoD_significant[MoD_significant <= 0.2] = 1
-        MoD_significant[MoD_significant != 1] = 0
+        MoD_significant[MoD_significant != 1] = 1
 
         self._MoD_coefficients = MoD_coefficients * MoD_significant
+
+        self._MoD_coefficient_interval_adjuster = None
 
         self._AV_trust = None
 
@@ -103,10 +117,21 @@ class Configuration:
 
         self._transit_agent_config = None
 
+        self._distance_threshold_to_user = None
+
+        self._driver_payment_share = None
+
+        self._AV_price_reduction = None
+
+        self._price_params = None
 
     @property
     def spatial_resolution(self):
         return self._spatial_resolution
+
+    @property
+    def city(self):
+        return self._city
 
     @property
     def spatial_resolution_value(self):
@@ -140,17 +165,25 @@ class Configuration:
     def fleet_state_file(self):
         return self._fleet_state_file
 
-    def add_ride_hailing_info(self, driver_payment_share):
+    def add_ride_hailing_info(self, driver_payment_share, AV_price_reduction, price_params):
         self._driver_payment_share = driver_payment_share
+        self._AV_price_reduction = AV_price_reduction
+        self._price_params = price_params
 
     def get_driver_payment_share(self):
         return self._driver_payment_share
 
+    def add_distance_threshold_to_user(self, distance):
+        self._distance_threshold_to_user = distance
+
     def get_distance_threshold_to_user(self):
-        return 10000
+        return self._distance_threshold_to_user
 
     def get_AV_price_reduction(self):
-        return 0.9
+        return self._AV_price_reduction
+
+    def get_price_parameters_ride_hailing(self):
+        return self._price_params
 
     def add_tech_penetration(self, EV_penetration, AV_penetration):
         self._EV_penetration = EV_penetration
@@ -183,6 +216,24 @@ class Configuration:
     def add_user_config(self, user_config):
         self._user_config = user_config
 
+    def generate_mode_choice_coefficient(self, pop_value):
+
+        mode_choice_coefficients_ci_lower = self.ci_lower_MoD_coefficients[pop_value]
+        mode_choice_coefficients_ci_upper = self.ci_upper_MoD_coefficients[pop_value]
+        interval_adjuster = self.MoD_coefficient_interval_adjuster
+        adjuster = (mode_choice_coefficients_ci_upper - mode_choice_coefficients_ci_lower) / 2 * interval_adjuster
+        mode_choice_coefficients_ci_lower = mode_choice_coefficients_ci_lower + adjuster
+        mode_choice_coefficients_ci_upper = mode_choice_coefficients_ci_upper - adjuster
+        mode_choice_coefficients = random.uniform(mode_choice_coefficients_ci_lower,
+                                                  mode_choice_coefficients_ci_upper)
+        return mode_choice_coefficients
+
+    def generate_AV_trust(self, pop_value):
+        trust_value_lower = self.AV_trust[pop_value] - 0.5
+        trust_value_upper = self.AV_trust[pop_value] + 0.5
+        trust_value = random.uniform(trust_value_lower,
+                                                  trust_value_upper)
+        return trust_value
     @property
     def user_config(self):
         return self._user_config
@@ -192,11 +243,26 @@ class Configuration:
         return self._MoD_coefficients
 
     @property
+    def ci_lower_MoD_coefficients(self):
+        return self._MoD_coefficients_ci_lower
+
+    @property
+    def ci_upper_MoD_coefficients(self):
+        return self._MoD_coefficients_ci_upper
+
+    @property
+    def MoD_coefficient_interval_adjuster(self):
+        return self._MoD_coefficient_interval_adjuster
+
+    @property
     def AV_trust(self):
         return self._AV_trust
 
     def add_AV_trust(self, AV_trust):
         self._AV_trust = np.array(AV_trust)
+
+    def add_MoD_coefficient_interval_adjuster(self, MoD_coefficient_interval_adjuster):
+        self._MoD_coefficient_interval_adjuster = MoD_coefficient_interval_adjuster
 
     def add_shared_vehicle_operator_config(self, shared_mobility_ops_config):
         self._shared_vehicle_operator_config = shared_mobility_ops_config
@@ -243,6 +309,14 @@ class Configuration:
     def get_recharging_threshold(self):
         return self._recharging_threshold
 
+    @property
+    def MoD_coefficients_ci_lower(self):
+        return self._MoD_coefficients_ci_lower
+
+    @property
+    def MoD_coefficients_ci_upper(self):
+        return self._MoD_coefficients_ci_upper
+
 
 class VehicleConfig:
     def __init__(self, price_per_min, max_state_of_charge, energy_consumption,
@@ -255,6 +329,9 @@ class VehicleConfig:
         self.max_walking_distance = max_walking_distance
         self.daily_total_cost = daily_total_cost
         self.initial_SoC = initial_SoC
+        self.EV_relative_energy_consumption = 0.8
+        self.cost_per_km = 0.53
+        self.charging_cost_per_kWh = 0.23
 
 
 class ModeChoiceConfig:

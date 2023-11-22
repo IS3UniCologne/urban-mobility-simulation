@@ -49,7 +49,7 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
 
         # No Vehicle Allocation
         if selected_vehicle.reserved_for_user != user:
-            print(selected_vehicle.reserved_for_user, user)
+            # print(selected_vehicle.reserved_for_user, user)
             return None
 
         # Vehicle was successfully allocated
