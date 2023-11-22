@@ -130,9 +130,9 @@ class World:
                     # Determine Consumer Type
                     population_type = self._population_factory.generatePopulationTypeRideHailing()
 
-                    new_user = user.RideHailingUser(fleet, origin_position, task, self._search_engine['ride_hailing'],
-                                                    self._payment_engine['ride_hailing'],
-                                         self._vehicle_assignment_engine['ride_hailing'], self._vehicle_choice_behavior,
+                    new_user = user.RideHailingUser(fleet, origin_position, task, self._search_engine[f'ride_hailing_{fleet}'],
+                                                    self._payment_engine[f'ride_hailing_{fleet}'],
+                                         self._vehicle_assignment_engine[f'ride_hailing_{fleet}'], self._vehicle_choice_behavior,
                                          population_type, self._env)
                     logging.debug(f"Ride-hailing user {new_user.user_id, population_type} request a vehicle at {self._env.now}.",
                                   extra={"clazz": self.__class__.__name__, "oid": " "})
