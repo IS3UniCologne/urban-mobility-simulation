@@ -24,6 +24,10 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
         self._driver_payment_share = Configuration.instance().get_driver_payment_share()
         self._AV_price_reduction = Configuration.instance().get_AV_price_reduction()
 
+        self._price_entering = Configuration.instance().get_price_parameters_ride_hailing()[0]
+        self._price_per_minute = Configuration.instance().get_price_parameters_ride_hailing()[1]
+        self._price_per_km = Configuration.instance().get_price_parameters_ride_hailing()[2]
+        self._min_price = Configuration.instance().get_price_parameters_ride_hailing()[3]
     @profile
     def search_for_transportation_alternatives(self, vehicle_search_task: TransportationSearchTask) -> TransportationAlternativeBrowser:
         """
@@ -63,8 +67,7 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
             trip_duration = distance/car.velocity
 
             # Calc Price
-            # TODO: hard_coded
-            price = max(2 + trip_duration*car.price_per_minute + distance/1000 * 1.3, 5)
+            price = max(self._price_entering + trip_duration*self._price_per_minute + distance/1000 * self._price_per_km, self._min_price)
 
 
             # Put together
@@ -85,7 +88,7 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
 
             # Calc Price
             # TODO: update the price for ride-hailing
-            price = max(2 + trip_duration*car.price_per_minute + distance/1000 * 1.3, 5) * self._AV_price_reduction
+            price = max(self._price_entering + trip_duration*self._price_per_minute + distance/1000 * self._price_per_km, self._min_price) * self._AV_price_reduction
 
             # Put together
             transportation_alternative = TransportationAlternativeRideHailing(car, route, price, trip_duration,

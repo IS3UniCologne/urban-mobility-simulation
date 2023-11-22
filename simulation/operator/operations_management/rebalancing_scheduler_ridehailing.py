@@ -103,19 +103,33 @@ class RebalancingSchedulerRidehailing:
             sorted_base_list = self._distance_matrix.loc[self._base_regions][[hex]].sort_values(
                 by=hex,
                 ascending=True)
-
+            selected_base_distance = None
             # Select Nearest Base
             if vehicle.electric_vehicle:
-                for index_base, row_base in sorted_base_list.iterrows():
-                    selected_base = index_base
-                    available_charging_stations = [x for x in self._charging_stations if len(x.plugs.queue) <= 0]
-                    if len(available_charging_stations) > 0:
-                        selected_charging_station = \
-                            [x for x in available_charging_stations if x.location == selected_base]
-                        if len(selected_charging_station) > 0:
-                            selected_charging_station = selected_charging_station[0]
-                            selected_base_distance = row_base[hex]
-                            break
+                # we prioritize based on the queue
+                for queue in [0, 2, 5, 10]:
+                    for index_base, row_base in sorted_base_list.iterrows():
+                        selected_base = index_base
+                        available_charging_stations = [x for x in self._charging_stations if len(x.plugs.queue) <= queue]
+                        if len(available_charging_stations) > 0:
+                            selected_charging_station = \
+                                [x for x in available_charging_stations if x.location == selected_base]
+                            if len(selected_charging_station) > 0:
+                                selected_charging_station = selected_charging_station[0]
+                                selected_base_distance = row_base[hex]
+                                break
+                # sometimes the queue is too long and we have to disregard it
+                if not selected_base_distance:
+                    for index_base, row_base in sorted_base_list.iterrows():
+                        selected_base = index_base
+                        available_charging_stations = [x for x in self._charging_stations]
+                        if len(available_charging_stations) > 0:
+                            selected_charging_station = \
+                                [x for x in available_charging_stations if x.location == selected_base]
+                            if len(selected_charging_station) > 0:
+                                selected_charging_station = selected_charging_station[0]
+                                selected_base_distance = row_base[hex]
+                                break
 
             if not vehicle.electric_vehicle:
                 for index_base, row_base in sorted_base_list.iterrows():

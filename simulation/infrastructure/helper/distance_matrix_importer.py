@@ -15,10 +15,11 @@ class DistanceMatrixImporter:
     Distance between hexagon elements are computed using haversine distances
     """
 
-    def __init__(self, hexagons, resolution, data_path):
+    def __init__(self, hexagons, resolution, data_path, city):
         self._hexagons = hexagons
         self._resolution = resolution
         self._data_path = data_path
+        self._city = city
 
     def load_distance_matrix(self):
         """
@@ -26,7 +27,7 @@ class DistanceMatrixImporter:
         :return:
         """
 
-        filename = f"distance_matrix_hex_{self._resolution}.csv"
+        filename = f"{self._city}_distance_matrix_hex_{self._resolution}.csv"
         p = Path(self._data_path, filename)
         hexagons = self._hexagons
 
