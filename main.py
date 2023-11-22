@@ -242,7 +242,7 @@ distance_matrix = dmi.load_distance_matrix()
 
 
 def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=1, AV_trust=AV_trust,
-                          pop_prob=pop_prob, allocation=None, EV_penetration=1.0, AV_penetration=1, returnDataFrame=False,
+                          pop_prob=pop_prob, allocation=None, EV_penetration=1, AV_penetration=1, returnDataFrame=False,
                           charging_capacity=20, charging_power=50, AV_price_reduction=None, discount_rate=0,
                           MoD_interval_reduction=0):
     """
@@ -305,14 +305,15 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
     global_config.add_distance_threshold_to_user(distance_threshold_to_user)
 
     # Operator Modules
-    search_engine = {'shared_vehicle': SharedVehicleSearchEngine(env), 'ride_hailing': RideHailingSearchEngine(env)}
+    search_engine = {'shared_vehicle': SharedVehicleSearchEngine(env), 'ride_hailing_0': RideHailingSearchEngine(env),
+                     'ride_hailing_1': RideHailingSearchEngine(env)}
     payment_engine = search_engine
     vehicle_assignment_engine = {'shared_vehicle': SharedVehicleAllocationEngine(env),
-                                 'ride_hailing': RideHailingAllocationEngine(env)}
+                                 'ride_hailing_0': RideHailingAllocationEngine(env),
+                                 'ride_hailing_1': RideHailingAllocationEngine(env)}
     # Technology penetration
     global_config.add_tech_penetration(EV_penetration, AV_penetration)
     global_config.add_AV_trust(AV_trust)
-
 
     # Read drivers availability distribution
     drivers_availability = parser.get('SUPPLY', "RH_availability").split(',')
@@ -331,7 +332,8 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
 
     # Charging Infrastructure
     number_of_charging_stations = parser.getint("Charging_Infrastructure", "NUMBER_OF_CHARGING_STATIONS")
-    charging_location_list = parser.get("Charging_Infrastructure", "BASE_REGIONS").split(',')[:number_of_charging_stations]
+    charging_location_list = parser.get("Charging_Infrastructure", "BASE_REGIONS").split(',')[
+                             :number_of_charging_stations]
     ### Activate it if there are specific capacity for charging stations
     # charging_power_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_POWER").split(',')
     # charging_power_list = [float(x) for x in charging_power_list]
@@ -373,13 +375,20 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
                                                                     n_AVs=n_cars, allocation_method='historical',
                                                                     allocation=allocation)
     ride_hailing_fleet_0 = generate_mixed_ride_hailing_fleet(env, ride_hailing_fleet_config_0)
+
+    ride_hailing_fleet_config_1 = generate_ridehailing_fleet_config(distribution=supply_prob, n_cars=n_cars,
+                                                                    n_AVs=n_cars, allocation_method='historical',
+                                                                    allocation=allocation)
+    ride_hailing_fleet_1 = generate_mixed_ride_hailing_fleet(env, ride_hailing_fleet_config_1)
+
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Inject Modules.                         #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
 
-    search_engine['ride_hailing'].register_fleet(ride_hailing_fleet_0)
+    search_engine['ride_hailing_0'].register_fleet(ride_hailing_fleet_0)
+    search_engine['ride_hailing_1'].register_fleet(ride_hailing_fleet_1)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -396,28 +405,45 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
     # Initialize Rule Based Relocation Scheduler
 
     # For RideHailing Fleets
-    rs_ridehailing = RebalancingSchedulerRidehailing(distance_matrix, ride_hailing_fleet_0,
-                                                     available_vehicle_modes_ridehailing,
-                                                     available_vehicle_modes_supply_ride_hailing, no_service_workers,
-                                                     base_regions, base_capacity, recharge_threshold,
-                                                     charging_infrastructure._chargers)
+    rs_ridehailing_0 = RebalancingSchedulerRidehailing(distance_matrix, ride_hailing_fleet_0,
+                                                       available_vehicle_modes_ridehailing,
+                                                       available_vehicle_modes_supply_ride_hailing, no_service_workers,
+                                                       base_regions, base_capacity, recharge_threshold,
+                                                       charging_infrastructure._chargers)
+
+    rs_ridehailing_1 = RebalancingSchedulerRidehailing(distance_matrix, ride_hailing_fleet_1,
+                                                       available_vehicle_modes_ridehailing,
+                                                       available_vehicle_modes_supply_ride_hailing, no_service_workers,
+                                                       base_regions, base_capacity, recharge_threshold,
+                                                       charging_infrastructure._chargers)
 
     # Store Tasks which are processed by service workers
     task_queue_ridehailing = TaskQueue(env)
 
     # Init Operations Module
 
-    ops_ridehailing = OperationsRidehailing(env, ride_hailing_fleet_0,
-                                            global_config.shared_vehicle_operator_config.operations_start,
-                                            global_config.shared_vehicle_operator_config.operations_duration,
-                                            rs_ridehailing,
-                                            payment_engine['ride_hailing'], available_vehicle_modes_ridehailing,
-                                            available_vehicle_modes_supply_ride_hailing,
-                                            global_config.shared_vehicle_operator_config.recharge_threshold,
-                                            task_queue_ridehailing, charging_infrastructure._chargers)
+    ops_ridehailing_0 = OperationsRidehailing(env, ride_hailing_fleet_0,
+                                              global_config.shared_vehicle_operator_config.operations_start,
+                                              global_config.shared_vehicle_operator_config.operations_duration,
+                                              rs_ridehailing_0,
+                                              payment_engine['ride_hailing_0'], available_vehicle_modes_ridehailing,
+                                              available_vehicle_modes_supply_ride_hailing,
+                                              global_config.shared_vehicle_operator_config.recharge_threshold,
+                                              task_queue_ridehailing, charging_infrastructure._chargers)
 
-    env.process(ops_ridehailing.timer())
-    env.process(ops_ridehailing.run_operations())
+    ops_ridehailing_1 = OperationsRidehailing(env, ride_hailing_fleet_1,
+                                              global_config.shared_vehicle_operator_config.operations_start,
+                                              global_config.shared_vehicle_operator_config.operations_duration,
+                                              rs_ridehailing_1,
+                                              payment_engine['ride_hailing_1'], available_vehicle_modes_ridehailing,
+                                              available_vehicle_modes_supply_ride_hailing,
+                                              global_config.shared_vehicle_operator_config.recharge_threshold,
+                                              task_queue_ridehailing, charging_infrastructure._chargers)
+
+    env.process(ops_ridehailing_0.timer())
+    env.process(ops_ridehailing_0.run_operations())
+    env.process(ops_ridehailing_1.timer())
+    env.process(ops_ridehailing_1.run_operations())
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -432,25 +458,39 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
     logging.warning(f"Simulation Finished.",
                     extra={"clazz": "main", "oid": ""})
 
-    total_cost_per_day = {'ride_hailing': (global_config.get_vehicle_config(
+    total_cost_per_day = {'ride_hailing_0': (global_config.get_vehicle_config(
+        "SharedCar").daily_total_cost * AV_penetration * n_cars) * (end_time / 1440),
+                          'ride_hailing_1': (global_config.get_vehicle_config(
         "SharedCar").daily_total_cost * AV_penetration * n_cars) * (end_time / 1440)}
 
     # Daily Total Cost (CAPEX+OPEX) (cost derived from RevCalc excel in iCloud folder)
-    no_vehicles_to_be_charged = {'ride_hailing': ride_hailing_fleet_0.get_all_vehicles_below_soc_level(
-        global_config.shared_vehicle_operator_config.recharge_threshold)}
+    no_vehicles_to_be_charged = {'ride_hailing_0': ride_hailing_fleet_0.get_all_vehicles_below_soc_level(
+        global_config.shared_vehicle_operator_config.recharge_threshold),
+        'ride_hailing_1': ride_hailing_fleet_1.get_all_vehicles_below_soc_level(
+            global_config.shared_vehicle_operator_config.recharge_threshold)}
 
-    total_operational_cost = {'ride_hailing': ride_hailing_fleet_0.get_operational_costs()}
+    total_operational_cost = {'ride_hailing_0': ride_hailing_fleet_0.get_operational_costs(),
+                              'ride_hailing_1': ride_hailing_fleet_1.get_operational_costs()}
 
     # Final Objective Function for Heuristic Search
     func_objective = {
-        'ride_hailing': payment_engine['ride_hailing'].total_revenue - total_cost_per_day['ride_hailing'] - \
-                        payment_engine['ride_hailing'].total_missed_revenue - total_operational_cost[
-                            'ride_hailing']}
-    transactions = {'ride_hailing': payment_engine['ride_hailing'].get_transactions()}
+        'ride_hailing_0': payment_engine['ride_hailing_0'].total_revenue - total_cost_per_day['ride_hailing_0'] - \
+                          payment_engine['ride_hailing_0'].total_missed_revenue - total_operational_cost[
+                              'ride_hailing_0'],
+        'ride_hailing_1': payment_engine['ride_hailing_1'].total_revenue - total_cost_per_day['ride_hailing_1'] - \
+                          payment_engine['ride_hailing_1'].total_missed_revenue - total_operational_cost[
+                              'ride_hailing_1']}
+    transactions = {'ride_hailing_0': payment_engine['ride_hailing_0'].get_transactions(),
+                    'ride_hailing_1': payment_engine['ride_hailing_1'].get_transactions()}
 
     if store_results:
-        transactions['ride_hailing'].to_csv(
-            Path(output_folder, 'ride_hailing_' + scenario_name + '_' + 'phase_' + str(phase) + '_' + transaction_file),
+        transactions['ride_hailing_0'].to_csv(
+            Path(output_folder,
+                 'ride_hailing_0_' + scenario_name + '_' + 'phase_' + str(phase) + '_' + transaction_file),
+            index=False)
+        transactions['ride_hailing_1'].to_csv(
+            Path(output_folder,
+                 'ride_hailing_1_' + scenario_name + '_' + 'phase_' + str(phase) + '_' + transaction_file),
             index=False)
 
     if returnDataFrame:
@@ -468,19 +508,19 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
             'discount_rate': [discount_rate],
             "seed": [seed],
             "phase": [phase],
-            "total_revenue_ride_hailing": [payment_engine['ride_hailing'].total_revenue],
-            "total_cost_per_day_ride_hailing": [total_cost_per_day['ride_hailing']],
-            "total_operational_cost_per_day_ride_hailing": total_operational_cost['ride_hailing'],
+            "total_revenue_ride_hailing": [payment_engine['ride_hailing_0'].total_revenue],
+            "total_cost_per_day_ride_hailing": [total_cost_per_day['ride_hailing_0']],
+            "total_operational_cost_per_day_ride_hailing": total_operational_cost['ride_hailing_0'],
             "total_profit_ride_hailing": [
-                payment_engine['ride_hailing'].total_revenue - total_cost_per_day['ride_hailing'] -
-                total_operational_cost['ride_hailing']],
+                payment_engine['ride_hailing_0'].total_revenue - total_cost_per_day['ride_hailing_0'] -
+                total_operational_cost['ride_hailing_0']],
             "total_trips_ride_hailing": len(world.users),
-            "total_fulfilled_trips_ride_hailing": [payment_engine['ride_hailing'].total_fulfilled_trips],
-            "total_missed_trips_ride_hailing": [payment_engine['ride_hailing'].total_missed_trips],
-            "total_missed_revenue_ride_hailing": [payment_engine['ride_hailing'].total_missed_revenue]
+            "total_fulfilled_trips_ride_hailing": [payment_engine['ride_hailing_0'].total_fulfilled_trips],
+            "total_missed_trips_ride_hailing": [payment_engine['ride_hailing_0'].total_missed_trips],
+            "total_missed_revenue_ride_hailing": [payment_engine['ride_hailing_0'].total_missed_revenue]
         }
 
-        transactions = transactions['ride_hailing']
+        transactions = transactions['ride_hailing_0']
         # Calculate performance indicators per mode
         indicators_per_mode = transactions[transactions["selected_vehicle_mode"] != 'None'].groupby(
             ["selected_vehicle_mode"]).agg(
@@ -509,29 +549,37 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
 
         return overall_rentals
     else:
-        return (payment_engine['ride_hailing'].total_revenue,
-                total_cost_per_day['ride_hailing'], total_operational_cost['ride_hailing'],
-                payment_engine['ride_hailing'].total_revenue - total_cost_per_day['ride_hailing'] -
-                total_operational_cost['ride_hailing'],
-                payment_engine['ride_hailing'].total_fulfilled_trips,
-                payment_engine['ride_hailing'].total_missed_trips,
-                no_vehicles_to_be_charged['ride_hailing'],
-                func_objective['ride_hailing'])
+        return (payment_engine['ride_hailing_0'].total_revenue,
+                total_cost_per_day['ride_hailing_0'], total_operational_cost['ride_hailing_0'],
+                payment_engine['ride_hailing_0'].total_revenue - total_cost_per_day['ride_hailing_0'] -
+                total_operational_cost['ride_hailing_0'],
+                payment_engine['ride_hailing_0'].total_fulfilled_trips,
+                payment_engine['ride_hailing_0'].total_missed_trips,
+                no_vehicles_to_be_charged['ride_hailing_0'],
+                func_objective['ride_hailing_0'],
+                payment_engine['ride_hailing_1'].total_revenue,
+                total_cost_per_day['ride_hailing_1'], total_operational_cost['ride_hailing_1'],
+                payment_engine['ride_hailing_1'].total_revenue - total_cost_per_day['ride_hailing_1'] -
+                total_operational_cost['ride_hailing_1'],
+                payment_engine['ride_hailing_1'].total_fulfilled_trips,
+                payment_engine['ride_hailing_1'].total_missed_trips,
+                no_vehicles_to_be_charged['ride_hailing_1'],
+                func_objective['ride_hailing_1']
+                )
 
 
 ### Single Run
-# TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
-# USER_SHARES = [0.247, 0.237, 0.19, 0.325]
-# random.seed(42)
-# seeds = random.sample(range(1000), 10)
-# phase = 2
-# for seed in seeds[1:]:
-#     a = run_single_simulation(end_time=1400 * 1, n_cars=500, seed=seed, phase=phase,
-#                               pop_prob=USER_SHARES, EV_penetration=TECH_SHARE[phase], charging_capacity=5,
-#                               AV_penetration=TECH_SHARE[phase], returnDataFrame=False, charging_power=10)
-#
-#     print(a)
+TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
+USER_SHARES = [0.247, 0.237, 0.19, 0.325]
+random.seed(42)
+seeds = random.sample(range(1000), 10)
+phase = 3
+for seed in seeds[1:]:
+    a = run_single_simulation(end_time=1400 * 1, n_cars=500, seed=seed, phase=phase,
+                              pop_prob=USER_SHARES, EV_penetration=TECH_SHARE[phase], charging_capacity=5,
+                              AV_penetration=TECH_SHARE[phase], returnDataFrame=False, charging_power=10)
 
+    print(a)
 
 # Simulation Experiments
 # Random Variables for our Monte Carlo Run
@@ -552,26 +600,26 @@ phases = [0, 1, 2, 3]
 
 if __name__ == '__main__':
     T = 1440 * sim_days
-
-    # single phase
-    for phase in range(0, 101, 5):
-        phase /= 100
-        data = []
-        for idx, seed in enumerate(seeds):
-            data.append({'end_time': T, 'seed': seed,
-                         'phase': phase,
-                         'EV_penetration': phase,
-                         'AV_penetration': phase, 'returnDataFrame': True,
-                         })
-        sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
-                       mp_context=mp.get_context('spawn'))
-        for i in range(len(sim_res)):
-            all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
-        logging.error("seed: {}, idx: {}".format(seed, idx),
-                      extra={"clazz": "main", "oid": ""})
-
-        # After each seed save
-        all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+    #
+    #     # single phase
+    #     for phase in range(0, 101, 5):
+    #         phase /= 100
+    #         data = []
+    #         for idx, seed in enumerate(seeds):
+    #             data.append({'end_time': T, 'seed': seed,
+    #                          'phase': phase,
+    #                          'EV_penetration': phase,
+    #                          'AV_penetration': phase, 'returnDataFrame': True,
+    #                          })
+    #         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+    #                        mp_context=mp.get_context('spawn'))
+    #         for i in range(len(sim_res)):
+    #             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+    #         logging.error("seed: {}, idx: {}".format(seed, idx),
+    #                       extra={"clazz": "main", "oid": ""})
+    #
+    #         # After each seed save
+    #         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
     ### This is for analysing different proportion of user population
     # for pop_type in range(4):
@@ -594,9 +642,8 @@ if __name__ == '__main__':
     #             logging.error("seed: {}, idx: {}".format(seed, idx),
     #                           extra={"clazz": "main", "oid": ""})
 
-                # After each seed save
-                # all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
-
+    # After each seed save
+    # all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
     ### This is for analysing different AV_trust values
 
@@ -623,7 +670,6 @@ if __name__ == '__main__':
     #                     all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'),
     #                                            index=False)
 
-
     ### This is for analysing different fleet sizes
 
     # for fleet_size in [200, 300, 400, 500, 600, 700, 800, 1000]:
@@ -641,9 +687,8 @@ if __name__ == '__main__':
     #         logging.error("seed: {}, idx: {}".format(seed, idx),
     #                       extra={"clazz": "main", "oid": ""})
 
-            # After each seed save
-            # all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
-
+    # After each seed save
+    # all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
     # # This is for analysing different charging power
     # POP_PROB = SHARES[0]
@@ -690,7 +735,6 @@ if __name__ == '__main__':
     #         # After each seed save
     #         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
-
     # AV_price
     # for phase in [25,50,75,100]:
     #     phase = phase/100
@@ -712,7 +756,6 @@ if __name__ == '__main__':
     #
     #         # After each seed save
     #         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
-
 
     # MCA_P
     # for phase in [25,50,75,100]:
