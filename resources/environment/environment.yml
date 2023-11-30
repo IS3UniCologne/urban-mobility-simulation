@@ -1,14 +1,17 @@
 name: urban-mobility-simulation
 channels:
-  - defaults
   - conda-forge
+  - defaults
 dependencies:
+  - python=3.7.10
+  - ipython
   - geopandas
-  - h3-py>=3.7.1
+  - h3-py>=3.7.1,<4
   - haversine
   - matplotlib
   - notebook
   - seaborn
+  - contextily
   - shapely
   - simpy>=4.0.1
   - statsmodels
@@ -19,4 +22,7 @@ dependencies:
       - peartree
       - gtfs_kit
       - mlrose
-      - line_profiler
+      - line-profiler-pycharm
+      - pqdm
+      - psutil
+      - tensorflow

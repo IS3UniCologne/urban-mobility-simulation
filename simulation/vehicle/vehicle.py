@@ -10,7 +10,8 @@ from simulation.environment.position import Position
 from simulation.infrastructure.network.edge import Edge
 
 
-class VehicleState(Enum):
+class VehicleState():
+    # because we can't mixin an enum into an enum, we use a object-based mixin
     INITIALIZED = 0
     PARKING = 1
     DRIVING = 2
@@ -24,7 +25,7 @@ class Vehicle(ABC):
 
     def __init__(self, env: Environment, position):
         self._id = Vehicle.vehicle_id
-        Vehicle.vehicle_id += 1  # Increment User Id
+        Vehicle.vehicle_id += 1  # Increment Vehicle Id
         self._env = env
         self._position = position
 

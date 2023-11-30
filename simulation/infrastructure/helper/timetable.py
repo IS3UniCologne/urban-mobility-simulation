@@ -47,7 +47,7 @@ class Timetable:
     def next_trips(self, time: SimulationTime, lookahead: int):
 
         # look ahead 'lookahead' minutes, simulation time is in minutes
-        # yield all trips that start (on this weekday) within the next minute
+        # yield all trips that start (on this weekday) within the next lookahead minutes
         weekday = time.dayofweek_as_str()
         last_weekday = time.last_dayofweek_as_str()
         if time.minutes() + lookahead > 59:
@@ -69,6 +69,13 @@ class Timetable:
         return trips
 
     def find_viable_trips(self, transportation_search_task, spatial_strategy = 'hexagon', temporal_lookahead = 10):
+        """
+        User facing method that enables users to find viable public transportation trips for a search task
+        :param transportation_search_task:
+        :param spatial_strategy:
+        :param temporal_lookahead: How many minutes to look into the future for latest possible departure (currently this does not account for walking time)
+        :return:
+        """
         search_time = transportation_search_task.transport_task.time
         latest_departure = SimulationTimeConverter.as_str(search_time + temporal_lookahead)
         weekday = SimulationTimeConverter.dayofweek_as_str(search_time)

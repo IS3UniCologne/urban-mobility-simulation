@@ -14,7 +14,13 @@ class PaymentInterface(ABC):
         self._total_missed_trips = 0
         self._total_missed_revenue = 0
 
+        # Make this dynamic with a dictionary
+        self._total_missed_car_trips = 0
+
         self._transactions = []
+
+        # only for bus tracking
+        self._tracked_demands = set()
 
     @abstractmethod
     def pay_for_fulfilled_transportation_task(self, user, transportation_task: TransportTask, selected_transportation_alternative: TransportationAlternative):
