@@ -162,19 +162,8 @@ dmypy.json
 # Editor-based Rest Client
 .idea/httpRequests
 
-.idea/webServers.xml
-# Data
+# Ignore everything in .idea
+.idea/
 
-/data/output/
-!/data/output/README.md
-/data/demand/
-!/data/demand/README.md
-/data/supply/
-!/data/supply/README.md
-/data/environment/*.*
-!/data/environment/README.md
-/data/infrastructure/
-!/data/infrastructure/README.md
-!/data/infrastructure/distance_matrix_hex_7.csv
-!/data/infrastructure/distance_matrix_hex_8.csv
+# Data
 *.pdf

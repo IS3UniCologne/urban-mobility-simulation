@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Deque, Optional, Union
 
-from keras.callbacks import TensorBoard
+# from keras.callbacks import TensorBoard
 
 from learning.spaces.action_space import DiscreteActionSpace
 
@@ -81,6 +81,8 @@ class Configuration:
         self._bus_config = None
 
         self.dynamic_routing_config = None
+
+        self.dynamic_checkpoint_routing_config = None
 
         self._DQN_config = None
 
@@ -171,6 +173,14 @@ class Configuration:
     # def dynamic_routing_config(self):
     #     return self._dynamic_routing_config
 
+    def add_dynamic_checkpoint_routing_config(self, dynamic_checkpoint_routing_config):
+        self.dynamic_checkpoint_routing_config = dynamic_checkpoint_routing_config
+
+    # TODO: somehow setting attributes this way didn't work but it works for DQN?
+    # @property
+    # def dynamic_checkpoint_routing_config(self):
+    #     return self._dynamic_checkpoint_routing_config
+    #
     def add_DQN_config(self, DQN_config):
         self._DQN_config = DQN_config
 
@@ -268,12 +278,37 @@ class DynamicRoutingConfig:
         self.timelimit_multiplier = timelimit_multiplier
 
 
+class DynamicCheckpointRoutingConfig:
+    def __init__(self, action_space: DiscreteActionSpace, action_resolution: int, checkpoints, corridor,
+                 penalty_checkpoints: Union[int, float], penalty_goingback: Union[int, float],
+                 penalty_unreachable: Union[int, float], periodic_testing: Optional[int], reward: Union[int, float],
+                 timelimit_multiplier: float, use_learning_agent: bool):
+        self.action_resolution = action_resolution
+        self.action_space = action_space
+        # a bus that doesn't use a learning agent moves as planned without rerouting
+        self.use_learning_agent = use_learning_agent
+        self.learning_agent = None # defer initialization
+        self.checkpoints = checkpoints
+        self.corridor = corridor
+        self.area = None # poly area of the corridor, defer initialization
+        self.alignment_cache = None # defer initialization
+        self.alignment_cell_cache = None # defer initialization
+        self.direction = None # defer initialization
+        self.penalty_checkpoints = penalty_checkpoints
+        self.penalty_goingback = penalty_goingback
+        self.penalty_unreachable = penalty_unreachable
+        self.periodic_testing = periodic_testing
+        self.problem = None  # defer initialization
+        self.reward = reward
+        self.timelimit_multiplier = timelimit_multiplier
+
+
 class DQNConfig:
     # TODO: sort alphabetically or by some grouping logic
     def __init__(self, episode: int, episodes: int, alpha: float,
-                 eps: float, eps_decay_strategy: str, eps_decay: str, eps_min: float, buffersize: int,
+                 eps: float, eps_decay_strategy: str, eps_decay: str, eps_max: float, eps_min: float, buffersize: int,
                  replaybuffer: Optional[Union[list, Deque]], min_experience: int, target_update_threshold: int,
-                 tau: Optional[float], gamma: float, weights, q_net_layer, tensorboard: TensorBoard,
+                 tau: Optional[float], gamma: float, weights, q_net_layer, tensorboard, train_frequency: int,
                  batchsize: int, lr_decay, lr_decay_steps, double_q):
         self.alpha = alpha
         self.batchsize = batchsize
@@ -282,10 +317,12 @@ class DQNConfig:
         self.eps = eps
         self.eps_decay_strategy = eps_decay_strategy
         self.eps_decay = eps_decay
+        self.eps_max = eps_max
         self.eps_min = eps_min
         self.replaybuffer_size = buffersize
         self.replaybuffer = replaybuffer
         self.min_experience = min_experience
+        self.train_frequency = train_frequency
         self.double_q = double_q
         self.target_update_threshold = target_update_threshold
         self.tau = tau
