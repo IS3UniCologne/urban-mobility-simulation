@@ -4,7 +4,7 @@ from simulation.vehicle.shared_vehicle import SharedVehicle
 
 
 class SharedKickScooter(SharedVehicle):
-    # Shared Care Counter
+    # Shared Kick Scooter Counter
     shared_kick_scooter_id = 0
 
     def __init__(self, env: Environment, position, max_available_seats=1, max_state_of_charge=0.288, energy_consumption = 0.0072, velocity=333.33, price_per_min = 0.19):

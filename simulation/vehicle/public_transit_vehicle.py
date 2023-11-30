@@ -1,22 +1,38 @@
-from abc import ABC, abstractmethod
-from enum import Enum
+from __future__ import annotations
 
+from abc import ABC
+from enum import Enum
 import logging
 from simpy import Environment
+from typing import TYPE_CHECKING
 
-from .interfaces.passenger_interface import PassengerInterface
-from .vehicle import Vehicle, VehicleState
-from simulation.infrastructure.route import PublicTransitRoute
+from simulation.vehicle.vehicle import Vehicle, VehicleState
+from simulation.helper.time import SimulationTimeConverter
 from simulation.infrastructure.transit_network.stop import Stop
-from simulation.agent.user import TransitUser
-from ..helper.time import SimulationTimeConverter
+
+if TYPE_CHECKING:
+    from simulation.infrastructure.route import PublicTransitRoute
+    from simulation.agent.user import TransitUser
 
 
 class PublicTransitVehicleState(VehicleState, Enum):
     AT_TERMINAL_ORIGIN = 2001
     AT_TERMINAL_DESTINATION = 2002
     AT_STOP = 2003
+
+    # bus specific
+    EN_ROUTE_PLANNED = 2011
+    EN_ROUTE_DETOUR = 2012
+
     UNKNOWN = 2999
+
+
+class PublicTransitVehicleException(Exception):
+    pass
+
+
+class PublicTransitVehicleFull(PublicTransitVehicleException):
+    pass
 
 
 class PublicTransitVehicle(Vehicle, ABC):
@@ -66,7 +82,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         return self._available_seats
 
     def mount_passenger(self, passenger: TransitUser):
-        if len(self._seats) < self._available_seats:
+        if self._available_seats > 0:
             self._seats.append(passenger)
             self._available_seats -= 1
 
@@ -79,7 +95,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         elif passenger in self._seats:
             raise Exception('Passenger is already in vehicle.')
         else:
-            raise Exception('Vehicle is full.')
+            raise PublicTransitVehicleFull
 
     def unmount_passenger(self, passenger: TransitUser):
         if passenger in self._seats:

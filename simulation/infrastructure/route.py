@@ -3,6 +3,7 @@ import geopandas as gpd
 
 from simulation.environment.position import Position
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.time import SimulationTimeConverter
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.transit_network.stop import Stop
@@ -123,6 +124,13 @@ class PublicTransitRoute(Route):
 
     def total_distance(self):
         return sum(self._route_segments)
+
+    def planned_duration(self):
+        return SimulationTimeConverter.duration_between(
+            self.route_stop_by_id(0).departure,
+            self.route_stop_by_id(-1).departure,
+            end_next_day=True if (not self.route_stop_by_id(0).departure_next_day) and self.route_stop_by_id(-1).departure_next_day else False
+        )
 
     def __str__(self):
         return f'PublicTransitRoute with id/name {self._id} and trip id {self._trip_id}'
