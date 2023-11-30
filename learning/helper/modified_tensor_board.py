@@ -1,3 +1,5 @@
+import logging
+
 import tensorflow as tf
 from keras.callbacks import TensorBoard
 
@@ -23,6 +25,7 @@ class ModifiedTensorBoard(TensorBoard):
     # (otherwise every .fit() will start writing from 0th step)
     def on_epoch_end(self, epoch, logs=None):
         self.update_stats(**logs)
+        self.step += 1
 
     # Overrided
     # We train for one batch only, no need to save anything at epoch end

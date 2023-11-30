@@ -2,7 +2,11 @@ import numpy
 from numpy.random import choice
 
 
-class ActionForbidden(Exception):
+class BadAction(Exception):
+    pass
+
+
+class ForbiddenAction(Exception):
     pass
 
 

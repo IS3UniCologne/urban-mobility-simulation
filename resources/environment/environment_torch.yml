@@ -1,0 +1,32 @@
+name: urban-mobility-simulation
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - python>=3.9.2,<3.10
+  - ipython
+  - geopandas
+  - h3-py>=3.7.1,<4
+  - haversine
+  - matplotlib
+  - notebook
+  - seaborn
+  - contextily
+  - shapely
+  - simpy>=4.0.1
+  - statsmodels
+  - tensorboard
+  - tqdm
+  - pip
+  - pytorch
+  - pytorch-cuda=11.7
+  - pip:
+      - partridge[full]
+      - gtfs_kit
+      - mlrose
+      - line-profiler-pycharm
+      - pqdm
+      - psutil
+      - lovely-tensors

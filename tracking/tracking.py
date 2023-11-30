@@ -77,16 +77,20 @@ class Tracking:
         uid = self._get_uid(to_untrack)
         self.unregister_by_uid(uid)
 
-    def get(self, uid, attribute) -> Any:
+    def get(self, obj, attribute) -> Any:
+        if isinstance(obj, str):
+            uid = obj
+        elif isinstance(obj, object):
+            uid = self._get_uid(obj)
         try:
             return self.__env.now, self.tracked[uid]['reference'].get(attribute)
         except (KeyError, PermissionError) as e:
             if type(e) == KeyError:
-                logging.error(f"Trying to access {attribute} of uid {uid}, but this uid is currently not tracked!",
+                logging.error(f"Trying to access {attribute} of uid {obj}, but this uid is currently not tracked!",
                               extra={"clazz": self.__class__.__name__, "oid": ""})
                 return None
             elif type(e) == PermissionError:
-                logging.error(f"{attribute} of uid {uid} is not exposed or does not exist!",
+                logging.error(f"{attribute} of uid {obj} is not exposed or does not exist!",
                               extra={"clazz": self.__class__.__name__, "oid": ""})
                 return None
 

@@ -1,6 +1,9 @@
 import logging
+import sys
 from collections import deque
 from copy import deepcopy
+
+import keras.callbacks
 import numpy as np
 import random
 import tensorflow as tf
@@ -9,11 +12,12 @@ from keras.losses import Huber
 from keras.models import Sequential
 from keras.optimizers import Adam
 from keras.optimizers.schedules.learning_rate_schedule import ExponentialDecay
+from line_profiler_pycharm import profile
 
 from learning.interface.learning_interface import LearningInterface
 from learning.helper.policy import Policy
 from learning.agents.rl_agent import RLAgent
-from learning.spaces.action_space import ActionForbidden
+from learning.spaces.action_space import ForbiddenAction
 
 
 class DQN(RLAgent):
@@ -35,10 +39,10 @@ class DQN(RLAgent):
             self._eps = self._config.DQN_config.eps
         self._eps_decay_strategy = self._config.DQN_config.eps_decay_strategy
         self._eps_decay = self._config.DQN_config.eps_decay
+        self._eps_max = self._config.DQN_config.eps_max
         self._eps_min = self._config.DQN_config.eps_min
         self._gamma = self._config.DQN_config.gamma
-        self._penalty = self._problem_config.penalty
-        self._reward = self._problem_config.reward
+        self._reward = self._problem_config.reward # TODO: remove? is problem-specific
         self._replaybuffer_size = self._config.DQN_config.replaybuffer_size  # size in episodes
         # Experience Replay
         if self._config.DQN_config.replaybuffer is not None:
@@ -54,6 +58,7 @@ class DQN(RLAgent):
         else:
             self._replaybuffer = []
         self._min_experience = self._config.DQN_config.min_experience  # episodes in replay buffer before training starts
+        self._train_frequency = self._config.DQN_config.train_frequency
         self._use_double_q = self._config.DQN_config.double_q  # usage of Double Q Learning (Hasselt 2016)
         self._minibatch_size = self._config.DQN_config.batchsize  # training minibatch size
         self._target_net_update_threshold = self._config.DQN_config.target_update_threshold  # training steps before q net weights are propagated to target q net
@@ -77,7 +82,7 @@ class DQN(RLAgent):
             self._learning_rate = 0.001  # adam default learning rate
 
         if self._config.DQN_config.optimizer is None:
-            self._optimizer = Adam(learning_rate=self._learning_rate)
+            self._optimizer = Adam(learning_rate=self._learning_rate, clipvalue=1)
         else:
             self._optimizer = self._config.DQN_config.optimizer
 
@@ -126,16 +131,15 @@ class DQN(RLAgent):
 
         # Input
         model.add(layers.Dense(self._q_net_layer[0], input_dim=input_layer_size,
-                               activation='tanh', kernel_initializer='glorot_uniform'))
+                               activation='relu', kernel_initializer='he_uniform'))
 
         # Hidden Layers
         for layernodes in self._q_net_layer[1:]:
-            model.add(layers.Dense(layernodes, activation='tanh', kernel_initializer='glorot_uniform'))
+            model.add(layers.Dense(layernodes, activation='relu', kernel_initializer='he_uniform'))
 
         # Output
         model.add(layers.Dense(self._action_space.num_choices(), activation='linear'))
-        # model.compile(loss=tf.keras.losses.Huber(), optimizer='sgd', metrics=['accuracy'])
-        model.compile(loss=Huber(), optimizer=self._optimizer, metrics=['accuracy'])
+        model.compile(loss=Huber(), optimizer=self._optimizer)
 
         return model
 
@@ -152,7 +156,7 @@ class DQN(RLAgent):
             action = self.policy(state)  # A_t, string such as "DOWN"
             try:
                 _, reward, finished = yield self.problem.env.process(self.problem.step(action))
-            except ActionForbidden:
+            except ForbiddenAction:
                 continue
             if finished:
                 break
@@ -160,15 +164,35 @@ class DQN(RLAgent):
     def learn(self):
 
         # Deep Q Learning with Experience Replay as in mnih2013 (deepmind atari paper)
+        actions_tried = set()
+        step = 0
         while True:
+            exploration = True if np.random.rand() <= self._eps else False
 
-            state = deepcopy(self.problem.state()) # S_t, as numpy 3d matrix
-            action = self.policy(state)  # A_t, string such as "DOWN"
+            if exploration:
+                action = self._action_space.sample_action_uniformly()
+            else:
+                state = self.problem.state() # S_t, as numpy array
+                action = self.policy(state)  # A_t, string such as "DOWN"
+
+            if action in actions_tried:
+                continue
+            elif action not in actions_tried and exploration:
+                # prevent repeated state creation from environment observation
+                state = self.problem.state()
+
+            actions_tried.add(action)
             action_index = self._action_space.index(action)  # A_t, index of action in action space
 
             try:
                 next_state, reward, finished = yield self.problem.env.process(self.problem.step(action))
-            except ActionForbidden:
+                actions_tried.clear()
+                step += 1
+            except ForbiddenAction:
+                if len(actions_tried) == self._action_space.num_choices():
+                    logging.error(f'Deadlock encountered! All actions tried, all forbidden!',
+                          extra={"clazz": self.__class__.__name__, "oid": ""})
+                    sys.exit(1)
                 continue
 
             self._cumulative_reward += reward
@@ -176,7 +200,8 @@ class DQN(RLAgent):
                           extra={"clazz": self.__class__.__name__, "oid": ""})
 
             self._replaybuffer.append((state, action_index, reward, next_state, finished))
-            self._train(finished)
+            if (self._episode >= self._min_experience) and (step % self._train_frequency == 0):
+                self._train(finished)
 
             if finished:
                 if self._eps_decay_strategy != 'none':
@@ -188,7 +213,7 @@ class DQN(RLAgent):
                         elif self._eps_decay_strategy == 'linear':
                             # decay linearly from 1 to 0 over all episodes
                             self._eps = 1 - (1 / self._total_episodes) * self._episode
-                        self._eps = max(self._eps_min, self._eps)
+                        self._eps = max(self._eps_min, min(self._eps_max, self._eps))
                 break
 
         # retain decayed epsilon
@@ -215,74 +240,70 @@ class DQN(RLAgent):
 
         self.problem.reset()
 
+    @profile
     def policy(self, state):
-        rand = True if np.random.rand() <= self._eps else False
-
-        if not rand:
-            q_values = self._target_predict(tf.expand_dims(state, axis=0))
-            # TODO: normalize / probabilities instead of argmax?
-            max_q = Policy.argmax_rand(q_values)
-            a = self._action_space.actions[max_q]
-        else:
-            a = self._action_space.sample_action_uniformly()
+        q_values = self._target_predict(tf.expand_dims(state, axis=0))
+        # TODO: normalize / probabilities instead of argmax?
+        max_q = Policy.argmax_rand(q_values)
+        a = self._action_space.actions[max_q]
 
         return a
 
     def _train(self, terminal_state: bool):
-        if self._episode >= self._min_experience:
-            minibatch = random.sample(self._replaybuffer, self._minibatch_size)
-            # minibatch = self._random.choice(self._replay_buffer, self._minibatch_size, replace=False)
+        minibatch = random.sample(self._replaybuffer, self._minibatch_size)
+        # minibatch = self._random.choice(self._replay_buffer, self._minibatch_size, replace=False)
 
-            states_t = np.array([transition[0] for transition in minibatch])  # s0
-            q_values_t = self._eval_predict(states_t).numpy()
+        states_t = np.array([transition[0] for transition in minibatch])  # s0
+        q_values_t = self._eval_predict(states_t).numpy()
 
-            states_tp1 = np.array([transition[3] for transition in minibatch])  # s1
+        states_tp1 = np.array([transition[3] for transition in minibatch])  # s1
 
-            if self._use_double_q:
-                # Double Q-learning
-                q_values_tp1 = self._eval_predict(states_tp1).numpy()
-                q_values_tp1_t = self._target_predict(states_tp1).numpy()
+        if self._use_double_q:
+            # Double Q-learning
+            q_values_tp1 = self._eval_predict(states_tp1).numpy()
+            q_values_tp1_t = self._target_predict(states_tp1).numpy()
+        else:
+            # Vanilla DQN with target network
+            q_values_tp1 = self._target_predict(states_tp1).numpy()
+
+        X = []
+        y = []
+
+        for i, (s0, a, r, s1, terminal) in enumerate(minibatch):
+            if terminal:
+                target_q = r
             else:
-                # Vanilla DQN with target network
-                q_values_tp1 = self._target_predict(states_tp1).numpy()
-
-            X = []
-            y = []
-
-            for i, (s0, a, r, s1, terminal) in enumerate(minibatch):
-                if terminal:
-                    target_q = r
+                if self._use_double_q:
+                    target_q = r + self._gamma * q_values_tp1_t[i][
+                        tf.math.argmax(q_values_tp1[i])]  # double Q-learning
                 else:
-                    if self._use_double_q:
-                        target_q = r + self._gamma * q_values_tp1_t[i][
-                            tf.math.argmax(q_values_tp1[i])]  # double Q-learning
-                    else:
-                        target_q = r + self._gamma * tf.math.reduce_max(
-                            q_values_tp1[i])  # vanilla DQN with target network
+                    target_q = r + self._gamma * tf.math.reduce_max(
+                        q_values_tp1[i])  # vanilla DQN with target network
 
-                q_values = q_values_t[i]
-                q_values[a] = target_q
+            q_values = q_values_t[i]
+            q_values[a] = target_q
 
-                X.append(s0)
-                y.append(q_values)
+            X.append(s0)
+            y.append(q_values)
 
-            self._q_net.fit(np.array(X), np.array(y), batch_size=self._minibatch_size, verbose=0, shuffle=False,
-                            callbacks=[self._tensorboard] if terminal_state else None)
+        self._q_net.fit(np.array(X), np.array(y), batch_size=self._minibatch_size, epochs=10, verbose=0,
+                        callbacks=[self._tensorboard,
+                                   tf.keras.callbacks.EarlyStopping(monitor='loss')])
 
-            if self._optimizer.iterations % self._target_net_update_threshold == 0:
-                if self._tau is not None:
-                    # do soft updates
-                    theta = self._q_net.get_weights()
-                    target_theta = self._target_q_net.get_weights()
-                    for i, (w, w_t) in enumerate(zip(theta, target_theta)):
-                        w_t = w * self._tau + w_t * (1 - self._tau)
-                        assert len(target_theta[i]) == len(w_t)
-                        target_theta[i] = w_t
-                    assert len(target_theta) == len(self._target_q_net.get_weights())
-                    self._target_q_net.set_weights(target_theta)
-                else:
-                    # do hard updates
-                    self._target_q_net.set_weights(self._q_net.get_weights())
+        if self._optimizer.iterations % self._target_net_update_threshold == 0:
+            if self._tau is not None:
+                # do soft updates
+                theta = self._q_net.get_weights()
+                target_theta = self._target_q_net.get_weights()
+                for i, (w, w_t) in enumerate(zip(theta, target_theta)):
+                    w_t = w * self._tau + w_t * (1 - self._tau)
+                    assert len(target_theta[i]) == len(w_t)
+                    target_theta[i] = w_t
+                assert len(target_theta) == len(self._target_q_net.get_weights())
+                self._target_q_net.set_weights(target_theta)
+            else:
+                # do hard updates
+                self._target_q_net.set_weights(self._q_net.get_weights())
 
     @tf.function
     def _target_predict(self, state):

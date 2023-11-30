@@ -7,6 +7,7 @@ import numpy
 import simpy
 from typing import TYPE_CHECKING
 
+from tracking.tracking_interface import TrackingInterface
 from .agent import Agent
 from ..environment.geodesic_environment import GeodesicEnvironment
 from ..environment.geodesic_position import GeodesicPosition
@@ -23,7 +24,7 @@ from ..tasks.transport_task import TransportTask
 from ..tasks.transportation_search_task import TransportationSearchTask
 from ..vehicle.interfaces.driver_interface import DriverInterface
 from ..vehicle.interfaces.passenger_interface import PassengerInterface
-from ..vehicle.public_transit_vehicle import PublicTransitVehicleFull
+from ..vehicle.public_transit_vehicle import PublicTransitVehicleFull, PublicTransitVehicle, PublicTransitVehicleState
 from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
@@ -89,6 +90,7 @@ class User(Agent, DriverInterface):
         self._arrived_at_pick_up_position = self._env.event()
         self._assigned_vehicle_arrived = self._env.event()
         self._arrived_at_destination = self._env.event()
+        self.process_finished = self._env.event()
 
         self._position_changed = self._env.event()
 
@@ -407,7 +409,8 @@ class User(Agent, DriverInterface):
         return f'User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}'
 
 
-class TransitUser(User, PassengerInterface):
+class TransitUser(User, PassengerInterface, TrackingInterface):
+    exposes = ['transport_task']
     transit_user_id = 0
 
     def __init__(self, position: GeodesicPosition, transport_task: TransportTask,
@@ -426,7 +429,9 @@ class TransitUser(User, PassengerInterface):
 
         # Config
         self._config = Configuration.instance()
-        self._bus_res = self._config.dynamic_routing_config.action_resolution
+        # TODO: somehow this must be decoupled - by making the user unaware of problems
+        self._problem_config = self._config.dynamic_checkpoint_routing_config
+        self._bus_res = self._problem_config.action_resolution
 
         # TODO: modify available_time over time
         self._available_time = self._transport_task.max_wait_time # max available walk / wait time, can change by e.g. waiting
@@ -503,7 +508,9 @@ class TransitUser(User, PassengerInterface):
                         break
                     else:
                         yield self._env.process(self.wait_for_transit(vehicle))
-                        yield self._env.process(self.start_passive_transit(vehicle))
+                        # TODO: here we hardcode the runtime for problems, not nice
+                        # yield self._env.process(self.start_passive_transit(vehicle))
+                        yield self._env.process(self.start_passive_checkpoint_transit(vehicle))
                         yield self._env.process((self.move_to_destination()))
                         selected_alternative = TransportationAlternative(
                             vehicle,
@@ -569,6 +576,8 @@ class TransitUser(User, PassengerInterface):
                         logging.debug(f'User was not able to board vehicle, vehicle is full.',
                                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
+        self.process_finished.succeed()
+
     def search_for_alternatives(self):
         # Update current state
         self._state = UserState.SEARCHING_TRANSPORT_ALTERNATIVES
@@ -627,16 +636,17 @@ class TransitUser(User, PassengerInterface):
             return False
 
         # TODO: this is coupled deep with the DynamicRouting problem, too much hardcoded
-        incorridor = False if not self._geodesic_env.filter_demands_by_corridor(
-            [self.transport_task], self._config.dynamic_routing_config.corridor) else True
-        indirection = False if not self._geodesic_env.filter_demands_by_direction([self.transport_task], vehicle) else True
+        incorridor = False if not self._geodesic_env.filter_demands_by_area(
+            [self.transport_task], self._problem_config.area) else True
+        indirection = False if not self._geodesic_env.filter_demands_by_direction([self.transport_task], vehicle) \
+            else True
 
         if not incorridor or not indirection:
             return False
         else:
             return True
 
-    def start_passive_transit(self, vehicle: Vehicle):
+    def start_passive_transit(self, vehicle: PublicTransitVehicle):
         # Wait for event
         yield self._assigned_vehicle_arrived
 
@@ -659,6 +669,52 @@ class TransitUser(User, PassengerInterface):
         vehicle._dropoffs += 1
 
         self._arrived_at_last_stop.succeed()
+
+    def start_passive_checkpoint_transit(self, vehicle: Bus):
+        # TODO: checkpoint logic
+        # when the checkpoint problem is running, we need to unmount at a checkpoint
+        # if the destination was "passed" already, meaning if it is not reachable anymore
+        # remember: the bus only moves forward toward the next checkpoint
+        # Wait for event
+        yield self._assigned_vehicle_arrived
+
+        if not vehicle.available_seats > 0:
+            # Interrupt this user's process
+            proc = self._world.user_process_by_id(self._id)['proc']
+            proc.interrupt()
+            return
+        else:
+            # Update current state
+            self._state = UserState.IN_TRANSPORT
+            self.mount_vehicle(vehicle)
+            vehicle._pickups += 1
+
+        while True:
+            yield vehicle._position_changed
+
+            # drive in vehicle while
+            # a) destination not reached
+            # b) checkpoint not reached that is "beyond" the destination
+            at_dest = self.transport_task.destination.get_hexagon_id(self._bus_res) == \
+                      vehicle.position.get_hexagon_id(self._bus_res)
+            at_checkpoint = (vehicle.state is PublicTransitVehicleState.AT_STOP)
+            unreachable_dest = False
+
+            if at_checkpoint:
+                # check if the direction toward the passengers destination is aligned with the movement
+                # direction of the bus
+                direction_bus = self._problem_config.direction
+                direction_dest = self._geodesic_env.get_bearing(
+                    *vehicle.position.getExactLocation(),
+                    *self.transport_task.destination.getExactLocation()
+                )
+                unreachable_dest = not self._geodesic_env.direction_aligns(direction_dest, direction_bus)
+
+            if (unreachable_dest and at_checkpoint) or at_dest:
+                self.unmount_vehicle(vehicle)
+                vehicle._dropoffs += 1
+                self._arrived_at_last_stop.succeed()
+                break
 
     def move_to_destination(self):
         # Wait for event
@@ -697,6 +753,13 @@ class TransitUser(User, PassengerInterface):
     @property
     def available_time(self):
         return self._available_time
+
+    def dump(self, exposed_only: bool = True) -> dict:
+        if exposed_only:
+            return {x: self.get(x) for x in self.exposes}
+        else:
+            dump_attr = ['transport_task', '_vehicle_choice_behavior', '_population_type', '_position', '_passive']
+            return {x: self.get(x) for x in dump_attr}
 
     def __str__(self):
         return f'TransitUser with id {self._id} is in state {self._state} and has transportation task {self._transport_task}'

@@ -38,7 +38,7 @@ class PublicTransitVehicleFull(PublicTransitVehicleException):
 class PublicTransitVehicle(Vehicle, ABC):
     public_transit_vehicle_id = 0
 
-    def __init__(self, env: Environment, route: PublicTransitRoute, position,  max_available_seats = 100, velocity = 833.5):
+    def __init__(self, env: Environment, route: PublicTransitRoute, position, max_available_seats = 100, velocity = 833.5):
         super(PublicTransitVehicle, self).__init__(env, position)
 
         self._id = PublicTransitVehicle.public_transit_vehicle_id

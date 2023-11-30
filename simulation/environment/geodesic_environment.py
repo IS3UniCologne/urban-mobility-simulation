@@ -30,7 +30,7 @@ class GeodesicEnvironment(Environment):
             super(GeodesicEnvironment, self).__init__()
 
             self._geodesic = pyproj.Geod(ellps='WGS84')
-            self._random = numpy.random.RandomState(42)  # use fnc reset_rnd_gen to change seed
+            self._random = numpy.random.RandomState(42)  # TODO: use fnc reset_rnd_gen to change seed?
 
     def getLayer(self, layer_name):
         """
@@ -184,33 +184,32 @@ class GeodesicEnvironment(Environment):
         return {item for sublist in [h3.k_ring(h, k) for h in straight] for item in sublist}
 
     @staticmethod
-    def filter_demands_by_corridor(demands, corridor):
+    def filter_demands_by_area(demands, area: Polygon):
         """
         :param demands: [{origin: GeodesicPosition, destination: GeodesicPosition}, ...]
-        :param corridor: set of hexagon cell ids
-        :return: list of demands which have both origin and destination within the corridor
+        :param area: shapely.Polygon
+        :return: list of demands which have both origin and destination within the area
         """
-
-        poly_corridor = Polygon(h3.h3_set_to_multi_polygon(corridor, geo_json=False)[0][0])
 
         filtered = []
         for d in demands:
-            if (Point(d.origin.getExactLocation()).within(poly_corridor) and
-                    Point(d.destination.getExactLocation()).within(poly_corridor)):
+            if (Point(d.origin.getExactLocation()).within(area) and
+                    Point(d.destination.getExactLocation()).within(area)):
                 filtered.append(d)
 
         return filtered
 
     def filter_demands_by_direction(self, demands, vehicle: Vehicle):
-        route_direction, _, _ = self._geodesic.inv(*vehicle.position.getExactLocation(geojson=True),
-                                             *vehicle.route.destination.getExactLocation(geojson=True))
+        route_direction = self.get_bearing(*vehicle.position.getExactLocation(),
+                                           *vehicle.route.destination.getExactLocation())
         route_direction_range = (route_direction-90, route_direction+90)
-        route_direction_norm = [(x+360)%360 for x in route_direction_range]
+        route_direction_norm = [(x+360) % 360 for x in route_direction_range]
 
         filtered = []
         for d in demands:
-            demand_direction, _, _ = self._geodesic.inv(*d.origin.getExactLocation(geojson=True),
-                                                  *d.destination.getExactLocation(geojson=True))
+            # TODO: parallelize?
+            demand_direction = self.get_bearing(*d.origin.getExactLocation(),
+                                                *d.destination.getExactLocation())
             demand_direction_norm = (demand_direction + 360) % 360
             if route_direction_norm[0] > route_direction_norm[1]:
                 # +90° was above 360°
@@ -220,3 +219,39 @@ class GeodesicEnvironment(Environment):
                 filtered.append(d)
 
         return filtered
+
+    @staticmethod
+    def direction_aligns(direction, target, degrees=180) -> bool:
+        assert degrees < 360
+        target_range = (target-(degrees/2), target+(degrees/2))
+        target_norm = tuple(x % 360 for x in target_range)
+
+        direction_norm = direction % 360
+
+        if target_norm[0] > target_norm[1]:
+            # +90° was above 360°
+            if direction_norm >= target_norm[0] or direction_norm <= target_norm[1]:
+                return True
+        elif target_norm[0] <= direction_norm <= target_norm[1]:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def get_bearing(lat1, long1, lat2, long2):
+        # great circle bearing without projection
+        # from https://stackoverflow.com/a/64747209
+        dLon = (long2 - long1)
+        x = math.cos(math.radians(lat2)) * math.sin(math.radians(dLon))
+        y = math.cos(math.radians(lat1)) * math.sin(math.radians(lat2)) - math.sin(math.radians(lat1)) * math.cos(
+            math.radians(lat2)) * math.cos(math.radians(dLon))
+        brng = numpy.arctan2(x, y)
+        brng = numpy.degrees(brng)
+
+        return brng
+
+    def _get_fwd_azi(self, lat1, long1, lat2, long2):
+        # great circle forward azimuth using the specified projection in the geodesic environment
+        # https://pyproj4.github.io/pyproj/stable/api/geod.html#pyproj.Geod.inv
+        azi, _, _ = self._geodesic.inv(long1, lat1, long2, lat2)
+        return azi
