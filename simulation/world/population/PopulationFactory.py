@@ -2,8 +2,11 @@ from enum import Enum
 import numpy
 
 class PopulationType(Enum):
-    PRICE_SENSITIVE = 0
-    CONVENIENCE_SEEKER = 1 # or Sustainanble
+    CLUSTER_0 = 0
+    CLUSTER_1 = 1
+    CLUSTER_2 = 2
+    CLUSTER_3 = 3
+
 
 class PopulationFactory():
 
@@ -12,7 +15,7 @@ class PopulationFactory():
         self._random = numpy.random.RandomState(seed)
 
         # Probability (for price sensitive user)
-        self._prob = 1-prob
+        self._prob = prob
 
     def generatePopulationType(self):
 
@@ -22,3 +25,15 @@ class PopulationFactory():
             return PopulationType.PRICE_SENSITIVE
         else:
             return PopulationType.CONVENIENCE_SEEKER
+
+    def generatePopulationTypeRideHailing(self):
+
+        pop_type = self._random.multinomial(1, self._prob)
+        if pop_type.argmax() == 0:
+            return PopulationType.CLUSTER_0
+        elif pop_type.argmax() == 1:
+            return PopulationType.CLUSTER_1
+        elif pop_type.argmax() == 2:
+            return PopulationType.CLUSTER_2
+        else:
+            return PopulationType.CLUSTER_3

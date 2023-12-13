@@ -8,7 +8,8 @@ class VehicleAllocation:
         self._vehicle                = vehicle                                  # Vehicle that got assigned to above user
         self._associated_alternative = associated_transportation_alternative    # Selected transportation offer
         self._pick_up_position       = pick_up_position                         # Pick up position of user for vehicle
-        self._pick_up_time           = pick_up_time                             #  Pick up time (i.e., when will be the vehicle be at pickup pos)
+        self._pick_up_time           = self._associated_alternative.waiting_time                       #  Pick up time (i.e., when will be the vehicle be at pickup pos)
+
 
     @property
     def user(self):
