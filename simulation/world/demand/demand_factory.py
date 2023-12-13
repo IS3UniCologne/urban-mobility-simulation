@@ -8,18 +8,20 @@ import logging
 from simulation.helper.configuration.configuration import Configuration
 from simulation.world.world import World
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
+import numpy as np
 
 
 class DemandFactory:
     counter = 0
 
-    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World, modifiers, seed,
+    def __init__(self, env, demand_profile, demand_importer: DemandImporter, world: World, modifiers, seed, mode,
                  maximal_demand=1_000_000):
         self._env = env
         self._time = SimulationTime(env)
         self._demand_profile = demand_profile
         self._demand_importer = demand_importer
         self._world = world
+        self._mode = mode
 
         origin, destination = demand_importer._get_spatial_column()
         temporal = demand_importer._get_temporal_column()
@@ -93,7 +95,7 @@ class DemandFactory:
 
         # Filter data on spatial unit such that we don't need to filter on the entire demand profile
         local_demand_profile = self._demand_profile[(self._demand_profile[self._origin_column] == spatial_unit)]
-
+        local_demand_profile.loc[:,'o_poisson_est'] /= 4
         # Run until simulation ends
         while (DemandFactory.counter < self._maximal_demand):
             try:
@@ -108,12 +110,21 @@ class DemandFactory:
                                                            self._day_of_week_column] == non_working_day)
                                                     ]
                 if (demand_slice.shape[0] == 0):
-                    print(f"Hex: {spatial_unit}  Time: {time_bucket}  Date:{non_working_day}  Env Time: {self._time.now()}")
+                    logging.debug(
+                        f"Hex: {spatial_unit}  Time: {time_bucket}  Date:{non_working_day}  Env Time: {self._time.now()}",
+                        extra={"clazz": self.__class__.__name__,})
                     #no lambda for given demand slice means there were no arrivals in the sample (lambda was zero)
                     poisson_lambda=0
                 else:
                     # Extract Poisson Estimate for given spatio-temporal cell
                     poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
+
+                # TODO: to define the target fleet
+                random_number = np.random.random(1)
+                if random_number < 1:
+                    fleet = 0
+                else:
+                    fleet = 1
 
                 # Based on Poisson Estimate sample next arrival time (in minutes)
                 # inter_arrival_time = numpy.random.exponential(
@@ -154,10 +165,10 @@ class DemandFactory:
 
                     # Append Arrival to World
                     # create agent or similar consumers
-                    logging.debug(f'Demand generated from hexagon {spatial_unit} to {destination}.',
+                    logging.debug(f'Demand generated from hexagon {spatial_unit} to {destination}. Fleet {fleet}',
                                   extra={"clazz": self.__class__.__name__, "oid": ""})
 
-                    self._world.add_user(spatial_unit, destination)
+            self._world.add_user(self._mode, fleet, spatial_unit, destination)
 
                 # Increase global counter (not thread safe)
                 DemandFactory.counter += 1

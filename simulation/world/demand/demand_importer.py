@@ -10,7 +10,8 @@ class DemandImporter:
 
     def __init__(self, temporal_resolution: TemporalBucket = TemporalBucket.FOUR_HOURLY_BUCKETS,
                  spatial_resolution: SpatialResolution = SpatialResolution.HEX_7,
-                 daily_resolution: DailyResolution = DailyResolution.WEEKDAY_WEEKEND):
+                 daily_resolution: DailyResolution = DailyResolution.WEEKDAY_WEEKEND,
+                 city='chicago'):
         """
         Initizalize Demand Importer. Reads Trip Data and transform it to spatio-temporal cells
         (see extract_spatio_temporal_demand_estimates)
@@ -23,7 +24,11 @@ class DemandImporter:
         self._temporal_resolution = temporal_resolution
         self._spatial_resolution = spatial_resolution
         self._daily_resolution = daily_resolution
+        self._city = city
 
+    @property
+    def city(self):
+        return self._city
 
     @property
     def temporal_resolution(self):
@@ -54,13 +59,14 @@ class DemandImporter:
         hex_start_column, hex_end_column = self._get_spatial_column()
         temporal_column = self._get_temporal_column()
         day_of_week_column = self._get_day_of_week_column()
+        city = self.city
         date_column = "date_start"
 
         if self._daily_resolution != DailyResolution.WEEKDAY_WEEKEND:
             raise NotImplementedError("Currently we can only distuinguish between weekday and weekend demand.")
 
         # First try to load cache
-        cache_path = Path('data/demand/', f"weekday_{temporal_column}_{hex_start_column}.csv")
+        cache_path = Path('data/demand/', f"{city}_weekday_{temporal_column}_{hex_start_column}.csv")
 
         if cache_path.exists():
             # Load cached data and return

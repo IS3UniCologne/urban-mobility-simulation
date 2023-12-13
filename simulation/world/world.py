@@ -1,8 +1,7 @@
 import logging
 from numpy.random import normal
 from simpy import Environment
-
-import simulation.agent.user as user
+from simulation.agent import user
 from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle.vehicle import Vehicle
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
@@ -30,10 +29,12 @@ class World:
             return World.__instance
 
     @staticmethod
-    def init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior, population_factory, reset=False):
+    def init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior,
+             population_factory, charging_infrastructure, reset=False):
         """ Static access method. """
         if World.__instance is None or reset is True:
-            World(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior, population_factory, reset)
+            World(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_behavior
+                  , population_factory, charging_infrastructure, reset)
         return World.__instance
 
 
@@ -43,6 +44,7 @@ class World:
                  vehicle_assignment_engine: VehicleAllocationEngineInterface,
                  vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
                  population_factory: PopulationFactory,
+                 charging_infrastructure,
                  reset: bool = False):
         """ Virtually private constructor. """
         if World.__instance is not None and not reset:
@@ -71,6 +73,9 @@ class World:
         # tracking
         self._tracking = Tracking.instance()
 
+        # charging infra
+        self._charging_infrastructure = charging_infrastructure
+
         # Config
         self._config = Configuration.instance()
 
@@ -94,9 +99,12 @@ class World:
     def vehicle_processes(self):
         return self._vehicle_processes
 
-    def add_user(self, origin, destination):
+
+    def add_user(self, mode, fleet, origin, destination):
         """
             Add a user agent to the world with an origin and a destination.
+        :param type: which type of request
+        :param fleet: which fleet
         :param origin: Spatial Unit ID (e.g., hex_id)
         :param destination: Spatial Unit ID (e.g., hex_id)
         :return: None
@@ -136,12 +144,29 @@ class World:
                                             self._vehicle_assignment_engine, self._vehicle_choice_behavior,
                                             population_type, self._env, passive=True)
             else:
-                # Generate Transportation Task
-                task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
+                if mode == 'shared_vehicle':
+                    # Generate Transportation Task
+                    task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
 
-                new_user = user.User(origin_position, task, self._search_engine, self._payment_engine,
-                                     self._vehicle_assignment_engine, self._vehicle_choice_behavior, population_type,
-                                     self._env)
+                    # Determine Consumer Type
+                    population_type = self._population_factory.generatePopulationType()
+
+                    new_user = user.User(fleet, origin_position, task, self._search_engine['shared_vehicle'], self._payment_engine['shared_vehicle'],
+                                         self._vehicle_assignment_engine['shared_vehicle'], self._vehicle_choice_behavior, population_type, self._env)
+                    logging.debug(f" Shared-vehicle user {new_user.user_id} starts searching for fleet {fleet} at {self._env.now}.",
+                                  extra={"clazz": self.__class__.__name__, "oid": " "})
+                if mode == 'ride_hailing':
+                    task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
+
+                    # Determine Consumer Type
+                    population_type = self._population_factory.generatePopulationTypeRideHailing()
+
+                    new_user = user.RideHailingUser(fleet, origin_position, task, self._search_engine[f'ride_hailing_{fleet}'],
+                                                    self._payment_engine[f'ride_hailing_{fleet}'],
+                                         self._vehicle_assignment_engine[f'ride_hailing_{fleet}'], self._vehicle_choice_behavior,
+                                         population_type, self._env)
+                    logging.debug(f"Ride-hailing user {new_user.user_id, population_type} request a vehicle at {self._env.now}.",
+                                  extra={"clazz": self.__class__.__name__, "oid": " "})
 
             # Add user to user list
             self._users.append(new_user)
@@ -181,6 +206,10 @@ class World:
     @property
     def vehicles(self):
         return self._vehicles
+
+    @property
+    def charging_infrastructure(self):
+        return self._charging_infrastructure
 
     @property
     def changed(self):
