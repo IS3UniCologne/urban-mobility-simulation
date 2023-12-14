@@ -6,6 +6,8 @@ class PopulationType(Enum):
     CLUSTER_1 = 1
     CLUSTER_2 = 2
     CLUSTER_3 = 3
+    PRICE_SENSITIVE = 4
+    CONVENIENCE_SEEKER = 5
 
 
 class PopulationFactory():

@@ -43,7 +43,7 @@ class Configuration:
     def instance() -> 'Configuration':
         """ Static access method. """
         if Configuration.__instance is None:
-            Configuration(spatial_resolution = 7, temporal_resolution = 4, daily_resolution = 1)
+            Configuration(spatial_resolution = 7, temporal_resolution = 4, daily_resolution = 1, city = "berlin")
         return Configuration.__instance
 
     @staticmethod

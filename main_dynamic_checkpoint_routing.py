@@ -59,9 +59,10 @@ parser.read(sys.argv[1])
 spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
 temporal_res = parser.getint("WORLD", "TEMPORAL_RESOLUTION")
 daily_res = parser.getint("WORLD", "daily_resolution")
+city = parser.get("WORLD", "city")
 
 # Create Global Config File
-global_config = Configuration.init(spatial_res, temporal_res, daily_res)
+global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand")
@@ -216,7 +217,8 @@ load_environment()
 p = Path(demand_file_path)
 di = DemandImporter(spatial_resolution=global_config.spatial_resolution,
                     temporal_resolution=global_config.temporal_resolution,
-                    daily_resolution=global_config.daily_resolution)
+                    daily_resolution=global_config.daily_resolution,
+                    city=global_config.city)
 
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
@@ -228,7 +230,7 @@ demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 geodesic_environment = GeodesicEnvironment.getInstance()
 hexagons = geodesic_environment.getLayer(f"hex_{spatial_res}").index.tolist()
-dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure")
+dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure", city)
 distance_matrix = dmi.load_distance_matrix()
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -291,15 +293,16 @@ def run_simulation(start_time: int, end_time: int, seed=4711):
     population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
 
     # World
-    world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model,
-                       population_factory, reset=True)
+    world = World.init(
+        env, search_engine, search_engine, vehicle_assignment_engine, 
+        vehicle_choice_model, population_factory, charging_infrastructure=None, reset=True)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Spawn Demand Processes.                 #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    demand_factory = DemandFactory(env, demand_profile, di, world, demand_modifier_paths, seed)
+    demand_factory = DemandFactory(env, demand_profile, di, world, demand_modifier_paths, seed, mode='public_transport')
     env.process(demand_factory.generate_demand())
 
     # # # # # # # # # # # # # # # # # # # # # #

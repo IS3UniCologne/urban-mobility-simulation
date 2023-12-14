@@ -102,8 +102,9 @@ class World:
 
     def add_user(self, mode, fleet, origin, destination):
         """
-            Add a user agent to the world with an origin and a destination.
-        :param type: which type of request
+        Add a user agent to the world with an origin and a destination.
+        
+        :param mode: which type of request
         :param fleet: which fleet
         :param origin: Spatial Unit ID (e.g., hex_id)
         :param destination: Spatial Unit ID (e.g., hex_id)
@@ -129,7 +130,7 @@ class World:
             # Determine Consumer Type
             population_type = self._population_factory.generatePopulationType()
 
-            if self._vehicle_choice_behavior.__class__.__name__ == 'PublicTransitVehicleChoiceBehavior':
+            if mode == 'public_transport':
                 # User Preferences
                 max_wait_time = normal(self._config.user_config.max_wait)  # sample from normal dist centered on config
 
@@ -143,8 +144,7 @@ class World:
                 new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
                                             self._vehicle_assignment_engine, self._vehicle_choice_behavior,
                                             population_type, self._env, passive=True)
-            else:
-                if mode == 'shared_vehicle':
+            elif mode == 'shared_vehicle':
                     # Generate Transportation Task
                     task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
 
@@ -155,18 +155,20 @@ class World:
                                          self._vehicle_assignment_engine['shared_vehicle'], self._vehicle_choice_behavior, population_type, self._env)
                     logging.debug(f" Shared-vehicle user {new_user.user_id} starts searching for fleet {fleet} at {self._env.now}.",
                                   extra={"clazz": self.__class__.__name__, "oid": " "})
-                if mode == 'ride_hailing':
-                    task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
+            elif mode == 'ride_hailing':
+                task = TransportTask(self._env.now, origin_position, destination_position, viable_vehicle_modes)
 
-                    # Determine Consumer Type
-                    population_type = self._population_factory.generatePopulationTypeRideHailing()
+                # Determine Consumer Type
+                population_type = self._population_factory.generatePopulationTypeRideHailing()
 
-                    new_user = user.RideHailingUser(fleet, origin_position, task, self._search_engine[f'ride_hailing_{fleet}'],
-                                                    self._payment_engine[f'ride_hailing_{fleet}'],
-                                         self._vehicle_assignment_engine[f'ride_hailing_{fleet}'], self._vehicle_choice_behavior,
-                                         population_type, self._env)
-                    logging.debug(f"Ride-hailing user {new_user.user_id, population_type} request a vehicle at {self._env.now}.",
-                                  extra={"clazz": self.__class__.__name__, "oid": " "})
+                new_user = user.RideHailingUser(fleet, origin_position, task, self._search_engine[f'ride_hailing_{fleet}'],
+                                                self._payment_engine[f'ride_hailing_{fleet}'],
+                                        self._vehicle_assignment_engine[f'ride_hailing_{fleet}'], self._vehicle_choice_behavior,
+                                        population_type, self._env)
+                logging.debug(f"Ride-hailing user {new_user.user_id, population_type} request a vehicle at {self._env.now}.",
+                                extra={"clazz": self.__class__.__name__, "oid": " "})
+            else:
+                raise NotImplementedError('User mode "{mode}" not implemented.')
 
             # Add user to user list
             self._users.append(new_user)

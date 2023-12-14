@@ -222,7 +222,7 @@ class DemandImporter:
         elif self.temporal_resolution == TemporalBucket.TWELVE_HOURLY_BUCKETS:
             return "time_bucket_12h"
         else:
-            return "time_bucket_4h"
+            return "time_bucket_4h" # default
 
     def _get_day_of_week_column(self):
         return "is_holiday"

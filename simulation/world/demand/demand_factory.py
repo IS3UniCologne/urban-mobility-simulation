@@ -1,14 +1,13 @@
-import json
 import h3
-import numpy
+import json
+import logging
+import numpy as np
 import simpy
 
 from simulation.world.demand.demand_importer import DemandImporter
-import logging
 from simulation.helper.configuration.configuration import Configuration
 from simulation.world.world import World
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
-import numpy as np
 
 
 class DemandFactory:
@@ -39,8 +38,8 @@ class DemandFactory:
 
         self._spatial_units = list(self._demand_profile[origin].unique())
 
-        # Random Number Generator
-        self._random = numpy.random.RandomState(seed)
+        # Random Number Generators
+        self._random = np.random.RandomState(seed)
 
         # Config
         self._config = Configuration.instance()
@@ -95,7 +94,7 @@ class DemandFactory:
 
         # Filter data on spatial unit such that we don't need to filter on the entire demand profile
         local_demand_profile = self._demand_profile[(self._demand_profile[self._origin_column] == spatial_unit)]
-        local_demand_profile.loc[:,'o_poisson_est'] /= 4
+        # local_demand_profile.loc[:,'o_poisson_est'] /= 4
         # Run until simulation ends
         while (DemandFactory.counter < self._maximal_demand):
             try:
@@ -168,7 +167,7 @@ class DemandFactory:
                     logging.debug(f'Demand generated from hexagon {spatial_unit} to {destination}. Fleet {fleet}',
                                   extra={"clazz": self.__class__.__name__, "oid": ""})
 
-            self._world.add_user(self._mode, fleet, spatial_unit, destination)
+                self._world.add_user(self._mode, fleet, spatial_unit, destination)
 
                 # Increase global counter (not thread safe)
                 DemandFactory.counter += 1
