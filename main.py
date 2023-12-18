@@ -1,7 +1,7 @@
 from pathlib import Path
 import random
 import pandas as pd
-from pqdm.processes import pqdm
+# from pqdm.processes import pqdm
 import multiprocessing as mp
 import numpy as np
 from simulation.agent.user import User  # must come before DemandFactory, otherwise circular imports
@@ -23,6 +23,7 @@ from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
+from tracking.tracking import Tracking
 
 pd.set_option('display.max_columns', None)
 import simpy
@@ -350,6 +351,7 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
     global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction)
 
     # World
+    tracking = Tracking.init(env)
     world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model,
                        population_factory, charging_infrastructure, reset=True)
 

@@ -128,7 +128,7 @@ class World:
             viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
             # Determine Consumer Type
-            population_type = self._population_factory.generatePopulationType()
+            population_type = self._population_factory.generatePopulationTypeRideHailing()
 
             if mode == 'public_transport':
                 # User Preferences
