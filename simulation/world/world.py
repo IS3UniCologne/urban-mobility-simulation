@@ -70,6 +70,8 @@ class World:
         self._vehicles = []
         self._vehicle_processes = []
 
+        # TODO: keep track of fleets here as well
+
         # tracking
         self._tracking = Tracking.instance()
 
