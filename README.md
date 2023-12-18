@@ -8,3 +8,8 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 * Because we want to support as many platforms as possible, we need to stick to certain Python versions as defined in `environment.yml`.
 Other Python versions are untested!
 > If you are on newer Macs (Apple Silicon) please use `environment_mac.yml` with special tensorflow dependencies!
+
+## Running an experiment
+> We provide a template at `experiment_template.py` for most common use cases, please refer to this!
+
+Provide configuration files as the first argument after the experiment file name such as `python experiment_template.py ./resources/configurations/app-remote.ini`
