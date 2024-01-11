@@ -83,14 +83,14 @@ class Operations:
             charging_events = []
 
             # No Vehicles to be charged
-            no_vehicles_scheduled_to_charge = {}
+            N_vehicles_scheduled_to_charge = {}
 
             for mode in self._available_modes:
                 charging_plans_for_current_mode = charging_plans[mode]
 
                 # Set Counter to 0
-                if mode not in no_vehicles_scheduled_to_charge:
-                    no_vehicles_scheduled_to_charge[mode] = 0
+                if mode not in N_vehicles_scheduled_to_charge:
+                    N_vehicles_scheduled_to_charge[mode] = 0
 
                 for charging_plan in charging_plans_for_current_mode:
                     if len(charging_plan) > 1:
@@ -105,7 +105,7 @@ class Operations:
                             multi_service_task.append_task(charging_task)
 
                             # Count Vehicles to be charged
-                            no_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
+                            N_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
 
                         # Schedule to Queue
                         self._scheduled_tasks.append(multi_service_task)
@@ -126,7 +126,7 @@ class Operations:
                         charging_events.append(charging_task.task_finished)
 
                         # Count Vehicles to be charged
-                        no_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
+                        N_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
 
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
@@ -134,7 +134,7 @@ class Operations:
             logging.info(f"There are {self._vehicle_fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""})
 
-            logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+            logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {N_vehicles_scheduled_to_charge}",
                 extra={"clazz": self.__class__.__name__, "oid": ""})
 
             # Notify listeners
@@ -160,14 +160,14 @@ class Operations:
                 relocation_events = []
 
                 # No Vehicles to be charged
-                no_vehicles_scheduled_to_relocate = {}
+                N_vehicles_scheduled_to_relocate = {}
 
                 for mode in self._available_modes:
                     relocation_plans_for_current_mode = relocations[mode]
 
                     # Set Counter to 0
-                    if mode not in no_vehicles_scheduled_to_relocate:
-                        no_vehicles_scheduled_to_relocate[mode] = 0
+                    if mode not in N_vehicles_scheduled_to_relocate:
+                        N_vehicles_scheduled_to_relocate[mode] = 0
 
                     for relocation_plan in relocation_plans_for_current_mode:
                         if len(relocation_plan) > 1:
@@ -182,7 +182,7 @@ class Operations:
                                 multi_service_task.append_task(relocation_task)
 
                                 # Count Vehicles to be charged
-                                no_vehicles_scheduled_to_relocate[mode] += no_vehicle_to_relocate
+                                N_vehicles_scheduled_to_relocate[mode] += no_vehicle_to_relocate
 
                             # Schedule to Queue
                             self._scheduled_tasks.append(multi_service_task)
@@ -204,7 +204,7 @@ class Operations:
                             relocation_events.append(relocation_task.task_finished)
 
                             # Count Vehicles to be charged
-                            no_vehicles_scheduled_to_relocate[mode] += no_vehicle_to_relocate
+                            N_vehicles_scheduled_to_relocate[mode] += no_vehicle_to_relocate
 
                 # Insert Tasks into Task Queue
                 self._task_queue.bulk_append(self._scheduled_tasks)
