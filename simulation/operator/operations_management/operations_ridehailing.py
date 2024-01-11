@@ -80,7 +80,7 @@ class OperationsRidehailing:
             charging_events = []
 
             # No Vehicles to be charged
-            no_vehicles_scheduled_to_charge = {}
+            N_vehicles_scheduled_to_charge = {}
 
 
             for charging_plan in charging_plans:
@@ -106,7 +106,7 @@ class OperationsRidehailing:
             logging.warning(f"There are {self._vehicle_fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""})
 
-            logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+            logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {N_vehicles_scheduled_to_charge}",
                 extra={"clazz": self.__class__.__name__, "oid": ""})
             # Notify listeners
             self._charging_plan_updated.succeed()

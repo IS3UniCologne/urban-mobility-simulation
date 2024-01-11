@@ -24,6 +24,8 @@ from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 from simulation.world.world import World
 from tracking.tracking import Tracking
 
+walking_speed_in_kmh = 5  # TODO: move to config
+walking_speed_in_mpm = walking_speed_in_kmh * 1000 / 60  # TODO: move to config
 
 class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface):
     def __init__(self, env: Environment, timetable: Timetable):
@@ -123,7 +125,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
             # from search to arrival + walk to final destination
             duration = SimulationTimeConverter.duration_between(SimulationTimeConverter.as_str(search_time),
                                                                 vehicle.prognose_arrival(subroute.destination)) + \
-                       (walking_dist_to_destination / 83.33)
+                       (walking_dist_to_destination / walking_speed_in_mpm)
 
             # TODO: convenience=0 is only a placeholder
             transportation_alternative = TransportationAlternative(vehicle, subroute, price, duration, distance, 0)
@@ -373,7 +375,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                            latest_departure):
         walking_dist = stop >> current_position
         # reachable within the specified temporal_lookahead and depart after arrival by foot
-        reachable = SimulationTimeConverter.as_str(current_time + (walking_dist / 83.33)) <= \
+        reachable = SimulationTimeConverter.as_str(current_time + (walking_dist / walking_speed_in_mpm)) <= \
                     vehicle.prognose_arrival(stop) <= \
                     latest_departure
         return reachable, walking_dist

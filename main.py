@@ -466,7 +466,7 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
         "SharedCar").daily_total_cost * AV_penetration * n_cars) * (end_time / 1440)}
 
     # Daily Total Cost (CAPEX+OPEX) (cost derived from RevCalc excel in iCloud folder)
-    no_vehicles_to_be_charged = {'ride_hailing_0': ride_hailing_fleet_0.get_all_vehicles_below_soc_level(
+    N_vehicles_to_be_charged = {'ride_hailing_0': ride_hailing_fleet_0.get_all_vehicles_below_soc_level(
         global_config.shared_vehicle_operator_config.recharge_threshold),
         'ride_hailing_1': ride_hailing_fleet_1.get_all_vehicles_below_soc_level(
             global_config.shared_vehicle_operator_config.recharge_threshold)}
@@ -557,7 +557,7 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
                 total_operational_cost['ride_hailing_0'],
                 payment_engine['ride_hailing_0'].total_fulfilled_trips,
                 payment_engine['ride_hailing_0'].total_missed_trips,
-                no_vehicles_to_be_charged['ride_hailing_0'],
+                N_vehicles_to_be_charged['ride_hailing_0'],
                 func_objective['ride_hailing_0'],
                 payment_engine['ride_hailing_1'].total_revenue,
                 total_cost_per_day['ride_hailing_1'], total_operational_cost['ride_hailing_1'],
@@ -565,7 +565,7 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
                 total_operational_cost['ride_hailing_1'],
                 payment_engine['ride_hailing_1'].total_fulfilled_trips,
                 payment_engine['ride_hailing_1'].total_missed_trips,
-                no_vehicles_to_be_charged['ride_hailing_1'],
+                N_vehicles_to_be_charged['ride_hailing_1'],
                 func_objective['ride_hailing_1']
                 )
 
