@@ -6,6 +6,7 @@ import logging
 from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.vehicle import VehicleState
+from simulation.environment.geodesic_position import GeodesicPosition
 
 
 # class RideHailingCarState(Enum):
@@ -27,7 +28,7 @@ class RideHailingCar(RideHailingVehicle):
     # Shared Care Counter
     ride_hailing_car_id = 0
 
-    def __init__(self, env: Environment, position, max_available_seats=4, max_state_of_charge=16.7, energy_consumption=0.152, velocity = 833.33, price_per_min = 0.26, electric_vehicle = True):
+    def __init__(self, env: Environment, position: GeodesicPosition, max_available_seats=4, max_state_of_charge=16.7, energy_consumption=0.152, velocity = 833.33, price_per_min = 0.26, electric_vehicle = True):
         """
 
         :param env:

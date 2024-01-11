@@ -79,7 +79,7 @@ class OperationsRidehailing:
             # We track the charging events
             charging_events = []
 
-            # No Vehicles to be charged
+            # Number of Vehicles to be charged
             N_vehicles_scheduled_to_charge = {}
 
 
