@@ -327,7 +327,7 @@ vehicle_assignment_engine = {'shared_vehicle': SharedVehicleAllocationEngine(env
                              'public_transport': pt_operator}
 
 # Initialize Rule Based Relocation Scheduler
-rs = RelocationScheduler(distance_matrix, mixed_fleet, available_vehicle_modes,
+relocation_scheduler = RelocationScheduler(distance_matrix, mixed_fleet, available_vehicle_modes,
                             available_vehicle_modes_supply, no_service_workers,
                             base_regions, base_capacity)
 
@@ -336,7 +336,7 @@ task_queue = TaskQueue(env)
 
 # Init Operations Module
 shared_operator = Operations(env, mixed_fleet, no_service_workers, global_config.shared_vehicle_operator_config.operations_start,
-                    global_config.shared_vehicle_operator_config.operations_duration, rs,
+                    global_config.shared_vehicle_operator_config.operations_duration, relocation_scheduler,
                     payment_engine, available_vehicle_modes,
                     available_vehicle_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold, task_queue)
 
