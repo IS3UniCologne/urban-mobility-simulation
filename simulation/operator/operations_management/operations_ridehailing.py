@@ -74,7 +74,7 @@ class OperationsRidehailing:
 
             # Retrieve Vehicle Transactions
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-            charging_plans = self._relocation_scheduler.generate_charging_plan()
+            charging_plans = self._relocation_scheduler.generate_charging_plan(self._charging_stations)
 
             # We track the charging events
             charging_events = []

@@ -410,14 +410,12 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
     rs_ridehailing_0 = RebalancingSchedulerRidehailing(distance_matrix, ride_hailing_fleet_0,
                                                        available_vehicle_modes_ridehailing,
                                                        available_vehicle_modes_supply_ride_hailing, no_service_workers,
-                                                       base_regions, base_capacity, recharge_threshold,
-                                                       charging_infrastructure._chargers)
+                                                       base_regions, base_capacity, recharge_threshold)
 
     rs_ridehailing_1 = RebalancingSchedulerRidehailing(distance_matrix, ride_hailing_fleet_1,
                                                        available_vehicle_modes_ridehailing,
                                                        available_vehicle_modes_supply_ride_hailing, no_service_workers,
-                                                       base_regions, base_capacity, recharge_threshold,
-                                                       charging_infrastructure._chargers)
+                                                       base_regions, base_capacity, recharge_threshold)
 
     # Store Tasks which are processed by service workers
     task_queue_ridehailing = TaskQueue(env)
