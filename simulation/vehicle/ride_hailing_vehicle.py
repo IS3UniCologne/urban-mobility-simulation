@@ -1,6 +1,3 @@
-from abc import ABC, abstractmethod
-from enum import Enum
-
 import logging
 from simpy import Environment
 
@@ -25,7 +22,7 @@ from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
 #     MOVING_TO_PICK_UP_POS = 1003
 
 
-class RideHailingVehicle(Vehicle, ABC):
+class RideHailingVehicle(Vehicle):
     ride_hailing_vehicle_id = 0
 
     def __init__(self, env: Environment, position, max_available_seats = 1, max_state_of_charge=1, energy_consumption = 0.01, velocity = 166.7, price_per_min = 1, driver: DriverInterface = None, electric_vehicle=True):

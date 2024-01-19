@@ -26,6 +26,7 @@ class RideHailingCar(RideHailingVehicle):
 
     # Shared Care Counter
     ride_hailing_car_id = 0
+    vehicle_type = "ridehailing_car" # TODO: make explicit that it's a human-driven car
 
     def __init__(self, env: Environment, position, max_available_seats=4, max_state_of_charge=16.7, energy_consumption=0.152, velocity = 833.33, price_per_min = 0.26, electric_vehicle = True):
         """

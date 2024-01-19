@@ -6,7 +6,7 @@ from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import SpatialResolution, Configuration
 from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
-from simulation.vehicle.autonomous_car import AutonomousCar
+from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 
 from simulation.vehicle.shared_car import SharedCar
@@ -162,7 +162,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
         for current_AV in range(AVs_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            autonomous_car = AutonomousCar(env, pos,
+            autonomous_car = RideHailingAV(env, pos,
                                     c_config.max_available_seats, c_config.max_state_of_charge,
                                     c_config.energy_consumption, c_config.velocity, c_config.price_per_min)
             fleet.add_shared_vehicle(autonomous_car)
