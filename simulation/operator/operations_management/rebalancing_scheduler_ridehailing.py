@@ -14,7 +14,7 @@ class RebalancingSchedulerRidehailing:
 
     def __init__(self, distance_matrix, fleet, ordered_available_vehicle_modes,
                  ordered_max_vehicle_supply, number_of_service_units,
-                 base_regions, base_capacity, charging_threshold, charging_stations):
+                 base_regions, base_capacity, charging_threshold):
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
 
@@ -32,7 +32,6 @@ class RebalancingSchedulerRidehailing:
         self._base_regions = base_regions
         self._base_capacity = base_capacity
         self._charging_threshold = charging_threshold
-        self._charging_stations = charging_stations
 
     def generate_relocation_plan(self, transactions):
         """
@@ -47,7 +46,7 @@ class RebalancingSchedulerRidehailing:
 
         return relocation_plans
 
-    def generate_charging_plan(self):
+    def generate_charging_plan(self, charging_stations):
         """
         Generate a rule based charging plan based on given service worker capacity
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
@@ -61,7 +60,7 @@ class RebalancingSchedulerRidehailing:
         # if config.store_results:
         #     state.to_csv(Path(config.output_path, config.fleet_state_file), index = False)
 
-        charging_plans = self.calculate_charging_plan(vehicles_to_charge)
+        charging_plans = self.calculate_charging_plan(vehicles_to_charge, charging_stations)
 
         return charging_plans
 
@@ -72,7 +71,7 @@ class RebalancingSchedulerRidehailing:
     #############################################
 
 
-    def calculate_charging_plan(self, vehicles_to_charge):
+    def calculate_charging_plan(self, vehicles_to_charge, charging_stations):
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
@@ -110,7 +109,7 @@ class RebalancingSchedulerRidehailing:
                 for queue in [0, 2, 5, 10]:
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
-                        available_charging_stations = [x for x in self._charging_stations if len(x.plugs.queue) <= queue]
+                        available_charging_stations = [x for x in charging_stations if len(x.plugs.queue) <= queue]
                         if len(available_charging_stations) > 0:
                             selected_charging_station = \
                                 [x for x in available_charging_stations if x.location == selected_base]
@@ -122,7 +121,7 @@ class RebalancingSchedulerRidehailing:
                 if not selected_base_distance:
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
-                        available_charging_stations = [x for x in self._charging_stations]
+                        available_charging_stations = [x for x in charging_stations]
                         if len(available_charging_stations) > 0:
                             selected_charging_station = \
                                 [x for x in available_charging_stations if x.location == selected_base]
@@ -134,7 +133,7 @@ class RebalancingSchedulerRidehailing:
             if not vehicle.electric_vehicle:
                 for index_base, row_base in sorted_base_list.iterrows():
                     selected_base = index_base
-                    available_charging_stations = [x for x in self._charging_stations]
+                    available_charging_stations = [x for x in charging_stations]
                     if len(available_charging_stations) > 0:
                         selected_charging_station = \
                             [x for x in available_charging_stations if x.location == selected_base][0]
