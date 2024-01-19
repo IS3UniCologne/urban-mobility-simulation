@@ -3,9 +3,9 @@ from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative import TransportationAlternative
 from simulation.operator.data_transfer_object.transportation_alternative_browser import TransportationAlternativeBrowser
-from simulation.operator.interface.fleet_interface import FleetInterface
 from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transport_task import TransportTask
 from simulation.tasks.transportation_search_task import TransportationSearchTask
 
@@ -143,7 +143,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         logging.info(f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
                       extra={"clazz": self.__class__.__name__, "oid": ""})
 
-    def register_fleet(self, fleet: FleetInterface):
+    def register_fleet(self, fleet: VehicleFleet):
         self._fleet = fleet
 
     @property

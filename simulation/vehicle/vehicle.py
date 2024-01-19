@@ -28,6 +28,7 @@ class VehicleState():
 
 class Vehicle(ABC):
     vehicle_id = 0
+    vehicle_type: str
 
     def __init__(self, env: Environment, position):
         self._id = Vehicle.vehicle_id

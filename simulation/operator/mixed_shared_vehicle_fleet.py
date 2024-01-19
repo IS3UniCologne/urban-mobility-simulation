@@ -2,7 +2,7 @@ from simpy import Environment
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
-from simulation.operator.interface.fleet_interface import FleetInterface
+from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
@@ -10,7 +10,7 @@ from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle.vehicle import VehicleState
 
 
-class MixedSharedVehicleFleet(FleetInterface):
+class MixedSharedVehicleFleet(VehicleFleet):
 
     def __init__(self, env: Environment):
         super(MixedSharedVehicleFleet, self).__init__(env)
@@ -30,7 +30,7 @@ class MixedSharedVehicleFleet(FleetInterface):
         else:
             self._bikes.append(vehicle)
 
-    def get_all_vehicles(self, region):
+    def vehicles_in_region(self, region):
         """
         Return all vehicles which are located in a region
 
@@ -139,7 +139,7 @@ class MixedSharedVehicleFleet(FleetInterface):
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
         below_soc_level_vehicles = []
-        cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = self.get_all_vehicles(region)
+        cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = self.vehicles_in_region(region)
 
         for vehicle in [*cars_in_area, *scooters_in_area, *kick_scooters_in_area, *bikes_in_area]:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
