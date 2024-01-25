@@ -50,10 +50,7 @@ os.chdir(working_dir)
 parser = ConfigParser()
 parser.read(sys.argv[1])
 
-# World Config
-spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
-temporal_res = parser.getint("WORLD", "TEMPORAL_RESOLUTION")
-daily_res = parser.getint("WORLD", "daily_resolution")
+ 
 
 # Create Global Config File
 global_config = Configuration.init(spatial_res, temporal_res, daily_res)
