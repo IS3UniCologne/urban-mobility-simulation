@@ -1,4 +1,10 @@
-# This file compares main.py and main_dynamicrouting.py and 
+# This file compares (current expertiment_template with) main.py and main_dynamicrouting.py (?)
+
+### Imports 
+from pathlib import Path
+import sys
+from configparser import ConfigParser
+import os
 
 # Change working directory to path of main.py
 working_dir = Path(__file__).parent
@@ -8,21 +14,39 @@ os.chdir(working_dir)
 parser = ConfigParser()
 parser.read(sys.argv[1])
 
-# World Config
+### Experiment Management
+start_time = parser.getint("EXPERIMENT_MANAGEMENT", "START_TIME")
+end_time = parser.getint("EXPERIMENT_MANAGEMENT", "END_TIME")
+seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Configuration                           #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+from simulation.helper.configuration.configuration import Configuration
+# Create Global Config File
+global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
+
+# World / Resolution Config
 spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
 temporal_res = parser.getint("WORLD", "TEMPORAL_RESOLUTION")
 daily_res = parser.getint("WORLD", "daily_resolution")
 #Dynamic.py has also "city"
 
-# Create Global Config File
-global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
-
+### Input Files
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand")
 demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(',')
 
 # Input Files (Supply)
+import pandas as pd
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
+# Get the supply probability from supply file
+supply_prob = pd.read_csv(supply_file_path)
+
+# Input Files (Public Transit Operator / Timetable)
+transit_timetable_path = parser.get("INFRASTRUCTURE", "path_transit_timetable")
 
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand")
@@ -34,7 +58,9 @@ env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7")
 env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8")
 env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 
+### Vehicle Configuration
 # Shared Vehicle Config
+from simulation.helper.configuration.configuration import VehicleConfig
 price_per_min = parser.getfloat("SHARED_CAR", "PRICE_PER_MIN")
 max_state_of_charge = parser.getfloat("SHARED_CAR", "MAX_STATE_OF_CHARGE")
 energy_consumption = parser.getfloat("SHARED_CAR", "ENERGY_CONSUMPTION")
@@ -47,13 +73,24 @@ initial_SoC = parser.getfloat("SHARED_CAR", "INITIAL_SOC")
 vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats,
                     max_walking_distance, daily_total_cost, initial_SoC)
 
+## Busses and PublicTransitOperator
+
 # Bus Vehicle Config
+from simulation.helper.configuration.configuration import BusConfig
 bus_config = BusConfig(
     max_available_seats=parser.getint("BUS", "SEATS"),
     velocity=parser.getfloat("BUS", "VELOCITY")
 )
 
-# User Configuration
+# Public Transit Operator Config
+from simulation.helper.configuration.configuration import TransitOperatorConfig
+transit_operator_config = TransitOperatorConfig(
+    planning_lookahead=parser.getint("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD"),
+    max_busses=parser.getint("TRANSIT_OPERATOR", "MAX_BUSSES")
+)
+
+# User and Moide Choice Configuration
+from simulation.helper.configuration.configuration import ModeChoiceConfig
 mode_choice_model_path = parser.get("MODE_CHOICE_MODEL", "path_to_mode_choice_model")
 mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
@@ -62,23 +99,11 @@ mode_choice_available_modes = mode_choice_available_modes.split(',')
 pop_prob = parser.get("MODE_CHOICE_MODEL", "population_probabilities").split(',')
 pop_prob = [float(x) for x in pop_prob]
 
-# Public Transit Operator Config
-transit_operator_config = TransitOperatorConfig(
-    planning_lookahead=parser.getint("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD"),
-    max_busses=parser.getint("TRANSIT_OPERATOR", "MAX_BUSSES")
-)
+mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary, mode_choice_available_modes,
+                      mode_choice_model_path)
 
-# we need to register every config in the global configuration
-global_config.add_vehicle_config("Shared_Car", vc)
-global_config.add_bus_config(bus_config)
-
-global_config.add_mode_choice_config(mc)
-global_config.add_transit_operator_config(transit_operator_config)
-
-svoc = SharedVehicleOperatorConfig(recharge_threshold, charging_station_power,
-                                   number_of_service_workers, base_regions,
-                                   base_capacity, operations_start, operations_duration,
-                                   vehicle_relocation_velocity)
+# Shared Vehicle Configuration
+from simulation.helper.configuration.configuration import SharedVehicleOperatorConfig
 
 # Read Shared Vehicle Operator Config
 # recharge_threshold = parser.getfloat("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD")
@@ -96,6 +121,20 @@ operations_start = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_DURATION")
 vehicle_relocation_velocity = parser.getint("SHARED_VEHICLE_OPERATOR", "VEHICLE_RELOCATION_VELOCITY")
 
+svoc = SharedVehicleOperatorConfig(recharge_threshold, charging_station_power,
+                                   number_of_service_workers, base_regions,
+                                   base_capacity, operations_start, operations_duration,
+                                   vehicle_relocation_velocity)
+
+# Register every config in the global configuration
+# - Shared Vehicles
+global_config.add_vehicle_config("Shared_Car", vc)
+# - Bus + PublicTransitOperator
+global_config.add_bus_config(bus_config)
+global_config.add_transit_operator_config(transit_operator_config)
+# - User / Mode Choice
+global_config.add_mode_choice_config(mc)
+# - Shared Vehicle Operator
 global_config.add_shared_vehicle_operator_config(svoc)
 
 # Output Configuration
@@ -109,6 +148,74 @@ global_config.set_store_results(store_results)
 global_config.set_output_path(output_folder)
 global_config.set_transaction_file(transaction_file)
 global_config.set_fleet_state_file(fleet_state_file)
+
+## Spatial Environment
+import geopandas as gpd
+from utils import load_environment
+# Load Spatial Environment
+load_environment()
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Load Demand Data (once).                #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+from simulation.world.demand.demand_importer import DemandImporter
+p = Path(demand_file_path)
+di = DemandImporter(spatial_resolution=global_config.spatial_resolution,
+                    temporal_resolution=global_config.temporal_resolution,
+                    daily_resolution=global_config.daily_resolution,
+                    city=global_config.city)
+
+demand_profile = di.extract_spatio_temporal_demand_estimates(p)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Load Distance Matrix (once).            #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.infrastructure.helper.distance_matrix_importer import DistanceMatrixImporter
+
+geodesic_environment = GeodesicEnvironment.getInstance()
+hexagons = geodesic_environment.getLayer(f"hex_{spatial_res}").index.tolist()
+dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure", city)
+distance_matrix = dmi.load_distance_matrix()
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Init. Simulation Environment            #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+import simpy
+env = simpy.Environment(initial_time=0)
+############################################################################
+#                                                                          #
+#  Before each simulation run, reset counter and random number generators  #
+#                                                                          #
+############################################################################
+from simulation.vehicle.shared_car import SharedCar
+from simulation.vehicle.shared_kick_scooter import SharedKickScooter
+from simulation.vehicle.shared_scooter import SharedScooter
+from simulation.vehicle.public_transit_bus import Bus
+from simulation.agent.user import User  # must come before DemandFactory, otherwise circular imports
+from simulation.world.demand.demand_factory import DemandFactory
+
+SharedCar.car_id = 0
+SharedKickScooter.shared_kick_scooter_id = 0
+SharedScooter.shared_scooter_id = 0
+Bus.bus_id = 0
+User.user_id = 0
+
+DemandFactory.counter = 0
+
+GeodesicEnvironment.getInstance().reset_random_generator(4711)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Logging                                 #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
 
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
@@ -134,90 +241,40 @@ file_handler.setLevel(log_level)
 cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
 logger.addFilter(cf_init)
 
-def load_environment():
-    # Read Environment Files
-    filename = bounding_box_path
-    with open(filename) as file:
-        env_df = gpd.read_file(file, driver="GeoJSON")
-
-    filename = env_layer_hex_9
-    with open(filename) as file:
-        env_df_hex_9 = gpd.read_file(file, driver="GeoJSON")
-        env_df_hex_9.set_index('hex_id_9', inplace=True)
-
-    filename = env_layer_hex_8
-    with open(filename) as file:
-        env_df_hex_8 = gpd.read_file(file, driver="GeoJSON")
-        env_df_hex_8.set_index('hex_id_8', inplace=True)
-
-    filename = env_layer_hex_7
-    with open(filename) as file:
-        env_df_hex_7 = gpd.read_file(file, driver="GeoJSON")
-        env_df_hex_7.set_index('hex_id_7', inplace=True)
-
-    geodesic_environment = GeodesicEnvironment()
-    geodesic_environment.addLayer("bounding_box", env_df)
-    geodesic_environment.addLayer("hex_9", env_df_hex_9)
-    geodesic_environment.addLayer("hex_8", env_df_hex_8)
-    geodesic_environment.addLayer("hex_7", env_df_hex_7)
-
-    return geodesic_environment
-
-# Load Spatial Environment
-load_environment()
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Load Demand Data (once).                #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-p = Path(demand_file_path)
-di = DemandImporter(spatial_resolution=global_config.spatial_resolution,
-                    temporal_resolution=global_config.temporal_resolution,
-                    daily_resolution=global_config.daily_resolution,
-                    city=global_config.city)
-
-demand_profile = di.extract_spatio_temporal_demand_estimates(p)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Load Distance Matrix (once).            #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-geodesic_environment = GeodesicEnvironment.getInstance()
-hexagons = geodesic_environment.getLayer(f"hex_{spatial_res}").index.tolist()
-dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure", city)
-distance_matrix = dmi.load_distance_matrix()
-
-# Simulation Environment
-env = simpy.Environment(initial_time=0)
-
-# Before each simulation run, reset counter and random number generators
-SharedCar.car_id = 0
-SharedKickScooter.shared_kick_scooter_id = 0
-SharedScooter.shared_scooter_id = 0
-Bus.bus_id = 0
-User.user_id = 0
-DemandFactory.counter = 0
-
-GeodesicEnvironment.getInstance().reset_random_generator(4711)
-
 # Inject Simulation Environment to Logger (such that we can log the env time)
+from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
+from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 cf = SimulationContextFilter(filter_name='add_env', extra=env)
 edf = ExtraDefaultFilter(filter_name="add_default_value")
 logger.addFilter(cf)
 logger.addFilter(edf)
 
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Init. Tracking                          #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+from tracking.tracking import Tracking
 tracking = Tracking.init(env)
 
-# Operator Modules
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Init. Simulation Modules                #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
 
-# PublicTransitOperator starts its own processes & also includes vehicle spawn
+# PublicTransitOperator // starts its own processes & also includes vehicle spawn
+from simulation.operator.public_transit_operator import PublicTransitOperator
 pt_operator = PublicTransitOperator(env, timetable)
 
-
-# Shared_Fleet
+# Fleet of vehicles: Configure + Generate
+from simulation.operator.fleet_factory import generate_mixed_fleet, generate_fleet_config
+# Get number of each vehicle type to be spawned from configuration
+n_cars = parser.getint("EXPERIMENT_MANAGEMENT", "N_CARS")
+n_kick_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_KICKSCOOTER")
+n_bikes = parser.getint("EXPERIMENT_MANAGEMENT", "N_BIKES")
+n_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
+# Configure and generate / spawn vehicles
 fleet_config = generate_fleet_config(supply_prob, n_cars = n_cars, n_scooter = n_scooter, n_kick_scooter= n_kick_scooter, n_bikes=n_bikes)
 mixed_fleet = generate_mixed_fleet(env, fleet_config)
