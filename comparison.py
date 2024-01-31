@@ -25,14 +25,16 @@ seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 from simulation.helper.configuration.configuration import Configuration
-# Create Global Config File
-global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
+
 
 # World / Resolution Config
 spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
 temporal_res = parser.getint("WORLD", "TEMPORAL_RESOLUTION")
 daily_res = parser.getint("WORLD", "daily_resolution")
-#Dynamic.py has also "city"
+city = parser.get("WORLD", "city")
+
+# Create Global Config File
+global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 ### Input Files
 # Input Files (Demand)
@@ -45,9 +47,6 @@ supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
 # Get the supply probability from supply file
 supply_prob = pd.read_csv(supply_file_path)
 
-# Input Files (Public Transit Operator / Timetable)
-transit_timetable_path = parser.get("INFRASTRUCTURE", "path_transit_timetable")
-
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand")
 demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(',')
@@ -57,37 +56,6 @@ bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
 env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7")
 env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8")
 env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
-
-### Vehicle Configuration
-# Shared Vehicle Config
-from simulation.helper.configuration.configuration import VehicleConfig
-price_per_min = parser.getfloat("SHARED_CAR", "PRICE_PER_MIN")
-max_state_of_charge = parser.getfloat("SHARED_CAR", "MAX_STATE_OF_CHARGE")
-energy_consumption = parser.getfloat("SHARED_CAR", "ENERGY_CONSUMPTION")
-velocity = parser.getfloat("SHARED_CAR", "VELOCITY")
-max_available_seats = parser.getint("SHARED_CAR", "MAX_AVAILABLE_SEATS")
-max_walking_distance = parser.getint("SHARED_CAR", "WALKING_DISTANCE")
-daily_total_cost = parser.getfloat("SHARED_CAR", "DAILY_TOTAL_COST")
-initial_SoC = parser.getfloat("SHARED_CAR", "INITIAL_SOC")
-
-vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats,
-                    max_walking_distance, daily_total_cost, initial_SoC)
-
-## Busses and PublicTransitOperator
-
-# Bus Vehicle Config
-from simulation.helper.configuration.configuration import BusConfig
-bus_config = BusConfig(
-    max_available_seats=parser.getint("BUS", "SEATS"),
-    velocity=parser.getfloat("BUS", "VELOCITY")
-)
-
-# Public Transit Operator Config
-from simulation.helper.configuration.configuration import TransitOperatorConfig
-transit_operator_config = TransitOperatorConfig(
-    planning_lookahead=parser.getint("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD"),
-    max_busses=parser.getint("TRANSIT_OPERATOR", "MAX_BUSSES")
-)
 
 # User and Moide Choice Configuration
 from simulation.helper.configuration.configuration import ModeChoiceConfig
@@ -102,58 +70,38 @@ pop_prob = [float(x) for x in pop_prob]
 mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary, mode_choice_available_modes,
                       mode_choice_model_path)
 
-# Shared Vehicle Configuration
-from simulation.helper.configuration.configuration import SharedVehicleOperatorConfig
-
-# Read Shared Vehicle Operator Config
-# recharge_threshold = parser.getfloat("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD")
-recharge_threshold = parser.get("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD").split(',')
-recharge_threshold = [float(x) / 100 for x in recharge_threshold]
-global_config.add_recharging_threshold(recharge_threshold)
-
-charging_station_power = parser.getfloat("SHARED_VEHICLE_OPERATOR", "CHARGING_STATION_POWER")
-number_of_service_workers = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_SERVICE_WORKER")
-number_of_base_regions = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_BASE_REGIONS")
-base_regions = parser.get("SHARED_VEHICLE_OPERATOR", "BASE_REGIONS")
-base_regions = base_regions.split(',')[:number_of_base_regions]
-base_capacity = parser.getint("SHARED_VEHICLE_OPERATOR", "BASE_CAPACITY")
-operations_start = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_START")
-operations_duration = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_DURATION")
-vehicle_relocation_velocity = parser.getint("SHARED_VEHICLE_OPERATOR", "VEHICLE_RELOCATION_VELOCITY")
-
-svoc = SharedVehicleOperatorConfig(recharge_threshold, charging_station_power,
-                                   number_of_service_workers, base_regions,
-                                   base_capacity, operations_start, operations_duration,
-                                   vehicle_relocation_velocity)
-
-# Register every config in the global configuration
-# - Shared Vehicles
-global_config.add_vehicle_config("Shared_Car", vc)
-# - Bus + PublicTransitOperator
-global_config.add_bus_config(bus_config)
-global_config.add_transit_operator_config(transit_operator_config)
-# - User / Mode Choice
+# Register User / Mode Choice
 global_config.add_mode_choice_config(mc)
-# - Shared Vehicle Operator
-global_config.add_shared_vehicle_operator_config(svoc)
 
-# Output Configuration
-store_results = parser.getboolean("OUTPUT", "persist_results")
-store_results = parser.getboolean("OUTPUT", "persist_results")
-output_folder = parser.get("OUTPUT", "output_folder")
-transaction_file = parser.get("OUTPUT", "transaction_file")
-fleet_state_file = parser.get("OUTPUT", "fleet_state_file")
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Init. Simulation Environment            #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+import simpy
+env = simpy.Environment(initial_time=0)
 
-global_config.set_store_results(store_results)
-global_config.set_output_path(output_folder)
-global_config.set_transaction_file(transaction_file)
-global_config.set_fleet_state_file(fleet_state_file)
+# Population Type
+from simulation.world.population.PopulationFactory import PopulationFactory
+population_factory = PopulationFactory(pop_prob, seed)
 
 ## Spatial Environment
 import geopandas as gpd
 from utils import load_environment
 # Load Spatial Environment
 load_environment()
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Operations Management Processes         #
+#                                         #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Store Tasks which are processed by service workers
+from simulation.operator.operations_management.task_queue import TaskQueue
+task_queue_ridehailing = TaskQueue(env)
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -182,34 +130,286 @@ hexagons = geodesic_environment.getLayer(f"hex_{spatial_res}").index.tolist()
 dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure", city)
 distance_matrix = dmi.load_distance_matrix()
 
+GeodesicEnvironment.getInstance().reset_random_generator(4711)
+
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
-# Init. Simulation Environment            #
+# If you want busses, use this block      #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
-import simpy
-env = simpy.Environment(initial_time=0)
-############################################################################
-#                                                                          #
-#  Before each simulation run, reset counter and random number generators  #
-#                                                                          #
-############################################################################
+
+# Before each simulation run, reset counter and random number generators
+from simulation.vehicle.public_transit_bus import Bus
+from simulation.agent.user import User  # must come before DemandFactory, otherwise circular imports
+from simulation.world.demand.demand_factory import DemandFactory
+# PublicTransitOperator // starts its own processes & also includes vehicle spawn
+from simulation.operator.public_transit_operator import PublicTransitOperator
+from simulation.infrastructure.helper.timetable import Timetable
+
+Bus.bus_id = 0
+User.user_id = 0
+DemandFactory.counter = 0
+
+# Input Files (Public Transit Operator / Timetable)  ??? Main.py does not have this 
+transit_timetable_path = parser.get("INFRASTRUCTURE", "path_transit_timetable")
+
+## Busses and PublicTransitOperator
+
+# Bus Vehicle Config
+from simulation.helper.configuration.configuration import BusConfig
+bus_config = BusConfig(
+    max_available_seats=parser.getint("BUS", "SEATS"),
+    velocity=parser.getfloat("BUS", "VELOCITY")
+)
+
+# Public Transit Operator Config
+from simulation.helper.configuration.configuration import TransitOperatorConfig
+transit_operator_config = TransitOperatorConfig(
+    planning_lookahead=parser.getint("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD"),
+    max_busses=parser.getint("TRANSIT_OPERATOR", "MAX_BUSSES")
+)
+
+# Register the config
+global_config.add_bus_config(bus_config)
+global_config.add_transit_operator_config(transit_operator_config)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Load GTFS Timetable (once).             #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+timetable = Timetable(transit_timetable_path)
+timetable.import_timetable()
+pt_operator = PublicTransitOperator(env, timetable)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# If you want shared vehicle fleet,       #
+#  use this block                         #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Before each simulation run, reset counter and random number generators
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
-from simulation.vehicle.public_transit_bus import Bus
 from simulation.agent.user import User  # must come before DemandFactory, otherwise circular imports
 from simulation.world.demand.demand_factory import DemandFactory
 
 SharedCar.car_id = 0
 SharedKickScooter.shared_kick_scooter_id = 0
 SharedScooter.shared_scooter_id = 0
-Bus.bus_id = 0
 User.user_id = 0
-
 DemandFactory.counter = 0
 
-GeodesicEnvironment.getInstance().reset_random_generator(4711)
+# Shared Vehicle Config
+from simulation.helper.configuration.configuration import VehicleConfig
+from simulation.helper.configuration.configuration import SharedVehicleOperatorConfig
+
+price_per_min = parser.getfloat("SHARED_CAR", "PRICE_PER_MIN")
+max_state_of_charge = parser.getfloat("SHARED_CAR", "MAX_STATE_OF_CHARGE")
+energy_consumption = parser.getfloat("SHARED_CAR", "ENERGY_CONSUMPTION")
+velocity = parser.getfloat("SHARED_CAR", "VELOCITY")
+max_available_seats = parser.getint("SHARED_CAR", "MAX_AVAILABLE_SEATS")
+max_walking_distance = parser.getint("SHARED_CAR", "WALKING_DISTANCE")
+daily_total_cost = parser.getfloat("SHARED_CAR", "DAILY_TOTAL_COST")
+initial_SoC = parser.getfloat("SHARED_CAR", "INITIAL_SOC")
+
+vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats,
+                    max_walking_distance, daily_total_cost, initial_SoC)
+
+
+# Read Shared Vehicle Operator Config
+# recharge_threshold = parser.getfloat("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD")
+recharge_threshold = parser.get("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD").split(',')
+recharge_threshold = [float(x) / 100 for x in recharge_threshold]
+global_config.add_recharging_threshold(recharge_threshold)
+
+charging_station_power = parser.getfloat("SHARED_VEHICLE_OPERATOR", "CHARGING_STATION_POWER")
+number_of_service_workers = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_SERVICE_WORKER")
+number_of_base_regions = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_BASE_REGIONS")
+base_regions = parser.get("SHARED_VEHICLE_OPERATOR", "BASE_REGIONS")
+base_regions = base_regions.split(',')[:number_of_base_regions]
+base_capacity = parser.getint("SHARED_VEHICLE_OPERATOR", "BASE_CAPACITY")
+operations_start = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_START")
+operations_duration = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_DURATION")
+vehicle_relocation_velocity = parser.getint("SHARED_VEHICLE_OPERATOR", "VEHICLE_RELOCATION_VELOCITY")
+
+svoc = SharedVehicleOperatorConfig(recharge_threshold, charging_station_power,
+                                   number_of_service_workers, base_regions,
+                                   base_capacity, operations_start, operations_duration,
+                                   vehicle_relocation_velocity)
+
+# Register the configs
+global_config.add_vehicle_config("Shared_Car", vc)
+global_config.add_shared_vehicle_operator_config(svoc)
+
+# Shared vehicle Fleet: Configure + Generate
+from simulation.operator.fleet_factory import generate_mixed_fleet, generate_fleet_config
+# Get number of each vehicle type to be spawned from configuration
+n_cars = parser.getint("EXPERIMENT_MANAGEMENT", "N_CARS")
+n_kick_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_KICKSCOOTER")
+n_bikes = parser.getint("EXPERIMENT_MANAGEMENT", "N_BIKES")
+n_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
+# Configure and generate / spawn vehicles
+fleet_config = generate_fleet_config(supply_prob, n_cars = n_cars, n_scooter = n_scooter, n_kick_scooter= n_kick_scooter, n_bikes=n_bikes)
+mixed_fleet = generate_mixed_fleet(env, fleet_config)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# If you want ride-hailing fleet,         #
+#  use this block                         #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Before each simulation run, reset counter and random number generators
+from simulation.agent.user import User  # must come before DemandFactory, otherwise circular imports
+from simulation.world.demand.demand_factory import DemandFactory
+
+User.user_id = 0
+DemandFactory.counter = 0
+
+# Vehicle Choice Model 
+from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import OnlyCarVehicleChoiceBehavior
+
+if mode_choice_strategy == "substitution":
+        vehicle_choice_model = OnlyCarVehicleChoiceBehavior(['RideHailingCar', 'AutonomousCar'])
+
+else:
+        raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
+
+# Ride Hailing Fleet Configuration
+AV_trust = parser.get("MODE_CHOICE_MODEL", "AV_trust").split(',')
+AV_trust = [float(x) for x in AV_trust]
+pop_prob = parser.get("MODE_CHOICE_MODEL", "population_probabilities").split(',')
+pop_prob = [float(x) for x in pop_prob]
+
+# Read ride-hailing related parameters
+AV_price_reduction = None #By choice
+discount_rate = 0 #By choice
+
+driver_payment_share = parser.getfloat('RIDE_HAILING', "DRIVER_PAYMENT_SHARE")
+if not AV_price_reduction:
+    AV_price_reduction = parser.getfloat('RIDE_HAILING', "AV_PRICE_REDUCTION")
+price_params_ride_hailing = parser.get('RIDE_HAILING', "PRICE_PARAMS")
+price_params_ride_hailing = price_params_ride_hailing.split(',')
+price_params_ride_hailing = [float(x) * (1 - discount_rate) for x in price_params_ride_hailing]
+global_config.add_ride_hailing_info(driver_payment_share, AV_price_reduction, price_params_ride_hailing)
+distance_threshold_to_user = parser.getfloat('RIDE_HAILING', "MAX_PICKUP_DISTANCE")
+global_config.add_distance_threshold_to_user(distance_threshold_to_user)
+
+# Charging Infrastructure
+from simulation.helper.configuration.configuration import ChargingInfrastructureConfig
+from simulation.infrastructure.charging_stations.charging_infastructure import ChargingInfrastructure
+import numpy as np
+
+number_of_charging_stations = parser.getint("Charging_Infrastructure", "NUMBER_OF_CHARGING_STATIONS")
+charging_location_list = parser.get("Charging_Infrastructure", "BASE_REGIONS").split(',')[
+                             :number_of_charging_stations]
+
+### Activate it if there are specific capacity for charging stations
+# charging_power_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_POWER").split(',')
+# charging_power_list = [float(x) for x in charging_power_list]
+# charging_capacity_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_CAPACITY").split(',')
+# charging_capacity_list = [float(x) for x in charging_capacity_list]
+
+charging_power = 10 # By choice
+charging_capacity = 5 # By choice
+charging_power_list = list(np.zeros(len(charging_location_list)) + charging_power)
+charging_capacity_list = list(np.zeros(len(charging_location_list)) + charging_capacity)
+sic = ChargingInfrastructureConfig(charging_location_list, charging_power_list, charging_capacity_list)
+global_config.add_charging_infrastructure_config(sic)
+charging_infrastructure = ChargingInfrastructure(env, charging_location_list, charging_power_list, charging_capacity_list, reset=True)
+
+# Technology penetration
+TECH_SHARE = [0.25, 0.5, 0.75, 1.0] # By choice
+phase = 3 # By choice
+AV_penetration=TECH_SHARE[phase]
+EV_penetration=TECH_SHARE[phase]
+
+global_config.add_tech_penetration(EV_penetration, AV_penetration)
+global_config.add_AV_trust(AV_trust)
+
+# Technology penetration
+global_config.add_tech_penetration(EV_penetration, AV_penetration)
+global_config.add_AV_trust(AV_trust)
+
+# Read drivers availability distribution
+drivers_availability = parser.get('SUPPLY', "RH_availability").split(',')
+drivers_availability = [round(float(x) * n_cars * (1 - AV_penetration)) for x in drivers_availability]
+global_config.add_driver_availability_vector(drivers_availability)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Finish ride-hailing fleet               #
+#                                         #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Output Configuration
+store_results = parser.getboolean("OUTPUT", "persist_results")
+store_results = parser.getboolean("OUTPUT", "persist_results")
+output_folder = parser.get("OUTPUT", "output_folder")
+transaction_file = parser.get("OUTPUT", "transaction_file")
+fleet_state_file = parser.get("OUTPUT", "fleet_state_file")
+
+global_config.set_store_results(store_results)
+global_config.set_output_path(output_folder)
+global_config.set_transaction_file(transaction_file)
+global_config.set_fleet_state_file(fleet_state_file)
+
+# Initialize Rule Based Relocation Scheduler
+from simulation.operator.operations_management.rebalancing_scheduler_ridehailing import RebalancingSchedulerRidehailing
+from simulation.operator.fleet_factory import generate_mixed_ride_hailing_fleet, generate_ridehailing_fleet_config
+
+supply_prob = pd.read_csv(supply_file_path)
+
+allocation = None # By choice
+
+ride_hailing_fleet_config_0 = generate_ridehailing_fleet_config(distribution=supply_prob, n_cars=n_cars,
+                                                                    n_AVs=n_cars, allocation_method='historical',
+                                                                    allocation=allocation)
+ride_hailing_fleet_0 = generate_mixed_ride_hailing_fleet(env, ride_hailing_fleet_config_0)
+
+available_vehicle_modes_ridehailing = ['RideHailingCar', 'AutonomousCar']
+available_vehicle_modes_supply_ride_hailing = [n_cars, n_cars]
+no_service_workers = global_config.shared_vehicle_operator_config.number_of_service_worker
+base_regions = global_config.shared_vehicle_operator_config.base_regions
+base_capacity = global_config.shared_vehicle_operator_config.base_capacity
+
+rs_ridehailing_0 = RebalancingSchedulerRidehailing(distance_matrix, ride_hailing_fleet_0,
+                                                    available_vehicle_modes_ridehailing,
+                                                    available_vehicle_modes_supply_ride_hailing, no_service_workers,
+                                                    base_regions, base_capacity, recharge_threshold,
+                                                    charging_infrastructure._chargers)
+
+# Initialize the search engine with the ride_hailing fleet
+from simulation.operator.ride_hailing_allocation_engine import RideHailingAllocationEngine
+from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine, register_fleet
+
+search_engine = {'ride_hailing_0': RideHailingSearchEngine(env)}
+
+search_engine['ride_hailing_0'].register_fleet(ride_hailing_fleet_0) # register_fleet not recognized
+
+payment_engine = search_engine
+vehicle_assignment_engine = {'ride_hailing_0': RideHailingAllocationEngine(env)}
+
+ops_ridehailing_0 = OperationsRidehailing(env, ride_hailing_fleet_0,
+                                              global_config.shared_vehicle_operator_config.operations_start,
+                                              global_config.shared_vehicle_operator_config.operations_duration,
+                                              rs_ridehailing_0,
+                                              payment_engine['ride_hailing_0'], available_vehicle_modes_ridehailing,
+                                              available_vehicle_modes_supply_ride_hailing,
+                                              global_config.shared_vehicle_operator_config.recharge_threshold,
+                                              task_queue_ridehailing, charging_infrastructure._chargers)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Configuration Done                      #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -264,17 +464,36 @@ tracking = Tracking.init(env)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# PublicTransitOperator // starts its own processes & also includes vehicle spawn
-from simulation.operator.public_transit_operator import PublicTransitOperator
-pt_operator = PublicTransitOperator(env, timetable)
 
-# Fleet of vehicles: Configure + Generate
-from simulation.operator.fleet_factory import generate_mixed_fleet, generate_fleet_config
-# Get number of each vehicle type to be spawned from configuration
-n_cars = parser.getint("EXPERIMENT_MANAGEMENT", "N_CARS")
-n_kick_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_KICKSCOOTER")
-n_bikes = parser.getint("EXPERIMENT_MANAGEMENT", "N_BIKES")
-n_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
-# Configure and generate / spawn vehicles
-fleet_config = generate_fleet_config(supply_prob, n_cars = n_cars, n_scooter = n_scooter, n_kick_scooter= n_kick_scooter, n_bikes=n_bikes)
-mixed_fleet = generate_mixed_fleet(env, fleet_config)
+# World
+from simulation.world.demand.demand_factory import DemandFactory
+from simulation.world.demand.demand_importer import DemandImporter
+from simulation.world.world import World
+tracking = Tracking.init(env)
+world = World.init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_model,
+                       population_factory, charging_infrastructure, reset=True)
+
+# Users
+MoD_interval_reduction = 0 # By choice
+global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction) # Not sure if we need this
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Start Spawn Demand Processes.           #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+import random
+random_number = random.random()
+silly_choice = 'public_transport' if random_number < 1/3 else ('shared_vehicle' if random_number < 2/3 else 'ride_hailing')
+
+demand_factory = DemandFactory(env, demand_profile, di, world, [], seed, mode=silly_choice)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# End Spawn Demand Processes.             #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+env.process(demand_factory.generate_demand())
+
