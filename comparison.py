@@ -183,6 +183,10 @@ timetable = Timetable(transit_timetable_path)
 timetable.import_timetable()
 pt_operator = PublicTransitOperator(env, timetable)
 
+search_engine = {'public_transport': pt_operator}
+payment_engine = search_engine
+bus_assignment_engine = {'public_transport': pt_operator}
+
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
 # If you want shared vehicle fleet,       #
@@ -247,14 +251,50 @@ global_config.add_shared_vehicle_operator_config(svoc)
 
 # Shared vehicle Fleet: Configure + Generate
 from simulation.operator.fleet_factory import generate_mixed_fleet, generate_fleet_config
+from simulation.operator.shared_vehicle_allocation_engine import SharedVehicleAllocationEngine
+from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
+from simulation.operator.operations_management.relocation_scheduler import RelocationScheduler
+from simulation.operator.operations_management.operations import Operations
 # Get number of each vehicle type to be spawned from configuration
 n_cars = parser.getint("EXPERIMENT_MANAGEMENT", "N_CARS")
 n_kick_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_KICKSCOOTER")
 n_bikes = parser.getint("EXPERIMENT_MANAGEMENT", "N_BIKES")
 n_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
-# Configure and generate / spawn vehicles
+# Configure and generate / spawn shared fleet vehicles
 fleet_config = generate_fleet_config(supply_prob, n_cars = n_cars, n_scooter = n_scooter, n_kick_scooter= n_kick_scooter, n_bikes=n_bikes)
 mixed_fleet = generate_mixed_fleet(env, fleet_config)
+
+search_engine = {'shared_vehicle': SharedVehicleSearchEngine(env)}
+payment_engine = search_engine
+vehicle_assignment_engine = {'shared_vehicle': SharedVehicleAllocationEngine(env)}
+
+# Shared Vehicles Operator is more atomic and needs some functionalities initialized beforehand
+available_vehicle_modes = ["SharedKickScooter", "SharedScooter", "SharedCar", "SharedBike"]
+available_vehicle_modes_supply = [n_kick_scooter, n_scooter, n_cars, n_bikes]
+no_service_workers = global_config.shared_vehicle_operator_config.number_of_service_worker
+base_regions = global_config.shared_vehicle_operator_config.base_regions
+base_capacity = global_config.shared_vehicle_operator_config.base_capacity
+
+search_engine = {'shared_vehicle': SharedVehicleSearchEngine(env),
+                 'public_transport': pt_operator}
+payment_engine = search_engine
+vehicle_assignment_engine = {'shared_vehicle': SharedVehicleAllocationEngine(env),
+                             'public_transport': pt_operator}
+
+# Initialize Rule Based Relocation Scheduler
+relocation_scheduler = RelocationScheduler(distance_matrix, mixed_fleet, available_vehicle_modes,
+                            available_vehicle_modes_supply, no_service_workers,
+                            base_regions, base_capacity)
+
+# Store Tasks which are processed by service workers
+task_queues_shared = TaskQueue(env)
+
+# Init Operations Module
+shared_operator = Operations(env, mixed_fleet, no_service_workers, global_config.shared_vehicle_operator_config.operations_start,
+                    global_config.shared_vehicle_operator_config.operations_duration, relocation_scheduler,
+                    payment_engine, available_vehicle_modes,
+                    available_vehicle_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold, task_queue)
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -340,26 +380,8 @@ drivers_availability = parser.get('SUPPLY', "RH_availability").split(',')
 drivers_availability = [round(float(x) * n_cars * (1 - AV_penetration)) for x in drivers_availability]
 global_config.add_driver_availability_vector(drivers_availability)
 
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Finish ride-hailing fleet               #
-#                                         #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-# Output Configuration
-store_results = parser.getboolean("OUTPUT", "persist_results")
-store_results = parser.getboolean("OUTPUT", "persist_results")
-output_folder = parser.get("OUTPUT", "output_folder")
-transaction_file = parser.get("OUTPUT", "transaction_file")
-fleet_state_file = parser.get("OUTPUT", "fleet_state_file")
-
-global_config.set_store_results(store_results)
-global_config.set_output_path(output_folder)
-global_config.set_transaction_file(transaction_file)
-global_config.set_fleet_state_file(fleet_state_file)
-
 # Initialize Rule Based Relocation Scheduler
+from simulation.operator.operations_management.operations_ridehailing import OperationsRidehailing
 from simulation.operator.operations_management.rebalancing_scheduler_ridehailing import RebalancingSchedulerRidehailing
 from simulation.operator.fleet_factory import generate_mixed_ride_hailing_fleet, generate_ridehailing_fleet_config
 
@@ -403,6 +425,28 @@ ops_ridehailing_0 = OperationsRidehailing(env, ride_hailing_fleet_0,
                                               available_vehicle_modes_supply_ride_hailing,
                                               global_config.shared_vehicle_operator_config.recharge_threshold,
                                               task_queue_ridehailing, charging_infrastructure._chargers)
+
+env.process(ops_ridehailing_0.timer())
+env.process(ops_ridehailing_0.run_operations())
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Finish ride-hailing fleet               #
+#                                         #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Output Configuration
+store_results = parser.getboolean("OUTPUT", "persist_results")
+store_results = parser.getboolean("OUTPUT", "persist_results")
+output_folder = parser.get("OUTPUT", "output_folder")
+transaction_file = parser.get("OUTPUT", "transaction_file")
+fleet_state_file = parser.get("OUTPUT", "fleet_state_file")
+
+global_config.set_store_results(store_results)
+global_config.set_output_path(output_folder)
+global_config.set_transaction_file(transaction_file)
+global_config.set_fleet_state_file(fleet_state_file)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
