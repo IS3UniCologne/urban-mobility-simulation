@@ -1,5 +1,3 @@
-# This file compares (current expertiment_template with) main.py and main_dynamicrouting.py (?)
-
 ### Imports 
 from pathlib import Path
 import sys
@@ -132,13 +130,6 @@ distance_matrix = dmi.load_distance_matrix()
 
 GeodesicEnvironment.getInstance().reset_random_generator(4711)
 
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# If you want ride-hailing fleet,         #
-#  use this block                         #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
 # Before each simulation run, reset counter and random number generators
 from simulation.agent.user import User  # must come before DemandFactory, otherwise circular imports
 from simulation.world.demand.demand_factory import DemandFactory
@@ -248,7 +239,7 @@ from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngi
 
 search_engine = {'ride_hailing_0': RideHailingSearchEngine(env)}
 
-search_engine['ride_hailing_0'].register_fleet(ride_hailing_fleet_0) # register_fleet not recognized
+search_engine['ride_hailing_0'].register_fleet(ride_hailing_fleet_0)
 
 payment_engine = search_engine
 vehicle_assignment_engine = {'ride_hailing_0': RideHailingAllocationEngine(env)}
@@ -265,13 +256,6 @@ ops_ridehailing_0 = OperationsRidehailing(env, ride_hailing_fleet_0,
 env.process(ops_ridehailing_0.timer())
 env.process(ops_ridehailing_0.run_operations())
 
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Finish ride-hailing fleet               #
-#                                         #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
 # Output Configuration
 store_results = parser.getboolean("OUTPUT", "persist_results")
 store_results = parser.getboolean("OUTPUT", "persist_results")
@@ -283,13 +267,6 @@ global_config.set_store_results(store_results)
 global_config.set_output_path(output_folder)
 global_config.set_transaction_file(transaction_file)
 global_config.set_fleet_state_file(fleet_state_file)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Configuration Done                      #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -365,10 +342,4 @@ global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction) # No
 
 demand_factory = DemandFactory(env, demand_profile, di, world, [], seed, mode='ridehailing')
 env.process(demand_factory.generate_demand())
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# End Spawn Demand Processes.             #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
 
