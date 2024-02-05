@@ -146,27 +146,12 @@ if mode_choice_strategy == "substitution":
 else:
         raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
-# Ride Hailing Fleet Configuration
-AV_trust = parser.get("MODE_CHOICE_MODEL", "AV_trust").split(',')
-AV_trust = [float(x) for x in AV_trust]
-pop_prob = parser.get("MODE_CHOICE_MODEL", "population_probabilities").split(',')
-pop_prob = [float(x) for x in pop_prob]
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Charging Infrastructure                 #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
 
-# Read ride-hailing related parameters
-AV_price_reduction = None #By choice
-discount_rate = 0 #By choice
-
-driver_payment_share = parser.getfloat('RIDE_HAILING', "DRIVER_PAYMENT_SHARE")
-if not AV_price_reduction:
-    AV_price_reduction = parser.getfloat('RIDE_HAILING', "AV_PRICE_REDUCTION")
-price_params_ride_hailing = parser.get('RIDE_HAILING', "PRICE_PARAMS")
-price_params_ride_hailing = price_params_ride_hailing.split(',')
-price_params_ride_hailing = [float(x) * (1 - discount_rate) for x in price_params_ride_hailing]
-global_config.add_ride_hailing_info(driver_payment_share, AV_price_reduction, price_params_ride_hailing)
-distance_threshold_to_user = parser.getfloat('RIDE_HAILING', "MAX_PICKUP_DISTANCE")
-global_config.add_distance_threshold_to_user(distance_threshold_to_user)
-
-# Charging Infrastructure
 from simulation.helper.configuration.configuration import ChargingInfrastructureConfig
 from simulation.infrastructure.charging_stations.charging_infastructure import ChargingInfrastructure
 import numpy as np
@@ -189,16 +174,40 @@ sic = ChargingInfrastructureConfig(charging_location_list, charging_power_list, 
 global_config.add_charging_infrastructure_config(sic)
 charging_infrastructure = ChargingInfrastructure(env, charging_location_list, charging_power_list, charging_capacity_list, reset=True)
 
-# Technology penetration
-TECH_SHARE = [0.25, 0.5, 0.75, 1.0] # By choice
-phase = 3 # By choice
-AV_penetration=TECH_SHARE[phase]
-EV_penetration=TECH_SHARE[phase]
+recharge_threshold = parser.get("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD").split(',')
+recharge_threshold = [float(x) / 100 for x in recharge_threshold]
+global_config.add_recharging_threshold(recharge_threshold)
 
-global_config.add_tech_penetration(EV_penetration, AV_penetration)
-global_config.add_AV_trust(AV_trust)
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Ride-Hailing Fleet Configuration        #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+n_cars = 500
+AV_trust = parser.get("MODE_CHOICE_MODEL", "AV_trust").split(',')
+AV_trust = [float(x) for x in AV_trust]
+pop_prob = parser.get("MODE_CHOICE_MODEL", "population_probabilities").split(',')
+pop_prob = [float(x) for x in pop_prob]
+
+# Read ride-hailing related parameters
+AV_price_reduction = None #By choice
+discount_rate = 0 #By choice
+
+driver_payment_share = parser.getfloat('RIDE_HAILING', "DRIVER_PAYMENT_SHARE")
+if not AV_price_reduction:
+    AV_price_reduction = parser.getfloat('RIDE_HAILING', "AV_PRICE_REDUCTION")
+price_params_ride_hailing = parser.get('RIDE_HAILING', "PRICE_PARAMS")
+price_params_ride_hailing = price_params_ride_hailing.split(',')
+price_params_ride_hailing = [float(x) * (1 - discount_rate) for x in price_params_ride_hailing]
+global_config.add_ride_hailing_info(driver_payment_share, AV_price_reduction, price_params_ride_hailing)
+distance_threshold_to_user = parser.getfloat('RIDE_HAILING', "MAX_PICKUP_DISTANCE")
+global_config.add_distance_threshold_to_user(distance_threshold_to_user)
 
 # Technology penetration
+EV_penetration = parser.getfloat('SUPPLY', "EV_penetration")
+AV_penetration = parser.getfloat('SUPPLY', "AV_penetration")
+
 global_config.add_tech_penetration(EV_penetration, AV_penetration)
 global_config.add_AV_trust(AV_trust)
 
@@ -256,7 +265,11 @@ ops_ridehailing_0 = OperationsRidehailing(env, ride_hailing_fleet_0,
 env.process(ops_ridehailing_0.timer())
 env.process(ops_ridehailing_0.run_operations())
 
-# Output Configuration
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Output Configuration                    #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
 store_results = parser.getboolean("OUTPUT", "persist_results")
 store_results = parser.getboolean("OUTPUT", "persist_results")
 output_folder = parser.get("OUTPUT", "output_folder")
