@@ -118,8 +118,6 @@ distance_matrix = dmi.load_distance_matrix()
 
 GeodesicEnvironment.getInstance().reset_random_generator(4711)
 
-############################################################################
-
 # Before each simulation run, reset counter and random number generators
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
@@ -228,9 +226,6 @@ env.process(shared_operator.run_operations())
 from simulation.operator.operations_management.service_worker import ServiceWorker
 for sw in range(no_service_workers):
     env.process(ServiceWorker(env, task_queue).run())
-
-
-#############################################################################
 
 # Output Configuration
 store_results = parser.getboolean("OUTPUT", "persist_results")
