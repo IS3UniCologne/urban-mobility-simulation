@@ -118,7 +118,12 @@ distance_matrix = dmi.load_distance_matrix()
 
 GeodesicEnvironment.getInstance().reset_random_generator(4711)
 
-# Before each simulation run, reset counter and random number generators
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Reset counters and random number        #
+# generators before each run              #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
@@ -131,7 +136,11 @@ SharedScooter.shared_scooter_id = 0
 User.user_id = 0
 DemandFactory.counter = 0
 
-# Shared Vehicle Config
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Shared Vehicle Configuration            #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
 from simulation.helper.configuration.configuration import VehicleConfig
 from simulation.helper.configuration.configuration import SharedVehicleOperatorConfig
 
@@ -199,35 +208,49 @@ no_service_workers = global_config.shared_vehicle_operator_config.number_of_serv
 base_regions = global_config.shared_vehicle_operator_config.base_regions
 base_capacity = global_config.shared_vehicle_operator_config.base_capacity
 
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Init. Simulation Modules                #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+## - Search Engine
+
 search_engine = {'shared_vehicle': SharedVehicleSearchEngine(env)}
 payment_engine = search_engine
 vehicle_assignment_engine = {'shared_vehicle': SharedVehicleAllocationEngine(env)}
 
-# Initialize Rule Based Relocation Scheduler
+search_engine['shared_vehicle'].register_fleet(mixed_fleet) # Is this needed?
+
+## - Rule Based Relocation Scheduler
 relocation_scheduler = RelocationScheduler(distance_matrix, mixed_fleet, available_vehicle_modes,
                             available_vehicle_modes_supply, no_service_workers,
                             base_regions, base_capacity)
 
-# Store Tasks which are processed by service workers
+## - Store Tasks which are processed by service workers
 from simulation.operator.operations_management.task_queue import TaskQueue
 task_queue = TaskQueue(env)
-
-# Init Operations Module
-shared_operator = Operations(env, mixed_fleet, no_service_workers, global_config.shared_vehicle_operator_config.operations_start,
-                    global_config.shared_vehicle_operator_config.operations_duration, relocation_scheduler,
-                    payment_engine, available_vehicle_modes,
-                    available_vehicle_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold, task_queue)
-
-
-env.process(shared_operator.timer())
-env.process(shared_operator.run_operations())
-
 # Spawn Service Workers
 from simulation.operator.operations_management.service_worker import ServiceWorker
 for sw in range(no_service_workers):
     env.process(ServiceWorker(env, task_queue).run())
 
-# Output Configuration
+## Init Operations Module
+shared_operator = Operations(env, mixed_fleet, no_service_workers, global_config.shared_vehicle_operator_config.operations_start,
+                    global_config.shared_vehicle_operator_config.operations_duration, relocation_scheduler,
+                    payment_engine, available_vehicle_modes,
+                    available_vehicle_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold, task_queue)
+
+env.process(shared_operator.timer())
+env.process(shared_operator.run_operations())
+
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Output Configuration                    #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+    
 store_results = parser.getboolean("OUTPUT", "persist_results")
 store_results = parser.getboolean("OUTPUT", "persist_results")
 output_folder = parser.get("OUTPUT", "output_folder")
@@ -301,6 +324,7 @@ from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.world import World
 world = World.init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_model,
                        population_factory, charging_infrastructure = None, reset=True)
+
 
 # Users
 MoD_interval_reduction = 0 # By choice
