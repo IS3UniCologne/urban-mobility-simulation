@@ -1,0 +1,15 @@
+from simulation.operator.interface.refueling_interface import RefuelingInterface
+from simulation.operator.interface.relocation_interface import RelocationInterface
+from simulation.operator.vehicle_fleet import VehicleFleet
+
+class IntegratedStrategy(RefuelingInterface, RelocationInterface):
+
+    def __init__(self):
+        pass
+
+    def refuel_fleet(self, fleet: VehicleFleet):
+        pass
+
+    def relocate_fleet(self, fleet: VehicleFleet):
+        pass
+    

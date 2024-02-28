@@ -25,6 +25,7 @@ from simulation.world.world import World
 from tracking.tracking import Tracking
 
 
+# TODO: refactor to adhere to base class "Operator" 
 class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface):
     def __init__(self, env: Environment, timetable: Timetable):
         PaymentInterface.__init__(self)

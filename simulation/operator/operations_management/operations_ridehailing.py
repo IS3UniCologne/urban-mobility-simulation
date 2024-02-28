@@ -6,6 +6,7 @@ import logging
 from simulation.operator.operations_management.service_tasks.relocation_task import RelocationTask
 
 
+# TODO: refactor to adhere to base class "Operator"
 class OperationsRidehailing:
 
     def __init__(self, env, vehicle_fleet, time_between_operations, operation_duration,
