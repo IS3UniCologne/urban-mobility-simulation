@@ -4,8 +4,8 @@ from simulation.operator.vehicle_fleet import VehicleFleet
 
 class RelocationStrategy(RelocationInterface):
 
-    def __init__(self):
-        pass
+    def __init__(self, env: Environment):
+        self._env = env
 
     def relocate_fleet(self, fleet: VehicleFleet):
         raise NotImplementedError('This is the base class, your implementation of a relocation strategy should overwrite this method!')

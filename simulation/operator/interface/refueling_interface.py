@@ -11,7 +11,6 @@ class RefuelingInterface(ABC):
     """
 
     @abstractmethod
-    # TODO: add charging infrastructure / service worker to interface?
     def refuel_fleet(self, fleet: VehicleFleet, ):
         pass
     
