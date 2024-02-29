@@ -1,3 +1,5 @@
+from simpy import Environment
+
 from simulation.operator.interface.relocation_interface import RelocationInterface
 from simulation.operator.vehicle_fleet import VehicleFleet
 
