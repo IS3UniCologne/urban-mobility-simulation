@@ -1,6 +1,7 @@
+from simpy import Environment
+
 from simulation.operator.interface.refueling_interface import RefuelingInterface
 from simulation.operator.vehicle_fleet import VehicleFleet
-from simpy import Environment
 
 
 class RefuelingStrategy(RefuelingInterface):
