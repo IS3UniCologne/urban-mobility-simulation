@@ -369,3 +369,5 @@ silly_choice = 'public_transport' if random.random() < 0.5 else 'shared_vehicle'
 
 demand_factory = DemandFactory(env, demand_profile, di, world, [], seed, mode=silly_choice)
 env.process(demand_factory.generate_demand())
+
+

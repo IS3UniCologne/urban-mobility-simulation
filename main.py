@@ -348,6 +348,7 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
                                                      charging_capacity_list, reset=True)
 
     # Users
+    ## What is "MoD_interval_reduction" for?
     global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction)
 
     # World

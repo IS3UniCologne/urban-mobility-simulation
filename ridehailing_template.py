@@ -356,3 +356,16 @@ global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction) # No
 demand_factory = DemandFactory(env, demand_profile, di, world, [], seed, mode='ridehailing')
 env.process(demand_factory.generate_demand())
 
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Run Simulation.                         #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+logging.warning(f"Starting Simulation.",
+                    extra={"clazz": "main", "oid": ""})
+
+env.run(until=end_time)
+
+logging.warning(f"Simulation Finished.",
+                    extra={"clazz": "main", "oid": ""})
+
