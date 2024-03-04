@@ -67,7 +67,6 @@ class DemandImporter:
 
         # First try to load cache
         cache_path = Path('data/demand/', f"{city}_weekday_{temporal_column}_{hex_start_column}.csv")
-
         if cache_path.exists():
             # Load cached data and return
             logging.debug(f'Demand File already existing for selected resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.',
