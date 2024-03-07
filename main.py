@@ -159,8 +159,14 @@ import logging
 logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p')
 
+logging.raiseExceptions = True
+
 logger = logging.getLogger()
 logger.setLevel(log_level)
+
+# Add Custom Init Filters (which work without the ENV obj)
+cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
+logger.addFilter(cf_init)
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
@@ -169,10 +175,34 @@ file_handler = logging.FileHandler('report.log')
 file_handler.setFormatter(formatter)
 file_handler.setLevel(log_level)
 
-# Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
-logger.addFilter(cf_init)
 
+
+# # Add the SimulationContextFilter to the logger
+# logger = logging.getLogger()
+# cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
+# logger.addFilter(cf_init)
+
+# # Set the basic configuration
+# log_level = logging.INFO
+# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)20s] [%(clazz)30s %(oid)3s]: %(message)s',
+#                     datefmt='%m/%d/%Y %I:%M:%S %p')
+
+# # Set the logger level
+# logger.setLevel(log_level)
+
+# # Block Logger of third party software
+# logging.getLogger("fiona").setLevel(logging.WARNING)
+
+# # Set up file handler with formatter
+# formatter = logging.Formatter('%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s')
+# file_handler = logging.FileHandler('report.log')
+# file_handler.setFormatter(formatter)
+# file_handler.setLevel(log_level)
+
+# # Add file handler to the logger
+# logger.addHandler(file_handler)
+
+print("Basic config initialized")
 
 # logger.addHandler(file_handler)
 
@@ -287,6 +317,7 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
     edf = ExtraDefaultFilter(filter_name="add_default_value")
     logger.addFilter(cf)
     logger.addFilter(edf)
+
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -456,7 +487,7 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
     logging.warning(f"Starting Simulation.",
                     extra={"clazz": "main", "oid": ""})
 
-    env.run(until=end_time)
+    env.run(until=1)
 
     logging.warning(f"Simulation Finished.",
                     extra={"clazz": "main", "oid": ""})
@@ -485,6 +516,8 @@ def run_single_simulation(start_time=0, end_time=20, n_cars=500, seed=42, phase=
                               'ride_hailing_1']}
     transactions = {'ride_hailing_0': payment_engine['ride_hailing_0'].get_transactions(),
                     'ride_hailing_1': payment_engine['ride_hailing_1'].get_transactions()}
+
+    scenario_name = f'single_P_analysis'
 
     if store_results:
         transactions['ride_hailing_0'].to_csv(
@@ -576,6 +609,7 @@ TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
 USER_SHARES = [0.247, 0.237, 0.19, 0.325]
 random.seed(42)
 seeds = random.sample(range(1000), 10)
+scenario_name = f'single_P_analysis'
 phase = 3
 for seed in seeds[1:]:
     a = run_single_simulation(end_time=1400 * 1, n_cars=500, seed=seed, phase=phase,
@@ -594,7 +628,6 @@ seeds = random.sample(range(1000), 10)
 # Store all simulation results in this data frame
 all_simulations = pd.DataFrame()
 sim_days = 1
-scenario_name = f'single_P_analysis'
 # AV_trust_analysis, population_analysis, fleet_size_analysis, charging_capacity_analysis, tech_phase_analysis
 TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
 phases = [0, 1, 2, 3]
