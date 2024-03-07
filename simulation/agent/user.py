@@ -841,6 +841,7 @@ class RideHailingUser(Agent, DriverInterface):
         self._assigned_vehicle_arrived = self._env.event()
         self._arrived_at_destination = self._env.event()
 
+        self.process_finished = self._env.event()
         self._position_changed = self._env.event()
 
         # Initial State and Runtime
