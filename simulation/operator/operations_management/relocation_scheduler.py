@@ -766,7 +766,10 @@ class RelocationScheduler:
 
         # Calculate Delta (Expected Inflow - Expected Outflow - Missed Demand)
         for vehicle in ordered_available_vehicle:
-            result["Delta_{}".format(vehicle)] = result["Inflow_{}".format(vehicle)] - result[
+            if vehicle not in vehicle_columns:
+                result["Delta_{}".format(vehicle)] = 0
+            else:
+                result["Delta_{}".format(vehicle)] = result["Inflow_{}".format(vehicle)] - result[
                 "OutFlow_Fulfilled_{}".format(vehicle)] - result["OutFlow_Missed_{}".format(vehicle)]
 
         return result

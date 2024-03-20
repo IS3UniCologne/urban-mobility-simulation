@@ -174,19 +174,20 @@ class World:
 
             # Add user to user list
             self._users.append(new_user)
-
             # register user with tracking
-            new_user_uid = self._tracking.register(new_user)
+            # TODO: Leave these lines commented out until the issue is resolved --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/48
+            #new_user_uid = self._tracking.register(new_user)
 
             # Start Process for each new user
             self._user_processes.append({'id': new_user.id, 'proc': self._env.process(new_user.run())})
 
             # Spawn cleanup process for that user
-            self._env.process(self._cleanup_user(new_user, new_user_uid))
+            #self._env.process(self._cleanup_user(new_user, new_user_uid))
 
             if len(self._users) == self._user_limit:
                 logging.info(f'Reached User Limit of {self._user_limit}. Not adding more users to world.',
                              extra={"clazz": self.__class__.__name__, "oid": " "})
+    
 
     def _cleanup_user(self, user, user_uid):
         yield user.process_finished
