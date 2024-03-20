@@ -4,6 +4,7 @@ import sys
 from configparser import ConfigParser
 import os
 
+
 # Change working directory to path of main.py
 working_dir = Path(__file__).parent
 os.chdir(working_dir)
@@ -23,7 +24,6 @@ seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 from simulation.helper.configuration.configuration import Configuration
-
 
 # World / Resolution Config
 spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
@@ -99,7 +99,6 @@ load_environment()
 # Store Tasks which are processed by service workers
 from simulation.operator.operations_management.task_queue import TaskQueue
 task_queue_ridehailing = TaskQueue(env)
-
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -334,7 +333,6 @@ tracking = Tracking.init(env)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-
 # World
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
@@ -364,8 +362,7 @@ env.process(demand_factory.generate_demand())
 logging.warning(f"Starting Simulation.",
                     extra={"clazz": "main", "oid": ""})
 
-env.run(until=end_time)
+env.run(until=end_time) # Can take a lower number for experimantal runs
 
 logging.warning(f"Simulation Finished.",
                     extra={"clazz": "main", "oid": ""})
-

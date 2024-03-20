@@ -172,7 +172,8 @@ class User(Agent, DriverInterface):
 
         # Wait for next event
         yield self._env.timeout(1)  # Open App
-
+        # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/50
+        self._waiting_time = 0
         # Update current state
         self._state = UserState.SEARCHING_TRANSPORT_ALTERNATIVES
 
@@ -220,12 +221,13 @@ class User(Agent, DriverInterface):
             filtered_list.sort(key=lambda vehicle: (vehicle[2], vehicle[0]))
 
         if filtered_list:
-            distance, price, filtered_list = zip(*filtered_list)
+            distance, price, convenience,filtered_list = zip(*filtered_list)
+            #distance, price, *filtered_list = zip(*filtered_list)
             filtered_list = list(filtered_list)
 
         # Only Consider Alternatives matching Customer needs
         available_transportation_alternatives.transportation_alternatives = filtered_list
-
+        self._waiting_time += 1
         # Trigger next event
         self._transportation_alternatives_received.succeed()
         logging.debug(f"Received transportation alternatives: {available_transportation_alternatives}.",
@@ -261,6 +263,7 @@ class User(Agent, DriverInterface):
         logging.debug(f"Selected transportation alternative: {selected_transportation_alternative}.",
                       extra={"clazz": self.__class__.__name__, "oid": self._id})
 
+        selected_transportation_alternative.waiting_time = self._waiting_time
         return selected_transportation_alternative
 
     def allocate_vehicle(self, selected_transportation_alternative: TransportationAlternative) -> VehicleAllocation:
