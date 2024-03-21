@@ -1,3 +1,5 @@
+### This is the template for a simulation with a ridehailing and shared mobility fleet. #####
+
 ##Imports 
 # Standard library imports
 import os
@@ -155,19 +157,21 @@ for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK
                        max_walking_distance, daily_total_cost, initial_SoC)
     global_config.add_vehicle_config(vehicle_type_classes[idx], vc)
 
-# Check the configuration file before running this, different modes might require multiple inputs
+# Needs to be modified depending on the mode
 # Vehicles whose state of charge is below the threshold value are to be charged
 recharge_threshold_shared_vehicle = parser.getfloat("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD") / 100 
 global_config.add_recharging_threshold(recharge_threshold_shared_vehicle)
 
-charging_station_power_shared_vehicle = parser.getfloat("SHARED_VEHICLE_OPERATOR", "CHARGING_STATION_POWER")
+charging_station_power_shared_vehicle = parser.getfloat("SHARED_VEHICLE_OPERATOR", "CHARGING_STATION_POWER") # Think about moving this to charging infrastructure
+# Service workers relocate the vehicles and bring them to charging stations
 number_of_service_workers_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_SERVICE_WORKER")
+# Base regions are city parts in which these service workers operate
 number_of_base_regions_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_BASE_REGIONS")
-
-# Hexagons as base regions for service workers to operate
+# Base regions are defined as hexagons in the city
 base_regions_shared_vehicle = parser.get("SHARED_VEHICLE_OPERATOR", "BASE_REGIONS")
 base_regions_shared_vehicle = base_regions_shared_vehicle.split(',')[:number_of_base_regions_shared_vehicle]
 
+# Base capacity is the number of charging stations in the charging hub
 base_capacity_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "BASE_CAPACITY")
 operations_start_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_START")
 operations_duration_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_DURATION")
@@ -187,12 +191,12 @@ n_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
 available_vehicle_modes_shared_vehicle = parser.get("SHARED_VEHICLE_OPERATOR", "available_vehicle_modes_shared_vehicle")
 available_vehicle_modes_shared_vehicle = available_vehicle_modes_shared_vehicle.split(',')
 available_vehicle_modes_supply_shared_vehicle = [n_cars, n_scooter, n_kick_scooter, n_bikes]
-MoD_interval_reduction = 0 # By choice
 
 # Register all configurations
 global_config.add_shared_vehicle_operator_config(svoc)
 
 #### Not sure if this part is necessary #####
+MoD_interval_reduction = 0 # By choice
 global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction) # Not sure if we need this
 
 ###### End Shared Vehicle Fleet Configuration ######
@@ -203,9 +207,13 @@ global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction) # No
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
+# Number of ridehailing cars in the fleet
 n_ridehailing_cars = parser.getint("RIDE_HAILING", "n_ridehailing_cars")
+# Number of autonomous cars in the fleet
 n_autonomous_cars = parser.getint("RIDE_HAILING", "n_autonomous_cars")
+# Not sure what this is for 
 allocation = parser.get("RIDE_HAILING", "ALLOCATION")
+# A score that represents how much users trust autonomous vehicles. Not relevant for every simulation
 AV_trust = parser.get("MODE_CHOICE_MODEL", "AV_trust").split(',')
 AV_trust = [float(x) for x in AV_trust]
 AV_price_reduction = parser.getfloat("RIDE_HAILING", "AV_PRICE_REDUCTION")
@@ -213,13 +221,15 @@ discount_rate = parser.getint("RIDE_HAILING", "DISCOUNT_RATE")
 
 AV_penetration = parser.getfloat('SUPPLY', "AV_penetration")
 EV_penetration = parser.getfloat('SUPPLY', "EV_penetration")
+# Drivers share of the revenue made with each ride
 driver_payment_share = parser.getfloat('RIDE_HAILING', "DRIVER_PAYMENT_SHARE")
 price_params_ride_hailing = parser.get('RIDE_HAILING', "PRICE_PARAMS")
 price_params_ride_hailing = price_params_ride_hailing.split(',')
 price_params_ride_hailing = [float(x) * (1 - discount_rate) for x in price_params_ride_hailing]
+# Maximumn pickuo distance that is ok for the users
 distance_threshold_ridehailing = parser.getfloat('RIDE_HAILING', "MAX_PICKUP_DISTANCE")
 global_config.add_distance_threshold_to_user(distance_threshold_ridehailing)
-
+# Vehicles whose state of charge is below the threshold value are to be charged
 recharge_threshold_ridehailing  = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").split(',')
 recharge_threshold_ridehailing = [float(x) / 100 for x in recharge_threshold_ridehailing]
 
@@ -227,13 +237,15 @@ recharge_threshold_ridehailing = [float(x) / 100 for x in recharge_threshold_rid
 #global_config.add_recharging_threshold(recharge_threshold_ridehailing)
 
 charging_station_power_ridehailing = parser.getfloat("RIDE_HAILING_OPERATOR", "CHARGING_STATION_POWER") ### Maybe this should belong to charging infrastructure?
+# Service workers relocate the vehicles and bring them to charging stations
 number_of_service_workers_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "NUMBER_OF_SERVICE_WORKER")
+# Base regions are city parts in which these service workers operate
 number_of_base_regions_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "NUMBER_OF_BASE_REGIONS")
-
-# Hexagons as base regions for service workers to operate
+# Base regions are defined as hexagons in the city
 base_regions_ridehailing = parser.get("RIDE_HAILING_OPERATOR", "BASE_REGIONS")
 base_regions_ridehailing = base_regions_ridehailing.split(',')[:number_of_base_regions_ridehailing]
 
+# Base capacity is the number of charging stations in the charging hub
 base_capacity_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "BASE_CAPACITY")
 operations_start_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
 operations_duration_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
@@ -275,7 +287,7 @@ load_environment()
 # Charging Infrastructure                 #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
-
+# Doubled Code --> actually the same as number of base capacity
 number_of_charging_stations = parser.getint("Charging_Infrastructure", "NUMBER_OF_CHARGING_STATIONS")
 charging_location_list = parser.get("Charging_Infrastructure", "BASE_REGIONS").split(',')[
                              :number_of_charging_stations]
@@ -352,7 +364,6 @@ logger.addFilter(edf)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-from tracking.tracking import Tracking
 tracking = Tracking.init(env)
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -401,7 +412,6 @@ DemandFactory.counter = 0
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Operator Modules
 search_engine = {'ride_hailing_0': RideHailingSearchEngine(env), 
                  'shared_vehicle': SharedVehicleSearchEngine(env)}
 
@@ -415,6 +425,7 @@ vehicle_assignment_engine = {'ride_hailing_0': RideHailingAllocationEngine(env),
 shared_vehicle_fleet_config = generate_fleet_config(supply_prob, n_cars = n_cars, n_scooter = n_scooter, n_kick_scooter= n_kick_scooter, n_bikes=n_bikes)
 mixed_fleet = generate_mixed_fleet(env, shared_vehicle_fleet_config)
 
+# Ride Hailing Fleet
 ride_hailing_fleet_config_0 = generate_ridehailing_fleet_config(distribution=supply_prob, n_cars=n_ridehailing_cars,
                                                                     n_AVs=n_autonomous_cars, allocation_method='historical',
                                                                     allocation=allocation)
@@ -424,6 +435,7 @@ ride_hailing_fleet_0 = generate_mixed_ride_hailing_fleet(env, ride_hailing_fleet
 search_engine['shared_vehicle'].register_fleet(mixed_fleet)
 search_engine['ride_hailing_0'].register_fleet(ride_hailing_fleet_0)
 
+# Initialize task queues for both fleets
 task_queue_ridehailing = TaskQueue(env)
 task_queue_shared_vehicle = TaskQueue(env)
 
@@ -431,13 +443,14 @@ task_queue_shared_vehicle = TaskQueue(env)
 for sw in range(global_config.shared_vehicle_operator_config.number_of_service_worker):
     env.process(ServiceWorker(env, task_queue_shared_vehicle).run())
 
-
+# Rebalancing scheduler creates the charging schedule and relocations vehicle in the ridehailing fleet
 rs_ridehailing_0 = RebalancingSchedulerRidehailing(distance_matrix, ride_hailing_fleet_0,
                                                     available_vehicle_modes_ridehailing,
                                                     available_vehicle_modes_supply_ride_hailing, number_of_service_workers_ridehailing,
                                                     base_regions_ridehailing, base_capacity_ridehailing, recharge_threshold_ridehailing,
                                                     charging_infrastructure._chargers)
 
+# Ridehailing operator manages all operations belonging to the ridehailing fleet
 ops_ridehailing_0 = OperationsRidehailing(env, ride_hailing_fleet_0,
                                               operations_start_ridehailing,
                                               operations_duration_ridehailing,
@@ -447,11 +460,12 @@ ops_ridehailing_0 = OperationsRidehailing(env, ride_hailing_fleet_0,
                                               recharge_threshold_ridehailing,
                                               task_queue_ridehailing, charging_infrastructure._chargers)
 
+# Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
 relocation_scheduler = RelocationScheduler(distance_matrix, mixed_fleet, available_vehicle_modes_shared_vehicle,
                             available_vehicle_modes_supply_shared_vehicle, number_of_service_workers_shared_vehicle,
                             base_regions_shared_vehicle, base_capacity_shared_vehicle)
 
-# Shared operator manages all operations belonging to the fleet
+# Shared operator manages all operations belonging to the shared mobility fleet
 shared_operator = Operations(env, mixed_fleet, number_of_service_workers_shared_vehicle, operations_start_shared_vehicle,
                     operations_duration_shared_vehicle, relocation_scheduler,
                     payment_engine["shared_vehicle"], available_vehicle_modes_shared_vehicle, ### What to do with the available modes?
