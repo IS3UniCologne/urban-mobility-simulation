@@ -68,7 +68,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         PublicTransitVehicle.public_transit_vehicle_id += 1
 
         logging.debug(
-            f"Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
+            "Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
     @property

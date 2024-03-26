@@ -3,9 +3,8 @@ import sys
 from pathlib import Path
 
 import h3
-import six
 
-sys.modules["sklearn.externals.six"] = six
+# sys.modules["sklearn.externals.six"] = six
 import mlrose as mlrose
 import pandas as pd
 
@@ -167,6 +166,7 @@ class RebalancingSchedulerRidehailing:
 
             # Keep Track of how many vehicles are already scheduled for charging
             currently_schedules_vehicles_per_unit = 0
+            logging.info(currently_schedules_vehicles_per_unit)
 
             # How many vehicles can we move to the base and charge?
             pick_up_vehicles = 1
@@ -838,7 +838,7 @@ class RebalancingSchedulerRidehailing:
 
         # Unstack Vehicle Type Level
         inflow = inflow.unstack()
-        base_column = ["destination", "state"]
+        ["destination", "state"]
         vehicle_columns = list(inflow["origin"].columns.values)
 
         # Reset Multi-Index to Flat Index (keep vehicle column order)

@@ -493,7 +493,7 @@ class PublicTransitOperator(
                 }
         else:
             raise NotImplementedError(
-                f"Other strategies for aligning travel demands are not implemented."
+                "Other strategies for aligning travel demands are not implemented."
             )
 
     @staticmethod

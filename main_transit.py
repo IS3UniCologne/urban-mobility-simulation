@@ -502,7 +502,7 @@ def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):
             if track:
                 # collect movements
                 ms = None  # movement start
-                for coordinates, time in zip(
+                for coordinates, time_ in zip(
                     operator._timestamped_position["geometry"]["coordinates"],
                     operator._timestamped_position["properties"]["times"],
                 ):
@@ -517,7 +517,7 @@ def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):
                                 "run": i + 1,
                                 "move_start": ms,
                                 "move_end": me,
-                                "time(ms)": time,
+                                "time(ms)": time_,
                             }
                         )
                         ms = coordinates
@@ -614,7 +614,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
             if k == "tau":
                 if v is None:
                     logging.info(
-                        f"Using hard updates of target Q-network",
+                        "Using hard updates of target Q-network",
                         extra={"clazz": __name__, "oid": ""},
                     )
                     bus_agent_config.tau = None
@@ -679,7 +679,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
                 episode=e,
                 seed=seed,
             )
-        except PublicTransitVehicleFull as e:
+        except PublicTransitVehicleFull:
             pass
 
         w = operator._rl_agent_weights

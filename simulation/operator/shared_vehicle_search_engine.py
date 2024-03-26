@@ -44,8 +44,8 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         origin = vehicle_search_task.transport_task.origin
         destination = vehicle_search_task.transport_task.destination
 
-        o_hex = origin.get_default_hexagon()
-        d_hex = destination.get_default_hexagon()
+        origin.get_default_hexagon()
+        destination.get_default_hexagon()
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route

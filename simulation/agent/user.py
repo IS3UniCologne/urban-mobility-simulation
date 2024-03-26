@@ -129,7 +129,7 @@ class User(Agent, DriverInterface):
         # Initial State and Runtime
         self._state = UserState.INITIALIZED  # Initial State of agent
         logging.debug(
-            f"Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
+            "Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
     @property
@@ -179,7 +179,7 @@ class User(Agent, DriverInterface):
             # If not allocated, retry.
             if not vehicle_allocation:
                 logging.debug(
-                    f" Vehicle allocation was not successful. Retrying with another vehicle.",
+                    " Vehicle allocation was not successful. Retrying with another vehicle.",
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
 
@@ -456,7 +456,7 @@ class User(Agent, DriverInterface):
         # Trigger next event
         self._arrived_at_destination.succeed()
         logging.debug(
-            f"Arrived at destination.",
+            "Arrived at destination.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -512,9 +512,9 @@ class User(Agent, DriverInterface):
         vehicle_soc_before_driving = vehicle.current_state_of_charge
 
         for route_segment in route.route_segments:
-            distance = route_segment.distance
-            velocity = vehicle.velocity
-            time = distance / velocity
+            # distance = route_segment.distance
+            # velocity = vehicle.velocity
+            # time = distance / velocity
 
             # yield self._env.timeout(time)
             yield self._env.process(vehicle.move(route_segment))
@@ -636,7 +636,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                     # If not allocated, retry.
                     if not vehicle_allocation:
                         logging.debug(
-                            f" Vehicle allocation was not successful. Retrying with another vehicle.",
+                            " Vehicle allocation was not successful. Retrying with another vehicle.",
                             extra={"clazz": self.__class__.__name__, "oid": self._id},
                         )
 
@@ -779,12 +779,12 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                     if isinstance(e, simpy.Interrupt):
                         # can also be interrupt from vehicle full
                         logging.debug(
-                            f"User was not serviced before bus reached terminal destination.",
+                            "User was not serviced before bus reached terminal destination.",
                             extra={"clazz": self.__class__.__name__, "oid": self._id},
                         )
                     elif isinstance(e, PublicTransitVehicleFull):
                         logging.debug(
-                            f"User was not able to board vehicle, vehicle is full.",
+                            "User was not able to board vehicle, vehicle is full.",
                             extra={"clazz": self.__class__.__name__, "oid": self._id},
                         )
 
@@ -1088,7 +1088,7 @@ class RideHailingUser(Agent, DriverInterface):
         # Initial State and Runtime
         self._state = UserState.INITIALIZED  # Initial State of agent
         logging.debug(
-            f"Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
+            "Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
     @property
@@ -1138,7 +1138,7 @@ class RideHailingUser(Agent, DriverInterface):
             # If not allocated, retry.
             if not vehicle_allocation:
                 logging.debug(
-                    f" Vehicle allocation was not successful. Retrying with another vehicle.",
+                    " Vehicle allocation was not successful. Retrying with another vehicle.",
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
 
@@ -1257,7 +1257,7 @@ class RideHailingUser(Agent, DriverInterface):
 
         if len(alternatives) == 1:
             alternative = alternatives[0]
-            mutual_alternative = alternative.copy()
+            # mutual_alternative = alternative.copy()
             if alternative.vehicle_type == "AutonomousCar":
                 pass
 
@@ -1470,7 +1470,7 @@ class RideHailingUser(Agent, DriverInterface):
         # Trigger next event
         self._arrived_at_destination.succeed()
         logging.debug(
-            f"Arrived at destination.",
+            "Arrived at destination.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -1543,9 +1543,9 @@ class RideHailingUser(Agent, DriverInterface):
         vehicle_soc_before_driving = vehicle.current_state_of_charge
 
         for route_segment in route.route_segments:
-            distance = route_segment.distance
-            velocity = vehicle.velocity
-            time = distance / velocity
+            # distance = route_segment.distance
+            # velocity = vehicle.velocity
+            # time = distance / velocity
 
             # yield self._env.timeout(time)
             yield self._env.process(vehicle.move(route_segment))

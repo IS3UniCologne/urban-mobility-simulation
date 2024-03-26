@@ -3,9 +3,8 @@ import sys
 from pathlib import Path
 
 import h3
-import six
 
-sys.modules["sklearn.externals.six"] = six
+# sys.modules["sklearn.externals.six"] = six # does this break the mlrose parts?
 import mlrose as mlrose
 import pandas as pd
 
@@ -100,9 +99,7 @@ class RelocationScheduler:
         state = fleet_state
 
         # How much capacity is already "used"
-        free_base_capacity = dict(
-            zip(self._base_regions, [self._base_capacity] * len(self._base_regions))
-        )
+        dict(zip(self._base_regions, [self._base_capacity] * len(self._base_regions)))
 
         # Split available service worker resources among vehicle types
         # (prioritize vehicles where most low soc vehicles are present)
@@ -908,7 +905,8 @@ class RelocationScheduler:
 
         # Unstack Vehicle Type Level
         inflow = inflow.unstack()
-        base_column = ["destination", "state"]
+        # base columns
+        ["destination", "state"]
         vehicle_columns = list(inflow["origin"].columns.values)
 
         # Reset Multi-Index to Flat Index (keep vehicle column order)

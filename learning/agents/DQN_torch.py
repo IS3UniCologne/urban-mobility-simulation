@@ -109,7 +109,7 @@ class DQN(RLAgent):
         # decay exponentially from initial_learning_rate to initial_learning_rate * decay_rate over decay_steps steps
         # lr = initial_learning_rate * decay_rate ^ (step / decay_steps)
         if self._config.DQN_config.lr_decay:
-            raise NotImplemented
+            raise NotImplementedError("Learning rate decay not implemented yet")
         else:
             self._learning_rate = 0.001  # adam default learning rate
 
@@ -196,7 +196,7 @@ class DQN(RLAgent):
                 forbidden_actions.add(self._action_space.index(action))
                 if len(forbidden_actions) == self._action_space.num_choices():
                     logging.error(
-                        f"Deadlock encountered! All actions tried, all forbidden!",
+                        "Deadlock encountered! All actions tried, all forbidden!",
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
                     sys.exit(1)
@@ -235,7 +235,7 @@ class DQN(RLAgent):
                 forbidden_actions.add(self._action_space.index(action))
                 if len(forbidden_actions) == self._action_space.num_choices():
                     logging.error(
-                        f"Deadlock encountered! All actions tried, all forbidden!",
+                        "Deadlock encountered! All actions tried, all forbidden!",
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
                     sys.exit(1)
@@ -301,7 +301,7 @@ class DQN(RLAgent):
         self._config.DQN_config.optimizer = self._optimizer.state_dict()
 
         if self._config.DQN_config.lr_decay:
-            raise NotImplemented
+            raise NotImplementedError("Learning rate decay is not yet implemented")
             # logging.debug(
             #     f'Saving decayed learning rate into config: {str(self._learning_rate(self._optimizer.iterations))}',
             #     extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})
@@ -319,7 +319,7 @@ class DQN(RLAgent):
             self._target_q_net.state_dict(),
         )
         logging.debug(
-            f"Saving model weights into config.",
+            "Saving model weights into config.",
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -375,7 +375,7 @@ class DQN(RLAgent):
 
         if self._use_double_q:
             # TODO: Double Q-Learning
-            raise NotImplemented
+            raise NotImplementedError("Double Q-Learning is not yet implemented")
         else:
             # Vanilla DQN using target net
 

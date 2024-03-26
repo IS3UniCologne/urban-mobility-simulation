@@ -99,13 +99,13 @@ class Tracking:
         try:
             return self.__env.now, self.tracked[uid]["reference"].get(attribute)
         except (KeyError, PermissionError) as e:
-            if type(e) == KeyError:
+            if type(e) is KeyError:
                 logging.error(
                     f"Trying to access {attribute} of uid {obj}, but this uid is currently not tracked!",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 return None
-            elif type(e) == PermissionError:
+            elif type(e) is PermissionError:
                 logging.error(
                     f"{attribute} of uid {obj} is not exposed or does not exist!",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
@@ -115,7 +115,7 @@ class Tracking:
     def dump(self, uid, exposed_only: bool = True) -> Optional[Tuple[float, dict]]:
         try:
             return self.__env.now, self.tracked[uid]["reference"].dump(exposed_only)
-        except KeyError as e:
+        except KeyError:
             logging.error(
                 f"Trying to dump attributes of uid {uid}, but this uid is currently not tracked!",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
@@ -140,7 +140,7 @@ class Tracking:
         """
         try:
             return self.tracked[uid]["reference"]
-        except KeyError as e:
+        except KeyError:
             logging.error(
                 f"Trying to access object at uid {uid}, but this uid is currently not tracked!",
                 extra={"clazz": self.__class__.__name__, "oid": ""},

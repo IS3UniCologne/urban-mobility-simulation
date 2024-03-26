@@ -299,7 +299,7 @@ def run_simulation(start_time: int, end_time: int, seed=4711):
     # Init. Tracking & RL Abstraction         #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    tracking = Tracking.init(env)
+    Tracking.init(env)
 
     # TODO: problem and agent can be initialized once outside the simulation and only reset
     # (Re-)Initialize the abstraction layer of the problem

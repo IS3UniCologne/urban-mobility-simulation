@@ -11,9 +11,10 @@ from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 
 from .vehicle import Vehicle, VehicleState
 
-# class SharedVehicleState(VehicleState, Enum):
-#     SOME_STATE = 1002
-#     RESERVED = 1001
+
+class SharedVehicleState(VehicleState, Enum):
+    SOME_STATE = 1002
+    RESERVED = 1001
 
 
 class SharedVehicle(Vehicle, ABC):
@@ -149,7 +150,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = SharedVehicleState.DRIVING
 
         logging.debug(
-            f"Driving started.",
+            "Driving started.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -157,7 +158,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = SharedVehicleState.PARKING
 
         logging.debug(
-            f"Driving stopped.",
+            "Driving stopped.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -169,7 +170,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = SharedVehicleState.PARKING
 
         logging.debug(
-            f"Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
+            "Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
     def reserve(self, user):
@@ -353,7 +354,7 @@ class SharedVehicle(Vehicle, ABC):
         self._charging_station_plugged_in = self._env.event()
 
         logging.debug(
-            f"Vehicle plugged in to charging station.",
+            "Vehicle plugged in to charging station.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -364,7 +365,7 @@ class SharedVehicle(Vehicle, ABC):
         self._charging_station_plugged_out = self._env.event()
 
         logging.debug(
-            f"Vehicle plugged out from charging station.",
+            "Vehicle plugged out from charging station.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 

@@ -51,7 +51,7 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
         """
         browser = TransportationAlternativeBrowser()
 
-        hexagon_origin = vehicle_search_task.agent_position.get_default_hexagon()
+        # hexagon_origin = vehicle_search_task.agent_position.get_default_hexagon()
 
         origin = vehicle_search_task.transport_task.origin
 
@@ -188,7 +188,7 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
         # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
         # We count the lost revenue for the "cheapest" mode
 
-        distance = transportation_task.origin >> transportation_task.destination
+        # distance = transportation_task.origin >> transportation_task.destination
         # TODO: define price of the trip
 
         self.increase_total_missed_trips(1)

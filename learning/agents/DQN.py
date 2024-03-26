@@ -221,7 +221,7 @@ class DQN(RLAgent):
             except ForbiddenAction:
                 if len(actions_tried) == self._action_space.num_choices():
                     logging.error(
-                        f"Deadlock encountered! All actions tried, all forbidden!",
+                        "Deadlock encountered! All actions tried, all forbidden!",
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
                     sys.exit(1)
@@ -285,7 +285,7 @@ class DQN(RLAgent):
             self._target_q_net.get_weights(),
         )
         logging.debug(
-            f"Saving model weights into config.",
+            "Saving model weights into config.",
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -372,7 +372,7 @@ class DQN(RLAgent):
     def _target_predict(self, state):
         try:
             return self._target_q_net(state, training=False)
-        except Exception as e:
+        except Exception:
             pass
 
     @tf.function

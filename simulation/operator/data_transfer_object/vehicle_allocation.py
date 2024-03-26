@@ -24,7 +24,7 @@ class VehicleAllocation:
         )
         self._pick_up_time = (
             self._associated_alternative.waiting_time
-        )  #  Pick up time (i.e., when will be the vehicle be at pickup pos)
+        )  # Pick up time (i.e., when will be the vehicle be at pickup pos)
 
     @property
     def user(self):

@@ -50,15 +50,15 @@ class ValueFunctionApproximator:
             self._weights = np.zeros(state_dim * action_dim)
 
     def evaluate_value(self, state, action):
-        s = state  # vector [d_terminal_x, d_terminal_y]
-        a = action  # binary vector [1, 2, 3, 4, 5, 6]
-        w = self._weights
+        s = state  # vector [d_terminal_x, d_terminal_y] # noqa: F841
+        a = action  # binary vector [1, 2, 3, 4, 5, 6] # noqa: F841
+        w = self._weights  # noqa: F841
         return eval(ValueFunctionApproximator.function)
 
     @staticmethod
     def evaluate_gradient(state, action):
-        s = state  # vector [d_terminal_x, d_terminal_y]
-        a = action  # binary vector [1, 2, 3, 4, 5, 6]
+        s = state  # vector [d_terminal_x, d_terminal_y] # noqa: F841
+        a = action  # binary vector [1, 2, 3, 4, 5, 6] # noqa: F841
         return eval(ValueFunctionApproximator.gradient)
 
     @property
@@ -118,8 +118,8 @@ class EpisodicSemiGradientSarsa(RLAgent):
 
                      up
                      __
-        up-left    /    \  up-right
-        down-left  \ __ /  down-right
+        up-left    /    \\  up-right
+        down-left  \\ __ /  down-right
                     down
 
         """

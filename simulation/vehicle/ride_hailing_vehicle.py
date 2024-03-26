@@ -205,7 +205,7 @@ class RideHailingVehicle(Vehicle, ABC):
         yield self._env.timeout(time)
         try:
             self._update_positions(route_segment.destination)
-        except:
+        except Exception:
             self._update_positions(route_segment.destination.position)
         self._update_state_of_charge(distance)
         self.travel_costs += distance / 1000 * self._cost_km
@@ -250,7 +250,7 @@ class RideHailingVehicle(Vehicle, ABC):
         self.state = VehicleState.DRIVING
 
         logging.debug(
-            f"Driving started.",
+            "Driving started.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -258,7 +258,7 @@ class RideHailingVehicle(Vehicle, ABC):
         self.state = VehicleState.PARKING
 
         logging.debug(
-            f"Driving stopped.",
+            "Driving stopped.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -272,7 +272,7 @@ class RideHailingVehicle(Vehicle, ABC):
         self.state = VehicleState.PARKING
 
         logging.debug(
-            f"Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
+            "Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
     def reserve(self, user):
@@ -459,7 +459,7 @@ class RideHailingVehicle(Vehicle, ABC):
         # self._charging_station_plugged_in = self._env.event()
 
         logging.debug(
-            f"Vehicle started waiting in the queue.",
+            "Vehicle started waiting in the queue.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -470,7 +470,7 @@ class RideHailingVehicle(Vehicle, ABC):
         self._charging_station_plugged_in = self._env.event()
 
         logging.debug(
-            f"Vehicle plugged in to charging station.",
+            "Vehicle plugged in to charging station.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -481,7 +481,7 @@ class RideHailingVehicle(Vehicle, ABC):
         self._charging_station_plugged_out = self._env.event()
 
         logging.debug(
-            f"Vehicle plugged out from charging station.",
+            "Vehicle plugged out from charging station.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 

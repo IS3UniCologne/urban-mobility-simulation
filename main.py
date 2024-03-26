@@ -1,14 +1,21 @@
 # from pqdm.processes import pqdm
+import logging
 import multiprocessing as mp
+import os
 import random
+import sys
+from configparser import ConfigParser
 from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
+import simpy
 
 from simulation.agent.user import (
     User,  # must come before DemandFactory, otherwise circular imports
 )
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import (
     ChargingInfrastructureConfig,
     Configuration,
@@ -16,6 +23,8 @@ from simulation.helper.configuration.configuration import (
     SharedVehicleOperatorConfig,
     VehicleConfig,
 )
+from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
+from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -37,6 +46,10 @@ from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
 )
 from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
+from simulation.operator.shared_vehicle_allocation_engine import (
+    SharedVehicleAllocationEngine,
+)
+from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
@@ -50,20 +63,6 @@ from simulation.world.world import World
 from tracking.tracking import Tracking
 
 pd.set_option("display.max_columns", None)
-import os
-import sys
-from configparser import ConfigParser
-
-import geopandas as gpd
-import simpy
-
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
-from simulation.operator.shared_vehicle_allocation_engine import (
-    SharedVehicleAllocationEngine,
-)
-from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -207,8 +206,6 @@ log_level = parser.get("SETTINGS", "log_level")
 # Configure Logging.                      #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
-
-import logging
 
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
@@ -453,7 +450,7 @@ def run_single_simulation(
     global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction)
 
     # World
-    tracking = Tracking.init(env)
+    Tracking.init(env)
     world = World.init(
         env,
         search_engine,
@@ -599,11 +596,11 @@ def run_single_simulation(
     # Run Simulation.                         #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    logging.warning(f"Starting Simulation.", extra={"clazz": "main", "oid": ""})
+    logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
     env.run(until=end_time)
 
-    logging.warning(f"Simulation Finished.", extra={"clazz": "main", "oid": ""})
+    logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
     total_cost_per_day = {
         "ride_hailing_0": (
@@ -754,7 +751,7 @@ def run_single_simulation(
             # Prepare KPI per Mode (Distance, Duration, Revenue)
             try:
                 kpi_for_mode = indicators_per_mode.loc[[mode]].reset_index(drop=True)
-            except:
+            except Exception:
                 kpi_for_mode = pd.DataFrame(
                     pd.Series(
                         {
@@ -831,7 +828,7 @@ seeds = random.sample(range(1000), 10)
 # Store all simulation results in this data frame
 all_simulations = pd.DataFrame()
 sim_days = 1
-scenario_name = f"single_P_analysis"
+scenario_name = "single_P_analysis"
 # AV_trust_analysis, population_analysis, fleet_size_analysis, charging_capacity_analysis, tech_phase_analysis
 TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
 phases = [0, 1, 2, 3]

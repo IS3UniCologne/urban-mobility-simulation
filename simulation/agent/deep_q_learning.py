@@ -324,9 +324,11 @@ class DQN(RLAgent):
                 self._target_q_net,
                 self._replay_buffer,
                 self._episode,
-                self._learning_rate(self._optimizer.iterations)
-                if self._config.transit_agent_config.lr_decay
-                else 0.001,
+                (
+                    self._learning_rate(self._optimizer.iterations)
+                    if self._config.transit_agent_config.lr_decay
+                    else 0.001
+                ),
                 reached_destination,
                 distance,
                 duration,
@@ -448,8 +450,8 @@ class DQN(RLAgent):
 
                      up
                      __
-        up-left    /    \  up-right
-        down-left  \ __ /  down-right
+        up-left    /    \\  up-right
+        down-left  \\ __ /  down-right
                     down
 
         """
@@ -512,7 +514,7 @@ class DQN(RLAgent):
         # unreachable_destination = False # JUST FOR DEBUGGING
         if unreachable_destination:
             logging.info(
-                f"Episode is cancelled, destination is unreachable within time limit",
+                "Episode is cancelled, destination is unreachable within time limit",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 

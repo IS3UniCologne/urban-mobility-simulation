@@ -100,7 +100,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
                     self._time.now_as_str(strf), self._current_stop.departure, strf
                 )
                 logging.debug(
-                    f"Bus waits for scheduled departure from terminal origin",
+                    "Bus waits for scheduled departure from terminal origin",
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
                 yield self._env.timeout(wait)
@@ -114,7 +114,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
                     self._current_stop.departure_next_day,
                 )
                 logging.debug(
-                    f"Bus is ahead of schedule and will wait for scheduled departure.",
+                    "Bus is ahead of schedule and will wait for scheduled departure.",
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
                 self._delay = 0  # reset delay

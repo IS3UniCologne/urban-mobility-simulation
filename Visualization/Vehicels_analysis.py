@@ -102,7 +102,7 @@ def data_vehicles(vehicles, fs=200, et="normal"):
     modes = modes.fillna(0)
     try:
         modes = modes[["active", "charging", "relocating", "ertc", "queue"]]
-    except:
+    except Exception:
         modes["relocating"] = 10
         modes = modes[["active", "charging", "relocating", "ertc", "queue"]]
     if fs == 250:

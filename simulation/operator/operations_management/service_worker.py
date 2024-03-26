@@ -36,7 +36,7 @@ class ServiceWorker:
             yield self._task_queue.task_queue_updated
 
             logging.debug(
-                f"Waking up and searching for available jobs.",
+                "Waking up and searching for available jobs.",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
@@ -48,7 +48,7 @@ class ServiceWorker:
                 yield self._env.process(self.execute_task(next_task))
 
             logging.debug(
-                f"There are no more tasks for me. Going into hibernate.",
+                "There are no more tasks for me. Going into hibernate.",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 

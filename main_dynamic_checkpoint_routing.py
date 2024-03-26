@@ -148,9 +148,9 @@ DQN_config = DQNConfig(
     gamma=parser.getfloat("DQN", "GAMMA"),
     lr_decay=parser.getboolean("DQN", "LR_DECAY"),
     lr_decay_steps=parser.getint("DQN", "LR_DECAY_STEPS"),
-    min_experience=parser.getint("DQN", "MIN_EXPERIENCE")
-    if replaybuffer is None
-    else 0,
+    min_experience=(
+        parser.getint("DQN", "MIN_EXPERIENCE") if replaybuffer is None else 0
+    ),
     q_net_layer=ast.literal_eval(parser.get("DQN", "DQN_LAYERS")),
     replaybuffer=replaybuffer,
     target_update_threshold=parser.getint("DQN", "TARGET_UPDATE_THRESHOLD"),
@@ -302,7 +302,7 @@ def run_simulation(start_time: int, end_time: int, seed=4711):
     # Init. Tracking                          #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    tracking = Tracking.init(env)
+    Tracking.init(env)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
