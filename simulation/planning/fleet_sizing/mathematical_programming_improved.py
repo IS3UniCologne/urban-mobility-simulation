@@ -160,7 +160,7 @@ def planning():
         for t in time_range:
             for e in energy_range:
                 if s_1[i, t, e].solution_value != 0:
-                    print(f"S_1_{i, t, e} = {s_1[i,t,e].solution_value}")
+                    print(f"S_1_{i, t, e} = {s_1[i, t, e].solution_value}")
 
                 if s_2[i, t, e].solution_value != 0:
                     print(f"S_2_{i, t, e} = {s_2[i, t, e].solution_value}")
