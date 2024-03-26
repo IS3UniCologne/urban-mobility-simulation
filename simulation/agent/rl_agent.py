@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 import simpy
 
 from simulation.agent.action_space import ActionSpace

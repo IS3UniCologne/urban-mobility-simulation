@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 
+
 class Environment(ABC):
     def __init__(self):
-        self._layer = {} # name: layer frame
+        self._layer = {}  # name: layer frame
 
     @property
     def layer(self):

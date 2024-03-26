@@ -19,6 +19,7 @@ class Policy:
             return np.random.choice(np.flatnonzero(arr == np.max(arr)))
         except ValueError:
             raise Exception("possible NaNs in NN encountered")
+
     @classmethod
     def decide(cls, state, q_hat, eps):
         """
@@ -33,7 +34,9 @@ class Policy:
         if np.random.rand() > eps:
             q_values = []
             for a in actionspace.actions:
-                q_values.append(q_hat.evaluate_value(state, actionspace.action_as_binary_vector(a)))
+                q_values.append(
+                    q_hat.evaluate_value(state, actionspace.action_as_binary_vector(a))
+                )
             return actionspace.actions[cls.argmax_rand(q_values)]
         else:
             return actionspace.sample_action_uniformly()

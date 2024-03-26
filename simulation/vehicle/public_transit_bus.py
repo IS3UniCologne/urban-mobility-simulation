@@ -7,10 +7,13 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
-from simulation.infrastructure.transit_network.route_segment import RouteSegment
-from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle, PublicTransitVehicleState
-from simulation.infrastructure.route import PublicTransitRoute
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
+from simulation.infrastructure.route import PublicTransitRoute
+from simulation.infrastructure.transit_network.route_segment import RouteSegment
+from simulation.vehicle.public_transit_vehicle import (
+    PublicTransitVehicle,
+    PublicTransitVehicleState,
+)
 from simulation.world.world import World
 from tracking.tracking_interface import TrackingInterface
 
@@ -19,10 +22,17 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     bus_id = 0
 
     # Tracking
-    exposes = ['_position', '_state', '_available_seats']
+    exposes = ["_position", "_state", "_available_seats"]
 
-    def __init__(self, env: Environment, route: PublicTransitRoute, position: GeodesicPosition,
-                 use_learning_agent: bool, max_available_seats=100, velocity=500):
+    def __init__(
+        self,
+        env: Environment,
+        route: PublicTransitRoute,
+        position: GeodesicPosition,
+        use_learning_agent: bool,
+        max_available_seats=100,
+        velocity=500,
+    ):
         """
 
         :param env:
@@ -72,35 +82,52 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         Time 00:03:00 - Departure 00:04:00 - next_day = True - should not happen
         """
         while self._state is not PublicTransitVehicleState.AT_TERMINAL_DESTINATION:
+            strf = "%H:%M:%S"
+            early_arrival = (
+                self._time.now_as_str() < self._current_stop.departure
+                and not self._current_stop.departure_next_day
+            ) or (
+                self._time.now_as_str() > self._current_stop.departure
+                and self._current_stop.departure_next_day
+            )
 
-            strf = '%H:%M:%S'
-            early_arrival = (self._time.now_as_str() < self._current_stop.departure and
-                             not self._current_stop.departure_next_day) or \
-                            (self._time.now_as_str() > self._current_stop.departure and
-                             self._current_stop.departure_next_day)
-
-            if self._state is PublicTransitVehicleState.AT_TERMINAL_ORIGIN and self._time.now_as_str() < self._current_stop.departure:
+            if (
+                self._state is PublicTransitVehicleState.AT_TERMINAL_ORIGIN
+                and self._time.now_as_str() < self._current_stop.departure
+            ):
                 # bus was pre-initialized by transit operator
-                wait = SimulationTimeConverter.duration_between(self._time.now_as_str(strf),
-                                                                self._current_stop.departure, strf)
-                logging.debug(f'Bus waits for scheduled departure from terminal origin',
-                              extra={"clazz": self.__class__.__name__, "oid": self._id})
+                wait = SimulationTimeConverter.duration_between(
+                    self._time.now_as_str(strf), self._current_stop.departure, strf
+                )
+                logging.debug(
+                    f"Bus waits for scheduled departure from terminal origin",
+                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                )
                 yield self._env.timeout(wait)
 
             elif early_arrival:
                 # if the bus has reached the planned stop earlier, wait
-                wait = SimulationTimeConverter.duration_between(self._time.now_as_str(strf),
-                                                                self._current_stop.departure, strf,
-                                                                self._current_stop.departure_next_day)
-                logging.debug(f'Bus is ahead of schedule and will wait for scheduled departure.',
-                              extra={"clazz": self.__class__.__name__, "oid": self._id})
+                wait = SimulationTimeConverter.duration_between(
+                    self._time.now_as_str(strf),
+                    self._current_stop.departure,
+                    strf,
+                    self._current_stop.departure_next_day,
+                )
+                logging.debug(
+                    f"Bus is ahead of schedule and will wait for scheduled departure.",
+                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                )
                 self._delay = 0  # reset delay
                 yield self._env.timeout(wait)
 
-            elif self._time.now_as_str() > self._current_stop.departure and not self._current_stop.departure_next_day:
+            elif (
+                self._time.now_as_str() > self._current_stop.departure
+                and not self._current_stop.departure_next_day
+            ):
                 # if the bus has reached the planned stop late, set delay
-                diff = datetime.strptime(self._time.now_as_str(strf), strf) - \
-                       datetime.strptime(self._current_stop.departure, strf)
+                diff = datetime.strptime(
+                    self._time.now_as_str(strf), strf
+                ) - datetime.strptime(self._current_stop.departure, strf)
                 self._delay = diff.total_seconds()
 
             # otherwise move on with driving
@@ -127,8 +154,9 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         self._state = PublicTransitVehicleState.EN_ROUTE_PLANNED
 
         logging.debug(
-            f'Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.',
-            extra={"clazz": self.__class__.__name__, "oid": self._id})
+            f"Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.",
+            extra={"clazz": self.__class__.__name__, "oid": self._id},
+        )
 
         yield self._env.timeout(duration)
 
@@ -137,13 +165,17 @@ class Bus(PublicTransitVehicle, TrackingInterface):
 
         if self._current_stop == self._route.destination:
             self._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
-            logging.debug(f'Bus has arrived at its terminal destination - stop {self._current_stop.stop_id} '
-                          f'at time {self._time.now_as_str()}',
-                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+            logging.debug(
+                f"Bus has arrived at its terminal destination - stop {self._current_stop.stop_id} "
+                f"at time {self._time.now_as_str()}",
+                extra={"clazz": self.__class__.__name__, "oid": self._id},
+            )
         else:
             self._state = PublicTransitVehicleState.AT_STOP
-            logging.debug(f'Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}',
-                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+            logging.debug(
+                f"Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}",
+                extra={"clazz": self.__class__.__name__, "oid": self._id},
+            )
 
     def _update_positions(self, new_position):
         # Update Vehicle Position
@@ -245,11 +277,17 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #     self._agent_completed_step = self._env.event()
 
     def __str__(self):
-        return f'I have {len(self._seats)} passengers on boards'
+        return f"I have {len(self._seats)} passengers on boards"
 
     def dump(self, exposed_only: bool = True) -> dict:
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}
         else:
-            dump_attr = ['_state', '_position', '_available_seats', '_spawned', '_velocity']
+            dump_attr = [
+                "_state",
+                "_position",
+                "_available_seats",
+                "_spawned",
+                "_velocity",
+            ]
             return {x: self.get(x) for x in dump_attr}
