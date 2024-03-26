@@ -1,10 +1,11 @@
 from simpy import Environment
 
-from simulation.operator.operations_management.service_tasks.service_task import ServiceTask
+from simulation.operator.operations_management.service_tasks.service_task import (
+    ServiceTask,
+)
 
 
 class MultiServiceTask(ServiceTask):
-
     def __init__(self, env: Environment):
         super().__init__(env)
 
@@ -23,7 +24,6 @@ class MultiServiceTask(ServiceTask):
 
         # Notify all
         self._task_finished = self._env.event()
-
 
     def append_task(self, service_task: ServiceTask):
         self._service_tasks.append(service_task)

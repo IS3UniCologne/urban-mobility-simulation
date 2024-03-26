@@ -1,11 +1,11 @@
 import logging
+import random
 import sys
 from collections import deque
 from copy import deepcopy
 
 import keras.callbacks
 import numpy as np
-import random
 import tensorflow as tf
 from keras import layers
 from keras.losses import Huber
@@ -14,9 +14,9 @@ from keras.optimizers import Adam
 from keras.optimizers.schedules.learning_rate_schedule import ExponentialDecay
 from line_profiler_pycharm import profile
 
-from learning.interface.learning_interface import LearningInterface
-from learning.helper.policy import Policy
 from learning.agents.rl_agent import RLAgent
+from learning.helper.policy import Policy
+from learning.interface.learning_interface import LearningInterface
 from learning.spaces.action_space import ForbiddenAction
 
 
@@ -42,8 +42,10 @@ class DQN(RLAgent):
         self._eps_max = self._config.DQN_config.eps_max
         self._eps_min = self._config.DQN_config.eps_min
         self._gamma = self._config.DQN_config.gamma
-        self._reward = self._problem_config.reward # TODO: remove? is problem-specific
-        self._replaybuffer_size = self._config.DQN_config.replaybuffer_size  # size in episodes
+        self._reward = self._problem_config.reward  # TODO: remove? is problem-specific
+        self._replaybuffer_size = (
+            self._config.DQN_config.replaybuffer_size
+        )  # size in episodes
         # Experience Replay
         if self._config.DQN_config.replaybuffer is not None:
             if isinstance(self._config.DQN_config.replaybuffer, deque):
@@ -53,15 +55,25 @@ class DQN(RLAgent):
                 if self._episode <= self._replaybuffer_size:
                     self._replaybuffer = self._config.DQN_config.replaybuffer
                 else:
-                    self._replaybuffer = deque(self._config.DQN_config.replaybuffer,
-                                               maxlen=len(self._config.DQN_config.replaybuffer))
+                    self._replaybuffer = deque(
+                        self._config.DQN_config.replaybuffer,
+                        maxlen=len(self._config.DQN_config.replaybuffer),
+                    )
         else:
             self._replaybuffer = []
-        self._min_experience = self._config.DQN_config.min_experience  # episodes in replay buffer before training starts
+        self._min_experience = (
+            self._config.DQN_config.min_experience
+        )  # episodes in replay buffer before training starts
         self._train_frequency = self._config.DQN_config.train_frequency
-        self._use_double_q = self._config.DQN_config.double_q  # usage of Double Q Learning (Hasselt 2016)
-        self._minibatch_size = self._config.DQN_config.batchsize  # training minibatch size
-        self._target_net_update_threshold = self._config.DQN_config.target_update_threshold  # training steps before q net weights are propagated to target q net
+        self._use_double_q = (
+            self._config.DQN_config.double_q
+        )  # usage of Double Q Learning (Hasselt 2016)
+        self._minibatch_size = (
+            self._config.DQN_config.batchsize
+        )  # training minibatch size
+        self._target_net_update_threshold = (
+            self._config.DQN_config.target_update_threshold
+        )  # training steps before q net weights are propagated to target q net
         self._tau = self._config.DQN_config.tau
         self._learning_rate = None
         self._learning_rate_decay_steps = self._config.DQN_config.lr_decay_steps
@@ -76,7 +88,7 @@ class DQN(RLAgent):
             self._learning_rate = ExponentialDecay(
                 initial_learning_rate=0.01,
                 decay_steps=self._learning_rate_decay_steps,
-                decay_rate=0.1
+                decay_rate=0.1,
             )
         else:
             self._learning_rate = 0.001  # adam default learning rate
@@ -107,8 +119,10 @@ class DQN(RLAgent):
         if self._config.DQN_config.weights is not None:
             if type(self._config.DQN_config.weights) is str:
                 # filepath is given
-                logging.info(f'Loading weights from {self._config.DQN_config.weights} ...',
-                             extra={"clazz": self.__class__.__name__, "oid": ""})
+                logging.info(
+                    f"Loading weights from {self._config.DQN_config.weights} ...",
+                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                )
                 self._q_net.load_weights(self._config.DQN_config.weights)
                 self._target_q_net.load_weights(self._config.DQN_config.weights)
             else:
@@ -118,8 +132,9 @@ class DQN(RLAgent):
                 self._target_q_net.set_weights(target_weights)
         else:
             logging.debug(self._q_net.summary())
-            logging.debug("Model Summary:",
-                          extra={"clazz": self.__class__.__name__, "oid": ""})
+            logging.debug(
+                "Model Summary:", extra={"clazz": self.__class__.__name__, "oid": ""}
+            )
 
             # in the first episode, initialize target q net weights = q net weights
             self._target_q_net.set_weights(self._q_net.get_weights())
@@ -130,15 +145,25 @@ class DQN(RLAgent):
         input_layer_size = self.problem.state_size_flattened
 
         # Input
-        model.add(layers.Dense(self._q_net_layer[0], input_dim=input_layer_size,
-                               activation='relu', kernel_initializer='he_uniform'))
+        model.add(
+            layers.Dense(
+                self._q_net_layer[0],
+                input_dim=input_layer_size,
+                activation="relu",
+                kernel_initializer="he_uniform",
+            )
+        )
 
         # Hidden Layers
         for layernodes in self._q_net_layer[1:]:
-            model.add(layers.Dense(layernodes, activation='relu', kernel_initializer='he_uniform'))
+            model.add(
+                layers.Dense(
+                    layernodes, activation="relu", kernel_initializer="he_uniform"
+                )
+            )
 
         # Output
-        model.add(layers.Dense(self._action_space.num_choices(), activation='linear'))
+        model.add(layers.Dense(self._action_space.num_choices(), activation="linear"))
         model.compile(loss=Huber(), optimizer=self._optimizer)
 
         return model
@@ -155,14 +180,15 @@ class DQN(RLAgent):
             state = deepcopy(self.problem.state())  # S_t, as dict
             action = self.policy(state)  # A_t, string such as "DOWN"
             try:
-                _, reward, finished = yield self.problem.env.process(self.problem.step(action))
+                _, reward, finished = yield self.problem.env.process(
+                    self.problem.step(action)
+                )
             except ForbiddenAction:
                 continue
             if finished:
                 break
 
     def learn(self):
-
         # Deep Q Learning with Experience Replay as in mnih2013 (deepmind atari paper)
         actions_tried = set()
         step = 0
@@ -172,7 +198,7 @@ class DQN(RLAgent):
             if exploration:
                 action = self._action_space.sample_action_uniformly()
             else:
-                state = self.problem.state() # S_t, as numpy array
+                state = self.problem.state()  # S_t, as numpy array
                 action = self.policy(state)  # A_t, string such as "DOWN"
 
             if action in actions_tried:
@@ -182,35 +208,47 @@ class DQN(RLAgent):
                 state = self.problem.state()
 
             actions_tried.add(action)
-            action_index = self._action_space.index(action)  # A_t, index of action in action space
+            action_index = self._action_space.index(
+                action
+            )  # A_t, index of action in action space
 
             try:
-                next_state, reward, finished = yield self.problem.env.process(self.problem.step(action))
+                next_state, reward, finished = yield self.problem.env.process(
+                    self.problem.step(action)
+                )
                 actions_tried.clear()
                 step += 1
             except ForbiddenAction:
                 if len(actions_tried) == self._action_space.num_choices():
-                    logging.error(f'Deadlock encountered! All actions tried, all forbidden!',
-                          extra={"clazz": self.__class__.__name__, "oid": ""})
+                    logging.error(
+                        f"Deadlock encountered! All actions tried, all forbidden!",
+                        extra={"clazz": self.__class__.__name__, "oid": ""},
+                    )
                     sys.exit(1)
                 continue
 
             self._cumulative_reward += reward
-            logging.debug(f'Current reward: {reward}, overall reward: {self._cumulative_reward}',
-                          extra={"clazz": self.__class__.__name__, "oid": ""})
+            logging.debug(
+                f"Current reward: {reward}, overall reward: {self._cumulative_reward}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
 
-            self._replaybuffer.append((state, action_index, reward, next_state, finished))
-            if (self._episode >= self._min_experience) and (step % self._train_frequency == 0):
+            self._replaybuffer.append(
+                (state, action_index, reward, next_state, finished)
+            )
+            if (self._episode >= self._min_experience) and (
+                step % self._train_frequency == 0
+            ):
                 self._train(finished)
 
             if finished:
-                if self._eps_decay_strategy != 'none':
+                if self._eps_decay_strategy != "none":
                     # decay epsilon at end of episode
                     if self._eps > self._eps_min:
-                        if self._eps_decay_strategy == 'exp':
+                        if self._eps_decay_strategy == "exp":
                             # actually a power law function decay
                             self._eps *= self._eps_decay
-                        elif self._eps_decay_strategy == 'linear':
+                        elif self._eps_decay_strategy == "linear":
                             # decay linearly from 1 to 0 over all episodes
                             self._eps = 1 - (1 / self._total_episodes) * self._episode
                         self._eps = max(self._eps_min, min(self._eps_max, self._eps))
@@ -218,25 +256,38 @@ class DQN(RLAgent):
 
         # retain decayed epsilon
         self._config.DQN_config.eps = self._eps
-        logging.debug(f'Saving decayed epsilon into config: {str(self._eps)}',
-                      extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})
+        logging.debug(
+            f"Saving decayed epsilon into config: {str(self._eps)}",
+            extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
+        )
 
         # retain optimizer steps for decayed learning rate
         self._config.DQN_config.optimizer = self._optimizer
         if self._config.DQN_config.lr_decay:
             logging.debug(
-                f'Saving decayed learning rate into config: {str(self._learning_rate(self._optimizer.iterations))}',
-                extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})
+                f"Saving decayed learning rate into config: {str(self._learning_rate(self._optimizer.iterations))}",
+                extra={
+                    "clazz": self.__class__.__name__,
+                    "oid": f"Episode {self._episode}",
+                },
+            )
 
         # retain replaybuffer
         self._config.DQN_config.replaybuffer = self._replaybuffer
-        logging.debug(f'Saving replay buffer into config. Size: {str(len(self._replaybuffer))}',
-                      extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})
+        logging.debug(
+            f"Saving replay buffer into config. Size: {str(len(self._replaybuffer))}",
+            extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
+        )
 
         # retain weights
-        self._config.DQN_config.weights = (self._q_net.get_weights(), self._target_q_net.get_weights())
-        logging.debug(f'Saving model weights into config.',
-                      extra={"clazz": self.__class__.__name__, "oid": f'Episode {self._episode}'})
+        self._config.DQN_config.weights = (
+            self._q_net.get_weights(),
+            self._target_q_net.get_weights(),
+        )
+        logging.debug(
+            f"Saving model weights into config.",
+            extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
+        )
 
         self.problem.reset()
 
@@ -274,11 +325,15 @@ class DQN(RLAgent):
                 target_q = r
             else:
                 if self._use_double_q:
-                    target_q = r + self._gamma * q_values_tp1_t[i][
-                        tf.math.argmax(q_values_tp1[i])]  # double Q-learning
+                    target_q = (
+                        r
+                        + self._gamma
+                        * q_values_tp1_t[i][tf.math.argmax(q_values_tp1[i])]
+                    )  # double Q-learning
                 else:
                     target_q = r + self._gamma * tf.math.reduce_max(
-                        q_values_tp1[i])  # vanilla DQN with target network
+                        q_values_tp1[i]
+                    )  # vanilla DQN with target network
 
             q_values = q_values_t[i]
             q_values[a] = target_q
@@ -286,9 +341,17 @@ class DQN(RLAgent):
             X.append(s0)
             y.append(q_values)
 
-        self._q_net.fit(np.array(X), np.array(y), batch_size=self._minibatch_size, epochs=10, verbose=0,
-                        callbacks=[self._tensorboard,
-                                   tf.keras.callbacks.EarlyStopping(monitor='loss')])
+        self._q_net.fit(
+            np.array(X),
+            np.array(y),
+            batch_size=self._minibatch_size,
+            epochs=10,
+            verbose=0,
+            callbacks=[
+                self._tensorboard,
+                tf.keras.callbacks.EarlyStopping(monitor="loss"),
+            ],
+        )
 
         if self._optimizer.iterations % self._target_net_update_threshold == 0:
             if self._tau is not None:

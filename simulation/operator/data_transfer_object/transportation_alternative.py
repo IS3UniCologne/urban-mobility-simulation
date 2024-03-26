@@ -3,16 +3,17 @@ from simulation.vehicle.vehicle import Vehicle
 
 
 class TransportationAlternative:
+    def __init__(
+        self, vehicle: Vehicle, route: Route, price, duration, distance, convenience
+    ):
+        self._vehicle = vehicle
+        self._price = price
+        self._duration = duration
+        self._distance = distance
+        self._route = route
+        self._convenience = convenience  # the ranking (the lower, the better)
 
-    def __init__(self, vehicle: Vehicle, route: Route, price, duration, distance, convenience):
-        self._vehicle   = vehicle
-        self._price     = price
-        self._duration  = duration
-        self._distance  = distance
-        self._route     = route
-        self._convenience = convenience # the ranking (the lower, the better)
-
-        self._energy_consumed = 0.0 # Is set after successful trip
+        self._energy_consumed = 0.0  # Is set after successful trip
 
     @property
     def vehicle(self):

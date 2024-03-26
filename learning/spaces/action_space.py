@@ -11,7 +11,6 @@ class ForbiddenAction(Exception):
 
 
 class DiscreteActionSpace:
-
     def __init__(self, actions: list[str]):
         self._actions = actions
 

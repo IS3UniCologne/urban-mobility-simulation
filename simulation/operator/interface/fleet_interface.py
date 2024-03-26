@@ -5,9 +5,8 @@ from simpy import Environment
 
 
 class FleetInterface(ABC):
-
     def __init__(self, env: Environment):
-        self._resource = simpy.Resource(env) # Semaphore
+        self._resource = simpy.Resource(env)  # Semaphore
 
     @property
     def resource(self):

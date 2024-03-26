@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import h3
-from haversine import haversine_vector, Unit
 import pandas as pd
+from haversine import Unit, haversine_vector
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
@@ -32,12 +32,17 @@ class DistanceMatrixImporter:
         hexagons = self._hexagons
 
         if p.exists():
-            distance_matrix = pd.read_csv(p, index_col = 0)
+            distance_matrix = pd.read_csv(p, index_col=0)
         else:
-
             hexagon_centers = [h3.h3_to_geo(x) for x in hexagons]
-            distance_matrix = pd.DataFrame(haversine_vector(hexagon_centers, hexagon_centers, comb=True, unit=Unit.METERS), index=hexagons, columns=hexagons)
-            distance_matrix.to_csv(p, index = True)
+            distance_matrix = pd.DataFrame(
+                haversine_vector(
+                    hexagon_centers, hexagon_centers, comb=True, unit=Unit.METERS
+                ),
+                index=hexagons,
+                columns=hexagons,
+            )
+            distance_matrix.to_csv(p, index=True)
 
             # Below is the old, inefficient way of doing things
             # geo_env = GeodesicEnvironment.getInstance()
@@ -60,5 +65,3 @@ class DistanceMatrixImporter:
             #             distance_matrix[hex_row][hex_col] = 0.0
 
         return distance_matrix
-
-

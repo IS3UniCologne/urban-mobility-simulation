@@ -13,30 +13,34 @@ from simulation.vehicle.public_transit_bus import PublicTransitVehicleState
 
 class ValueFunctionApproximator:
     # this function only looks at (d_terminal_x, d_terminal_y)
-    function = "w[0] * s[0] * a[0] + w[1] * s[1] * a[0] + " \
-               "w[2] * s[0] * a[1] + w[3] * s[1] * a[1] + " \
-               "w[4] * s[0] * a[2] + w[5] * s[1] * a[2] + " \
-               "w[6] * s[0] * a[3] + w[7] * s[1] * a[3] + " \
-               "w[8] * s[0] * a[4] + w[9] * s[1] * a[4] + " \
-               "w[10] * s[0] * a[5] + w[11] * s[1] * a[5] + " \
-               "w[12] * s[0] * a[6] + w[13] * s[1] * a[6]"
+    function = (
+        "w[0] * s[0] * a[0] + w[1] * s[1] * a[0] + "
+        "w[2] * s[0] * a[1] + w[3] * s[1] * a[1] + "
+        "w[4] * s[0] * a[2] + w[5] * s[1] * a[2] + "
+        "w[6] * s[0] * a[3] + w[7] * s[1] * a[3] + "
+        "w[8] * s[0] * a[4] + w[9] * s[1] * a[4] + "
+        "w[10] * s[0] * a[5] + w[11] * s[1] * a[5] + "
+        "w[12] * s[0] * a[6] + w[13] * s[1] * a[6]"
+    )
 
-    gradient = "np.array([" \
-               "s[0] * a[0], " \
-               "s[1] * a[0], " \
-               "s[0] * a[1], " \
-               "s[1] * a[1], " \
-               "s[0] * a[2], " \
-               "s[1] * a[2], " \
-               "s[0] * a[3], " \
-               "s[1] * a[3], " \
-               "s[0] * a[4], " \
-               "s[1] * a[4], " \
-               "s[0] * a[5], " \
-               "s[1] * a[5], " \
-               "s[0] * a[6], " \
-               "s[1] * a[6]" \
-               "])"
+    gradient = (
+        "np.array(["
+        "s[0] * a[0], "
+        "s[1] * a[0], "
+        "s[0] * a[1], "
+        "s[1] * a[1], "
+        "s[0] * a[2], "
+        "s[1] * a[2], "
+        "s[0] * a[3], "
+        "s[1] * a[3], "
+        "s[0] * a[4], "
+        "s[1] * a[4], "
+        "s[0] * a[5], "
+        "s[1] * a[5], "
+        "s[0] * a[6], "
+        "s[1] * a[6]"
+        "])"
+    )
 
     def __init__(self, state_dim, action_dim, init_values=None):
         if init_values is not None:
@@ -95,7 +99,9 @@ class EpisodicSemiGradientSarsa(RLAgent):
                 # and go to next episode
                 break
 
-            a_ = self._action_space.action_as_binary_vector(Policy.decide(s_, self._q_hat, self._eps))
+            a_ = self._action_space.action_as_binary_vector(
+                Policy.decide(s_, self._q_hat, self._eps)
+            )
 
             # update weights
             self._update_policy(s, a, s_, a_)
@@ -121,25 +127,31 @@ class EpisodicSemiGradientSarsa(RLAgent):
         new_centroid = None
 
         while True:
-            action = Policy.decide(self._vectorize_state(bus._env_state), self._q_hat, self._eps)
+            action = Policy.decide(
+                self._vectorize_state(bus._env_state), self._q_hat, self._eps
+            )
 
-            if action == 'STAY':
+            if action == "STAY":
                 break
             else:
                 try:
                     new_centroid = bus.test_action(action)
                 except NotImplementedError:
                     # hexagon is out of layer bounding box - action is forbidden
-                    logging.debug(f'Action {action} is forbidden, sampling again',
-                                  extra={"clazz": self.__class__.__name__, "oid": bus.id})
+                    logging.debug(
+                        f"Action {action} is forbidden, sampling again",
+                        extra={"clazz": self.__class__.__name__, "oid": bus.id},
+                    )
                     continue
                 break
 
-        logging.debug(f'Bus takes action {action}',
-                      extra={"clazz": self.__class__.__name__, "oid": bus.id})
+        logging.debug(
+            f"Bus takes action {action}",
+            extra={"clazz": self.__class__.__name__, "oid": bus.id},
+        )
 
         if new_centroid is None:
-            yield self._env.timeout(.01)
+            yield self._env.timeout(0.01)
         else:
             new_position = GeodesicPosition(*new_centroid)
 
@@ -161,13 +173,15 @@ class EpisodicSemiGradientSarsa(RLAgent):
         # update weights based on semi gradient sarsa
 
         if terminal:
-            self._q_hat.weights = self._q_hat.weights + self._alpha * \
-                                  (self._reward - self._q_hat.evaluate_value(s, a)) * \
-                                  self._q_hat.evaluate_gradient(s, a)
+            self._q_hat.weights = self._q_hat.weights + self._alpha * (
+                self._reward - self._q_hat.evaluate_value(s, a)
+            ) * self._q_hat.evaluate_gradient(s, a)
         else:
-            self._q_hat.weights = self._q_hat.weights + \
-                                  self._alpha * (self._reward + self._gamma * self._q_hat.evaluate_value(s_, a_) -
-                                                 self._q_hat.evaluate_value(s, a)) * self._q_hat.evaluate_gradient(s, a)
+            self._q_hat.weights = self._q_hat.weights + self._alpha * (
+                self._reward
+                + self._gamma * self._q_hat.evaluate_value(s_, a_)
+                - self._q_hat.evaluate_value(s, a)
+            ) * self._q_hat.evaluate_gradient(s, a)
 
     @staticmethod
     def reward_state(state, terminal=False):
@@ -185,10 +199,10 @@ class EpisodicSemiGradientSarsa(RLAgent):
         else:
             # we oversimplify a lot here, coming from a geodesic environment, but we just wanna know a approximate absolute
             # distance measure for constructing the reward
-            distance = sqrt(state['d_terminal'][0] ** 2 + state['d_terminal'][1] ** 2)
+            distance = sqrt(state["d_terminal"][0] ** 2 + state["d_terminal"][1] ** 2)
 
             return -distance
 
     @staticmethod
     def _vectorize_state(state):
-        return np.array([state['d_terminal'][0], state['d_terminal'][1]])
+        return np.array([state["d_terminal"][0], state["d_terminal"][1]])
