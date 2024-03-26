@@ -123,7 +123,7 @@ class ChargingStationHandler:
         )
         try:
             charging_station_vehicle[charging_station_id] -= 1
-        except:
+        except Exception:
             pass
         # print(f"Reduce capacity in hexagon {charging_station_id}, to {charging_station_vehicle[charging_station_id]}")
 

@@ -74,7 +74,7 @@ def plot_static_choropleth_map(
 
 
 def clean(x):
-    if type(x) != float:
+    if type(x) is not float:
         x = x.replace("[", "").replace("]", "")
     return x
 

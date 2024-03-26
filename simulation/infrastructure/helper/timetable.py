@@ -117,7 +117,7 @@ class Timetable:
         )
 
         # calc walk distance and duration
-        if not spatial_strategy in ["euclidean", "walk"]:
+        if spatial_strategy not in ["euclidean", "walk"]:
             # if stops in vicinity were found by hexagon, no distance has been calculated, use euclidean
             viable_trips["walk_dist"] = viable_trips.apply(
                 lambda x: transportation_search_task.transport_task.origin
@@ -141,7 +141,7 @@ class Timetable:
         ]
 
         # of all those, find trips that have at least one stop in vicinity of the transport task destination
-        viable_trip_ids = list(viable_trips["trip_id"].unique())
+        list(viable_trips["trip_id"].unique())
 
         return viable_trips
 
@@ -155,5 +155,5 @@ class Timetable:
             return trips[trips.within(poly)]
         else:
             raise NotImplementedError(
-                f"Other strategies for aligning travel demands are not implemented."
+                "Other strategies for aligning travel demands are not implemented."
             )

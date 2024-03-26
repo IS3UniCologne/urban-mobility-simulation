@@ -45,7 +45,7 @@ class MixedSharedVehicleFleet(FleetInterface):
         bikes_in_area = []
 
         geo_env = GeodesicEnvironment.getInstance()
-        config = Configuration.instance()
+        Configuration.instance()
         geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
@@ -81,8 +81,8 @@ class MixedSharedVehicleFleet(FleetInterface):
         kick_scooters_in_area = []
         bikes_in_area = []
 
-        geo_env = GeodesicEnvironment.getInstance()
-        geometry = geo_env.get_hexagon(region)
+        # geo_env = GeodesicEnvironment.getInstance()
+        # geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
             if (
@@ -201,7 +201,7 @@ class MixedSharedVehicleFleet(FleetInterface):
         values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
-        vehicle_dict = dict(zip(available_vehicles, values))
+        # vehicle_dict = dict(zip(available_vehicles, values))
 
         supply = {}
 
@@ -237,7 +237,7 @@ class MixedSharedVehicleFleet(FleetInterface):
         values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
-        vehicle_dict = dict(zip(available_vehicles, values))
+        # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = {}
 

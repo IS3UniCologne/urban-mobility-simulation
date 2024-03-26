@@ -260,7 +260,7 @@ def generate_mixed_fleet(env, fleet_config):
         car_count = row["cars"]
         scooter_count = row["scooters"]
         kick_scooter_count = row["kick_scooters"]
-        bike_count = row["bikes"]
+        row["bikes"]
 
         # Add Cars
         for current_car in range(car_count):

@@ -267,7 +267,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
             if self.reached_destination:
                 pass
             logging.info(
-                f"Episode is cancelled, destination is unreachable within time limit",
+                "Episode is cancelled, destination is unreachable within time limit",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             self.duration = None
@@ -306,8 +306,8 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
                      up
                      __
-        up-left    /    \  up-right
-        down-left  \ __ /  down-right
+        up-left    /    \\  up-right
+        down-left  \\ __ /  down-right
                     down
 
         """

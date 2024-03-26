@@ -50,7 +50,7 @@ def set_style():
 
 
 def clean(x):
-    if type(x) != float:
+    if type(x) is not float:
         x = x.replace("[", "").replace("]", "")
     return x
 
@@ -129,7 +129,7 @@ def plot_costs_4(dg, mode):
     X = "Type of Costs"
     X_title = "Type of Costs"
     Y = "Costs"
-    Y_title = "Costs($)"
+    # Y_title = "Costs($)"
     names = [
         "REOPT",
         "SADC",

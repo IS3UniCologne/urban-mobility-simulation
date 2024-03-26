@@ -78,7 +78,7 @@ class Operations:
             self._operations_started.succeed()
             self._operations_started = self._env.event()
             logging.warning(
-                f"Operations started.",
+                "Operations started.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -199,7 +199,7 @@ class Operations:
                 < self._duration_of_operations
             ):
                 logging.info(
-                    f"Planning next relocation schedule.",
+                    "Planning next relocation schedule.",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
 
@@ -300,7 +300,7 @@ class Operations:
                     yield self._env.all_of(charging_events)
 
                     logging.info(
-                        f"All Charging Tasks have been fulfilled. Re-Generating Relocation Plan.",
+                        "All Charging Tasks have been fulfilled. Re-Generating Relocation Plan.",
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
 
@@ -308,6 +308,6 @@ class Operations:
                 yield self._env.all_of(relocation_events)
 
                 logging.info(
-                    f"Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan.",
+                    "Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan.",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )

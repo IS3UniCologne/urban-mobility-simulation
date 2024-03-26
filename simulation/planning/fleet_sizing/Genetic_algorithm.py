@@ -1,4 +1,5 @@
 import ga
+import matplotlib.pyplot
 import numpy
 import pandas as pd
 
@@ -139,8 +140,6 @@ best_match_idx = numpy.where(fitness == numpy.max(fitness))
 
 print("Best solution : ", new_population[best_match_idx, :])
 # print("Best solution fitness : ", fitness[best_match_idx])
-
-import matplotlib.pyplot
 
 matplotlib.pyplot.plot(best_outputs)
 matplotlib.pyplot.xlabel("Iteration")

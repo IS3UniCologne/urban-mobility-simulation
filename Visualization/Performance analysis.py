@@ -8,7 +8,7 @@ from IPython.display import set_matplotlib_formats
 
 
 def clean(x):
-    if type(x) != float:
+    if type(x) is not float:
         x = x.replace("[", "").replace("]", "")
     return x
 
@@ -67,7 +67,7 @@ def plot_CS_Benchmark(dg):
     Y_LABLE = ["Profits($)", "Costs($)", "Served Requests(%)", "Time(minute)"]
     Title = ["Fleet Profits", "Fleet Costs", "Service Quality", "Waiting Time"]
     Y_LIMIT_UP = [95000, 24000, 1.1, 12]
-    Y_LIMIT_LO = [30000, 5000, 6500]
+    # Y_LIMIT_LO = [30000, 5000, 6500]
     # for i in range(5):
     #     for j in range(3):
     #         sns.boxplot(data=dg[i], x=X, y=Y[j], hue=HUE, palette=sns.color_palette('mako', n_colors=N_COLORS), ax=ax[i][j],
@@ -120,8 +120,8 @@ def plot_CS_Benchmark_new(dg):
         "Service Quality",
         "Waiting Time",
     ]
-    Y_LIMIT_UP = [85000, 24000, 8000]
-    Y_LIMIT_LO = [30000, 5000, 6500]
+    # Y_LIMIT_UP = [85000, 24000, 8000]
+    # Y_LIMIT_LO = [30000, 5000, 6500]
     # for i in range(5):
     #     for j in range(3):
     #         sns.boxplot(data=dg[i], x=X, y=Y[j], hue=HUE, palette=sns.color_palette('mako', n_colors=N_COLORS), ax=ax[i][j],

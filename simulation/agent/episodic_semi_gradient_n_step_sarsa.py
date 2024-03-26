@@ -104,8 +104,8 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
 
                      up
                      __
-        up-left    /    \  up-right
-        down-left  \ __ /  down-right
+        up-left    /    \\  up-right
+        down-left  \\ __ /  down-right
                     down
 
         """

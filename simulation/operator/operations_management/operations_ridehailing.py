@@ -79,7 +79,7 @@ class OperationsRidehailing:
             self._operations_started.succeed()
             self._operations_started = self._env.event()
             logging.warning(
-                f"Operations started.",
+                "Operations started.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 

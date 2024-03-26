@@ -49,7 +49,7 @@ class MixedRideHailingFleet(FleetInterface):
         cars_in_area = []
 
         geo_env = GeodesicEnvironment.getInstance()
-        config = Configuration.instance()
+        Configuration.instance()
         geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
@@ -187,7 +187,7 @@ class MixedRideHailingFleet(FleetInterface):
         values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
-        vehicle_dict = dict(zip(available_vehicles, values))
+        # vehicle_dict = dict(zip(available_vehicles, values))
 
         supply = {}
 
@@ -219,7 +219,7 @@ class MixedRideHailingFleet(FleetInterface):
         values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
-        vehicle_dict = dict(zip(available_vehicles, values))
+        # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = {}
 
@@ -248,11 +248,11 @@ class MixedRideHailingFleet(FleetInterface):
         :param state_of_charge_threshold:
         :return: List, vehicles with low SoC}
         """
-        available_vehicles = ["RideHailingCar"]
-        values = [0] * len(available_vehicles)
+        # available_vehicles = ["RideHailingCar"]
+        # values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
-        vehicle_dict = dict(zip(available_vehicles, values))
+        # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = []
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)

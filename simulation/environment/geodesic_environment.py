@@ -17,13 +17,13 @@ class GeodesicEnvironment(Environment):
     @staticmethod
     def getInstance():
         """Static access method."""
-        if GeodesicEnvironment.__instance == None:
+        if GeodesicEnvironment.__instance is None:
             GeodesicEnvironment()
         return GeodesicEnvironment.__instance
 
     def __init__(self):
         """Virtually private constructor."""
-        if GeodesicEnvironment.__instance != None:
+        if GeodesicEnvironment.__instance is not None:
             raise Exception("This class is a singleton!")
         else:
             GeodesicEnvironment.__instance = self
@@ -118,8 +118,8 @@ class GeodesicEnvironment(Environment):
            /           \
          /1/          \2\
                 0
-         \5\          /6/
-          \  ________  /
+         \\5\\          /6/
+          \\  ________  /
                 4
 
         It doesn't really matter if the movement is named "up" or "left" as long as it corresponds always to the same
