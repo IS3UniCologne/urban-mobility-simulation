@@ -2,12 +2,13 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
-from simulation.operator.data_transfer_object.transportation_alternative import TransportationAlternative
+from simulation.operator.data_transfer_object.transportation_alternative import (
+    TransportationAlternative,
+)
 from simulation.tasks.transport_task import TransportTask
 
 
 class PaymentInterface(ABC):
-
     def __init__(self):
         self._total_revenue = 0
         self._total_fulfilled_trips = 0
@@ -23,11 +24,16 @@ class PaymentInterface(ABC):
         self._tracked_demands = set()
 
     @abstractmethod
-    def pay_for_fulfilled_transportation_task(self, user, transportation_task: TransportTask, selected_transportation_alternative: TransportationAlternative):
+    def pay_for_fulfilled_transportation_task(
+        self,
+        user,
+        transportation_task: TransportTask,
+        selected_transportation_alternative: TransportationAlternative,
+    ):
         pass
 
     @abstractmethod
-    def withdraw_transportation_task(self, user, transportation_task:TransportTask):
+    def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         pass
 
     @property

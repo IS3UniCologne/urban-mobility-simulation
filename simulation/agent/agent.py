@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
+
 from simulation.environment.position import Position
 
-class Agent(ABC):
 
+class Agent(ABC):
     @abstractmethod
     def __init__(self):
         pass
@@ -20,7 +21,7 @@ class Agent(ABC):
         return self._position
 
     @position.setter
-    def position(self, position:Position):
+    def position(self, position: Position):
         self._position = position
 
     @abstractmethod
