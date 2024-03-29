@@ -1,16 +1,31 @@
-from simulation.operator.operations_management.service_tasks.charging_task_ridehailing import ChargingTaskRidehailing
-from simulation.operator.operations_management.service_tasks.multi_service_task import MultiServiceTask
-
 import logging
 
-from simulation.operator.operations_management.service_tasks.relocation_task import RelocationTask
+from simulation.operator.operations_management.service_tasks.charging_task_ridehailing import (
+    ChargingTaskRidehailing,
+)
+from simulation.operator.operations_management.service_tasks.multi_service_task import (
+    MultiServiceTask,
+)
+from simulation.operator.operations_management.service_tasks.relocation_task import (
+    RelocationTask,
+)
 
 
 class OperationsRidehailing:
-
-    def __init__(self, env, vehicle_fleet, time_between_operations, operation_duration,
-                 relocation_scheduler, payment_engine, available_modes, available_modes_supply,
-                 state_of_charge_threshold, task_queue, charging_stations):
+    def __init__(
+        self,
+        env,
+        vehicle_fleet,
+        time_between_operations,
+        operation_duration,
+        relocation_scheduler,
+        payment_engine,
+        available_modes,
+        available_modes_supply,
+        state_of_charge_threshold,
+        task_queue,
+        charging_stations,
+    ):
         """
 
         :param env: SimPy Environment
@@ -33,8 +48,8 @@ class OperationsRidehailing:
 
         # To access vehicle transactions
         self._payment_engine = payment_engine
-        self._available_modes = available_modes # Modes in Fleet
-        self._available_modes_supply = available_modes_supply # Number of Vehicles in Fleet per Mode e.g., [100, 100, 50]
+        self._available_modes = available_modes  # Modes in Fleet
+        self._available_modes_supply = available_modes_supply  # Number of Vehicles in Fleet per Mode e.g., [100, 100, 50]
 
         self._state_of_charge_threshold = state_of_charge_threshold
 
@@ -50,7 +65,7 @@ class OperationsRidehailing:
         self._time_between_operations = time_between_operations
 
         # Shift Duration (OM shift duration)
-        self._duration_of_operations = operation_duration # mins
+        self._duration_of_operations = operation_duration  # mins
         self._charging_stations = charging_stations
         self._counter = 0
 
@@ -63,8 +78,10 @@ class OperationsRidehailing:
             yield self._env.timeout(self._time_between_operations)
             self._operations_started.succeed()
             self._operations_started = self._env.event()
-            logging.warning(f"Operations started.",
-                         extra={"clazz": self.__class__.__name__, "oid": ""})
+            logging.warning(
+                "Operations started.",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
 
     def run_operations(self):
         while True:
@@ -82,15 +99,27 @@ class OperationsRidehailing:
             # No Vehicles to be charged
             no_vehicles_scheduled_to_charge = {}
 
-
             for charging_plan in charging_plans:
+                (
+                    origin,
+                    destination,
+                    no_vehicle_to_charge,
+                    distance_to_base,
+                    charging_station,
+                    vehicle,
+                ) = charging_plan[0]
 
-                origin, destination, no_vehicle_to_charge, distance_to_base, charging_station, vehicle = \
-                    charging_plan[0]
-
-                charging_task = ChargingTaskRidehailing(self._env, origin, destination, no_vehicle_to_charge,
-                                                        distance_to_base, self._vehicle_fleet,
-                                                        self._state_of_charge_threshold, charging_station, vehicle)
+                charging_task = ChargingTaskRidehailing(
+                    self._env,
+                    origin,
+                    destination,
+                    no_vehicle_to_charge,
+                    distance_to_base,
+                    self._vehicle_fleet,
+                    self._state_of_charge_threshold,
+                    charging_station,
+                    vehicle,
+                )
 
                 # Schedule to Queue
                 self._scheduled_tasks.append(charging_task)
@@ -102,22 +131,26 @@ class OperationsRidehailing:
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
 
+            logging.warning(
+                f"There are {self._vehicle_fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
 
-            logging.warning(f"There are {self._vehicle_fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
-                extra={"clazz": self.__class__.__name__, "oid": ""})
-
-            logging.info(f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
-                extra={"clazz": self.__class__.__name__, "oid": ""})
+            logging.info(
+                f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
             # Notify listeners
             self._charging_plan_updated.succeed()
             self._charging_plan_updated = self._env.event()
             while self._task_queue.count > 0:
                 next_task = self._task_queue.popleft()
-                logging.debug(f"Processing following task: {next_task}.",
-                              extra={"clazz": self.__class__.__name__})
+                logging.debug(
+                    f"Processing following task: {next_task}.",
+                    extra={"clazz": self.__class__.__name__},
+                )
                 # TODO: we do not need a service ID here
                 self._env.process(next_task.execute(0))
                 self._counter += 1
-
 
             # ### TODO: activate relocation for ridehailing later

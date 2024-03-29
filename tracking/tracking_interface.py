@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod, abstractproperty
 import logging
+from abc import ABC, abstractmethod, abstractproperty
 
 
 class TrackingInterface(ABC):
@@ -14,15 +14,19 @@ class TrackingInterface(ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         if cls.exposes is NotImplemented:
-            raise NotImplementedError("Please implement the `exposes` class variable for any class that implements the"
-                                      "TrackingIntercace AbstractBaseClass")
+            raise NotImplementedError(
+                "Please implement the `exposes` class variable for any class that implements the"
+                "TrackingIntercace AbstractBaseClass"
+            )
 
     def get(self, attribute: str):
         if attribute in self.exposes and hasattr(self, attribute):
             return self.__getattribute__(attribute)
         else:
-            logging.debug(f'Tracking tried to request an unexposed or private attribute ({attribute}) from this object',
-                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+            logging.debug(
+                f"Tracking tried to request an unexposed or private attribute ({attribute}) from this object",
+                extra={"clazz": self.__class__.__name__, "oid": self._id},
+            )
             raise PermissionError
 
     @abstractmethod

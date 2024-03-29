@@ -5,7 +5,6 @@ from keras.callbacks import TensorBoard
 
 
 class ModifiedTensorBoard(TensorBoard):
-
     # Overriding init to set initial step and writer (we want one log file for all .fit() calls)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -41,6 +40,5 @@ class ModifiedTensorBoard(TensorBoard):
     def update_stats(self, **stats):
         with self.writer.as_default():
             for key, value in stats.items():
-                tf.summary.scalar(key,value,step=self.step)
+                tf.summary.scalar(key, value, step=self.step)
                 self.writer.flush()
-

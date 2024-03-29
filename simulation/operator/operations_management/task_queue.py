@@ -2,7 +2,10 @@ from collections import deque
 
 from simpy import Environment
 
-from simulation.operator.operations_management.service_tasks.service_task import ServiceTask
+from simulation.operator.operations_management.service_tasks.service_task import (
+    ServiceTask,
+)
+
 
 class TaskQueue:
     def __init__(self, env: Environment):

@@ -1,16 +1,21 @@
 import h3
+import pandas as pd
 import simpy
 from shapely.geometry import shape
-import pandas as pd
+
 
 class ChargingStation:
-
     def __init__(self, id, env, location, power, capacity):
         self.env = env
         self.capacity = capacity
         location = location.split("'")[1].split("'")[0]
         self.polygon = shape(
-            {"type": "Polygon", "coordinates": [h3.h3_to_geo_boundary(location, geo_json=True)], "properties": ""})
+            {
+                "type": "Polygon",
+                "coordinates": [h3.h3_to_geo_boundary(location, geo_json=True)],
+                "properties": "",
+            }
+        )
         self.centre = [self.polygon.centroid.y, self.polygon.centroid.x]
         self.plugs = simpy.PriorityResource(self.env, capacity=capacity)
         self.id = id

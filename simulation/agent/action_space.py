@@ -10,8 +10,8 @@ class ActionSpace:
     __instance = None
 
     @staticmethod
-    def instance() -> 'ActionSpace':
-        """ Static access method. """
+    def instance() -> "ActionSpace":
+        """Static access method."""
         if ActionSpace.__instance is None:
             raise Exception("ActionSpace was not initialized")
         else:
@@ -19,13 +19,13 @@ class ActionSpace:
 
     @staticmethod
     def init(actions: list, reset=False):
-        """ Public constructor """
+        """Public constructor"""
         if ActionSpace.__instance is None or reset is True:
             ActionSpace(actions, reset)
         return ActionSpace.__instance
 
     def __init__(self, actions: list, reset: bool = False):
-        """ Virtually private constructor. """
+        """Virtually private constructor."""
         if ActionSpace.__instance is not None and not reset:
             raise Exception("This class is a singleton!")
         else:
