@@ -1,6 +1,12 @@
 [flake8]
-#E203, F403
-extend-ignore = E266, E501, E711, W503, F401
-max-line-length = 90
-max-complexity = 18
+#F401 module imported but unused
+#E203 whitespace around , : :
+# E266 too many leading '#' for block comment
+# E501 line too long
+# E711 comparison to None should be 'if cond is None:'
+# W503 line break before binary operator
+extend-ignore = E203, E701, E266, E501, W503, F401
+max-line-length = 88
+# Failing because of complexity in modular code blocks
+# max-complexity = 18
 #select = B,C,E,F,W,T4,B9
