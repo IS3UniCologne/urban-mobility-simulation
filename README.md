@@ -9,3 +9,5 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 * Because we want to support as many platforms as possible, we need to stick to certain Python versions as defined in `environment.yml`.
 Other Python versions are untested!
 > If you are on newer Macs (Apple Silicon) please use `environment_mac.yml` with special tensorflow dependencies!
+
+> This is a very important change to the README and definetely not just a test for the pull request
