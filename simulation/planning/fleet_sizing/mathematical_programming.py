@@ -1,8 +1,9 @@
 import random
-from docplex.mp.model import Model
 from datetime import datetime
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+from docplex.mp.model import Model
 
 
 def planning():
@@ -10,8 +11,12 @@ def planning():
     random.seed(2)
     mdl = Model("Charging-cluster_Management")
     # mdl.parameters.timelimit = 7200 * 2
-    data = pd.read_csv('weekday_time_bucket_4h_h3_start_7.csv')
-    data = data.groupby(['h3_start_7', 'h3_end_7','time_bucket_4h']).agg({'total_trips':'mean'}).reset_index()
+    data = pd.read_csv("weekday_time_bucket_4h_h3_start_7.csv")
+    data = (
+        data.groupby(["h3_start_7", "h3_end_7", "time_bucket_4h"])
+        .agg({"total_trips": "mean"})
+        .reset_index()
+    )
     # mdl.parameters.mip.tolerances.mipgap = 0.01
 
     # Sets
@@ -27,8 +32,8 @@ def planning():
     for i in space_range:
         for j in space_range:
             for t in time_range:
-                D_1[i, j, t] = D_2[i, j, t] = D_3[i, j, t] = np.random.randint(0,2)
-                '''D_1[i, j, t] = data.loc[
+                D_1[i, j, t] = D_2[i, j, t] = D_3[i, j, t] = np.random.randint(0, 2)
+                """D_1[i, j, t] = data.loc[
                     (data['h3_start_7'] == i) & (data['h3_end_7'] == j) & (data['time_bucket_4h'] == t),
                     'total_trips'].values[0] * 0.05
                 D_2[i, j, t] = data.loc[
@@ -36,61 +41,85 @@ def planning():
                     'total_trips'].values[0] * 0.025
                 D_3[i, j, t] = data.loc[
                     (data['h3_start_7'] == i) & (data['h3_end_7'] == j) & (data['time_bucket_4h'] == t),
-                    'total_trips'].values[0] * 0.025'''
+                    'total_trips'].values[0] * 0.025"""
 
     # Variables
-    x_1 = mdl.integer_var_cube(space_range, space_range, time_range, lb=0, name='x_1')
-    x_2 = mdl.integer_var_cube(space_range, space_range, time_range, lb=0, name='x_2')
-    s_1 = mdl.integer_var_matrix(space_range, time_range, lb=0, name='s_1')
-    s_2 = mdl.integer_var_matrix(space_range, time_range, lb=0, name='s_2')
-    y_1 = mdl.integer_var_dict(space_range, lb=0, ub=100, name='y_1')
-    y_2 = mdl.integer_var_dict(space_range, lb=0, ub=100, name='y_2')
+    x_1 = mdl.integer_var_cube(space_range, space_range, time_range, lb=0, name="x_1")
+    x_2 = mdl.integer_var_cube(space_range, space_range, time_range, lb=0, name="x_2")
+    s_1 = mdl.integer_var_matrix(space_range, time_range, lb=0, name="s_1")
+    s_2 = mdl.integer_var_matrix(space_range, time_range, lb=0, name="s_2")
+    y_1 = mdl.integer_var_dict(space_range, lb=0, ub=100, name="y_1")
+    y_2 = mdl.integer_var_dict(space_range, lb=0, ub=100, name="y_2")
 
     # Constraints
     for i in space_range:
-        mdl.add_constraint(s_1[i, 0] == y_1[i], 'C1')
-        mdl.add_constraint(s_2[i, 0] == y_2[i], 'C1')
+        mdl.add_constraint(s_1[i, 0] == y_1[i], "C1")
+        mdl.add_constraint(s_2[i, 0] == y_2[i], "C1")
 
         for t in time_range:
-            mdl.add_constraint(mdl.sum(x_1[i, j, t] for j in space_range) <= s_1[i, t], 'C2')
-            mdl.add_constraint(mdl.sum(x_2[i, j, t] for j in space_range) <= s_2[i, t], 'C3')
+            mdl.add_constraint(
+                mdl.sum(x_1[i, j, t] for j in space_range) <= s_1[i, t], "C2"
+            )
+            mdl.add_constraint(
+                mdl.sum(x_2[i, j, t] for j in space_range) <= s_2[i, t], "C3"
+            )
             for j in space_range:
-                mdl.add_constraint(x_1[i, j, t] <= D_1[i, j, t] + D_3[i, j, t], 'C4')
-                mdl.add_constraint(x_2[i, j, t] <= D_2[i, j, t] + D_3[i, j, t], 'C5')
-                mdl.add_constraint(x_1[i, j, t] + x_2[i, j, t] <=
-                                   D_1[i, j, t] + D_2[i, j, t] + D_3[i, j, t], 'C6')
+                mdl.add_constraint(x_1[i, j, t] <= D_1[i, j, t] + D_3[i, j, t], "C4")
+                mdl.add_constraint(x_2[i, j, t] <= D_2[i, j, t] + D_3[i, j, t], "C5")
+                mdl.add_constraint(
+                    x_1[i, j, t] + x_2[i, j, t]
+                    <= D_1[i, j, t] + D_2[i, j, t] + D_3[i, j, t],
+                    "C6",
+                )
         for t in range(1, 24):
-            mdl.add_constraint(s_1[i, t] == s_1[i, t - 1] + mdl.sum(x_1[j, i, t - 1] for j in space_range) -
-                               mdl.sum(x_1[i, j, t - 1] for j in space_range), 'C7')
-            mdl.add_constraint(s_2[i, t] == s_2[i, t - 1] + mdl.sum(x_2[j, i, t - 1] for j in space_range) -
-                               mdl.sum(x_2[i, j, t - 1] for j in space_range), 'C8')
+            mdl.add_constraint(
+                s_1[i, t]
+                == s_1[i, t - 1]
+                + mdl.sum(x_1[j, i, t - 1] for j in space_range)
+                - mdl.sum(x_1[i, j, t - 1] for j in space_range),
+                "C7",
+            )
+            mdl.add_constraint(
+                s_2[i, t]
+                == s_2[i, t - 1]
+                + mdl.sum(x_2[j, i, t - 1] for j in space_range)
+                - mdl.sum(x_2[i, j, t - 1] for j in space_range),
+                "C8",
+            )
 
-    Revenue = mdl.sum(x_1[i, j, t] * 5 + x_2[i, j, t] * 2 for i in space_range for j in space_range for t in time_range)
+    Revenue = mdl.sum(
+        x_1[i, j, t] * 5 + x_2[i, j, t] * 2
+        for i in space_range
+        for j in space_range
+        for t in time_range
+    )
     Costs = mdl.sum(y_1[i] * 29.86 + y_2[i] * 7.66 for i in space_range)
     mdl.maximize(Revenue - Costs)
-    print('Start_time: {}'.format(start_time))
+    print("Start_time: {}".format(start_time))
     mdl.print_information()
     assert mdl.solve()
     mdl.report()
-    print(f'Costs={Costs.solution_value}')
-    print(f'Revenue={Revenue.solution_value}')
+    print(f"Costs={Costs.solution_value}")
+    print(f"Revenue={Revenue.solution_value}")
     for i in space_range:
         if y_1[i].solution_value != 0:
-            print(f'y_1_{i} = {y_1[i].solution_value}')
+            print(f"y_1_{i} = {y_1[i].solution_value}")
         if y_2[i].solution_value != 0:
-            print(f'y_2_{i} = {y_2[i].solution_value}')
+            print(f"y_2_{i} = {y_2[i].solution_value}")
     print(
-        f'x_{1} = {mdl.sum(x_1[i, j, t] for i in space_range for j in space_range for t in time_range).solution_value}')
+        f"x_{1} = {mdl.sum(x_1[i, j, t] for i in space_range for j in space_range for t in time_range).solution_value}"
+    )
     print(
-        f'x_{2} = {mdl.sum(x_2[i, j, t] for i in space_range for j in space_range for t in time_range).solution_value}')
-    '''for i in space_range:
+        f"x_{2} = {mdl.sum(x_2[i, j, t] for i in space_range for j in space_range for t in time_range).solution_value}"
+    )
+    """for i in space_range:
         for j in space_range:
             for t in time_range:
                 if x_1[i, j, t].solution_value != 0:
                     print(f'x_1_{i, j, t} = {x_1[i, j, t].solution_value}')
                 if x_2[i, j, t].solution_value != 0:
                     print(f'x_2_{i, j, t} = {x_2[i, j, t].solution_value}')
-'''
+"""
     """try:
         assert mdl.solve(), "!!! Solve of the model fails"
         end_time = datetime.now()

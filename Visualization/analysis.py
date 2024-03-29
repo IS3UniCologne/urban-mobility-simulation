@@ -1,61 +1,81 @@
 import random
 
-import shapely
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from IPython.display import set_matplotlib_formats
-from h3 import h3
-from shapely.geometry import shape
 import contextily as ctx
 import geopandas as gpd
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
+import shapely
+from h3 import h3
+from IPython.display import set_matplotlib_formats
+from shapely.geometry import shape
 
-set_matplotlib_formats('retina')
+set_matplotlib_formats("retina")
 
 
 def set_style():
     # This sets reasonable defaults for font size for a figure that will go in a paper
     sns.set_context("paper")
-    plt.rcParams.update({'font.size': 20})
+    plt.rcParams.update({"font.size": 20})
     # Set the font to be serif, rather than sans
-    sns.set(font='serif')
+    sns.set(font="serif")
     # sns.set_color_codes("pastel")
     sns.set_palette("mako", n_colors=2)
     # Make the background white, and specify the font family
-    sns.set_style("ticks", {
-        "font.family": "serif",
-        "font.serif": ["Times", "Palatino", "serif"]
-    })
+    sns.set_style(
+        "ticks", {"font.family": "serif", "font.serif": ["Times", "Palatino", "serif"]}
+    )
 
 
-def transform_df_to_gdf(df, crs='EPSG:4326'):
-    return gpd.GeoDataFrame(data=df,
-                            geometry=list(map(lambda h3_index: shapely.geometry.Polygon(
-                                h3.h3_to_geo_boundary(h=h3_index, geo_json=True)), df.index)),
-                            crs=crs)
+def transform_df_to_gdf(df, crs="EPSG:4326"):
+    return gpd.GeoDataFrame(
+        data=df,
+        geometry=list(
+            map(
+                lambda h3_index: shapely.geometry.Polygon(
+                    h3.h3_to_geo_boundary(h=h3_index, geo_json=True)
+                ),
+                df.index,
+            )
+        ),
+        crs=crs,
+    )
 
 
 # A function plotting a choropleth map for a geo data frame. It zooms in to Berlin and adds points of interest.
-def plot_static_choropleth_map(gdf, ax, title, column='num_trips', label='Number of trips by hexagon', cmap='Reds',
-                               crs='EPSG:4326'):
+def plot_static_choropleth_map(
+    gdf,
+    ax,
+    title,
+    column="num_trips",
+    label="Number of trips by hexagon",
+    cmap="Reds",
+    crs="EPSG:4326",
+):
     # Construct choropleth map
-    gdf.cx[13.25:13.55, 52.4:52.6].plot(column=column, ax=ax, alpha=0.6, cmap=cmap, legend=True,
-                                        legend_kwds={'label': label, 'orientation': 'horizontal'})
+    gdf.cx[13.25:13.55, 52.4:52.6].plot(
+        column=column,
+        ax=ax,
+        alpha=0.6,
+        cmap=cmap,
+        legend=True,
+        legend_kwds={"label": label, "orientation": "horizontal"},
+    )
     ctx.add_basemap(ax=ax, crs=crs)
     ax.set_title(title)
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
     # Add main station
-    ax.scatter(x=13.369402, y=52.525084, label='Main station', color='blue')
+    ax.scatter(x=13.369402, y=52.525084, label="Main station", color="blue")
     # Add Humboldt university
-    ax.scatter(x=13.3914611, y=52.5178862, label='Humboldt university', color='green')
+    ax.scatter(x=13.3914611, y=52.5178862, label="Humboldt university", color="green")
     ax.legend()
 
 
 def clean(x):
-    if type(x) != float:
-        x = x.replace('[', '').replace(']', '')
+    if type(x) is not float:
+        x = x.replace("[", "").replace("]", "")
     return x
 
 
@@ -99,50 +119,109 @@ def clean(x):
 def profit_analysis(profit_data, service_level_data):
     random.seed = 42
     set_style()
-    plt.rcParams.update({'font.size': 16})
-    profit_data['Reoptimisation Benchmark'] = profit_data['Reoptimisation Benchmark'] + np.random.uniform(500,
-                                                                                                          700) * 10
-    print(profit_data['Reoptimisation Benchmark'])
-    service_level_data['Reoptimisation Benchmark'] = service_level_data['Reoptimisation Benchmark'] + np.random.uniform(0.003,
-                                                                                                          0.007)
-    print(service_level_data['Reoptimisation Benchmark'])
+    plt.rcParams.update({"font.size": 16})
+    profit_data["Reoptimisation Benchmark"] = (
+        profit_data["Reoptimisation Benchmark"] + np.random.uniform(500, 700) * 10
+    )
+    print(profit_data["Reoptimisation Benchmark"])
+    service_level_data["Reoptimisation Benchmark"] = service_level_data[
+        "Reoptimisation Benchmark"
+    ] + np.random.uniform(0.003, 0.007)
+    print(service_level_data["Reoptimisation Benchmark"])
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
-    ax[0].plot(profit_data['Episode'], profit_data['Limited_HDQN'], label='MADC (Proposed)', linestyle='solid', marker='x')
-    ax[0].plot(profit_data['Episode'], profit_data['Q_learning'], label='Q_learning', linestyle='solid', marker='x')
-    ax[0].plot(profit_data['Episode'], profit_data['Upperbound'], label='Upper bound', linestyle='dashed', marker='_')
-    ax[0].plot(profit_data['Episode'], profit_data['Reoptimisation Benchmark'], label='REOPT',
-               linestyle='dotted', marker='.')
-    ax[0].plot(profit_data['Episode'], profit_data['SADC Benchmark'], label='SADC', linestyle='dotted',
-               marker='o')
-    ax[0].ticklabel_format(style='sci', scilimits=(-3, 4), axis='y')
+    ax[0].plot(
+        profit_data["Episode"],
+        profit_data["Limited_HDQN"],
+        label="MADC (Proposed)",
+        linestyle="solid",
+        marker="x",
+    )
+    ax[0].plot(
+        profit_data["Episode"],
+        profit_data["Q_learning"],
+        label="Q_learning",
+        linestyle="solid",
+        marker="x",
+    )
+    ax[0].plot(
+        profit_data["Episode"],
+        profit_data["Upperbound"],
+        label="Upper bound",
+        linestyle="dashed",
+        marker="_",
+    )
+    ax[0].plot(
+        profit_data["Episode"],
+        profit_data["Reoptimisation Benchmark"],
+        label="REOPT",
+        linestyle="dotted",
+        marker=".",
+    )
+    ax[0].plot(
+        profit_data["Episode"],
+        profit_data["SADC Benchmark"],
+        label="SADC",
+        linestyle="dotted",
+        marker="o",
+    )
+    ax[0].ticklabel_format(style="sci", scilimits=(-3, 4), axis="y")
     ax[0].set_xlabel("Episode", fontsize=12)
     ax[0].set_ylabel("Profit($)", fontsize=12)
     ax[0].set_title("Fleet Profit", fontsize=12)
     ax[0].legend(fontsize=12)
-    ax[0].tick_params(axis='both', labelsize=12)
-    ax[0].set_ylim(2 * 10 ** 5, )
+    ax[0].tick_params(axis="both", labelsize=12)
+    ax[0].set_ylim(
+        2 * 10**5,
+    )
 
-    ax[1].plot(service_level_data['Episode'], service_level_data['Limited_HDQN'], label='MADC (Proposed)',
-               linestyle='solid', marker='x')
-    ax[1].plot(service_level_data['Episode'], service_level_data['Q_learning'], label='Q_learning',
-               linestyle='solid', marker='x')
-    ax[1].plot(service_level_data['Episode'], service_level_data['Upperbound'], label='Upper bound', linestyle='dashed',
-               marker='_')
-    ax[1].plot(service_level_data['Episode'], service_level_data['Reoptimisation Benchmark'],
-               label='REOPT', linestyle='dotted', marker='.')
-    ax[1].plot(service_level_data['Episode'], service_level_data['SADC Benchmark'],
-               label='SADC', linestyle='dotted', marker='o')
-    ax[1].ticklabel_format(style='sci', scilimits=(-3, 4), axis='y')
+    ax[1].plot(
+        service_level_data["Episode"],
+        service_level_data["Limited_HDQN"],
+        label="MADC (Proposed)",
+        linestyle="solid",
+        marker="x",
+    )
+    ax[1].plot(
+        service_level_data["Episode"],
+        service_level_data["Q_learning"],
+        label="Q_learning",
+        linestyle="solid",
+        marker="x",
+    )
+    ax[1].plot(
+        service_level_data["Episode"],
+        service_level_data["Upperbound"],
+        label="Upper bound",
+        linestyle="dashed",
+        marker="_",
+    )
+    ax[1].plot(
+        service_level_data["Episode"],
+        service_level_data["Reoptimisation Benchmark"],
+        label="REOPT",
+        linestyle="dotted",
+        marker=".",
+    )
+    ax[1].plot(
+        service_level_data["Episode"],
+        service_level_data["SADC Benchmark"],
+        label="SADC",
+        linestyle="dotted",
+        marker="o",
+    )
+    ax[1].ticklabel_format(style="sci", scilimits=(-3, 4), axis="y")
     ax[1].set_xlabel("Episode", fontsize=12)
     ax[1].set_ylabel("Served Trips(%)", fontsize=12)
     ax[1].set_title("Fleet Service Quality", fontsize=12)
     ax[1].legend(fontsize=12)
-    ax[1].tick_params(axis='both', labelsize=12)
-    ax[1].set_ylim(0.3, )
+    ax[1].tick_params(axis="both", labelsize=12)
+    ax[1].set_ylim(
+        0.3,
+    )
     plt.savefig("profit_RL_Q_learning.pdf")
     plt.show()
 
 
-profit_data = pd.read_csv('../results/profit_RL.csv')
-service_level_data = pd.read_csv('../results/service_level_RL.csv')
+profit_data = pd.read_csv("../results/profit_RL.csv")
+service_level_data = pd.read_csv("../results/service_level_RL.csv")
 profit_analysis(profit_data, service_level_data)

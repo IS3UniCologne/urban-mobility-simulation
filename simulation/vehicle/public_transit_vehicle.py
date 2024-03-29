@@ -1,18 +1,19 @@
 from __future__ import annotations
 
+import logging
 from abc import ABC
 from enum import Enum
-import logging
-from simpy import Environment
 from typing import TYPE_CHECKING
 
-from simulation.vehicle.vehicle import Vehicle, VehicleState
+from simpy import Environment
+
 from simulation.helper.time import SimulationTimeConverter
 from simulation.infrastructure.transit_network.stop import Stop
+from simulation.vehicle.vehicle import Vehicle, VehicleState
 
 if TYPE_CHECKING:
-    from simulation.infrastructure.route import PublicTransitRoute
     from simulation.agent.user import TransitUser
+    from simulation.infrastructure.route import PublicTransitRoute
 
 
 class PublicTransitVehicleState(VehicleState, Enum):
@@ -38,7 +39,14 @@ class PublicTransitVehicleFull(PublicTransitVehicleException):
 class PublicTransitVehicle(Vehicle, ABC):
     public_transit_vehicle_id = 0
 
-    def __init__(self, env: Environment, route: PublicTransitRoute, position, max_available_seats = 100, velocity = 833.5):
+    def __init__(
+        self,
+        env: Environment,
+        route: PublicTransitRoute,
+        position,
+        max_available_seats=100,
+        velocity=833.5,
+    ):
         super(PublicTransitVehicle, self).__init__(env, position)
 
         self._id = PublicTransitVehicle.public_transit_vehicle_id
@@ -46,9 +54,9 @@ class PublicTransitVehicle(Vehicle, ABC):
         self._available_seats = max_available_seats
         self._max_available_seats = max_available_seats
         self._seats = []
-        self._velocity = velocity   # meter per minute (16.67m/min = 1kmh)
+        self._velocity = velocity  # meter per minute (16.67m/min = 1kmh)
         self._current_stop = route.origin
-        self._delay = 0 # in seconds from planned route timetable
+        self._delay = 0  # in seconds from planned route timetable
 
         # Events
         self._user_mounted = self._env.event()
@@ -57,9 +65,11 @@ class PublicTransitVehicle(Vehicle, ABC):
         # Initialize state
         self._state = PublicTransitVehicleState.AT_TERMINAL_ORIGIN
 
-        PublicTransitVehicle.public_transit_vehicle_id +=1
+        PublicTransitVehicle.public_transit_vehicle_id += 1
 
-        logging.debug(f"Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id})
+        logging.debug(
+            "Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
+        )
 
     @property
     def route(self):
@@ -89,11 +99,13 @@ class PublicTransitVehicle(Vehicle, ABC):
             self._user_mounted.succeed()
             self._user_mounted = self._env.event()
 
-            logging.debug(f'Passenger: {passenger.identify_passenger()} mounted vehicle.',
-                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+            logging.debug(
+                f"Passenger: {passenger.identify_passenger()} mounted vehicle.",
+                extra={"clazz": self.__class__.__name__, "oid": self._id},
+            )
 
         elif passenger in self._seats:
-            raise Exception('Passenger is already in vehicle.')
+            raise Exception("Passenger is already in vehicle.")
         else:
             raise PublicTransitVehicleFull
 
@@ -105,16 +117,18 @@ class PublicTransitVehicle(Vehicle, ABC):
             self._user_unmounted.succeed()
             self._user_unmounted = self._env.event()
 
-            logging.debug(f'Passenger: {passenger.identify_passenger()} unmounted vehicle.',
-                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+            logging.debug(
+                f"Passenger: {passenger.identify_passenger()} unmounted vehicle.",
+                extra={"clazz": self.__class__.__name__, "oid": self._id},
+            )
         else:
-            raise Exception('Passenger is not in vehicle.')
+            raise Exception("Passenger is not in vehicle.")
 
     def prognose_arrival(self, stop: Stop):
         # TODO: this is pretty optimistic: What if the vehicle waits at intermediate stops
 
         distance = self._route.subroute(self._current_stop, stop).total_distance()
-        duration = distance / self._velocity # in minutes
-        arrival = SimulationTimeConverter.as_str(self._env.now + duration, '%H:%M:%S')
+        duration = distance / self._velocity  # in minutes
+        arrival = SimulationTimeConverter.as_str(self._env.now + duration, "%H:%M:%S")
         # stop will likely be reached in travel duration + delay, but not earlier than planned (will wait there)
         return max(arrival, stop.departure)
