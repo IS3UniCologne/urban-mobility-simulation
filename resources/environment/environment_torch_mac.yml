@@ -17,14 +17,14 @@ dependencies:
   - statsmodels
   - tqdm
   - pip>20.3
-  - pytorch
   - pip:
       - h3>=3.7.1,<4
       - partridge[full]
       - peartree
       - gtfs_kit
-      - mlrose
+      - git+https://github.com/gkhayes/mlrose.git
       - line-profiler-pycharm
       - pqdm
       - psutil
+      - torch
       - lovely-tensors
