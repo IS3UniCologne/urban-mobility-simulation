@@ -4,7 +4,6 @@ import sys
 from collections import deque
 from copy import deepcopy
 
-import keras.callbacks
 import numpy as np
 import tensorflow as tf
 from keras import layers

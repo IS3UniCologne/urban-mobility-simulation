@@ -1,4 +1,4 @@
-from simulation.agent.user import RideHailingUser, User
+from simulation.agent.user import RideHailingUser
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )

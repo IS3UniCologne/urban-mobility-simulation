@@ -20,7 +20,6 @@ from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
 )
 from simulation.world.population.PopulationFactory import (
     PopulationFactory,
-    PopulationType,
 )
 from tracking.tracking import Tracking
 

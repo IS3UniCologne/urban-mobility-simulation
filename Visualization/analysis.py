@@ -9,7 +9,6 @@ import seaborn as sns
 import shapely
 from h3 import h3
 from IPython.display import set_matplotlib_formats
-from shapely.geometry import shape
 
 set_matplotlib_formats("retina")
 

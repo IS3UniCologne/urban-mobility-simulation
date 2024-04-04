@@ -4,7 +4,6 @@ import logging
 import h3
 import numpy as np
 from h3.unstable import vect
-from line_profiler_pycharm import profile
 from shapely.geometry import Polygon
 from simpy import Environment
 

@@ -6,12 +6,10 @@ import numpy as np
 from simpy import Environment
 
 from learning.interface.learning_interface import LearningInterface
-from learning.spaces.action_space import ForbiddenAction
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.time import SimulationTimeConverter
-from simulation.vehicle.public_transit_bus import Bus
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicleState
 from simulation.world.world import World
 from tracking.tracking import Tracking

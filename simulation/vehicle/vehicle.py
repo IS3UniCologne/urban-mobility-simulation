@@ -1,10 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
-from enum import Enum
 
 from simpy import Environment
 
-from simulation.agent.agent import Agent
 from simulation.environment.position import Position
 from simulation.infrastructure.network.edge import Edge
 
