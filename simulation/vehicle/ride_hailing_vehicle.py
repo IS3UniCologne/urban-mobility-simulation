@@ -45,11 +45,11 @@ class RideHailingVehicle(Vehicle, ABC):
 
         # State Of Charge
         self._max_state_of_charge = max_state_of_charge # in kWh
-        initial_state_of_charge_percentage = Configuration.instance()._vehicle_configs['SharedCar'].initial_SoC
+        initial_state_of_charge_percentage = Configuration.instance()._ridehailing_vehicle_configs['RideHailingCar'].initial_SoC
         self._current_state_of_charge = max_state_of_charge * initial_state_of_charge_percentage # in kWh #
         self._energy_consumption = energy_consumption # in kWh/km
         if not self._electric_vehicle:
-            self._energy_consumption = energy_consumption * Configuration.instance()._vehicle_configs['SharedCar'].EV_relative_energy_consumption
+            self._energy_consumption = energy_consumption * Configuration.instance()._ridehailing_vehicle_configs['RideHailingCar'].EV_relative_energy_consumption
 
         #### Vehicle Events
         # Driving Events
@@ -90,8 +90,8 @@ class RideHailingVehicle(Vehicle, ABC):
         self._destination = None
 
         #costs
-        self._cost_km = Configuration.instance()._vehicle_configs['SharedCar'].cost_per_km
-        self._charging_cost_per_kWh = Configuration.instance()._vehicle_configs['SharedCar'].charging_cost_per_kWh
+        self._cost_km = Configuration.instance()._ridehailing_vehicle_configs['RideHailingCar'].cost_per_km
+        self._charging_cost_per_kWh = Configuration.instance()._ridehailing_vehicle_configs['RideHailingCar'].charging_cost_per_kWh
 
         RideHailingVehicle.ride_hailing_vehicle_id += 1
 

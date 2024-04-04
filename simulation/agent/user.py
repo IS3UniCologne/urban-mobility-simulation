@@ -196,14 +196,14 @@ class User(Agent, DriverInterface):
         for alternative in available_transportation_alternatives.transportation_alternatives:
             distance_to_vehicle = self.position >> alternative.vehicle.position
             if self._transport_task.viable_vehicle_modes[alternative.vehicle.__class__.__name__]:
-                if isinstance(alternative.vehicle, SharedCar) and distance_to_vehicle < config.get_vehicle_config(
+                if isinstance(alternative.vehicle, SharedCar) and distance_to_vehicle < config.get_shared_vehicle_config(
                         alternative.vehicle.__class__.__name__).max_walking_distance:  # See own paper
                     filtered_list.append((distance_to_vehicle, alternative.price, alternative.convenience, alternative))
                 elif isinstance(alternative.vehicle,
-                                SharedKickScooter) and distance_to_vehicle < config.get_vehicle_config(
+                                SharedKickScooter) and distance_to_vehicle < config.get_shared_vehicle_config(
                     alternative.vehicle.__class__.__name__).max_walking_distance:  # See Reck
                     filtered_list.append((distance_to_vehicle, alternative.price, alternative.convenience, alternative))
-                elif isinstance(alternative.vehicle, SharedScooter) and distance_to_vehicle < config.get_vehicle_config(
+                elif isinstance(alternative.vehicle, SharedScooter) and distance_to_vehicle < config.get_shared_vehicle_config(
                         alternative.vehicle.__class__.__name__).max_walking_distance:  # See Nothing..
                     filtered_list.append((distance_to_vehicle, alternative.price, alternative.convenience, alternative))
 

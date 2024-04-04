@@ -26,7 +26,7 @@ from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 
 # Import configurations and extra logging filters
-from simulation.helper.configuration.configuration import Configuration, ModeChoiceConfig, VehicleConfig, SharedVehicleOperatorConfig
+from simulation.helper.configuration.configuration import Configuration, ModeChoiceConfig, SharedVehicleConfig, SharedVehicleOperatorConfig, ChargingInfrastructureConfig
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 
@@ -39,6 +39,7 @@ from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import Onl
 # Import infrastructure related modules
 from simulation.infrastructure.helper.distance_matrix_importer import DistanceMatrixImporter
 from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.infrastructure.charging_stations.charging_infastructure import ChargingInfrastructure
 
 # Import operator related modules
 from simulation.operator.fleet_factory import generate_mixed_fleet, generate_fleet_config
@@ -100,15 +101,14 @@ env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 # User and Mode Choice Configuration
 # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/49
 # Check the configuration file before running this, this mode needs only one probability which is the probability of a user being price sensitive or not. Other modes might require multiple inputs.
-pop_prob = parser.get("MODE_CHOICE_MODEL", "population_probabilities").split(',')
-pop_prob = [float(x) for x in pop_prob]
+pop_prob_sharedvehicle = parser.get("SHARED_VEHICLE_OPERATOR", "population_probabilities").split(',')
+pop_prob_sharedvehicle = [float(x) for x in pop_prob_sharedvehicle]
+
 mode_choice_model_path = parser.get("MODE_CHOICE_MODEL", "path_to_mode_choice_model")
 mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
-mode_choice_available_modes = parser.get("MODE_CHOICE_MODEL", "available_modes")
-mode_choice_available_modes = mode_choice_available_modes.split(',')
 
-mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary, mode_choice_available_modes,
+mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary,
                       mode_choice_model_path)
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -130,10 +130,14 @@ for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK
     daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
     if vehicle_type == "SHARED_CAR":
         initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
+    EV_relative_energy_consumption = parser.getfloat(vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION")
+    cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
+    charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
 
-    vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats,
-                       max_walking_distance, daily_total_cost, initial_SoC)
-    global_config.add_vehicle_config(vehicle_type_classes[idx], vc)
+
+    vc = SharedVehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats,
+                       max_walking_distance, daily_total_cost, initial_SoC, EV_relative_energy_consumption, cost_per_km, charging_cost_per_kWh)
+    global_config.add_shared_vehicle_config(vehicle_type_classes[idx], vc)
 
 # Check the configuration file before running this, different modes might require multiple inputs
 # Vehicles whose state of charge is below the threshold value are to be charged
@@ -152,33 +156,57 @@ operations_start = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_DURATION")
 vehicle_relocation_velocity = parser.getint("SHARED_VEHICLE_OPERATOR", "VEHICLE_RELOCATION_VELOCITY")
 
+# Get number of each vehicle type to be spawned from configuration
+n_cars = parser.getint("EXPERIMENT_MANAGEMENT", "N_CARS")
+n_kick_scooters = parser.getint("EXPERIMENT_MANAGEMENT", "N_KICKSCOOTER")
+n_bikes = parser.getint("EXPERIMENT_MANAGEMENT", "N_BIKES")
+n_scooters = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
+
+available_modes = parser.get("SHARED_VEHICLE_OPERATOR", "available_vehicle_modes_shared_vehicle")
+available_modes = available_modes.split(',')
+available_vehicle_modes_supply = [n_cars, n_scooters, n_kick_scooters]
+
+# Initiliaze the shared fleet operator 
 svoc = SharedVehicleOperatorConfig(recharge_threshold, charging_station_power,
                                    number_of_service_workers, base_regions,
                                    base_capacity, operations_start, operations_duration,
-                                   vehicle_relocation_velocity)
-
-# Get number of each vehicle type to be spawned from configuration
-n_cars = parser.getint("EXPERIMENT_MANAGEMENT", "N_CARS")
-n_kick_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_KICKSCOOTER")
-n_bikes = parser.getint("EXPERIMENT_MANAGEMENT", "N_BIKES")
-n_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
-available_vehicle_modes_supply = [n_cars, n_scooter, n_kick_scooter]
+                                   vehicle_relocation_velocity, available_modes, available_vehicle_modes_supply, n_cars, n_scooters, n_kick_scooters, n_bikes)
 
 # Vehicle Choice Model: Add available mobility modes
 if mode_choice_strategy == "substitution":
-     vehicle_choice_model = OnlyCarVehicleChoiceBehavior(['SharedScooter', 'SharedKickScooter','SharedCar']) ## Needs to be modified depending on the modus
-
+     vehicle_choice_model = OnlyCarVehicleChoiceBehavior(['SharedScooter', 'SharedKickScooter','SharedCar'])
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
 # Register all configurations
 global_config.add_mode_choice_config(mc)
 global_config.add_shared_vehicle_operator_config(svoc)
-global_config.add_recharging_threshold(recharge_threshold)
 
 #### Not sure if this part is necessary #####
 MoD_interval_reduction = 0 # By choice
-global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction) # Not sure if we need this
+global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Charging Infrastructure                 #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+# Doubled Code --> actually the same as number of base capacity
+number_of_charging_stations = parser.getint("Charging_Infrastructure", "NUMBER_OF_CHARGING_STATIONS")
+charging_location_list = parser.get("Charging_Infrastructure", "BASE_REGIONS").split(',')[
+                             :number_of_charging_stations]
+
+charging_power = parser.getint("Charging_Infrastructure", "CHARGING_POWER")
+charging_capacity = parser.getint("Charging_Infrastructure", "CHARGING_CAPACITY")
+charging_power_list = list(np.zeros(len(charging_location_list)) + charging_power)
+charging_capacity_list = list(np.zeros(len(charging_location_list)) + charging_capacity)
+sic = ChargingInfrastructureConfig(charging_location_list, charging_power_list, charging_capacity_list)
+charging_infrastructure = ChargingInfrastructure(env, charging_location_list, charging_power_list, charging_capacity_list, reset=True)
+
+global_config.add_charging_infrastructure_config(sic)
+
+ #### End Charging Infrastructure Configuration #####
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -189,7 +217,7 @@ global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction) # No
 env = simpy.Environment(initial_time=0)
 
 # Population Type
-population_factory = PopulationFactory(pop_prob, seed)
+population_factory = PopulationFactory(pop_prob_sharedvehicle, seed)
 
 # Load Spatial Environment
 load_environment()
@@ -304,8 +332,8 @@ payment_engine = search_engine
 vehicle_assignment_engine = {'shared_vehicle': SharedVehicleAllocationEngine(env)}
 
 # Configure and generate / spawn shared fleet vehicles
-fleet_config = generate_fleet_config(supply_prob, n_cars = n_cars, n_scooter = n_scooter, n_kick_scooter= n_kick_scooter, n_bikes=n_bikes)
-mixed_fleet = generate_mixed_fleet(env, fleet_config)
+shared_vehicle_fleet_config = generate_fleet_config(supply_prob, n_cars = global_config.shared_vehicle_operator_config.n_cars, n_scooter = global_config._shared_vehicle_operator_config.n_scooters, n_kick_scooter= global_config.shared_vehicle_operator_config.n_kickscooters, n_bikes= global_config.shared_vehicle_operator_config.n_bikes)
+mixed_fleet = generate_mixed_fleet(env, shared_vehicle_fleet_config)
 
 # Add the fleet to the search engine
 search_engine['shared_vehicle'].register_fleet(mixed_fleet)
@@ -314,23 +342,24 @@ search_engine['shared_vehicle'].register_fleet(mixed_fleet)
 task_queue = TaskQueue(env)
 
 # Spawn Service Workers
-for sw in range(global_config.shared_vehicle_operator_config.number_of_service_worker):
+for sw in range(global_config.shared_vehicle_operator_config.number_of_service_workers):
     env.process(ServiceWorker(env, task_queue).run())
 
-# Relocation scheduler creates the charging schedule and relocates vehicles
-relocation_scheduler = RelocationScheduler(distance_matrix, mixed_fleet, mode_choice_available_modes,
-                            available_vehicle_modes_supply, global_config.shared_vehicle_operator_config.number_of_service_worker,
-                            base_regions, base_capacity)
+# Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
+relocation_scheduler = RelocationScheduler(distance_matrix, mixed_fleet, global_config.shared_vehicle_operator_config.available_modes,
+                            global_config.shared_vehicle_operator_config.available_modes_supply, global_config.shared_vehicle_operator_config.number_of_service_workers,
+                            global_config.shared_vehicle_operator_config.base_regions, global_config.shared_vehicle_operator_config.base_capacity)
 
-# Shared operator manages all operations belonging to the fleet
-shared_operator = Operations(env, mixed_fleet, global_config.shared_vehicle_operator_config.number_of_service_worker, global_config.shared_vehicle_operator_config.operations_start,
+# Shared operator manages all operations belonging to the shared mobility fleet
+shared_operator = Operations(env, mixed_fleet, global_config.shared_vehicle_operator_config.number_of_service_workers, global_config.shared_vehicle_operator_config.operations_start,
                     global_config.shared_vehicle_operator_config.operations_duration, relocation_scheduler,
-                    payment_engine["shared_vehicle"], mode_choice_available_modes,
-                    available_vehicle_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold, task_queue)
+                    payment_engine["shared_vehicle"], global_config.shared_vehicle_operator_config.available_modes,
+                    global_config.shared_vehicle_operator_config.available_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold, task_queue)
+
 
 # Initialize world
 world = World.init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_model,
-                       population_factory, charging_infrastructure = None, reset=True)
+                       population_factory, charging_infrastructure, reset=True)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
