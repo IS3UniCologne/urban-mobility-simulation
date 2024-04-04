@@ -28,7 +28,7 @@ from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 
 # Import configurations and extra logging filters
-from simulation.helper.configuration.configuration import Configuration, ModeChoiceConfig, VehicleConfig, SharedVehicleOperatorConfig
+from simulation.helper.configuration.configuration import Configuration, ModeChoiceConfig, SharedVehicleConfig, RideHailingVehicleConfig, SharedVehicleOperatorConfig, RideHailingOperatorConfig, PopulationConfig
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 
@@ -111,22 +111,19 @@ mode_choice_model_path = parser.get("MODE_CHOICE_MODEL", "path_to_mode_choice_mo
 mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
 
-mode_choice_available_modes = parser.get("MODE_CHOICE_MODEL", "available_modes")
-mode_choice_available_modes = mode_choice_available_modes.split(',')
-
-###### Registering available modes does not make sense anymore since each operator gets its own available vehicle modes #####
-# For example: Shared operator gets SharedCar, SharedScooter, SharedKickScooter and eventually SharedBike
-#              Ridehailing operator gets RideHailingCar, AutonomousCar
-mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary, mode_choice_available_modes,
+# Initialize the mode choice config
+mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary,
                       mode_choice_model_path)
 
+# Load the config to the global config
 global_config.add_mode_choice_config(mc)
 
 
 # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/51
 if mode_choice_strategy == "substitution":
+     # For now modify this depending on the modus
      vehicle_choice_model = OnlyCarVehicleChoiceBehavior(['SharedScooter','SharedKickScooter','SharedCar'])
-     #vehicle_choice_model = OnlyCarVehicleChoiceBehavior(['AutonomousCar','RideHailingCar']) ## Needs to be modified depending on the modus
+     #vehicle_choice_model = OnlyCarVehicleChoiceBehavior(['AutonomousCar','RideHailingCar'])
 
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
@@ -141,6 +138,7 @@ else:
 
 # TODO: Implement SharedBikes --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/46
 # TODO: SharedScooters and SharedKickScooters do not have an initial state of charge. They start with the max state of charge.
+# Initialize config for different vehicle types
 for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]):
     vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter"]
     price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
@@ -152,52 +150,53 @@ for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK
     daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
     if vehicle_type == "SHARED_CAR":
         initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
+    EV_relative_energy_consumption = parser.getfloat(vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION")
+    cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
+    charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
 
-    vc = VehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats,
-                       max_walking_distance, daily_total_cost, initial_SoC)
-    global_config.add_vehicle_config(vehicle_type_classes[idx], vc)
+
+    vc = SharedVehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats,
+                       max_walking_distance, daily_total_cost, initial_SoC, EV_relative_energy_consumption, cost_per_km, charging_cost_per_kWh)
+    global_config.add_shared_vehicle_config(vehicle_type_classes[idx], vc)
 
 # Needs to be modified depending on the mode
 # Vehicles whose state of charge is below the threshold value are to be charged
-recharge_threshold_shared_vehicle = parser.getfloat("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD") / 100 
-global_config.add_recharging_threshold(recharge_threshold_shared_vehicle)
-
-charging_station_power_shared_vehicle = parser.getfloat("SHARED_VEHICLE_OPERATOR", "CHARGING_STATION_POWER") # Think about moving this to charging infrastructure
+recharge_threshold = parser.getfloat("SHARED_VEHICLE_OPERATOR", "RECHARGE_THRESHOLD") / 100 
+charging_station_power = parser.getfloat("SHARED_VEHICLE_OPERATOR", "CHARGING_STATION_POWER") # Think about moving this to charging infrastructure
 # Service workers relocate the vehicles and bring them to charging stations
-number_of_service_workers_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_SERVICE_WORKER")
+number_of_service_workers = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_SERVICE_WORKER")
 # Base regions are city parts in which these service workers operate
-number_of_base_regions_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_BASE_REGIONS")
+number_of_base_regions = parser.getint("SHARED_VEHICLE_OPERATOR", "NUMBER_OF_BASE_REGIONS")
 # Base regions are defined as hexagons in the city
-base_regions_shared_vehicle = parser.get("SHARED_VEHICLE_OPERATOR", "BASE_REGIONS")
-base_regions_shared_vehicle = base_regions_shared_vehicle.split(',')[:number_of_base_regions_shared_vehicle]
-
+base_regions = parser.get("SHARED_VEHICLE_OPERATOR", "BASE_REGIONS")
+base_regions = base_regions.split(',')[:number_of_base_regions]
 # Base capacity is the number of charging stations in the charging hub
-base_capacity_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "BASE_CAPACITY")
-operations_start_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_START")
-operations_duration_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_DURATION")
-vehicle_relocation_velocity_shared_vehicle = parser.getint("SHARED_VEHICLE_OPERATOR", "VEHICLE_RELOCATION_VELOCITY")
-
-svoc = SharedVehicleOperatorConfig(recharge_threshold_shared_vehicle, charging_station_power_shared_vehicle,
-                                   number_of_service_workers_shared_vehicle, base_regions_shared_vehicle,
-                                   base_capacity_shared_vehicle, operations_start_shared_vehicle, operations_duration_shared_vehicle,
-                                   vehicle_relocation_velocity_shared_vehicle)
+base_capacity= parser.getint("SHARED_VEHICLE_OPERATOR", "BASE_CAPACITY")
+operations_start = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_START")
+operations_duration = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_DURATION")
+vehicle_relocation_velocity = parser.getint("SHARED_VEHICLE_OPERATOR", "VEHICLE_RELOCATION_VELOCITY")
 
 # Get number of each vehicle type to be spawned from configuration (Maybe move it to the shared vehicle operator?)
 n_cars = parser.getint("EXPERIMENT_MANAGEMENT", "N_CARS")
-n_kick_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_KICKSCOOTER")
+n_kickscooters = parser.getint("EXPERIMENT_MANAGEMENT", "N_KICKSCOOTER")
 n_bikes = parser.getint("EXPERIMENT_MANAGEMENT", "N_BIKES")
-n_scooter = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
+n_scooters = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
 
-available_vehicle_modes_shared_vehicle = parser.get("SHARED_VEHICLE_OPERATOR", "available_vehicle_modes_shared_vehicle")
-available_vehicle_modes_shared_vehicle = available_vehicle_modes_shared_vehicle.split(',')
-available_vehicle_modes_supply_shared_vehicle = [n_cars, n_scooter, n_kick_scooter, n_bikes]
+available_modes = parser.get("SHARED_VEHICLE_OPERATOR", "available_vehicle_modes_shared_vehicle")
+available_modes = available_modes.split(',')
+available_modes_supply = [n_cars, n_scooters, n_kickscooters, n_bikes]
 
+# Initiliaze the shared fleet operator 
+svoc = SharedVehicleOperatorConfig(recharge_threshold, charging_station_power,
+                                   number_of_service_workers, base_regions,
+                                   base_capacity, operations_start, operations_duration,
+                                   vehicle_relocation_velocity, available_modes, available_modes_supply, n_cars, n_scooters, n_kickscooters, n_bikes)
 # Register all configurations
 global_config.add_shared_vehicle_operator_config(svoc)
 
 #### Not sure if this part is necessary #####
 MoD_interval_reduction = 0 # By choice
-global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction) # Not sure if we need this
+global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction)
 
 ###### End Shared Vehicle Fleet Configuration ######
 
@@ -206,6 +205,22 @@ global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction) # No
 # RideHailing Fleet Configuration         #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
+
+# Initialize config for different vehicle types
+for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
+    vehicle_type_classes = ["AutonomousCar", "RideHailingCar"]
+    price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
+    max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
+    energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
+    velocity = parser.getfloat(vehicle_type, "VELOCITY")
+    max_available_seats = parser.getint(vehicle_type, "MAX_AVAILABLE_SEATS")
+    initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
+    charging_cost_per_km = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
+    cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
+    EV_relative_energy_consumption = parser.getfloat(vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION")
+
+    rvc = RideHailingVehicleConfig(price_per_min, max_state_of_charge, energy_consumption, velocity, max_available_seats, initial_SoC, charging_cost_per_km, cost_per_km, EV_relative_energy_consumption)
+    global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
 
 # Number of ridehailing cars in the fleet
 n_ridehailing_cars = parser.getint("RIDE_HAILING", "n_ridehailing_cars")
@@ -223,48 +238,59 @@ AV_penetration = parser.getfloat('SUPPLY', "AV_penetration")
 EV_penetration = parser.getfloat('SUPPLY', "EV_penetration")
 # Drivers share of the revenue made with each ride
 driver_payment_share = parser.getfloat('RIDE_HAILING', "DRIVER_PAYMENT_SHARE")
-price_params_ride_hailing = parser.get('RIDE_HAILING', "PRICE_PARAMS")
-price_params_ride_hailing = price_params_ride_hailing.split(',')
-price_params_ride_hailing = [float(x) * (1 - discount_rate) for x in price_params_ride_hailing]
-# Maximumn pickuo distance that is ok for the users
-distance_threshold_ridehailing = parser.getfloat('RIDE_HAILING', "MAX_PICKUP_DISTANCE")
-global_config.add_distance_threshold_to_user(distance_threshold_ridehailing)
+price_params = parser.get('RIDE_HAILING', "PRICE_PARAMS")
+price_params = price_params.split(',')
+price_params = [float(x) * (1 - discount_rate) for x in price_params]
+# Maximumn pickup distance that is ok for the users
+distance_threshold = parser.getfloat('RIDE_HAILING', "MAX_PICKUP_DISTANCE")
+global_config.add_distance_threshold_to_user(distance_threshold)
 # Vehicles whose state of charge is below the threshold value are to be charged
-recharge_threshold_ridehailing  = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").split(',')
-recharge_threshold_ridehailing = [float(x) / 100 for x in recharge_threshold_ridehailing]
+recharge_threshold  = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").split(',')
+recharge_threshold = [float(x) / 100 for x in recharge_threshold]
 
-#TODO: Separate configurations --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/49
-#global_config.add_recharging_threshold(recharge_threshold_ridehailing)
-
-charging_station_power_ridehailing = parser.getfloat("RIDE_HAILING_OPERATOR", "CHARGING_STATION_POWER") ### Maybe this should belong to charging infrastructure?
+charging_station_power = parser.getfloat("RIDE_HAILING_OPERATOR", "CHARGING_STATION_POWER") ### Maybe this should belong to charging infrastructure?
 # Service workers relocate the vehicles and bring them to charging stations
-number_of_service_workers_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "NUMBER_OF_SERVICE_WORKER")
+number_of_service_workers = parser.getint("RIDE_HAILING_OPERATOR", "NUMBER_OF_SERVICE_WORKER")
 # Base regions are city parts in which these service workers operate
-number_of_base_regions_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "NUMBER_OF_BASE_REGIONS")
+number_of_base_regions = parser.getint("RIDE_HAILING_OPERATOR", "NUMBER_OF_BASE_REGIONS")
 # Base regions are defined as hexagons in the city
-base_regions_ridehailing = parser.get("RIDE_HAILING_OPERATOR", "BASE_REGIONS")
-base_regions_ridehailing = base_regions_ridehailing.split(',')[:number_of_base_regions_ridehailing]
+base_regions = parser.get("RIDE_HAILING_OPERATOR", "BASE_REGIONS")
+base_regions = base_regions.split(',')[:number_of_base_regions]
 
 # Base capacity is the number of charging stations in the charging hub
-base_capacity_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "BASE_CAPACITY")
-operations_start_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
-operations_duration_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
-vehicle_relocation_velocity_ridehailing = parser.getint("RIDE_HAILING_OPERATOR", "VEHICLE_RELOCATION_VELOCITY")
+base_capacity = parser.getint("RIDE_HAILING_OPERATOR", "BASE_CAPACITY")
+operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
+operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
+vehicle_relocation_velocity = parser.getint("RIDE_HAILING_OPERATOR", "VEHICLE_RELOCATION_VELOCITY")
 
 # Read drivers availability distribution
 drivers_availability = parser.get('SUPPLY', "RH_availability").split(',')
 drivers_availability = [round(float(x) * n_cars * (1 - AV_penetration)) for x in drivers_availability]
+available_modes = parser.get("RIDE_HAILING", "available_vehicle_modes_ridehailing")
+available_modes = available_modes.split(',')
+available_modes_supply = [n_ridehailing_cars, n_autonomous_cars]
 
-available_vehicle_modes_ridehailing = parser.get("RIDE_HAILING", "available_vehicle_modes_ridehailing")
-available_vehicle_modes_ridehailing = available_vehicle_modes_ridehailing.split(',')
-available_vehicle_modes_supply_ride_hailing = [n_ridehailing_cars, n_autonomous_cars]
+# Initiliaze the ridehailing operator 
+rhoc = RideHailingOperatorConfig(recharge_threshold, charging_station_power, number_of_service_workers, base_regions, base_capacity, operations_start, operations_duration, vehicle_relocation_velocity, available_modes, available_modes_supply, n_autonomous_cars, n_ridehailing_cars, allocation)
 
+global_config.add_ridehailing_operator_config(rhoc)
 global_config.add_tech_penetration(EV_penetration, AV_penetration)
 global_config.add_AV_trust(AV_trust)
 global_config.add_driver_availability_vector(drivers_availability)
-global_config.add_ride_hailing_info(driver_payment_share, AV_price_reduction, price_params_ride_hailing)
+global_config.add_ride_hailing_info(driver_payment_share, AV_price_reduction, price_params)
 
 ###### End RideHailing Fleet Configuration ######
+
+#### Population Configuration ####
+
+population_probabilities = parser.get("POPULATION", "population_probabilities").split(',')
+population_probabilities = [float(x) for x in population_probabilities]
+
+type_paths = parser.get("POPULATION", "type_paths")
+
+pc = PopulationConfig(population_probabilities, type_paths)
+
+global_config.add_population_config(pc)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -405,6 +431,7 @@ SharedCar.car_id = 0
 SharedKickScooter.shared_kick_scooter_id = 0
 SharedScooter.shared_scooter_id = 0
 DemandFactory.counter = 0
+# Add a counter for ridehailing car too
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -422,13 +449,13 @@ vehicle_assignment_engine = {'ride_hailing_0': RideHailingAllocationEngine(env),
 
 # Configure and generate / spawn fleet vehicles
 # Shared Vehicle Fleet
-shared_vehicle_fleet_config = generate_fleet_config(supply_prob, n_cars = n_cars, n_scooter = n_scooter, n_kick_scooter= n_kick_scooter, n_bikes=n_bikes)
+shared_vehicle_fleet_config = generate_fleet_config(supply_prob, n_cars = global_config.shared_vehicle_operator_config.n_cars, n_scooter = global_config._shared_vehicle_operator_config.n_scooters, n_kick_scooter= global_config.shared_vehicle_operator_config.n_kickscooters, n_bikes= global_config.shared_vehicle_operator_config.n_bikes)
 mixed_fleet = generate_mixed_fleet(env, shared_vehicle_fleet_config)
 
 # Ride Hailing Fleet
-ride_hailing_fleet_config_0 = generate_ridehailing_fleet_config(distribution=supply_prob, n_cars=n_ridehailing_cars,
-                                                                    n_AVs=n_autonomous_cars, allocation_method='historical',
-                                                                    allocation=allocation)
+ride_hailing_fleet_config_0 = generate_ridehailing_fleet_config(distribution=supply_prob, n_cars= global_config.ridehailing_operator_config.n_ridehailing_cars,
+                                                                    n_AVs= global_config.ridehailing_operator_config.n_autonomous_cars, allocation_method='historical',
+                                                                    allocation=global_config.ridehailing_operator_config.allocation)
 ride_hailing_fleet_0 = generate_mixed_ride_hailing_fleet(env, ride_hailing_fleet_config_0)
 
 # Add the fleets to the search engine
@@ -440,36 +467,36 @@ task_queue_ridehailing = TaskQueue(env)
 task_queue_shared_vehicle = TaskQueue(env)
 
 # Spawn Service Workers for the Shared Fleet
-for sw in range(global_config.shared_vehicle_operator_config.number_of_service_worker):
+for sw in range(global_config.shared_vehicle_operator_config.number_of_service_workers):
     env.process(ServiceWorker(env, task_queue_shared_vehicle).run())
 
 # Rebalancing scheduler creates the charging schedule and relocations vehicle in the ridehailing fleet
 rs_ridehailing_0 = RebalancingSchedulerRidehailing(distance_matrix, ride_hailing_fleet_0,
-                                                    available_vehicle_modes_ridehailing,
-                                                    available_vehicle_modes_supply_ride_hailing, number_of_service_workers_ridehailing,
-                                                    base_regions_ridehailing, base_capacity_ridehailing, recharge_threshold_ridehailing,
+                                                    global_config.ridehailing_operator_config.available_modes,
+                                                    global_config.ridehailing_operator_config.available_modes_supply, global_config.ridehailing_operator_config.number_of_service_workers,
+                                                    global_config.ridehailing_operator_config.base_regions, global_config.ridehailing_operator_config.base_capacity, global_config.ridehailing_operator_config.recharge_threshold,
                                                     charging_infrastructure._chargers)
 
 # Ridehailing operator manages all operations belonging to the ridehailing fleet
 ops_ridehailing_0 = OperationsRidehailing(env, ride_hailing_fleet_0,
-                                              operations_start_ridehailing,
-                                              operations_duration_ridehailing,
+                                              global_config.ridehailing_operator_config.operations_start,
+                                              global_config.ridehailing_operator_config.operations_duration,
                                               rs_ridehailing_0,
-                                              payment_engine['ride_hailing_0'], available_vehicle_modes_ridehailing,
-                                              available_vehicle_modes_supply_ride_hailing,
-                                              recharge_threshold_ridehailing,
+                                              payment_engine['ride_hailing_0'], global_config.ridehailing_operator_config.available_modes,
+                                              global_config.ridehailing_operator_config.available_modes_supply,
+                                              global_config.ridehailing_operator_config.recharge_threshold,
                                               task_queue_ridehailing, charging_infrastructure._chargers)
 
 # Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
-relocation_scheduler = RelocationScheduler(distance_matrix, mixed_fleet, available_vehicle_modes_shared_vehicle,
-                            available_vehicle_modes_supply_shared_vehicle, number_of_service_workers_shared_vehicle,
-                            base_regions_shared_vehicle, base_capacity_shared_vehicle)
+relocation_scheduler = RelocationScheduler(distance_matrix, mixed_fleet, global_config.shared_vehicle_operator_config.available_modes,
+                            global_config.shared_vehicle_operator_config.available_modes_supply, global_config.shared_vehicle_operator_config.number_of_service_workers,
+                            global_config.shared_vehicle_operator_config.base_regions, global_config.shared_vehicle_operator_config.base_capacity)
 
 # Shared operator manages all operations belonging to the shared mobility fleet
-shared_operator = Operations(env, mixed_fleet, number_of_service_workers_shared_vehicle, operations_start_shared_vehicle,
-                    operations_duration_shared_vehicle, relocation_scheduler,
-                    payment_engine["shared_vehicle"], available_vehicle_modes_shared_vehicle, ### What to do with the available modes?
-                    available_vehicle_modes_supply_shared_vehicle, recharge_threshold_shared_vehicle, task_queue_shared_vehicle)
+shared_operator = Operations(env, mixed_fleet, global_config.shared_vehicle_operator_config.number_of_service_workers, global_config.shared_vehicle_operator_config.operations_start,
+                    global_config.shared_vehicle_operator_config.operations_duration, relocation_scheduler,
+                    payment_engine["shared_vehicle"], global_config.shared_vehicle_operator_config.available_modes,
+                    global_config.shared_vehicle_operator_config.available_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold, task_queue_shared_vehicle)
 
 # Initialize World
 world = World.init(env, search_engine, payment_engine, vehicle_assignment_engine, vehicle_choice_model, # Again the problem with different modes is here
@@ -518,21 +545,14 @@ logging.warning(f"Simulation Finished.",
 #    or have different infrastructure configurations?
 #    When they share the same infrastructure, how do we communicate between fleets that the charging stations are occupied by the other fleet?
 
-# 3. In this version very few parameters are registered to the config since there are shared_vehicle / ridehailing versions of these. For example: recharge_threshold_shared_vehicle
-#                                                                                                                                                  recharge_threshold_ridehailing
-#    - We should either add these different versions to the global config
-#    - Or leave registering these which would almost mean that we stop registering completely but only register those that are used by other modules from the config
-
 # 4. Basic idea for the template was to start the operations of both fleets and generate demand for only one fleet. But the Relocation Scheduler needs the transactions dataframe to calculate the estimated demand 
 #    per hexagon to create a charging plan. For now we do not start the operations of the Relocation Scheduler but we should probably think of how the Relocation Scheduler handles the situation when there aren't any transactions, or
 #    we leave it for now until we can generate demand for multiple modes.
 
-# 5. Population factory cannot yet deal with different modes at the same time.
-
+# 5. Population factory cannot yet deal with different modes at the same time. One version should be commented out.
 
 ### Things to do while changing the mode: ####
 
-# - Register only the charging threshold of the respective mode
 # - Change the OnlyCarVehicleChoiceBehavior - modify the class too --> Shared Fleet has 3 attributes whereas RideHailing Fleet has 2
 # - Modify population factory (just comment out the other pop factory)
 # - To run RideHailing fleet comment out the running of the shared operator (Issue 4 on the list above)

@@ -110,15 +110,15 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
 
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         # Get available vehicle types
-        vehicle_types = Configuration.instance().get_available_vehicle_types()
+        vehicle_types = Configuration.instance().get_available_shared_vehicle_types()
 
         # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
         # We count the lost revenue for the "cheapest" mode
         for vehicle_type in vehicle_types:
             if vehicle_type in transportation_task.viable_vehicle_modes and transportation_task.viable_vehicle_modes[vehicle_type] == 1:
                 distance = transportation_task.origin >> transportation_task.destination
-                velocity = Configuration.instance().get_vehicle_config(vehicle_type).velocity
-                price_per_min = Configuration.instance().get_vehicle_config(vehicle_type).price_per_min
+                velocity = Configuration.instance().get_shared_vehicle_config(vehicle_type).velocity
+                price_per_min = Configuration.instance().get_shared_vehicle_config(vehicle_type).price_per_min
                 missed_trip_cost = distance / velocity * price_per_min
 
                 if vehicle_type == "SharedKickScooter":

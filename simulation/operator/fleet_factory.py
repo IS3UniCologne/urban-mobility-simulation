@@ -127,7 +127,9 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
     config = Configuration.instance()
 
     # Load Vehicle Configurations
-    c_config = config.get_vehicle_config("SharedCar")
+    rh_config = config.get_ridehailing_vehicle_config("RideHailingCar")
+    a_config = config.get_ridehailing_vehicle_config("AutonomousCar")
+
 
     for index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
@@ -143,8 +145,8 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             car = RideHailingCar(env, pos,
-                            c_config.max_available_seats, c_config.max_state_of_charge,
-                            c_config.energy_consumption, c_config.velocity, c_config.price_per_min)
+                            rh_config.max_available_seats, rh_config.max_state_of_charge,
+                            rh_config.energy_consumption, rh_config.velocity, rh_config.price_per_min)
             fleet.add_shared_vehicle(car)
             car._fleet = fleet
 
@@ -153,8 +155,8 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             car = RideHailingCar(env, pos,
-                            c_config.max_available_seats, c_config.max_state_of_charge,
-                            c_config.energy_consumption, c_config.velocity, c_config.price_per_min, electric_vehicle=False)
+                            rh_config.max_available_seats, rh_config.max_state_of_charge,
+                            rh_config.energy_consumption, rh_config.velocity, rh_config.price_per_min, electric_vehicle=False)
             fleet.add_shared_vehicle(car)
             car._fleet = fleet
 
@@ -163,8 +165,8 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             autonomous_car = AutonomousCar(env, pos,
-                                    c_config.max_available_seats, c_config.max_state_of_charge,
-                                    c_config.energy_consumption, c_config.velocity, c_config.price_per_min)
+                                    a_config.max_available_seats, a_config.max_state_of_charge,
+                                    a_config.energy_consumption, a_config.velocity, a_config.price_per_min)
             fleet.add_shared_vehicle(autonomous_car)
             autonomous_car._fleet = fleet
 
@@ -190,9 +192,9 @@ def generate_mixed_fleet(env, fleet_config):
     config = Configuration.instance()
 
     # Load Vehicle Configurations
-    c_config = config.get_vehicle_config("SharedCar")
-    s_config = config.get_vehicle_config("SharedScooter")
-    ks_config = config.get_vehicle_config("SharedKickScooter")
+    c_config = config.get_shared_vehicle_config("SharedCar")
+    s_config = config.get_shared_vehicle_config("SharedScooter")
+    ks_config = config.get_shared_vehicle_config("SharedKickScooter")
 
     for index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon

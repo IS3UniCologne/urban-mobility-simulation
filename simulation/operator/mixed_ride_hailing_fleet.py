@@ -20,7 +20,7 @@ class MixedRideHailingFleet(FleetInterface):
         self._autonomous_cars = []
         self._distance_threshold_to_user = Configuration.instance().get_distance_threshold_to_user()
         self._driver_availability_vector = Configuration.instance().get_driver_availability_vector()
-        self._recharging_threshold = Configuration.instance().get_recharging_threshold()
+        self._recharging_threshold = Configuration.instance().ridehailing_operator_config.recharge_threshold
         self._env.process(self.fleet_size_monitor())
 
 

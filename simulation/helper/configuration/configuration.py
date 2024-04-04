@@ -71,11 +71,13 @@ class Configuration:
         self._transaction_file = ''
         self._fleet_state_file = ''
 
-        self._vehicle_configs = {}
+        self._shared_vehicle_configs = {}
 
         self._mode_choice_config = []
 
         self._user_config = None
+
+        self._ridehailing_vehicle_configs = {}
 
         # [cst, price, waiting_time, EV, trip_duration, cst_AV, cst_HV, trust_AV, trust_HV]
         MoD_coefficients = np.array([[-0.273671504, -0.353911557, -0.103573505, -1.128132785, 0.150429623,
@@ -111,6 +113,10 @@ class Configuration:
         self._AV_trust = None
 
         self._shared_vehicle_operator_config = None
+
+        self._ridehailing_operator_config = None
+
+        self._population_config = None
 
         self._charging_infrastructure_config = None
 
@@ -226,11 +232,17 @@ class Configuration:
     def add_driver_availability_vector(self, availability_vector):
         self._add_driver_availability_vector = availability_vector
 
-    def add_vehicle_config(self, vehicle_type_name, vehicle_config):
-        self._vehicle_configs[vehicle_type_name] = vehicle_config
+    def add_shared_vehicle_config(self, vehicle_type_name, shared_vehicle_config):
+        self._shared_vehicle_configs[vehicle_type_name] = shared_vehicle_config
 
-    def get_vehicle_config(self, vehicle_type_name):
-        return self._vehicle_configs[vehicle_type_name]
+    def get_shared_vehicle_config(self, vehicle_type_name):
+        return self._shared_vehicle_configs[vehicle_type_name]
+    
+    def add_ridehailing_vehicle_config(self, vehicle_type_name, ridehailing_vehicle_config):
+        self._ridehailing_vehicle_configs[vehicle_type_name] = ridehailing_vehicle_config
+
+    def get_ridehailing_vehicle_config(self, vehicle_type_name):
+        return self._ridehailing_vehicle_configs[vehicle_type_name]
 
     def add_mode_choice_config(self, mode_choice_config):
         self._mode_choice_config = mode_choice_config
@@ -292,12 +304,22 @@ class Configuration:
     def add_shared_vehicle_operator_config(self, shared_mobility_ops_config):
         self._shared_vehicle_operator_config = shared_mobility_ops_config
 
+    def add_ridehailing_operator_config(self, ridehailing_ops_config):
+        self._ridehailing_operator_config = ridehailing_ops_config
+
     def add_charging_infrastructure_config(self, charging_infrastructure_ops_config):
         self._charging_infrastructure_config = charging_infrastructure_ops_config
+
+    def add_population_config(self, population_config):
+        self.population_config = population_config
 
     @property
     def shared_vehicle_operator_config(self):
         return self._shared_vehicle_operator_config
+    
+    @property
+    def ridehailing_operator_config(self):
+        return self._ridehailing_operator_config
 
     def add_transit_operator_config(self, transit_operator_config):
         self._transit_operator_config = transit_operator_config
@@ -347,14 +369,11 @@ class Configuration:
     def set_fleet_state_file(self, file):
         self._fleet_state_file = file
 
-    def get_available_vehicle_types(self):
-        return list(self._vehicle_configs.keys())
-
-    def add_recharging_threshold(self, values):
-        self._recharging_threshold = values
-
-    def get_recharging_threshold(self):
-        return self._recharging_threshold
+    def get_available_shared_vehicle_types(self):
+        return list(self._shared_vehicle_configs.keys())
+    
+    def get_available_ridehailing_vehicle_types(self):
+        return list(self._ridehailing_vehicle_configs.keys())
 
     @property
     def MoD_coefficients_ci_lower(self):
@@ -365,9 +384,9 @@ class Configuration:
         return self._MoD_coefficients_ci_upper
 
 
-class VehicleConfig:
+class SharedVehicleConfig:
     def __init__(self, price_per_min, max_state_of_charge, energy_consumption,
-                 velocity, max_available_seats, max_walking_distance, daily_total_cost, initial_SoC):
+                 velocity, max_available_seats, max_walking_distance, daily_total_cost, initial_SoC, EV_relative_energy_consumption, cost_per_km, charging_cost_per_kWh):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
         self.energy_consumption = energy_consumption
@@ -377,13 +396,25 @@ class VehicleConfig:
         self.max_walking_distance = max_walking_distance
         self.daily_total_cost = daily_total_cost
         self.initial_SoC = initial_SoC
-        self.EV_relative_energy_consumption = 0.8
-        self.cost_per_km = 0.53
-        self.charging_cost_per_kWh = 0.23
+        self.EV_relative_energy_consumption = EV_relative_energy_consumption
+        self.cost_per_km = cost_per_km 
+        self.charging_cost_per_kWh = charging_cost_per_kWh
 
-
+class RideHailingVehicleConfig:
+    def __init__(self, price_per_min, max_state_of_charge, energy_consumption,
+                 velocity, max_available_seats, initial_SoC, charging_cost_per_kWh, cost_per_km, EV_relative_energy_consumption):
+        self.price_per_min = price_per_min
+        self.max_state_of_charge = max_state_of_charge
+        self.energy_consumption = energy_consumption
+        self.velocity = velocity
+        self.max_available_seats = max_available_seats
+        self.initial_SoC = initial_SoC
+        self.charging_cost_per_kWh = charging_cost_per_kWh
+        self.cost_per_km = cost_per_km
+        self.EV_relative_energy_consumption = EV_relative_energy_consumption
+    
 class ModeChoiceConfig:
-    def __init__(self, mode_choice_strategy, substitution_boundary, available_modes, path_to_model):
+    def __init__(self, mode_choice_strategy, substitution_boundary, path_to_model):
         if mode_choice_strategy == "random":
             self.mode_choice_strategy = ModeChoiceStrategy.RANDOM
         elif mode_choice_strategy == "substitution":
@@ -392,29 +423,51 @@ class ModeChoiceConfig:
             self.mode_choice_strategy = ModeChoiceStrategy.NO_SUBSTITUTION
 
         self.substitution_boundary = substitution_boundary
-        self.available_modes = available_modes
         self.path_to_model = path_to_model
 
+class PopulationConfig:
+    def __init__(self, population_probabilities, type_paths):
+        self.population_probabilities = population_probabilities
+        self.type_paths = type_paths
 
 class UserConfig:
     def __init__(self, spatial_strategy: str, max_wait: int):
         self.spatial_strategy = spatial_strategy
         self.max_wait = int(max_wait)
 
-
-
-
-class SharedVehicleOperatorConfig:
-    def __init__(self, recharge_threshold, charging_station_power, number_of_service_worker,
-                 base_regions, base_capacity, operations_start, operations_duration, vehicle_relocation_velocity):
+class RideHailingOperatorConfig:
+    def __init__(self, recharge_threshold, charging_station_power, number_of_service_worker, base_regions, base_capacity, operations_start, operations_duration, vehicle_relocation_velocity, available_modes, available_modes_supply,n_autonomous_cars, n_ridehailing_cars, allocation):
         self.recharge_threshold = recharge_threshold
         self.charging_station_power = charging_station_power
-        self.number_of_service_worker = number_of_service_worker
+        self.number_of_service_workers = number_of_service_worker
         self.base_regions = base_regions
         self.base_capacity = base_capacity
         self.operations_start = operations_start
         self.operations_duration = operations_duration
         self.vehicle_relocation_velocity = vehicle_relocation_velocity
+        self.available_modes = available_modes
+        self.available_modes_supply = available_modes_supply
+        self.n_autonomous_cars = n_autonomous_cars
+        self.n_ridehailing_cars = n_ridehailing_cars
+        self.allocation = allocation
+
+class SharedVehicleOperatorConfig:
+    def __init__(self, recharge_threshold, charging_station_power, number_of_service_worker,
+                 base_regions, base_capacity, operations_start, operations_duration, vehicle_relocation_velocity, available_modes, available_modes_supply, n_cars, n_scooters, n_kickscooters, n_bikes):
+        self.recharge_threshold = recharge_threshold
+        self.charging_station_power = charging_station_power
+        self.number_of_service_workers = number_of_service_worker
+        self.base_regions = base_regions
+        self.base_capacity = base_capacity
+        self.operations_start = operations_start
+        self.operations_duration = operations_duration
+        self.vehicle_relocation_velocity = vehicle_relocation_velocity
+        self.available_modes = available_modes
+        self.available_modes_supply = available_modes_supply
+        self.n_cars = n_cars
+        self.n_scooters = n_scooters
+        self.n_kickscooters = n_kickscooters
+        self.n_bikes = n_bikes
 
 
 class ChargingInfrastructureConfig:
