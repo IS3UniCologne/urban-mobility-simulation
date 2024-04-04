@@ -32,9 +32,9 @@ class DynamicCheckpointRoutingTracker:
         ).getExactLocation(geojson=True)
 
         # ... log viable demands ...
-        self._timestamped_viable_demands[
-            timestamp
-        ] = self._problem._get_viable_demands()
+        self._timestamped_viable_demands[timestamp] = (
+            self._problem._get_viable_demands()
+        )
 
     # # ... build TimeStampedGeoJSON feature ...
     # self._timestamped_bus_positions['geometry']['coordinates'].append(

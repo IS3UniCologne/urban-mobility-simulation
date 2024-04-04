@@ -85,9 +85,9 @@ class DynamicBusProblem(LearningInterface):
         else:
             with open(self._config.dynamic_routing_config.corridor, "r") as f:
                 # also assign the parsed corridor back to the config for other reads of it
-                self._corridor = (
-                    self._config.dynamic_routing_config.corridor
-                ) = ast.literal_eval(f.read())
+                self._corridor = self._config.dynamic_routing_config.corridor = (
+                    ast.literal_eval(f.read())
+                )
 
         self._corridor_dim = len(self._corridor)
         self._corridor_sorted = sorted(self._corridor)
