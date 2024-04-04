@@ -5,3 +5,6 @@ output-format = "grouped"
 skip-magic-trailing-comma = true
 [tool.ruff.lint.mccabe]
 max-complexity = 18
+[tool.ruff.lint]
+# Skip unused variable rules (`F841`).
+ignore = ["E721"]
