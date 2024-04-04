@@ -1,0 +1,40 @@
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+        contents: write
+    steps:
+      #----------------------------------------------
+      #       check-out repo and set-up python
+      #----------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      #----------------------------------------------
+      #       run ruff
+      #----------------------------------------------
+      - name: Run ruff linter
+        uses: chartboost/ruff-action@v1
+        with:
+          args: 'check --fix'
+      - name: Run ruff formatter
+        uses: chartboost/ruff-action@v1
+        with:
+          args: 'format'
+      #----------------------------------------------
+      #       Commit fixes done by ruff
+      #----------------------------------------------
+      # Commit all changed files back to the repository
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: fix style with ruff"
