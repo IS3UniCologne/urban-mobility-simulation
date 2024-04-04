@@ -238,9 +238,9 @@ class RelocationScheduler:
                                 )
 
                                 # Update Already Picked Up Vehicle Dict
-                                already_scheduled_low_vehicles[
-                                    adjacent_hex_id
-                                ] += pick_up_vehicles_from_adjacent_region
+                                already_scheduled_low_vehicles[adjacent_hex_id] += (
+                                    pick_up_vehicles_from_adjacent_region
+                                )
 
                                 # Distance to Neighbour
                                 distance_to_neighbour = self._distance_matrix.loc[
@@ -860,9 +860,9 @@ class RelocationScheduler:
 
             qry_res = transactions.query(query)  # If not empty
             if qry_res.shape[0] > 0:
-                transactions.loc[
-                    qry_res.index, "cheapest_vehicle_mode"
-                ] = ordered_available_vehicle[i]
+                transactions.loc[qry_res.index, "cheapest_vehicle_mode"] = (
+                    ordered_available_vehicle[i]
+                )
 
         # (All) Hexagons
         hexagons = pd.unique(transactions[["origin", "destination"]].values.ravel("K"))

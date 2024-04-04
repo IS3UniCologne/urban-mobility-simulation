@@ -226,7 +226,11 @@ class RideHailingCar(RideHailingVehicle):
                                 "oid": self.car_id,
                             },
                         )
-                        yield self._driver_unmounted | self._vehicle_relocation_finished | self._charging_station_plugged_out
+                        yield (
+                            self._driver_unmounted
+                            | self._vehicle_relocation_finished
+                            | self._charging_station_plugged_out
+                        )
                         self.get_offline()
             # we check driver decisions every one hour
             yield self._env.timeout(15)

@@ -793,9 +793,9 @@ class RebalancingSchedulerRidehailing:
 
             qry_res = transactions.query(query)  # If not empty
             if qry_res.shape[0] > 0:
-                transactions.loc[
-                    qry_res.index, "cheapest_vehicle_mode"
-                ] = ordered_available_vehicle[i]
+                transactions.loc[qry_res.index, "cheapest_vehicle_mode"] = (
+                    ordered_available_vehicle[i]
+                )
 
         # (All) Hexagons
         hexagons = pd.unique(transactions[["origin", "destination"]].values.ravel("K"))
