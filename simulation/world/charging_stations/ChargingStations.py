@@ -1,6 +1,4 @@
-import logging
 
-from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle.vehicle import VehicleState
 
 

@@ -1,5 +1,4 @@
 import h3
-import pandas as pd
 import simpy
 from shapely.geometry import shape
 

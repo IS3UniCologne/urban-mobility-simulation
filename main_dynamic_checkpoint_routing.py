@@ -10,7 +10,6 @@ from configparser import ConfigParser
 from copy import deepcopy
 from pathlib import Path
 
-import numpy
 import pandas as pd
 import simpy
 from matplotlib import pyplot as plt

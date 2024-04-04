@@ -2,7 +2,6 @@ import logging
 
 from line_profiler_pycharm import profile
 
-from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
