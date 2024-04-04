@@ -94,10 +94,9 @@ class Operations:
             transactions = self._payment_engine.get_transactions()
 
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-            (
-                charging_plans,
-                used_capacity,
-            ) = self._relocation_scheduler.generate_charging_plan(transactions)
+            (charging_plans, used_capacity) = (
+                self._relocation_scheduler.generate_charging_plan(transactions)
+            )
 
             # We track the charging events
             charging_events = []

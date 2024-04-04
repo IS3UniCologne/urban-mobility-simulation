@@ -6,7 +6,6 @@ import mlrose as mlrose
 import pandas as pd
 
 
-
 class RebalancingSchedulerRidehailing:
     def __init__(
         self,

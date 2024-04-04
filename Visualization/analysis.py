@@ -169,9 +169,7 @@ def profit_analysis(profit_data, service_level_data):
     ax[0].set_title("Fleet Profit", fontsize=12)
     ax[0].legend(fontsize=12)
     ax[0].tick_params(axis="both", labelsize=12)
-    ax[0].set_ylim(
-        2 * 10**5,
-    )
+    ax[0].set_ylim(2 * 10**5)
 
     ax[1].plot(
         service_level_data["Episode"],
@@ -214,9 +212,7 @@ def profit_analysis(profit_data, service_level_data):
     ax[1].set_title("Fleet Service Quality", fontsize=12)
     ax[1].legend(fontsize=12)
     ax[1].tick_params(axis="both", labelsize=12)
-    ax[1].set_ylim(
-        0.3,
-    )
+    ax[1].set_ylim(0.3)
     plt.savefig("profit_RL_Q_learning.pdf")
     plt.show()
 
