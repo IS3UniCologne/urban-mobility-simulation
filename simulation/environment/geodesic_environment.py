@@ -3,7 +3,6 @@ import math
 import h3
 import numpy
 import pyproj
-from numpy import random
 from shapely.geometry import Point, Polygon
 
 from simulation.environment.environment import Environment

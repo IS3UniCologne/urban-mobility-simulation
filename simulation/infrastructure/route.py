@@ -1,6 +1,5 @@
 from typing import List
 
-import geopandas as gpd
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.environment.position import Position

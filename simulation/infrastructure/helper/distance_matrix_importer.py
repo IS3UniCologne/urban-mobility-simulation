@@ -4,9 +4,6 @@ import h3
 import pandas as pd
 from haversine import Unit, haversine_vector
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.environment.geodesic_position import GeodesicPosition
-
 
 class DistanceMatrixImporter:
     """

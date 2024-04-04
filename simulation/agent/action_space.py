@@ -1,6 +1,3 @@
-import logging
-from enum import Enum
-
 import numpy
 from numpy.random import choice
 

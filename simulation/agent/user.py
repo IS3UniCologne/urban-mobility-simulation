@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -40,7 +39,6 @@ from ..vehicle.public_transit_vehicle import (
     PublicTransitVehicleFull,
     PublicTransitVehicleState,
 )
-from ..vehicle.ride_hailing_car import RideHailingCar
 from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter

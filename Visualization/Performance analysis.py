@@ -1,10 +1,6 @@
-import datetime as dt
-
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
-from IPython.display import set_matplotlib_formats
 
 
 def clean(x):
