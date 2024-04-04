@@ -1,4 +1,3 @@
-
 from simulation.vehicle.vehicle import VehicleState
 
 

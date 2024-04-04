@@ -136,9 +136,7 @@ class DemandFactory:
                 if demand_slice.shape[0] == 0:
                     logging.debug(
                         f"Hex: {spatial_unit}  Time: {time_bucket}  Date:{non_working_day}  Env Time: {self._time.now()}",
-                        extra={
-                            "clazz": self.__class__.__name__,
-                        },
+                        extra={"clazz": self.__class__.__name__},
                     )
                     # no lambda for given demand slice means there were no arrivals in the sample (lambda was zero)
                     poisson_lambda = 0

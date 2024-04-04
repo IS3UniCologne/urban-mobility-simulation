@@ -5,7 +5,6 @@ import pandas as pd
 from haversine import Unit, haversine_vector
 
 
-
 class DistanceMatrixImporter:
     """
     Proxy Class for Distance Matrix. Either (Re-)Calculate, or load Matrix, if already existing

@@ -1,3 +1,7 @@
-
-[tool.isort]
-profile = "black"
+[tool.ruff]
+fix = true
+output-format = "grouped"
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+[tool.ruff.lint.mccabe]
+max-complexity = 18

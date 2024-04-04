@@ -153,12 +153,9 @@ class MixedSharedVehicleFleet(FleetInterface):
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
         below_soc_level_vehicles = []
-        (
-            cars_in_area,
-            scooters_in_area,
-            kick_scooters_in_area,
-            bikes_in_area,
-        ) = self.get_all_vehicles(region)
+        (cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area) = (
+            self.get_all_vehicles(region)
+        )
 
         for vehicle in [
             *cars_in_area,
