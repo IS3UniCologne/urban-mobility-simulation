@@ -66,7 +66,6 @@ class GeodesicPosition(Position):
         :return: hex_id:   String
                  geometry: Hexagon geometry
         """
-        import geopandas as gpd
 
         geo_env = GeodesicEnvironment.getInstance()
 

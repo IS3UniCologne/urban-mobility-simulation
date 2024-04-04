@@ -1,14 +1,9 @@
 import logging
-import sys
-from pathlib import Path
 
-import h3
 
 # sys.modules["sklearn.externals.six"] = six
 import mlrose as mlrose
 import pandas as pd
-
-from simulation.helper.configuration.configuration import Configuration
 
 
 class RebalancingSchedulerRidehailing:
@@ -793,9 +788,9 @@ class RebalancingSchedulerRidehailing:
 
             qry_res = transactions.query(query)  # If not empty
             if qry_res.shape[0] > 0:
-                transactions.loc[
-                    qry_res.index, "cheapest_vehicle_mode"
-                ] = ordered_available_vehicle[i]
+                transactions.loc[qry_res.index, "cheapest_vehicle_mode"] = (
+                    ordered_available_vehicle[i]
+                )
 
         # (All) Hexagons
         hexagons = pd.unique(transactions[["origin", "destination"]].values.ravel("K"))

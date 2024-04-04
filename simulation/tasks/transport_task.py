@@ -1,4 +1,3 @@
-from simulation.agent.agent import Agent
 from simulation.environment.position import Position
 
 

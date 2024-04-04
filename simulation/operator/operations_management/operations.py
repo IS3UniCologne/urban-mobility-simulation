@@ -94,10 +94,9 @@ class Operations:
             transactions = self._payment_engine.get_transactions()
 
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-            (
-                charging_plans,
-                used_capacity,
-            ) = self._relocation_scheduler.generate_charging_plan(transactions)
+            (charging_plans, used_capacity) = (
+                self._relocation_scheduler.generate_charging_plan(transactions)
+            )
 
             # We track the charging events
             charging_events = []
@@ -138,9 +137,9 @@ class Operations:
                             multi_service_task.append_task(charging_task)
 
                             # Count Vehicles to be charged
-                            no_vehicles_scheduled_to_charge[
-                                mode
-                            ] += no_vehicle_to_charge
+                            no_vehicles_scheduled_to_charge[mode] += (
+                                no_vehicle_to_charge
+                            )
 
                         # Schedule to Queue
                         self._scheduled_tasks.append(multi_service_task)
@@ -253,9 +252,9 @@ class Operations:
                                 multi_service_task.append_task(relocation_task)
 
                                 # Count Vehicles to be charged
-                                no_vehicles_scheduled_to_relocate[
-                                    mode
-                                ] += no_vehicle_to_relocate
+                                no_vehicles_scheduled_to_relocate[mode] += (
+                                    no_vehicle_to_relocate
+                                )
 
                             # Schedule to Queue
                             self._scheduled_tasks.append(multi_service_task)
@@ -288,9 +287,9 @@ class Operations:
                             relocation_events.append(relocation_task.task_finished)
 
                             # Count Vehicles to be charged
-                            no_vehicles_scheduled_to_relocate[
-                                mode
-                            ] += no_vehicle_to_relocate
+                            no_vehicles_scheduled_to_relocate[mode] += (
+                                no_vehicle_to_relocate
+                            )
 
                 # Insert Tasks into Task Queue
                 self._task_queue.bulk_append(self._scheduled_tasks)

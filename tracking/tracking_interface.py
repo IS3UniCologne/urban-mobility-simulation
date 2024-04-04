@@ -1,5 +1,5 @@
 import logging
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 
 
 class TrackingInterface(ABC):

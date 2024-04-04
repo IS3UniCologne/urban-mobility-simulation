@@ -12,25 +12,15 @@ from copy import deepcopy
 from pathlib import Path
 
 import geopandas as gpd
-import numpy
 import pandas as pd
 import simpy
-import tensorflow as tf
 from matplotlib import pyplot as plt
 from memory_profiler import profile
 from pqdm.processes import pqdm
-from tensorboard import program
 from tqdm import tqdm
 
 from simulation.agent.action_space import ActionSpace
-from simulation.agent.deep_q_learning import DQN, ModifiedTensorBoard
-from simulation.agent.episodic_semi_gradient_n_step_sarsa import (
-    EpisodicSemiGradientNStepSarsa,
-)
-from simulation.agent.episodic_semi_gradient_sarsa import (
-    EpisodicSemiGradientSarsa,
-    ValueFunctionApproximator,
-)
+from simulation.agent.deep_q_learning import ModifiedTensorBoard
 from simulation.agent.user import (
     User,  # must come before DemandFactory, otherwise circular imports
 )
@@ -713,7 +703,6 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
 
             # map position over time (and possibly demands over time)
             import folium
-            from folium import GeoJson
             from folium.plugins import TimestampedGeoJson
 
             template = """{

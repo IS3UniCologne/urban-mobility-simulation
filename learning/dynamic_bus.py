@@ -6,12 +6,10 @@ import numpy as np
 from simpy import Environment
 
 from learning.interface.learning_interface import LearningInterface
-from learning.spaces.action_space import ForbiddenAction
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.time import SimulationTimeConverter
-from simulation.vehicle.public_transit_bus import Bus
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicleState
 from simulation.world.world import World
 from tracking.tracking import Tracking
@@ -85,9 +83,9 @@ class DynamicBusProblem(LearningInterface):
         else:
             with open(self._config.dynamic_routing_config.corridor, "r") as f:
                 # also assign the parsed corridor back to the config for other reads of it
-                self._corridor = (
-                    self._config.dynamic_routing_config.corridor
-                ) = ast.literal_eval(f.read())
+                self._corridor = self._config.dynamic_routing_config.corridor = (
+                    ast.literal_eval(f.read())
+                )
 
         self._corridor_dim = len(self._corridor)
         self._corridor_sorted = sorted(self._corridor)

@@ -18,10 +18,7 @@ from simulation.vehicle_choice_model.trip_characteristics import TripCharacteris
 from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
     VehicleChoiceBehaviorInterface,
 )
-from simulation.world.population.PopulationFactory import (
-    PopulationFactory,
-    PopulationType,
-)
+from simulation.world.population.PopulationFactory import PopulationFactory
 from tracking.tracking import Tracking
 
 
