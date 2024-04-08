@@ -12,6 +12,7 @@ import logging
 import simpy
 import pandas as pd
 import geopandas as gpd
+import numpy as np
 
 # Custom module imports
 from utils import load_environment
@@ -188,6 +189,20 @@ global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
+# Init. Simulation Environment            #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+env = simpy.Environment(initial_time=0)
+
+# Population Type
+population_factory = PopulationFactory(pop_prob_sharedvehicle, seed)
+
+# Load Spatial Environment
+load_environment()
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
 # Charging Infrastructure                 #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
@@ -206,21 +221,6 @@ charging_infrastructure = ChargingInfrastructure(env, charging_location_list, ch
 global_config.add_charging_infrastructure_config(sic)
 
  #### End Charging Infrastructure Configuration #####
-
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Init. Simulation Environment            #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-env = simpy.Environment(initial_time=0)
-
-# Population Type
-population_factory = PopulationFactory(pop_prob_sharedvehicle, seed)
-
-# Load Spatial Environment
-load_environment()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
