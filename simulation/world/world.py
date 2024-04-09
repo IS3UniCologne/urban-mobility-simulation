@@ -160,11 +160,12 @@ class World:
             viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
             # Determine Consumer Type
-            population_type = (
-                self._population_factory.generatePopulationTypeRideHailing()
-            )
-
             if mode == "public_transport":
+
+                population_type = (
+                    self._population_factory.generatePopulationTypeRideHailing()
+                )
+
                 # User Preferences
                 max_wait_time = normal(
                     self._config.user_config.max_wait
@@ -255,7 +256,8 @@ class World:
             self._users.append(new_user)
 
             # register user with tracking
-            new_user_uid = self._tracking.register(new_user)
+            # TODO: Leave these lines commented out until the issue is resolved --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/48
+            # new_user_uid = self._tracking.register(new_user)
 
             # Start Process for each new user
             self._user_processes.append(
@@ -263,7 +265,7 @@ class World:
             )
 
             # Spawn cleanup process for that user
-            self._env.process(self._cleanup_user(new_user, new_user_uid))
+            #self._env.process(self._cleanup_user(new_user, new_user_uid))
 
             if len(self._users) == self._user_limit:
                 logging.info(

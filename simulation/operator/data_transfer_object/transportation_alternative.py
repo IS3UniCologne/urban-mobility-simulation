@@ -14,6 +14,7 @@ class TransportationAlternative:
         self._convenience = convenience  # the ranking (the lower, the better)
 
         self._energy_consumed = 0.0  # Is set after successful trip
+        self._waiting_time = 0
 
     @property
     def vehicle(self):
@@ -37,7 +38,11 @@ class TransportationAlternative:
 
     @property
     def convenience(self):
-        return self._convenience
+        return self._convenience\
+
+    @property
+    def waiting_time(self):
+        return self._waiting_time
 
     # Perhaps it makes sense to encapsulate TransportationAlternative
     #  around a "SuccessfulTrip" where we store this object along with

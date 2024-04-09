@@ -39,6 +39,7 @@ from ..vehicle.public_transit_vehicle import (
     PublicTransitVehicleFull,
     PublicTransitVehicleState,
 )
+from ..vehicle.shared_bike import SharedBike
 from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
@@ -188,6 +189,9 @@ class User(Agent, DriverInterface):
                 self._vehicle_allocated = self._env.event()
 
                 continue  # retry again until vehicle supply is depleted
+
+
+
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
             yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
@@ -222,7 +226,6 @@ class User(Agent, DriverInterface):
                 search_task
             )
         )
-
         # Vehicle Choice (moved to World Add User Function)
         # distance = self._transport_task.origin >> self._transport_task.destination
         # tc = TripCharacteristics(distance)
@@ -285,6 +288,21 @@ class User(Agent, DriverInterface):
                             alternative,
                         )
                     )
+                elif (
+                    isinstance(alternative.vehicle, SharedBike)
+                    and distance_to_vehicle
+                    < config.get_vehicle_config(
+                        alternative.vehicle.__class__.__name__
+                    ).max_walking_distance
+                ):  # See Nothing..
+                    filtered_list.append(
+                        (
+                            distance_to_vehicle,
+                            alternative.price,
+                            alternative.convenience,
+                            alternative,
+                        )
+                    )
 
         # Determine Vehicle Preference based on Population Type
         # a) Price Sensitive Users will prefer cheapest option
@@ -300,7 +318,8 @@ class User(Agent, DriverInterface):
             filtered_list.sort(key=lambda vehicle: (vehicle[2], vehicle[0]))
 
         if filtered_list:
-            distance, price, filtered_list = zip(*filtered_list)
+            distance, price, convenience, filtered_list = zip(*filtered_list)
+            # distance, price, *filtered_list = zip(*filtered_list)
             filtered_list = list(filtered_list)
 
         # Only Consider Alternatives matching Customer needs
@@ -347,8 +366,8 @@ class User(Agent, DriverInterface):
         self._transportation_alternatives_selected.succeed(
             selected_transportation_alternative
         )
-        logging.debug(
-            f"Selected transportation alternative: {selected_transportation_alternative}.",
+        logging.info(
+            f"Selected transportation alternative: {type(selected_transportation_alternative.vehicle)}. For the price: {selected_transportation_alternative.price}",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -430,6 +449,8 @@ class User(Agent, DriverInterface):
         )
 
     def start_driving(self, vehicle_allocation: VehicleAllocation):
+
+        logging.debug(f"start_driving of {vehicle_allocation.vehicle.id}")
         # Wait for event
         yield self._assigned_vehicle_arrived
 
@@ -454,7 +475,7 @@ class User(Agent, DriverInterface):
         # Trigger next event
         self._arrived_at_destination.succeed()
         logging.debug(
-            "Arrived at destination.",
+            f"Vehicle {vehicle_allocation.vehicle.id} has arrived at destination.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -465,7 +486,7 @@ class User(Agent, DriverInterface):
         # Update current state
         self._state = UserState.FULFILLED
         logging.debug(
-            f"Transport request of user {self._id} has been successfully fulfilled.",
+            f"Vehicle transport request of user {self._id} has been successfully fulfilled.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 

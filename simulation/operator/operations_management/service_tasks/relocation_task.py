@@ -1,3 +1,5 @@
+import logging
+
 from simpy import Environment
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -61,6 +63,8 @@ class RelocationTask(ServiceTask):
                     vehicle.prepare_for_service_task(
                         f"Service Worker {args[0]}", self.__class__.__name__
                     )
+
+                    logging.debug(f"{vehicle.id} has been assigned for relocation by Service Worker {args[0]}")
                     # Add to charging list
                     selected_vehicles_to_relocate.append(vehicle)
 

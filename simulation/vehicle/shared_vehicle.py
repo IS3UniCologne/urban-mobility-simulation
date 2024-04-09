@@ -150,7 +150,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = SharedVehicleState.DRIVING
 
         logging.debug(
-            "Driving started.",
+            f"Driving started of vehicle {self._id}",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -158,7 +158,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = SharedVehicleState.PARKING
 
         logging.debug(
-            "Driving stopped.",
+            f"Driving stopped of vehicle {self._id}",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -170,7 +170,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = SharedVehicleState.PARKING
 
         logging.debug(
-            "Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
+            f"Vehicle {self._id} parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
     def reserve(self, user):
@@ -303,6 +303,12 @@ class SharedVehicle(Vehicle, ABC):
             raise Exception("Agent is not in vehicle.")
 
     def relocate(self, route_segment: Edge, time, relocator):
+
+        if self._id == 197:
+            print("/&" * 30)
+            print(self.state)
+            print(self._driver)
+
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
@@ -310,9 +316,9 @@ class SharedVehicle(Vehicle, ABC):
         :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
         :return:
         """
-        if self._driver is not None or len(self._seats) > 0:
+        if self._driver is not None or self.state == SharedVehicleState.RESERVED or len(self._seats) > 0:
             logging.debug(
-                f"Vehicle {self._id} has a driver {self._driver.identify_driver()}. Revoke relocation task.",
+                f"Vehicle {self._id} has a driver. Revoke relocation task.",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
