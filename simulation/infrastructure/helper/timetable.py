@@ -48,9 +48,10 @@ class Timetable:
 
         # look ahead 'lookahead' minutes, simulation time is in minutes
         # yield all trips that start (on this weekday) within the next lookahead minutes
+        lookahead = int(lookahead)
         weekday = time.dayofweek_as_str()
         last_weekday = time.last_dayofweek_as_str()
-        if time.minutes() + lookahead > 59:
+        if time.minutes() + int(lookahead) > 59:
             if time.hours() == 23:
                 last_weekday = weekday
                 weekday = time.next_dayofweek_as_str()

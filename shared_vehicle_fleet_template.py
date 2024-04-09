@@ -269,7 +269,6 @@ DemandFactory.counter = 0
 # # # # # # # # # # # # # # # # # # # # # #
     
 store_results = parser.getboolean("OUTPUT", "persist_results")
-store_results = parser.getboolean("OUTPUT", "persist_results")
 output_folder = parser.get("OUTPUT", "output_folder")
 transaction_file = parser.get("OUTPUT", "transaction_file")
 fleet_state_file = parser.get("OUTPUT", "fleet_state_file")

@@ -69,7 +69,7 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                 logging.debug(f'TransitOperator is at time {self._time.now_as_str()}',
                               extra={"clazz": self.__class__.__name__, "oid": ""})
 
-                if len(self._busses) < self._operator_config.max_busses:
+                if len(self._busses) < int(self._operator_config.max_busses):
 
                     trips = self._timetable.next_trips(self._time, self._operator_config.planning_lookahead)
 
@@ -89,13 +89,13 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
                                 trip = self._timetable.trip_by_id(trip_id)
                                 route = self._build_route(trip)
                                 bus = self._spawn_bus(route,
-                                                      use_learning_agent=
-                                                      self._problem_config.use_learning_agent)
+                                                      use_learning_agent=False) # Set to False to decouple from DynamicCheckpointRouting
+                                                      #self._problem_config.use_learning_agent)
 
                                 # also spawn a cleanup process that waits for completion of trip
                                 self._env.process(self._clean_up_bus(bus))
 
-                                if len(self._busses) >= self._operator_config.max_busses:
+                                if len(self._busses) >= int(self._operator_config.max_busses):
                                     break
 
                 yield self._env.timeout(1)
@@ -252,8 +252,8 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._world.add_vehicle(bus)
 
         # now add the correct reference of the bus to the problem LearningInterface and do deferred init
-        self._problem_config.problem.bus = bus
-        self._problem_config.problem.problem_init()
+        #self._problem_config.problem.bus = bus
+        #self._problem_config.problem.problem_init()
 
         self._tracking.register(bus)
 
@@ -272,8 +272,9 @@ class PublicTransitOperator(SearchEngineInterface, VehicleAllocationEngineInterf
         self._unserved_passengers = len(bus._seats)
 
         # TODO: this is hardcoded for one learning bus
-        if self._problem_config.use_learning_agent:
-            self._operator_process.interrupt()
+        if self._problem_config is not None:
+            if self._problem_config.use_learning_agent:
+                self._operator_process.interrupt()
 
     def _find_viable_transit(self, transportation_search_task, spatial_strategy='hexagon', temporal_lookahead=10):
         search_time = transportation_search_task.transport_task.time
