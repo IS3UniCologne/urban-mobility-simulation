@@ -462,7 +462,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         self._config = Configuration.instance()
         # TODO: somehow this must be decoupled - by making the user unaware of problems
         self._problem_config = self._config.dynamic_checkpoint_routing_config
-        self._bus_res = self._problem_config.action_resolution
+        # Comment out for now to run a bus without RL Agent
+        #self._bus_res = self._problem_config.action_resolution
+        self._bus_res = 8
 
         # TODO: modify available_time over time
         self._available_time = self._transport_task.max_wait_time # max available walk / wait time, can change by e.g. waiting
@@ -540,8 +542,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                     else:
                         yield self._env.process(self.wait_for_transit(vehicle))
                         # TODO: here we hardcode the runtime for problems, not nice
-                        # yield self._env.process(self.start_passive_transit(vehicle))
-                        yield self._env.process(self.start_passive_checkpoint_transit(vehicle))
+                        yield self._env.process(self.start_passive_transit(vehicle))
+                        #yield self._env.process(self.start_passive_checkpoint_transit(vehicle))
                         yield self._env.process((self.move_to_destination()))
                         selected_alternative = TransportationAlternative(
                             vehicle,
@@ -667,8 +669,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             return False
 
         # TODO: this is coupled deep with the DynamicRouting problem, too much hardcoded
-        incorridor = False if not self._geodesic_env.filter_demands_by_area(
-            [self.transport_task], self._problem_config.area) else True
+        # Comment out for now to run without DynamicRouting
+        #incorridor = False if not self._geodesic_env.filter_demands_by_area(
+        #    [self.transport_task], self._problem_config.area) else True
+        incorridor = True
         indirection = False if not self._geodesic_env.filter_demands_by_direction([self.transport_task], vehicle) \
             else True
 
@@ -734,7 +738,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             if at_checkpoint:
                 # check if the direction toward the passengers destination is aligned with the movement
                 # direction of the bus
-                direction_bus = self._problem_config.direction
+                #direction_bus = self._problem_config.direction
+                # Set to none manually for now to not use the RL Agent configuration
+                direction_bus = None
                 direction_dest = self._geodesic_env.get_bearing(
                     *vehicle.position.getExactLocation(),
                     *self.transport_task.destination.getExactLocation()
