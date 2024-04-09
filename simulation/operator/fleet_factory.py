@@ -8,6 +8,7 @@ from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.vehicle.autonomous_car import AutonomousCar
 from simulation.vehicle.ride_hailing_car import RideHailingCar
+from simulation.vehicle.shared_bike import SharedBike
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
@@ -18,7 +19,7 @@ def generate_fleet_config(
     n_cars=1000,
     n_scooter=500,
     n_kick_scooter=500,
-    n_bikes=0,
+    n_bikes=500,
     seed=42,
     allocation_method="historical",
     allocation=np.random.randint(low=20, high=50, size=213),
@@ -76,6 +77,9 @@ def generate_fleet_config(
     fleet_config = distribution[
         [hex_column, "cars", "scooters", "kick_scooters", "bikes"]
     ]
+
+    print("fleet config")
+    print(fleet_config)
 
     return fleet_config
 
@@ -248,6 +252,7 @@ def generate_mixed_fleet(env, fleet_config):
     c_config = config.get_vehicle_config("SharedCar")
     s_config = config.get_vehicle_config("SharedScooter")
     ks_config = config.get_vehicle_config("SharedKickScooter")
+    b_config = config.get_vehicle_config("SharedBike")
 
     for index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
@@ -257,7 +262,7 @@ def generate_mixed_fleet(env, fleet_config):
         car_count = row["cars"]
         scooter_count = row["scooters"]
         kick_scooter_count = row["kick_scooters"]
-        row["bikes"]
+        bike_count = row["bikes"]
 
         # Add Cars
         for current_car in range(car_count):
@@ -304,11 +309,17 @@ def generate_mixed_fleet(env, fleet_config):
             )
             fleet.add_shared_vehicle(kick_scooter)
 
-        # Add Bikes
-        # for current_bike in range(bike_count):
-        #    rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-        #    pos = GeodesicPosition(rdm_lat, rdm_lng)
-        #    bike = SharedBike(env, pos)
-        #    fleet.add_shared_vehicle(kick_scooter)
+        for current_bike in range(bike_count):
+            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
+
+            bike = SharedBike(
+                env,
+                pos,
+                b_config.max_available_seats,
+                b_config.velocity,
+                b_config.price_per_min
+            )
+            fleet.add_shared_vehicle(bike)
 
     return fleet

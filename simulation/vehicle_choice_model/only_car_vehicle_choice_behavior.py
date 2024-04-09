@@ -14,5 +14,6 @@ class OnlyCarVehicleChoiceBehavior(VehicleChoiceBehaviorInterface):
 
     def choose_vehicle(self, trip_characteristics: TripCharacteristics):
         # return the only known PublicTransit Mode: Bus as the viable "choice"
-        result = {self._available_modes[0]: 1, self._available_modes[1]: 1}
+        # TODO: Make dependent of mode
+        result = {self._available_modes[0]: 1, self._available_modes[1]: 1, self._available_modes[2]: 1, self._available_modes[3]: 1}
         return result
