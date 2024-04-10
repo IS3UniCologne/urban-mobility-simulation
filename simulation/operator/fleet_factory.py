@@ -78,9 +78,6 @@ def generate_fleet_config(
         [hex_column, "cars", "scooters", "kick_scooters", "bikes"]
     ]
 
-    print("fleet config")
-    print(fleet_config)
-
     return fleet_config
 
 

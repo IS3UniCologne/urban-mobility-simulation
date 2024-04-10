@@ -303,12 +303,6 @@ class SharedVehicle(Vehicle, ABC):
             raise Exception("Agent is not in vehicle.")
 
     def relocate(self, route_segment: Edge, time, relocator):
-
-        if self._id == 197:
-            print("/&" * 30)
-            print(self.state)
-            print(self._driver)
-
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
