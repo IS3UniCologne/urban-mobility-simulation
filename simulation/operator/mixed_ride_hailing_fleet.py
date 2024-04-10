@@ -12,7 +12,6 @@ from simulation.vehicle.vehicle import VehicleState
 
 
 class MixedRideHailingFleet(VehicleFleet):
-
     def __init__(self, env: Environment):
         super(MixedRideHailingFleet, self).__init__(env)
         self._env = env

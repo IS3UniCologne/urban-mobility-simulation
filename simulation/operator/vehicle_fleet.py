@@ -3,7 +3,6 @@ from simulation.vehicle.vehicle import Vehicle
 
 
 class VehicleFleet(ABC):
-
     def __init__(self, env, capacity):
         self._fleet_capacity = capacity
         self._vehicles = []
@@ -11,7 +10,9 @@ class VehicleFleet(ABC):
     @property
     def vehicles(self):
         # TODO: most probably Unfug
-        return self._vehicles.copy() # to avoid that the fleet can be changed from outside
+        return (
+            self._vehicles.copy()
+        )  # to avoid that the fleet can be changed from outside
 
     @abstractmethod
     def get_available_vehicles(self, region):

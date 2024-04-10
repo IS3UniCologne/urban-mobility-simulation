@@ -11,6 +11,5 @@ class RelocationInterface(ABC):
     """
 
     @abstractmethod
-    def relocate_fleet(self, fleet: VehicleFleet, ):
+    def relocate_fleet(self, fleet: VehicleFleet):
         pass
-    

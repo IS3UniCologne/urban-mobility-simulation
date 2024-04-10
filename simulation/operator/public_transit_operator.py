@@ -34,7 +34,7 @@ from simulation.world.world import World
 from tracking.tracking import Tracking
 
 
-# TODO: refactor to adhere to base class "Operator" 
+# TODO: refactor to adhere to base class "Operator"
 class PublicTransitOperator(
     SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface
 ):

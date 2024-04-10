@@ -11,6 +11,5 @@ class RefuelingInterface(ABC):
     """
 
     @abstractmethod
-    def refuel_fleet(self, fleet: VehicleFleet, ):
+    def refuel_fleet(self, fleet: VehicleFleet):
         pass
-    
