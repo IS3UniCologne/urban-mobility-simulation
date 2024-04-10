@@ -1,48 +1,54 @@
 import ast
 import configparser
 import datetime
+import logging
+import multiprocessing as mp
+import os
 import random
+import sys
 import time
 from configparser import ConfigParser
 from copy import deepcopy
-from memory_profiler import profile
+from pathlib import Path
 
 import geopandas as gpd
-import logging
-
-import multiprocessing as mp
-from matplotlib import pyplot as plt
-import numpy
-import os
 import pandas as pd
-from pathlib import Path
 import simpy
-import sys
-
-import tensorflow as tf
+from matplotlib import pyplot as plt
+from memory_profiler import profile
 from pqdm.processes import pqdm
-from tensorboard import program
 from tqdm import tqdm
 
 from simulation.agent.action_space import ActionSpace
-from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator, EpisodicSemiGradientSarsa
-from simulation.agent.episodic_semi_gradient_n_step_sarsa import EpisodicSemiGradientNStepSarsa
-from simulation.agent.deep_q_learning import DQN, ModifiedTensorBoard
-from simulation.agent.user import User  # must come before DemandFactory, otherwise circular imports
-from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig, \
-    TransitAgentConfig
-from simulation.operator.public_transit_operator import PublicTransitOperator
+from simulation.agent.deep_q_learning import ModifiedTensorBoard
+from simulation.agent.user import (
+    User,  # must come before DemandFactory, otherwise circular imports
+)
+from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.helper.configuration.configuration import (
+    Configuration,
+    TransitAgentConfig,
+    TransitOperatorConfig,
+    UserConfig,
+)
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.infrastructure.helper.distance_matrix_importer import (
+    DistanceMatrixImporter,
+)
+from simulation.infrastructure.helper.timetable import Timetable
+from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.vehicle.public_transit_bus import Bus
-from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle, PublicTransitVehicleFull
+from simulation.vehicle.public_transit_vehicle import (
+    PublicTransitVehicle,
+    PublicTransitVehicleFull,
+)
 from simulation.vehicle.vehicle import Vehicle
-from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import PublicTransitVehicleChoiceBehavior
+from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import (
+    PublicTransitVehicleChoiceBehavior,
+)
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
-from simulation.infrastructure.helper.timetable import Timetable
-from simulation.infrastructure.helper.distance_matrix_importer import DistanceMatrixImporter
-from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 
@@ -67,7 +73,7 @@ daily_res = parser.getint("WORLD", "daily_resolution")
 
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand")
-demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(',')
+demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
 
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
@@ -108,7 +114,7 @@ except configparser.NoOptionError:
     corridor = None
 # TODO: refactor casting around of values here and in Config, use parser.getint etc instead
 episodes = int(parser.get("BUS", "EPISODES"))
-actions = parser.get("BUS", "ACTION_SPACE").split(',')
+actions = parser.get("BUS", "ACTION_SPACE").split(",")
 action_dim = len(actions)
 action_resolution = parser.get("BUS", "ACTION_SPACE_RESOLUTION")
 timelimit_multiplier = parser.getfloat("BUS", "TIMELIMIT")
@@ -142,12 +148,35 @@ tensorboard = ModifiedTensorBoard(log_dir=logdir)
 # tf.debugging.experimental.enable_dump_debug_info(logdir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
 
 user_config = UserConfig(spatial_strategy, max_waiting_time)
-transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
-bus_agent_config = TransitAgentConfig(episodes, action_resolution, agent_alpha, agent_eps, agent_eps_decay_strategy,
-                                      agent_eps_decay, agent_eps_min, buffersize, min_experience, timelimit_multiplier,
-                                      target_update_threshold, tau, agent_gamma, bootstrap_agent_n, tensorboard,
-                                      corridor, agent_penalty, agent_reward, q_net_layers, batchsize, lr_decay,
-                                      lr_decay_steps, double_q, velocity)
+transit_operator_config = TransitOperatorConfig(
+    transit_planning_lookahead, transit_max_busses
+)
+bus_agent_config = TransitAgentConfig(
+    episodes,
+    action_resolution,
+    agent_alpha,
+    agent_eps,
+    agent_eps_decay_strategy,
+    agent_eps_decay,
+    agent_eps_min,
+    buffersize,
+    min_experience,
+    timelimit_multiplier,
+    target_update_threshold,
+    tau,
+    agent_gamma,
+    bootstrap_agent_n,
+    tensorboard,
+    corridor,
+    agent_penalty,
+    agent_reward,
+    q_net_layers,
+    batchsize,
+    lr_decay,
+    lr_decay_steps,
+    double_q,
+    velocity,
+)
 
 global_config.add_user_config(user_config)
 global_config.add_transit_operator_config(transit_operator_config)
@@ -166,8 +195,10 @@ log_level = parser.get("SETTINGS", "log_level")
 
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s',
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+)
 logging.raiseExceptions = False
 logger = logging.getLogger()
 logger.setLevel(log_level)
@@ -176,11 +207,10 @@ logger.setLevel(log_level)
 logging.getLogger("fiona").setLevel(logging.WARNING)
 
 # Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
+cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf_init)
 
-logging.info(f'Tensorboard logdir: {logdir}',
-             extra={"clazz": __name__, "oid": ""})
+logging.info(f"Tensorboard logdir: {logdir}", extra={"clazz": __name__, "oid": ""})
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -188,6 +218,7 @@ logging.info(f'Tensorboard logdir: {logdir}',
 # Load Underlying Spatial Environment.    #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
+
 
 def load_environment():
     # Read Environment Files
@@ -198,17 +229,17 @@ def load_environment():
     filename = env_layer_hex_9
     with open(filename) as file:
         env_df_hex_9 = gpd.read_file(file, driver="GeoJSON")
-        env_df_hex_9.set_index('hex_id_9', inplace=True)
+        env_df_hex_9.set_index("hex_id_9", inplace=True)
 
     filename = env_layer_hex_8
     with open(filename) as file:
         env_df_hex_8 = gpd.read_file(file)
-        env_df_hex_8.set_index('hex_id_8', inplace=True)
+        env_df_hex_8.set_index("hex_id_8", inplace=True)
 
     filename = env_layer_hex_7
     with open(filename) as file:
         env_df_hex_7 = gpd.read_file(file)
-        env_df_hex_7.set_index('hex_id_7', inplace=True)
+        env_df_hex_7.set_index("hex_id_7", inplace=True)
 
     geodesic_environment = GeodesicEnvironment.getInstance()
     geodesic_environment.addLayer("bounding_box", env_df)
@@ -229,9 +260,11 @@ load_environment()
 # # # # # # # # # # # # # # # # # # # # # #
 
 p = Path(demand_file_path)
-di = DemandImporter(spatial_resolution=global_config.spatial_resolution,
-                    temporal_resolution=global_config.temporal_resolution,
-                    daily_resolution=global_config.daily_resolution)
+di = DemandImporter(
+    spatial_resolution=global_config.spatial_resolution,
+    temporal_resolution=global_config.temporal_resolution,
+    daily_resolution=global_config.daily_resolution,
+)
 
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
@@ -263,7 +296,15 @@ timetable.import_timetable()
 ActionSpace.init(actions)
 
 
-def run_single_simulation(start_time=0, end_time=60, price_sensitive_pop_prob = 0.0, seed=4711, weights=None, replay_buffer=None, episode=1):
+def run_single_simulation(
+    start_time=0,
+    end_time=60,
+    price_sensitive_pop_prob=0.0,
+    seed=4711,
+    weights=None,
+    replay_buffer=None,
+    episode=1,
+):
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Setup Simulation Environment.           #
@@ -282,7 +323,7 @@ def run_single_simulation(start_time=0, end_time=60, price_sensitive_pop_prob = 
     GeodesicEnvironment.getInstance().reset_random_generator(seed)
 
     # Inject Simulation Environment to Logger (such that we can log the env time)
-    cf = SimulationContextFilter(filter_name='add_env', extra=env)
+    cf = SimulationContextFilter(filter_name="add_env", extra=env)
     edf = ExtraDefaultFilter(filter_name="add_default_value")
     logger.addFilter(cf)
     logger.addFilter(edf)
@@ -309,20 +350,30 @@ def run_single_simulation(start_time=0, end_time=60, price_sensitive_pop_prob = 
     vehicle_assignment_engine = operator
 
     # Vehicle Choice Model
-    vehicle_choice_model = PublicTransitVehicleChoiceBehavior(['Bus'])
+    vehicle_choice_model = PublicTransitVehicleChoiceBehavior(["Bus"])
 
     # Population Type
     population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
 
     # World
-    world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model, population_factory, reset=True)
+    world = World.init(
+        env,
+        search_engine,
+        search_engine,
+        vehicle_assignment_engine,
+        vehicle_choice_model,
+        population_factory,
+        reset=True,
+    )
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Spawn Demand Processes.                 #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    demand_factory = DemandFactory(env, demand_profile, di, world, demand_modifier_paths, seed)
+    demand_factory = DemandFactory(
+        env, demand_profile, di, world, demand_modifier_paths, seed
+    )
 
     env.process(demand_factory.generate_demand())
 
@@ -339,8 +390,9 @@ def run_single_simulation(start_time=0, end_time=60, price_sensitive_pop_prob = 
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
     try:
-        service_level = payment_engine.total_fulfilled_trips / \
-                        (payment_engine.total_missed_trips + payment_engine.total_fulfilled_trips)
+        service_level = payment_engine.total_fulfilled_trips / (
+            payment_engine.total_missed_trips + payment_engine.total_fulfilled_trips
+        )
     except ZeroDivisionError:
         service_level = 0
     # print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
@@ -350,8 +402,9 @@ def run_single_simulation(start_time=0, end_time=60, price_sensitive_pop_prob = 
 
     return operator, world, payment_engine, service_level
 
+
 @profile
-def benchmark_agent(nn_weights = None, runs=100, demand_res=7, seed=None):
+def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):
     global global_config
 
     if nn_weights is None:
@@ -374,9 +427,11 @@ def benchmark_agent(nn_weights = None, runs=100, demand_res=7, seed=None):
 
         # switch world resolution and re-run demand importer
         global_config.spatial_resolution = demand_res
-        di = DemandImporter(spatial_resolution=global_config.spatial_resolution,
-                            temporal_resolution=global_config.temporal_resolution,
-                            daily_resolution=global_config.daily_resolution)
+        di = DemandImporter(
+            spatial_resolution=global_config.spatial_resolution,
+            temporal_resolution=global_config.temporal_resolution,
+            daily_resolution=global_config.daily_resolution,
+        )
 
         demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
@@ -387,62 +442,104 @@ def benchmark_agent(nn_weights = None, runs=100, demand_res=7, seed=None):
         distance_matrix = dmi.load_distance_matrix()
 
     for i in tqdm(range(runs), total=runs):
-
         # mutate motherseed that all processes were given to generate new randomness in new run
         # because in the first run the multiplicator is 0, this has the nice side effect
         # of making this one run comparable across all benchmarks
         run_seed = seed * i
 
         operator, world, payment_engine, service_level = run_single_simulation(
-            start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=i+1, seed=run_seed)
+            start_time=14 * 60,
+            end_time=16 * 60,
+            weights=w,
+            replay_buffer=b,
+            episode=i + 1,
+            seed=run_seed,
+        )
 
         t = operator._rl_agent_reached_destination
         dis = operator._rl_agent_distance
         dur = operator._rl_agent_duration
 
         if nn_weights is None:
-            episode_returns.append(deepcopy({'run': i+1,
-                                             'type': 'BVG',
-                                             'spatial_res': demand_res,
-                                             'reached_destination': True,
-                                             'service_level': service_level,
-                                             'distance': dis,
-                                             'duration': dur}))
+            episode_returns.append(
+                deepcopy(
+                    {
+                        "run": i + 1,
+                        "type": "BVG",
+                        "spatial_res": demand_res,
+                        "reached_destination": True,
+                        "service_level": service_level,
+                        "distance": dis,
+                        "duration": dur,
+                    }
+                )
+            )
         else:
-            episode_returns.append(deepcopy({'run': i+1,
-                                             'type': 'DQN',
-                                             'spatial_res': demand_res,
-                                             'reached_destination': t,
-                                             'service_level': service_level,
-                                             'distance': dis,
-                                             'duration': dur}))
+            episode_returns.append(
+                deepcopy(
+                    {
+                        "run": i + 1,
+                        "type": "DQN",
+                        "spatial_res": demand_res,
+                        "reached_destination": t,
+                        "service_level": service_level,
+                        "distance": dis,
+                        "duration": dur,
+                    }
+                )
+            )
 
             if track:
                 # collect movements
-                ms = None # movement start
-                for coordinates, time in zip(operator._timestamped_position['geometry']['coordinates'], operator._timestamped_position['properties']['times']):
+                ms = None  # movement start
+                for coordinates, time_ in zip(
+                    operator._timestamped_position["geometry"]["coordinates"],
+                    operator._timestamped_position["properties"]["times"],
+                ):
                     if ms is None:
                         # first movement
                         ms = coordinates
                         continue
                     else:
-                        me = coordinates # movement end
-                        tracks.append({'run': i+1, 'move_start': ms, 'move_end': me, 'time(ms)': time})
+                        me = coordinates  # movement end
+                        tracks.append(
+                            {
+                                "run": i + 1,
+                                "move_start": ms,
+                                "move_end": me,
+                                "time(ms)": time_,
+                            }
+                        )
                         ms = coordinates
 
                 # collect tracked demands
                 # > convert set to list
                 # > and append run number at front of all tuples
-                demands.extend([(i+1,)+x for x in operator._tracked_demands])
+                demands.extend([(i + 1,) + x for x in operator._tracked_demands])
 
     if track and nn_weights is not None:
         tracks = pd.DataFrame.from_records(tracks)
-        tracks = tracks.set_index('run')
-        demands = pd.DataFrame.from_records(demands, columns=['run', 'origin', 'destination', 'time(ms)', 'fulfilled'])
+        tracks = tracks.set_index("run")
+        demands = pd.DataFrame.from_records(
+            demands, columns=["run", "origin", "destination", "time(ms)", "fulfilled"]
+        )
 
         strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        tracks.to_csv(os.path.join(output_folder, 'tracking', f'{str(runs)}_benchmark_agent_movements_{strf}.csv'))
-        demands.to_csv(os.path.join(output_folder, 'tracking', f'{str(runs)}_benchmark_demands_hex{demand_res}_{strf}.csv'), index=False)
+        tracks.to_csv(
+            os.path.join(
+                output_folder,
+                "tracking",
+                f"{str(runs)}_benchmark_agent_movements_{strf}.csv",
+            )
+        )
+        demands.to_csv(
+            os.path.join(
+                output_folder,
+                "tracking",
+                f"{str(runs)}_benchmark_demands_hex{demand_res}_{strf}.csv",
+            ),
+            index=False,
+        )
 
     returns = pd.DataFrame.from_records(episode_returns)
     return returns
@@ -452,68 +549,92 @@ def benchmark_agent(nn_weights = None, runs=100, demand_res=7, seed=None):
 def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
     if kwargs:
         for k, v in kwargs.items():
-            if k == 'penalty':
-                logging.info(f'Agent Penalty set to {str(v)}',
-                             extra={"clazz": __name__, "oid": ""})
+            if k == "penalty":
+                logging.info(
+                    f"Agent Penalty set to {str(v)}",
+                    extra={"clazz": __name__, "oid": ""},
+                )
                 bus_agent_config.penalty = v
-            if k == 'q_net_layer':
-                logging.info(f'DQN layer configuration set to {str(v)}',
-                             extra={"clazz": __name__, "oid": ""})
+            if k == "q_net_layer":
+                logging.info(
+                    f"DQN layer configuration set to {str(v)}",
+                    extra={"clazz": __name__, "oid": ""},
+                )
                 bus_agent_config.q_net_layer = v
-            if k == 'batchsize':
-                logging.info(f'Batchsize set to {str(v)}',
-                             extra={"clazz": __name__, "oid": ""})
+            if k == "batchsize":
+                logging.info(
+                    f"Batchsize set to {str(v)}", extra={"clazz": __name__, "oid": ""}
+                )
                 bus_agent_config.batchsize = v
-            if k == 'buffersize':
-                logging.info(f'Experience replay buffer size set to {str(v)}',
-                             extra={"clazz": __name__, "oid": ""})
+            if k == "buffersize":
+                logging.info(
+                    f"Experience replay buffer size set to {str(v)}",
+                    extra={"clazz": __name__, "oid": ""},
+                )
                 bus_agent_config.buffersize = v
-            if k == 'action_space':
-                logging.info(f'Action space set to {str(v)}',
-                             extra={"clazz": __name__, "oid": ""})
+            if k == "action_space":
+                logging.info(
+                    f"Action space set to {str(v)}",
+                    extra={"clazz": __name__, "oid": ""},
+                )
                 ActionSpace.init(v, reset=True)
-            if k == 'lr_decay':
-                logging.info(f'Learning rate decay set to {str(v)}',
-                             extra={"clazz": __name__, "oid": ""})
+            if k == "lr_decay":
+                logging.info(
+                    f"Learning rate decay set to {str(v)}",
+                    extra={"clazz": __name__, "oid": ""},
+                )
                 bus_agent_config.lr_decay = v
-            if k == 'reward':
-                logging.info(f'Reward set to {str(v)}',
-                             extra={"clazz": __name__, "oid": ""})
+            if k == "reward":
+                logging.info(
+                    f"Reward set to {str(v)}", extra={"clazz": __name__, "oid": ""}
+                )
                 bus_agent_config.reward = v
-            if k == 'doubleQ':
-                logging.info(f'Usage of Double Q set to {str(v)}',
-                             extra={"clazz": __name__, "oid": ""})
+            if k == "doubleQ":
+                logging.info(
+                    f"Usage of Double Q set to {str(v)}",
+                    extra={"clazz": __name__, "oid": ""},
+                )
                 bus_agent_config.double_q = v
-            if k == 'eps_decay':
-                logging.info(f'Epsilon decay set to {str(v)}',
-                             extra={"clazz": __name__, "oid": ""})
+            if k == "eps_decay":
+                logging.info(
+                    f"Epsilon decay set to {str(v)}",
+                    extra={"clazz": __name__, "oid": ""},
+                )
                 bus_agent_config.eps_decay = v
-            if k == 'tau':
+            if k == "tau":
                 if v is None:
-                    logging.info(f'Using hard updates of target Q-network',
-                                 extra={"clazz": __name__, "oid": ""})
+                    logging.info(
+                        "Using hard updates of target Q-network",
+                        extra={"clazz": __name__, "oid": ""},
+                    )
                     bus_agent_config.tau = None
                 else:
-                    logging.info(f'Using soft updates of target Q-network with tau of {str(v)}',
-                                 extra={"clazz": __name__, "oid": ""})
+                    logging.info(
+                        f"Using soft updates of target Q-network with tau of {str(v)}",
+                        extra={"clazz": __name__, "oid": ""},
+                    )
                     bus_agent_config.tau = v
                     # to complete a "full" update in the same number of steps as hard updates
-                    bus_agent_config.target_update_threshold = max(1, int(bus_agent_config.target_update_threshold * v))
-            if k == 'eps_decay_strategy':
-                logging.info(f'Epsilon decay strategy set to {str(v)}',
-                             extra={"clazz": __name__, "oid": ""})
+                    bus_agent_config.target_update_threshold = max(
+                        1, int(bus_agent_config.target_update_threshold * v)
+                    )
+            if k == "eps_decay_strategy":
+                logging.info(
+                    f"Epsilon decay strategy set to {str(v)}",
+                    extra={"clazz": __name__, "oid": ""},
+                )
                 bus_agent_config.eps_decay_strategy = v
 
         # list experiment params for paths
         experiments = "_".join([str(k) + "=" + str(v) for k, v in kwargs.items()])
 
-        logdir_ = f'{logdir}/{experiments}' # TODO: this might differ some seconds and not use the same dir
+        logdir_ = f"{logdir}/{experiments}"  # TODO: this might differ some seconds and not use the same dir
         tensorboard_ = ModifiedTensorBoard(log_dir=logdir_)
         bus_agent_config.tensorboard = tensorboard_
 
     if experiment is not None:
         # average experiment is running
-        logdir_ = f'{logdir}/run{experiment}'
+        logdir_ = f"{logdir}/run{experiment}"
         tensorboard_ = ModifiedTensorBoard(log_dir=logdir_)
         bus_agent_config.tensorboard = tensorboard_
 
@@ -523,11 +644,13 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
         time.sleep(random.random())
         strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
         if not kwargs:
-            track_path = f'{str(episodes)}_episodes_movements_{strf}.csv'
+            track_path = f"{str(episodes)}_episodes_movements_{strf}.csv"
         else:
-            track_path = f'{str(episodes)}_episodes_{experiments}_movements_{strf}.csv'
+            track_path = f"{str(episodes)}_episodes_{experiments}_movements_{strf}.csv"
 
-        track_dir = os.path.join(output_folder, 'tracking', track_path.replace('.csv', '/'))
+        track_dir = os.path.join(
+            output_folder, "tracking", track_path.replace(".csv", "/")
+        )
         os.makedirs(os.path.dirname(track_dir), exist_ok=True)
         tracks = []
 
@@ -537,11 +660,16 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
     episode_returns = []
 
     for i in tqdm(range(episodes), total=episodes):
-
         try:
             operator, world, payment_engine, service_level = run_single_simulation(
-                start_time=14 * 60, end_time=16 * 60, weights=w, replay_buffer=b, episode=e, seed=seed)
-        except PublicTransitVehicleFull as e:
+                start_time=14 * 60,
+                end_time=16 * 60,
+                weights=w,
+                replay_buffer=b,
+                episode=e,
+                seed=seed,
+            )
+        except PublicTransitVehicleFull:
             pass
 
         w = operator._rl_agent_weights
@@ -550,12 +678,15 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
         lr = operator._rl_agent_lr
         t = operator._rl_agent_reached_destination
 
-        episode = deepcopy({'episode': e,
-                            'return': operator._rewards_sum[-1],
-                            'service_level': service_level,
-                            'lr': lr,
-                            'reached_destination': t
-                            })
+        episode = deepcopy(
+            {
+                "episode": e,
+                "return": operator._rewards_sum[-1],
+                "service_level": service_level,
+                "lr": lr,
+                "reached_destination": t,
+            }
+        )
 
         if not kwargs:
             episode_returns.append(episode)
@@ -565,12 +696,13 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
 
         if track:
             # collect movements
-            for coordinates in operator._timestamped_position['geometry']['coordinates']:
-                tracks.append({'episode': e, 'position': coordinates})
+            for coordinates in operator._timestamped_position["geometry"][
+                "coordinates"
+            ]:
+                tracks.append({"episode": e, "position": coordinates})
 
             # map position over time (and possibly demands over time)
             import folium
-            from folium import GeoJson
             from folium.plugins import TimestampedGeoJson
 
             template = """{
@@ -590,24 +722,29 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
             m = folium.Map(location=[52.52, 13.40])
 
             if operator._tracked_demands:
-                t = TimestampedGeoJson({
-                    'type': 'FeatureCollection',
-                    'features': [
-                        operator._timestamped_position
-                    ] + [eval(template) for d in operator._tracked_demands]
-                }, loop=False, period='PT1M')
+                t = TimestampedGeoJson(
+                    {
+                        "type": "FeatureCollection",
+                        "features": [operator._timestamped_position]
+                        + [eval(template) for d in operator._tracked_demands],
+                    },
+                    loop=False,
+                    period="PT1M",
+                )
                 # , style_function=lambda x: {'color': 'green'} if x['properties']['serviced'] else {'color': 'red'}
 
             else:
-                t = TimestampedGeoJson({
-                    'type': 'FeatureCollection',
-                    'features': [
-                        operator._timestamped_position
-                    ]
-                }, loop=False, period='PT1M')
+                t = TimestampedGeoJson(
+                    {
+                        "type": "FeatureCollection",
+                        "features": [operator._timestamped_position],
+                    },
+                    loop=False,
+                    period="PT1M",
+                )
 
             t.add_to(m)
-            m.save(os.path.join(track_dir, f'bus_movement_episode_{str(e)}.html'))
+            m.save(os.path.join(track_dir, f"bus_movement_episode_{str(e)}.html"))
 
         e += 1
 
@@ -615,40 +752,44 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
     if not kwargs:
-        weights_path = f'{str(episodes)}_episodes_weights_{strf}.keras'
+        weights_path = f"{str(episodes)}_episodes_weights_{strf}.keras"
     else:
-        weights_path = f'{str(episodes)}_episodes_{experiments}_weights_{strf}.keras'
+        weights_path = f"{str(episodes)}_episodes_{experiments}_weights_{strf}.keras"
 
-    return_path = weights_path.replace('weights', 'returns').replace('keras', 'csv')
+    return_path = weights_path.replace("weights", "returns").replace("keras", "csv")
 
     operator._rl_agent_model.save_weights(
-        os.path.join(output_folder, 'weights', weights_path)
+        os.path.join(output_folder, "weights", weights_path)
     )
 
     returns = pd.DataFrame.from_records(episode_returns)
-    returns = returns.set_index('episode')
-    returns.to_csv(os.path.join(output_folder, 'returns', return_path))
+    returns = returns.set_index("episode")
+    returns.to_csv(os.path.join(output_folder, "returns", return_path))
 
     if track:
         tracks = pd.DataFrame.from_records(tracks)
-        tracks = tracks.set_index('episode')
-        tracks.to_csv(os.path.join(output_folder, 'tracking', track_path))
+        tracks = tracks.set_index("episode")
+        tracks.to_csv(os.path.join(output_folder, "tracking", track_path))
 
     if not kwargs:
-        returns[['return', 'service_level']].plot(secondary_y=['service_level'],
-                                                             alpha=.5,
-                                                             color=['black', 'green'],
-                                                             title='Total Reward and Service Level over Episodes')
+        returns[["return", "service_level"]].plot(
+            secondary_y=["service_level"],
+            alpha=0.5,
+            color=["black", "green"],
+            title="Total Reward and Service Level over Episodes",
+        )
     else:
-        returns[['return', 'service_level']].plot(secondary_y=['service_level'],
-                                                             alpha=.5,
-                                                             color=['black', 'green'],
-                                                             title=f'Experiment: {experiments}')
+        returns[["return", "service_level"]].plot(
+            secondary_y=["service_level"],
+            alpha=0.5,
+            color=["black", "green"],
+            title=f"Experiment: {experiments}",
+        )
         try:
             for k, v in kwargs.items():
                 returns[k] = str(v)
         except Exception as e:
-            print('cant append experiment params to returns DF')
+            print("cant append experiment params to returns DF")
             print(e)
     plt.show()
 
@@ -657,22 +798,33 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
     return returns
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     weights = learn_agent(prepare_benchmark=True, seed=4711)
     # weights = "./data/output/weights/10000_episodes_buffersize=1000_eps_decay_strategy=linear_weights_20220117-213313.keras"
     runs = 100
-    motherseed = random.randint(1,1000) # use the same seed for all 4 parallel runs
+    motherseed = random.randint(1, 1000)  # use the same seed for all 4 parallel runs
     # in each process, multiple that "motherseed" with the run number to achieve randomness between runs but not processes
 
     benchmark = [
-        {'nn_weights': None, 'runs': runs, 'demand_res': 7, 'seed': motherseed},
-        {'nn_weights': weights, 'runs': runs, 'demand_res': 7, 'seed': motherseed},
-        {'nn_weights': None, 'runs': runs, 'demand_res': 8, 'seed': motherseed},
-        {'nn_weights': weights, 'runs': runs, 'demand_res': 8, 'seed': motherseed},
+        {"nn_weights": None, "runs": runs, "demand_res": 7, "seed": motherseed},
+        {"nn_weights": weights, "runs": runs, "demand_res": 7, "seed": motherseed},
+        {"nn_weights": None, "runs": runs, "demand_res": 8, "seed": motherseed},
+        {"nn_weights": weights, "runs": runs, "demand_res": 8, "seed": motherseed},
     ]
 
-    results = pqdm(benchmark, benchmark_agent, n_jobs=len(benchmark), argument_type='kwargs', mp_context=mp.get_context('spawn'))
+    results = pqdm(
+        benchmark,
+        benchmark_agent,
+        n_jobs=len(benchmark),
+        argument_type="kwargs",
+        mp_context=mp.get_context("spawn"),
+    )
     results = pd.concat(results, ignore_index=False)
 
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    results.to_csv(os.path.join(output_folder, 'benchmarks', f'{str(runs)}_episodes_benchmark_{strf}.csv'), index=False)
+    results.to_csv(
+        os.path.join(
+            output_folder, "benchmarks", f"{str(runs)}_episodes_benchmark_{strf}.csv"
+        ),
+        index=False,
+    )

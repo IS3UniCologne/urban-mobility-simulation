@@ -1,5 +1,6 @@
-from simpy import Environment
 import logging
+
+from simpy import Environment
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
@@ -18,13 +19,14 @@ class MixedRideHailingFleet(VehicleFleet):
         self._cars = []
         self._ridehailing_cars = []
         self._autonomous_cars = []
-        self._distance_threshold_to_user = Configuration.instance().get_distance_threshold_to_user()
-        self._driver_availability_vector = Configuration.instance().get_driver_availability_vector()
+        self._distance_threshold_to_user = (
+            Configuration.instance().get_distance_threshold_to_user()
+        )
+        self._driver_availability_vector = (
+            Configuration.instance().get_driver_availability_vector()
+        )
         self._recharging_threshold = Configuration.instance().get_recharging_threshold()
         self._env.process(self.fleet_size_monitor())
-
-
-
 
     def add_shared_vehicle(self, vehicle: RideHailingVehicle):
         if isinstance(vehicle, RideHailingCar):
@@ -47,8 +49,8 @@ class MixedRideHailingFleet(VehicleFleet):
         """
         cars_in_area = []
 
-        geo_env  = GeodesicEnvironment.getInstance()
-        config   = Configuration.instance()
+        geo_env = GeodesicEnvironment.getInstance()
+        Configuration.instance()
         geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
@@ -90,14 +92,22 @@ class MixedRideHailingFleet(VehicleFleet):
 
         parking_cars = [car for car in self._cars if car.state == VehicleState.PARKING]
         for car in parking_cars:
-            if car.position >> origin <= self._distance_threshold_to_user and not car._suggested:
+            if (
+                car.position >> origin <= self._distance_threshold_to_user
+                and not car._suggested
+            ):
                 cars_in_area.append(car)
 
         serving_cars = [car for car in self._cars if car.state == VehicleState.DRIVING]
         for car in serving_cars:
-            distance_to_current_destination = (car.estimated_completion_time - self._env.now) * car.velocity
-            if (car.destination.position >> origin) + distance_to_current_destination <= \
-                    self._distance_threshold_to_user and not car._suggested:
+            distance_to_current_destination = (
+                car.estimated_completion_time - self._env.now
+            ) * car.velocity
+            if (
+                (car.destination.position >> origin) + distance_to_current_destination
+                <= self._distance_threshold_to_user
+                and not car._suggested
+            ):
                 hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
                 state_of_charge_threshold = self._recharging_threshold[hour]
                 if car.current_relative_state_of_charge > state_of_charge_threshold + 5:
@@ -142,7 +152,9 @@ class MixedRideHailingFleet(VehicleFleet):
                 operational_costs += vehicle.travel_costs + vehicle.charging_costs
         return operational_costs
 
-    def get_all_vehicles_below_soc_level_in_region(self, state_of_charge_threshold, region):
+    def get_all_vehicles_below_soc_level_in_region(
+        self, state_of_charge_threshold, region
+    ):
         """
         Return all vehicles that need to be refueled/recharged in a region
         :param state_of_charge_threshold: between 0 and 1
@@ -156,7 +168,6 @@ class MixedRideHailingFleet(VehicleFleet):
                 below_soc_level_vehicles.append(vehicle)
 
         return below_soc_level_vehicles
-
 
     def count_cars(self):
         return len(self._cars)
@@ -174,10 +185,10 @@ class MixedRideHailingFleet(VehicleFleet):
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
         available_vehicles = ["RideHailingCar"]
-        values = [0]*len(available_vehicles)
+        values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
-        vehicle_dict = dict(zip(available_vehicles, values))
+        # vehicle_dict = dict(zip(available_vehicles, values))
 
         supply = {}
 
@@ -185,7 +196,7 @@ class MixedRideHailingFleet(VehicleFleet):
             if mode == "RideHailingCar":
                 vehicle_list = self._cars
             else:
-                raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')
+                raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
                 hex_id = vehicle.position.get_default_hexagon()
@@ -206,10 +217,10 @@ class MixedRideHailingFleet(VehicleFleet):
                  e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
         available_vehicles = ["RideHailingCar"]
-        values = [0]*len(available_vehicles)
+        values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
-        vehicle_dict = dict(zip(available_vehicles, values))
+        # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = {}
 
@@ -218,7 +229,7 @@ class MixedRideHailingFleet(VehicleFleet):
                 vehicle_list = self._cars
 
             else:
-                raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')
+                raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
                 hex_id = vehicle.position.get_default_hexagon()
@@ -238,11 +249,11 @@ class MixedRideHailingFleet(VehicleFleet):
         :param state_of_charge_threshold:
         :return: List, vehicles with low SoC}
         """
-        available_vehicles = ["RideHailingCar"]
-        values = [0]*len(available_vehicles)
+        # available_vehicles = ["RideHailingCar"]
+        # values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
-        vehicle_dict = dict(zip(available_vehicles, values))
+        # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = []
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
@@ -251,7 +262,10 @@ class MixedRideHailingFleet(VehicleFleet):
         vehicle_list = self._cars
 
         for vehicle in vehicle_list:
-            if vehicle.current_relative_state_of_charge < state_of_charge_threshold and vehicle.state == VehicleState.PARKING:
+            if (
+                vehicle.current_relative_state_of_charge < state_of_charge_threshold
+                and vehicle.state == VehicleState.PARKING
+            ):
                 low_soc_supply.append(vehicle)
 
         return low_soc_supply
@@ -264,7 +278,9 @@ class MixedRideHailingFleet(VehicleFleet):
         :return: Lists of online vehicles
         """
 
-        online_vehicles = [car for car in self._ridehailing_cars if car.state != VehicleState.OFFLINE]
+        online_vehicles = [
+            car for car in self._ridehailing_cars if car.state != VehicleState.OFFLINE
+        ]
 
         return online_vehicles
 
@@ -276,7 +292,9 @@ class MixedRideHailingFleet(VehicleFleet):
         :return: Lists of online vehicles
         """
 
-        online_vehicles = [car for car in self._ridehailing_cars if car.state == VehicleState.OFFLINE]
+        online_vehicles = [
+            car for car in self._ridehailing_cars if car.state == VehicleState.OFFLINE
+        ]
 
         return online_vehicles
 
@@ -287,6 +305,8 @@ class MixedRideHailingFleet(VehicleFleet):
         """
         while True:
             number_of_online_vehicles = len(self.get_online_vehicles())
-            logging.info(f'Fleet has {number_of_online_vehicles} online vehicles',
-                          extra={"clazz": self.__class__.__name__})
+            logging.info(
+                f"Fleet has {number_of_online_vehicles} online vehicles",
+                extra={"clazz": self.__class__.__name__},
+            )
             yield self._env.timeout(60)

@@ -1,12 +1,10 @@
-import random
+import logging
 
 from simpy import Environment
-import logging
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.vehicle import VehicleState
-
 
 # class RideHailingCarState(Enum):
 #     INITIALIZED = 0
@@ -23,12 +21,21 @@ from simulation.vehicle.vehicle import VehicleState
 
 
 class RideHailingCar(RideHailingVehicle):
-
     # Shared Care Counter
     ride_hailing_car_id = 0
     vehicle_type = "ridehailing_car" # TODO: make explicit that it's a human-driven car
 
-    def __init__(self, env: Environment, position, max_available_seats=4, max_state_of_charge=16.7, energy_consumption=0.152, velocity = 833.33, price_per_min = 0.26, electric_vehicle = True):
+    def __init__(
+        self,
+        env: Environment,
+        position,
+        max_available_seats=4,
+        max_state_of_charge=16.7,
+        energy_consumption=0.152,
+        velocity=833.33,
+        price_per_min=0.26,
+        electric_vehicle=True,
+    ):
         """
 
         :param env:
@@ -39,7 +46,16 @@ class RideHailingCar(RideHailingVehicle):
         :param energy_consumption: 15.2 kWh/100km as per Smart EQ specification
         :param velocity:
         """
-        super(RideHailingCar, self).__init__(env, position, max_available_seats, max_state_of_charge, energy_consumption, velocity, price_per_min, electric_vehicle=electric_vehicle)
+        super(RideHailingCar, self).__init__(
+            env,
+            position,
+            max_available_seats,
+            max_state_of_charge,
+            energy_consumption,
+            velocity,
+            price_per_min,
+            electric_vehicle=electric_vehicle,
+        )
 
         # Increment Shared Car ID
         self.car_id = RideHailingCar.ride_hailing_car_id
@@ -58,6 +74,7 @@ class RideHailingCar(RideHailingVehicle):
         RideHailingCar.ride_hailing_car_id += 1
 
         self._env.process(self.run_shift_check_process())
+
     @property
     def total_earn(self):
         return self._total_earn
@@ -86,15 +103,19 @@ class RideHailingCar(RideHailingVehicle):
         time = self._env.now
         self._shift_start_time = time
 
-        logging.debug(f'RideHailingCar {self.car_id} started its shift at {time}.',
-                      extra={"clazz": self.__class__.__name__, "oid": self.car_id})
+        logging.debug(
+            f"RideHailingCar {self.car_id} started its shift at {time}.",
+            extra={"clazz": self.__class__.__name__, "oid": self.car_id},
+        )
 
     def update_shift_end_time(self):
         time = self._env.now
         self._shift_end_time = time
 
-        logging.debug(f'RideHailingCar {self.car_id} ended its shift at {time}.',
-                      extra={"clazz": self.__class__.__name__, "oid": self.car_id})
+        logging.debug(
+            f"RideHailingCar {self.car_id} ended its shift at {time}.",
+            extra={"clazz": self.__class__.__name__, "oid": self.car_id},
+        )
 
     def update_shift_duration(self):
         self._shift_duration = self._env.now - self._shift_start_time
@@ -102,7 +123,7 @@ class RideHailingCar(RideHailingVehicle):
     def update_offline_duration(self):
         self._offline_duration = self._env.now - self._shift_end_time
 
-    def update_idle_time(self): #TODO
+    def update_idle_time(self):  # TODO
         pass
 
     def update_earned_money(self, payment):
@@ -111,17 +132,20 @@ class RideHailingCar(RideHailingVehicle):
         self._total_earn += earn
         self._shift_earn += earn
 
-        logging.debug(f'RideHailingCar {self.car_id} earned {self.shift_earn} since he/she started the shift.',
-                      extra={"clazz": self.__class__.__name__, "oid": self.car_id})
-
+        logging.debug(
+            f"RideHailingCar {self.car_id} earned {self.shift_earn} since he/she started the shift.",
+            extra={"clazz": self.__class__.__name__, "oid": self.car_id},
+        )
 
     def get_online(self):
         self._state = VehicleState.PARKING
         self.update_shift_start_time()
         self._online_event.succeed()
         self._online_event = self._env.event()
-        logging.debug(f'Driver {self.car_id} gets online.',
-                      extra={"clazz": self.__class__.__name__, "oid": self.car_id})
+        logging.debug(
+            f"Driver {self.car_id} gets online.",
+            extra={"clazz": self.__class__.__name__, "oid": self.car_id},
+        )
 
     def get_offline(self):
         self._state = VehicleState.OFFLINE
@@ -129,8 +153,10 @@ class RideHailingCar(RideHailingVehicle):
         self.update_shift_end_time()
         self._offline_event.succeed()
         self._offline_event = self._env.event()
-        logging.debug(f'Driver {self.car_id} gets offline.',
-                      extra={"clazz": self.__class__.__name__, "oid": self.car_id})
+        logging.debug(
+            f"Driver {self.car_id} gets offline.",
+            extra={"clazz": self.__class__.__name__, "oid": self.car_id},
+        )
 
     def decide_to_get_online(self):
         go_online = False
@@ -152,7 +178,6 @@ class RideHailingCar(RideHailingVehicle):
             go_online = True
         return go_online
 
-
     def decide_to_get_offline(self):
         go_offline = False
         ### comment off when we have mode chioce variables
@@ -167,7 +192,7 @@ class RideHailingCar(RideHailingVehicle):
         #     go_offline = True
         fleet_size_threshold = self.fleet.driver_availability_vector()
         time = self._env.now
-        hour = int((time % 1440)/60)
+        hour = int((time % 1440) / 60)
         number_of_online_vehicles = len(self.fleet.get_online_vehicles())
         if number_of_online_vehicles >= fleet_size_threshold[hour]:
             go_offline = True
@@ -194,10 +219,18 @@ class RideHailingCar(RideHailingVehicle):
                         self.get_offline()
                     # if the driver has a task to do we yield until its completion
                     else:
-                        logging.debug(f'Driver {self._id} is {self.state} and has a task to do before getting offline.',
-                                     extra={"clazz": self.__class__.__name__, "oid": self.car_id})
-                        yield self._driver_unmounted | self._vehicle_relocation_finished \
-                              | self._charging_station_plugged_out
+                        logging.debug(
+                            f"Driver {self._id} is {self.state} and has a task to do before getting offline.",
+                            extra={
+                                "clazz": self.__class__.__name__,
+                                "oid": self.car_id,
+                            },
+                        )
+                        yield (
+                            self._driver_unmounted
+                            | self._vehicle_relocation_finished
+                            | self._charging_station_plugged_out
+                        )
                         self.get_offline()
             # we check driver decisions every one hour
             yield self._env.timeout(15)

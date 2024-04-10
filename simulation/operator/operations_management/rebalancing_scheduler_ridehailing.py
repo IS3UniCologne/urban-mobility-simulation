@@ -1,20 +1,24 @@
 import logging
-from pathlib import Path
 
-import h3
-import six
-import sys
-sys.modules['sklearn.externals.six'] = six
+
+# sys.modules["sklearn.externals.six"] = six
 import mlrose as mlrose
 import pandas as pd
 
-from simulation.helper.configuration.configuration import Configuration
 
 class RebalancingSchedulerRidehailing:
-
-    def __init__(self, distance_matrix, fleet, ordered_available_vehicle_modes,
-                 ordered_max_vehicle_supply, number_of_service_units,
-                 base_regions, base_capacity, charging_threshold):
+    def __init__(
+        self,
+        distance_matrix,
+        fleet,
+        ordered_available_vehicle_modes,
+        ordered_max_vehicle_supply,
+        number_of_service_units,
+        base_regions,
+        base_capacity,
+        charging_threshold,
+        charging_stations,
+    ):
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
 
@@ -70,7 +74,6 @@ class RebalancingSchedulerRidehailing:
     #############################################
     #############################################
 
-
     def calculate_charging_plan(self, vehicles_to_charge, charging_stations):
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
@@ -99,9 +102,9 @@ class RebalancingSchedulerRidehailing:
             hex = vehicle.position.get_default_hexagon()
 
             # Get nearest fleet base region (.loc -> destination, [[]] -> Origin)
-            sorted_base_list = self._distance_matrix.loc[self._base_regions][[hex]].sort_values(
-                by=hex,
-                ascending=True)
+            sorted_base_list = self._distance_matrix.loc[self._base_regions][
+                [hex]
+            ].sort_values(by=hex, ascending=True)
             selected_base_distance = None
             # Select Nearest Base
             if vehicle.electric_vehicle:
@@ -109,10 +112,17 @@ class RebalancingSchedulerRidehailing:
                 for queue in [0, 2, 5, 10]:
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
-                        available_charging_stations = [x for x in charging_stations if len(x.plugs.queue) <= queue]
+                        available_charging_stations = [
+                            x
+                            for x in charging_stations
+                            if len(x.plugs.queue) <= queue
+                        ]
                         if len(available_charging_stations) > 0:
-                            selected_charging_station = \
-                                [x for x in available_charging_stations if x.location == selected_base]
+                            selected_charging_station = [
+                                x
+                                for x in available_charging_stations
+                                if x.location == selected_base
+                            ]
                             if len(selected_charging_station) > 0:
                                 selected_charging_station = selected_charging_station[0]
                                 selected_base_distance = row_base[hex]
@@ -121,10 +131,15 @@ class RebalancingSchedulerRidehailing:
                 if not selected_base_distance:
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
-                        available_charging_stations = [x for x in charging_stations]
+                        available_charging_stations = [
+                            x for x in self._charging_stations
+                        ]
                         if len(available_charging_stations) > 0:
-                            selected_charging_station = \
-                                [x for x in available_charging_stations if x.location == selected_base]
+                            selected_charging_station = [
+                                x
+                                for x in available_charging_stations
+                                if x.location == selected_base
+                            ]
                             if len(selected_charging_station) > 0:
                                 selected_charging_station = selected_charging_station[0]
                                 selected_base_distance = row_base[hex]
@@ -135,13 +150,17 @@ class RebalancingSchedulerRidehailing:
                     selected_base = index_base
                     available_charging_stations = [x for x in charging_stations]
                     if len(available_charging_stations) > 0:
-                        selected_charging_station = \
-                            [x for x in available_charging_stations if x.location == selected_base][0]
+                        selected_charging_station = [
+                            x
+                            for x in available_charging_stations
+                            if x.location == selected_base
+                        ][0]
                         selected_base_distance = row_base[hex]
                         break
 
             # Keep Track of how many vehicles are already scheduled for charging
             currently_schedules_vehicles_per_unit = 0
+            logging.info(currently_schedules_vehicles_per_unit)
 
             # How many vehicles can we move to the base and charge?
             pick_up_vehicles = 1
@@ -150,7 +169,14 @@ class RebalancingSchedulerRidehailing:
             chargings_tasks = []
 
             # Charging Task from current region to fleet base
-            charging_task = (hex, selected_base, pick_up_vehicles, selected_base_distance, selected_charging_station, vehicle)
+            charging_task = (
+                hex,
+                selected_base,
+                pick_up_vehicles,
+                selected_base_distance,
+                selected_charging_station,
+                vehicle,
+            )
 
             # Add main chargin task to charging tasks
             if pick_up_vehicles > 0:
@@ -162,11 +188,15 @@ class RebalancingSchedulerRidehailing:
 
             # Save Charging Plan of Vehicle Mode
 
-
         return charging_plan
 
-
-    def calculate_resource_capacity_split_for_charging(self, fleet_state, available_vehicle_modes, max_vehicle_supply, number_of_service_units):
+    def calculate_resource_capacity_split_for_charging(
+        self,
+        fleet_state,
+        available_vehicle_modes,
+        max_vehicle_supply,
+        number_of_service_units,
+    ):
         """
             Determine Service Worker Split Between Modes (How many workers should be assigned to charge how many vehicles)
 
@@ -196,17 +226,23 @@ class RebalancingSchedulerRidehailing:
             # Normalize the vehicle weight;
             # otherwise all resources are bound to kick scooters as there are way more low soc kick scooters
             # One Service Worker can "process" 40 units of kick scooters compared to 1 sw for one car.
-            current_low_soc_supply.append(fleet_state[f"{mode}_Low_SoC"].sum() / max_capacity_per_unit)
+            current_low_soc_supply.append(
+                fleet_state[f"{mode}_Low_SoC"].sum() / max_capacity_per_unit
+            )
 
-        low_fraction_per_mode = [curr_low_supply / max_supply for curr_low_supply, max_supply in
-                                 zip(current_low_soc_supply, max_vehicle_supply)]
+        low_fraction_per_mode = [
+            curr_low_supply / max_supply
+            for curr_low_supply, max_supply in zip(
+                current_low_soc_supply, max_vehicle_supply
+            )
+        ]
 
         # Temporary Denom
         denominator = sum(low_fraction_per_mode)
 
         if denominator == 0.0:
             # No Charging Needed => No Workers assigned
-            return len(low_fraction_per_mode)*[0]
+            return len(low_fraction_per_mode) * [0]
 
         # Split capacity based on the following fraction
         capacity_fraction = low_fraction_per_mode / denominator
@@ -279,9 +315,12 @@ class RebalancingSchedulerRidehailing:
 
         # Split available service worker resources among vehicle types
         # (prioritize vehicles where most low soc vehicles are present)
-        capacity_per_mode = self.calculate_resource_capacity_split_for_relocation(state, self._available_vehicle_modes,
-                                                                                self._max_vehicle_supply,
-                                                                                self._number_of_service_units)
+        capacity_per_mode = self.calculate_resource_capacity_split_for_relocation(
+            state,
+            self._available_vehicle_modes,
+            self._max_vehicle_supply,
+            self._number_of_service_units,
+        )
         for i, mode in enumerate(self._available_vehicle_modes):
             # Relocation List containing tuples (origin, destination, number_of_vehicles_to_be_relocated, distance)
             relocation_list = []
@@ -302,10 +341,12 @@ class RebalancingSchedulerRidehailing:
             # Sort Ascending
             state = state.sort_values(by=[f"Residual_Supply_{mode}"])
 
-            for index, next_hex in state[state[f"Residual_Supply_{mode}"] < 0].iterrows():
+            for index, next_hex in state[
+                state[f"Residual_Supply_{mode}"] < 0
+            ].iterrows():
                 """
-                  Iterate through each hexagon where we expect a negative supply (i.e., demand and supply don't match)
-                  Start with hexagon with highest lack of vehicle supply
+                Iterate through each hexagon where we expect a negative supply (i.e., demand and supply don't match)
+                Start with hexagon with highest lack of vehicle supply
                 """
                 next_hex_id = next_hex["hex_id"]
                 residual_supply = next_hex[f"Residual_Supply_{mode}"]
@@ -324,14 +365,19 @@ class RebalancingSchedulerRidehailing:
 
                 # Merge Sub Distance Matrix of selected Region with Relocation Plan
                 # We obtain for the current hexagon a list of all hexagons along with their current vehicle supply
-                distance_to_other_hexagons = sub_distance_matrix.merge(state, how="inner", on="hex_id")
+                distance_to_other_hexagons = sub_distance_matrix.merge(
+                    state, how="inner", on="hex_id"
+                )
 
                 # Sort by distance (in meter) (i.e., prefer neighbours first)
-                distance_to_other_hexagons = distance_to_other_hexagons.sort_values(by=[next_hex_id])
+                distance_to_other_hexagons = distance_to_other_hexagons.sort_values(
+                    by=[next_hex_id]
+                )
 
                 # Only consider regions having additional supply
                 distance_to_other_hexagons = distance_to_other_hexagons[
-                    distance_to_other_hexagons[f"Residual_Supply_{mode}"] > 0]
+                    distance_to_other_hexagons[f"Residual_Supply_{mode}"] > 0
+                ]
                 distance_to_other_hexagons[f"Relocate_{mode}"] = 0
 
                 # Calculate for the current hexagon the number of vehicles to be relocated from other regions.
@@ -342,15 +388,23 @@ class RebalancingSchedulerRidehailing:
                     # Minimum between available vehicles (i.e., only relocate vehicles which are there, now!)
                     vehicle_buffer = 3
                     # -3 is our buffer
-                    physicially_available_vehicles = min(row[f"Residual_Supply_{mode}"], max(row[f"{mode}"]-vehicle_buffer, 0))
+                    physicially_available_vehicles = min(
+                        row[f"Residual_Supply_{mode}"],
+                        max(row[f"{mode}"] - vehicle_buffer, 0),
+                    )
 
                     if physicially_available_vehicles <= 0:
-                        continue # We cannot use this region to get vehicles
+                        continue  # We cannot use this region to get vehicles
 
                     # Relocatable Vehicles = Additional Vehicles - Already (Planned) for Relocation Vehicles
-                    relocatable_vehicles = physicially_available_vehicles - already_relocated[row["hex_id"]]
+                    relocatable_vehicles = (
+                        physicially_available_vehicles
+                        - already_relocated[row["hex_id"]]
+                    )
                     # We relocate only either the availalbe number of relocatable vehicles or missing number of vehicles
-                    relocate = min(relocatable_vehicles, abs(residual_supply) - relocated_vehicles)
+                    relocate = min(
+                        relocatable_vehicles, abs(residual_supply) - relocated_vehicles
+                    )
 
                     # Increment relocated vehicles counter
                     relocated_vehicles += relocate
@@ -367,23 +421,41 @@ class RebalancingSchedulerRidehailing:
                 if len(local_relocation_schedule) == 0:
                     logging.info(
                         f"Cannot calculate relocation plan for {mode} as there are no regions with excess supply.",
-                        extra={"clazz": self.__class__.__name__, "oid": ""})
+                        extra={"clazz": self.__class__.__name__, "oid": ""},
+                    )
                     break
 
                 # Append No. of Vehicles to be relocated
-                distance_to_other_hexagons[f"Relocate_{mode}"] = pd.DataFrame(local_relocation_schedule, index=idx)
+                distance_to_other_hexagons[f"Relocate_{mode}"] = pd.DataFrame(
+                    local_relocation_schedule, index=idx
+                )
 
                 # Pool Relocations and split tasks by capacity of each service worker.
                 tmp_list = []
                 tmp_counter = 0
                 for index, row in distance_to_other_hexagons[
-                    distance_to_other_hexagons[f"Relocate_{mode}"] > 0].iterrows():
-
+                    distance_to_other_hexagons[f"Relocate_{mode}"] > 0
+                ].iterrows():
                     # First create relocation jobs that can immediately provide vehicles without "visiting" nearby areas
-                    while (distance_to_other_hexagons.loc[index, f"Relocate_{mode}"] >= max_capacity_per_unit
-                           and len(relocation_list) < number_of_service_units_per_mode):
-                        relocation_list.append([(row["hex_id"], next_hex_id, max_capacity_per_unit, row[next_hex_id])])
-                        distance_to_other_hexagons.loc[index, f"Relocate_{mode}"] = distance_to_other_hexagons.loc[index, f"Relocate_{mode}"] - max_capacity_per_unit
+                    while (
+                        distance_to_other_hexagons.loc[index, f"Relocate_{mode}"]
+                        >= max_capacity_per_unit
+                        and len(relocation_list) < number_of_service_units_per_mode
+                    ):
+                        relocation_list.append(
+                            [
+                                (
+                                    row["hex_id"],
+                                    next_hex_id,
+                                    max_capacity_per_unit,
+                                    row[next_hex_id],
+                                )
+                            ]
+                        )
+                        distance_to_other_hexagons.loc[index, f"Relocate_{mode}"] = (
+                            distance_to_other_hexagons.loc[index, f"Relocate_{mode}"]
+                            - max_capacity_per_unit
+                        )
 
                     if len(relocation_list) == number_of_service_units_per_mode:
                         # No more service worker capacity, stop planning
@@ -392,15 +464,32 @@ class RebalancingSchedulerRidehailing:
                     # Remaining capacity of service worker
                     local_missing_supply = max_capacity_per_unit - tmp_counter
 
-                    local_relocatable_vehicles = min(distance_to_other_hexagons.loc[index, f"Relocate_{mode}"], local_missing_supply)
+                    local_relocatable_vehicles = min(
+                        distance_to_other_hexagons.loc[index, f"Relocate_{mode}"],
+                        local_missing_supply,
+                    )
 
                     # Pool Relocation Tasks as worker has still some capacity
-                    if tmp_counter + local_relocatable_vehicles <= max_capacity_per_unit and local_relocatable_vehicles > 0:
-                        tmp_list.append((row["hex_id"], next_hex_id, local_relocatable_vehicles, row[next_hex_id]))
+                    if (
+                        tmp_counter + local_relocatable_vehicles
+                        <= max_capacity_per_unit
+                        and local_relocatable_vehicles > 0
+                    ):
+                        tmp_list.append(
+                            (
+                                row["hex_id"],
+                                next_hex_id,
+                                local_relocatable_vehicles,
+                                row[next_hex_id],
+                            )
+                        )
                         tmp_counter += local_relocatable_vehicles
 
                         # Update relocatable vehicles (such that next service worker can also process remaining vehicles)
-                        distance_to_other_hexagons.loc[index, f"Relocate_{mode}"] = distance_to_other_hexagons.loc[index, f"Relocate_{mode}"] - local_relocatable_vehicles
+                        distance_to_other_hexagons.loc[index, f"Relocate_{mode}"] = (
+                            distance_to_other_hexagons.loc[index, f"Relocate_{mode}"]
+                            - local_relocatable_vehicles
+                        )
                     else:
                         # Start new pooled task as capacity is depleted of current service worker.
                         # List of (Origin, Destination, No. Vehicles to Relocate, Distance from Origin to Distance)
@@ -411,7 +500,10 @@ class RebalancingSchedulerRidehailing:
                         tmp_list = []
                         tmp_counter = 0
 
-                if len(relocation_list) < number_of_service_units_per_mode and len(tmp_list) > 0:
+                if (
+                    len(relocation_list) < number_of_service_units_per_mode
+                    and len(tmp_list) > 0
+                ):
                     relocation_list.append(tmp_list)
 
             # If multiple hexagons are visited to pick up vehicles, we need to solve the traveling salesman problem
@@ -433,16 +525,22 @@ class RebalancingSchedulerRidehailing:
                     for i, value_i in hexagons.items():
                         for j, value_j in hexagons.items():
                             if i != j:
-                                dist_list.append((value_i, value_j, self._distance_matrix.loc[j][i]))
+                                dist_list.append(
+                                    (value_i, value_j, self._distance_matrix.loc[j][i])
+                                )
 
                     # Initialize fitness function object using dist_list
                     fitness_dists = mlrose.TravellingSales(distances=dist_list)
 
                     # Define optimization problem object
-                    problem_fit = mlrose.TSPOpt(length=len(hexagons), fitness_fn=fitness_dists, maximize=False)
+                    problem_fit = mlrose.TSPOpt(
+                        length=len(hexagons), fitness_fn=fitness_dists, maximize=False
+                    )
 
                     # Solve problem using the genetic algorithm (keep random state constant)
-                    best_state, best_fitness = mlrose.genetic_alg(problem_fit, random_state=1337)
+                    best_state, best_fitness = mlrose.genetic_alg(
+                        problem_fit, random_state=1337
+                    )
 
                     # Convert Numpy Array to List
                     best_state = best_state.tolist()
@@ -451,26 +549,34 @@ class RebalancingSchedulerRidehailing:
                     index_of_destination = best_state.index(0)
 
                     # Position "Destination" of relocations to the end
-                    if len(best_state)-1 != index_of_destination:
-                        best_state = best_state[index_of_destination+1:] + best_state[:index_of_destination+1]
+                    if len(best_state) - 1 != index_of_destination:
+                        best_state = (
+                            best_state[index_of_destination + 1 :]
+                            + best_state[: index_of_destination + 1]
+                        )
 
                     # We start at the origin and end at the destination. Distance between "destination" and "origin"
                     # must be substracted from the best fit.
                     origin_of_trip = best_state[0]
-                    dest_of_trip   = best_state[-1]
+                    dest_of_trip = best_state[-1]
 
                     excess_distance = 0
                     for distance_weights in dist_list:
                         # distance_weights[0] => origin, distance_weights[1] => destination
                         # In our case dest_of_trip refers to the "origin" and origin_of_trip to "destination"
                         # <=> remove last edge from the route
-                        if distance_weights[0] == dest_of_trip and distance_weights[1] == origin_of_trip:
+                        if (
+                            distance_weights[0] == dest_of_trip
+                            and distance_weights[1] == origin_of_trip
+                        ):
                             excess_distance += distance_weights[2]
 
                     # Remove the distance from the "destination" to the "origin" of the relocation trip
                     total_distance = best_fitness - excess_distance
 
-                    average_distance_per_relocation_step = total_distance/len(relocation)
+                    average_distance_per_relocation_step = total_distance / len(
+                        relocation
+                    )
 
                     # Save old tuples
                     old_relocation = relocation.copy()
@@ -482,14 +588,19 @@ class RebalancingSchedulerRidehailing:
                     for elem in old_relocation:
                         tmp_elem = list(elem)
                         tmp_elem[3] = average_distance_per_relocation_step
-                        tmp_elem = (*tmp_elem, )
+                        tmp_elem = (*tmp_elem,)
 
                         relocation.append(tmp_elem)
 
         return relocations
 
-
-    def calculate_resource_capacity_split_for_relocation(self, fleet_state, available_vehicle_modes, max_vehicle_supply, number_of_service_units):
+    def calculate_resource_capacity_split_for_relocation(
+        self,
+        fleet_state,
+        available_vehicle_modes,
+        max_vehicle_supply,
+        number_of_service_units,
+    ):
         """
             Determine Service Worker Split Between Modes (How many workers should be assigned to relocate how many vehicles)
 
@@ -511,20 +622,29 @@ class RebalancingSchedulerRidehailing:
 
             # Normalize the vehicle weight;
             # One Service Worker can "process" 40 units of kick scooters compared to 1 sw for one car.
-            current_supply_mismatch.append(fleet_state[f"Residual_Supply_{mode}"].abs().sum() / max_capacity_per_unit)
+            current_supply_mismatch.append(
+                fleet_state[f"Residual_Supply_{mode}"].abs().sum()
+                / max_capacity_per_unit
+            )
 
-            max_unit_assignment.append(round(max_vehicle_supply[idx]/max_capacity_per_unit+0.49)) # Round Up
+            max_unit_assignment.append(
+                round(max_vehicle_supply[idx] / max_capacity_per_unit + 0.49)
+            )  # Round Up
 
         # Normalize by number of vehicles
-        current_supply_mismatch = [supply_mismatch / max_supply for supply_mismatch, max_supply in
-                                 zip(current_supply_mismatch, max_vehicle_supply)]
+        current_supply_mismatch = [
+            supply_mismatch / max_supply
+            for supply_mismatch, max_supply in zip(
+                current_supply_mismatch, max_vehicle_supply
+            )
+        ]
 
         # Temporary Denom
         denominator = sum(current_supply_mismatch)
 
         if denominator == 0.0:
             # No Relocations Needed => No Workers assigned
-            return len(current_supply_mismatch)*[0]
+            return len(current_supply_mismatch) * [0]
 
         # Split capacity based on the following fraction
         capacity_fraction = current_supply_mismatch / denominator
@@ -533,7 +653,10 @@ class RebalancingSchedulerRidehailing:
 
         capacity = [round(x) for x in capacity]
 
-        capacity = [min(capa, max_unit_assign) for capa, max_unit_assign in zip(capacity, max_unit_assignment)]
+        capacity = [
+            min(capa, max_unit_assign)
+            for capa, max_unit_assign in zip(capacity, max_unit_assignment)
+        ]
 
         # Rounding Fractions => Sum of Residual don't add up to available units
         # We fix this by adding or subtracting the residual to the max. element
@@ -579,87 +702,103 @@ class RebalancingSchedulerRidehailing:
         # Get Vehicle Supply per Hexagon
         supply = vehicle_fleet.calc_supply_per_region()
 
-
         supply_df = pd.DataFrame(supply).T.reset_index()
         supply_df.rename(columns={"index": "hex_id"}, inplace=True)
 
         # Get LoW Soc Vehicle Supply per Hexagon
-        low_soc_supply = vehicle_fleet.calc_vehicles_to_be_charged_per_region(self._charging_threshold)
-
+        low_soc_supply = vehicle_fleet.calc_vehicles_to_be_charged_per_region(
+            self._charging_threshold
+        )
 
         df_low_soc = pd.DataFrame(low_soc_supply).T.reset_index()
         df_low_soc.rename(columns={"index": "hex_id"}, inplace=True)
 
         # Get Expected Demand (Delta) per Hexagon
-        expected_demand = self.estimate_delta_demand(transactions, self._available_vehicle_modes)
+        expected_demand = self.estimate_delta_demand(
+            transactions, self._available_vehicle_modes
+        )
 
         # Merge Demand, Suppy and Low SoC Vehicles
-        state = expected_demand.merge(supply_df, how = "outer", on = "hex_id")
-        state = state.merge(df_low_soc, how = "outer", on = "hex_id", suffixes = ("", "_Low_SoC"))
+        state = expected_demand.merge(supply_df, how="outer", on="hex_id")
+        state = state.merge(
+            df_low_soc, how="outer", on="hex_id", suffixes=("", "_Low_SoC")
+        )
         state.fillna(0, inplace=True)
 
         # Calculate Residual Supply for each vehicle type
         # RS = Supply - Low SoC Vehicles - Delta Demand (i.e., E[Inflow]-E[Outflow]-E[Missed Trips]
         for vehicle in self._available_vehicle_modes:
             # + Delta because delta is negative or positive based on calc delta demand
-            state[f"Residual_Supply_{vehicle}"] = state[vehicle] - state[f"{vehicle}_Low_SoC"] + state[f"Delta_{vehicle}"]
+            state[f"Residual_Supply_{vehicle}"] = (
+                state[vehicle] - state[f"{vehicle}_Low_SoC"] + state[f"Delta_{vehicle}"]
+            )
         return state
 
     def estimate_delta_demand(self, transactions, ordered_available_vehicle):
         """
-            Compute the expected demand in a hexagon based on collected rental transactions from the simulation.
+        Compute the expected demand in a hexagon based on collected rental transactions from the simulation.
 
-            Transactions: Transaction Records from the Payment Interface
-            Ordered_Available_Vehicle: List with Available Vehicles and Natural Ordering of Preference in case of neutrality
-                i.e., the following hodls
-                    ordered_available_vehicle[i] = 1 and ordered_available_vehicle[k] = 1
+        Transactions: Transaction Records from the Payment Interface
+        Ordered_Available_Vehicle: List with Available Vehicles and Natural Ordering of Preference in case of neutrality
+            i.e., the following hodls
+                ordered_available_vehicle[i] = 1 and ordered_available_vehicle[k] = 1
 
-                                            k > i
+                                        k > i
 
-                    =>
+                =>
 
-                    Demand is counted for: ordered_available_vehicle[i] as we assume preference order i << k
+                Demand is counted for: ordered_available_vehicle[i] as we assume preference order i << k
 
-            We calculate for each vehicle type -- based on the previous assumption -- the delta demand:
+        We calculate for each vehicle type -- based on the previous assumption -- the delta demand:
 
-                    E[Delta Demand| Hexagon ID] = E[Inflow | Hexagon ID] - E[Outflow s| Hexagon ID] - E[Missed Trips | Hexagon ID]
+                E[Delta Demand| Hexagon ID] = E[Inflow | Hexagon ID] - E[Outflow s| Hexagon ID] - E[Missed Trips | Hexagon ID]
         """
-        transactions  = transactions.copy()
+        transactions = transactions.copy()
 
-        diff = set(transactions["selected_vehicle_mode"].unique()) - set(ordered_available_vehicle + ['None'])
+        diff = set(transactions["selected_vehicle_mode"].unique()) - set(
+            ordered_available_vehicle + ["None"]
+        )
 
         if len(diff) > 1:
-           raise RuntimeError('There are more vehicle types than defined in ordered available vehicle')
+            raise RuntimeError(
+                "There are more vehicle types than defined in ordered available vehicle"
+            )
 
         if len(set(transactions["selected_vehicle_mode"].unique())) == 1:
-           raise RuntimeError('There are not enough transactions to calculate historical values')
+            raise RuntimeError(
+                "There are not enough transactions to calculate historical values"
+            )
 
         # Rearrange Columns according to Vehicle Preferences
         cols = transactions.columns.tolist()
-        cols = cols[:-(len(ordered_available_vehicle))] + ordered_available_vehicle
+        cols = cols[: -(len(ordered_available_vehicle))] + ordered_available_vehicle
 
         # Rearrange Columns
         transactions = transactions[cols]
 
         # Get the cheapest (most-preferred) mode for that trip.
         # In other words, if a trip can be undertaken either by scooter or car, count this as a scooter trip
-        transactions["cheapest_vehicle_mode"] = ''
+        transactions["cheapest_vehicle_mode"] = ""
 
         for i in range(len(ordered_available_vehicle)):
-            query = '{} == {}'.format(ordered_available_vehicle[i], 1)
+            query = "{} == {}".format(ordered_available_vehicle[i], 1)
             for k in range(i):
-                query += ' & {} == {}'.format(ordered_available_vehicle[k], 0)
+                query += " & {} == {}".format(ordered_available_vehicle[k], 0)
 
-            qry_res = transactions.query(query) # If not empty
+            qry_res = transactions.query(query)  # If not empty
             if qry_res.shape[0] > 0:
-                transactions.loc[qry_res.index, "cheapest_vehicle_mode"] = ordered_available_vehicle[i]
+                transactions.loc[qry_res.index, "cheapest_vehicle_mode"] = (
+                    ordered_available_vehicle[i]
+                )
 
         # (All) Hexagons
-        hexagons = pd.unique(transactions[["origin", "destination"]].values.ravel('K'))
+        hexagons = pd.unique(transactions[["origin", "destination"]].values.ravel("K"))
         hexagons = pd.DataFrame(hexagons, columns=["hex_id"])
 
         # Calculate Expected Outflow
-        outflow = transactions.groupby(["origin", "state", "cheapest_vehicle_mode"]).agg({"destination": "count"})
+        outflow = transactions.groupby(
+            ["origin", "state", "cheapest_vehicle_mode"]
+        ).agg({"destination": "count"})
 
         # Unstack Vehicle Type Level
         outflow = outflow.unstack()
@@ -678,22 +817,29 @@ class RebalancingSchedulerRidehailing:
         # Arrange Column Names
         unfolded_cols = ["hex_id"]
         for vehicle in vehicle_columns:
-            unfolded_cols = unfolded_cols + ["OutFlow_Fulfilled_{}".format(vehicle), "OutFlow_Missed_{}".format(vehicle)]
+            unfolded_cols = unfolded_cols + [
+                "OutFlow_Fulfilled_{}".format(vehicle),
+                "OutFlow_Missed_{}".format(vehicle),
+            ]
 
         # Overwrite Column Names
         outflow.columns = unfolded_cols
 
         # Calculate Expected Inflow
-        inflow = transactions.groupby(["destination", "state", "cheapest_vehicle_mode"]).agg({"origin": "count"})
+        inflow = transactions.groupby(
+            ["destination", "state", "cheapest_vehicle_mode"]
+        ).agg({"origin": "count"})
 
         # Unstack Vehicle Type Level
         inflow = inflow.unstack()
-        base_column = ["destination", "state"]
+        ["destination", "state"]
         vehicle_columns = list(inflow["origin"].columns.values)
 
         # Reset Multi-Index to Flat Index (keep vehicle column order)
         inflow = inflow.reset_index()
-        inflow.columns = ["hex_id", "state"] + ["Inflow_{}".format(vehicle) for vehicle in vehicle_columns]
+        inflow.columns = ["hex_id", "state"] + [
+            "Inflow_{}".format(vehicle) for vehicle in vehicle_columns
+        ]
 
         # to ensure that "fulfilled" comes before "missed" during unstacking
         inflow = inflow.sort_values(["hex_id", "state"])
@@ -706,12 +852,17 @@ class RebalancingSchedulerRidehailing:
 
         # Put together expected outflow and inflow
         result = hexagons.merge(inflow, on=["hex_id"], how="left", suffixes=("", ""))
-        result = result.merge(outflow, on=["hex_id"], how="left", suffixes=("_inflow", "_outflow"))
+        result = result.merge(
+            outflow, on=["hex_id"], how="left", suffixes=("_inflow", "_outflow")
+        )
         result.fillna(0, inplace=True)
 
         # Calculate Delta (Expected Inflow - Expected Outflow - Missed Demand)
         for vehicle in ordered_available_vehicle:
-            result["Delta_{}".format(vehicle)] = result["Inflow_{}".format(vehicle)] - result[
-                "OutFlow_Fulfilled_{}".format(vehicle)] - result["OutFlow_Missed_{}".format(vehicle)]
+            result["Delta_{}".format(vehicle)] = (
+                result["Inflow_{}".format(vehicle)]
+                - result["OutFlow_Fulfilled_{}".format(vehicle)]
+                - result["OutFlow_Missed_{}".format(vehicle)]
+            )
 
         return result
