@@ -29,4 +29,5 @@ dependencies:
       - line-profiler-pycharm
       - pqdm
       - psutil
-      - lovely-tensors
+      - lovely-tensor
+      - ruff
