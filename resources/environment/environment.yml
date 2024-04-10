@@ -22,8 +22,9 @@ dependencies:
   - pip:
       - partridge[full]
       - gtfs_kit
-      - mlrose
+      - git+https://github.com/gkhayes/mlrose.git
       - line-profiler-pycharm
       - pqdm
       - psutil
       - tensorflow
+      - ruff

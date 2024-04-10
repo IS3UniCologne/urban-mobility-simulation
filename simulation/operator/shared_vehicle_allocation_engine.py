@@ -1,12 +1,17 @@
 from simulation.agent.user import User
-from simulation.operator.data_transfer_object.transportation_alternative import TransportationAlternative
-from simulation.operator.data_transfer_object.vehicle_allocation import VehicleAllocation
-from simulation.operator.interface.vehicle_allocation_engine_interface import VehicleAllocationEngineInterface
+from simulation.operator.data_transfer_object.transportation_alternative import (
+    TransportationAlternative,
+)
+from simulation.operator.data_transfer_object.vehicle_allocation import (
+    VehicleAllocation,
+)
+from simulation.operator.interface.vehicle_allocation_engine_interface import (
+    VehicleAllocationEngineInterface,
+)
 from simulation.vehicle.vehicle import VehicleState
 
 
 class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
-
     def __init__(self, env):
         self._env = env
         self._vehicles_assigned_to_users = self._env.event()
@@ -31,8 +36,9 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
             self._vehicles_assigned_to_users = self._env.event()
             self._vehicle_assignment_requests.clear()
 
-
-    def request_vehicle_allocation(self, user: User, selected_transportation_alternative: TransportationAlternative) -> VehicleAllocation:
+    def request_vehicle_allocation(
+        self, user: User, selected_transportation_alternative: TransportationAlternative
+    ) -> VehicleAllocation:
         """
             Assign vehicle in transportation alternative to user
         :param user:
@@ -40,7 +46,9 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
         :return:
         """
 
-        self._vehicle_assignment_requests.append((user, selected_transportation_alternative))
+        self._vehicle_assignment_requests.append(
+            (user, selected_transportation_alternative)
+        )
 
         yield self._vehicles_assigned_to_users
 
@@ -51,10 +59,16 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
             return None
 
         # Vehicle was succesfully allocated
-        return VehicleAllocation(user, selected_vehicle, selected_transportation_alternative, selected_vehicle.position)
+        return VehicleAllocation(
+            user,
+            selected_vehicle,
+            selected_transportation_alternative,
+            selected_vehicle.position,
+        )
 
-
-    def notify_user_arrival_at_pick_up_position(self, vehicle_assignment: VehicleAllocation):
+    def notify_user_arrival_at_pick_up_position(
+        self, vehicle_assignment: VehicleAllocation
+    ):
         pass
 
         # For Autonomous Vehicles or Mass Transit (i.e., listen to position of vehicle)
@@ -70,6 +84,7 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
         yield self._env.timeout(10)
 
         from simulation.environment.geodesic_position import GeodesicPosition
+
         vehicle_assignment.vehicle.position = GeodesicPosition(55.3, 13.3)
 
         yield self._env.timeout(10)

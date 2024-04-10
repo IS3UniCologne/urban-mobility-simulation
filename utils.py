@@ -1,8 +1,9 @@
-from configparser import ConfigParser
-import geopandas as gpd
 import os
-from pathlib import Path
 import sys
+from configparser import ConfigParser
+from pathlib import Path
+
+import geopandas as gpd
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 
@@ -30,17 +31,17 @@ def load_environment():
     filename = env_layer_hex_9
     with open(filename, encoding="utf-8") as file:
         env_df_hex_9 = gpd.read_file(file, driver="GeoJSON")
-        env_df_hex_9.set_index('hex_id_9', inplace=True)
+        env_df_hex_9.set_index("hex_id_9", inplace=True)
 
     filename = env_layer_hex_8
     with open(filename, encoding="utf-8") as file:
         env_df_hex_8 = gpd.read_file(file)
-        env_df_hex_8.set_index('hex_id_8', inplace=True)
+        env_df_hex_8.set_index("hex_id_8", inplace=True)
 
     filename = env_layer_hex_7
     with open(filename, encoding="utf-8") as file:
         env_df_hex_7 = gpd.read_file(file)
-        env_df_hex_7.set_index('hex_id_7', inplace=True)
+        env_df_hex_7.set_index("hex_id_7", inplace=True)
 
     geodesic_environment = GeodesicEnvironment.getInstance()
     geodesic_environment.addLayer("bounding_box", env_df)

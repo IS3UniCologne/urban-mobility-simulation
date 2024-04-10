@@ -1,5 +1,7 @@
 from enum import Enum
+
 import numpy
+
 
 class PopulationType(Enum):
     CLUSTER_0 = 0
@@ -10,8 +12,7 @@ class PopulationType(Enum):
     CONVENIENCE_SEEKER = 5
 
 
-class PopulationFactory():
-
+class PopulationFactory:
     def __init__(self, prob, seed):
         # Random Number Generator
         self._random = numpy.random.RandomState(seed)
@@ -20,7 +21,6 @@ class PopulationFactory():
         self._prob = prob
 
     def generatePopulationType(self):
-
         pop_type = self._random.binomial(1, self._prob, 1)
 
         if pop_type == 0:
@@ -29,7 +29,6 @@ class PopulationFactory():
             return PopulationType.CONVENIENCE_SEEKER
 
     def generatePopulationTypeRideHailing(self):
-
         pop_type = self._random.multinomial(1, self._prob)
         if pop_type.argmax() == 0:
             return PopulationType.CLUSTER_0

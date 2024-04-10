@@ -1,16 +1,13 @@
+import logging
 from abc import ABC, abstractmethod
-from enum import Enum
 
 from simpy import Environment
 
-from simulation.agent.agent import Agent
-
-import logging
 from simulation.environment.position import Position
 from simulation.infrastructure.network.edge import Edge
 
 
-class VehicleState():
+class VehicleState:
     # because we can't mixin an enum into an enum, we use a object-based mixin
     INITIALIZED = 0
     PARKING = 1
@@ -23,7 +20,6 @@ class VehicleState():
     SOME_STATE = 1002
     RESERVED = 1001
     MOVING_TO_PICK_UP_POS = 1003
-
 
 
 class Vehicle(ABC):
@@ -60,14 +56,16 @@ class Vehicle(ABC):
         return self._position
 
     @position.setter
-    def position(self, position : Position):
+    def position(self, position: Position):
         self._position = position
 
         self._position_changed.succeed(self._position)
         self._position_changed = self._env.event()
 
-        logging.debug(f'Position updated {self._position}.',
-                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+        logging.debug(
+            f"Position updated {self._position}.",
+            extra={"clazz": self.__class__.__name__, "oid": self._id},
+        )
 
     # Methods
     @abstractmethod

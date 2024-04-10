@@ -45,8 +45,8 @@ class MixedSharedVehicleFleet(VehicleFleet):
         kick_scooters_in_area = []
         bikes_in_area = []
 
-        geo_env  = GeodesicEnvironment.getInstance()
-        config   = Configuration.instance()
+        geo_env = GeodesicEnvironment.getInstance()
+        Configuration.instance()
         geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
@@ -82,24 +82,35 @@ class MixedSharedVehicleFleet(VehicleFleet):
         kick_scooters_in_area = []
         bikes_in_area = []
 
-        geo_env  = GeodesicEnvironment.getInstance()
-        geometry = geo_env.get_hexagon(region)
-
+        # geo_env = GeodesicEnvironment.getInstance()
+        # geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
-            if car.position.get_default_hexagon() == region and car.state == VehicleState.PARKING:
+            if (
+                car.position.get_default_hexagon() == region
+                and car.state == VehicleState.PARKING
+            ):
                 cars_in_area.append(car)
 
         for scooter in self._scooters:
-            if scooter.position.get_default_hexagon() == region and scooter.state == VehicleState.PARKING:
+            if (
+                scooter.position.get_default_hexagon() == region
+                and scooter.state == VehicleState.PARKING
+            ):
                 scooters_in_area.append(scooter)
 
         for kick_scooter in self._kick_scooters:
-            if kick_scooter.position.get_default_hexagon() == region and kick_scooter.state == VehicleState.PARKING:
+            if (
+                kick_scooter.position.get_default_hexagon() == region
+                and kick_scooter.state == VehicleState.PARKING
+            ):
                 kick_scooters_in_area.append(kick_scooter)
 
         for bike in self._bikes:
-            if bike.position.get_default_hexagon() == region and bike.state == VehicleState.PARKING:
+            if (
+                bike.position.get_default_hexagon() == region
+                and bike.state == VehicleState.PARKING
+            ):
                 bikes_in_area.append(bike)
 
         return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
@@ -124,7 +135,9 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
         below_soc_level_vehicles = []
-        all_vehicle_list = self._cars + self._scooters + self._kick_scooters + self._bikes
+        all_vehicle_list = (
+            self._cars + self._scooters + self._kick_scooters + self._bikes
+        )
 
         for vehicle in all_vehicle_list:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
@@ -132,7 +145,9 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
         return len(below_soc_level_vehicles)
 
-    def get_all_vehicles_below_soc_level_in_region(self, state_of_charge_threshold, region):
+    def get_all_vehicles_below_soc_level_in_region(
+        self, state_of_charge_threshold, region
+    ):
         """
         Return all vehicles that need to be refueled/recharged in a region
         :param state_of_charge_threshold: between 0 and 1
@@ -141,7 +156,12 @@ class MixedSharedVehicleFleet(VehicleFleet):
         below_soc_level_vehicles = []
         cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = self.vehicles_in_region(region)
 
-        for vehicle in [*cars_in_area, *scooters_in_area, *kick_scooters_in_area, *bikes_in_area]:
+        for vehicle in [
+            *cars_in_area,
+            *scooters_in_area,
+            *kick_scooters_in_area,
+            *bikes_in_area,
+        ]:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
                 below_soc_level_vehicles.append(vehicle)
 
@@ -160,7 +180,12 @@ class MixedSharedVehicleFleet(VehicleFleet):
         return len(self._bikes)
 
     def count_total(self):
-        return self.count_cars()+self.count_bikes()+self.count_scooters()+self.count_kick_scooters()
+        return (
+            self.count_cars()
+            + self.count_bikes()
+            + self.count_scooters()
+            + self.count_kick_scooters()
+        )
 
     def calc_supply_per_region(self):
         """
@@ -169,10 +194,10 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
         available_vehicles = ["SharedKickScooter", "SharedScooter", "SharedCar"]
-        values = [0]*len(available_vehicles)
+        values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
-        vehicle_dict = dict(zip(available_vehicles, values))
+        # vehicle_dict = dict(zip(available_vehicles, values))
 
         supply = {}
 
@@ -184,7 +209,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
             elif mode == "SharedCar":
                 vehicle_list = self._cars
             else:
-                raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')
+                raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
                 hex_id = vehicle.position.get_default_hexagon()
@@ -205,10 +230,10 @@ class MixedSharedVehicleFleet(VehicleFleet):
                  e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
         available_vehicles = ["SharedKickScooter", "SharedScooter", "SharedCar"]
-        values = [0]*len(available_vehicles)
+        values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
-        vehicle_dict = dict(zip(available_vehicles, values))
+        # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = {}
 
@@ -220,7 +245,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
             elif mode == "SharedCar":
                 vehicle_list = self._cars
             else:
-                raise NotImplementedError(f'Fleet Not Ready to Work with {mode}')
+                raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
                 hex_id = vehicle.position.get_default_hexagon()

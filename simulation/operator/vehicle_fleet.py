@@ -26,10 +26,10 @@ class VehicleFleet(ABC):
         if vehicle not in self._vehicles:
             self._vehicles.append(vehicle)
         else:
-            raise Exception(f'Vehicle {vehicle} is already registered in Fleet')
+            raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
 
     def remove_vehicle(self, vehicle: Vehicle):
         if vehicle in self._vehicles:
             self._vehicles.remove(vehicle)
         else:
-            raise Exception(f'Vehicle {vehicle} is not registered in Fleet yet')
+            raise Exception(f"Vehicle {vehicle} is not registered in Fleet yet")

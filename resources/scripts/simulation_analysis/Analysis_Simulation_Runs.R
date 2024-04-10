@@ -35,14 +35,14 @@ data$energy_consumption_total <- data$SharedKickScooter_energy_consumption+data$
 ############################################
 # Economic Perspective      ################
 ############################################
-summary <- data %>% group_by(subs_bandwidth, price_sensitive_pop_prob) %>% 
-  summarise(exp_total_revenue = mean(total_revenue), 
+summary <- data %>% group_by(subs_bandwidth, price_sensitive_pop_prob) %>%
+  summarise(exp_total_revenue = mean(total_revenue),
             exp_rev_ks = mean(SharedKickScooter_revenue), exp_rev_s = mean(SharedScooter_revenue), exp_rev_c = mean(SharedCar_revenue),
             exp_dis_ks = mean(SharedKickScooter_distance), exp_dis_s = mean(SharedScooter_distance), exp_dis_c = mean(SharedCar_distance),
             exp_dur_ks = mean(SharedKickScooter_duration), exp_dur_s = mean(SharedScooter_duration), exp_dur_c = mean(SharedCar_duration),
             exp_ec_ks = mean(SharedKickScooter_energy_consumption), exp_ec_s = mean(SharedScooter_energy_consumption), exp_ec_c = mean(SharedCar_energy_consumption),
             exp_total_cost = mean(total_cost_per_day),
-            exp_total_profit = mean(total_revenue) - mean(total_cost_per_day), 
+            exp_total_profit = mean(total_revenue) - mean(total_cost_per_day),
             exp_service_quality = 1-mean(total_missed_trips/(total_fulfilled_trips+total_missed_trips)))
 
 summary
@@ -129,8 +129,8 @@ cat(out)
 ############################################
 # Environmental Perspective ################
 ############################################
-summary <- data %>% group_by(subs_bandwidth, price_sensitive_pop_prob) %>% 
-  summarise(exp_total_trips = mean(total_fulfilled_trips), exp_total_missed_trips = mean(total_missed_trips), 
+summary <- data %>% group_by(subs_bandwidth, price_sensitive_pop_prob) %>%
+  summarise(exp_total_trips = mean(total_fulfilled_trips), exp_total_missed_trips = mean(total_missed_trips),
             exp_ks_c = mean(SharedKickScooter_SharedCar), exp_ks_s = mean(SharedKickScooter_SharedScooter), exp_ks_ks = mean(SharedKickScooter_SharedKickScooter),
             exp_s_c = mean(SharedScooter_SharedCar), exp_s_s = mean(SharedScooter_SharedScooter), exp_s_ks = mean(SharedScooter_SharedKickScooter),
             exp_c_c = mean(SharedCar_SharedCar), exp_c_s = mean(SharedCar_SharedScooter), exp_c_ks = mean(SharedCar_SharedKickScooter),
@@ -283,7 +283,7 @@ exp_c_s_trips_fr <- sprintf(exp_c_s_trips, format(round(summary %>% filter(subs_
                                    format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_c_s,0),nsmall=0, big.mark=",")
 )
 
-### Duration 
+### Duration
 exp_dur_total = " Total Trip Duration (h)& %s &  %s &  %s &  %s &&  %s &  %s & %s & %s \\\\"
 exp_dur_ks = "\\hspace{3.5ex}By Kick Scooter & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
 exp_dur_s = "\\hspace{3.5ex}By Scooter & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
@@ -329,7 +329,7 @@ exp_dur_c_fr <- sprintf(exp_dur_c, format(round(summary %>% filter(subs_bandwidt
                                format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dur_c,0),nsmall=0, big.mark=",")
 )
 
-### Distance 
+### Distance
 exp_dis_total = " Total Trip Distance (km)& %s &  %s &  %s &  %s &&  %s &  %s & %s & %s \\\\"
 exp_dis_ks = "\\hspace{3.5ex}By Kick Scooter & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
 exp_dis_s = "\\hspace{3.5ex}By Scooter & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
@@ -375,7 +375,7 @@ exp_dis_c_fr <- sprintf(exp_dis_c, format(round(summary %>% filter(subs_bandwidt
                         format(round(summary %>% filter(subs_bandwidth==0.2, price_sensitive_pop_prob == 0) %>% .$exp_dis_c,0),nsmall=0, big.mark=",")
 )
 
-### Energy Consumption 
+### Energy Consumption
 exp_ec_total = " Total Energy Consumption (kWh) & %s &  %s &  %s &  %s &&  %s &  %s & %s & %s \\\\"
 exp_ec_ks = "\\hspace{3.5ex}By Kick Scooter & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
 exp_ec_s = "\\hspace{3.5ex}By Scooter & %s & %s & %s & %s && %s & %s & %s & %s \\\\"
@@ -424,8 +424,8 @@ exp_ec_c_fr <- sprintf(exp_ec_c, format(round(summary %>% filter(subs_bandwidth=
 # Concat Partial Strings
 out <- paste(exp_daily_trips_fr, exp_daily_missed_trips_fr, exp_ks_trips_fr, exp_ks_s_trips_fr,
              exp_ks_c_trips_fr, exp_s_trips_fr, exp_s_ks_trips_fr, exp_s_c_trips_fr, exp_c_trips_fr,
-             exp_c_ks_trips_fr, exp_c_s_trips_fr, 
-             exp_dis_total_fr, exp_dis_ks_fr, exp_dis_s_fr, exp_dis_c_fr, 
+             exp_c_ks_trips_fr, exp_c_s_trips_fr,
+             exp_dis_total_fr, exp_dis_ks_fr, exp_dis_s_fr, exp_dis_c_fr,
              exp_dur_total_fr, exp_dur_ks_fr, exp_dur_s_fr, exp_dur_c_fr,
              exp_ec_total_fr, exp_ec_ks_fr, exp_ec_s_fr, exp_ec_c_fr)
 # Output for Latex
