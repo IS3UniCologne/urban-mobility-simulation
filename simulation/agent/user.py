@@ -190,8 +190,6 @@ class User(Agent, DriverInterface):
 
                 continue  # retry again until vehicle supply is depleted
 
-
-
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
             yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
@@ -366,7 +364,7 @@ class User(Agent, DriverInterface):
         self._transportation_alternatives_selected.succeed(
             selected_transportation_alternative
         )
-        logging.info(
+        logging.debug(
             f"Selected transportation alternative: {type(selected_transportation_alternative.vehicle)}. For the price: {selected_transportation_alternative.price}",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
@@ -450,7 +448,6 @@ class User(Agent, DriverInterface):
 
     def start_driving(self, vehicle_allocation: VehicleAllocation):
 
-        logging.debug(f"start_driving of {vehicle_allocation.vehicle.id}")
         # Wait for event
         yield self._assigned_vehicle_arrived
 
@@ -486,7 +483,7 @@ class User(Agent, DriverInterface):
         # Update current state
         self._state = UserState.FULFILLED
         logging.debug(
-            f"Vehicle transport request of user {self._id} has been successfully fulfilled.",
+            f"Transport request of user {self._id} has been successfully fulfilled.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 

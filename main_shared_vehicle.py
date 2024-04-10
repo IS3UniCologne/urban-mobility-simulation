@@ -518,7 +518,7 @@ all_simulations = pd.DataFrame()
 
 
 # End Time
-T = 720
+T = 20
 
 # Real Run
 run_single_simulation(

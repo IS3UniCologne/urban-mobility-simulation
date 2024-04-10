@@ -38,7 +38,7 @@ class TransportationAlternative:
 
     @property
     def convenience(self):
-        return self._convenience\
+        return self._convenience
 
     @property
     def waiting_time(self):

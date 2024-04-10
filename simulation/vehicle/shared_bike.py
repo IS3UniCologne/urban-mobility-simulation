@@ -13,8 +13,8 @@ class SharedBike(SharedVehicle):
         env: Environment,
         position,
         max_available_seats=1,
-        velocity=333.33,
-        price_per_min=0.19,
+        velocity=47.,
+        price_per_min=0.08,
     ):
         """
 
