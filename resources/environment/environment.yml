@@ -27,3 +27,4 @@ dependencies:
       - pqdm
       - psutil
       - tensorflow
+      - ruff

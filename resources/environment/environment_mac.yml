@@ -29,3 +29,4 @@ dependencies:
       - psutil
       - tensorflow-macos
       - tensorflow-metal
+      - ruff
