@@ -1,7 +1,9 @@
 from pathlib import Path
-import pandas as pd
-import numpy as np
 
+import numpy as np
+import pandas as pd
+
+from simulation.agent.user import User  # must come before DemandFactory, otherwise circular imports
 from simulation.helper.configuration.configuration import Configuration, VehicleConfig, ModeChoiceConfig, \
     SharedVehicleOperatorConfig, ChargingInfrastructureConfig
 from simulation.infrastructure.charging_stations.charging_infastructure import ChargingInfrastructure
@@ -11,17 +13,15 @@ from simulation.operator.operations_management.operations import Operations
 from simulation.operator.operations_management.relocation_scheduler import RelocationScheduler
 from simulation.operator.operations_management.service_worker import ServiceWorker
 from simulation.operator.operations_management.task_queue import TaskQueue
-from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import \
-    DistanceBasedSharedVehicleVehicleChoiceBehavior
-from simulation.agent.user import User # must come before DemandFactory, otherwise circular imports
-from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import OnlyCarVehicleChoiceBehavior
-from simulation.world.demand.demand_factory import DemandFactory
-from simulation.world.demand.demand_importer import DemandImporter
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
+from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import OnlyCarVehicleChoiceBehavior
+from simulation.world.demand.demand_factory import DemandFactory
+from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
+
 pd.set_option('display.max_columns', None)
 import simpy
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -51,7 +51,7 @@ parser = ConfigParser()
 parser.read(sys.argv[1])
 
 # World Config
-spatial_res  = parser.getint("WORLD", "SPATIAL_RESOLUTION")
+spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
 temporal_res = parser.getint("WORLD", "TEMPORAL_RESOLUTION")
 daily_res = parser.getint("WORLD", "daily_resolution")
 city = parser.get("WORLD", "city")
@@ -77,7 +77,6 @@ for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK
     vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter", "SharedBike"]
     price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
     max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
-
 
     energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
     velocity = parser.getfloat(vehicle_type, "VELOCITY")
@@ -106,11 +105,6 @@ mode_choice_available_modes = parser.get("MODE_CHOICE_MODEL", "available_modes")
 mode_choice_available_modes = mode_choice_available_modes.split(',')
 
 # User Configuration
-mode_choice_model_path = parser.get("MODE_CHOICE_MODEL", "path_to_mode_choice_model")
-mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
-mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
-mode_choice_available_modes = parser.get("MODE_CHOICE_MODEL", "available_modes")
-mode_choice_available_modes = mode_choice_available_modes.split(",")
 AV_trust = parser.get("MODE_CHOICE_MODEL", "AV_trust").split(",")
 AV_trust = [float(x) for x in AV_trust]
 pop_prob = parser.get("MODE_CHOICE_MODEL", "population_probabilities").split(",")
@@ -144,8 +138,8 @@ global_config.add_shared_vehicle_operator_config(svoc)
 # Output Configuration
 store_results = parser.getboolean("OUTPUT", "persist_results")
 output_folder = parser.get("OUTPUT", "output_folder")
-transaction_file   = parser.get("OUTPUT", "transaction_file")
-fleet_state_file   = parser.get("OUTPUT", "fleet_state_file")
+transaction_file = parser.get("OUTPUT", "transaction_file")
+fleet_state_file = parser.get("OUTPUT", "fleet_state_file")
 
 global_config.set_store_results(store_results)
 global_config.set_output_path(output_folder)
@@ -162,9 +156,11 @@ log_level = parser.get("SETTINGS", "log_level")
 # # # # # # # # # # # # # # # # # # # # # #
 
 import logging
+
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p')
 
 logger = logging.getLogger()
 logger.setLevel(log_level)
@@ -175,6 +171,7 @@ logging.getLogger("fiona").setLevel(logging.WARNING)
 # Add Custom Init Filters (which work without the ENV obj)
 cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
 logger.addFilter(cf_init)
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -190,7 +187,7 @@ def load_environment():
 
     filename = env_layer_hex_9
     with open(filename) as file:
-        env_df_hex_9 = gpd.read_file(file, driver= "GeoJSON")
+        env_df_hex_9 = gpd.read_file(file, driver="GeoJSON")
         env_df_hex_9.set_index('hex_id_9', inplace=True)
 
     filename = env_layer_hex_8
@@ -210,6 +207,7 @@ def load_environment():
     geodesic_environment.addLayer("hex_7", env_df_hex_7)
 
     return geodesic_environment
+
 
 # Load Spatial Environment
 load_environment()
@@ -238,25 +236,26 @@ hexagons = geodesic_environment.getLayer(f"hex_{spatial_res}").index.tolist()
 dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure", city)
 distance_matrix = dmi.load_distance_matrix()
 
+
 def run_single_simulation(
-    start_time=0,
-    end_time=20,
-    n_cars=0,
-    n_scooter=0,
-    n_kick_scooter=0,
-    n_bikes=0,
-    seed=42,
-    phase=1,
-    AV_trust=AV_trust,
-    pop_prob=pop_prob,
-    allocation=None,
-    EV_penetration=1,
-    AV_penetration=1,
-    returnDataFrame=False,
-    charging_capacity=20,
-    charging_power=50,
-    substitution = 0.1,
-    price_sensitive_pop_prob = 0.0
+        start_time=0,
+        end_time=20,
+        n_cars=0,
+        n_scooter=0,
+        n_kick_scooter=0,
+        n_bikes=0,
+        seed=42,
+        phase=1,
+        AV_trust=AV_trust,
+        pop_prob=pop_prob,
+        allocation=None,
+        EV_penetration=1,
+        AV_penetration=1,
+        returnDataFrame=False,
+        charging_capacity=20,
+        charging_power=50,
+        substitution=0.1,
+        price_sensitive_pop_prob=0.0
 ):
     """
     :param price_params_ride_hailing:
@@ -314,7 +313,8 @@ def run_single_simulation(
 
     # Vehicle Choice Model
     if mode_choice_strategy == "substitution":
-        vehicle_choice_model = OnlyCarVehicleChoiceBehavior(['SharedScooter', 'SharedKickScooter', 'SharedCar', 'SharedBike'])
+        vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
+            ['SharedScooter', 'SharedKickScooter', 'SharedCar', 'SharedBike'])
     else:
         raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
@@ -329,10 +329,6 @@ def run_single_simulation(
         "Charging_Infrastructure", "BASE_REGIONS"
     ).split(",")[:number_of_charging_stations]
     ### Activate it if there are specific capacity for charging stations
-    # charging_power_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_POWER").split(',')
-    # charging_power_list = [float(x) for x in charging_power_list]
-    # charging_capacity_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_CAPACITY").split(',')
-    # charging_capacity_list = [float(x) for x in charging_capacity_list]
     charging_power_list = list(np.zeros(len(charging_location_list)) + charging_power)
     charging_capacity_list = list(
         np.zeros(len(charging_location_list)) + charging_capacity
@@ -378,7 +374,8 @@ def run_single_simulation(
     # # # # # # # # # # # # # # # # # # # # # #
     supply_prob = pd.read_csv(supply_file_path)
 
-    fleet_config = generate_fleet_config(supply_prob, n_cars=n_cars, n_scooter=n_scooter, n_kick_scooter=n_kick_scooter, n_bikes=n_bikes)
+    fleet_config = generate_fleet_config(supply_prob, n_cars=n_cars, n_scooter=n_scooter, n_kick_scooter=n_kick_scooter,
+                                         n_bikes=n_bikes)
     mixed_fleet = generate_mixed_fleet(env, fleet_config)
 
     # # # # # # # # # # # # # # # # # # # # # #
@@ -409,10 +406,12 @@ def run_single_simulation(
     task_queue = TaskQueue(env)
 
     # Init Operations Module
-    ops = Operations(env, mixed_fleet, no_service_workers, global_config.shared_vehicle_operator_config.operations_start,
+    ops = Operations(env, mixed_fleet, no_service_workers,
+                     global_config.shared_vehicle_operator_config.operations_start,
                      global_config.shared_vehicle_operator_config.operations_duration, rs,
                      payment_engines["shared_vehicle"], available_vehicle_modes,
-                     available_vehicle_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold, task_queue)
+                     available_vehicle_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold,
+                     task_queue)
 
     env.process(ops.timer())
     env.process(ops.run_operations())
@@ -429,96 +428,16 @@ def run_single_simulation(
     logging.warning(f"Starting Simulation.",
                     extra={"clazz": "main", "oid": ""})
 
-    env.run(until = end_time)
+    env.run(until=end_time)
 
     payment_engines["shared_vehicle"].get_transactions().to_excel('./transactions.xlsx')
 
     logging.warning(f"Simulation Finished.",
                     extra={"clazz": "main", "oid": ""})
 
-    # Daily Total Cost (CAPEX+OPEX) (cost derived from RevCalc excel in iCloud folder)
-    total_cost_per_day =(global_config.get_vehicle_config("SharedCar").daily_total_cost*n_cars
-                         +global_config.get_vehicle_config("SharedScooter").daily_total_cost*n_scooter
-                         +global_config.get_vehicle_config("SharedKickScooter").daily_total_cost*n_kick_scooter)*(end_time/1440)
-
-    #print("Total Revenue: " + str(payment_engine.total_revenue))
-    #print("Total Costs: " + str(total_cost_per_day))
-    #print("Profit: " + str(payment_engine.total_revenue-total_cost_per_day))
-
-    #print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
-    #print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
-    #print("Total Missed Revenue: " + str(payment_engine.total_missed_revenue))
-
-    no_vehicles_to_be_charged = mixed_fleet.get_all_vehicles_below_soc_level(global_config.shared_vehicle_operator_config.recharge_threshold)
-
-    #print("Number of Vehicles to be charged: " + str(no_vehicles_to_be_charged))
-
-    # Final Objective Function for Heuristic Search
-    func_objective = payment_engines['shared_vehicle'].total_revenue-total_cost_per_day-payment_engines['shared_vehicle'].total_missed_revenue
-    #print("Objective Function:" + str(func_objective))
-    transactions = payment_engines['shared_vehicle'].get_transactions()
-
-    if store_results:
-        transactions.to_csv(Path(output_folder, transaction_file), index = False)
-
-    # print(DemandFactory.counter)
-
-    if returnDataFrame:
-        # Persist Results
-        result = {
-            "n_cars":[n_cars],
-            "n_scooter":[n_scooter],
-            "n_kick_scooter":[n_kick_scooter],
-            "n_bikes":[n_bikes],
-            "subs_bandwidth":[substitution],
-            "price_sensitive_pop_prob":[price_sensitive_pop_prob],
-            "seed":[seed],
-            "total_revenue":[payment_engines['shared_vehicle'].total_revenue],
-            "total_cost_per_day":[total_cost_per_day],
-            "total_profit":[payment_engines['shared_vehicle'].total_revenue-total_cost_per_day],
-            "total_fulfilled_trips":[payment_engines['shared_vehicle'].total_fulfilled_trips],
-            "total_missed_trips":[payment_engines['shared_vehicle'].total_missed_trips],
-            "total_missed_revenue":[payment_engines['shared_vehicle'].total_missed_revenue],
-            "vehicles_to_be_charged":[no_vehicles_to_be_charged]
-        }
-
-        # Calculate performance indicators per mode
-        indicators_per_mode = transactions[transactions["selected_vehicle_mode"]!='None'].groupby(["selected_vehicle_mode"]).agg({"price":"sum", "duration":"sum", "distance":"sum", "energy_consumption":"sum"})
-
-        # Count Trips by Vehicle Type
-        overall_rentals = pd.DataFrame(result)
-        for mode in available_vehicle_modes:
-            rentals = transactions[transactions["selected_vehicle_mode"]==mode].groupby("state").agg({"SharedCar":"sum", "SharedScooter":"sum", "SharedKickScooter":"sum"}).reset_index(drop=True)
-            rentals = rentals.add_prefix('{}_'.format(mode))
-            overall_rentals = pd.concat([overall_rentals, rentals], axis=1)
-
-            # Prepare KPI per Mode (Distance, Duration, Revenue)
-            kpi_for_mode = indicators_per_mode.loc[[mode]].reset_index(drop=True)
-            kpi_for_mode.rename(columns={"price":"revenue"}, inplace=True) # to avoid future confusion
-            kpi_for_mode = kpi_for_mode.add_prefix('{}_'.format(mode))
-            overall_rentals = pd.concat([overall_rentals, kpi_for_mode], axis=1)
-
-
-        return overall_rentals
-    else:
-        return (payment_engines['shared_vehicle'].total_revenue, total_cost_per_day,
-                payment_engines['shared_vehicle'].total_revenue-total_cost_per_day,
-                payment_engines['shared_vehicle'].total_fulfilled_trips, payment_engines['shared_vehicle'].total_missed_trips,
-                payment_engines['shared_vehicle'].total_missed_revenue, no_vehicles_to_be_charged, func_objective)
-
-
-
-# Random Variables for our Monte Carlo Run
-import random
-random.seed(42)
-seeds = random.sample(range(10000), 100)
-
-# Store all simulation results in this data frame
-all_simulations = pd.DataFrame()
-
 
 # End Time
-T = 20
+T = 1440
 
 # Real Run
 run_single_simulation(
@@ -529,4 +448,3 @@ run_single_simulation(
     n_kick_scooter=800,
     n_bikes=800
 )
-
