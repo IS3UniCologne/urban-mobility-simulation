@@ -11,7 +11,6 @@ from simulation.vehicle.vehicle import VehicleState
 
 
 class MixedSharedVehicleFleet(VehicleFleet):
-
     def __init__(self, env: Environment):
         super(MixedSharedVehicleFleet, self).__init__(env)
 
@@ -154,7 +153,9 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
         below_soc_level_vehicles = []
-        cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = self.vehicles_in_region(region)
+        cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = (
+            self.vehicles_in_region(region)
+        )
 
         for vehicle in [
             *cars_in_area,

@@ -2,14 +2,23 @@ from simpy import Environment
 
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
+
 # TODO: why does this inherit from RideHailingVehicle, not RideHailingCar?
 class RideHailingAV(RideHailingVehicle):
-
     # Autonomous Ride Hailing Car Counter
     ride_hailing_car_id = 0
     vehicle_type = "ridehailing_AV"
 
-    def __init__(self, env: Environment, position, max_available_seats=4, max_state_of_charge=16.7, energy_consumption=0.152, velocity = 833.33, price_per_min = 0.26):
+    def __init__(
+        self,
+        env: Environment,
+        position,
+        max_available_seats=4,
+        max_state_of_charge=16.7,
+        energy_consumption=0.152,
+        velocity=833.33,
+        price_per_min=0.26,
+    ):
         """
 
         :param env:
@@ -20,7 +29,15 @@ class RideHailingAV(RideHailingVehicle):
         :param energy_consumption: 15.2 kWh/100km as per Smart EQ specification
         :param velocity:
         """
-        super(RideHailingAV, self).__init__(env, position, max_available_seats, max_state_of_charge, energy_consumption, velocity, price_per_min)
+        super(RideHailingAV, self).__init__(
+            env,
+            position,
+            max_available_seats,
+            max_state_of_charge,
+            energy_consumption,
+            velocity,
+            price_per_min,
+        )
 
         # Increment Shared Car ID
         self.car_id = RideHailingAV.ride_hailing_car_id

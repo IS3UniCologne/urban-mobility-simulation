@@ -8,7 +8,6 @@ from simulation.operator.data_transfer_object.transportation_alternative import 
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
 )
-from simulation.operator.interface.fleet_interface import FleetInterface
 from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.vehicle_fleet import VehicleFleet

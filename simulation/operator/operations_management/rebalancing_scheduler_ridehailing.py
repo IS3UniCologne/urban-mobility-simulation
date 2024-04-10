@@ -64,7 +64,9 @@ class RebalancingSchedulerRidehailing:
         # if config.store_results:
         #     state.to_csv(Path(config.output_path, config.fleet_state_file), index = False)
 
-        charging_plans = self.calculate_charging_plan(vehicles_to_charge, charging_stations)
+        charging_plans = self.calculate_charging_plan(
+            vehicles_to_charge, charging_stations
+        )
 
         return charging_plans
 
@@ -113,9 +115,7 @@ class RebalancingSchedulerRidehailing:
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
                         available_charging_stations = [
-                            x
-                            for x in charging_stations
-                            if len(x.plugs.queue) <= queue
+                            x for x in charging_stations if len(x.plugs.queue) <= queue
                         ]
                         if len(available_charging_stations) > 0:
                             selected_charging_station = [
