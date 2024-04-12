@@ -271,58 +271,58 @@ class World:
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
 
-        def _cleanup_user(self, user, user_uid):
-            yield user.process_finished
+    def _cleanup_user(self, user, user_uid):
+        yield user.process_finished
 
-            self._tracking.unregister_by_uid(user_uid)
+        self._tracking.unregister_by_uid(user_uid)
 
-        def add_vehicle(self, vehicle: Vehicle):
-            self._vehicles.append(vehicle)
+    def add_vehicle(self, vehicle: Vehicle):
+        self._vehicles.append(vehicle)
 
-            # TODO: register vehicle with tracking
+        # TODO: register vehicle with tracking
 
-        def remove_vehicle(self, vehicle: Vehicle):
-            self._vehicles.remove(vehicle)
+    def remove_vehicle(self, vehicle: Vehicle):
+        self._vehicles.remove(vehicle)
 
-            # TODO: de-register vehicle with tracking
+        # TODO: de-register vehicle with tracking
 
-        @property
-        def users(self):
-            return self._users
+    @property
+    def users(self):
+        return self._users
 
-        @property
-        def vehicles(self):
-            return self._vehicles
+    @property
+    def vehicles(self):
+        return self._vehicles
 
-        @property
-        def charging_infrastructure(self):
-            return self._charging_infrastructure
+    @property
+    def charging_infrastructure(self):
+        return self._charging_infrastructure
 
-        @property
-        def changed(self):
-            return self._changed
+    @property
+    def changed(self):
+        return self._changed
 
-        @changed.setter
-        def changed(self, event):
-            self._changed = event
+    @changed.setter
+    def changed(self, event):
+        self._changed = event
 
-        def stop_all_processes(self):
-            # stop demand generation
-            for d in self.demand_processes:
-                try:
-                    d.interrupt()
-                except RuntimeError:
-                    # already terminated
-                    pass
+    def stop_all_processes(self):
+        # stop demand generation
+        for d in self.demand_processes:
+            try:
+                d.interrupt()
+            except RuntimeError:
+                # already terminated
+                pass
 
-            # clean up user demands
-            for u in self.user_processes:
-                try:
-                    u["proc"].interrupt()
-                except RuntimeError:
-                    # already terminated
-                    pass
+        # clean up user demands
+        for u in self.user_processes:
+            try:
+                u["proc"].interrupt()
+            except RuntimeError:
+                # already terminated
+                pass
 
-        def user_process_by_id(self, user_id):
-            procs = [p for p in self._user_processes if p["id"] == user_id]
-            return procs[0]  # TODO: what about some error handling
+    def user_process_by_id(self, user_id):
+        procs = [p for p in self._user_processes if p["id"] == user_id]
+        return procs[0]  # TODO: what about some error handling
