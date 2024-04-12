@@ -28,3 +28,4 @@ dependencies:
       - psutil
       - torch
       - lovely-tensors
+      - ruff
