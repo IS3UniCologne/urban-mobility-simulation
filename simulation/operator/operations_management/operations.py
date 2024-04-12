@@ -93,10 +93,14 @@ class Operations:
             # Retrieve Vehicle Transactions
             transactions = self._payment_engine.get_transactions()
 
-            condition = (transactions['selected_vehicle_mode'].apply(lambda x: x == 'None')).all()
+            condition = (
+                transactions["selected_vehicle_mode"].apply(lambda x: x == "None")
+            ).all()
 
             if condition:
-                logging.debug('Skip operations, cause there has not been one successful transaction yet')
+                logging.debug(
+                    "Skip operations, cause there has not been one successful transaction yet"
+                )
                 continue
 
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge

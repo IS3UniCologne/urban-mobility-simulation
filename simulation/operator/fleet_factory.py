@@ -315,7 +315,7 @@ def generate_mixed_fleet(env, fleet_config):
                 pos,
                 b_config.max_available_seats,
                 b_config.velocity,
-                b_config.price_per_min
+                b_config.price_per_min,
             )
             fleet.add_shared_vehicle(bike)
 
