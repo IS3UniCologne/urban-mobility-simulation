@@ -13,7 +13,7 @@ class SharedBike(SharedVehicle):
         env: Environment,
         position,
         max_available_seats=1,
-        velocity=47.,
+        velocity=47.0,
         price_per_min=0.08,
     ):
         """
@@ -25,13 +25,7 @@ class SharedBike(SharedVehicle):
         :param velocity:
         """
         super(SharedBike, self).__init__(
-            env,
-            position,
-            max_available_seats,
-            1,
-            0.0,
-            velocity,
-            price_per_min
+            env, position, max_available_seats, 1, 0.0, velocity, price_per_min
         )
 
         # Increment Shared Car ID
@@ -46,6 +40,4 @@ class SharedBike(SharedVehicle):
         :param distance: Distance driven
         """
 
-        logging.debug(
-            f"Skip Charge updating of Bike"
-        )
+        logging.debug("Skip Charge updating of Bike")

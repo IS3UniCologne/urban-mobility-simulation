@@ -170,7 +170,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = SharedVehicleState.PARKING
 
         logging.debug(
-            f"Vehicle {self._id} parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
+            "Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
     def reserve(self, user):
@@ -310,7 +310,11 @@ class SharedVehicle(Vehicle, ABC):
         :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
         :return:
         """
-        if self._driver is not None or self.state == SharedVehicleState.RESERVED or len(self._seats) > 0:
+        if (
+            self._driver is not None
+            or self.state == SharedVehicleState.RESERVED
+            or len(self._seats) > 0
+        ):
             logging.debug(
                 f"Vehicle {self._id} has a driver. Revoke relocation task.",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},

@@ -1,15 +1,13 @@
 import logging
 from pathlib import Path
-
 import h3
-
 import sys
 import six
-sys.modules["sklearn.externals.six"] = six
-import mlrose as mlrose
-import pandas as pd
-
 from simulation.helper.configuration.configuration import Configuration
+
+sys.modules["sklearn.externals.six"] = six
+import mlrose as mlrose  # noqa
+import pandas as pd  # noqa
 
 
 class RelocationScheduler:
@@ -302,9 +300,7 @@ class RelocationScheduler:
 
         current_low_soc_supply = []
 
-
         for mode in self._available_vehicle_modes:
-
             # Service Worker Charging Capacity per Mode
             max_capacity_per_unit = self.get_max_capacity_per_unit(mode)
 
@@ -317,7 +313,9 @@ class RelocationScheduler:
 
         low_fraction_per_mode = [
             curr_low_supply / max_supply if max_supply != 0 else 0
-            for curr_low_supply, max_supply in zip(current_low_soc_supply, max_vehicle_supply)
+            for curr_low_supply, max_supply in zip(
+                current_low_soc_supply, max_vehicle_supply
+            )
         ]
 
         # Temporary Denom
@@ -803,51 +801,59 @@ class RelocationScheduler:
         # Calculate Residual Supply for each vehicle type
         # RS = Supply - Low SoC Vehicles - Delta Demand (i.e., E[Inflow]-E[Outflow]-E[Missed Trips]
         for vehicle in self._available_vehicle_modes:
-            if vehicle == 'SharedBike':
+            if vehicle == "SharedBike":
                 # + Delta because delta is negative or positive based on calc delta demand
                 state[f"Residual_Supply_{vehicle}"] = (
-                        state[vehicle] + state[f"Delta_{vehicle}"]
+                    state[vehicle] + state[f"Delta_{vehicle}"]
                 )
             else:
                 # + Delta because delta is negative or positive based on calc delta demand
                 state[f"Residual_Supply_{vehicle}"] = (
-                    state[vehicle] - state[f"{vehicle}_Low_SoC"] + state[f"Delta_{vehicle}"]
+                    state[vehicle]
+                    - state[f"{vehicle}_Low_SoC"]
+                    + state[f"Delta_{vehicle}"]
                 )
 
         return state
 
     def estimate_delta_demand(self, transactions, ordered_available_vehicle):
         """
-            Compute the expected demand in a hexagon based on collected rental transactions from the simulation.
+        Compute the expected demand in a hexagon based on collected rental transactions from the simulation.
 
-            Transactions: Transaction Records from the Payment Interface
-            Ordered_Available_Vehicle: List with Available Vehicles and Natural Ordering of Preference in case of neutrality
-                i.e., the following hodls
-                    ordered_available_vehicle[i] = 1 and ordered_available_vehicle[k] = 1
+        Transactions: Transaction Records from the Payment Interface
+        Ordered_Available_Vehicle: List with Available Vehicles and Natural Ordering of Preference in case of neutrality
+            i.e., the following hodls
+                ordered_available_vehicle[i] = 1 and ordered_available_vehicle[k] = 1
 
-                                            k > i
+                                        k > i
 
-                    =>
+                =>
 
-                    Demand is counted for: ordered_available_vehicle[i] as we assume preference order i << k
+                Demand is counted for: ordered_available_vehicle[i] as we assume preference order i << k
 
-            We calculate for each vehicle type -- based on the previous assumption -- the delta demand:
+        We calculate for each vehicle type -- based on the previous assumption -- the delta demand:
 
-                    E[Delta Demand| Hexagon ID] = E[Inflow | Hexagon ID] - E[Outflow s| Hexagon ID] - E[Missed Trips | Hexagon ID]
+                E[Delta Demand| Hexagon ID] = E[Inflow | Hexagon ID] - E[Outflow s| Hexagon ID] - E[Missed Trips | Hexagon ID]
         """
         transactions = transactions.copy()
 
-        diff = set(transactions["selected_vehicle_mode"].unique()) - set(ordered_available_vehicle + ['None'])
+        diff = set(transactions["selected_vehicle_mode"].unique()) - set(
+            ordered_available_vehicle + ["None"]
+        )
 
         if len(diff) > 0:
-           raise RuntimeError('There are more vehicle types than defined in ordered available vehicle')
+            raise RuntimeError(
+                "There are more vehicle types than defined in ordered available vehicle"
+            )
 
         if len(set(transactions["selected_vehicle_mode"].unique())) == 1:
-           raise RuntimeError('There are not enough transactions to calculate historical values')
+            raise RuntimeError(
+                "There are not enough transactions to calculate historical values"
+            )
 
         # Rearrange Columns according to Vehicle Preferences
         cols = transactions.columns.tolist()
-        cols = cols[:-(len(ordered_available_vehicle))] + ordered_available_vehicle
+        cols = cols[: -(len(ordered_available_vehicle))] + ordered_available_vehicle
 
         # Rearrange Columns
         transactions = transactions[cols]
@@ -855,19 +861,29 @@ class RelocationScheduler:
         # Get the cheapest (most-preferred) mode for that trip.
         # In other words, if a trip can be undertaken either by scooter or car, count this as a scooter trip
         # Finden Sie für jede origin-destination Kombination den günstigsten Fahrzeugmodus
-        cheapest_modes = transactions.groupby(['origin', 'destination']).apply(
-            lambda group: group.loc[group['price'].idxmin(), 'selected_vehicle_mode']
-        ).reset_index(name='cheapest_vehicle_mode')
+        cheapest_modes = (
+            transactions.groupby(["origin", "destination"])
+            .apply(
+                lambda group: group.loc[
+                    group["price"].idxmin(), "selected_vehicle_mode"
+                ]
+            )
+            .reset_index(name="cheapest_vehicle_mode")
+        )
 
         # Fügen Sie die Information über den günstigsten Fahrzeugmodus zum ursprünglichen DataFrame hinzu
-        transactions = pd.merge(transactions, cheapest_modes, on=['origin', 'destination'], how='left')
+        transactions = pd.merge(
+            transactions, cheapest_modes, on=["origin", "destination"], how="left"
+        )
 
         # (All) Hexagons
-        hexagons = pd.unique(transactions[["origin", "destination"]].values.ravel('K'))
+        hexagons = pd.unique(transactions[["origin", "destination"]].values.ravel("K"))
         hexagons = pd.DataFrame(hexagons, columns=["hex_id"])
 
         # Calculate Expected Outflow
-        outflow = transactions.groupby(["origin", "state", "cheapest_vehicle_mode"]).agg({"destination": "count"})
+        outflow = transactions.groupby(
+            ["origin", "state", "cheapest_vehicle_mode"]
+        ).agg({"destination": "count"})
 
         # Unstack Vehicle Type Level
         outflow = outflow.unstack()
@@ -886,22 +902,28 @@ class RelocationScheduler:
         # Arrange Column Names
         unfolded_cols = ["hex_id"]
         for vehicle in vehicle_columns:
-            unfolded_cols = unfolded_cols + ["OutFlow_Fulfilled_{}".format(vehicle), "OutFlow_Missed_{}".format(vehicle)]
+            unfolded_cols = unfolded_cols + [
+                "OutFlow_Fulfilled_{}".format(vehicle),
+                "OutFlow_Missed_{}".format(vehicle),
+            ]
 
         # Overwrite Column Names
         outflow.columns = unfolded_cols
 
         # Calculate Expected Inflow
-        inflow = transactions.groupby(["destination", "state", "cheapest_vehicle_mode"]).agg({"origin": "count"})
+        inflow = transactions.groupby(
+            ["destination", "state", "cheapest_vehicle_mode"]
+        ).agg({"origin": "count"})
 
         # Unstack Vehicle Type Level
         inflow = inflow.unstack()
-        base_column = ["destination", "state"]
         vehicle_columns = list(inflow["origin"].columns.values)
 
         # Reset Multi-Index to Flat Index (keep vehicle column order)
         inflow = inflow.reset_index()
-        inflow.columns = ["hex_id", "state"] + ["Inflow_{}".format(vehicle) for vehicle in vehicle_columns]
+        inflow.columns = ["hex_id", "state"] + [
+            "Inflow_{}".format(vehicle) for vehicle in vehicle_columns
+        ]
 
         # to ensure that "fulfilled" comes before "missed" during unstacking
         inflow = inflow.sort_values(["hex_id", "state"])
@@ -914,7 +936,9 @@ class RelocationScheduler:
 
         # Put together expected outflow and inflow
         result = hexagons.merge(inflow, on=["hex_id"], how="left", suffixes=("", ""))
-        result = result.merge(outflow, on=["hex_id"], how="left", suffixes=("_inflow", "_outflow"))
+        result = result.merge(
+            outflow, on=["hex_id"], how="left", suffixes=("_inflow", "_outflow")
+        )
         result.fillna(0, inplace=True)
 
         # Calculate Delta (Expected Inflow - Expected Outflow - Missed Demand)
@@ -922,7 +946,10 @@ class RelocationScheduler:
             if vehicle not in vehicle_columns:
                 result["Delta_{}".format(vehicle)] = 0
             else:
-                result["Delta_{}".format(vehicle)] = result["Inflow_{}".format(vehicle)] - result[
-                "OutFlow_Fulfilled_{}".format(vehicle)] - result["OutFlow_Missed_{}".format(vehicle)]
+                result["Delta_{}".format(vehicle)] = (
+                    result["Inflow_{}".format(vehicle)]
+                    - result["OutFlow_Fulfilled_{}".format(vehicle)]
+                    - result["OutFlow_Missed_{}".format(vehicle)]
+                )
 
         return result

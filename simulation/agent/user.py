@@ -189,7 +189,6 @@ class User(Agent, DriverInterface):
                 self._vehicle_allocated = self._env.event()
 
                 continue  # retry again until vehicle supply is depleted
-
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
             yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
@@ -224,6 +223,7 @@ class User(Agent, DriverInterface):
                 search_task
             )
         )
+
         # Vehicle Choice (moved to World Add User Function)
         # distance = self._transport_task.origin >> self._transport_task.destination
         # tc = TripCharacteristics(distance)
@@ -365,7 +365,7 @@ class User(Agent, DriverInterface):
             selected_transportation_alternative
         )
         logging.debug(
-            f"Selected transportation alternative: {type(selected_transportation_alternative.vehicle)}. For the price: {selected_transportation_alternative.price}",
+            f"Selected transportation alternative: {selected_transportation_alternative}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -447,7 +447,6 @@ class User(Agent, DriverInterface):
         )
 
     def start_driving(self, vehicle_allocation: VehicleAllocation):
-
         # Wait for event
         yield self._assigned_vehicle_arrived
 
@@ -472,7 +471,7 @@ class User(Agent, DriverInterface):
         # Trigger next event
         self._arrived_at_destination.succeed()
         logging.debug(
-            f"Vehicle {vehicle_allocation.vehicle.id} has arrived at destination.",
+            "Arrived at destination.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 

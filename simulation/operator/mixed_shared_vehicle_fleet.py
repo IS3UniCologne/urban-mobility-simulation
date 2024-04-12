@@ -30,7 +30,7 @@ class MixedSharedVehicleFleet(FleetInterface):
         elif isinstance(vehicle, SharedBike):
             self._bikes.append(vehicle)
         else:
-            raise Exception('Unknown Vehicle type', type(vehicle))
+            raise Exception("Unknown Vehicle type", type(vehicle))
 
     def get_all_vehicles(self, region):
         """
@@ -197,7 +197,12 @@ class MixedSharedVehicleFleet(FleetInterface):
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-        available_vehicles = ["SharedKickScooter", "SharedScooter", "SharedCar", "SharedBike"]
+        available_vehicles = [
+            "SharedKickScooter",
+            "SharedScooter",
+            "SharedCar",
+            "SharedBike",
+        ]
         values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
@@ -235,7 +240,12 @@ class MixedSharedVehicleFleet(FleetInterface):
         :return: Dictionary, where key = hex_id and value is a dictionary counting the vehicles to be charged
                  e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-        available_vehicles = ["SharedKickScooter", "SharedScooter", "SharedCar", "SharedBike"]
+        available_vehicles = [
+            "SharedKickScooter",
+            "SharedScooter",
+            "SharedCar",
+            "SharedBike",
+        ]
         values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
