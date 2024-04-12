@@ -150,7 +150,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = SharedVehicleState.DRIVING
 
         logging.debug(
-            f"Driving started of vehicle {self._id}",
+            "Driving started.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -158,7 +158,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = SharedVehicleState.PARKING
 
         logging.debug(
-            f"Driving stopped of vehicle {self._id}",
+            "Driving stopped.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
