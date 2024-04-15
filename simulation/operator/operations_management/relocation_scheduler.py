@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 import h3
-import sys
 from simulation.helper.configuration.configuration import Configuration
 import mlrose as mlrose  # noqa
 import pandas as pd  # noqa
