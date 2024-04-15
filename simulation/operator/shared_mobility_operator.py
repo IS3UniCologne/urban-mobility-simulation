@@ -1,35 +1,88 @@
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
-)
-from simulation.operator.operations_management.refueling_strategy import (
-    RefuelingStrategy,
-)
-from simulation.operator.operations_management.relocation_strategy import (
-    RelocationStrategy,
-)
+import logging
+
+from simpy import Environment
+
+from simulation.helper.configuration.configuration import Configuration
+from simulation.infrastructure.charging_stations.charging_infastructure import \
+    ChargingInfrastructure
+from simulation.operator.interface.search_engine_interface import \
+    SearchEngineInterface
+from simulation.operator.interface.vehicle_allocation_engine_interface import \
+    VehicleAllocationEngineInterface
+from simulation.operator.operations_management.operations import \
+    OperationsInterface
 from simulation.operator.operator import Operator
 from simulation.operator.service_workforce import ServiceWorkforce
 from simulation.operator.vehicle_fleet import VehicleFleet
+from simulation.tasks.transport_task import TransportTask
 
 
 class SharedMobiltyOperator(Operator):
     def __init__(
         self,
+        env: Environment,
         fleet: VehicleFleet,
         charging_infrastructure: ChargingInfrastructure,
-        refueling_strategy: RefuelingStrategy,
-        relocation_strategy: RelocationStrategy,
+        operations: OperationsInterface,
+        search_engine: SearchEngineInterface,
+        allocation_engine: VehicleAllocationEngineInterface,
         number_service_workers: int,
     ):
         super(SharedMobiltyOperator, self).__init__(
-            fleet, charging_infrastructure, refueling_strategy, relocation_strategy
+            env, fleet, charging_infrastructure, operations, search_engine, allocation_engine
         )
 
+        # Shared Mobility specific: Service Workforce
         self._service_workforce = ServiceWorkforce(
-            env=self.env, number_service_workers=number_service_workers
+            env=self._env, number_service_workers=number_service_workers
         )
 
-        # TODO: enforce that used strategies are SharedMobilityStrategy
+    def withdraw_transportation_task(self, user, transportation_task: TransportTask):
+        # Get available vehicle types
+        vehicle_types = Configuration.instance().get_available_vehicle_types()
 
-        refueling_strategy.register_workforce(self._service_workforce)
-        relocation_strategy.register_workforce(self._service_workforce)
+        # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
+        # We count the lost revenue for the "cheapest" mode
+        for vehicle_type in vehicle_types:
+            if (
+                vehicle_type in transportation_task.viable_vehicle_modes
+                and transportation_task.viable_vehicle_modes[vehicle_type] == 1
+            ):
+                distance = transportation_task.origin >> transportation_task.destination
+                velocity = (
+                    Configuration.instance().get_vehicle_config(vehicle_type).velocity
+                )
+                price_per_min = (
+                    Configuration.instance()
+                    .get_vehicle_config(vehicle_type)
+                    .price_per_min
+                )
+                missed_trip_cost = distance / velocity * price_per_min
+
+                if vehicle_type == "SharedKickScooter":
+                    missed_trip_cost += 1.0  # Unlock Fee
+
+        self.increase_total_missed_trips(missed_trip_cost)
+
+        # Add Transaction to Log
+        self._transactions.append(
+            {
+                "origin": transportation_task.origin.get_default_hexagon(),
+                "destination": transportation_task.destination.get_default_hexagon(),
+                "time_start": self._env.now,
+                "time_end": self._env.now,
+                "price": 0.0,
+                "distance": transportation_task.origin
+                >> transportation_task.destination,
+                "duration": 0.0,
+                "energy_consumption": 0.0,
+                "selected_vehicle_mode": "None",
+                "state": "Missed",
+                **transportation_task.viable_vehicle_modes,
+            }
+        )
+
+        logging.info(
+            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
+            extra={"clazz": self.__class__.__name__, "oid": ""},
+        )

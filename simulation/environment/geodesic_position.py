@@ -92,6 +92,8 @@ class GeodesicPosition(Position):
         hex_id = h3.geo_to_h3(self._lat, self._lng, resolution)
         geometry = layer.loc[hex_id].geometry
 
+        # TODO: if resolution = default, cache hex as default and lazy load on calls to this method
+
         return hex_id, geometry
 
     def get_hexagon_id(self, resolution=0):
