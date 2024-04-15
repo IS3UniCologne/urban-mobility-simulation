@@ -1,44 +1,44 @@
 import logging
+import sys
 from pathlib import Path
 
 import h3
 import six
-import sys
 
-from simulation.operator.operations_management.integrated_strategy import (
-    IntegratedStrategy,
-)
-from simulation.operator.operations_management.service_tasks.charging_task import (
-    ChargingTask,
-)
-from simulation.operator.operations_management.service_tasks.multi_service_task import (
-    MultiServiceTask,
-)
-from simulation.operator.operations_management.shared_mobility_strategy import (
-    SharedMobiltyStrategy,
-)
-from simulation.operator.vehicle_fleet import VehicleFleet
+from simulation.operator.operations_management.service_tasks.relocation_task import \
+    RelocationTask
 
 sys.modules["sklearn.externals.six"] = six
-import mlrose as mlrose
+import mlrose
 import pandas as pd
 
 from simulation.helper.configuration.configuration import Configuration
+from simulation.operator.operations_management.operations import \
+    OperationsInterface
+from simulation.operator.operations_management.service_tasks.charging_task import \
+    ChargingTask
+from simulation.operator.operations_management.service_tasks.multi_service_task import \
+    MultiServiceTask
+from simulation.operator.vehicle_fleet import VehicleFleet
 
 
-class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy):
+class IntegratedSharedMobilityStrategy(OperationsInterface):
     # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
 
     def __init__(
         self,
         env,
+        time_between_operations,
+        operation_duration,
         distance_matrix,
         ordered_available_vehicle_modes,
         ordered_max_vehicle_supply,
+        state_of_charge_threshold,
         base_regions,
         base_capacity,
     ):
         super(IntegratedSharedMobilityStrategy, self).__init__(env=env)
+
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
 
@@ -47,30 +47,39 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
         # For example: If we observe a demand for KickScooter and Scooter, we count that
         # demand to KickScooter. This ordering is defined according to the following list
         # (from left to right)
-        self._available_vehicle_modes = ordered_available_vehicle_modes
-        self._max_vehicle_supply = ordered_max_vehicle_supply
+        self._available_vehicle_modes = ordered_available_vehicle_modes # TODO: get from fleet
+        self._max_vehicle_supply = ordered_max_vehicle_supply # TODO: get from fleet
         self._base_regions = base_regions
         self._base_capacity = base_capacity
 
-        self._scheduled_tasks = []
+        self._state_of_charge_threshold = state_of_charge_threshold
 
-    def refuel_fleet(self, fleet: VehicleFleet):
-        # TODO: Refactor stuff from main and operator, such that the operator only has to call strategy.refuel_fleet()
-        self._fleet = fleet
+        self._scheduled_tasks = [] # TODO: move to workforce? or internal schedule?
 
-        """"
+        # Events
+        self._charging_plan_updated = env.event()
+        self._operations_started = env.event()
+
+        # When to start operations (every 1440 min)
+        self._time_between_operations = time_between_operations
+
+        # Shift Duration (OM shift duration)
+        self._duration_of_operations = operation_duration  # mins
+
+    def execute(self):
+        # TODO: Refactor stuff from main and operator, such that the operator only has to call operations.execute()
+
+        """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
         """
 
         # Clean old jobs (if there are some left)
-        self._service_workforce.task_queue.clear()
-
-        # TODO: how do we get transactions from operator? / do we need transactions here?
-        # Retrieve Vehicle Transactions
-        # transactions = self._payment_engine.get_transactions()
+        self._operator_reference._workforce.task_queue.clear()
 
         # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-        charging_plans, used_capacity = self.generate_charging_plan(transactions)
+        charging_plans, used_capacity = self.generate_charging_plan(
+            self._operator_reference._transactions
+        )
 
         # We track the charging events
         charging_events = []
@@ -78,7 +87,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
         # No Vehicles to be charged
         no_vehicles_scheduled_to_charge = {}
 
-        for mode in self._available_modes:
+        for mode in self._available_vehicle_modes:
             charging_plans_for_current_mode = charging_plans[mode]
 
             # Set Counter to 0
@@ -101,7 +110,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
                             no_vehicle_to_charge,
                             mode,
                             distance_to_base,
-                            self._fleet,
+                            self._operator_reference._fleet,
                             self._state_of_charge_threshold,
                         )
 
@@ -128,7 +137,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
                         no_vehicle_to_charge,
                         mode,
                         distance_to_base,
-                        self._vehicle_fleet,
+                        self._operator_reference._fleet,
                         self._state_of_charge_threshold,
                     )
 
@@ -142,10 +151,10 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
                     no_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
 
         # Insert Tasks into Task Queue
-        self._task_queue.bulk_append(self._scheduled_tasks)
+        self._operator_reference._workforce.task_queue.bulk_append(self._scheduled_tasks)
 
         logging.info(
-            f"There are {self._vehicle_fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
+            f"There are {self._operator_reference._fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
@@ -173,9 +182,9 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
             # Wait 2 Minutes, then (re-)schedule relocation
             yield self._env.timeout(2)
 
-            transactions = self._payment_engine.get_transactions()
+            transactions = self._operator_reference.get_transactions()
 
-            relocations = self._relocation_scheduler.generate_relocation_plan(
+            relocations = self.generate_relocation_plan(
                 transactions
             )
 
@@ -185,7 +194,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
             # No Vehicles to be charged
             no_vehicles_scheduled_to_relocate = {}
 
-            for mode in self._available_modes:
+            for mode in self._available_vehicle_modes:
                 relocation_plans_for_current_mode = relocations[mode]
 
                 # Set Counter to 0
@@ -211,7 +220,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
                                 no_vehicle_to_relocate,
                                 relocation_distance,
                                 mode,
-                                self._vehicle_fleet,
+                                self._operator_reference._fleet,
                             )
 
                             multi_service_task.append_task(relocation_task)
@@ -242,7 +251,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
                             no_vehicle_to_relocate,
                             relocation_distance,
                             mode,
-                            self._vehicle_fleet,
+                            self._operator_reference._fleet,
                         )
 
                         # Schedule to Queue
@@ -257,7 +266,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
                         )
 
             # Insert Tasks into Task Queue
-            self._task_queue.bulk_append(self._scheduled_tasks)
+            self._operator_reference._workforce.task_queue.bulk_append(self._scheduled_tasks)
 
             if len(charging_events):
                 # Wait for Charging events
@@ -276,14 +285,6 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
-    def relocate_fleet(self, fleet: VehicleFleet):
-        """
-        For the integrated strategy, we don't need to do anything, since self.refuel_fleet() handles both refueling and relocation
-        :param fleet: this is the VehicleFleet
-        :return: Nothing
-        """
-        pass
-
     def generate_relocation_plan(self, transactions):
         """
 
@@ -291,7 +292,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows (from PaymentEngine)
         :return: Dict of potential relocations {"SharedCar": [(origin, destination, no, distance)], ..}
         """
-        state = self.calculate_residual_supply(self._fleet, transactions)
+        state = self.calculate_residual_supply(self._operator_reference._fleet, transactions)
 
         relocation_plans = self.identify_potential_relocations(state)
 
@@ -306,7 +307,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
                 **used_capacity**: How many service workers are planned to cope with charging needs
         """
         # Get Current Fleet State
-        state = self.calculate_residual_supply(self._fleet, transactions)
+        state = self.calculate_residual_supply(self._operator_reference._fleet, transactions)
 
         config = Configuration.instance()
         if config.store_results:
@@ -353,7 +354,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
             state,
             self._available_vehicle_modes,
             self._max_vehicle_supply,
-            self._service_workforce.number_service_workers,
+            self._operator_reference._workforce.number_service_workers,
         )
 
         # We calculate for each vehicle mode dedicated charging plans based on the available resources
@@ -649,7 +650,7 @@ class IntegratedSharedMobilityStrategy(SharedMobiltyStrategy, IntegratedStrategy
             state,
             self._available_vehicle_modes,
             self._max_vehicle_supply,
-            self._service_workforce.number_service_workers,
+            self._operator_reference._workforce.number_service_workers,
         )
         for i, mode in enumerate(self._available_vehicle_modes):
             # Relocation List containing tuples (origin, destination, number_of_vehicles_to_be_relocated, distance)

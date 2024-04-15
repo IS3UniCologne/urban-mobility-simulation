@@ -1,49 +1,48 @@
 from pathlib import Path
+
 import pandas as pd
 
+from simulation.agent.user import \
+    User  # must come before DemandFactory, otherwise circular imports
 from simulation.helper.configuration.configuration import (
-    Configuration,
-    VehicleConfig,
-    ModeChoiceConfig,
-    SharedVehicleOperatorConfig,
-)
-from simulation.infrastructure.helper.distance_matrix_importer import (
-    DistanceMatrixImporter,
-)
-from simulation.operator.fleet_factory import (
-    generate_fleet_config,
-    generate_mixed_fleet,
-)
-from simulation.operator.operations_management.operations import Operations
-from simulation.operator.operations_management.relocation_scheduler import (
-    RelocationScheduler,
-)
-from simulation.operator.service_worker import ServiceWorker
+    Configuration, ModeChoiceConfig, SharedVehicleOperatorConfig,
+    VehicleConfig)
+from simulation.infrastructure.helper.distance_matrix_importer import \
+    DistanceMatrixImporter
+from simulation.operator.fleet_factory import (generate_fleet_config,
+                                               generate_mixed_fleet)
+from simulation.operator.operations_management.operations_shared_mobility import \
+    Operations
+from simulation.operator.operations_management.relocation_scheduler import \
+    RelocationScheduler
 from simulation.operator.operations_management.task_queue import TaskQueue
-from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import (
-    DistanceBasedSharedVehicleVehicleChoiceBehavior,
-)
-from simulation.agent.user import (
-    User,
-)  # must come before DemandFactory, otherwise circular imports
-from simulation.world.demand.demand_factory import DemandFactory
-from simulation.world.demand.demand_importer import DemandImporter
+from simulation.operator.service_worker import ServiceWorker
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
+from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import \
+    DistanceBasedSharedVehicleVehicleChoiceBehavior
+from simulation.world.demand.demand_factory import DemandFactory
+from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 
 pd.set_option("display.max_columns", None)
+import os
+import sys
+from configparser import ConfigParser
+
+import geopandas as gpd
 import simpy
+
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
-from simulation.operator.shared_vehicle_allocation_engine import (
-    SharedVehicleAllocationEngine,
-)
-from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
-import geopandas as gpd
+from simulation.helper.logging.simulation_context_filter import \
+    SimulationContextFilter
+from simulation.operator.shared_vehicle_allocation_engine import \
+    SharedVehicleAllocationEngine
+from simulation.operator.shared_vehicle_search_engine import \
+    SharedVehicleSearchEngine
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -51,9 +50,6 @@ import geopandas as gpd
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-import sys
-from configparser import ConfigParser
-import os
 
 # Change working directory to path of main.py
 working_dir = Path(__file__).parent
@@ -577,6 +573,12 @@ for idx, seed in enumerate(seeds):
                     seed, idx, pop_prob, sub_bandwidth
                 ),
                 extra={"clazz": "main", "oid": ""},
+            )
+
+    # After each seed save
+    all_simulations.to_csv("all_simulation_results.csv")
+
+print("FINISHED")
             )
 
     # After each seed save
