@@ -2,10 +2,7 @@ import logging
 from pathlib import Path
 import h3
 import sys
-import six
 from simulation.helper.configuration.configuration import Configuration
-
-sys.modules["sklearn.externals.six"] = six
 import mlrose as mlrose  # noqa
 import pandas as pd  # noqa
 
@@ -860,21 +857,18 @@ class RelocationScheduler:
 
         # Get the cheapest (most-preferred) mode for that trip.
         # In other words, if a trip can be undertaken either by scooter or car, count this as a scooter trip
-        # Finden Sie für jede origin-destination Kombination den günstigsten Fahrzeugmodus
-        cheapest_modes = (
-            transactions.groupby(["origin", "destination"])
-            .apply(
-                lambda group: group.loc[
-                    group["price"].idxmin(), "selected_vehicle_mode"
-                ]
-            )
-            .reset_index(name="cheapest_vehicle_mode")
-        )
+        transactions["cheapest_vehicle_mode"] = ""
 
-        # Fügen Sie die Information über den günstigsten Fahrzeugmodus zum ursprünglichen DataFrame hinzu
-        transactions = pd.merge(
-            transactions, cheapest_modes, on=["origin", "destination"], how="left"
-        )
+        for i in range(len(ordered_available_vehicle)):
+            query = "{} == {}".format(ordered_available_vehicle[i], 1)
+            for k in range(i):
+                query += " & {} == {}".format(ordered_available_vehicle[k], 0)
+
+            qry_res = transactions.query(query)  # If not empty
+            if qry_res.shape[0] > 0:
+                transactions.loc[qry_res.index, "cheapest_vehicle_mode"] = (
+                    ordered_available_vehicle[i]
+                )
 
         # (All) Hexagons
         hexagons = pd.unique(transactions[["origin", "destination"]].values.ravel("K"))
