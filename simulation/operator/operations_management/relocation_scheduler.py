@@ -2,7 +2,10 @@ import logging
 from pathlib import Path
 import h3
 import sys
+import six
 from simulation.helper.configuration.configuration import Configuration
+
+sys.modules["sklearn.externals.six"] = six
 import mlrose as mlrose  # noqa
 import pandas as pd  # noqa
 
