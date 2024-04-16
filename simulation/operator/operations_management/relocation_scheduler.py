@@ -1,13 +1,13 @@
 import logging
 from pathlib import Path
-import h3
-import sys
-import six
-from simulation.helper.configuration.configuration import Configuration
 
-sys.modules["sklearn.externals.six"] = six
-import mlrose as mlrose  # noqa
-import pandas as pd  # noqa
+import h3
+
+# sys.modules["sklearn.externals.six"] = six # does this break the mlrose parts?
+import mlrose as mlrose
+import pandas as pd
+
+from simulation.helper.configuration.configuration import Configuration
 
 
 class RelocationScheduler:
