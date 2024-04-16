@@ -39,6 +39,7 @@ from ..vehicle.public_transit_vehicle import (
     PublicTransitVehicleFull,
     PublicTransitVehicleState,
 )
+from ..vehicle.shared_bike import SharedBike
 from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
@@ -285,6 +286,21 @@ class User(Agent, DriverInterface):
                             alternative,
                         )
                     )
+                elif (
+                    isinstance(alternative.vehicle, SharedBike)
+                    and distance_to_vehicle
+                    < config.get_vehicle_config(
+                        alternative.vehicle.__class__.__name__
+                    ).max_walking_distance
+                ):  # See Nothing..
+                    filtered_list.append(
+                        (
+                            distance_to_vehicle,
+                            alternative.price,
+                            alternative.convenience,
+                            alternative,
+                        )
+                    )
 
         # Determine Vehicle Preference based on Population Type
         # a) Price Sensitive Users will prefer cheapest option
@@ -300,7 +316,8 @@ class User(Agent, DriverInterface):
             filtered_list.sort(key=lambda vehicle: (vehicle[2], vehicle[0]))
 
         if filtered_list:
-            distance, price, filtered_list = zip(*filtered_list)
+            distance, price, convenience, filtered_list = zip(*filtered_list)
+            # distance, price, *filtered_list = zip(*filtered_list)
             filtered_list = list(filtered_list)
 
         # Only Consider Alternatives matching Customer needs

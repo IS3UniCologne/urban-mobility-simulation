@@ -6,6 +6,7 @@ from simulation.operator.interface.fleet_interface import FleetInterface
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
+from simulation.vehicle.shared_bike import SharedBike
 from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle.vehicle import VehicleState
 
@@ -26,8 +27,10 @@ class MixedSharedVehicleFleet(FleetInterface):
             self._scooters.append(vehicle)
         elif isinstance(vehicle, SharedKickScooter):
             self._kick_scooters.append(vehicle)
-        else:
+        elif isinstance(vehicle, SharedBike):
             self._bikes.append(vehicle)
+        else:
+            raise Exception("Unknown Vehicle type", type(vehicle))
 
     def get_all_vehicles(self, region):
         """
@@ -194,7 +197,12 @@ class MixedSharedVehicleFleet(FleetInterface):
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-        available_vehicles = ["SharedKickScooter", "SharedScooter", "SharedCar"]
+        available_vehicles = [
+            "SharedKickScooter",
+            "SharedScooter",
+            "SharedCar",
+            "SharedBike",
+        ]
         values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
@@ -209,6 +217,8 @@ class MixedSharedVehicleFleet(FleetInterface):
                 vehicle_list = self._scooters
             elif mode == "SharedCar":
                 vehicle_list = self._cars
+            elif mode == "SharedBike":
+                vehicle_list = self._bikes
             else:
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
@@ -230,7 +240,12 @@ class MixedSharedVehicleFleet(FleetInterface):
         :return: Dictionary, where key = hex_id and value is a dictionary counting the vehicles to be charged
                  e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-        available_vehicles = ["SharedKickScooter", "SharedScooter", "SharedCar"]
+        available_vehicles = [
+            "SharedKickScooter",
+            "SharedScooter",
+            "SharedCar",
+            "SharedBike",
+        ]
         values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
@@ -245,6 +260,8 @@ class MixedSharedVehicleFleet(FleetInterface):
                 vehicle_list = self._scooters
             elif mode == "SharedCar":
                 vehicle_list = self._cars
+            elif mode == "SharedBike":
+                vehicle_list = self._bikes
             else:
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
