@@ -1,18 +1,15 @@
-import logging
-
 from line_profiler_pycharm import profile
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.route import Route
-from simulation.operator.data_transfer_object.transportation_alternative_browser import \
-    TransportationAlternativeBrowser
-from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import \
-    TransportationAlternativeRideHailing
-from simulation.operator.interface.search_engine_interface import \
-    SearchEngineInterface
-from simulation.tasks.transport_task import TransportTask
-from simulation.tasks.transportation_search_task import \
-    TransportationSearchTask
+from simulation.operator.data_transfer_object.transportation_alternative_browser import (
+    TransportationAlternativeBrowser,
+)
+from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
+    TransportationAlternativeRideHailing,
+)
+from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.tasks.transportation_search_task import TransportationSearchTask
 from simulation.vehicle.vehicle import VehicleState
 
 
@@ -132,4 +129,3 @@ class RideHailingSearchEngine(SearchEngineInterface):
                 browser.add_transportation_alternative(transportation_alternative)
 
         return browser
-    

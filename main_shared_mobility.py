@@ -1,48 +1,53 @@
+import logging
+import os
+import sys
+from configparser import ConfigParser
 from pathlib import Path
 
+import geopandas as gpd
 import pandas as pd
+import simpy
 
-from simulation.agent.user import \
-    User  # must come before DemandFactory, otherwise circular imports
+from simulation.agent.user import User
+
+# must come before DemandFactory, otherwise circular imports
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import (
-    Configuration, ModeChoiceConfig, SharedVehicleOperatorConfig,
-    VehicleConfig)
-from simulation.infrastructure.helper.distance_matrix_importer import \
-    DistanceMatrixImporter
-from simulation.operator.fleet_factory import (generate_fleet_config,
-                                               generate_mixed_fleet)
-from simulation.operator.operations_management.operations_shared_mobility import \
-    Operations
-from simulation.operator.operations_management.relocation_scheduler import \
-    RelocationScheduler
-from simulation.operator.operations_management.task_queue import TaskQueue
-from simulation.operator.service_worker import ServiceWorker
+    Configuration,
+    ModeChoiceConfig,
+    SharedVehicleOperatorConfig,
+    VehicleConfig,
+)
+from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
+from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.infrastructure.helper.distance_matrix_importer import (
+    DistanceMatrixImporter,
+)
+from simulation.operator.fleet_factory import (
+    generate_fleet_config,
+    generate_mixed_fleet,
+)
+from simulation.operator.operations_management.integrated_shared_mobility_operations import (
+    IntegratedSharedMobilityOperations,
+)
+from simulation.operator.shared_mobility_operator import SharedMobilityOperator
+from simulation.operator.shared_vehicle_allocation_engine import (
+    SharedVehicleAllocationEngine,
+)
+from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
-from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import \
-    DistanceBasedSharedVehicleVehicleChoiceBehavior
+from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import (
+    DistanceBasedSharedVehicleVehicleChoiceBehavior,
+)
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
+from tracking.tracking import Tracking
 
 pd.set_option("display.max_columns", None)
-import os
-import sys
-from configparser import ConfigParser
-
-import geopandas as gpd
-import simpy
-
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import \
-    SimulationContextFilter
-from simulation.operator.shared_vehicle_allocation_engine import \
-    SharedVehicleAllocationEngine
-from simulation.operator.shared_vehicle_search_engine import \
-    SharedVehicleSearchEngine
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -79,7 +84,7 @@ env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8")
 env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 
 # Create Global Config File
-global_config = Configuration.init(spatial_res, temporal_res, daily_res)
+global_config = Configuration.init(spatial_res, temporal_res, daily_res, city="berlin")
 
 # Read Shared Vehicle Config and add to Global Config File
 for idx, vehicle_type in enumerate(
@@ -102,6 +107,7 @@ for idx, vehicle_type in enumerate(
         max_available_seats,
         max_walking_distance,
         daily_total_cost,
+        initial_SoC=0.5,
     )
     global_config.add_vehicle_config(vehicle_type_classes[idx], vc)
 
@@ -168,8 +174,6 @@ log_level = parser.get("SETTINGS", "log_level")
 # Configure Logging.                      #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
-
-import logging
 
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
@@ -251,7 +255,9 @@ demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 geodesic_environment = GeodesicEnvironment.getInstance()
 hexagons = geodesic_environment.getLayer(f"hex_{spatial_res}").index.tolist()
-dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure")
+dmi = DistanceMatrixImporter(
+    hexagons, spatial_res, "./data/infrastructure", city="berlin"
+)
 distance_matrix = dmi.load_distance_matrix()
 
 
@@ -308,8 +314,10 @@ def run_single_simulation(
     # # # # # # # # # # # # # # # # # # # # # #
 
     # Operator Modules
+    # Search Engine finds transportation alternatives for users and manages payment processes
     search_engine = SharedVehicleSearchEngine(env)
-    payment_engine = search_engine
+
+    # Vehicle Assignment Engine assigns users to vehicles and notifies them about the pickup position
     vehicle_assignment_engine = SharedVehicleAllocationEngine(env)
 
     # Vehicle Choice Model
@@ -323,27 +331,13 @@ def run_single_simulation(
     # Population Type
     population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
 
-    # World
-    world = World.init(
-        env,
-        search_engine,
-        search_engine,
-        vehicle_assignment_engine,
-        vehicle_choice_model,
-        population_factory,
-        reset=True,
-    )
-
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
-    # Spawn Demand Processes.                 #
+    # Init. Tracking                          #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    demand_factory = DemandFactory(
-        env, demand_profile, di, world, demand_modifier_paths, seed
-    )
 
-    env.process(demand_factory.generate_demand())
+    Tracking.init(env)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -363,13 +357,6 @@ def run_single_simulation(
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
-    # Inject Modules.                         #
-    #                                         #
-    # # # # # # # # # # # # # # # # # # # # # #
-    search_engine.register_fleet(mixed_fleet)
-
-    # # # # # # # # # # # # # # # # # # # # # #
-    #                                         #
     # Operations Management Processes         #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
@@ -379,44 +366,59 @@ def run_single_simulation(
     no_service_workers = (
         global_config.shared_vehicle_operator_config.number_of_service_worker
     )
-    base_regions = global_config.shared_vehicle_operator_config.base_regions
-    base_capacity = global_config.shared_vehicle_operator_config.base_capacity
-
-    # Initialize Rule Based Relocation Scheduler
-    rs = RelocationScheduler(
-        distance_matrix,
-        mixed_fleet,
-        available_vehicle_modes,
-        available_vehicle_modes_supply,
-        no_service_workers,
-        base_regions,
-        base_capacity,
-    )
-
-    # Store Tasks which are processed by service workers
-    task_queue = TaskQueue(env)
 
     # Init Operations Module
-    ops = Operations(
-        env,
-        mixed_fleet,
-        no_service_workers,
-        global_config.shared_vehicle_operator_config.operations_start,
-        global_config.shared_vehicle_operator_config.operations_duration,
-        rs,
-        payment_engine,
-        available_vehicle_modes,
-        available_vehicle_modes_supply,
-        global_config.shared_vehicle_operator_config.recharge_threshold,
-        task_queue,
+    ops = IntegratedSharedMobilityOperations(
+        env=env,
+        time_between_operations=global_config.shared_vehicle_operator_config.operations_start,
+        operation_duration=global_config.shared_vehicle_operator_config.operations_duration,
+        distance_matrix=distance_matrix,
+        ordered_available_vehicle_modes=available_vehicle_modes,
+        ordered_max_vehicle_supply=available_vehicle_modes_supply,
+        state_of_charge_threshold=global_config.shared_vehicle_operator_config.recharge_threshold,
+        base_regions=global_config.shared_vehicle_operator_config.base_regions,
+        base_capacity=global_config.shared_vehicle_operator_config.base_capacity,
     )
 
-    env.process(ops.timer())
-    env.process(ops.run_operations())
+    # Init operator
+    operator = SharedMobilityOperator(
+        env=env,
+        fleet=mixed_fleet,
+        charging_infrastructure=None,
+        operations=ops,
+        search_engine=search_engine,
+        allocation_engine=vehicle_assignment_engine,
+        number_service_workers=no_service_workers,
+    )
 
-    # Spawn Service Workers
-    for sw in range(no_service_workers):
-        env.process(ServiceWorker(env, task_queue).run())
+    # World
+    world = World.init(
+        env=env,
+        search_engine=search_engine,
+        payment_engine=operator,
+        vehicle_assignment_engine=vehicle_assignment_engine,
+        vehicle_choice_behavior=vehicle_choice_model,
+        population_factory=population_factory,
+        charging_infrastructure=None,
+        reset=True,
+    )
+
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Spawn Demand Processes.                 #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
+    demand_factory = DemandFactory(
+        env,
+        demand_profile,
+        di,
+        world,
+        demand_modifier_paths,
+        seed,
+        mode="shared_vehicle",
+    )
+
+    env.process(demand_factory.generate_demand())
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -445,20 +447,20 @@ def run_single_simulation(
     # print("Total Missed Trips: " + str(payment_engine.total_missed_trips))
     # print("Total Missed Revenue: " + str(payment_engine.total_missed_revenue))
 
-    no_vehicles_to_be_charged = mixed_fleet.get_all_vehicles_below_soc_level(
-        global_config.shared_vehicle_operator_config.recharge_threshold
+    no_vehicles_to_be_charged = len(
+        mixed_fleet.get_all_vehicles_below_soc_level(
+            global_config.shared_vehicle_operator_config.recharge_threshold
+        )
     )
 
     # print("Number of Vehicles to be charged: " + str(no_vehicles_to_be_charged))
 
     # Final Objective Function for Heuristic Search
     func_objective = (
-        payment_engine.total_revenue
-        - total_cost_per_day
-        - payment_engine.total_missed_revenue
+        operator.total_revenue - total_cost_per_day - operator.total_missed_revenue
     )
     # print("Objective Function:" + str(func_objective))
-    transactions = payment_engine.get_transactions()
+    transactions = operator.get_transactions()
 
     if store_results:
         transactions.to_csv(Path(output_folder, transaction_file), index=False)
@@ -474,12 +476,12 @@ def run_single_simulation(
             "subs_bandwidth": [substitution],
             "price_sensitive_pop_prob": [price_sensitive_pop_prob],
             "seed": [seed],
-            "total_revenue": [payment_engine.total_revenue],
+            "total_revenue": [operator.total_revenue],
             "total_cost_per_day": [total_cost_per_day],
-            "total_profit": [payment_engine.total_revenue - total_cost_per_day],
-            "total_fulfilled_trips": [payment_engine.total_fulfilled_trips],
-            "total_missed_trips": [payment_engine.total_missed_trips],
-            "total_missed_revenue": [payment_engine.total_missed_revenue],
+            "total_profit": [operator.total_revenue - total_cost_per_day],
+            "total_fulfilled_trips": [operator.total_fulfilled_trips],
+            "total_missed_trips": [operator.total_missed_trips],
+            "total_missed_revenue": [operator.total_missed_revenue],
             "vehicles_to_be_charged": [no_vehicles_to_be_charged],
         }
 
@@ -526,62 +528,69 @@ def run_single_simulation(
         return overall_rentals
     else:
         return (
-            payment_engine.total_revenue,
+            operator.total_revenue,
             total_cost_per_day,
-            payment_engine.total_revenue - total_cost_per_day,
-            payment_engine.total_fulfilled_trips,
-            payment_engine.total_missed_trips,
-            payment_engine.total_missed_revenue,
+            operator.total_revenue - total_cost_per_day,
+            operator.total_fulfilled_trips,
+            operator.total_missed_trips,
+            operator.total_missed_revenue,
             no_vehicles_to_be_charged,
             func_objective,
         )
 
 
-# Random Variables for our Monte Carlo Run
-import random
+# Run Single Simulation
+result = run_single_simulation(
+    end_time=2880,
+    n_cars=1500,
+    n_scooter=1500,
+    n_kick_scooter=1500,
+    seed=4711,
+    substitution=0.05,
+    price_sensitive_pop_prob=0,
+    returnDataFrame=True,
+)
 
-random.seed(42)
-seeds = random.sample(range(10000), 100)
 
-# Store all simulation results in this data frame
-all_simulations = pd.DataFrame()
+# # Random Variables for our Monte Carlo Run
+# import random
+
+# random.seed(42)
+# seeds = random.sample(range(10000), 1)
+
+# # Store all simulation results in this data frame
+# all_simulations = pd.DataFrame()
 
 
-# End Time
-T = 1440
+# # End Time
+# T = 1440
 
-# Real Run
-pop_probs = [0.0, 1.0]
-sub_bandwidths = [0.0, 0.05, 0.1, 0.2]
+# # Real Run
+# pop_probs = [0.0, 1.0]
+# sub_bandwidths = [0.0, 0.05, 0.1, 0.2]
 
-for idx, seed in enumerate(seeds):
-    for pop_prob in pop_probs:
-        for sub_bandwidth in sub_bandwidths:
-            sim_res = run_single_simulation(
-                end_time=T,
-                n_cars=1500,
-                n_scooter=1500,
-                n_kick_scooter=1500,
-                seed=seed,
-                substitution=sub_bandwidth,
-                price_sensitive_pop_prob=pop_prob,
-                returnDataFrame=True,
-            )
-            all_simulations = pd.concat([all_simulations, sim_res], axis=0)
-            logging.warning(
-                "seed: {}, idx: {}, pop_prob: {}, sub: {}".format(
-                    seed, idx, pop_prob, sub_bandwidth
-                ),
-                extra={"clazz": "main", "oid": ""},
-            )
+# for idx, seed in enumerate(seeds):
+#     for pop_prob in pop_probs:
+#         for sub_bandwidth in sub_bandwidths:
+#             sim_res = run_single_simulation(
+#                 end_time=T,
+#                 n_cars=1500,
+#                 n_scooter=1500,
+#                 n_kick_scooter=1500,
+#                 seed=seed,
+#                 substitution=sub_bandwidth,
+#                 price_sensitive_pop_prob=pop_prob,
+#                 returnDataFrame=True,
+#             )
+#             all_simulations = pd.concat([all_simulations, sim_res], axis=0)
+#             logging.warning(
+#                 "seed: {}, idx: {}, pop_prob: {}, sub: {}".format(
+#                     seed, idx, pop_prob, sub_bandwidth
+#                 ),
+#                 extra={"clazz": "main", "oid": ""},
+#             )
 
-    # After each seed save
-    all_simulations.to_csv("all_simulation_results.csv")
-
-print("FINISHED")
-            )
-
-    # After each seed save
-    all_simulations.to_csv("all_simulation_results.csv")
+#     # After each seed save
+#     all_simulations.to_csv("all_simulation_results.csv")
 
 print("FINISHED")

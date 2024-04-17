@@ -1,6 +1,7 @@
 import logging
 from abc import ABC
 from enum import Enum
+from random import random
 
 from simpy import Environment
 
@@ -43,7 +44,7 @@ class SharedVehicle(Vehicle, ABC):
 
         # State Of Charge
         self._max_state_of_charge = max_state_of_charge  # in kWh
-        self._current_state_of_charge = max_state_of_charge  # in kWh
+        self._current_state_of_charge = random() * max_state_of_charge  # in kWh
         self._energy_consumption = energy_consumption  # in kWh/km
 
         #### Vehicle Events

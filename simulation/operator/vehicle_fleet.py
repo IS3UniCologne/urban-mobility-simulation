@@ -1,11 +1,23 @@
 from abc import ABC, abstractmethod
+
+import simpy
+
 from simulation.vehicle.vehicle import Vehicle
 
 
 class VehicleFleet(ABC):
-    def __init__(self, env, capacity):
-        self._fleet_capacity = capacity
+    def __init__(self, env: simpy.Environment):
+        self._env = env
         self._vehicles = []
+        self._resource = simpy.Resource(env)  # Semaphore
+
+    @property
+    def resource(self):
+        """
+        SimPy Resource to handle parallel access
+        :return:
+        """
+        return self._resource
 
     @property
     def vehicles(self):

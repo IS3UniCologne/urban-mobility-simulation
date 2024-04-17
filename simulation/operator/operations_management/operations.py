@@ -16,7 +16,7 @@ class OperationsInterface(ABC):
         :return:
         """
         try:
-            assert operator_reference is None
+            assert self._operator_reference is None
         except AssertionError as e:
             raise ValueError(
                 "Attention: Another operator back-reference is already set! Do you need to initialize multiple strategies?"

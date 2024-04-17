@@ -3,21 +3,21 @@ import logging
 from simpy import Environment
 
 from simulation.helper.configuration.configuration import Configuration
-from simulation.infrastructure.charging_stations.charging_infastructure import \
-    ChargingInfrastructure
-from simulation.operator.interface.search_engine_interface import \
-    SearchEngineInterface
-from simulation.operator.interface.vehicle_allocation_engine_interface import \
-    VehicleAllocationEngineInterface
-from simulation.operator.operations_management.operations import \
-    OperationsInterface
+from simulation.infrastructure.charging_stations.charging_infastructure import (
+    ChargingInfrastructure,
+)
+from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.operator.interface.vehicle_allocation_engine_interface import (
+    VehicleAllocationEngineInterface,
+)
+from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operator import Operator
 from simulation.operator.service_workforce import ServiceWorkforce
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transport_task import TransportTask
 
 
-class SharedMobiltyOperator(Operator):
+class SharedMobilityOperator(Operator):
     def __init__(
         self,
         env: Environment,
@@ -28,14 +28,21 @@ class SharedMobiltyOperator(Operator):
         allocation_engine: VehicleAllocationEngineInterface,
         number_service_workers: int,
     ):
-        super(SharedMobiltyOperator, self).__init__(
-            env, fleet, charging_infrastructure, operations, search_engine, allocation_engine
+        super(SharedMobilityOperator, self).__init__(
+            env,
+            fleet,
+            charging_infrastructure,
+            operations,
+            search_engine,
+            allocation_engine,
         )
 
         # Shared Mobility specific: Service Workforce
-        self._service_workforce = ServiceWorkforce(
+        self._workforce = ServiceWorkforce(
             env=self._env, number_service_workers=number_service_workers
         )
+
+        self._env.process(self._operations.execute())
 
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         # Get available vehicle types

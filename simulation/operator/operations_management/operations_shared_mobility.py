@@ -1,11 +1,14 @@
 import logging
 
-from simulation.operator.operations_management.service_tasks.charging_task import \
-    ChargingTask
-from simulation.operator.operations_management.service_tasks.multi_service_task import \
-    MultiServiceTask
-from simulation.operator.operations_management.service_tasks.relocation_task import \
-    RelocationTask
+from simulation.operator.operations_management.service_tasks.charging_task import (
+    ChargingTask,
+)
+from simulation.operator.operations_management.service_tasks.multi_service_task import (
+    MultiServiceTask,
+)
+from simulation.operator.operations_management.service_tasks.relocation_task import (
+    RelocationTask,
+)
 
 
 # TODO: refactor to adhere to base class "Operator"
@@ -46,11 +49,11 @@ class Operations:
         self._relocation_scheduler = relocation_scheduler
 
         # To access vehicle transactions
-        self._payment_engine = payment_engine  
+        self._payment_engine = payment_engine
         self._available_modes = available_modes  # Modes in Fleet
         self._available_modes_supply = available_modes_supply  # Number of Vehicles in Fleet per Mode e.g., [100, 100, 50]
 
-        self._state_of_charge_threshold = state_of_charge_threshold # > strategy
+        self._state_of_charge_threshold = state_of_charge_threshold  # > strategy
 
         # Task List
         self._task_queue = task_queue
