@@ -39,6 +39,7 @@ from ..vehicle.public_transit_vehicle import (
     PublicTransitVehicleFull,
     PublicTransitVehicleState,
 )
+from ..vehicle.shared_bike import SharedBike
 from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
@@ -273,6 +274,21 @@ class User(Agent, DriverInterface, TrackingInterface):
                     )
                 elif (
                     isinstance(alternative.vehicle, SharedScooter)
+                    and distance_to_vehicle
+                    < config.get_vehicle_config(
+                        alternative.vehicle.__class__.__name__
+                    ).max_walking_distance
+                ):  # See Nothing..
+                    filtered_list.append(
+                        (
+                            distance_to_vehicle,
+                            alternative.price,
+                            alternative.convenience,
+                            alternative,
+                        )
+                    )
+                elif (
+                    isinstance(alternative.vehicle, SharedBike)
                     and distance_to_vehicle
                     < config.get_vehicle_config(
                         alternative.vehicle.__class__.__name__
