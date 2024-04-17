@@ -29,6 +29,8 @@ class MixedSharedVehicleFleet(VehicleFleet):
         else:
             self._bikes.append(vehicle)
 
+        self._vehicles.append(vehicle)
+
     def vehicles_in_region(self, region):
         """
         Return all vehicles which are located in a region
@@ -142,7 +144,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
                 below_soc_level_vehicles.append(vehicle)
 
-        return len(below_soc_level_vehicles)
+        return below_soc_level_vehicles
 
     def get_all_vehicles_below_soc_level_in_region(
         self, state_of_charge_threshold, region

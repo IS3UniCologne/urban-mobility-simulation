@@ -159,11 +159,6 @@ class World:
             tc = TripCharacteristics(distance)
             viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
-            # Determine Consumer Type
-            population_type = (
-                self._population_factory.generatePopulationTypeRideHailing()
-            )
-
             if mode == "public_transport":
                 # User Preferences
                 max_wait_time = normal(
@@ -182,6 +177,8 @@ class World:
                 # new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
                 #                             self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env,
                 #                             passive=True if not self._config.transit_agent_config.dumb else False)
+                population_type = None
+
                 new_user = user.TransitUser(
                     origin_position,
                     task,
@@ -209,9 +206,9 @@ class World:
                     fleet,
                     origin_position,
                     task,
-                    self._search_engine["shared_vehicle"],
-                    self._payment_engine["shared_vehicle"],
-                    self._vehicle_assignment_engine["shared_vehicle"],
+                    self._search_engine,
+                    self._payment_engine,
+                    self._vehicle_assignment_engine,
                     self._vehicle_choice_behavior,
                     population_type,
                     self._env,

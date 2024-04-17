@@ -72,8 +72,9 @@ class UserState(Enum):
     MOVING_TO_DESTINATION = 102  # walk after last transit stop
 
 
-class User(Agent, DriverInterface):
+class User(Agent, DriverInterface, TrackingInterface):
     user_id = 0
+    exposes = ["_position"]
 
     def __init__(
         self,
@@ -300,7 +301,7 @@ class User(Agent, DriverInterface):
             filtered_list.sort(key=lambda vehicle: (vehicle[2], vehicle[0]))
 
         if filtered_list:
-            distance, price, filtered_list = zip(*filtered_list)
+            distance, price, convenience, filtered_list = zip(*filtered_list)
             filtered_list = list(filtered_list)
 
         # Only Consider Alternatives matching Customer needs
@@ -546,6 +547,19 @@ class User(Agent, DriverInterface):
 
     def __str__(self):
         return f"User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"
+
+    def dump(self, exposed_only: bool = True) -> dict:
+        if exposed_only:
+            return {x: self.get(x) for x in self.exposes}
+        else:
+            dump_attr = [
+                "_transport_task",
+                "_vehicle_choice_behavior",
+                "_population_type",
+                "_position",
+                "_state",
+            ]
+            return {x: self.get(x) for x in dump_attr}
 
 
 class TransitUser(User, PassengerInterface, TrackingInterface):

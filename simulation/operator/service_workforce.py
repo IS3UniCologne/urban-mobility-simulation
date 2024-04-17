@@ -1,6 +1,7 @@
+from simpy import Environment
+
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.service_worker import ServiceWorker
-from simpy import Environment
 
 
 class ServiceWorkforce:
@@ -11,7 +12,7 @@ class ServiceWorkforce:
 
         for i in range(number_service_workers):
             self._service_workers.append(
-                ServiceWorker(env=env, task_queue=self._task_queue)
+                env.process(ServiceWorker(env=env, task_queue=self._task_queue).run())
             )
 
     @property

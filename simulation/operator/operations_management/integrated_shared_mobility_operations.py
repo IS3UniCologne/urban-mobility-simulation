@@ -1,28 +1,25 @@
 import logging
-import sys
 from pathlib import Path
 
 import h3
-import six
-
-from simulation.operator.operations_management.service_tasks.relocation_task import \
-    RelocationTask
-
-sys.modules["sklearn.externals.six"] = six
-import mlrose
+import mlrose_hiive as mlrose
 import pandas as pd
+from pandas import DataFrame
 
 from simulation.helper.configuration.configuration import Configuration
-from simulation.operator.operations_management.operations import \
-    OperationsInterface
-from simulation.operator.operations_management.service_tasks.charging_task import \
-    ChargingTask
-from simulation.operator.operations_management.service_tasks.multi_service_task import \
-    MultiServiceTask
-from simulation.operator.vehicle_fleet import VehicleFleet
+from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.operations_management.service_tasks.charging_task import (
+    ChargingTask,
+)
+from simulation.operator.operations_management.service_tasks.multi_service_task import (
+    MultiServiceTask,
+)
+from simulation.operator.operations_management.service_tasks.relocation_task import (
+    RelocationTask,
+)
 
 
-class IntegratedSharedMobilityStrategy(OperationsInterface):
+class IntegratedSharedMobilityOperations(OperationsInterface):
     # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
 
     def __init__(
@@ -37,7 +34,7 @@ class IntegratedSharedMobilityStrategy(OperationsInterface):
         base_regions,
         base_capacity,
     ):
-        super(IntegratedSharedMobilityStrategy, self).__init__(env=env)
+        super(IntegratedSharedMobilityOperations, self).__init__(env=env)
 
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
@@ -47,14 +44,16 @@ class IntegratedSharedMobilityStrategy(OperationsInterface):
         # For example: If we observe a demand for KickScooter and Scooter, we count that
         # demand to KickScooter. This ordering is defined according to the following list
         # (from left to right)
-        self._available_vehicle_modes = ordered_available_vehicle_modes # TODO: get from fleet
-        self._max_vehicle_supply = ordered_max_vehicle_supply # TODO: get from fleet
+        self._available_vehicle_modes = (
+            ordered_available_vehicle_modes  # TODO: get from fleet
+        )
+        self._max_vehicle_supply = ordered_max_vehicle_supply  # TODO: get from fleet
         self._base_regions = base_regions
         self._base_capacity = base_capacity
 
         self._state_of_charge_threshold = state_of_charge_threshold
 
-        self._scheduled_tasks = [] # TODO: move to workforce? or internal schedule?
+        self._scheduled_tasks = []  # TODO: move to workforce? or internal schedule?
 
         # Events
         self._charging_plan_updated = env.event()
@@ -73,34 +72,69 @@ class IntegratedSharedMobilityStrategy(OperationsInterface):
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
         """
 
-        # Clean old jobs (if there are some left)
-        self._operator_reference._workforce.task_queue.clear()
+        while True:
+            yield self._env.timeout(self._time_between_operations)
 
-        # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-        charging_plans, used_capacity = self.generate_charging_plan(
-            self._operator_reference._transactions
-        )
+            # Clean old jobs (if there are some left)
+            self._operator_reference._workforce.task_queue.clear()
 
-        # We track the charging events
-        charging_events = []
+            # Retrieve Charging Plan to Charge Vehicles with low State of Charge
+            charging_plans, used_capacity = self.generate_charging_plan(
+                self._operator_reference.get_transactions()
+            )
 
-        # No Vehicles to be charged
-        no_vehicles_scheduled_to_charge = {}
+            # We track the charging events
+            charging_events = []
 
-        for mode in self._available_vehicle_modes:
-            charging_plans_for_current_mode = charging_plans[mode]
+            # No Vehicles to be charged
+            no_vehicles_scheduled_to_charge = {}
 
-            # Set Counter to 0
-            if mode not in no_vehicles_scheduled_to_charge:
-                no_vehicles_scheduled_to_charge[mode] = 0
+            for mode in self._available_vehicle_modes:
+                charging_plans_for_current_mode = charging_plans[mode]
 
-            for charging_plan in charging_plans_for_current_mode:
-                if len(charging_plan) > 1:
-                    multi_service_task = MultiServiceTask(self._env)
-                    # Pooled Task
-                    for task in charging_plan:
+                # Set Counter to 0
+                if mode not in no_vehicles_scheduled_to_charge:
+                    no_vehicles_scheduled_to_charge[mode] = 0
+
+                for charging_plan in charging_plans_for_current_mode:
+                    if len(charging_plan) > 1:
+                        multi_service_task = MultiServiceTask(self._env)
+                        # Pooled Task
+                        for task in charging_plan:
+                            (
+                                origin,
+                                destination,
+                                no_vehicle_to_charge,
+                                distance_to_base,
+                            ) = task
+
+                            charging_task = ChargingTask(
+                                self._env,
+                                origin,
+                                destination,
+                                no_vehicle_to_charge,
+                                mode,
+                                distance_to_base,
+                                self._operator_reference._fleet,
+                                self._state_of_charge_threshold,
+                            )
+
+                            multi_service_task.append_task(charging_task)
+
+                            # Count Vehicles to be charged
+                            no_vehicles_scheduled_to_charge[mode] += (
+                                no_vehicle_to_charge
+                            )
+
+                        # Schedule to Queue
+                        self._scheduled_tasks.append(multi_service_task)
+
+                        # Remember event for multi service tasks
+                        charging_events.append(multi_service_task.task_finished)
+                    else:
+                        # Single Task
                         origin, destination, no_vehicle_to_charge, distance_to_base = (
-                            task
+                            charging_plan[0]
                         )
 
                         charging_task = ChargingTask(
@@ -114,104 +148,109 @@ class IntegratedSharedMobilityStrategy(OperationsInterface):
                             self._state_of_charge_threshold,
                         )
 
-                        multi_service_task.append_task(charging_task)
+                        # Schedule to Queue
+                        self._scheduled_tasks.append(charging_task)
+
+                        # Remember event for multi service tasks
+                        charging_events.append(charging_task.task_finished)
 
                         # Count Vehicles to be charged
                         no_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
 
-                    # Schedule to Queue
-                    self._scheduled_tasks.append(multi_service_task)
+            # Insert Tasks into Task Queue
+            self._operator_reference._workforce.task_queue.bulk_append(
+                self._scheduled_tasks
+            )
 
-                    # Remember event for multi service tasks
-                    charging_events.append(multi_service_task.task_finished)
-                else:
-                    # Single Task
-                    origin, destination, no_vehicle_to_charge, distance_to_base = (
-                        charging_plan[0]
-                    )
-
-                    charging_task = ChargingTask(
-                        self._env,
-                        origin,
-                        destination,
-                        no_vehicle_to_charge,
-                        mode,
-                        distance_to_base,
-                        self._operator_reference._fleet,
-                        self._state_of_charge_threshold,
-                    )
-
-                    # Schedule to Queue
-                    self._scheduled_tasks.append(charging_task)
-
-                    # Remember event for multi service tasks
-                    charging_events.append(charging_task.task_finished)
-
-                    # Count Vehicles to be charged
-                    no_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
-
-        # Insert Tasks into Task Queue
-        self._operator_reference._workforce.task_queue.bulk_append(self._scheduled_tasks)
-
-        logging.info(
-            f"There are {self._operator_reference._fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )
-
-        logging.info(
-            f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )
-
-        # Notify listeners
-        self._charging_plan_updated.succeed()
-        self._charging_plan_updated = self._env.event()
-
-        # While Shift is not over, recalculate relocation plans and execute them.
-        while (
-            self._env.now % self._time_between_operations < self._duration_of_operations
-        ):
             logging.info(
-                "Planning next relocation schedule.",
+                f"There are {self._operator_reference._fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
-            # Reset Scheduled Tasks
-            self._scheduled_tasks.clear()
-
-            # Wait 2 Minutes, then (re-)schedule relocation
-            yield self._env.timeout(2)
-
-            transactions = self._operator_reference.get_transactions()
-
-            relocations = self.generate_relocation_plan(
-                transactions
+            logging.info(
+                f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
-            # We track the charging events
-            relocation_events = []
+            # Notify listeners
+            self._charging_plan_updated.succeed()
+            self._charging_plan_updated = self._env.event()
 
-            # No Vehicles to be charged
-            no_vehicles_scheduled_to_relocate = {}
+            # While Shift is not over, recalculate relocation plans and execute them.
+            while (
+                self._env.now % self._time_between_operations
+                < self._duration_of_operations
+            ):
+                logging.info(
+                    "Planning next relocation schedule.",
+                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                )
 
-            for mode in self._available_vehicle_modes:
-                relocation_plans_for_current_mode = relocations[mode]
+                # Reset Scheduled Tasks
+                self._scheduled_tasks.clear()
 
-                # Set Counter to 0
-                if mode not in no_vehicles_scheduled_to_relocate:
-                    no_vehicles_scheduled_to_relocate[mode] = 0
+                # Wait 2 Minutes, then (re-)schedule relocation
+                yield self._env.timeout(2)
 
-                for relocation_plan in relocation_plans_for_current_mode:
-                    if len(relocation_plan) > 1:
-                        multi_service_task = MultiServiceTask(self._env)
-                        # Pooled Task
-                        for task in relocation_plan:
+                transactions = self._operator_reference.get_transactions()
+
+                relocations = self.generate_relocation_plan(transactions)
+
+                # We track the charging events
+                relocation_events = []
+
+                # No Vehicles to be charged
+                no_vehicles_scheduled_to_relocate = {}
+
+                for mode in self._available_vehicle_modes:
+                    relocation_plans_for_current_mode = relocations[mode]
+
+                    # Set Counter to 0
+                    if mode not in no_vehicles_scheduled_to_relocate:
+                        no_vehicles_scheduled_to_relocate[mode] = 0
+
+                    for relocation_plan in relocation_plans_for_current_mode:
+                        if len(relocation_plan) > 1:
+                            multi_service_task = MultiServiceTask(self._env)
+                            # Pooled Task
+                            for task in relocation_plan:
+                                (
+                                    origin,
+                                    destination,
+                                    no_vehicle_to_relocate,
+                                    relocation_distance,
+                                ) = task
+
+                                relocation_task = RelocationTask(
+                                    self._env,
+                                    origin,
+                                    destination,
+                                    no_vehicle_to_relocate,
+                                    relocation_distance,
+                                    mode,
+                                    self._operator_reference._fleet,
+                                )
+
+                                multi_service_task.append_task(relocation_task)
+
+                                # Count Vehicles to be charged
+                                no_vehicles_scheduled_to_relocate[mode] += (
+                                    no_vehicle_to_relocate
+                                )
+
+                            # Schedule to Queue
+                            self._scheduled_tasks.append(multi_service_task)
+
+                            # Remember event for multi service tasks
+                            relocation_events.append(multi_service_task.task_finished)
+                        else:
+                            # Single Task
                             (
                                 origin,
                                 destination,
                                 no_vehicle_to_relocate,
                                 relocation_distance,
-                            ) = task
+                            ) = relocation_plan[0]
 
                             relocation_task = RelocationTask(
                                 self._env,
@@ -223,67 +262,38 @@ class IntegratedSharedMobilityStrategy(OperationsInterface):
                                 self._operator_reference._fleet,
                             )
 
-                            multi_service_task.append_task(relocation_task)
+                            # Schedule to Queue
+                            self._scheduled_tasks.append(relocation_task)
+
+                            # Remember event for multi service tasks
+                            relocation_events.append(relocation_task.task_finished)
 
                             # Count Vehicles to be charged
                             no_vehicles_scheduled_to_relocate[mode] += (
                                 no_vehicle_to_relocate
                             )
 
-                        # Schedule to Queue
-                        self._scheduled_tasks.append(multi_service_task)
-
-                        # Remember event for multi service tasks
-                        relocation_events.append(multi_service_task.task_finished)
-                    else:
-                        # Single Task
-                        (
-                            origin,
-                            destination,
-                            no_vehicle_to_relocate,
-                            relocation_distance,
-                        ) = relocation_plan[0]
-
-                        relocation_task = RelocationTask(
-                            self._env,
-                            origin,
-                            destination,
-                            no_vehicle_to_relocate,
-                            relocation_distance,
-                            mode,
-                            self._operator_reference._fleet,
-                        )
-
-                        # Schedule to Queue
-                        self._scheduled_tasks.append(relocation_task)
-
-                        # Remember event for multi service tasks
-                        relocation_events.append(relocation_task.task_finished)
-
-                        # Count Vehicles to be charged
-                        no_vehicles_scheduled_to_relocate[mode] += (
-                            no_vehicle_to_relocate
-                        )
-
-            # Insert Tasks into Task Queue
-            self._operator_reference._workforce.task_queue.bulk_append(self._scheduled_tasks)
-
-            if len(charging_events):
-                # Wait for Charging events
-                yield self._env.all_of(charging_events)
-
-                logging.info(
-                    "All Charging Tasks have been fulfilled. Re-Generating Relocation Plan.",
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                # Insert Tasks into Task Queue
+                self._operator_reference._workforce.task_queue.bulk_append(
+                    self._scheduled_tasks
                 )
 
-            # Wait for relocation events to be processed
-            yield self._env.all_of(relocation_events)
+                if len(charging_events):
+                    # Wait for Charging events
+                    yield self._env.all_of(charging_events)
 
-            logging.info(
-                "Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan.",
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
+                    logging.info(
+                        "All Charging Tasks have been fulfilled. Re-Generating Relocation Plan.",
+                        extra={"clazz": self.__class__.__name__, "oid": ""},
+                    )
+
+                # Wait for relocation events to be processed
+                yield self._env.all_of(relocation_events)
+
+                logging.info(
+                    "Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan.",
+                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                )
 
     def generate_relocation_plan(self, transactions):
         """
@@ -292,7 +302,9 @@ class IntegratedSharedMobilityStrategy(OperationsInterface):
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows (from PaymentEngine)
         :return: Dict of potential relocations {"SharedCar": [(origin, destination, no, distance)], ..}
         """
-        state = self.calculate_residual_supply(self._operator_reference._fleet, transactions)
+        state = self.calculate_residual_supply(
+            self._operator_reference._fleet, transactions
+        )
 
         relocation_plans = self.identify_potential_relocations(state)
 
@@ -307,7 +319,9 @@ class IntegratedSharedMobilityStrategy(OperationsInterface):
                 **used_capacity**: How many service workers are planned to cope with charging needs
         """
         # Get Current Fleet State
-        state = self.calculate_residual_supply(self._operator_reference._fleet, transactions)
+        state = self.calculate_residual_supply(
+            self._operator_reference._fleet, transactions
+        )
 
         config = Configuration.instance()
         if config.store_results:
@@ -1054,7 +1068,7 @@ class IntegratedSharedMobilityStrategy(OperationsInterface):
 
         return state
 
-    def estimate_delta_demand(self, transactions, ordered_available_vehicle):
+    def estimate_delta_demand(self, transactions: DataFrame, ordered_available_vehicle):
         """
         Compute the expected demand in a hexagon based on collected rental transactions from the simulation.
 

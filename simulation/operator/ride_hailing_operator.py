@@ -3,16 +3,17 @@ import logging
 from simpy import Environment
 
 from simulation.helper.configuration.configuration import Configuration
-from simulation.infrastructure.charging_stations.charging_infastructure import \
-    ChargingInfrastructure
-from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import \
-    TransportationAlternativeRideHailing
-from simulation.operator.interface.search_engine_interface import \
-    SearchEngineInterface
-from simulation.operator.interface.vehicle_allocation_engine_interface import \
-    VehicleAllocationEngineInterface
-from simulation.operator.operations_management.operations import \
-    OperationsInterface
+from simulation.infrastructure.charging_stations.charging_infastructure import (
+    ChargingInfrastructure,
+)
+from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
+    TransportationAlternativeRideHailing,
+)
+from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.operator.interface.vehicle_allocation_engine_interface import (
+    VehicleAllocationEngineInterface,
+)
+from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operator import Operator
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transport_task import TransportTask
@@ -29,7 +30,12 @@ class RideHailingOperator(Operator):
         allocation_engine: VehicleAllocationEngineInterface,
     ):
         super().__init__(
-            env, fleet, charging_infrastructure, operations, search_engine, allocation_engine
+            env,
+            fleet,
+            charging_infrastructure,
+            operations,
+            search_engine,
+            allocation_engine,
         )
 
         self._driver_payment_share = Configuration.instance().get_driver_payment_share()

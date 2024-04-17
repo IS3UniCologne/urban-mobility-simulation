@@ -3,16 +3,17 @@ import logging
 import pandas as pd
 from simpy import Environment
 
-from simulation.infrastructure.charging_stations.charging_infastructure import \
-    ChargingInfrastructure
-from simulation.operator.data_transfer_object.transportation_alternative import \
-    TransportationAlternative
-from simulation.operator.interface.search_engine_interface import \
-    SearchEngineInterface
-from simulation.operator.interface.vehicle_allocation_engine_interface import \
-    VehicleAllocationEngineInterface
-from simulation.operator.operations_management.operations import \
-    OperationsInterface
+from simulation.infrastructure.charging_stations.charging_infastructure import (
+    ChargingInfrastructure,
+)
+from simulation.operator.data_transfer_object.transportation_alternative import (
+    TransportationAlternative,
+)
+from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.operator.interface.vehicle_allocation_engine_interface import (
+    VehicleAllocationEngineInterface,
+)
+from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transport_task import TransportTask
 
@@ -43,8 +44,6 @@ class Operator:
         self._transactions = []
 
         self._operations.register_operator_reference(self)
-        self._operations.register_fleet(fleet)
-        self._operations.register_charging_infrastructure(charging_infrastructure)
 
         self._search_engine.register_fleet(self._fleet)
 
@@ -104,8 +103,8 @@ class Operator:
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": selected_transportation_alternative.route.origin.get_hexagon(),
-                "destination": selected_transportation_alternative.route.destination.get_hexagon(),
+                "origin": selected_transportation_alternative.route.origin.get_default_hexagon(),
+                "destination": selected_transportation_alternative.route.destination.get_default_hexagon(),
                 "time_start": transportation_task.time,
                 "time_end": self._env.now,
                 "price": selected_transportation_alternative.price,
@@ -129,8 +128,8 @@ class Operator:
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": transportation_task.origin.get_hexagon(),
-                "destination": transportation_task.destination.get_hexagon(),
+                "origin": transportation_task.origin.get_default_hexagon(),
+                "destination": transportation_task.destination.get_default_hexagon(),
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,

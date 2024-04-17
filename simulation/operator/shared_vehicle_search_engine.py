@@ -1,16 +1,12 @@
-import logging
-
-from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.route import Route
-from simulation.operator.data_transfer_object.transportation_alternative import \
-    TransportationAlternative
-from simulation.operator.data_transfer_object.transportation_alternative_browser import \
-    TransportationAlternativeBrowser
-from simulation.operator.interface.search_engine_interface import \
-    SearchEngineInterface
-from simulation.tasks.transport_task import TransportTask
-from simulation.tasks.transportation_search_task import \
-    TransportationSearchTask
+from simulation.operator.data_transfer_object.transportation_alternative import (
+    TransportationAlternative,
+)
+from simulation.operator.data_transfer_object.transportation_alternative_browser import (
+    TransportationAlternativeBrowser,
+)
+from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 
 class SharedVehicleSearchEngine(SearchEngineInterface):
