@@ -78,10 +78,21 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             # Clean old jobs (if there are some left)
             self._operator_reference._workforce.task_queue.clear()
 
+            # Retrieve Vehicle Transactions
+            transactions = self._operator_reference.get_transactions()
+
+            condition = (
+                transactions["selected_vehicle_mode"].apply(lambda x: x == "None")
+            ).all()
+
+            if condition:
+                logging.debug(
+                    "Skip operations, cause there has not been one successful transaction yet"
+                )
+                continue
+
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-            charging_plans, used_capacity = self.generate_charging_plan(
-                self._operator_reference.get_transactions()
-            )
+            charging_plans, used_capacity = self.generate_charging_plan(transactions)
 
             # We track the charging events
             charging_events = []

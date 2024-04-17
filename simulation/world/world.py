@@ -159,6 +159,7 @@ class World:
             tc = TripCharacteristics(distance)
             viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
+            # Determine Consumer Type
             if mode == "public_transport":
                 # User Preferences
                 max_wait_time = normal(

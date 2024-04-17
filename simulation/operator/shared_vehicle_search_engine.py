@@ -91,4 +91,19 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
             if kick_scooter.has_enough_state_of_charge(distance):
                 browser.add_transportation_alternative(transportation_alternative)
 
+        # Add all available bikes to alternative browser
+        for bike in bikes_in_area:
+            # Calc Duration
+            duration = distance / bike.velocity
+
+            # Calc Price
+            price = duration * bike.price_per_minute
+
+            # Put together
+            transportation_alternative = TransportationAlternative(
+                bike, route, price, duration, distance, 1
+            )
+
+            browser.add_transportation_alternative(transportation_alternative)
+
         return browser

@@ -312,7 +312,7 @@ class RelocationScheduler:
             )
 
         low_fraction_per_mode = [
-            curr_low_supply / max_supply
+            curr_low_supply / max_supply if max_supply != 0 else 0
             for curr_low_supply, max_supply in zip(
                 current_low_soc_supply, max_vehicle_supply
             )
@@ -356,6 +356,8 @@ class RelocationScheduler:
             max_capacity_per_unit = 8
         elif mode == "SharedCar":
             max_capacity_per_unit = 1
+        elif mode == "SharedBike":
+            max_capacity_per_unit = 8
         else:
             raise NotImplementedError("Not Implemented")
         return max_capacity_per_unit
@@ -716,7 +718,7 @@ class RelocationScheduler:
 
         # Normalize by number of vehicles
         current_supply_mismatch = [
-            supply_mismatch / max_supply
+            supply_mismatch / max_supply if max_supply != 0 else 0
             for supply_mismatch, max_supply in zip(
                 current_supply_mismatch, max_vehicle_supply
             )
@@ -799,10 +801,18 @@ class RelocationScheduler:
         # Calculate Residual Supply for each vehicle type
         # RS = Supply - Low SoC Vehicles - Delta Demand (i.e., E[Inflow]-E[Outflow]-E[Missed Trips]
         for vehicle in self._available_vehicle_modes:
-            # + Delta because delta is negative or positive based on calc delta demand
-            state[f"Residual_Supply_{vehicle}"] = (
-                state[vehicle] - state[f"{vehicle}_Low_SoC"] + state[f"Delta_{vehicle}"]
-            )
+            if vehicle == "SharedBike":
+                # + Delta because delta is negative or positive based on calc delta demand
+                state[f"Residual_Supply_{vehicle}"] = (
+                    state[vehicle] + state[f"Delta_{vehicle}"]
+                )
+            else:
+                # + Delta because delta is negative or positive based on calc delta demand
+                state[f"Residual_Supply_{vehicle}"] = (
+                    state[vehicle]
+                    - state[f"{vehicle}_Low_SoC"]
+                    + state[f"Delta_{vehicle}"]
+                )
 
         return state
 
@@ -904,8 +914,6 @@ class RelocationScheduler:
 
         # Unstack Vehicle Type Level
         inflow = inflow.unstack()
-        # base columns
-        ["destination", "state"]
         vehicle_columns = list(inflow["origin"].columns.values)
 
         # Reset Multi-Index to Flat Index (keep vehicle column order)
@@ -932,10 +940,13 @@ class RelocationScheduler:
 
         # Calculate Delta (Expected Inflow - Expected Outflow - Missed Demand)
         for vehicle in ordered_available_vehicle:
-            result["Delta_{}".format(vehicle)] = (
-                result["Inflow_{}".format(vehicle)]
-                - result["OutFlow_Fulfilled_{}".format(vehicle)]
-                - result["OutFlow_Missed_{}".format(vehicle)]
-            )
+            if vehicle not in vehicle_columns:
+                result["Delta_{}".format(vehicle)] = 0
+            else:
+                result["Delta_{}".format(vehicle)] = (
+                    result["Inflow_{}".format(vehicle)]
+                    - result["OutFlow_Fulfilled_{}".format(vehicle)]
+                    - result["OutFlow_Missed_{}".format(vehicle)]
+                )
 
         return result
