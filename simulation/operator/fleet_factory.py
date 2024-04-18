@@ -314,6 +314,7 @@ def generate_mixed_fleet(env, fleet_config):
                 env,
                 pos,
                 b_config.max_available_seats,
+                b_config.max_state_of_charge,
                 b_config.velocity,
                 b_config.price_per_min,
             )

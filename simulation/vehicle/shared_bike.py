@@ -1,11 +1,10 @@
 from simpy import Environment
-import logging
 
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
 
 class SharedBike(SharedVehicle):
-    # Shared Kick Scooter Counter
+    # Shared Bike Counter
     shared_bike_id = 0
 
     def __init__(
@@ -13,6 +12,7 @@ class SharedBike(SharedVehicle):
         env: Environment,
         position,
         max_available_seats=1,
+        max_state_of_charge=0,
         velocity=47.0,
         price_per_min=0.08,
     ):
@@ -25,7 +25,13 @@ class SharedBike(SharedVehicle):
         :param velocity:
         """
         super(SharedBike, self).__init__(
-            env, position, max_available_seats, 1, 0.0, velocity, price_per_min
+            env,
+            position,
+            max_available_seats,
+            max_state_of_charge,
+            0.0,
+            velocity,
+            price_per_min,
         )
 
         # Increment Shared Car ID
@@ -34,10 +40,7 @@ class SharedBike(SharedVehicle):
         SharedBike.shared_bike_id += 1
 
     def _update_state_of_charge(self, distance):
-        """
-        Update state of charge of vehicles based on driven distance.
-        SoC = SoC_old - EnergyConsumption (kWh/km) * km
-        :param distance: Distance driven
-        """
+        pass
 
-        logging.debug("Skip Charge updating of Bike")
+    def has_enough_state_of_charge(self, distance):
+        return True
