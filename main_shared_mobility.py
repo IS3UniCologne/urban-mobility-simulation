@@ -35,6 +35,7 @@ from simulation.operator.shared_vehicle_allocation_engine import (
     SharedVehicleAllocationEngine,
 )
 from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
+from simulation.vehicle.shared_bike import SharedBike
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
@@ -88,9 +89,14 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city="b
 
 # Read Shared Vehicle Config and add to Global Config File
 for idx, vehicle_type in enumerate(
-    ["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]
+    ["SHARED_BIKE", "SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]
 ):
-    vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter"]
+    vehicle_type_classes = [
+        "SharedBike",
+        "SharedCar",
+        "SharedScooter",
+        "SharedKickScooter",
+    ]
     price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
     max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
     energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
@@ -264,6 +270,7 @@ distance_matrix = dmi.load_distance_matrix()
 def run_single_simulation(
     start_time=0,
     end_time=20,
+    n_bikes=0,
     n_cars=0,
     n_scooter=0,
     n_kick_scooter=0,
@@ -293,6 +300,7 @@ def run_single_simulation(
     env = simpy.Environment(initial_time=start_time)
 
     # Before each simulation run, reset counter and random number generators
+    SharedBike.shared_bike_id = 0
     SharedCar.car_id = 0
     SharedKickScooter.shared_kick_scooter_id = 0
     SharedScooter.shared_scooter_id = 0
@@ -351,7 +359,7 @@ def run_single_simulation(
         n_cars=n_cars,
         n_scooter=n_scooter,
         n_kick_scooter=n_kick_scooter,
-        n_bikes=0,
+        n_bikes=n_bikes,
     )
     mixed_fleet = generate_mixed_fleet(env, fleet_config)
 
@@ -361,8 +369,13 @@ def run_single_simulation(
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
 
-    available_vehicle_modes = ["SharedKickScooter", "SharedScooter", "SharedCar"]
-    available_vehicle_modes_supply = [n_kick_scooter, n_scooter, n_cars]
+    available_vehicle_modes = [
+        "SharedBike",
+        "SharedCar",
+        "SharedKickScooter",
+        "SharedScooter",
+    ]
+    available_vehicle_modes_supply = [n_bikes, n_cars, n_kick_scooter, n_scooter]
     no_service_workers = (
         global_config.shared_vehicle_operator_config.number_of_service_worker
     )
@@ -433,7 +446,8 @@ def run_single_simulation(
 
     # Daily Total Cost (CAPEX+OPEX) (cost derived from RevCalc excel in iCloud folder)
     total_cost_per_day = (
-        global_config.get_vehicle_config("SharedCar").daily_total_cost * n_cars
+        global_config.get_vehicle_config("SharedBike").daily_total_cost * n_bikes
+        + global_config.get_vehicle_config("SharedCar").daily_total_cost * n_cars
         + global_config.get_vehicle_config("SharedScooter").daily_total_cost * n_scooter
         + global_config.get_vehicle_config("SharedKickScooter").daily_total_cost
         * n_kick_scooter
@@ -507,6 +521,7 @@ def run_single_simulation(
                 .groupby("state")
                 .agg(
                     {
+                        "SharedBike": "sum",
                         "SharedCar": "sum",
                         "SharedScooter": "sum",
                         "SharedKickScooter": "sum",
@@ -541,9 +556,10 @@ def run_single_simulation(
 
 # Run Single Simulation
 result = run_single_simulation(
-    end_time=2880,
-    n_cars=1500,
-    n_scooter=1500,
+    end_time=1440,
+    n_bikes=1000,
+    n_cars=500,
+    n_scooter=300,
     n_kick_scooter=1500,
     seed=4711,
     substitution=0.05,

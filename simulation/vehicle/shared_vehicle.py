@@ -122,7 +122,11 @@ class SharedVehicle(Vehicle, ABC):
 
     @property
     def current_relative_state_of_charge(self):
-        return self.current_state_of_charge / self.max_state_of_charge
+        return (
+            self.current_state_of_charge / self.max_state_of_charge
+            if self.max_state_of_charge != 0
+            else 1
+        )
 
     @property
     def energy_consumption(self):

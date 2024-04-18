@@ -66,8 +66,6 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         self._duration_of_operations = operation_duration  # mins
 
     def execute(self):
-        # TODO: Refactor stuff from main and operator, such that the operator only has to call operations.execute()
-
         """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
         """
@@ -174,7 +172,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             )
 
             logging.info(
-                f"There are {self._operator_reference._fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
+                f"There are {len(self._operator_reference._fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold))} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -585,7 +583,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             )
 
         low_fraction_per_mode = [
-            curr_low_supply / max_supply
+            curr_low_supply / max_supply if max_supply != 0 else 0
             for curr_low_supply, max_supply in zip(
                 current_low_soc_supply, max_vehicle_supply
             )
@@ -625,6 +623,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         # Mode Specific Collection Capacity per Service Worker (i.e., how many vehicles can one sw collect)
         if mode == "SharedKickScooter":
             max_capacity_per_unit = 40
+        elif mode == "SharedBike":
+            max_capacity_per_unit = 8
         elif mode == "SharedScooter":
             max_capacity_per_unit = 8
         elif mode == "SharedCar":
@@ -894,8 +894,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     )
 
                     # Solve problem using the genetic algorithm (keep random state constant)
-                    best_state, best_fitness = mlrose.genetic_alg(
-                        problem_fit, random_state=1337
+                    best_state, best_fitness, _ = mlrose.genetic_alg(
+                        problem_fit, random_state=1337, curve=False
                     )
 
                     # Convert Numpy Array to List
@@ -989,7 +989,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         # Normalize by number of vehicles
         current_supply_mismatch = [
-            supply_mismatch / max_supply
+            supply_mismatch / max_supply if max_supply != 0 else 0
             for supply_mismatch, max_supply in zip(
                 current_supply_mismatch, max_vehicle_supply
             )
@@ -1072,10 +1072,18 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         # Calculate Residual Supply for each vehicle type
         # RS = Supply - Low SoC Vehicles - Delta Demand (i.e., E[Inflow]-E[Outflow]-E[Missed Trips]
         for vehicle in self._available_vehicle_modes:
-            # + Delta because delta is negative or positive based on calc delta demand
-            state[f"Residual_Supply_{vehicle}"] = (
-                state[vehicle] - state[f"{vehicle}_Low_SoC"] + state[f"Delta_{vehicle}"]
-            )
+            if vehicle == "SharedBike":
+                # + Delta because delta is negative or positive based on calc delta demand
+                state[f"Residual_Supply_{vehicle}"] = (
+                    state[vehicle] + state[f"Delta_{vehicle}"]
+                )
+            else:
+                # + Delta because delta is negative or positive based on calc delta demand
+                state[f"Residual_Supply_{vehicle}"] = (
+                    state[vehicle]
+                    - state[f"{vehicle}_Low_SoC"]
+                    + state[f"Delta_{vehicle}"]
+                )
 
         return state
 
@@ -1177,7 +1185,6 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         # Unstack Vehicle Type Level
         inflow = inflow.unstack()
-        base_column = ["destination", "state"]
         vehicle_columns = list(inflow["origin"].columns.values)
 
         # Reset Multi-Index to Flat Index (keep vehicle column order)
@@ -1203,11 +1210,15 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         result.fillna(0, inplace=True)
 
         # Calculate Delta (Expected Inflow - Expected Outflow - Missed Demand)
+
         for vehicle in ordered_available_vehicle:
-            result["Delta_{}".format(vehicle)] = (
-                result["Inflow_{}".format(vehicle)]
-                - result["OutFlow_Fulfilled_{}".format(vehicle)]
-                - result["OutFlow_Missed_{}".format(vehicle)]
-            )
+            if vehicle not in vehicle_columns:
+                result["Delta_{}".format(vehicle)] = 0
+            else:
+                result["Delta_{}".format(vehicle)] = (
+                    result["Inflow_{}".format(vehicle)]
+                    - result["OutFlow_Fulfilled_{}".format(vehicle)]
+                    - result["OutFlow_Missed_{}".format(vehicle)]
+                )
 
         return result
