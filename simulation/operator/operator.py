@@ -63,6 +63,10 @@ class Operator:
     def total_missed_revenue(self):
         return self._total_missed_revenue
 
+    @property
+    def fleet(self):
+        return self._fleet
+
     def increase_total_revenue(self, additional_revenue):
         self._total_fulfilled_trips += 1
         self._total_revenue += additional_revenue
