@@ -15,16 +15,16 @@ class MixedRideHailingFleet(VehicleFleet):
     def __init__(self, env: Environment):
         super(MixedRideHailingFleet, self).__init__(env)
         self._env = env
+        self._config = Configuration.instance()
+
         self._cars = []
         self._ridehailing_cars = []
         self._autonomous_cars = []
-        self._distance_threshold_to_user = (
-            Configuration.instance().get_distance_threshold_to_user()
+        self._distance_threshold_to_user = self._config.get_distance_threshold_to_user()
+        self._driver_availability_vector = self._config.get_driver_availability_vector()
+        self._recharging_threshold = (
+            self._config.ridehailing_operator_config.recharge_threshold
         )
-        self._driver_availability_vector = (
-            Configuration.instance().get_driver_availability_vector()
-        )
-        self._recharging_threshold = Configuration.instance().get_recharging_threshold()
         self._env.process(self.fleet_size_monitor())
 
     def add_shared_vehicle(self, vehicle: RideHailingVehicle):

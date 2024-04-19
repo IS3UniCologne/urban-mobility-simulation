@@ -86,11 +86,6 @@ class RideHailingOperator(Operator):
     def withdraw_transportation_task(
         self, user, transportation_task: TransportTask, state=None
     ):
-        # Get available vehicle types
-
-        # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
-        # We count the lost revenue for the "cheapest" mode
-
         # distance = transportation_task.origin >> transportation_task.destination
         # TODO: define price of the trip
 
