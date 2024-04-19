@@ -4,21 +4,20 @@ from simulation.operator.operations_management.operations import OperationsInter
 from simulation.operator.operations_management.service_tasks.charging_task_ridehailing import (
     ChargingTaskRidehailing,
 )
+from simulation.operator.operations_management.task_queue import TaskQueue
 
 
 class RideHailingChargingOperations(OperationsInterface):
     def __init__(
         self,
         env,
-        vehicle_fleet,
+        distance_matrix,
         time_between_operations,
         operation_duration,
-        relocation_scheduler,
-        payment_engine,
         available_modes,
         available_modes_supply,
+        base_regions,
         state_of_charge_threshold,
-        task_queue,
         charging_stations,
     ):
         super(RideHailingChargingOperations, self).__init__(env=env)
@@ -37,21 +36,17 @@ class RideHailingChargingOperations(OperationsInterface):
         :param state_of_charge_threshold: State of Charge Percent; below that => vehicle needs charging
 
         """
-
-        self._env = env
-        self._vehicle_fleet = vehicle_fleet
-
-        self._relocation_scheduler = relocation_scheduler
+        # Distance Matrix between Regions
+        self._distance_matrix = distance_matrix
 
         # To access vehicle transactions
-        self._payment_engine = payment_engine
         self._available_modes = available_modes  # Modes in Fleet
         self._available_modes_supply = available_modes_supply  # Number of Vehicles in Fleet per Mode e.g., [100, 100, 50]
 
         self._state_of_charge_threshold = state_of_charge_threshold
 
         # Task List
-        self._task_queue = task_queue
+        self._task_queue = TaskQueue(env)
         self._scheduled_tasks = []
 
         # Events
@@ -65,6 +60,7 @@ class RideHailingChargingOperations(OperationsInterface):
         self._duration_of_operations = operation_duration  # mins
         self._charging_stations = charging_stations
         self._counter = 0
+        self._base_regions = base_regions
 
     @property
     def charging_plan_updated(self):

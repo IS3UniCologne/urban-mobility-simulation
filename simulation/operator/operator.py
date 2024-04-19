@@ -47,6 +47,8 @@ class Operator:
 
         self._search_engine.register_fleet(self._fleet)
 
+        self._env.process(self._operations.execute())
+
     @property
     def total_revenue(self):
         return self._total_revenue

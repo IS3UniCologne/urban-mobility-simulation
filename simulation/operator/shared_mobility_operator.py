@@ -42,8 +42,6 @@ class SharedMobilityOperator(Operator):
             env=self._env, number_service_workers=number_service_workers
         )
 
-        self._env.process(self._operations.execute())
-
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         # Get available vehicle types
         vehicle_types = Configuration.instance().get_available_vehicle_types()
