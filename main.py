@@ -504,15 +504,6 @@ def run_single_simulation(
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
-    # Inject Modules.                         #
-    #                                         #
-    # # # # # # # # # # # # # # # # # # # # # #
-
-    search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
-    search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
-
-    # # # # # # # # # # # # # # # # # # # # # #
-    #                                         #
     # Operations Management Processes         #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #

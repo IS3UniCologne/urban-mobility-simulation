@@ -124,7 +124,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                                 no_vehicle_to_charge,
                                 mode,
                                 distance_to_base,
-                                self._operator_reference._fleet,
+                                self._operator_reference.fleet,
                                 self._state_of_charge_threshold,
                             )
 
@@ -153,7 +153,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                             no_vehicle_to_charge,
                             mode,
                             distance_to_base,
-                            self._operator_reference._fleet,
+                            self._operator_reference.fleet,
                             self._state_of_charge_threshold,
                         )
 
@@ -172,7 +172,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             )
 
             logging.info(
-                f"There are {len(self._operator_reference._fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold))} vehicles with low state of charge.",
+                f"There are {len(self._operator_reference.fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold))} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -237,7 +237,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                                     no_vehicle_to_relocate,
                                     relocation_distance,
                                     mode,
-                                    self._operator_reference._fleet,
+                                    self._operator_reference.fleet,
                                 )
 
                                 multi_service_task.append_task(relocation_task)
@@ -268,7 +268,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                                 no_vehicle_to_relocate,
                                 relocation_distance,
                                 mode,
-                                self._operator_reference._fleet,
+                                self._operator_reference.fleet,
                             )
 
                             # Schedule to Queue
@@ -312,7 +312,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         :return: Dict of potential relocations {"SharedCar": [(origin, destination, no, distance)], ..}
         """
         state = self.calculate_residual_supply(
-            self._operator_reference._fleet, transactions
+            self._operator_reference.fleet, transactions
         )
 
         relocation_plans = self.identify_potential_relocations(state)
@@ -329,7 +329,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         """
         # Get Current Fleet State
         state = self.calculate_residual_supply(
-            self._operator_reference._fleet, transactions
+            self._operator_reference.fleet, transactions
         )
 
         config = Configuration.instance()
