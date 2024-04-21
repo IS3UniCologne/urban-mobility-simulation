@@ -14,6 +14,9 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 
+from simulation.vehicle.shared_bike import SharedBike
+from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import \
+    DistanceBasedSharedVehicleVehicleChoiceBehavior
 # Custom module imports
 from utils import load_environment
 from configparser import ConfigParser
@@ -120,8 +123,8 @@ mc = ModeChoiceConfig(mode_choice_strategy, mode_choice_sub_boundary,
 
 # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/46
 # TODO: SharedScooters and SharedKickScooters do not have an initial state of charge. They start with the max state of charge.
-for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]):
-    vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter"]
+for idx, vehicle_type in enumerate(["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER", "SHARED_BIKE"]):
+    vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter", "SharedBike"]
     price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
     max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
     energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
@@ -165,7 +168,7 @@ n_scooters = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
 
 available_modes = parser.get("SHARED_VEHICLE_OPERATOR", "available_vehicle_modes_shared_vehicle")
 available_modes = available_modes.split(',')
-available_vehicle_modes_supply = [n_cars, n_scooters, n_kick_scooters]
+available_vehicle_modes_supply = [n_cars, n_scooters, n_kick_scooters, n_bikes]
 
 # Initiliaze the shared fleet operator 
 svoc = SharedVehicleOperatorConfig(recharge_threshold, charging_station_power,
@@ -175,7 +178,7 @@ svoc = SharedVehicleOperatorConfig(recharge_threshold, charging_station_power,
 
 # Vehicle Choice Model: Add available mobility modes
 if mode_choice_strategy == "substitution":
-     vehicle_choice_model = OnlyCarVehicleChoiceBehavior(['SharedScooter', 'SharedKickScooter','SharedCar'])
+     vehicle_choice_model = DistanceBasedSharedVehicleVehicleChoiceBehavior(mode_choice_model_path, mode_choice_sub_boundary, ['SharedScooter', 'SharedKickScooter','SharedCar', 'SharedBike'])
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
@@ -259,6 +262,7 @@ GeodesicEnvironment.getInstance().reset_random_generator(4711)
 SharedCar.car_id = 0
 SharedKickScooter.shared_kick_scooter_id = 0
 SharedScooter.shared_scooter_id = 0
+SharedBike.shared_bike_id = 0
 User.user_id = 0
 DemandFactory.counter = 0
 
