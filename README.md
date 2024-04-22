@@ -11,7 +11,6 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 Other Python versions are untested!
 > If you are on newer Macs (Apple Silicon) please use `environment_mac.yml` with special tensorflow dependencies!
 
-<<<<<<< HEAD
 ## Running an experiment
 > We provide a template at `experiment_template.py` for most common use cases, please refer to this!
 
@@ -35,7 +34,7 @@ This file contains following parameters that are required in every simulation:
 
 - **Input Files**:
 
-=======
+
 ## Pull Requests
 
 All pull requests must conform in formatting and linting to the interpretation of *ruff* on *blacks* code style and to the PEP definitions and their interpretation. In case a pull request's check of the *ruff* style fails, you have to run ruff locally. Simply use the following command:
@@ -48,4 +47,5 @@ You can use ruff to format your code as well. In that case, use the following co
 ```
 ruff format
 ```
->>>>>>> develop
+
+
