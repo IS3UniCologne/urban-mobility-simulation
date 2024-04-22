@@ -14,7 +14,12 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
         self._substitution_boundary = substitution_boundary
 
         # derived order through: sm.MNLogit(Y, X)._ynames_map
-        self._class_mapping = {0: 'SharedBike', 1: 'SharedCar', 2: 'SharedKickScooter', 3: 'SharedScooter'}
+        self._class_mapping = {
+            0: "SharedBike",
+            1: "SharedCar",
+            2: "SharedKickScooter",
+            3: "SharedScooter",
+        }
 
         self._available_vehicles = available_vehicles
 
@@ -23,13 +28,16 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
         # (Car, Kick Scooter, Scooter)
         # (p_car, p_ks, p_scooter)
 
-        choice_probabilities = self._choice_model.predict((1, trip_characteristics.distance))
-        choice_probabilities = choice_probabilities.reshape((-1))  # Transform 2D array to 1D array
+        choice_probabilities = self._choice_model.predict(
+            (1, trip_characteristics.distance)
+        )
+        choice_probabilities = choice_probabilities.reshape(
+            (-1)
+        )  # Transform 2D array to 1D array
         result = {}
 
         for i in range(len(choice_probabilities)):
             result[self._class_mapping[i]] = choice_probabilities[i]
-
 
         # Get Choice Index
         choice = choice_probabilities.argmax()
