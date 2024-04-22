@@ -30,7 +30,9 @@ class RouteSegment:
         if isinstance(other, RouteSegment):
             return self._distance + other._distance
         else:
-            raise TypeError(f'{other} is not a RouteSegment object, can\'t sum these two together')
+            raise TypeError(
+                f"{other} is not a RouteSegment object, can't sum these two together"
+            )
 
     def __radd__(self, other):
         return other + self._distance

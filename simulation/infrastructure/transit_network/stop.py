@@ -2,7 +2,9 @@ from simulation.environment.geodesic_position import GeodesicPosition
 
 
 class Stop(GeodesicPosition):
-    def __init__(self, stop_id, gtfs_id, latitude, longitude, departure, departure_next_day: bool):
+    def __init__(
+        self, stop_id, gtfs_id, latitude, longitude, departure, departure_next_day: bool
+    ):
         super(Stop, self).__init__(latitude, longitude)
 
         self._stop_id = stop_id
