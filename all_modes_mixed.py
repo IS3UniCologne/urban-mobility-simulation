@@ -2,85 +2,84 @@
 
 ##Imports
 # Standard library imports
+import logging
 import os
 import sys
-from pathlib import Path
 from configparser import ConfigParser
-import logging
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 # Third-party library imports
 import simpy
-import pandas as pd
-import numpy as np
-
-# Custom module imports
-from utils import load_environment
-from tracking.tracking import Tracking
 
 # Imports world related modules
 from simulation.agent.user import User
-from simulation.world.world import World
-from simulation.world.demand.demand_factory import DemandFactory
-from simulation.world.demand.demand_importer import DemandImporter
-from simulation.world.population.PopulationFactory import PopulationFactory
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import (
+    ChargingInfrastructureConfig,
     Configuration,
     ModeChoiceConfig,
-    SharedVehicleConfig,
-    RideHailingVehicleConfig,
-    SharedVehicleOperatorConfig,
-    RideHailingOperatorConfig,
     PopulationConfig,
+    RideHailingOperatorConfig,
+    RideHailingVehicleConfig,
+    SharedVehicleConfig,
+    SharedVehicleOperatorConfig,
     TransitOperatorConfig,
     UserConfig,
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
-
-# Import vehicle types and vehicle choice options
-from simulation.vehicle.vehicle import Vehicle
-from simulation.vehicle.public_transit_bus import Bus
-from simulation.vehicle.shared_car import SharedCar
-from simulation.vehicle.shared_kick_scooter import SharedKickScooter
-from simulation.vehicle.shared_scooter import SharedScooter
-from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
-from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
-    OnlyCarVehicleChoiceBehavior,
+from simulation.infrastructure.charging_stations.charging_infastructure import (
+    ChargingInfrastructure,
 )
 
 # Import infrastructure related modules
 from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
 )
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.configuration.configuration import ChargingInfrastructureConfig
 from simulation.infrastructure.helper.timetable import Timetable
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
-)
 
 # Import operator related modules
 from simulation.operator.fleet_factory import (
-    generate_mixed_fleet,
     generate_fleet_config,
-)
-from simulation.operator.fleet_factory import (
+    generate_mixed_fleet,
     generate_mixed_ride_hailing_fleet,
     generate_ridehailing_fleet_config,
 )
-from simulation.operator.shared_vehicle_allocation_engine import (
-    SharedVehicleAllocationEngine,
-)
-from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
+from simulation.operator.operations_management.service_worker import ServiceWorker
+from simulation.operator.operations_management.task_queue import TaskQueue
+from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
 )
 from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
-from simulation.operator.public_transit_operator import PublicTransitOperator
-from simulation.operator.operations_management.task_queue import TaskQueue
-from simulation.operator.operations_management.service_worker import ServiceWorker
+from simulation.operator.shared_vehicle_allocation_engine import (
+    SharedVehicleAllocationEngine,
+)
+from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
+from simulation.vehicle.public_transit_bus import Bus
+from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
+from simulation.vehicle.shared_car import SharedCar
+from simulation.vehicle.shared_kick_scooter import SharedKickScooter
+from simulation.vehicle.shared_scooter import SharedScooter
+
+# Import vehicle types and vehicle choice options
+from simulation.vehicle.vehicle import Vehicle
+from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
+    OnlyCarVehicleChoiceBehavior,
+)
+from simulation.world.demand.demand_factory import DemandFactory
+from simulation.world.demand.demand_importer import DemandImporter
+from simulation.world.population.PopulationFactory import PopulationFactory
+from simulation.world.world import World
+from tracking.tracking import Tracking
+
+# Custom module imports
+from utils import load_environment
 
 # Change working directory to path of this file
 working_dir = Path(__file__).parent
@@ -101,7 +100,6 @@ start_time = parser.getint("EXPERIMENT_MANAGEMENT", "START_TIME")
 end_time = parser.getint("EXPERIMENT_MANAGEMENT", "END_TIME")
 seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
 
-start_time = 14 * 60
 
 # World / Resolution Config
 spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
@@ -146,7 +144,10 @@ mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_bo
 
 # Initialize the mode choice config
 mc = ModeChoiceConfig(
-    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
+    mode_choice_strategy,
+    mode_choice_sub_boundary,
+    mode_choice_model_path,
+    path_to_model=None,
 )
 
 # Load the config to the global config
@@ -156,10 +157,12 @@ global_config.add_mode_choice_config(mc)
 # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/51
 if mode_choice_strategy == "substitution":
     # For now modify this depending on the modus
-    # vehicle_choice_model = OnlyCarVehicleChoiceBehavior(['SharedScooter','SharedKickScooter','SharedCar'])
     vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
-        ["AutonomousCar", "RideHailingCar"]
+        ["SharedScooter", "SharedKickScooter", "SharedCar", "SharedBike"]
     )
+    # vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
+    #  ["AutonomousCar", "RideHailingCar"]
+    # )
     # vehicle_choice_model = PublicTransitVehicleChoiceBehavior(['Bus'])
 
 else:
@@ -175,7 +178,7 @@ else:
 
 # Operator Config
 transit_planning_lookahead = parser.get("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD")
-transit_max_busses = parser.get("TRANSIT_OPERATOR", "MAX_BUSSES")
+transit_max_busses = parser.getint("TRANSIT_OPERATOR", "MAX_BUSSES")
 
 # User configuration
 max_waiting_time = parser.get("USER", "TRANSIT_MAX_WAIT")
@@ -203,9 +206,14 @@ global_config.add_transit_operator_config(transit_operator_config)
 # TODO: SharedScooters and SharedKickScooters do not have an initial state of charge. They start with the max state of charge.
 # Initialize config for different vehicle types
 for idx, vehicle_type in enumerate(
-    ["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]
+    ["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER", "SHARED_BIKE"]
 ):
-    vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter"]
+    vehicle_type_classes = [
+        "SharedCar",
+        "SharedScooter",
+        "SharedKickScooter",
+        "SharedBike",
+    ]
     price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
     max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
     energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
@@ -215,11 +223,12 @@ for idx, vehicle_type in enumerate(
     daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
     if vehicle_type == "SHARED_CAR":
         initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
-    EV_relative_energy_consumption = parser.getfloat(
-        vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
-    )
-    cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
-    charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
+    if vehicle_type != "SHARED_BIKE":
+        EV_relative_energy_consumption = parser.getfloat(
+            vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
+        )
+        cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
+        charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
 
     vc = SharedVehicleConfig(
         price_per_min,
@@ -441,7 +450,7 @@ global_config.add_population_config(pc)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-env = simpy.Environment(initial_time=0)
+env = simpy.Environment(initial_time=start_time)
 
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
@@ -662,32 +671,58 @@ for sw in range(global_config.shared_vehicle_operator_config.number_of_service_w
 
 ### Comment out for public operator ####
 # Rebalancing scheduler creates the charging schedule and relocations vehicle in the ridehailing fleet
-# rs_ridehailing_0 = RebalancingSchedulerRidehailing(distance_matrix, ride_hailing_fleet_0,
-# global_config.ridehailing_operator_config.available_modes,
-# global_config.ridehailing_operator_config.available_modes_supply, global_config.ridehailing_operator_config.number_of_service_workers,
-# global_config.ridehailing_operator_config.base_regions, global_config.ridehailing_operator_config.base_capacity, global_config.ridehailing_operator_config.recharge_threshold,
-# charging_infrastructure._chargers)
+# rs_ridehailing_0 = RebalancingSchedulerRidehailing(
+#     distance_matrix,
+#     ride_hailing_fleet_0,
+#     global_config.ridehailing_operator_config.available_modes,
+#     global_config.ridehailing_operator_config.available_modes_supply,
+#     global_config.ridehailing_operator_config.number_of_service_workers,
+#     global_config.ridehailing_operator_config.base_regions,
+#     global_config.ridehailing_operator_config.base_capacity,
+#     global_config.ridehailing_operator_config.recharge_threshold,
+#     charging_infrastructure._chargers,
+# )
 
-# Ridehailing operator manages all operations belonging to the ridehailing fleet
-# ops_ridehailing_0 = OperationsRidehailing(env, ride_hailing_fleet_0,
-#   global_config.ridehailing_operator_config.operations_start,
-#   global_config.ridehailing_operator_config.operations_duration,
-#   rs_ridehailing_0,
-#   payment_engine['ride_hailing_0'], global_config.ridehailing_operator_config.available_modes,
-#   global_config.ridehailing_operator_config.available_modes_supply,
-#   global_config.ridehailing_operator_config.recharge_threshold,
-#   task_queue_ridehailing, charging_infrastructure._chargers)
+# # Ridehailing operator manages all operations belonging to the ridehailing fleet
+# ops_ridehailing_0 = OperationsRidehailing(
+#     env,
+#     ride_hailing_fleet_0,
+#     global_config.ridehailing_operator_config.operations_start,
+#     global_config.ridehailing_operator_config.operations_duration,
+#     rs_ridehailing_0,
+#     payment_engine["ride_hailing_0"],
+#     global_config.ridehailing_operator_config.available_modes,
+#     global_config.ridehailing_operator_config.available_modes_supply,
+#     global_config.ridehailing_operator_config.recharge_threshold,
+#     task_queue_ridehailing,
+#     charging_infrastructure._chargers,
+# )
 
-# Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
-# relocation_scheduler = RelocationScheduler(distance_matrix, mixed_fleet, global_config.shared_vehicle_operator_config.available_modes,
-# global_config.shared_vehicle_operator_config.available_modes_supply, global_config.shared_vehicle_operator_config.number_of_service_workers,
-# global_config.shared_vehicle_operator_config.base_regions, global_config.shared_vehicle_operator_config.base_capacity)
+# # Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
+# relocation_scheduler = RelocationScheduler(
+#     distance_matrix,
+#     mixed_fleet,
+#     global_config.shared_vehicle_operator_config.available_modes,
+#     global_config.shared_vehicle_operator_config.available_modes_supply,
+#     global_config.shared_vehicle_operator_config.number_of_service_workers,
+#     global_config.shared_vehicle_operator_config.base_regions,
+#     global_config.shared_vehicle_operator_config.base_capacity,
+# )
 
-# Shared operator manages all operations belonging to the shared mobility fleet
-# shared_operator = Operations(env, mixed_fleet, global_config.shared_vehicle_operator_config.number_of_service_workers, global_config.shared_vehicle_operator_config.operations_start,
-# global_config.shared_vehicle_operator_config.operations_duration, relocation_scheduler,
-# payment_engine["shared_vehicle"], global_config.shared_vehicle_operator_config.available_modes,
-# global_config.shared_vehicle_operator_config.available_modes_supply, global_config.shared_vehicle_operator_config.recharge_threshold, task_queue_shared_vehicle)
+# # Shared operator manages all operations belonging to the shared mobility fleet
+# shared_operator = Operations(
+#     env,
+#     mixed_fleet,
+#     global_config.shared_vehicle_operator_config.number_of_service_workers,
+#     global_config.shared_vehicle_operator_config.operations_start,
+#     global_config.shared_vehicle_operator_config.operations_duration,
+#     relocation_scheduler,
+#     payment_engine["shared_vehicle"],
+#     global_config.shared_vehicle_operator_config.available_modes,
+#     global_config.shared_vehicle_operator_config.available_modes_supply,
+#     global_config.shared_vehicle_operator_config.recharge_threshold,
+#     task_queue_shared_vehicle,
+# )
 
 ### Finish commenting out for public operator ####
 
@@ -743,7 +778,7 @@ logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
 ### Things to do while changing the mode: ####
 
-# - Change the OnlyCarVehicleChoiceBehavior - modify the class too --> Shared Fleet has 3 attributes whereas RideHailing Fleet has 2 | Not needed for public operator
 # - Modify population factory (just comment out the other pop factories)
 # - To run RideHailing fleet comment out the running of the shared operator
+# - Switch to the correct payment engine
 # - Comment out all the operator modules from other fleets for the public operator
