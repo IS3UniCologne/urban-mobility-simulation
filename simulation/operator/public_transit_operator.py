@@ -111,7 +111,8 @@ class PublicTransitOperator(
                                 route = self._build_route(trip)
                                 bus = self._spawn_bus(
                                     route,
-                                    use_learning_agent=self._problem_config.use_learning_agent,
+                                    use_learning_agent=False,  # To run without the RL Agent
+                                    # self._problem_config.use_learning_agent,
                                 )
 
                                 # also spawn a cleanup process that waits for completion of trip

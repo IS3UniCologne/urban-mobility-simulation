@@ -371,7 +371,7 @@ class User(Agent, DriverInterface):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-        selected_transportation_alternative.waiting_time = self._waiting_time
+        # selected_transportation_alternative.waiting_time = self._waiting_time
         return selected_transportation_alternative
 
     def allocate_vehicle(
@@ -887,13 +887,14 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             return False
 
         # TODO: this is coupled deep with the DynamicRouting problem, too much hardcoded
-        incorridor = (
-            False
-            if not self._geodesic_env.filter_demands_by_area(
-                [self.transport_task], self._problem_config.area
-            )
-            else True
-        )
+        # incorridor = (
+        # False
+        # if not self._geodesic_env.filter_demands_by_area(
+        #     [self.transport_task], self._problem_config.area
+        # )
+        # else True
+        # )
+        incorridor = True  # For now
         indirection = (
             False
             if not self._geodesic_env.filter_demands_by_direction(
@@ -973,9 +974,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                     *vehicle.position.getExactLocation(),
                     *self.transport_task.destination.getExactLocation(),
                 )
-                unreachable_dest = not self._geodesic_env.direction_aligns(
-                    direction_dest, direction_bus
-                )
+                # Cannot calculate unreachable destionation without the correct direction of the bus without the RL Agent
+                # unreachable_dest = not self._geodesic_env.direction_aligns(
+                #    direction_dest, direction_bus
+                # )
 
             if (unreachable_dest and at_checkpoint) or at_dest:
                 self.unmount_vehicle(vehicle)
