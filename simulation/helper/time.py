@@ -1,7 +1,16 @@
-from simpy import Environment
 import datetime
 
-WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+from simpy import Environment
+
+WEEKDAYS = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+]
 
 
 class SimulationTime:
@@ -37,7 +46,7 @@ class SimulationTime:
     def last_dayofweek_as_str(self) -> str:
         return SimulationTimeConverter.last_dayofweek_as_str(self._env.now)
 
-    def now_as_str(self, strf: str = '%H:%M:%S'):
+    def now_as_str(self, strf: str = "%H:%M:%S"):
         return SimulationTimeConverter.as_str(self._env.now, strf)
 
     def now_as_time(self):
@@ -75,10 +84,12 @@ class SimulationTimeConverter:
 
     @classmethod
     def last_dayofweek_as_str(cls, time: float) -> str:
-        return WEEKDAYS[(cls.dayofweek(time) + 6) % 7]  # add 6 instead of subtracting 1 and let modulo do the work
+        return WEEKDAYS[
+            (cls.dayofweek(time) + 6) % 7
+        ]  # add 6 instead of subtracting 1 and let modulo do the work
 
     @classmethod
-    def as_str(cls, time: float, strf: str = '%H:%M:%S'):
+    def as_str(cls, time: float, strf: str = "%H:%M:%S"):
         return cls.as_time(time).strftime(strf)
 
     @classmethod
@@ -86,7 +97,9 @@ class SimulationTimeConverter:
         return datetime.time(cls.hours(time), cls.minutes(time), cls.seconds(time))
 
     @staticmethod
-    def duration_between(start: str, end: str, strf: str = '%H:%M:%S', end_next_day=None):
+    def duration_between(
+        start: str, end: str, strf: str = "%H:%M:%S", end_next_day=None
+    ):
         """
         Gives the duration between two timestamps in minutes.
         Must be start <= end for end_next_day = False
@@ -102,11 +115,16 @@ class SimulationTimeConverter:
             end_next_day = end < start
 
         if not end_next_day:
-            return (datetime.datetime.strptime(end, strf) -
-                    datetime.datetime.strptime(start, strf)).total_seconds() / 60
+            return (
+                datetime.datetime.strptime(end, strf)
+                - datetime.datetime.strptime(start, strf)
+            ).total_seconds() / 60
         else:
-            return (datetime.datetime.strptime(end, strf) + datetime.timedelta(days=1) -
-                    datetime.datetime.strptime(start, strf)).total_seconds() / 60
+            return (
+                datetime.datetime.strptime(end, strf)
+                + datetime.timedelta(days=1)
+                - datetime.datetime.strptime(start, strf)
+            ).total_seconds() / 60
 
     @classmethod
     def convert_to_day_of_week_bucket(cls, time: float):
@@ -117,4 +135,6 @@ class SimulationTimeConverter:
 
     @staticmethod
     def convert_to_temporal_bucket(time: float, temporal_resolution):
-        return (time % (24 * 60)) // (temporal_resolution * 60)  # Reduce to one day, then get day of week
+        return (time % (24 * 60)) // (
+            temporal_resolution * 60
+        )  # Reduce to one day, then get day of week

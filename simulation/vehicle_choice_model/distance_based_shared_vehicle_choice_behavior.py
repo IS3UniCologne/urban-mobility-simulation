@@ -1,9 +1,12 @@
-from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import VehicleChoiceBehaviorInterface
-from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 from statsmodels.iolib.smpickle import load_pickle
 
-class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInterface):
+from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
+from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
+    VehicleChoiceBehaviorInterface,
+)
 
+
+class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInterface):
     def __init__(self, path_to_choice_model, substitution_boundary, available_vehicles):
         # Load Choice Model
         self._choice_model = load_pickle(path_to_choice_model)
@@ -19,12 +22,14 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
         # Predict single outcome (1, distance) (1 = constant)
         # (Car, Kick Scooter, Scooter)
         # (p_car, p_ks, p_scooter)
+
         choice_probabilities = self._choice_model.predict((1, trip_characteristics.distance))
         choice_probabilities = choice_probabilities.reshape((-1))  # Transform 2D array to 1D array
         result = {}
 
         for i in range(len(choice_probabilities)):
             result[self._class_mapping[i]] = choice_probabilities[i]
+
 
         # Get Choice Index
         choice = choice_probabilities.argmax()

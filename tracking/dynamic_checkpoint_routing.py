@@ -2,7 +2,7 @@ from simulation.helper.configuration.configuration import Configuration
 from tracking.tracking import Tracking
 
 
-class DynamicCheckpointRoutingTracker():
+class DynamicCheckpointRoutingTracker:
     def __init__(self):
         self._tracking = Tracking.instance()
         self._config = Configuration.instance()
@@ -27,10 +27,14 @@ class DynamicCheckpointRoutingTracker():
         timestamp = self._problem.bus._time.now_as_str()
 
         # ... log bus position ...
-        self._timestamped_bus_positions[timestamp] = self._tracking.get(self._problem.bus, 'position').getExactLocation(geojson=True)
+        self._timestamped_bus_positions[timestamp] = self._tracking.get(
+            self._problem.bus, "position"
+        ).getExactLocation(geojson=True)
 
         # ... log viable demands ...
-        self._timestamped_viable_demands[timestamp] = self._problem._get_viable_demands()
+        self._timestamped_viable_demands[timestamp] = (
+            self._problem._get_viable_demands()
+        )
 
     # # ... build TimeStampedGeoJSON feature ...
     # self._timestamped_bus_positions['geometry']['coordinates'].append(

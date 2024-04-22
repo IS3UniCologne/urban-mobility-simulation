@@ -10,30 +10,40 @@ from configparser import ConfigParser
 from copy import deepcopy
 from pathlib import Path
 
-import numpy
 import pandas as pd
 import simpy
 from matplotlib import pyplot as plt
-from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 from learning.agents.DQN_torch import DQN
 from learning.dynamic_bus_checkpoints import DynamicBusCheckpointProblem
+
 # from learning.helper.modified_tensor_board import ModifiedTensorBoard
 from learning.spaces.action_space import DiscreteActionSpace
 from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.configuration.configuration import DQNConfig, DynamicCheckpointRoutingConfig, Configuration, \
-    BusConfig, TransitOperatorConfig, UserConfig
+from simulation.helper.configuration.configuration import (
+    BusConfig,
+    Configuration,
+    DQNConfig,
+    DynamicCheckpointRoutingConfig,
+    TransitOperatorConfig,
+    UserConfig,
+)
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
-from simulation.infrastructure.helper.distance_matrix_importer import DistanceMatrixImporter
+from simulation.infrastructure.helper.distance_matrix_importer import (
+    DistanceMatrixImporter,
+)
 from simulation.infrastructure.helper.timetable import Timetable
 from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.vehicle.public_transit_bus import Bus
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 from simulation.vehicle.vehicle import Vehicle
-from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import PublicTransitVehicleChoiceBehavior
+from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import (
+    PublicTransitVehicleChoiceBehavior,
+)
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
@@ -66,7 +76,7 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand")
-demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(',')
+demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
 
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
@@ -80,24 +90,24 @@ output_folder = parser.get("OUTPUT", "output_folder")
 # User Config
 user_config = UserConfig(
     spatial_strategy=parser.get("USER", "SPATIAL_STRATEGY"),
-    max_wait=parser.getint("USER", "TRANSIT_MAX_WAIT")
+    max_wait=parser.getint("USER", "TRANSIT_MAX_WAIT"),
 )
 
 # Bus Vehicle Config
 bus_config = BusConfig(
     max_available_seats=parser.getint("BUS", "SEATS"),
-    velocity=parser.getfloat("BUS", "VELOCITY")
+    velocity=parser.getfloat("BUS", "VELOCITY"),
 )
 
 # Public Transit Operator Config
 transit_operator_config = TransitOperatorConfig(
     planning_lookahead=parser.getint("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD"),
-    max_busses=parser.getint("TRANSIT_OPERATOR", "MAX_BUSSES")
+    max_busses=parser.getint("TRANSIT_OPERATOR", "MAX_BUSSES"),
 )
 
 # Custom tensorboard object
 logtime = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-logdir = f'./data/output/logs/{logtime}'
+logdir = f"./data/output/logs/{logtime}"
 
 # PyTorch
 tensorboard = SummaryWriter(logdir)
@@ -116,35 +126,37 @@ except configparser.NoOptionError:
 try:
     # warm start the replaybuffer with pure exploration
     replaybuffer_path = parser.get("DQN", "REPLAYBUFFER")
-    with open(replaybuffer_path, 'rb') as f:
+    with open(replaybuffer_path, "rb") as f:
         replaybuffer = pickle.load(f)
         replaybuffer = deque(replaybuffer, maxlen=len(replaybuffer))
 except configparser.NoOptionError:
     replaybuffer = None
 
 DQN_config = DQNConfig(
-    alpha = parser.getfloat("DQN", "ALPHA"),
+    alpha=parser.getfloat("DQN", "ALPHA"),
     batchsize=parser.getint("DQN", "BATCHSIZE"),
     buffersize=parser.getint("DQN", "BUFFERSIZE"),
     episode=1,
-    episodes = parser.getint("DQN", "EPISODES"),
-    eps = parser.getfloat("DQN", "EPS"),
-    eps_decay_strategy = parser.get("DQN", "EPS_DECAY_STRATEGY"),
-    eps_decay = parser.getfloat("DQN", "EPS_DECAY"),
+    episodes=parser.getint("DQN", "EPISODES"),
+    eps=parser.getfloat("DQN", "EPS"),
+    eps_decay_strategy=parser.get("DQN", "EPS_DECAY_STRATEGY"),
+    eps_decay=parser.getfloat("DQN", "EPS_DECAY"),
     eps_max=parser.getfloat("DQN", "EPS_MAX"),
-    eps_min = parser.getfloat("DQN", "EPS_MIN"),
+    eps_min=parser.getfloat("DQN", "EPS_MIN"),
     double_q=parser.getboolean("DQN", "USE_DOUBLE_Q"),
     gamma=parser.getfloat("DQN", "GAMMA"),
     lr_decay=parser.getboolean("DQN", "LR_DECAY"),
     lr_decay_steps=parser.getint("DQN", "LR_DECAY_STEPS"),
-    min_experience = parser.getint("DQN", "MIN_EXPERIENCE") if replaybuffer is None else 0,
+    min_experience=(
+        parser.getint("DQN", "MIN_EXPERIENCE") if replaybuffer is None else 0
+    ),
     q_net_layer=ast.literal_eval(parser.get("DQN", "DQN_LAYERS")),
     replaybuffer=replaybuffer,
-    target_update_threshold = parser.getint("DQN", "TARGET_UPDATE_THRESHOLD"),
-    tau = tau,
+    target_update_threshold=parser.getint("DQN", "TARGET_UPDATE_THRESHOLD"),
+    tau=tau,
     tensorboard=tensorboard,
     train_frequency=parser.getint("DQN", "TRAIN_FREQUENCY"),
-    weights=None
+    weights=None,
 )
 
 # Problem Config
@@ -154,14 +166,27 @@ except configparser.NoOptionError:
     corridor = None
 
 dynamic_checkpoint_routing_config = DynamicCheckpointRoutingConfig(
-    action_resolution=parser.getint("DYNAMIC_CHECKPOINT_ROUTING", "ACTION_SPACE_RESOLUTION"),
-    action_space=DiscreteActionSpace(parser.get("DYNAMIC_CHECKPOINT_ROUTING", "ACTION_SPACE").split(',')),
-    checkpoints=[int(x) for x in parser.get("DYNAMIC_CHECKPOINT_ROUTING", "CHECKPOINTS").split(',')],
+    action_resolution=parser.getint(
+        "DYNAMIC_CHECKPOINT_ROUTING", "ACTION_SPACE_RESOLUTION"
+    ),
+    action_space=DiscreteActionSpace(
+        parser.get("DYNAMIC_CHECKPOINT_ROUTING", "ACTION_SPACE").split(",")
+    ),
+    checkpoints=[
+        int(x)
+        for x in parser.get("DYNAMIC_CHECKPOINT_ROUTING", "CHECKPOINTS").split(",")
+    ],
     corridor=corridor,
-    penalty_checkpoints=parser.getfloat("DYNAMIC_CHECKPOINT_ROUTING", "PENALTY_CHECKPOINTS"),
+    penalty_checkpoints=parser.getfloat(
+        "DYNAMIC_CHECKPOINT_ROUTING", "PENALTY_CHECKPOINTS"
+    ),
     penalty_goingback=parser.getint("DYNAMIC_CHECKPOINT_ROUTING", "PENALTY_GOINGBACK"),
-    penalty_unreachable=parser.getint("DYNAMIC_CHECKPOINT_ROUTING", "PENALTY_UNREACHABLE"),
-    periodic_testing=parser.getint("DYNAMIC_CHECKPOINT_ROUTING", "PERIODIC_TESTING", fallback=None),
+    penalty_unreachable=parser.getint(
+        "DYNAMIC_CHECKPOINT_ROUTING", "PENALTY_UNREACHABLE"
+    ),
+    periodic_testing=parser.getint(
+        "DYNAMIC_CHECKPOINT_ROUTING", "PERIODIC_TESTING", fallback=None
+    ),
     reward=parser.getint("DYNAMIC_CHECKPOINT_ROUTING", "REWARD"),
     timelimit_multiplier=parser.getfloat("DYNAMIC_CHECKPOINT_ROUTING", "TIMELIMIT"),
     use_learning_agent=True,
@@ -184,8 +209,10 @@ log_level = parser.get("SETTINGS", "log_level")
 
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s',
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+)
 logging.raiseExceptions = False
 logger = logging.getLogger()
 logger.setLevel(log_level)
@@ -194,10 +221,10 @@ logger.setLevel(log_level)
 logging.getLogger("fiona").setLevel(logging.WARNING)
 
 # Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
+cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf_init)
 
-logging.debug(f'Tensorboard logdir: {logdir}')
+logging.debug(f"Tensorboard logdir: {logdir}")
 
 # 1. Initialize Simulation and simpy Environment
 # # # # # # # # # # # # # # # # # # # # # #
@@ -215,10 +242,12 @@ load_environment()
 # # # # # # # # # # # # # # # # # # # # # #
 
 p = Path(demand_file_path)
-di = DemandImporter(spatial_resolution=global_config.spatial_resolution,
-                    temporal_resolution=global_config.temporal_resolution,
-                    daily_resolution=global_config.daily_resolution,
-                    city=global_config.city)
+di = DemandImporter(
+    spatial_resolution=global_config.spatial_resolution,
+    temporal_resolution=global_config.temporal_resolution,
+    daily_resolution=global_config.daily_resolution,
+    city=global_config.city,
+)
 
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
@@ -242,6 +271,7 @@ distance_matrix = dmi.load_distance_matrix()
 timetable = Timetable(transit_timetable_path)
 timetable.import_timetable()
 
+
 def run_simulation(start_time: int, end_time: int, seed=4711):
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -261,7 +291,7 @@ def run_simulation(start_time: int, end_time: int, seed=4711):
     GeodesicEnvironment.getInstance().reset_random_generator(seed)
 
     # Inject Simulation Environment to Logger (such that we can log the env time)
-    cf = SimulationContextFilter(filter_name='add_env', extra=env)
+    cf = SimulationContextFilter(filter_name="add_env", extra=env)
     edf = ExtraDefaultFilter(filter_name="add_default_value")
     logger.addFilter(cf)
     logger.addFilter(edf)
@@ -271,7 +301,7 @@ def run_simulation(start_time: int, end_time: int, seed=4711):
     # Init. Tracking                          #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    tracking = Tracking.init(env)
+    Tracking.init(env)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -286,23 +316,38 @@ def run_simulation(start_time: int, end_time: int, seed=4711):
     vehicle_assignment_engine = operator
 
     # Vehicle Choice Model
-    vehicle_choice_model = PublicTransitVehicleChoiceBehavior(['Bus'])
+    vehicle_choice_model = PublicTransitVehicleChoiceBehavior(["Bus"])
 
     # Population Type
-    price_sensitive_pop_prob = 0 #TODO: move to user config
+    price_sensitive_pop_prob = 0  # TODO: move to user config
     population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
 
     # World
     world = World.init(
-        env, search_engine, search_engine, vehicle_assignment_engine, 
-        vehicle_choice_model, population_factory, charging_infrastructure=None, reset=True)
+        env,
+        search_engine,
+        search_engine,
+        vehicle_assignment_engine,
+        vehicle_choice_model,
+        population_factory,
+        charging_infrastructure=None,
+        reset=True,
+    )
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Spawn Demand Processes.                 #
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
-    demand_factory = DemandFactory(env, demand_profile, di, world, demand_modifier_paths, seed, mode='public_transport')
+    demand_factory = DemandFactory(
+        env,
+        demand_profile,
+        di,
+        world,
+        demand_modifier_paths,
+        seed,
+        mode="public_transport",
+    )
     env.process(demand_factory.generate_demand())
 
     # # # # # # # # # # # # # # # # # # # # # #
@@ -315,7 +360,9 @@ def run_simulation(start_time: int, end_time: int, seed=4711):
     dynamic_checkpoint_routing_config.problem = DynamicBusCheckpointProblem(env)
 
     # Initialize Generalized Learning Agent with Problem
-    dynamic_checkpoint_routing_config.learning_agent = DQN(problem=dynamic_checkpoint_routing_config.problem)
+    dynamic_checkpoint_routing_config.learning_agent = DQN(
+        problem=dynamic_checkpoint_routing_config.problem
+    )
     # learning_agent_uid = tracking.register(dynamic_routing_config.learning_agent)
 
     # # # # # # # # # # # # # # # # # # # # # #
@@ -331,8 +378,9 @@ def run_simulation(start_time: int, end_time: int, seed=4711):
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
     try:
-        service_level = payment_engine.total_fulfilled_trips / \
-                        (payment_engine.total_missed_trips + payment_engine.total_fulfilled_trips)
+        service_level = payment_engine.total_fulfilled_trips / (
+            payment_engine.total_missed_trips + payment_engine.total_fulfilled_trips
+        )
     except ZeroDivisionError:
         service_level = 0
     # print("Total Fulfilled Trips: " + str(payment_engine.total_fulfilled_trips))
@@ -353,32 +401,42 @@ def run_simulation(start_time: int, end_time: int, seed=4711):
     # # # # # # # # # # # # # # # # # # # # # #
 
     # return problem evaluation measures
-    return dynamic_checkpoint_routing_config.problem.reached_destination, \
-           dynamic_checkpoint_routing_config.problem.distance, \
-           dynamic_checkpoint_routing_config.problem.duration, \
-           service_level
+    return (
+        dynamic_checkpoint_routing_config.problem.reached_destination,
+        dynamic_checkpoint_routing_config.problem.distance,
+        dynamic_checkpoint_routing_config.problem.duration,
+        service_level,
+    )
 
 
 episodes = []
 
 for e in tqdm(range(DQN_config.episodes)):
-    logging.debug(f"Starting Episode {DQN_config.episode}",
-                 extra={"clazz": "Main Routine"})
+    logging.debug(
+        f"Starting Episode {DQN_config.episode}", extra={"clazz": "Main Routine"}
+    )
 
-    if (dynamic_checkpoint_routing_config.periodic_testing is not None
-            and DQN_config.episode % dynamic_checkpoint_routing_config.periodic_testing == 0):
+    if (
+        dynamic_checkpoint_routing_config.periodic_testing is not None
+        and DQN_config.episode % dynamic_checkpoint_routing_config.periodic_testing == 0
+    ):
         DQN_config.evaluation = True
 
-    reached_destination, distance, duration, service_level = run_simulation(start_time=14*60, end_time=16*60)
+    reached_destination, distance, duration, service_level = run_simulation(
+        start_time=14 * 60, end_time=16 * 60
+    )
 
-    episode = deepcopy({'episode': DQN_config.episode,
-                        'evaluation': DQN_config.evaluation,
-                        'return': dynamic_checkpoint_routing_config.learning_agent._cumulative_reward,
-                        'service_level': service_level,
-                        'reached_destination': reached_destination,
-                        'distance': distance,
-                        'duration': duration
-                        })
+    episode = deepcopy(
+        {
+            "episode": DQN_config.episode,
+            "evaluation": DQN_config.evaluation,
+            "return": dynamic_checkpoint_routing_config.learning_agent._cumulative_reward,
+            "service_level": service_level,
+            "reached_destination": reached_destination,
+            "distance": distance,
+            "duration": duration,
+        }
+    )
     episodes.append(episode)
 
     # reset, just in case
@@ -390,19 +448,30 @@ for e in tqdm(range(DQN_config.episodes)):
         DQN_config.episode += 1
 
 episodes = pd.DataFrame.from_records(episodes)
-episodes = episodes.set_index('episode')
+episodes = episodes.set_index("episode")
 
 print(episodes.tail(20))
-episodes.to_csv(f'./data/output/returns/{logtime}.csv')
-logging.info(f'Tensorboard logdir: {logdir}', extra={"clazz": "Main Routine"})
-logging.info(f"Episode Returns: {f'./data/output/returns/{logtime}.csv'}", extra={"clazz": "Main Routine"})
+episodes.to_csv(f"./data/output/returns/{logtime}.csv")
+logging.info(f"Tensorboard logdir: {logdir}", extra={"clazz": "Main Routine"})
+logging.info(
+    f"Episode Returns: {f'./data/output/returns/{logtime}.csv'}",
+    extra={"clazz": "Main Routine"},
+)
 
 fig, ax = plt.subplots()
-ax.plot(episodes.index, episodes['return'], alpha=.5, color='lightblue')
-ax.plot(episodes[episodes['evaluation']].index, episodes[episodes['evaluation']]['return'], color='darkblue')
+ax.plot(episodes.index, episodes["return"], alpha=0.5, color="lightblue")
+ax.plot(
+    episodes[episodes["evaluation"]].index,
+    episodes[episodes["evaluation"]]["return"],
+    color="darkblue",
+)
 ax2 = ax.twinx()
-ax2.plot(episodes.index, episodes['service_level'], alpha=.5, color='lightgreen')
-ax2.plot(episodes[episodes['evaluation']].index, episodes[episodes['evaluation']]['service_level'], color='darkgreen')
+ax2.plot(episodes.index, episodes["service_level"], alpha=0.5, color="lightgreen")
+ax2.plot(
+    episodes[episodes["evaluation"]].index,
+    episodes[episodes["evaluation"]]["service_level"],
+    color="darkgreen",
+)
 plt.show()
 
 # with open(f'replaybuffer_torch_500_goingback.pkl', 'wb') as f:

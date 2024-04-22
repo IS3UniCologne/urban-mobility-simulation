@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-class Position(ABC):
 
+class Position(ABC):
     @abstractmethod
     def __init__(self):
         self._x = "I have a x position"
