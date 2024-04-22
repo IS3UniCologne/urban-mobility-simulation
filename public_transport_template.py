@@ -1,4 +1,4 @@
-##Imports 
+##Imports
 # Standard library imports
 import os
 import sys
@@ -8,17 +8,15 @@ import logging
 
 # Third-party library imports
 import simpy
-import pandas as pd
-import geopandas as gpd
-import numpy as np
 
 # Custom module imports
 from utils import load_environment
-from configparser import ConfigParser
 from tracking.tracking import Tracking
 
-# Imports world related modules
-from simulation.agent.user import User #must come before DemandFactory, otherwise circular imports
+# Imports world related modules
+from simulation.agent.user import (
+    User,
+)  # must come before DemandFactory, otherwise circular imports
 from simulation.world.world import World
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
@@ -26,24 +24,30 @@ from simulation.infrastructure.helper.timetable import Timetable
 from simulation.world.population.PopulationFactory import PopulationFactory
 
 # Import configurations and extra logging filters
-from simulation.helper.configuration.configuration import Configuration, UserConfig, TransitOperatorConfig
+from simulation.helper.configuration.configuration import (
+    Configuration,
+    UserConfig,
+    TransitOperatorConfig,
+)
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 
-# Import vehicle types and vehicle choice options
+# Import vehicle types and vehicle choice options
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 from simulation.vehicle.vehicle import Vehicle
 from simulation.vehicle.public_transit_bus import Bus
-from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import PublicTransitVehicleChoiceBehavior
+from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import (
+    PublicTransitVehicleChoiceBehavior,
+)
 
 # Import infrastructure related modules
-from simulation.infrastructure.helper.distance_matrix_importer import DistanceMatrixImporter
+from simulation.infrastructure.helper.distance_matrix_importer import (
+    DistanceMatrixImporter,
+)
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 # Import operator related modules
 from simulation.operator.public_transit_operator import PublicTransitOperator
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -81,7 +85,7 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand")
-demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(',')
+demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
 
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
@@ -90,7 +94,9 @@ supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
 transit_timetable_path = parser.get("INFRASTRUCTURE", "path_transit_timetable")
 
 # Probability of the population to be price sensitive
-price_sensitive_pop_prob = parser.get("SHARED_VEHICLE_OPERATOR", "population_probabilities").split(',')
+price_sensitive_pop_prob = parser.get(
+    "SHARED_VEHICLE_OPERATOR", "population_probabilities"
+).split(",")
 price_sensitive_pop_prob = [float(x) for x in price_sensitive_pop_prob]
 
 # Operator Config
@@ -98,7 +104,9 @@ transit_planning_lookahead = parser.get("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD")
 transit_max_busses = parser.get("TRANSIT_OPERATOR", "MAX_BUSSES")
 
 # Create transit operator configuration
-transit_operator_config = TransitOperatorConfig(transit_planning_lookahead, transit_max_busses)
+transit_operator_config = TransitOperatorConfig(
+    transit_planning_lookahead, transit_max_busses
+)
 
 # Environment files
 bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
@@ -138,9 +146,12 @@ load_environment()
 # # # # # # # # # # # # # # # # # # # # # #
 
 p = Path(demand_file_path)
-di = DemandImporter(spatial_resolution=global_config.spatial_resolution,
-                    temporal_resolution=global_config.temporal_resolution,
-                    daily_resolution=global_config.daily_resolution, city=global_config.city)
+di = DemandImporter(
+    spatial_resolution=global_config.spatial_resolution,
+    temporal_resolution=global_config.temporal_resolution,
+    daily_resolution=global_config.daily_resolution,
+    city=global_config.city,
+)
 
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
@@ -209,31 +220,32 @@ tracking = Tracking.init(env)
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
 
-import logging
 
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s',
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+)
 
 logger = logging.getLogger()
 logger.setLevel(log_level)
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
-formatter = logging.Formatter('%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s')
-file_handler = logging.FileHandler('report.log')
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+)
+file_handler = logging.FileHandler("report.log")
 file_handler.setFormatter(formatter)
 file_handler.setLevel(log_level)
 
 # Add Custom Init Filters (which work without the ENV obj)
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
-cf_init = SimulationContextFilter(filter_name='add_env', extra=[])
+cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf_init)
 
 # Inject Simulation Environment to Logger (such that we can log the env time)
-cf = SimulationContextFilter(filter_name='add_env', extra=env)
+cf = SimulationContextFilter(filter_name="add_env", extra=env)
 edf = ExtraDefaultFilter(filter_name="add_default_value")
 logger.addFilter(cf)
 logger.addFilter(edf)
@@ -251,13 +263,22 @@ payment_engine = operator
 vehicle_assignment_engine = operator
 
 # Vehicle Choice Model
-vehicle_choice_model = PublicTransitVehicleChoiceBehavior(['Bus'])
+vehicle_choice_model = PublicTransitVehicleChoiceBehavior(["Bus"])
 
 # Population Type
 population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
 
 # World --> Charging Infrastructure is irrelevant for the public operator so this is set to None
-world = World.init(env, search_engine, search_engine, vehicle_assignment_engine, vehicle_choice_model, population_factory, charging_infrastructure = None, reset=True)
+world = World.init(
+    env,
+    search_engine,
+    search_engine,
+    vehicle_assignment_engine,
+    vehicle_choice_model,
+    population_factory,
+    charging_infrastructure=None,
+    reset=True,
+)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -265,7 +286,9 @@ world = World.init(env, search_engine, search_engine, vehicle_assignment_engine,
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-demand_factory = DemandFactory(env, demand_profile, di, world, demand_modifier_paths, seed, mode = "public_transport")
+demand_factory = DemandFactory(
+    env, demand_profile, di, world, demand_modifier_paths, seed, mode="public_transport"
+)
 
 env.process(demand_factory.generate_demand())
 
@@ -277,10 +300,8 @@ env.process(demand_factory.generate_demand())
 
 env.process(operator._run())
 
-logging.warning(f"Starting Simulation.",
-                    extra={"clazz": "main", "oid": ""})
+logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
 env.run(until=end_time)
 
-logging.warning(f"Simulation Finished.",
-                    extra={"clazz": "main", "oid": ""})
+logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
