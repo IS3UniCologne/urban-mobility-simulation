@@ -1,11 +1,11 @@
+import logging
 from enum import Enum
 
 from simpy import Environment
 
-from simulation.operator.operations_management.service_tasks.service_task import ServiceTask
-
-import logging
-
+from simulation.operator.operations_management.service_tasks.service_task import (
+    ServiceTask,
+)
 from simulation.operator.operations_management.task_queue import TaskQueue
 
 
@@ -14,10 +14,11 @@ class ServiceWorkerState(Enum):
     WORKING = 1
     HIBERNATE = 3
 
+
 class ServiceWorker:
     service_worker_id = 0
 
-    def __init__(self, env:Environment, task_queue:TaskQueue):
+    def __init__(self, env: Environment, task_queue: TaskQueue):
         self._id = ServiceWorker.service_worker_id
 
         self._env = env
@@ -30,13 +31,14 @@ class ServiceWorker:
         ServiceWorker.service_worker_id += 1
 
     def run(self):
-
         while True:
             # Wait until operation management engine puts tasks into queue
             yield self._task_queue.task_queue_updated
 
-            logging.debug(f"Waking up and searching for available jobs.",
-                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+            logging.debug(
+                "Waking up and searching for available jobs.",
+                extra={"clazz": self.__class__.__name__, "oid": self._id},
+            )
 
             self._state = ServiceWorkerState.FREE
 
@@ -45,8 +47,10 @@ class ServiceWorker:
 
                 yield self._env.process(self.execute_task(next_task))
 
-            logging.debug(f"There are no more tasks for me. Going into hibernate.",
-                          extra={"clazz": self.__class__.__name__, "oid": self._id})
+            logging.debug(
+                "There are no more tasks for me. Going into hibernate.",
+                extra={"clazz": self.__class__.__name__, "oid": self._id},
+            )
 
             # Go back to sleep
             self._state = ServiceWorkerState.HIBERNATE
@@ -59,8 +63,10 @@ class ServiceWorker:
         """
         self._state = ServiceWorkerState.WORKING
 
-        logging.debug(f"Processing following task: {service_task}.",
-                      extra={"clazz": self.__class__.__name__, "oid": self._id})
+        logging.debug(
+            f"Processing following task: {service_task}.",
+            extra={"clazz": self.__class__.__name__, "oid": self._id},
+        )
 
         yield self._env.process(service_task.execute(self._id))
 
@@ -77,4 +83,3 @@ class ServiceWorker:
     @property
     def state(self):
         return self._state
-

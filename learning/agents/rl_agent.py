@@ -1,14 +1,11 @@
 from abc import ABC, abstractmethod
-import simpy
 
-from simulation.agent.action_space import ActionSpace
-from simulation.agent.agent import Agent
+
 from simulation.helper.configuration.configuration import Configuration
 
 
 class RLAgent(ABC):
     def __init__(self):
-
         # Configuration
         self._config = Configuration.instance()
 

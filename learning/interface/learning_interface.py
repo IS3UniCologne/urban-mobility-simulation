@@ -49,12 +49,16 @@ class LearningInterface(ABC):
             self._test_action(action)
         except (BadAction, ForbiddenAction) as e:
             if evaluation and isinstance(e, BadAction):
-                logging.debug(f'Action {action} is considered bad, but allowed in evaluation',
-                              extra={"clazz": self.__class__.__name__, "oid": ""})
+                logging.debug(
+                    f"Action {action} is considered bad, but allowed in evaluation",
+                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                )
                 pass
             elif not evaluation and isinstance(e, BadAction):
-                logging.debug(f'Action {action} is considered bad, delegate decision',
-                              extra={"clazz": self.__class__.__name__, "oid": ""})
+                logging.debug(
+                    f"Action {action} is considered bad, delegate decision",
+                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                )
                 try:
                     bad_action_penalty = self._handle_bad_action(action)
                 except ForbiddenAction as e:
@@ -65,13 +69,19 @@ class LearningInterface(ABC):
                 raise
 
         yield self.env.process(self._take_action(action))
-        logging.debug(f'Agent takes action {action}',
-                      extra={"clazz": self.__class__.__name__, "oid": ""})
+        logging.debug(
+            f"Agent takes action {action}",
+            extra={"clazz": self.__class__.__name__, "oid": ""},
+        )
 
         self._step_executed.succeed()
         self._step_executed = self.env.event()
 
-        return self.state(), self._get_reward()-np.float32(bad_action_penalty), self._check_terminal()
+        return (
+            self.state(),
+            self._get_reward() - np.float32(bad_action_penalty),
+            self._check_terminal(),
+        )
 
     @abstractmethod
     def state(self):
@@ -120,4 +130,3 @@ class LearningInterface(ABC):
         :return:
         """
         pass
-

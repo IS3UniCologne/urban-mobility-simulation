@@ -1,10 +1,15 @@
-from simulation.agent.agent import Agent
 from simulation.environment.position import Position
 
 
 class TransportTask:
-
-    def __init__(self, time, origin: Position, destination: Position, viable_vehicle_modes, max_wait_time = None):
+    def __init__(
+        self,
+        time,
+        origin: Position,
+        destination: Position,
+        viable_vehicle_modes,
+        max_wait_time=None,
+    ):
         self._time = time
         self._origin = origin
         self._destination = destination
@@ -40,4 +45,4 @@ class TransportTask:
         return self._max_wait_time
 
     def __str__(self):
-        return f'From {self._origin} to {self._destination}'
+        return f"From {self._origin} to {self._destination}"

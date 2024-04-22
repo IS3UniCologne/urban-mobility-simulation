@@ -1,23 +1,25 @@
 from typing import List
-import geopandas as gpd
 
-from simulation.environment.position import Position
+
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.environment.position import Position
 from simulation.helper.time import SimulationTimeConverter
-from simulation.infrastructure.network.vertex import Vertex
 from simulation.infrastructure.network.edge import Edge
-from simulation.infrastructure.transit_network.stop import Stop
+from simulation.infrastructure.network.vertex import Vertex
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
+from simulation.infrastructure.transit_network.stop import Stop
 
 
 class Route:
     def __init__(self, origin: Position, destination: Position):
         self._origin = origin
         self._destination = destination
-        self._route_segments: List[Edge] =  []
+        self._route_segments: List[Edge] = []
 
-        distance = origin >> destination # euclidean distance
-        self._route_segments.append(Edge(distance, Vertex(origin), Vertex(destination))) # Append Dummy Edge
+        distance = origin >> destination  # euclidean distance
+        self._route_segments.append(
+            Edge(distance, Vertex(origin), Vertex(destination))
+        )  # Append Dummy Edge
 
     @property
     def origin(self):
@@ -26,7 +28,7 @@ class Route:
     @property
     def destination(self):
         return self._destination
-    
+
     @property
     def route_segments(self):
         return self._route_segments
@@ -56,8 +58,15 @@ class PublicTransitRoute(Route):
     - A "route segment" is the part of the route between two stops
     """
 
-    def __init__(self, origin: GeodesicPosition, destination: GeodesicPosition, route_id: str, trip_id: str,
-                 stops: List[Stop] = None, segments: List[RouteSegment] = None):
+    def __init__(
+        self,
+        origin: GeodesicPosition,
+        destination: GeodesicPosition,
+        route_id: str,
+        trip_id: str,
+        stops: List[Stop] = None,
+        segments: List[RouteSegment] = None,
+    ):
         super(PublicTransitRoute, self).__init__(origin, destination)
 
         self._id = route_id
@@ -119,8 +128,14 @@ class PublicTransitRoute(Route):
         :param end: to which stop (incl.)
         :return: PublicTransitRoute Object Stop_start -> ... -> Stop_end, which is a part of self
         """
-        return PublicTransitRoute(self._origin, self._destination, f'SUB_{self._id}', self._trip_id,
-                                  self._route_stops[start.stop_id:end.stop_id+1], self._route_segments[start.stop_id:end.stop_id])
+        return PublicTransitRoute(
+            self._origin,
+            self._destination,
+            f"SUB_{self._id}",
+            self._trip_id,
+            self._route_stops[start.stop_id : end.stop_id + 1],
+            self._route_segments[start.stop_id : end.stop_id],
+        )
 
     def total_distance(self):
         return sum(self._route_segments)
@@ -129,8 +144,11 @@ class PublicTransitRoute(Route):
         return SimulationTimeConverter.duration_between(
             self.route_stop_by_id(0).departure,
             self.route_stop_by_id(-1).departure,
-            end_next_day=True if (not self.route_stop_by_id(0).departure_next_day) and self.route_stop_by_id(-1).departure_next_day else False
+            end_next_day=True
+            if (not self.route_stop_by_id(0).departure_next_day)
+            and self.route_stop_by_id(-1).departure_next_day
+            else False,
         )
 
     def __str__(self):
-        return f'PublicTransitRoute with id/name {self._id} and trip id {self._trip_id}'
+        return f"PublicTransitRoute with id/name {self._id} and trip id {self._trip_id}"
