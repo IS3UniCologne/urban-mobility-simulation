@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-class DriverInterface(ABC):
 
+class DriverInterface(ABC):
     @abstractmethod
     def mount_vehicle_as_driver(self, vehicle):
         pass
@@ -15,7 +15,7 @@ class DriverInterface(ABC):
         pass
 
     @abstractmethod
-    def park_vehicle(self, vehicle, position = None):
+    def park_vehicle(self, vehicle, position=None):
         pass
 
     @abstractmethod

@@ -4,7 +4,6 @@ from simpy import Environment
 
 
 class ServiceTask(ABC):
-
     def __init__(self, env: Environment):
         self._env = env
         self._task_finished = self._env.event()

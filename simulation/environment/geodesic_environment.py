@@ -1,11 +1,10 @@
 import math
 
 import h3
-from numpy import random
 import numpy
-
 import pyproj
 from shapely.geometry import Point, Polygon
+
 from simulation.environment.environment import Environment
 from simulation.vehicle.vehicle import Vehicle
 
@@ -16,21 +15,23 @@ class GeodesicEnvironment(Environment):
 
     @staticmethod
     def getInstance():
-        """ Static access method. """
-        if GeodesicEnvironment.__instance == None:
+        """Static access method."""
+        if GeodesicEnvironment.__instance is None:
             GeodesicEnvironment()
         return GeodesicEnvironment.__instance
 
     def __init__(self):
-        """ Virtually private constructor. """
-        if GeodesicEnvironment.__instance != None:
+        """Virtually private constructor."""
+        if GeodesicEnvironment.__instance is not None:
             raise Exception("This class is a singleton!")
         else:
             GeodesicEnvironment.__instance = self
             super(GeodesicEnvironment, self).__init__()
 
-            self._geodesic = pyproj.Geod(ellps='WGS84')
-            self._random = numpy.random.RandomState(42)  # TODO: use fnc reset_rnd_gen to change seed?
+            self._geodesic = pyproj.Geod(ellps="WGS84")
+            self._random = numpy.random.RandomState(
+                42
+            )  # TODO: use fnc reset_rnd_gen to change seed?
 
     def getLayer(self, layer_name):
         """
@@ -66,7 +67,9 @@ class GeodesicEnvironment(Environment):
         minx, miny, maxx, maxy = geometry.bounds
         points = []
         while len(points) < 1:
-            pnt = Point(self._random.uniform(minx, maxx), self._random.uniform(miny, maxy))
+            pnt = Point(
+                self._random.uniform(minx, maxx), self._random.uniform(miny, maxy)
+            )
             if geometry.contains(pnt):
                 return pnt.y, pnt.x  # Latitude, Longitude
 
@@ -114,8 +117,8 @@ class GeodesicEnvironment(Environment):
            /           \
          /1/          \2\
                 0
-         \5\          /6/
-          \  ________  /
+         \\5\\          /6/
+          \\  ________  /
                 4
 
         It doesn't really matter if the movement is named "up" or "left" as long as it corresponds always to the same
@@ -142,18 +145,19 @@ class GeodesicEnvironment(Environment):
         """
 
         EDGE_MAPPING = {
-            'UP': 3,
-            'UP_RIGHT': 2,
-            'DOWN_RIGHT': 6,
-            'DOWN': 4,
-            'DOWN_LEFT': 5,
-            'UP_LEFT': 1
+            "UP": 3,
+            "UP_RIGHT": 2,
+            "DOWN_RIGHT": 6,
+            "DOWN": 4,
+            "DOWN_LEFT": 5,
+            "UP_LEFT": 1,
         }
 
         # create mapping of edge number -> neighbors
         neighbors = {
-            int(f'{int(x, base=16) + 0x200:0>64b}'[5:8], base=2):
-                h3.get_destination_h3_index_from_unidirectional_edge(x)
+            int(
+                f"{int(x, base=16) + 0x200:0>64b}"[5:8], base=2
+            ): h3.get_destination_h3_index_from_unidirectional_edge(x)
             for x in h3.get_h3_unidirectional_edges_from_hexagon(hex_id)
         }
 
@@ -163,9 +167,13 @@ class GeodesicEnvironment(Environment):
 
         # quick sanity check
         assert h3.h3_get_resolution(hex_id) == h3.h3_get_resolution(new_hex_id)
-        assert h3.h3_indexes_are_neighbors(hex_id, new_hex_id) # should be neighbors
-        assert h3.h3_get_faces(hex_id) == h3.h3_get_faces(new_hex_id) # should be on the same icosahedron face
-        assert h3.h3_get_base_cell(hex_id) == h3.h3_get_base_cell(new_hex_id) # TODO: should be on the same base cell?
+        assert h3.h3_indexes_are_neighbors(hex_id, new_hex_id)  # should be neighbors
+        assert h3.h3_get_faces(hex_id) == h3.h3_get_faces(
+            new_hex_id
+        )  # should be on the same icosahedron face
+        assert h3.h3_get_base_cell(hex_id) == h3.h3_get_base_cell(
+            new_hex_id
+        )  # TODO: should be on the same base cell?
 
         return new_hex_id
 
@@ -181,7 +189,9 @@ class GeodesicEnvironment(Environment):
         :return: set of hexagon ids
         """
         straight = h3.h3_line(start, end)
-        return {item for sublist in [h3.k_ring(h, k) for h in straight] for item in sublist}
+        return {
+            item for sublist in [h3.k_ring(h, k) for h in straight] for item in sublist
+        }
 
     @staticmethod
     def filter_demands_by_area(demands, area: Polygon):
@@ -193,29 +203,40 @@ class GeodesicEnvironment(Environment):
 
         filtered = []
         for d in demands:
-            if (Point(d.origin.getExactLocation()).within(area) and
-                    Point(d.destination.getExactLocation()).within(area)):
+            if Point(d.origin.getExactLocation()).within(area) and Point(
+                d.destination.getExactLocation()
+            ).within(area):
                 filtered.append(d)
 
         return filtered
 
     def filter_demands_by_direction(self, demands, vehicle: Vehicle):
-        route_direction = self.get_bearing(*vehicle.position.getExactLocation(),
-                                           *vehicle.route.destination.getExactLocation())
-        route_direction_range = (route_direction-90, route_direction+90)
-        route_direction_norm = [(x+360) % 360 for x in route_direction_range]
+        route_direction = self.get_bearing(
+            *vehicle.position.getExactLocation(),
+            *vehicle.route.destination.getExactLocation(),
+        )
+        route_direction_range = (route_direction - 90, route_direction + 90)
+        route_direction_norm = [(x + 360) % 360 for x in route_direction_range]
 
         filtered = []
         for d in demands:
             # TODO: parallelize?
-            demand_direction = self.get_bearing(*d.origin.getExactLocation(),
-                                                *d.destination.getExactLocation())
+            demand_direction = self.get_bearing(
+                *d.origin.getExactLocation(), *d.destination.getExactLocation()
+            )
             demand_direction_norm = (demand_direction + 360) % 360
             if route_direction_norm[0] > route_direction_norm[1]:
                 # +90° was above 360°
-                if demand_direction_norm >= route_direction_norm[0] or demand_direction_norm <= route_direction_norm[1]:
+                if (
+                    demand_direction_norm >= route_direction_norm[0]
+                    or demand_direction_norm <= route_direction_norm[1]
+                ):
                     filtered.append(d)
-            elif route_direction_norm[0] <= demand_direction_norm <= route_direction_norm[1]:
+            elif (
+                route_direction_norm[0]
+                <= demand_direction_norm
+                <= route_direction_norm[1]
+            ):
                 filtered.append(d)
 
         return filtered
@@ -223,7 +244,7 @@ class GeodesicEnvironment(Environment):
     @staticmethod
     def direction_aligns(direction, target, degrees=180) -> bool:
         assert degrees < 360
-        target_range = (target-(degrees/2), target+(degrees/2))
+        target_range = (target - (degrees / 2), target + (degrees / 2))
         target_norm = tuple(x % 360 for x in target_range)
 
         direction_norm = direction % 360
@@ -241,10 +262,11 @@ class GeodesicEnvironment(Environment):
     def get_bearing(lat1, long1, lat2, long2):
         # great circle bearing without projection
         # from https://stackoverflow.com/a/64747209
-        dLon = (long2 - long1)
+        dLon = long2 - long1
         x = math.cos(math.radians(lat2)) * math.sin(math.radians(dLon))
-        y = math.cos(math.radians(lat1)) * math.sin(math.radians(lat2)) - math.sin(math.radians(lat1)) * math.cos(
-            math.radians(lat2)) * math.cos(math.radians(dLon))
+        y = math.cos(math.radians(lat1)) * math.sin(math.radians(lat2)) - math.sin(
+            math.radians(lat1)
+        ) * math.cos(math.radians(lat2)) * math.cos(math.radians(dLon))
         brng = numpy.arctan2(x, y)
         brng = numpy.degrees(brng)
 
