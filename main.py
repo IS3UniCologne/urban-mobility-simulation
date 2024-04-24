@@ -210,6 +210,10 @@ logging.basicConfig(
 logger = logging.getLogger()
 logger.setLevel(log_level)
 
+# Add Custom Init Filters (which work without the ENV obj)
+cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
+logger.addFilter(cf_init)
+
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
 formatter = logging.Formatter(
@@ -223,6 +227,27 @@ file_handler.setLevel(log_level)
 cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf_init)
 
+# # Set the basic configuration
+# log_level = logging.INFO
+# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)20s] [%(clazz)30s %(oid)3s]: %(message)s',
+#                     datefmt='%m/%d/%Y %I:%M:%S %p')
+
+# # Set the logger level
+# logger.setLevel(log_level)
+
+# # Block Logger of third party software
+# logging.getLogger("fiona").setLevel(logging.WARNING)
+
+# # Set up file handler with formatter
+# formatter = logging.Formatter('%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s')
+# file_handler = logging.FileHandler('report.log')
+# file_handler.setFormatter(formatter)
+# file_handler.setLevel(log_level)
+
+# # Add file handler to the logger
+# logger.addHandler(file_handler)
+
+print("Basic config initialized")
 
 # logger.addHandler(file_handler)
 
@@ -436,6 +461,7 @@ def run_single_simulation(
     )
 
     # Users
+    ## What is "MoD_interval_reduction" for?
     global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction)
 
     # World
@@ -552,7 +578,7 @@ def run_single_simulation(
     # # # # # # # # # # # # # # # # # # # # # #
     logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-    env.run(until=end_time)
+    env.run(until=1)
 
     logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
@@ -753,6 +779,7 @@ TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
 USER_SHARES = [0.247, 0.237, 0.19, 0.325]
 random.seed(42)
 seeds = random.sample(range(1000), 10)
+scenario_name = "single_P_analysis"
 phase = 3
 for seed in seeds[1:]:
     a = run_single_simulation(

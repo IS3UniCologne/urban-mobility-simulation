@@ -210,7 +210,8 @@ class User(Agent, DriverInterface, TrackingInterface):
 
         # Wait for next event
         yield self._env.timeout(1)  # Open App
-
+        # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/50
+        self._waiting_time = 0
         # Update current state
         self._state = UserState.SEARCHING_TRANSPORT_ALTERNATIVES
 
@@ -245,7 +246,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                 if (
                     isinstance(alternative.vehicle, SharedCar)
                     and distance_to_vehicle
-                    < config.get_vehicle_config(
+                    < config.get_shared_vehicle_config(
                         alternative.vehicle.__class__.__name__
                     ).max_walking_distance
                 ):  # See own paper
@@ -260,7 +261,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                 elif (
                     isinstance(alternative.vehicle, SharedKickScooter)
                     and distance_to_vehicle
-                    < config.get_vehicle_config(
+                    < config.get_shared_vehicle_config(
                         alternative.vehicle.__class__.__name__
                     ).max_walking_distance
                 ):  # See Reck
@@ -275,7 +276,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                 elif (
                     isinstance(alternative.vehicle, SharedScooter)
                     and distance_to_vehicle
-                    < config.get_vehicle_config(
+                    < config.get_shared_vehicle_config(
                         alternative.vehicle.__class__.__name__
                     ).max_walking_distance
                 ):  # See Nothing..
@@ -290,7 +291,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                 elif (
                     isinstance(alternative.vehicle, SharedBike)
                     and distance_to_vehicle
-                    < config.get_vehicle_config(
+                    < config.get_shared_vehicle_config(
                         alternative.vehicle.__class__.__name__
                     ).max_walking_distance
                 ):  # See Nothing..
@@ -324,7 +325,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         available_transportation_alternatives.transportation_alternatives = (
             filtered_list
         )
-
+        self._waiting_time += 1
         # Trigger next event
         self._transportation_alternatives_received.succeed()
         logging.debug(
@@ -369,6 +370,7 @@ class User(Agent, DriverInterface, TrackingInterface):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
+        # selected_transportation_alternative.waiting_time = self._waiting_time
         return selected_transportation_alternative
 
     def allocate_vehicle(
@@ -616,7 +618,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         self._config = Configuration.instance()
         # TODO: somehow this must be decoupled - by making the user unaware of problems
         self._problem_config = self._config.dynamic_checkpoint_routing_config
-        self._bus_res = self._problem_config.action_resolution
+        # Comment out for now to run a bus without RL Agent
+        # self._bus_res = self._problem_config.action_resolution
+        self._bus_res = 8
 
         # TODO: modify available_time over time
         self._available_time = (
@@ -895,13 +899,14 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             return False
 
         # TODO: this is coupled deep with the DynamicRouting problem, too much hardcoded
-        incorridor = (
-            False
-            if not self._geodesic_env.filter_demands_by_area(
-                [self.transport_task], self._problem_config.area
-            )
-            else True
-        )
+        # incorridor = (
+        # False
+        # if not self._geodesic_env.filter_demands_by_area(
+        #     [self.transport_task], self._problem_config.area
+        # )
+        # else True
+        # )
+        incorridor = True  # For now
         indirection = (
             False
             if not self._geodesic_env.filter_demands_by_direction(
@@ -971,17 +976,20 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             at_checkpoint = vehicle.state is PublicTransitVehicleState.AT_STOP
             unreachable_dest = False
 
-            if at_checkpoint:
-                # check if the direction toward the passengers destination is aligned with the movement
-                # direction of the bus
-                direction_bus = self._problem_config.direction
-                direction_dest = self._geodesic_env.get_bearing(
-                    *vehicle.position.getExactLocation(),
-                    *self.transport_task.destination.getExactLocation(),
-                )
-                unreachable_dest = not self._geodesic_env.direction_aligns(
-                    direction_dest, direction_bus
-                )
+            # if at_checkpoint:
+            # check if the direction toward the passengers destination is aligned with the movement
+            # direction of the bus
+            # direction_bus = self._problem_config.direction
+            # Set to none manually for now to not use the RL Agent configuration
+            # direction_bus = None
+            # direction_dest = self._geodesic_env.get_bearing(
+            #      *vehicle.position.getExactLocation(),
+            #      *self.transport_task.destination.getExactLocation(),
+            # )
+            # Cannot calculate unreachable destionation without the correct direction of the bus without the RL Agent
+            # unreachable_dest = not self._geodesic_env.direction_aligns(
+            #    direction_dest, direction_bus
+            # )
 
             if (unreachable_dest and at_checkpoint) or at_dest:
                 self.unmount_vehicle(vehicle)
@@ -1111,6 +1119,7 @@ class RideHailingUser(Agent, DriverInterface):
         self._assigned_vehicle_arrived = self._env.event()
         self._arrived_at_destination = self._env.event()
 
+        self.process_finished = self._env.event()
         self._position_changed = self._env.event()
 
         # Initial State and Runtime

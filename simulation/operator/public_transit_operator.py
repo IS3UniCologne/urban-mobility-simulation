@@ -33,6 +33,9 @@ from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 from simulation.world.world import World
 from tracking.tracking import Tracking
 
+walking_speed_in_kmh = 5  # TODO: move to config
+walking_speed_in_mpm = walking_speed_in_kmh * 1000 / 60  # TODO: move to config
+
 
 # TODO: refactor to adhere to base class "Operator"
 class PublicTransitOperator(
@@ -109,7 +112,8 @@ class PublicTransitOperator(
                                 route = self._build_route(trip)
                                 bus = self._spawn_bus(
                                     route,
-                                    use_learning_agent=self._problem_config.use_learning_agent,
+                                    use_learning_agent=False,  # To run without the RL Agent
+                                    # self._problem_config.use_learning_agent,
                                 )
 
                                 # also spawn a cleanup process that waits for completion of trip
@@ -155,7 +159,7 @@ class PublicTransitOperator(
             duration = SimulationTimeConverter.duration_between(
                 SimulationTimeConverter.as_str(search_time),
                 vehicle.prognose_arrival(subroute.destination),
-            ) + (walking_dist_to_destination / 83.33)
+            ) + (walking_dist_to_destination / walking_speed_in_mpm)
 
             # TODO: convenience=0 is only a placeholder
             transportation_alternative = TransportationAlternative(
@@ -323,8 +327,8 @@ class PublicTransitOperator(
         self._world.add_vehicle(bus)
 
         # now add the correct reference of the bus to the problem LearningInterface and do deferred init
-        self._problem_config.problem.bus = bus
-        self._problem_config.problem.problem_init()
+        # self._problem_config.problem.bus = bus
+        # self._problem_config.problem.problem_init()
 
         self._tracking.register(bus)
 
@@ -345,8 +349,9 @@ class PublicTransitOperator(
         self._unserved_passengers = len(bus._seats)
 
         # TODO: this is hardcoded for one learning bus
-        if self._problem_config.use_learning_agent:
-            self._operator_process.interrupt()
+        if self._problem_config is not None:
+            if self._problem_config.use_learning_agent:
+                self._operator_process.interrupt()
 
     def _find_viable_transit(
         self,
@@ -508,7 +513,9 @@ class PublicTransitOperator(
         walking_dist = stop >> current_position
         # reachable within the specified temporal_lookahead and depart after arrival by foot
         reachable = (
-            SimulationTimeConverter.as_str(current_time + (walking_dist / 83.33))
+            SimulationTimeConverter.as_str(
+                current_time + (walking_dist / walking_speed_in_mpm)
+            )
             <= vehicle.prognose_arrival(stop)
             <= latest_departure
         )
