@@ -1,10 +1,6 @@
 import logging
-import sys
 
-import six
-
-sys.modules["sklearn.externals.six"] = six
-import mlrose as mlrose
+import mlrose_hiive as mlrose
 import pandas as pd
 
 

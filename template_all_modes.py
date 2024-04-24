@@ -50,6 +50,16 @@ from simulation.operator.fleet_factory import (
     generate_mixed_ride_hailing_fleet,
     generate_ridehailing_fleet_config,
 )
+from simulation.operator.operations_management.operations import Operations
+from simulation.operator.operations_management.operations_ridehailing import (
+    OperationsRidehailing,
+)
+from simulation.operator.operations_management.rebalancing_scheduler_ridehailing import (
+    RebalancingSchedulerRidehailing,
+)
+from simulation.operator.operations_management.relocation_scheduler import (
+    RelocationScheduler,
+)
 from simulation.operator.operations_management.service_worker import ServiceWorker
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.public_transit_operator import PublicTransitOperator
@@ -157,12 +167,12 @@ global_config.add_mode_choice_config(mc)
 # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/51
 if mode_choice_strategy == "substitution":
     # For now modify this depending on the modus
-    vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
-        ["SharedScooter", "SharedKickScooter", "SharedCar", "SharedBike"]
-    )
     # vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
-    #  ["AutonomousCar", "RideHailingCar"]
+    #     ["SharedScooter", "SharedKickScooter", "SharedCar", "SharedBike"]
     # )
+    vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
+        ["AutonomousCar", "RideHailingCar"]
+    )
     # vehicle_choice_model = PublicTransitVehicleChoiceBehavior(['Bus'])
 
 else:
@@ -454,8 +464,8 @@ env = simpy.Environment(initial_time=start_time)
 
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
-# population_factory = PopulationFactory(pop_prob_ridehailing, seed)
-population_factory = PopulationFactory(pop_prob_public, seed)
+population_factory = PopulationFactory(pop_prob_ridehailing, seed)
+# population_factory = PopulationFactory(pop_prob_public, seed)
 # population_factory = PopulationFactory(pop_prob_sharedvehicle, seed)
 
 # Load Spatial Environment
@@ -623,10 +633,10 @@ search_engine = {
 }
 
 # For RideHailing and Shared Fleet use the search engine as payment engine
-# payment_engine = search_engine
+payment_engine = search_engine
 
 # For public operator the payment services are in the operator module itself
-payment_engine = search_engine["public_transport"]
+# payment_engine = search_engine["public_transport"]
 
 vehicle_assignment_engine = {
     "ride_hailing_0": RideHailingAllocationEngine(env),
@@ -671,58 +681,58 @@ for sw in range(global_config.shared_vehicle_operator_config.number_of_service_w
 
 ### Comment out for public operator ####
 # Rebalancing scheduler creates the charging schedule and relocations vehicle in the ridehailing fleet
-# rs_ridehailing_0 = RebalancingSchedulerRidehailing(
-#     distance_matrix,
-#     ride_hailing_fleet_0,
-#     global_config.ridehailing_operator_config.available_modes,
-#     global_config.ridehailing_operator_config.available_modes_supply,
-#     global_config.ridehailing_operator_config.number_of_service_workers,
-#     global_config.ridehailing_operator_config.base_regions,
-#     global_config.ridehailing_operator_config.base_capacity,
-#     global_config.ridehailing_operator_config.recharge_threshold,
-#     charging_infrastructure._chargers,
-# )
+rs_ridehailing_0 = RebalancingSchedulerRidehailing(
+    distance_matrix,
+    ride_hailing_fleet_0,
+    global_config.ridehailing_operator_config.available_modes,
+    global_config.ridehailing_operator_config.available_modes_supply,
+    global_config.ridehailing_operator_config.number_of_service_workers,
+    global_config.ridehailing_operator_config.base_regions,
+    global_config.ridehailing_operator_config.base_capacity,
+    global_config.ridehailing_operator_config.recharge_threshold,
+    charging_infrastructure._chargers,
+)
 
-# # Ridehailing operator manages all operations belonging to the ridehailing fleet
-# ops_ridehailing_0 = OperationsRidehailing(
-#     env,
-#     ride_hailing_fleet_0,
-#     global_config.ridehailing_operator_config.operations_start,
-#     global_config.ridehailing_operator_config.operations_duration,
-#     rs_ridehailing_0,
-#     payment_engine["ride_hailing_0"],
-#     global_config.ridehailing_operator_config.available_modes,
-#     global_config.ridehailing_operator_config.available_modes_supply,
-#     global_config.ridehailing_operator_config.recharge_threshold,
-#     task_queue_ridehailing,
-#     charging_infrastructure._chargers,
-# )
+# Ridehailing operator manages all operations belonging to the ridehailing fleet
+ops_ridehailing_0 = OperationsRidehailing(
+    env,
+    ride_hailing_fleet_0,
+    global_config.ridehailing_operator_config.operations_start,
+    global_config.ridehailing_operator_config.operations_duration,
+    rs_ridehailing_0,
+    payment_engine["ride_hailing_0"],
+    global_config.ridehailing_operator_config.available_modes,
+    global_config.ridehailing_operator_config.available_modes_supply,
+    global_config.ridehailing_operator_config.recharge_threshold,
+    task_queue_ridehailing,
+    charging_infrastructure._chargers,
+)
 
-# # Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
-# relocation_scheduler = RelocationScheduler(
-#     distance_matrix,
-#     mixed_fleet,
-#     global_config.shared_vehicle_operator_config.available_modes,
-#     global_config.shared_vehicle_operator_config.available_modes_supply,
-#     global_config.shared_vehicle_operator_config.number_of_service_workers,
-#     global_config.shared_vehicle_operator_config.base_regions,
-#     global_config.shared_vehicle_operator_config.base_capacity,
-# )
+# Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
+relocation_scheduler = RelocationScheduler(
+    distance_matrix,
+    mixed_fleet,
+    global_config.shared_vehicle_operator_config.available_modes,
+    global_config.shared_vehicle_operator_config.available_modes_supply,
+    global_config.shared_vehicle_operator_config.number_of_service_workers,
+    global_config.shared_vehicle_operator_config.base_regions,
+    global_config.shared_vehicle_operator_config.base_capacity,
+)
 
-# # Shared operator manages all operations belonging to the shared mobility fleet
-# shared_operator = Operations(
-#     env,
-#     mixed_fleet,
-#     global_config.shared_vehicle_operator_config.number_of_service_workers,
-#     global_config.shared_vehicle_operator_config.operations_start,
-#     global_config.shared_vehicle_operator_config.operations_duration,
-#     relocation_scheduler,
-#     payment_engine["shared_vehicle"],
-#     global_config.shared_vehicle_operator_config.available_modes,
-#     global_config.shared_vehicle_operator_config.available_modes_supply,
-#     global_config.shared_vehicle_operator_config.recharge_threshold,
-#     task_queue_shared_vehicle,
-# )
+# Shared operator manages all operations belonging to the shared mobility fleet
+shared_operator = Operations(
+    env,
+    mixed_fleet,
+    global_config.shared_vehicle_operator_config.number_of_service_workers,
+    global_config.shared_vehicle_operator_config.operations_start,
+    global_config.shared_vehicle_operator_config.operations_duration,
+    relocation_scheduler,
+    payment_engine["shared_vehicle"],
+    global_config.shared_vehicle_operator_config.available_modes,
+    global_config.shared_vehicle_operator_config.available_modes_supply,
+    global_config.shared_vehicle_operator_config.recharge_threshold,
+    task_queue_shared_vehicle,
+)
 
 ### Finish commenting out for public operator ####
 
@@ -739,8 +749,8 @@ world = World.init(
 )
 
 # Start operations for ridehailing fleet
-# env.process(ops_ridehailing_0.timer())
-# env.process(ops_ridehailing_0.run_operations())
+env.process(ops_ridehailing_0.timer())
+env.process(ops_ridehailing_0.run_operations())
 
 # Shared Operator cannot deal with zero transactions, comment this part out while running a ridehailing fleet/public operator
 # Start operations for shared fleet
@@ -759,7 +769,7 @@ env.process(public_operator._run())
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, [], seed, mode="public_transport"
+    env, demand_profile, di, world, [], seed, mode="ride_hailing"
 )
 env.process(demand_factory.generate_demand())
 
