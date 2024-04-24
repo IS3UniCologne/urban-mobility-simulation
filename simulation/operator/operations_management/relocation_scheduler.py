@@ -4,7 +4,7 @@ from pathlib import Path
 import h3
 
 # sys.modules["sklearn.externals.six"] = six # does this break the mlrose parts?
-import mlrose as mlrose
+import mlrose_hiive as mlrose
 import pandas as pd
 
 from simulation.helper.configuration.configuration import Configuration
