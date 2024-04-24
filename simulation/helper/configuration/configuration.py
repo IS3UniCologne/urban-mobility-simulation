@@ -547,6 +547,11 @@ class RideHailingOperatorConfig:
         operations_start,
         operations_duration,
         vehicle_relocation_velocity,
+        available_modes,
+        available_modes_supply,
+        n_autonomous_cars,
+        n_ridehailing_cars,
+        allocation,
     ):
         self.recharge_threshold = recharge_threshold
         self.charging_station_power = charging_station_power
@@ -556,6 +561,45 @@ class RideHailingOperatorConfig:
         self.operations_start = operations_start
         self.operations_duration = operations_duration
         self.vehicle_relocation_velocity = vehicle_relocation_velocity
+        self.available_modes = available_modes
+        self.available_modes_supply = available_modes_supply
+        self.n_autonomous_cars = n_autonomous_cars
+        self.n_ridehailing_cars = n_ridehailing_cars
+        self.allocation = allocation
+
+
+class SharedVehicleOperatorConfig:
+    def __init__(
+        self,
+        recharge_threshold,
+        charging_station_power,
+        number_of_service_worker,
+        base_regions,
+        base_capacity,
+        operations_start,
+        operations_duration,
+        vehicle_relocation_velocity,
+        available_modes,
+        available_modes_supply,
+        n_cars,
+        n_scooters,
+        n_kickscooters,
+        n_bikes,
+    ):
+        self.recharge_threshold = recharge_threshold
+        self.charging_station_power = charging_station_power
+        self.number_of_service_workers = number_of_service_worker
+        self.base_regions = base_regions
+        self.base_capacity = base_capacity
+        self.operations_start = operations_start
+        self.operations_duration = operations_duration
+        self.vehicle_relocation_velocity = vehicle_relocation_velocity
+        self.available_modes = available_modes
+        self.available_modes_supply = available_modes_supply
+        self.n_cars = n_cars
+        self.n_scooters = n_scooters
+        self.n_kickscooters = n_kickscooters
+        self.n_bikes = n_bikes
 
 
 class SharedVehicleOperatorConfig:

@@ -13,18 +13,31 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
 
         self._substitution_boundary = substitution_boundary
 
+        # derived order through: sm.MNLogit(Y, X)._ynames_map
+        self._class_mapping = {
+            0: "SharedBike",
+            1: "SharedCar",
+            2: "SharedKickScooter",
+            3: "SharedScooter",
+        }
+
         self._available_vehicles = available_vehicles
 
     def choose_vehicle(self, trip_characteristics: TripCharacteristics):
         # Predict single outcome (1, distance) (1 = constant)
         # (Car, Kick Scooter, Scooter)
         # (p_car, p_ks, p_scooter)
+
         choice_probabilities = self._choice_model.predict(
             (1, trip_characteristics.distance)
         )
         choice_probabilities = choice_probabilities.reshape(
             (-1)
         )  # Transform 2D array to 1D array
+        result = {}
+
+        for i in range(len(choice_probabilities)):
+            result[self._class_mapping[i]] = choice_probabilities[i]
 
         # Get Choice Index
         choice = choice_probabilities.argmax()
@@ -33,13 +46,7 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
         lower_bound = choice_probabilities[choice] - self._substitution_boundary
 
         # Set Candidate Vehicle Choices to 1 based on given Trip Chars
-        mode_choices = [1 if x >= lower_bound else 0 for x in choice_probabilities]
+        for key, value in result.items():
+            result[key] = 1 if value >= lower_bound else 0
 
-        # Return vehicles which are considered as viable means of transport
-        result = {}
-        for idx, mode_choice in enumerate(mode_choices):
-            if mode_choices[idx]:
-                result[self._available_vehicles[idx]] = 1
-            else:
-                result[self._available_vehicles[idx]] = 0
         return result

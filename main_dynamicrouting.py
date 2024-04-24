@@ -64,9 +64,10 @@ parser.read(sys.argv[1])
 spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
 temporal_res = parser.getint("WORLD", "TEMPORAL_RESOLUTION")
 daily_res = parser.getint("WORLD", "daily_resolution")
+city = parser.get("WORLD", "city")
 
 # Create Global Config File
-global_config = Configuration.init(spatial_res, temporal_res, daily_res)
+global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand")
