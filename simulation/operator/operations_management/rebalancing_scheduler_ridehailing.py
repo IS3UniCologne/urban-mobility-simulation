@@ -1,8 +1,6 @@
 import logging
 
-
-# sys.modules["sklearn.externals.six"] = six
-import mlrose as mlrose
+import mlrose_hiive as mlrose
 import pandas as pd
 
 
@@ -71,7 +69,7 @@ class RebalancingSchedulerRidehailing:
 
     #############################################
     #############################################
-    #  Charging Planing                         #
+    #  Charging Planning                        #
     #############################################
     #############################################
 
@@ -110,7 +108,7 @@ class RebalancingSchedulerRidehailing:
             # Select Nearest Base
             if vehicle.electric_vehicle:
                 # we prioritize based on the queue
-                for queue in [0, 2, 5, 10]:
+                for queue in [0, 2, 5, 10]:  # What is going on here?
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
                         available_charging_stations = [
@@ -146,7 +144,7 @@ class RebalancingSchedulerRidehailing:
                                 selected_base_distance = row_base[hex]
                                 break
 
-            if not vehicle.electric_vehicle:
+            if not vehicle.electric_vehicle:  # if we have hybrids, we just disregard the queue length and go to the closest charger
                 for index_base, row_base in sorted_base_list.iterrows():
                     selected_base = index_base
                     available_charging_stations = [x for x in self._charging_stations]

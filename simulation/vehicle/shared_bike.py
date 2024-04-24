@@ -1,5 +1,6 @@
-from simpy import Environment
 import logging
+
+from simpy import Environment
 
 from simulation.vehicle.shared_vehicle import SharedVehicle
 

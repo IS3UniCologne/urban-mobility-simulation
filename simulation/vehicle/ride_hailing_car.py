@@ -2,6 +2,7 @@ import logging
 
 from simpy import Environment
 
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.vehicle import VehicleState
@@ -27,7 +28,7 @@ class RideHailingCar(RideHailingVehicle):
     def __init__(
         self,
         env: Environment,
-        position,
+        position: GeodesicPosition,
         max_available_seats=4,
         max_state_of_charge=16.7,
         energy_consumption=0.152,
