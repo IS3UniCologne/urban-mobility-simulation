@@ -22,7 +22,7 @@ dependencies:
       - partridge[full]
       - peartree
       - gtfs_kit
-      - git+https://github.com/gkhayes/mlrose.git
+      - git+https://github.com/hiive/mlrose.git
       - line-profiler-pycharm
       - pqdm
       - psutil

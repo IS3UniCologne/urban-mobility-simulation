@@ -964,20 +964,20 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             at_checkpoint = vehicle.state is PublicTransitVehicleState.AT_STOP
             unreachable_dest = False
 
-            if at_checkpoint:
-                # check if the direction toward the passengers destination is aligned with the movement
-                # direction of the bus
-                # direction_bus = self._problem_config.direction
-                # Set to none manually for now to not use the RL Agent configuration
-                direction_bus = None
-                direction_dest = self._geodesic_env.get_bearing(
-                    *vehicle.position.getExactLocation(),
-                    *self.transport_task.destination.getExactLocation(),
-                )
-                # Cannot calculate unreachable destionation without the correct direction of the bus without the RL Agent
-                # unreachable_dest = not self._geodesic_env.direction_aligns(
-                #    direction_dest, direction_bus
-                # )
+            # if at_checkpoint:
+            # check if the direction toward the passengers destination is aligned with the movement
+            # direction of the bus
+            # direction_bus = self._problem_config.direction
+            # Set to none manually for now to not use the RL Agent configuration
+            # direction_bus = None
+            # direction_dest = self._geodesic_env.get_bearing(
+            #      *vehicle.position.getExactLocation(),
+            #      *self.transport_task.destination.getExactLocation(),
+            # )
+            # Cannot calculate unreachable destionation without the correct direction of the bus without the RL Agent
+            # unreachable_dest = not self._geodesic_env.direction_aligns(
+            #    direction_dest, direction_bus
+            # )
 
             if (unreachable_dest and at_checkpoint) or at_dest:
                 self.unmount_vehicle(vehicle)
