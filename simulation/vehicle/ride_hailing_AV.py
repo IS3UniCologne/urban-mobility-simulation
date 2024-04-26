@@ -6,7 +6,7 @@ from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 # TODO: why does this inherit from RideHailingVehicle, not RideHailingCar?
 class RideHailingAV(RideHailingVehicle):
     # Autonomous Ride Hailing Car Counter
-    ride_hailing_car_id = 0
+    ride_hailing_av_id = 0
     vehicle_type = "ridehailing_AV"
 
     def __init__(
@@ -40,7 +40,7 @@ class RideHailingAV(RideHailingVehicle):
         )
 
         # Increment Shared Car ID
-        self.car_id = RideHailingAV.ride_hailing_car_id
+        self.car_id = RideHailingAV.ride_hailing_av_id
         self._price_per_minute = price_per_min
         self.electric_vehicle = True
-        RideHailingAV.ride_hailing_car_id += 1
+        RideHailingAV.ride_hailing_av_id += 1

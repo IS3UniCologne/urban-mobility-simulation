@@ -375,27 +375,33 @@ class Configuration:
     def add_MoD_coefficient_interval_adjuster(self, MoD_coefficient_interval_adjuster):
         self._MoD_coefficient_interval_adjuster = MoD_coefficient_interval_adjuster
 
-    def add_shared_vehicle_operator_config(self, shared_mobility_ops_config):
+    def add_shared_vehicle_operator_config(
+        self, shared_mobility_ops_config: "SharedVehicleOperatorConfig"
+    ):
         self._shared_vehicle_operator_config = shared_mobility_ops_config
 
-    def add_ridehailing_operator_config(self, ridehailing_ops_config):
+    def add_ridehailing_operator_config(
+        self, ridehailing_ops_config: "RideHailingOperatorConfig"
+    ):
         self._ridehailing_operator_config = ridehailing_ops_config
 
     def add_charging_infrastructure_config(self, charging_infrastructure_ops_config):
         self._charging_infrastructure_config = charging_infrastructure_ops_config
 
     def add_population_config(self, population_config):
-        self.population_config = population_config
+        self._population_config = population_config
 
     @property
-    def ridehailing_operator_config(self):
+    def shared_vehicle_operator_config(self):
         return self._shared_vehicle_operator_config
 
     @property
     def ridehailing_operator_config(self):
         return self._ridehailing_operator_config
 
-    def add_transit_operator_config(self, transit_operator_config):
+    def add_transit_operator_config(
+        self, transit_operator_config: "TransitOperatorConfig"
+    ):
         self._transit_operator_config = transit_operator_config
 
     @property
@@ -566,40 +572,6 @@ class RideHailingOperatorConfig:
         self.n_autonomous_cars = n_autonomous_cars
         self.n_ridehailing_cars = n_ridehailing_cars
         self.allocation = allocation
-
-
-class SharedVehicleOperatorConfig:
-    def __init__(
-        self,
-        recharge_threshold,
-        charging_station_power,
-        number_of_service_worker,
-        base_regions,
-        base_capacity,
-        operations_start,
-        operations_duration,
-        vehicle_relocation_velocity,
-        available_modes,
-        available_modes_supply,
-        n_cars,
-        n_scooters,
-        n_kickscooters,
-        n_bikes,
-    ):
-        self.recharge_threshold = recharge_threshold
-        self.charging_station_power = charging_station_power
-        self.number_of_service_workers = number_of_service_worker
-        self.base_regions = base_regions
-        self.base_capacity = base_capacity
-        self.operations_start = operations_start
-        self.operations_duration = operations_duration
-        self.vehicle_relocation_velocity = vehicle_relocation_velocity
-        self.available_modes = available_modes
-        self.available_modes_supply = available_modes_supply
-        self.n_cars = n_cars
-        self.n_scooters = n_scooters
-        self.n_kickscooters = n_kickscooters
-        self.n_bikes = n_bikes
 
 
 class SharedVehicleOperatorConfig:
