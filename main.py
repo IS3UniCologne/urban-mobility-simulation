@@ -110,6 +110,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
     initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
     charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COST_PER_KWH")
     cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
+    daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
     EV_relative_energy_consumption = parser.getfloat(
         vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
     )
@@ -123,6 +124,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
         initial_SoC=initial_SoC,
         charging_cost_per_kWh=charging_cost_per_kWh,
         cost_per_km=cost_per_km,
+        daily_total_cost=daily_total_cost,
         EV_relative_energy_consumption=EV_relative_energy_consumption,
     )
     global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
@@ -463,21 +465,6 @@ def run_single_simulation(
     distance_threshold_to_user = parser.getfloat("RIDE_HAILING", "MAX_PICKUP_DISTANCE")
     global_config.add_distance_threshold_to_user(distance_threshold_to_user)
 
-    # Operator Modules
-    search_engine = {
-        "ride_hailing_0": RideHailingSearchEngine(env),
-        "ride_hailing_1": RideHailingSearchEngine(env),
-    }
-
-    payment_engine = {
-        "ride_hailing_0": ridehailing_operator_0,
-        "ride_hailing_1": ridehailing_operator_1,
-    }
-
-    vehicle_assignment_engine = {
-        "ride_hailing_0": RideHailingAllocationEngine(env),
-        "ride_hailing_1": RideHailingAllocationEngine(env),
-    }
     # Technology penetration
     global_config.add_tech_penetration(EV_penetration, AV_penetration)
     global_config.add_AV_trust(AV_trust)
@@ -533,31 +520,6 @@ def run_single_simulation(
     ## What is "MoD_interval_reduction" for?
     global_config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction)
 
-    # World
-    Tracking.init(env)
-    world = World.init(
-        env,
-        search_engine,
-        payment_engine,
-        vehicle_assignment_engine,
-        vehicle_choice_model,
-        population_factory,
-        charging_infrastructure,
-        reset=True,
-    )
-
-    # # # # # # # # # # # # # # # # # # # # # #
-    #                                         #
-    # Spawn Demand Processes.                 #
-    #                                         #
-    # # # # # # # # # # # # # # # # # # # # # #
-
-    ride_hailing_demand_factory = DemandFactory(
-        env, demand_profile, di, world, demand_modifier_paths, seed, mode="ride_hailing"
-    )
-
-    env.process(ride_hailing_demand_factory.generate_demand())
-
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Load Vehicle Fleet and Place on World.  #
@@ -598,7 +560,6 @@ def run_single_simulation(
     base_regions = global_config.ridehailing_operator_config.base_regions
 
     # Initialize Rule Based Relocation Scheduler
-
     # For RideHailing Fleets
     ridehailing_operations_0 = RideHailingChargingOperations(
         env=env,
@@ -624,6 +585,17 @@ def run_single_simulation(
         charging_stations=charging_infrastructure._chargers,
     )
 
+    # Operator Modules
+    search_engine = {
+        "ride_hailing_0": RideHailingSearchEngine(env),
+        "ride_hailing_1": RideHailingSearchEngine(env),
+    }
+
+    vehicle_assignment_engine = {
+        "ride_hailing_0": RideHailingAllocationEngine(env),
+        "ride_hailing_1": RideHailingAllocationEngine(env),
+    }
+
     ridehailing_operator_0 = RideHailingOperator(
         env=env,
         fleet=ride_hailing_fleet_0,
@@ -641,6 +613,36 @@ def run_single_simulation(
         search_engine=search_engine["ride_hailing_1"],
         allocation_engine=vehicle_assignment_engine["ride_hailing_1"],
     )
+
+    payment_engine = {
+        "ride_hailing_0": ridehailing_operator_0,
+        "ride_hailing_1": ridehailing_operator_1,
+    }
+
+    # World
+    Tracking.init(env)
+    world = World.init(
+        env,
+        search_engine,
+        payment_engine,
+        vehicle_assignment_engine,
+        vehicle_choice_model,
+        population_factory,
+        charging_infrastructure,
+        reset=True,
+    )
+
+    # # # # # # # # # # # # # # # # # # # # # #
+    #                                         #
+    # Spawn Demand Processes.                 #
+    #                                         #
+    # # # # # # # # # # # # # # # # # # # # # #
+
+    ride_hailing_demand_factory = DemandFactory(
+        env, demand_profile, di, world, demand_modifier_paths, seed, mode="ride_hailing"
+    )
+
+    env.process(ride_hailing_demand_factory.generate_demand())
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
