@@ -15,8 +15,8 @@ from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import (
     Configuration,
     ModeChoiceConfig,
+    SharedVehicleConfig,
     SharedVehicleOperatorConfig,
-    VehicleConfig,
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
@@ -105,7 +105,7 @@ for idx, vehicle_type in enumerate(
     max_walking_distance = parser.getint(vehicle_type, "WALKING_DISTANCE")
     daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
 
-    vc = VehicleConfig(
+    vc = SharedVehicleConfig(
         price_per_min,
         max_state_of_charge,
         energy_consumption,
@@ -125,10 +125,7 @@ mode_choice_available_modes = parser.get("MODE_CHOICE_MODEL", "available_modes")
 mode_choice_available_modes = mode_choice_available_modes.split(",")
 
 mc = ModeChoiceConfig(
-    mode_choice_strategy,
-    mode_choice_sub_boundary,
-    mode_choice_available_modes,
-    mode_choice_model_path,
+    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
 )
 global_config.add_mode_choice_config(mc)
 
@@ -149,6 +146,18 @@ vehicle_relocation_velocity = parser.getint(
     "SHARED_VEHICLE_OPERATOR", "VEHICLE_RELOCATION_VELOCITY"
 )
 
+# Get number of each vehicle type to be spawned from configuration
+n_cars = parser.getint("EXPERIMENT_MANAGEMENT", "N_CARS")
+n_kick_scooters = parser.getint("EXPERIMENT_MANAGEMENT", "N_KICKSCOOTER")
+n_bikes = parser.getint("EXPERIMENT_MANAGEMENT", "N_BIKES")
+n_scooters = parser.getint("EXPERIMENT_MANAGEMENT", "N_SCOOTER")
+
+available_modes = parser.get(
+    "SHARED_VEHICLE_OPERATOR", "available_vehicle_modes_shared_vehicle"
+)
+available_modes = available_modes.split(",")
+available_modes_supply = [n_cars, n_scooters, n_kick_scooters, n_bikes]
+
 svoc = SharedVehicleOperatorConfig(
     recharge_threshold,
     charging_station_power,
@@ -158,6 +167,12 @@ svoc = SharedVehicleOperatorConfig(
     operations_start,
     operations_duration,
     vehicle_relocation_velocity,
+    available_modes,
+    available_modes_supply,
+    n_cars,
+    n_scooters,
+    n_kick_scooters,
+    n_bikes,
 )
 global_config.add_shared_vehicle_operator_config(svoc)
 
@@ -290,6 +305,9 @@ def run_single_simulation(
     :param price_sensitive_pop_prob: 1.0 means only price sensitive users, 0.0 means only sustainable users
     :return:
     """
+
+    # TODO: modify configuration attributes to reflect function params
+
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Setup Simulation Environment.           #

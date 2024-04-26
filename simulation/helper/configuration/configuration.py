@@ -475,9 +475,6 @@ class SharedVehicleConfig:
         max_walking_distance,
         daily_total_cost,
         initial_SoC,
-        EV_relative_energy_consumption,
-        cost_per_km,
-        charging_cost_per_kWh,
     ):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
@@ -488,9 +485,6 @@ class SharedVehicleConfig:
         self.max_walking_distance = max_walking_distance
         self.daily_total_cost = daily_total_cost
         self.initial_SoC = initial_SoC
-        self.EV_relative_energy_consumption = EV_relative_energy_consumption
-        self.cost_per_km = cost_per_km
-        self.charging_cost_per_kWh = charging_cost_per_kWh
 
 
 class RideHailingVehicleConfig:
@@ -504,6 +498,7 @@ class RideHailingVehicleConfig:
         initial_SoC,
         charging_cost_per_kWh,
         cost_per_km,
+        daily_total_cost,
         EV_relative_energy_consumption,
     ):
         self.price_per_min = price_per_min
@@ -514,6 +509,7 @@ class RideHailingVehicleConfig:
         self.initial_SoC = initial_SoC
         self.charging_cost_per_kWh = charging_cost_per_kWh
         self.cost_per_km = cost_per_km
+        self.daily_total_cost = daily_total_cost
         self.EV_relative_energy_consumption = EV_relative_energy_consumption
 
 
