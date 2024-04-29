@@ -1,7 +1,6 @@
 # from pqdm.processes import pqdm
 import logging
 import os
-import random
 import sys
 from configparser import ConfigParser
 from pathlib import Path
@@ -852,247 +851,268 @@ def run_single_simulation(
 
 
 ### Single Run
+
 TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
 USER_SHARES = [0.247, 0.237, 0.19, 0.325]
-random.seed(42)
-seeds = random.sample(range(1000), 10)
 scenario_name = "single_P_analysis"
-phase = 3
-for seed in seeds[1:]:
-    a = run_single_simulation(
-        end_time=1400 * 1,
-        n_cars=500,
-        seed=seed,
-        phase=phase,
-        pop_prob=USER_SHARES,
-        EV_penetration=TECH_SHARE[phase],
-        charging_capacity=5,
-        AV_penetration=TECH_SHARE[phase],
-        returnDataFrame=False,
-        charging_power=10,
-    )
+# AV_trust_analysis, population_analysis, fleet_size_analysis, charging_capacity_analysis, tech_phase_analysis
+phase = 1
 
-    print(a)
+result = run_single_simulation(
+    end_time=600,
+    n_cars=100,
+    seed=4711,
+    phase=phase,
+    pop_prob=USER_SHARES,
+    EV_penetration=TECH_SHARE[phase],
+    charging_capacity=5,
+    AV_penetration=TECH_SHARE[phase],
+    returnDataFrame=False,
+    charging_power=10,
+)
+
+
+# TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
+# USER_SHARES = [0.247, 0.237, 0.19, 0.325]
+# random.seed(42)
+# seeds = random.sample(range(1000), 10)
+# scenario_name = "single_P_analysis"
+# phase = 3
+# for seed in seeds[1:]:
+#     a = run_single_simulation(
+#         end_time=1400 * 1,
+#         n_cars=500,
+#         seed=seed,
+#         phase=phase,
+#         pop_prob=USER_SHARES,
+#         EV_penetration=TECH_SHARE[phase],
+#         charging_capacity=5,
+#         AV_penetration=TECH_SHARE[phase],
+#         returnDataFrame=False,
+#         charging_power=10,
+#     )
+
+#     print(a)
 
 # Simulation Experiments
 # Random Variables for our Monte Carlo Run
 
 
-random.seed(42)
-seeds = random.sample(range(1000), 10)
+# random.seed(42)
+# seeds = random.sample(range(1000), 10)
 
-# Store all simulation results in this data frame
-all_simulations = pd.DataFrame()
-sim_days = 1
-scenario_name = "single_P_analysis"
-# AV_trust_analysis, population_analysis, fleet_size_analysis, charging_capacity_analysis, tech_phase_analysis
-TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
-phases = [0, 1, 2, 3]
+# # Store all simulation results in this data frame
+# all_simulations = pd.DataFrame()
+# sim_days = 1
+# scenario_name = "single_P_analysis"
+# # AV_trust_analysis, population_analysis, fleet_size_analysis, charging_capacity_analysis, tech_phase_analysis
+# TECH_SHARE = [0.25, 0.5, 0.75, 1.0]
+# phases = [0, 1, 2, 3]
 
-# Real Run
+# # Real Run
 
-if __name__ == "__main__":
-    T = 1440 * sim_days
-    #
-    #     # single phase
-    #     for phase in range(0, 101, 5):
-    #         phase /= 100
-    #         data = []
-    #         for idx, seed in enumerate(seeds):
-    #             data.append({'end_time': T, 'seed': seed,
-    #                          'phase': phase,
-    #                          'EV_penetration': phase,
-    #                          'AV_penetration': phase, 'returnDataFrame': True,
-    #                          })
-    #         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
-    #                        mp_context=mp.get_context('spawn'))
-    #         for i in range(len(sim_res)):
-    #             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
-    #         logging.error("seed: {}, idx: {}".format(seed, idx),
-    #                       extra={"clazz": "main", "oid": ""})
-    #
-    #         # After each seed save
-    #         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+# if __name__ == "__main__":
+#     T = 1440 * sim_days
+#
+#     # single phase
+#     for phase in range(0, 101, 5):
+#         phase /= 100
+#         data = []
+#         for idx, seed in enumerate(seeds):
+#             data.append({'end_time': T, 'seed': seed,
+#                          'phase': phase,
+#                          'EV_penetration': phase,
+#                          'AV_penetration': phase, 'returnDataFrame': True,
+#                          })
+#         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+#                        mp_context=mp.get_context('spawn'))
+#         for i in range(len(sim_res)):
+#             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+#         logging.error("seed: {}, idx: {}".format(seed, idx),
+#                       extra={"clazz": "main", "oid": ""})
+#
+#         # After each seed save
+#         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
-    ### This is for analysing different proportion of user population
-    # for pop_type in range(4):
-    #     for user_share in range(11):
-    #
-    #         POP_PROB = [(10 - user_share) / 3 * 0.1, (10 - user_share) / 3 * 0.1, (10 - user_share) / 3 * 0.1,
-    #                     (10 - user_share) / 3 * 0.1]
-    #         POP_PROB[pop_type] = user_share * 0.1
-    #         for phase in phases:
-    #             data = []
-    #             for idx, seed in enumerate(seeds):
-    #                 data.append({'end_time': T, 'seed': seed,
-    #                              'phase': phase, 'pop_prob': POP_PROB,
-    #                              'EV_penetration': TECH_SHARE[phase],
-    #                              'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True})
-    #             sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
-    #                            mp_context=mp.get_context('spawn'))
-    #             for i in range(len(sim_res)):
-    #                 all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
-    #             logging.error("seed: {}, idx: {}".format(seed, idx),
-    #                           extra={"clazz": "main", "oid": ""})
+### This is for analysing different proportion of user population
+# for pop_type in range(4):
+#     for user_share in range(11):
+#
+#         POP_PROB = [(10 - user_share) / 3 * 0.1, (10 - user_share) / 3 * 0.1, (10 - user_share) / 3 * 0.1,
+#                     (10 - user_share) / 3 * 0.1]
+#         POP_PROB[pop_type] = user_share * 0.1
+#         for phase in phases:
+#             data = []
+#             for idx, seed in enumerate(seeds):
+#                 data.append({'end_time': T, 'seed': seed,
+#                              'phase': phase, 'pop_prob': POP_PROB,
+#                              'EV_penetration': TECH_SHARE[phase],
+#                              'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True})
+#             sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+#                            mp_context=mp.get_context('spawn'))
+#             for i in range(len(sim_res)):
+#                 all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+#             logging.error("seed: {}, idx: {}".format(seed, idx),
+#                           extra={"clazz": "main", "oid": ""})
 
-    # After each seed save
-    # all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+# After each seed save
+# all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
-    ### This is for analysing different AV_trust values
+### This is for analysing different AV_trust values
 
-    # for a_1 in [2, 4, 6, 8]:
-    #     for a_2 in [2, 4, 6, 8]:
-    #         for a_3 in [2, 4, 6, 8]:
-    #             for a_4 in [2, 4, 6, 8]:
-    #                 AV_TRUST = [a_1, a_2, a_3, a_4]
-    #                 for phase in phases:
-    #                     data = []
-    #                     for idx, seed in enumerate(seeds):
-    #                         data.append({'end_time': T, 'seed': seed,
-    #                                      'phase': phase, "AV_trust": AV_TRUST,
-    #                                      'EV_penetration': TECH_SHARE[phase],
-    #                                      'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True})
-    #                     sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
-    #                                    mp_context=mp.get_context('spawn'))
-    #                     for i in range(len(sim_res)):
-    #                         all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
-    #                     logging.error("seed: {}, idx: {}".format(seed, idx),
-    #                                   extra={"clazz": "main", "oid": ""})
-    #
-    #                     # After each seed save
-    #                     all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'),
-    #                                            index=False)
+# for a_1 in [2, 4, 6, 8]:
+#     for a_2 in [2, 4, 6, 8]:
+#         for a_3 in [2, 4, 6, 8]:
+#             for a_4 in [2, 4, 6, 8]:
+#                 AV_TRUST = [a_1, a_2, a_3, a_4]
+#                 for phase in phases:
+#                     data = []
+#                     for idx, seed in enumerate(seeds):
+#                         data.append({'end_time': T, 'seed': seed,
+#                                      'phase': phase, "AV_trust": AV_TRUST,
+#                                      'EV_penetration': TECH_SHARE[phase],
+#                                      'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True})
+#                     sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+#                                    mp_context=mp.get_context('spawn'))
+#                     for i in range(len(sim_res)):
+#                         all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+#                     logging.error("seed: {}, idx: {}".format(seed, idx),
+#                                   extra={"clazz": "main", "oid": ""})
+#
+#                     # After each seed save
+#                     all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'),
+#                                            index=False)
 
-    ### This is for analysing different fleet sizes
+### This is for analysing different fleet sizes
 
-    # for fleet_size in [200, 300, 400, 500, 600, 700, 800, 1000]:
-    #     for phase in phases:
-    #         data = []
-    #         for idx, seed in enumerate(seeds):
-    #             data.append({'end_time': T, 'n_cars': fleet_size, 'seed': seed,
-    #                          'phase': phase,
-    #                          'EV_penetration': TECH_SHARE[phase],
-    #                          'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True})
-    #         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
-    #                        mp_context=mp.get_context('spawn'))
-    #         for i in range(len(sim_res)):
-    #             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
-    #         logging.error("seed: {}, idx: {}".format(seed, idx),
-    #                       extra={"clazz": "main", "oid": ""})
+# for fleet_size in [200, 300, 400, 500, 600, 700, 800, 1000]:
+#     for phase in phases:
+#         data = []
+#         for idx, seed in enumerate(seeds):
+#             data.append({'end_time': T, 'n_cars': fleet_size, 'seed': seed,
+#                          'phase': phase,
+#                          'EV_penetration': TECH_SHARE[phase],
+#                          'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True})
+#         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+#                        mp_context=mp.get_context('spawn'))
+#         for i in range(len(sim_res)):
+#             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+#         logging.error("seed: {}, idx: {}".format(seed, idx),
+#                       extra={"clazz": "main", "oid": ""})
 
-    # After each seed save
-    # all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+# After each seed save
+# all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
-    # # This is for analysing different charging power
-    # POP_PROB = SHARES[0]
-    # for fleet_size in [200, 300, 400, 500, 600, 700, 800, 1000]:
-    #     for charging_capacity in [1, 4, 5, 10, 20]:
-    #         for charging_power in [5, 10, 22, 50]:
-    #             for phase in phases:
-    #                 data = []
-    #                 for idx, seed in enumerate(seeds):
-    #                     data.append({'end_time': T, 'n_cars': fleet_size, 'seed': seed,
-    #                                  'phase': phase, 'pop_prob': POP_PROB,
-    #                                  'EV_penetration': TECH_SHARE[phase], "charging_capacity": charging_capacity,
-    #                                  'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True,
-    #                                  'charging_power': charging_power})
-    #                 sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
-    #                                mp_context=mp.get_context('spawn'))
-    #                 for i in range(len(sim_res)):
-    #                     all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
-    #                 logging.error("seed: {}, idx: {}".format(seed, idx),
-    #                               extra={"clazz": "main", "oid": ""})
-    #
-    #                 # After each seed save
-    #                 all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
-    #
-    # print("FINISHED")
+# # This is for analysing different charging power
+# POP_PROB = SHARES[0]
+# for fleet_size in [200, 300, 400, 500, 600, 700, 800, 1000]:
+#     for charging_capacity in [1, 4, 5, 10, 20]:
+#         for charging_power in [5, 10, 22, 50]:
+#             for phase in phases:
+#                 data = []
+#                 for idx, seed in enumerate(seeds):
+#                     data.append({'end_time': T, 'n_cars': fleet_size, 'seed': seed,
+#                                  'phase': phase, 'pop_prob': POP_PROB,
+#                                  'EV_penetration': TECH_SHARE[phase], "charging_capacity": charging_capacity,
+#                                  'AV_penetration': TECH_SHARE[phase], 'returnDataFrame': True,
+#                                  'charging_power': charging_power})
+#                 sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+#                                mp_context=mp.get_context('spawn'))
+#                 for i in range(len(sim_res)):
+#                     all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+#                 logging.error("seed: {}, idx: {}".format(seed, idx),
+#                               extra={"clazz": "main", "oid": ""})
+#
+#                 # After each seed save
+#                 all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+#
+# print("FINISHED")
 
-    # for pop_prob in [[1.0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]:
-    #     for phase in range(0, 101, 5):
-    #         phase /= 100
-    #         data = []
-    #         for idx, seed in enumerate(seeds):
-    #             data.append({'end_time': T, 'seed': seed,
-    #                          'phase': phase, 'pop_prob': pop_prob,
-    #                          'EV_penetration': phase,
-    #                          'AV_penetration': phase, 'returnDataFrame': True,
-    #                          })
-    #         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
-    #                        mp_context=mp.get_context('spawn'))
-    #         for i in range(len(sim_res)):
-    #             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
-    #         logging.error("seed: {}, idx: {}".format(seed, idx),
-    #                       extra={"clazz": "main", "oid": ""})
-    #
-    #         # After each seed save
-    #         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+# for pop_prob in [[1.0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]:
+#     for phase in range(0, 101, 5):
+#         phase /= 100
+#         data = []
+#         for idx, seed in enumerate(seeds):
+#             data.append({'end_time': T, 'seed': seed,
+#                          'phase': phase, 'pop_prob': pop_prob,
+#                          'EV_penetration': phase,
+#                          'AV_penetration': phase, 'returnDataFrame': True,
+#                          })
+#         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+#                        mp_context=mp.get_context('spawn'))
+#         for i in range(len(sim_res)):
+#             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+#         logging.error("seed: {}, idx: {}".format(seed, idx),
+#                       extra={"clazz": "main", "oid": ""})
+#
+#         # After each seed save
+#         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
-    # AV_price
-    # for phase in [25,50,75,100]:
-    #     phase = phase/100
-    #     for AV_price_fraction in range(3, 10):
-    #         AV_price_fraction /= 10
-    #         data = []
-    #         for idx, seed in enumerate(seeds):
-    #             data.append({'end_time': T, 'seed': seed, 'discount_rate': 0,
-    #                          'phase': phase, 'AV_price_reduction': AV_price_fraction,
-    #                          'EV_penetration': phase,
-    #                          'AV_penetration': phase, 'returnDataFrame': True
-    #                          })
-    #         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
-    #                        mp_context=mp.get_context('spawn'))
-    #         for i in range(len(sim_res)):
-    #             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
-    #         logging.error("seed: {}, idx: {}".format(seed, idx),
-    #                       extra={"clazz": "main", "oid": ""})
-    #
-    #         # After each seed save
-    #         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+# AV_price
+# for phase in [25,50,75,100]:
+#     phase = phase/100
+#     for AV_price_fraction in range(3, 10):
+#         AV_price_fraction /= 10
+#         data = []
+#         for idx, seed in enumerate(seeds):
+#             data.append({'end_time': T, 'seed': seed, 'discount_rate': 0,
+#                          'phase': phase, 'AV_price_reduction': AV_price_fraction,
+#                          'EV_penetration': phase,
+#                          'AV_penetration': phase, 'returnDataFrame': True
+#                          })
+#         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+#                        mp_context=mp.get_context('spawn'))
+#         for i in range(len(sim_res)):
+#             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+#         logging.error("seed: {}, idx: {}".format(seed, idx),
+#                       extra={"clazz": "main", "oid": ""})
+#
+#         # After each seed save
+#         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
-    # MCA_P
-    # for phase in [25,50,75,100]:
-    #     phase = phase/100
-    #     for MCA_reduction in range(0, 10):
-    #         MCA_reduction /= 10
-    #         data = []
-    #         for idx, seed in enumerate(seeds):
-    #             data.append({'end_time': T, 'seed': seed, 'discount_rate': 0,
-    #                          'phase': phase,
-    #                          'EV_penetration': phase, 'MoD_interval_reduction': MCA_reduction,
-    #                          'AV_penetration': phase, 'returnDataFrame': True
-    #                          })
-    #         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
-    #                        mp_context=mp.get_context('spawn'))
-    #         for i in range(len(sim_res)):
-    #             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
-    #         logging.error("seed: {}, idx: {}".format(seed, idx),
-    #                       extra={"clazz": "main", "oid": ""})
-    #
-    #         # After each seed save
-    #
-    #         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+# MCA_P
+# for phase in [25,50,75,100]:
+#     phase = phase/100
+#     for MCA_reduction in range(0, 10):
+#         MCA_reduction /= 10
+#         data = []
+#         for idx, seed in enumerate(seeds):
+#             data.append({'end_time': T, 'seed': seed, 'discount_rate': 0,
+#                          'phase': phase,
+#                          'EV_penetration': phase, 'MoD_interval_reduction': MCA_reduction,
+#                          'AV_penetration': phase, 'returnDataFrame': True
+#                          })
+#         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+#                        mp_context=mp.get_context('spawn'))
+#         for i in range(len(sim_res)):
+#             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+#         logging.error("seed: {}, idx: {}".format(seed, idx),
+#                       extra={"clazz": "main", "oid": ""})
+#
+#         # After each seed save
+#
+#         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
-    ### FS_UP
-    # for pop_prob in [[1.0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]:
-    #     for AVT in range(0, 10):
-    #         AV_TRUST = [AVT, AVT, AVT, AVT]
-    #         phase = 0.5
-    #         data = []
-    #         for idx, seed in enumerate(seeds):
-    #             data.append({'end_time': T, 'seed': seed,
-    #                          'phase': phase, 'pop_prob': pop_prob,
-    #                          'EV_penetration': phase, 'AV_trust': AV_TRUST,
-    #                          'AV_penetration': phase, 'returnDataFrame': True,
-    #                          })
-    #         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
-    #                        mp_context=mp.get_context('spawn'))
-    #         for i in range(len(sim_res)):
-    #             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
-    #         logging.error("seed: {}, idx: {}".format(seed, idx),
-    #                       extra={"clazz": "main", "oid": ""})
-    #
-    #         # After each seed save
-    #         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
+### FS_UP
+# for pop_prob in [[1.0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]:
+#     for AVT in range(0, 10):
+#         AV_TRUST = [AVT, AVT, AVT, AVT]
+#         phase = 0.5
+#         data = []
+#         for idx, seed in enumerate(seeds):
+#             data.append({'end_time': T, 'seed': seed,
+#                          'phase': phase, 'pop_prob': pop_prob,
+#                          'EV_penetration': phase, 'AV_trust': AV_TRUST,
+#                          'AV_penetration': phase, 'returnDataFrame': True,
+#                          })
+#         sim_res = pqdm(data, run_single_simulation, n_jobs=10, argument_type='kwargs',
+#                        mp_context=mp.get_context('spawn'))
+#         for i in range(len(sim_res)):
+#             all_simulations = pd.concat([all_simulations, sim_res[i]], axis=0)
+#         logging.error("seed: {}, idx: {}".format(seed, idx),
+#                       extra={"clazz": "main", "oid": ""})
+#
+#         # After each seed save
+#         all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
 
-    print("FINISHED")
+# print("FINISHED")

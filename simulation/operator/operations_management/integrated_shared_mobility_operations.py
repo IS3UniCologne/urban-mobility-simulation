@@ -367,9 +367,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         state = fleet_state
 
         # How much capacity is already "used"
-        free_base_capacity = dict(
-            zip(self._base_regions, [self._base_capacity] * len(self._base_regions))
-        )
+        # free_base_capacity = dict(
+        #     zip(self._base_regions, [self._base_capacity] * len(self._base_regions))
+        # )
 
         # Split available service worker resources among vehicle types
         # (prioritize vehicles where most low soc vehicles are present)
