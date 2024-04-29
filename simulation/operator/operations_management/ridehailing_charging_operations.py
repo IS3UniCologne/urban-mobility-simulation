@@ -8,6 +8,8 @@ from simulation.operator.operations_management.task_queue import TaskQueue
 
 
 class RideHailingChargingOperations(OperationsInterface):
+    # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
+
     def __init__(
         self,
         env,
@@ -66,15 +68,79 @@ class RideHailingChargingOperations(OperationsInterface):
     def charging_plan_updated(self):
         return self._charging_plan_updated
 
-    def timer(self):
+    def execute(self):
+        "Below, we combine the old operational logic from operations_ridehailing.py and rebalancing_scheduler_ridehailing.py"
+
         while True:
+            # Operations begin after first day
+            self._scheduled_tasks = []
             yield self._env.timeout(self._time_between_operations)
-            self._operations_started.succeed()
-            self._operations_started = self._env.event()
+
+            # Retrieve Vehicle Transactions
+            # Retrieve Charging Plan to Charge Vehicles with low State of Charge
+            charging_plans = self.generate_charging_plan(self._charging_stations)
+
+            # We track the charging events
+            charging_events = []
+
+            # No Vehicles to be charged
+            no_vehicles_scheduled_to_charge = {}
+
+            for charging_plan in charging_plans:
+                (
+                    origin,
+                    destination,
+                    no_vehicle_to_charge,
+                    distance_to_base,
+                    charging_station,
+                    vehicle,
+                ) = charging_plan[0]
+
+                charging_task = ChargingTaskRidehailing(
+                    self._env,
+                    origin,
+                    destination,
+                    no_vehicle_to_charge,
+                    distance_to_base,
+                    self._operator_reference.fleet,
+                    self._state_of_charge_threshold,
+                    charging_station,
+                    vehicle,
+                )
+
+                # Schedule to Queue
+                self._scheduled_tasks.append(charging_task)
+                # Remember event for multi service tasks
+                charging_events.append(charging_task.task_finished)
+
+                # Count Vehicles to be charged
+                # no_vehicles_scheduled_to_charge['a'] += no_vehicle_to_charge
+            # Insert Tasks into Task Queue
+            self._task_queue.bulk_append(self._scheduled_tasks)
+
             logging.warning(
-                "Operations started.",
+                f"There are {self._operator_reference.fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
+
+            logging.info(
+                f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
+            # Notify listeners
+            self._charging_plan_updated.succeed()
+            self._charging_plan_updated = self._env.event()
+            while self._task_queue.count > 0:
+                next_task = self._task_queue.popleft()
+                logging.debug(
+                    f"Processing following task: {next_task}.",
+                    extra={"clazz": self.__class__.__name__},
+                )
+                # TODO: we do not need a service ID here
+                self._env.process(next_task.execute(0))
+                self._counter += 1
+
+            # ### TODO: activate relocation for ridehailing later
 
     def generate_charging_plan(self, charging_stations):
         """
@@ -86,7 +152,9 @@ class RideHailingChargingOperations(OperationsInterface):
         """
         # Get Current Fleet State
         # state = self.calculate_residual_supply(self._fleet, transactions)
-        vehicles_to_charge = self.calculate_low_soc_vehicles(self._fleet)
+        vehicles_to_charge = self._operator_reference.fleet.mark_vehicles_to_be_charged(
+            self._state_of_charge_threshold
+        )
         # if config.store_results:
         #     state.to_csv(Path(config.output_path, config.fleet_state_file), index = False)
 
@@ -239,7 +307,7 @@ class RideHailingChargingOperations(OperationsInterface):
 
         current_low_soc_supply = []
 
-        for mode in self._available_vehicle_modes:
+        for mode in self._available_modes:
             # Service Worker Charging Capacity per Mode
             max_capacity_per_unit = self.get_max_capacity_per_unit(mode)
 
@@ -296,75 +364,3 @@ class RideHailingChargingOperations(OperationsInterface):
         else:
             raise NotImplementedError("Not Implemented")
         return max_capacity_per_unit
-
-    def execute(self):
-        while True:
-            # Operations begin after first day
-            self._scheduled_tasks = []
-            yield self._operations_started
-
-            # Retrieve Vehicle Transactions
-            # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-            charging_plans = self.generate_charging_plan(self._charging_stations)
-
-            # We track the charging events
-            charging_events = []
-
-            # No Vehicles to be charged
-            no_vehicles_scheduled_to_charge = {}
-
-            for charging_plan in charging_plans:
-                (
-                    origin,
-                    destination,
-                    no_vehicle_to_charge,
-                    distance_to_base,
-                    charging_station,
-                    vehicle,
-                ) = charging_plan[0]
-
-                charging_task = ChargingTaskRidehailing(
-                    self._env,
-                    origin,
-                    destination,
-                    no_vehicle_to_charge,
-                    distance_to_base,
-                    self._vehicle_fleet,
-                    self._state_of_charge_threshold,
-                    charging_station,
-                    vehicle,
-                )
-
-                # Schedule to Queue
-                self._scheduled_tasks.append(charging_task)
-                # Remember event for multi service tasks
-                charging_events.append(charging_task.task_finished)
-
-                # Count Vehicles to be charged
-                # no_vehicles_scheduled_to_charge['a'] += no_vehicle_to_charge
-            # Insert Tasks into Task Queue
-            self._task_queue.bulk_append(self._scheduled_tasks)
-
-            logging.warning(
-                f"There are {self._vehicle_fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
-
-            logging.info(
-                f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
-            # Notify listeners
-            self._charging_plan_updated.succeed()
-            self._charging_plan_updated = self._env.event()
-            while self._task_queue.count > 0:
-                next_task = self._task_queue.popleft()
-                logging.debug(
-                    f"Processing following task: {next_task}.",
-                    extra={"clazz": self.__class__.__name__},
-                )
-                # TODO: we do not need a service ID here
-                self._env.process(next_task.execute(0))
-                self._counter += 1
-
-            # ### TODO: activate relocation for ridehailing later
