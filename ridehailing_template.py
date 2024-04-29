@@ -1,51 +1,39 @@
 ##Imports
 # Standard library imports
+import logging
 import os
 import sys
-from pathlib import Path
 from configparser import ConfigParser
-import logging
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 # Third-party library imports
 import simpy
-import pandas as pd
-import numpy as np
-
-# Custom module imports
-from utils import load_environment
-from tracking.tracking import Tracking
 
 # Imports world related modules
 from simulation.agent.user import User
-from simulation.world.world import World
-from simulation.world.demand.demand_factory import DemandFactory
-from simulation.world.demand.demand_importer import DemandImporter
-from simulation.world.population.PopulationFactory import PopulationFactory
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import (
+    ChargingInfrastructureConfig,
     Configuration,
     ModeChoiceConfig,
-    RideHailingOperatorConfig,
     PopulationConfig,
+    RideHailingOperatorConfig,
     RideHailingVehicleConfig,
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
-
-# Import vehicle types and vehicle choice options
-from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
-    OnlyCarVehicleChoiceBehavior,
+from simulation.infrastructure.charging_stations.charging_infastructure import (
+    ChargingInfrastructure,
 )
 
 # Import infrastructure related modules
 from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
-)
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.configuration.configuration import ChargingInfrastructureConfig
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
 )
 
 # Import operator related modules
@@ -53,10 +41,6 @@ from simulation.operator.fleet_factory import (
     generate_mixed_ride_hailing_fleet,
     generate_ridehailing_fleet_config,
 )
-from simulation.operator.ride_hailing_allocation_engine import (
-    RideHailingAllocationEngine,
-)
-from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 from simulation.operator.operations_management.operations_ridehailing import (
     OperationsRidehailing,
 )
@@ -64,6 +48,23 @@ from simulation.operator.operations_management.rebalancing_scheduler_ridehailing
     RebalancingSchedulerRidehailing,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
+from simulation.operator.ride_hailing_allocation_engine import (
+    RideHailingAllocationEngine,
+)
+from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
+
+# Import vehicle types and vehicle choice options
+from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
+    OnlyCarVehicleChoiceBehavior,
+)
+from simulation.world.demand.demand_factory import DemandFactory
+from simulation.world.demand.demand_importer import DemandImporter
+from simulation.world.population.PopulationFactory import PopulationFactory
+from simulation.world.world import World
+from tracking.tracking import Tracking
+
+# Custom module imports
+from utils import load_environment
 
 # Change working directory to path of this file
 working_dir = Path(__file__).parent
@@ -95,19 +96,14 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 ### Input Files
 # Input Files (Demand)
-demand_file_path = parser.get("DEMAND", "path_trip_demand")
+demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
 demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
 
 # Input Files (Supply)
-supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
+supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
 # Get the supply probability from supply file
 supply_prob = pd.read_csv(supply_file_path)
 
-# Environment files
-bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
-env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7")
-env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8")
-env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 
 pop_prob_ridehailing = parser.get("RIDE_HAILING", "population_probabilities").split(",")
 pop_prob_ridehailing = [float(x) for x in pop_prob_ridehailing]
@@ -118,7 +114,10 @@ mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_bo
 
 # Initialize the mode choice config
 mc = ModeChoiceConfig(
-    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
+    mode_choice_strategy,
+    mode_choice_sub_boundary,
+    mode_choice_model_path,
+    path_to_model=None,
 )
 
 # Load the config to the global config
@@ -284,8 +283,8 @@ env = simpy.Environment(initial_time=0)
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
 population_factory = PopulationFactory(pop_prob_ridehailing, seed)
 
-# Load Spatial Environment
-load_environment()
+# Load Spatial Environment and the environment files
+load_environment(city)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -341,7 +340,6 @@ global_config.set_fleet_state_file(fleet_state_file)
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
 
-
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
 logging.basicConfig(
@@ -362,11 +360,7 @@ file_handler.setFormatter(formatter)
 file_handler.setLevel(log_level)
 
 # Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf_init)
-
-# Inject Simulation Environment to Logger (such that we can log the env time)
-cf = SimulationContextFilter(filter_name="add_env", extra=env)
+cf = SimulationContextFilter(filter_name="add_env", extra=[])
 edf = ExtraDefaultFilter(filter_name="add_default_value")
 logger.addFilter(cf)
 logger.addFilter(edf)
