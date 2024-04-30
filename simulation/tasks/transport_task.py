@@ -9,12 +9,14 @@ class TransportTask:
         destination: Position,
         viable_vehicle_modes,
         max_wait_time=None,
+        actual_wait_time=None
     ):
         self._time = time
         self._origin = origin
         self._destination = destination
         self._viable_vehicle_modes = viable_vehicle_modes
         self._max_wait_time = max_wait_time
+        self._actual_wait_time = actual_wait_time
 
     @property
     def time(self):
@@ -43,6 +45,10 @@ class TransportTask:
     @property
     def max_wait_time(self):
         return self._max_wait_time
+
+    @property
+    def actual_wait_time(self):
+        return self._actual_wait_time
 
     def __str__(self):
         return f"From {self._origin} to {self._destination}"

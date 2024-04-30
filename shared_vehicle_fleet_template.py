@@ -13,6 +13,8 @@ import simpy
 import pandas as pd
 import numpy as np
 
+from simulation.vehicle.shared_bike import SharedBike
+from simulation.vehicle.shared_vehicle import SharedVehicle
 # Custom module imports
 from utils import load_environment
 from tracking.tracking import Tracking
@@ -67,6 +69,9 @@ from simulation.operator.operations_management.relocation_scheduler import (
 from simulation.operator.operations_management.operations import Operations
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.operations_management.service_worker import ServiceWorker
+
+# Import metrics
+from simulation.metrics import MetricsFactory
 
 # Change working directory to path of this file
 working_dir = Path(__file__).parent
@@ -141,9 +146,9 @@ mc = ModeChoiceConfig(
 # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/46
 # TODO: SharedScooters and SharedKickScooters do not have an initial state of charge. They start with the max state of charge.
 for idx, vehicle_type in enumerate(
-    ["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER"]
+    ["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER", "SHARED_BIKE"]
 ):
-    vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter"]
+    vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter", "SharedBike"]
     price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
     max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
     energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
@@ -158,6 +163,7 @@ for idx, vehicle_type in enumerate(
     )
     cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
     charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
+    co2_per_km = parser.getfloat(vehicle_type, "KG_CO2_PER_KM")
 
     vc = SharedVehicleConfig(
         price_per_min,
@@ -171,6 +177,7 @@ for idx, vehicle_type in enumerate(
         EV_relative_energy_consumption,
         cost_per_km,
         charging_cost_per_kWh,
+        co2_per_km
     )
     global_config.add_shared_vehicle_config(vehicle_type_classes[idx], vc)
 
@@ -211,7 +218,7 @@ available_modes = parser.get(
     "SHARED_VEHICLE_OPERATOR", "available_vehicle_modes_shared_vehicle"
 )
 available_modes = available_modes.split(",")
-available_vehicle_modes_supply = [n_cars, n_scooters, n_kick_scooters]
+available_vehicle_modes_supply = [n_cars, n_scooters, n_kick_scooters, n_bikes]
 
 # Initiliaze the shared fleet operator
 svoc = SharedVehicleOperatorConfig(
@@ -234,7 +241,7 @@ svoc = SharedVehicleOperatorConfig(
 # Vehicle Choice Model: Add available mobility modes
 if mode_choice_strategy == "substitution":
     vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
-        ["SharedScooter", "SharedKickScooter", "SharedCar"]
+        ["SharedScooter", "SharedKickScooter", "SharedCar", "SharedBike"]
     )
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
@@ -325,9 +332,11 @@ GeodesicEnvironment.getInstance().reset_random_generator(4711)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
+SharedVehicle.shared_vehicle_id = 0
 SharedCar.car_id = 0
 SharedKickScooter.shared_kick_scooter_id = 0
 SharedScooter.shared_scooter_id = 0
+SharedBike.shared_bike_id = 0
 User.user_id = 0
 DemandFactory.counter = 0
 
@@ -481,6 +490,23 @@ env.process(shared_operator.run_operations())
 logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
 # Run the simulation until end time
-env.run(until=50)
+env.run(until=1440)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+
+transactions = search_engine["shared_vehicle"].get_transactions()
+transactions.to_excel('./transactions.xlsx')
+
+metrics_factory = MetricsFactory(transactions)
+
+num_vehicles = {
+    "SharedBike": n_bikes,
+    "SharedCar": n_cars,
+    "SharedKickScooter": n_kick_scooters,
+    "SharedScooter": n_scooters
+}
+
+general_metrics = metrics_factory.general_metrics
+
+metrics_factory.print_simulation_summary(
+    num_vehicles, global_config.get_cost_per_vehicle_km(), global_config.get_co2_per_vehicle_km())
