@@ -474,6 +474,7 @@ class Configuration:
 
         return res
 
+
 class SharedVehicleConfig:
     def __init__(
         self,
@@ -488,7 +489,7 @@ class SharedVehicleConfig:
         EV_relative_energy_consumption,
         cost_per_km,
         charging_cost_per_kWh,
-        co2_per_km
+        co2_per_km,
     ):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
@@ -530,12 +531,7 @@ class RideHailingVehicleConfig:
 
 
 class ModeChoiceConfig:
-    def __init__(
-        self,
-        mode_choice_strategy,
-        substitution_boundary,
-        path_to_model,
-    ):
+    def __init__(self, mode_choice_strategy, substitution_boundary, path_to_model):
         if mode_choice_strategy == "random":
             self.mode_choice_strategy = ModeChoiceStrategy.RANDOM
         elif mode_choice_strategy == "substitution":

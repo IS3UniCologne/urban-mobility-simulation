@@ -15,6 +15,7 @@ import numpy as np
 
 from simulation.vehicle.shared_bike import SharedBike
 from simulation.vehicle.shared_vehicle import SharedVehicle
+
 # Custom module imports
 from utils import load_environment
 from tracking.tracking import Tracking
@@ -148,7 +149,12 @@ mc = ModeChoiceConfig(
 for idx, vehicle_type in enumerate(
     ["SHARED_CAR", "SHARED_SCOOTER", "SHARED_KICK_SCOOTER", "SHARED_BIKE"]
 ):
-    vehicle_type_classes = ["SharedCar", "SharedScooter", "SharedKickScooter", "SharedBike"]
+    vehicle_type_classes = [
+        "SharedCar",
+        "SharedScooter",
+        "SharedKickScooter",
+        "SharedBike",
+    ]
     price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
     max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
     energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
@@ -177,7 +183,7 @@ for idx, vehicle_type in enumerate(
         EV_relative_energy_consumption,
         cost_per_km,
         charging_cost_per_kWh,
-        co2_per_km
+        co2_per_km,
     )
     global_config.add_shared_vehicle_config(vehicle_type_classes[idx], vc)
 
@@ -495,7 +501,7 @@ env.run(until=1440)
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
 transactions = search_engine["shared_vehicle"].get_transactions()
-transactions.to_excel('./transactions.xlsx')
+transactions.to_excel("./transactions.xlsx")
 
 metrics_factory = MetricsFactory(transactions)
 
@@ -503,10 +509,13 @@ num_vehicles = {
     "SharedBike": n_bikes,
     "SharedCar": n_cars,
     "SharedKickScooter": n_kick_scooters,
-    "SharedScooter": n_scooters
+    "SharedScooter": n_scooters,
 }
 
 general_metrics = metrics_factory.general_metrics
 
 metrics_factory.print_simulation_summary(
-    num_vehicles, global_config.get_cost_per_vehicle_km(), global_config.get_co2_per_vehicle_km())
+    num_vehicles,
+    global_config.get_cost_per_vehicle_km(),
+    global_config.get_co2_per_vehicle_km(),
+)

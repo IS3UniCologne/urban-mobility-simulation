@@ -3,8 +3,8 @@ from .modules.service_provider_metrics import ServiceProviderMetrics
 from .modules.customer_metrics import CustomerMetrics
 from .modules.society_metrics import SocietyMetrics
 
-class MetricsFactory:
 
+class MetricsFactory:
     def __init__(self, transactions):
         self._general_metrics = GeneralMetrics(transactions)
         self._service_provider = ServiceProviderMetrics(transactions)
@@ -28,13 +28,17 @@ class MetricsFactory:
     def society_metrics(self):
         return self._society_metrics
 
-    def print_simulation_summary(self, number_of_vehicles: dict, cost_per_vehicle_km: dict, co2_per_km_per_vehicle: dict):
-
-        print(f'############ Simulation Summary ############')
-        print(' ')
+    def print_simulation_summary(
+        self,
+        number_of_vehicles: dict,
+        cost_per_vehicle_km: dict,
+        co2_per_km_per_vehicle: dict,
+    ):
+        print("############ Simulation Summary ############")
+        print(" ")
         self._general_metrics.print_summary()
         self._service_provider.print_summary(number_of_vehicles, cost_per_vehicle_km)
         self._customer_metrics.print_summary()
         self._society_metrics.print_summary(co2_per_km_per_vehicle)
-        print(' ')
-        print('#' * 40)
+        print(" ")
+        print("#" * 40)
