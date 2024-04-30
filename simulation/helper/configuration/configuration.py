@@ -458,6 +458,21 @@ class Configuration:
     def MoD_coefficients_ci_upper(self):
         return self._MoD_coefficients_ci_upper
 
+    def get_cost_per_vehicle_km(self):
+        res = {}
+
+        for key, value in self._shared_vehicle_configs.items():
+            res[key] = value.cost_per_km
+
+        return res
+
+    def get_co2_per_vehicle_km(self):
+        res = {}
+
+        for key, value in self._shared_vehicle_configs.items():
+            res[key] = value.co2_per_km
+
+        return res
 
 class SharedVehicleConfig:
     def __init__(
@@ -473,6 +488,7 @@ class SharedVehicleConfig:
         EV_relative_energy_consumption,
         cost_per_km,
         charging_cost_per_kWh,
+        co2_per_km
     ):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
@@ -486,6 +502,7 @@ class SharedVehicleConfig:
         self.EV_relative_energy_consumption = EV_relative_energy_consumption
         self.cost_per_km = cost_per_km
         self.charging_cost_per_kWh = charging_cost_per_kWh
+        self.co2_per_km = co2_per_km
 
 
 class RideHailingVehicleConfig:
@@ -517,7 +534,6 @@ class ModeChoiceConfig:
         self,
         mode_choice_strategy,
         substitution_boundary,
-        available_modes,
         path_to_model,
     ):
         if mode_choice_strategy == "random":

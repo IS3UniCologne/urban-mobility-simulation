@@ -153,6 +153,8 @@ class User(Agent, DriverInterface):
         """
 
         while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
+            start_ordering_time = self._env.now
+
             ## Retrieve available transportation alternatives
             available_transportation_alternatives = yield self._env.process(
                 self.search_for_alternatives()
@@ -192,6 +194,12 @@ class User(Agent, DriverInterface):
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
             yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
+
+            start_driving_time = self._env.now
+
+            wait_time = start_driving_time - start_ordering_time
+
+            self._transport_task._actual_wait_time = wait_time
 
             yield self._env.process(self.start_driving(vehicle_allocation))
 
