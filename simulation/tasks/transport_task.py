@@ -9,7 +9,7 @@ class TransportTask:
         destination: Position,
         viable_vehicle_modes,
         max_wait_time=None,
-        actual_wait_time=None
+        actual_wait_time=None,
     ):
         self._time = time
         self._origin = origin
