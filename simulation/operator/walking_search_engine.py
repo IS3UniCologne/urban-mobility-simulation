@@ -31,14 +31,12 @@ class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
         origin = vehicle_search_task.transport_task.origin
         destination = vehicle_search_task.transport_task.destination
 
-        # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
         route = Route(origin, destination)
 
         # Calc Distance
         distance = route.distance  # Euclidean Distance
 
-        # Add all available cars to alternative browser
         # Calc Duration
         duration = distance/walking.velocity
 

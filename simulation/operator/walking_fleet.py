@@ -12,9 +12,7 @@ class WalkingFleet(FleetInterface):
 
     def __init__(self, env: Environment):
         super(WalkingFleet, self).__init__(env)
-
         self._walking = Walking(env, None)
-
         self.env = env
 
     @property
