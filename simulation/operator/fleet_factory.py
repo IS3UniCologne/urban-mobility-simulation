@@ -6,6 +6,7 @@ from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+from simulation.operator.walking_fleet import WalkingFleet
 from simulation.vehicle.autonomous_car import AutonomousCar
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 from simulation.vehicle.shared_bike import SharedBike
@@ -225,6 +226,9 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             autonomous_car._fleet = fleet
 
     return fleet
+
+def generate_walking_fleet(env):
+    return WalkingFleet(env)
 
 
 def generate_mixed_fleet(env, fleet_config):
