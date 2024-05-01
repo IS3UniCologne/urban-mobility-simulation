@@ -172,21 +172,26 @@ class User(Agent, DriverInterface):
                 break
 
             if isinstance(selected_transportation_alternative.vehicle, Walking):
-                logging.debug(f"User {self.id} chooses to walk to destination",
+                logging.debug(
+                    f"User {self.id} chooses to walk to destination",
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
-                yield self._env.process(self.walk(self.position, selected_transportation_alternative.route.destination))
+                yield self._env.process(
+                    self.walk(
+                        self.position,
+                        selected_transportation_alternative.route.destination,
+                    )
+                )
 
-                logging.debug(f"User {self.id} has reached walking destination",
+                logging.debug(
+                    f"User {self.id} has reached walking destination",
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
             else:
-
                 # Vehicle Found and allocated?
                 vehicle_allocation = yield self._env.process(
                     self.allocate_vehicle(selected_transportation_alternative)
                 )
-
 
                 # If not allocated, retry.
                 if not vehicle_allocation:
@@ -203,7 +208,9 @@ class User(Agent, DriverInterface):
 
                     continue  # retry again until vehicle supply is depleted
 
-                yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
+                yield self._env.process(
+                    self.move_to_pick_up_position(vehicle_allocation)
+                )
 
                 yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
 
@@ -252,17 +259,14 @@ class User(Agent, DriverInterface):
         for (
             alternative
         ) in available_transportation_alternatives.transportation_alternatives:
-            
-            if isinstance(alternative.vehicle, Walking) and self._transport_task.viable_vehicle_modes[
-                alternative.vehicle.__class__.__name__
-            ]:
+            if (
+                isinstance(alternative.vehicle, Walking)
+                and self._transport_task.viable_vehicle_modes[
+                    alternative.vehicle.__class__.__name__
+                ]
+            ):
                 filtered_list.append(
-                    (
-                        0, 
-                        alternative.price, 
-                        alternative.convenience, 
-                        alternative
-                    )
+                    (0, alternative.price, alternative.convenience, alternative)
                 )
                 continue
             distance_to_vehicle = self.position >> alternative.vehicle.position

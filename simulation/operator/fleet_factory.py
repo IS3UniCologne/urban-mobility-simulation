@@ -227,6 +227,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
 
     return fleet
 
+
 def generate_walking_fleet(env):
     return WalkingFleet(env)
 
