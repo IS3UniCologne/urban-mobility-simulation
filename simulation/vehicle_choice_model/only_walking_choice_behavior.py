@@ -4,7 +4,7 @@ from simulation.vehicle_choice_model.trip_characteristics import TripCharacteris
 
 class OnlyWalkingChoiceBehavior(VehicleChoiceBehaviorInterface):
     """
-    Currently, this is only a dummy class that emulates Vehicle Choice Behavior in the absence of choice
+    The only choice in this behavior is to walk
     """
     def __init__(self, available_modes):
         self._available_modes = available_modes
