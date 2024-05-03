@@ -18,26 +18,10 @@ class RideHailingChargingOperations(OperationsInterface):
         operation_duration,
         available_modes,
         available_modes_supply,
-        base_regions,
         state_of_charge_threshold,
-        charging_stations,
     ):
         super(RideHailingChargingOperations, self).__init__(env=env)
 
-        """
-
-        :param env: SimPy Environment
-        :param relocation_scheduler: Calculates Relocation and Charging Plans (centralizied and currently rule based)
-        :param vehicle_fleet: The underlying vehicle fleet to operate
-        :param service_workers: list of service workers
-        :param time_between_operations: Delay in min between operations (e.g., 1440 (min) => every 24 hours
-        :param operation_duration: Operation Time (Shift of Service Workers)
-        :param payment_engine: Handles all transactions
-        :param available_modes: List of available vehicle modes
-        :param available_modes_supply: List of number of available vehicles per mode (aligned with available_modes)
-        :param state_of_charge_threshold: State of Charge Percent; below that => vehicle needs charging
-
-        """
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
 
@@ -60,9 +44,7 @@ class RideHailingChargingOperations(OperationsInterface):
 
         # Shift Duration (OM shift duration)
         self._duration_of_operations = operation_duration  # mins
-        self._charging_stations = charging_stations
         self._counter = 0
-        self._base_regions = base_regions
 
     @property
     def charging_plan_updated(self):
@@ -78,7 +60,7 @@ class RideHailingChargingOperations(OperationsInterface):
 
             # Retrieve Vehicle Transactions
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-            charging_plans = self.generate_charging_plan(self._charging_stations)
+            charging_plans = self.generate_charging_plan()
 
             # We track the charging events
             charging_events = []
@@ -142,39 +124,27 @@ class RideHailingChargingOperations(OperationsInterface):
 
             # ### TODO: activate relocation for ridehailing later
 
-    def generate_charging_plan(self, charging_stations):
+    def generate_charging_plan(self):
         """
         Generate a rule based charging plan based on given service worker capacity
-        :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
         :return: **charging_plan**: Dictionary with keys for vehicle modes and values with lists of multiple
                 charging tasks
                 **used_capacity**: How many service workers are planned to cope with charging needs
         """
         # Get Current Fleet State
-        # state = self.calculate_residual_supply(self._fleet, transactions)
         vehicles_to_charge = self._operator_reference.fleet.mark_vehicles_to_be_charged(
             self._state_of_charge_threshold
         )
         # if config.store_results:
         #     state.to_csv(Path(config.output_path, config.fleet_state_file), index = False)
 
-        charging_plans = self.calculate_charging_plan(
-            vehicles_to_charge, charging_stations
-        )
+        charging_plans = self.calculate_charging_plan(vehicles_to_charge)
 
         return charging_plans
 
-    def calculate_charging_plan(self, vehicles_to_charge, charging_stations):
+    def calculate_charging_plan(self, vehicles_to_charge):
         """
-        :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
-        :param distance_matrix: Distance between Regions
-        :param number_of_service_units: Number of  Available Service Workers
-        :param available_vehicle_modes: List of available vehicle modes
-        :param max_vehicle_supply: List of number of available vehicle most (supply per mode)
-        :param base_regions: Possible Fleet Base Regions for charging
-               (can handle multiple bases e.g.,  base_regions = ['871f1d488ffffff','871f18b21ffffff'])
-               default: '871f1d488ffffff' == Berlin Mitte (Unter den Linden, Deutscher Bundestag)
-        :param base_capacity: Set base capacity to 1000 vehicles (i.e., can charge that many vehicles)
+        :param vehicles_to_charge: List of vehicles to be charged
         :return: all_charging_plans and used capacity per mode
                 all_charging_plans {"SharedKickScooter":[[(origin, destination, number of vehicles to pick up, destination to base), ()], [()],
                                     "SharedScooter": [], "SharedCar":[]}
@@ -191,19 +161,21 @@ class RideHailingChargingOperations(OperationsInterface):
         for vehicle in vehicles_to_charge:
             hex = vehicle.position.get_default_hexagon()
 
-            # Get nearest fleet base region (.loc -> destination, [[]] -> Origin)
-            sorted_base_list = self._distance_matrix.loc[self._base_regions][
-                [hex]
-            ].sort_values(by=hex, ascending=True)
+            # Get nearest charging station (.loc -> destination, [[]] -> Origin)
+            sorted_base_list = self._distance_matrix.loc[
+                self._operator_reference.charging_infrastructure.get_locations()
+            ][[hex]].sort_values(by=hex, ascending=True)
             selected_base_distance = None
             # Select Nearest Base
-            if vehicle.electric_vehicle:
+            if vehicle.is_electric:
                 # we prioritize based on the queue
                 for queue in [0, 2, 5, 10]:
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
                         available_charging_stations = [
-                            x for x in charging_stations if len(x.plugs.queue) <= queue
+                            x
+                            for x in self._operator_reference.charging_infrastructure.charging_stations
+                            if len(x.plugs.queue) <= queue
                         ]
                         if len(available_charging_stations) > 0:
                             selected_charging_station = [
@@ -220,7 +192,8 @@ class RideHailingChargingOperations(OperationsInterface):
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
                         available_charging_stations = [
-                            x for x in self._charging_stations
+                            x
+                            for x in self._operator_reference.charging_infrastructure.charging_stations
                         ]
                         if len(available_charging_stations) > 0:
                             selected_charging_station = [
@@ -233,10 +206,13 @@ class RideHailingChargingOperations(OperationsInterface):
                                 selected_base_distance = row_base[hex]
                                 break
 
-            if not vehicle.electric_vehicle:
+            if not vehicle.is_electric:
                 for index_base, row_base in sorted_base_list.iterrows():
                     selected_base = index_base
-                    available_charging_stations = [x for x in charging_stations]
+                    available_charging_stations = [
+                        x
+                        for x in self._operator_reference.charging_infrastructure.charging_stations
+                    ]
                     if len(available_charging_stations) > 0:
                         selected_charging_station = [
                             x
@@ -245,10 +221,6 @@ class RideHailingChargingOperations(OperationsInterface):
                         ][0]
                         selected_base_distance = row_base[hex]
                         break
-
-            # Keep Track of how many vehicles are already scheduled for charging
-            currently_schedules_vehicles_per_unit = 0
-            logging.info(currently_schedules_vehicles_per_unit)
 
             # How many vehicles can we move to the base and charge?
             pick_up_vehicles = 1

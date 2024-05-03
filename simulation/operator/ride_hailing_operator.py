@@ -71,8 +71,8 @@ class RideHailingOperator(Operator):
                 "pick_up_time": selected_transportation_alternative.pick_up_time,
                 "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__
                 + "_"
-                + str(selected_transportation_alternative.vehicle._electric_vehicle),
-                "selected_vehicle_EV": selected_transportation_alternative.vehicle._electric_vehicle,
+                + str(selected_transportation_alternative.vehicle.is_electric),
+                "selected_vehicle_EV": selected_transportation_alternative.vehicle.is_electric,
                 "state": "Fulfilled",
                 **transportation_task.viable_vehicle_modes,
             }

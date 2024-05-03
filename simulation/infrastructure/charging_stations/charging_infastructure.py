@@ -28,24 +28,27 @@ class ChargingInfrastructure:
         else:
             ChargingInfrastructure.__instance = self
             super(ChargingInfrastructure, self).__init__()
-        self.env = env
-        self.location_list = location_list
-        self.power_list = power_list
-        self.capacity_list = capacity_list
-        self._chargers = []  # a list of charger objects
-        self.initialise_charging_stations()
+        self._env = env
+        self._location_list = location_list
+        self._power_list = power_list
+        self._capacity_list = capacity_list
+        self._charging_stations = []  # a list of charger objects
+        self._initialise_charging_stations()
 
-    def initialise_charging_stations(self):
-        for i in range(len(self.location_list)):
+    def _initialise_charging_stations(self):
+        for i, location in enumerate(self._location_list):
             charging_station = ChargingStation(
                 id=i,
-                env=self.env,
-                location=self.location_list[i],
-                power=self.power_list[i],
-                capacity=self.capacity_list[i],
+                env=self._env,
+                location=location,
+                power=self._power_list[i],
+                capacity=self._capacity_list[i],
             )
-            self._chargers.append(charging_station)
+            self._charging_stations.append(charging_station)
 
     @property
-    def users(self):
-        return self._chargers
+    def charging_stations(self):
+        return self._charging_stations
+
+    def get_locations(self):
+        return self._location_list

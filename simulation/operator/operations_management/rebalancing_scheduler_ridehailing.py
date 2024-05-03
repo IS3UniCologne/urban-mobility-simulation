@@ -107,7 +107,7 @@ class RebalancingSchedulerRidehailing:
             ].sort_values(by=hex, ascending=True)
             selected_base_distance = None
             # Select Nearest Base
-            if vehicle.electric_vehicle:
+            if vehicle.is_electric:
                 # we prioritize based on the queue
                 for queue in [0, 2, 5, 10]:  # What is going on here?
                     for index_base, row_base in sorted_base_list.iterrows():
@@ -143,7 +143,7 @@ class RebalancingSchedulerRidehailing:
                                 selected_base_distance = row_base[hex]
                                 break
 
-            if not vehicle.electric_vehicle:  # if we have hybrids, we just disregard the queue length and go to the closest charger
+            if not vehicle.is_electric:  # if we have hybrids, we just disregard the queue length and go to the closest charger
                 for index_base, row_base in sorted_base_list.iterrows():
                     selected_base = index_base
                     available_charging_stations = [x for x in charging_stations]

@@ -35,7 +35,7 @@ class RideHailingCar(RideHailingVehicle):
         energy_consumption=0.152,
         velocity=833.33,
         price_per_min=0.26,
-        electric_vehicle=True,
+        is_electric=True,
     ):
         """
 
@@ -55,12 +55,11 @@ class RideHailingCar(RideHailingVehicle):
             energy_consumption,
             velocity,
             price_per_min,
-            electric_vehicle=electric_vehicle,
+            is_electric=is_electric,
         )
 
         # Increment Shared Car ID
         self.car_id = RideHailingCar.ride_hailing_car_id
-        self.electric_vehicle = electric_vehicle
         self._price_per_minute = price_per_min
         self._total_earn = 0
         self._shift_earn = 0

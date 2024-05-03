@@ -156,6 +156,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
     initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
     charging_cost_per_km = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
     cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
+    daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
     EV_relative_energy_consumption = parser.getfloat(
         vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
     )
@@ -169,6 +170,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
         initial_SoC,
         charging_cost_per_km,
         cost_per_km,
+        daily_total_cost,
         EV_relative_energy_consumption,
     )
     global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
@@ -461,7 +463,7 @@ rs_ridehailing_0 = RebalancingSchedulerRidehailing(
     global_config.ridehailing_operator_config.base_regions,
     global_config.ridehailing_operator_config.base_capacity,
     global_config.ridehailing_operator_config.recharge_threshold,
-    charging_infrastructure._chargers,
+    charging_infrastructure._charging_stations,
 )
 
 # Ridehailing operator manages all operations belonging to the ridehailing fleet
@@ -476,7 +478,7 @@ ops_ridehailing_0 = OperationsRidehailing(
     global_config.ridehailing_operator_config.available_modes_supply,
     global_config.ridehailing_operator_config.recharge_threshold,
     task_queue_ridehailing,
-    charging_infrastructure._chargers,
+    charging_infrastructure._charging_stations,
 )
 
 # Initialize World

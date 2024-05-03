@@ -690,7 +690,7 @@ rs_ridehailing_0 = RebalancingSchedulerRidehailing(
     global_config.ridehailing_operator_config.base_regions,
     global_config.ridehailing_operator_config.base_capacity,
     global_config.ridehailing_operator_config.recharge_threshold,
-    charging_infrastructure._chargers,
+    charging_infrastructure._charging_stations,
 )
 
 # Ridehailing operator manages all operations belonging to the ridehailing fleet
@@ -705,7 +705,7 @@ ops_ridehailing_0 = OperationsRidehailing(
     global_config.ridehailing_operator_config.available_modes_supply,
     global_config.ridehailing_operator_config.recharge_threshold,
     task_queue_ridehailing,
-    charging_infrastructure._chargers,
+    charging_infrastructure._charging_stations,
 )
 
 # Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
