@@ -2,6 +2,7 @@ import os
 import sys
 from configparser import ConfigParser
 from pathlib import Path
+from typing import Optional
 
 import geopandas as gpd
 
@@ -50,3 +51,10 @@ def load_environment():
     geodesic_environment.addLayer("hex_7", env_df_hex_7)
 
     return geodesic_environment
+
+
+def parse_multiline_list(
+    section: str, key: str, delimiter: str, cast: Optional[type] = None
+):
+    l = parser.get(section, key).replace("\n", "").replace(" ", "").split(delimiter)
+    return [cast(x) for x in l] if cast is not None else l

@@ -44,7 +44,7 @@ class TransportationAlternativeRideHailing:
             )
 
     def set_environment(self):
-        if self._vehicle.electric_vehicle:
+        if self._vehicle.is_electric:
             return 1
         else:
             return 0

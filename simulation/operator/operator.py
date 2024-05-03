@@ -30,7 +30,7 @@ class Operator:
     ):
         self._env = env
         self._fleet = fleet
-        self.charging_infastructure = charging_infrastructure
+        self._charging_infrastructure = charging_infrastructure
         self._operations = operations
 
         self._search_engine = search_engine
@@ -68,6 +68,10 @@ class Operator:
     @property
     def fleet(self):
         return self._fleet
+
+    @property
+    def charging_infrastructure(self):
+        return self._charging_infrastructure
 
     def increase_total_revenue(self, additional_revenue):
         self._total_fulfilled_trips += 1

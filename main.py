@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import simpy
 
+import utils
 from simulation.agent.user import (
     User,  # must come before DemandFactory, otherwise circular imports
 )
@@ -153,23 +154,31 @@ recharge_threshold = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").s
 )
 recharge_threshold = [float(x) / 100 for x in recharge_threshold]
 
-charging_station_power = parser.getfloat(
-    "RIDE_HAILING_OPERATOR", "CHARGING_STATION_POWER"
-)  ### Maybe this should belong to charging infrastructure?
-# Service workers relocate the vehicles and bring them to charging stations
-number_of_service_workers = parser.getint(
-    "RIDE_HAILING_OPERATOR", "NUMBER_OF_SERVICE_WORKER"
+number_of_charging_locations = parser.getint(
+    "CHARGING_INFRASTRUCTURE", "NUMBER_OF_CHARGING_STATIONS"
 )
-# Base regions are city parts in which these service workers operate
-number_of_base_regions = parser.getint(
-    "RIDE_HAILING_OPERATOR", "NUMBER_OF_BASE_REGIONS"
+# Locations are defined as hexagons (regions) in the city
+charging_station_locations = utils.parse_multiline_list(
+    "CHARGING_INFRASTRUCTURE", "LOCATIONS", delimiter=","
 )
-# Base regions are defined as hexagons in the city
-base_regions = parser.get("RIDE_HAILING_OPERATOR", "BASE_REGIONS")
-base_regions = base_regions.split(",")[:number_of_base_regions]
+charging_station_locations = charging_station_locations[:number_of_charging_locations]
 
-# Base capacity is the number of charging stations in the charging hub
-base_capacity = parser.getint("RIDE_HAILING_OPERATOR", "BASE_CAPACITY")
+charging_station_power = utils.parse_multiline_list(
+    "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_POWER", delimiter=",", cast=float
+)
+if len(charging_station_power) == 1:
+    charging_station_power = list(
+        np.full(number_of_charging_locations, charging_station_power[0])
+    )
+
+# Capacity is the number of charging stations in the charging hub (or plugs at a station)
+charging_station_capacity = utils.parse_multiline_list(
+    "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_CAPACITY", delimiter=",", cast=int
+)
+if len(charging_station_capacity) == 1:
+    charging_station_capacity = list(
+        np.full(number_of_charging_locations, charging_station_capacity[0])
+    )
 operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
 vehicle_relocation_velocity = parser.getint(
@@ -188,10 +197,6 @@ available_modes_supply = [n_ridehailing_cars, n_autonomous_cars]
 
 rhoc = RideHailingOperatorConfig(
     recharge_threshold=recharge_threshold,
-    charging_station_power=charging_station_power,
-    number_of_service_worker=number_of_service_workers,
-    base_regions=base_regions,
-    base_capacity=base_capacity,
     operations_start=operations_start,
     operations_duration=operations_duration,
     vehicle_relocation_velocity=vehicle_relocation_velocity,
@@ -488,21 +493,22 @@ def run_single_simulation(
     population_factory = PopulationFactory(pop_prob, seed)
 
     # Charging Infrastructure
-    number_of_charging_stations = parser.getint(
-        "Charging_Infrastructure", "NUMBER_OF_CHARGING_STATIONS"
+    number_of_charging_locations = parser.getint(
+        "CHARGING_INFRASTRUCTURE", "NUMBER_OF_CHARGING_STATIONS"
     )
-    charging_location_list = parser.get(
-        "Charging_Infrastructure", "BASE_REGIONS"
-    ).split(",")[:number_of_charging_stations]
-    ### Activate it if there are specific capacity for charging stations
-    # charging_power_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_POWER").split(',')
-    # charging_power_list = [float(x) for x in charging_power_list]
-    # charging_capacity_list = parser.get("Charging_Infrastructure", "CHARGING_STATION_CAPACITY").split(',')
-    # charging_capacity_list = [float(x) for x in charging_capacity_list]
-    charging_power_list = list(np.zeros(len(charging_location_list)) + charging_power)
-    charging_capacity_list = list(
-        np.zeros(len(charging_location_list)) + charging_capacity
-    )
+    charging_location_list = utils.parse_multiline_list(
+        "CHARGING_INFRASTRUCTURE", "LOCATIONS", delimiter=","
+    )[:number_of_charging_locations]
+    if isinstance(charging_power, list):
+        charging_power_list = charging_power
+    else:
+        charging_power_list = list(np.full(len(charging_location_list), charging_power))
+    if isinstance(charging_capacity, list):
+        charging_capacity_list = charging_capacity
+    else:
+        charging_capacity_list = list(
+            np.full(len(charging_location_list), charging_capacity)
+        )
     sic = ChargingInfrastructureConfig(
         charging_location_list, charging_power_list, charging_capacity_list
     )
@@ -556,7 +562,6 @@ def run_single_simulation(
 
     available_vehicle_modes_ridehailing = ["RideHailingCar", "AutonomousCar"]
     available_vehicle_modes_supply_ride_hailing = [n_cars, n_cars]
-    base_regions = global_config.ridehailing_operator_config.base_regions
 
     # Initialize Rule Based Relocation Scheduler
     # For RideHailing Fleets
@@ -567,9 +572,7 @@ def run_single_simulation(
         operation_duration=global_config.ridehailing_operator_config.operations_duration,
         available_modes=available_vehicle_modes_ridehailing,
         available_modes_supply=available_vehicle_modes_supply_ride_hailing,
-        base_regions=base_regions,
         state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-        charging_stations=charging_infrastructure._chargers,
     )
 
     ridehailing_operations_1 = RideHailingChargingOperations(
@@ -579,9 +582,7 @@ def run_single_simulation(
         operation_duration=global_config.ridehailing_operator_config.operations_duration,
         available_modes=available_vehicle_modes_ridehailing,
         available_modes_supply=available_vehicle_modes_supply_ride_hailing,
-        base_regions=base_regions,
         state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-        charging_stations=charging_infrastructure._chargers,
     )
 
     # Operator Modules
@@ -865,10 +866,10 @@ result = run_single_simulation(
     phase=phase,
     pop_prob=USER_SHARES,
     EV_penetration=TECH_SHARE[phase],
-    charging_capacity=5,
+    charging_power=charging_station_power,
+    charging_capacity=charging_station_capacity,
     AV_penetration=TECH_SHARE[phase],
     returnDataFrame=False,
-    charging_power=10,
 )
 
 

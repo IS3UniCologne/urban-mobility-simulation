@@ -203,7 +203,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                 rh_config.energy_consumption,
                 rh_config.velocity,
                 rh_config.price_per_min,
-                electric_vehicle=False,
+                is_electric=False,
             )
             fleet.add_shared_vehicle(car)
             car._fleet = fleet

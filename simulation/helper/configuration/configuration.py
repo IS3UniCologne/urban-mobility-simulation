@@ -1,6 +1,6 @@
 import random
 from enum import Enum
-from typing import Deque, Optional, Union
+from typing import Deque, List, Optional, Union
 
 import numpy as np
 
@@ -542,10 +542,6 @@ class RideHailingOperatorConfig:
     def __init__(
         self,
         recharge_threshold,
-        charging_station_power,
-        number_of_service_worker,
-        base_regions,
-        base_capacity,
         operations_start,
         operations_duration,
         vehicle_relocation_velocity,
@@ -556,10 +552,6 @@ class RideHailingOperatorConfig:
         allocation,
     ):
         self.recharge_threshold = recharge_threshold
-        self.charging_station_power = charging_station_power
-        self.number_of_service_workers = number_of_service_worker
-        self.base_regions = base_regions
-        self.base_capacity = base_capacity
         self.operations_start = operations_start
         self.operations_duration = operations_duration
         self.vehicle_relocation_velocity = vehicle_relocation_velocity
@@ -605,8 +597,8 @@ class SharedVehicleOperatorConfig:
 
 
 class ChargingInfrastructureConfig:
-    def __init__(self, location, power, capacity):
-        self.location = location
+    def __init__(self, locations: List, power: List, capacity: List):
+        self.locations = locations
         self.power = power
         self.capacity = capacity
 
