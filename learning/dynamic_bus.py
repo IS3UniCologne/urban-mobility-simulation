@@ -74,8 +74,8 @@ class DynamicBusProblem(LearningInterface):
         # parse or create corridor
         if self._config.dynamic_routing_config.corridor is None:
             self._corridor = self._geodesic_env.corridor(
-                self.bus.route.origin.get_hexagon_id(resolution=self._action_res),
-                self.bus.route.destination.get_hexagon_id(resolution=self._action_res),
+                self.bus.route.origin.get_hexagon(resolution=self._action_res)[0],
+                self.bus.route.destination.get_hexagon(resolution=self._action_res)[0],
                 k=2,
             )
         elif isinstance(self._config.dynamic_routing_config.corridor, set):
@@ -113,11 +113,11 @@ class DynamicBusProblem(LearningInterface):
         m = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
         for d in demands:
             try:
-                start = self._corridor_sorted.index(
-                    d.origin.get_hexagon_id(self._action_res)
+                start, _ = self._corridor_sorted.index(
+                    d.origin.get_hexagon(self._action_res)
                 )
-                end = self._corridor_sorted.index(
-                    d.destination.get_hexagon_id(self._action_res)
+                end, _ = self._corridor_sorted.index(
+                    d.destination.get_hexagon(self._action_res)
                 )
                 m[start][end] += 1
             except ValueError as e:
@@ -132,11 +132,11 @@ class DynamicBusProblem(LearningInterface):
         # origin = current position, destination = drop-off
         for p in self.bus._seats:
             try:
-                start = self._corridor_sorted.index(
-                    self.bus._position.get_hexagon_id(self._action_res)
+                start, _ = self._corridor_sorted.index(
+                    self.bus._position.get_hexagon(self._action_res)
                 )
-                end = self._corridor_sorted.index(
-                    p.transport_task.destination.get_hexagon_id(self._action_res)
+                end, _ = self._corridor_sorted.index(
+                    p.transport_task.destination.get_hexagon(self._action_res)
                 )
                 m[start][end] += 1
             except ValueError as e:
@@ -153,8 +153,8 @@ class DynamicBusProblem(LearningInterface):
 
         # build position vector v[hex] =1 if bus is at hex, else 0
         position = np.zeros(self._corridor_dim, dtype=int)
-        pos = self._corridor_sorted.index(
-            self.bus._position.get_hexagon_id(self._action_res)
+        pos, _ = self._corridor_sorted.index(
+            self.bus._position.get_hexagon(self._action_res)
         )
         position[pos] = 1
 
@@ -236,8 +236,9 @@ class DynamicBusProblem(LearningInterface):
                 extra={"clazz": self.__class__.__name__, "oid": f"Bus {self.bus._id}"},
             )
 
-            if region_id == self.bus._route.destination.get_hexagon_id(
-                self._action_res
+            if (
+                region_id
+                == self.bus._route.destination.get_hexagon(self._action_res)[0]
             ):
                 self.bus._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
                 logging.info(

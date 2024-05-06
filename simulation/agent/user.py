@@ -880,8 +880,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def _demand_aligns(self, vehicle: Bus):
         if (
-            self.transport_task.origin.get_hexagon_id()
-            == self.transport_task.destination.get_hexagon_id()
+            self.transport_task.origin.get_hexagon()[0]
+            == self.transport_task.destination.get_hexagon()[0]
         ):
             # we don't want to service demands that board and unboard at the same station, they can walk
             return False
@@ -923,9 +923,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             self.mount_vehicle(vehicle)
 
         # drive in vehicle until destination hexagon is reached, this might not happen at all
-        while self.transport_task.destination.get_hexagon_id(
-            self._bus_res
-        ) != vehicle.position.get_hexagon_id(self._bus_res):
+        while (
+            self.transport_task.destination.get_hexagon(self._bus_res)[0]
+            != vehicle.position.get_hexagon(self._bus_res)[0]
+        ):
             yield vehicle._position_changed
 
         self.unmount_vehicle(vehicle)
@@ -958,9 +959,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             # drive in vehicle while
             # a) destination not reached
             # b) checkpoint not reached that is "beyond" the destination
-            at_dest = self.transport_task.destination.get_hexagon_id(
-                self._bus_res
-            ) == vehicle.position.get_hexagon_id(self._bus_res)
+            at_dest = (
+                self.transport_task.destination.get_hexagon(self._bus_res)[0]
+                == vehicle.position.get_hexagon(self._bus_res)[0]
+            )
             at_checkpoint = vehicle.state is PublicTransitVehicleState.AT_STOP
             unreachable_dest = False
 
@@ -1006,9 +1008,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def wait_for_transit(self, vehicle: Vehicle):
         # wait indefinitely for transit pick up
-        while self.position.get_hexagon_id(
-            self._bus_res
-        ) != vehicle.position.get_hexagon_id(self._bus_res):
+        while (
+            self.position.get_hexagon(self._bus_res)[0]
+            != vehicle.position.get_hexagon(self._bus_res)[0]
+        ):
             yield vehicle._position_changed
 
         self._assigned_vehicle_arrived.succeed()
