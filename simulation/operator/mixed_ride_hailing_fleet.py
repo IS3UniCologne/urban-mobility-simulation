@@ -52,7 +52,7 @@ class MixedRideHailingFleet(FleetInterface):
 
         geo_env = GeodesicEnvironment.getInstance()
         Configuration.instance()
-        geometry = geo_env.get_hexagon(region)
+        _, geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
             if car.position.is_in_geometry(geometry):
@@ -74,7 +74,7 @@ class MixedRideHailingFleet(FleetInterface):
 
         parking_cars = [car for car in self._cars if car.state == VehicleState.PARKING]
         for car in parking_cars:
-            if car.position.get_hexagon_id() == region:
+            if car.position.get_hexagon()[0] == region:
                 cars_in_area.append(car)
 
         return cars_in_area

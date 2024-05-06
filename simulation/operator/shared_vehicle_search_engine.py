@@ -40,9 +40,6 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         origin = vehicle_search_task.transport_task.origin
         destination = vehicle_search_task.transport_task.destination
 
-        origin.get_hexagon_id()
-        destination.get_hexagon_id()
-
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
         route = Route(origin, destination)
@@ -127,8 +124,12 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": selected_transportation_alternative.route.origin.get_hexagon_id(),
-                "destination": selected_transportation_alternative.route.destination.get_hexagon_id(),
+                "origin": selected_transportation_alternative.route.origin.get_hexagon()[
+                    0
+                ],
+                "destination": selected_transportation_alternative.route.destination.get_hexagon()[
+                    0
+                ],
                 "time_start": transportation_task.time,
                 "time_end": self._env.now,
                 "price": selected_transportation_alternative.price,
@@ -178,8 +179,8 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": transportation_task.origin.get_hexagon_id(),
-                "destination": transportation_task.destination.get_hexagon_id(),
+                "origin": transportation_task.origin.get_hexagon()[0],
+                "destination": transportation_task.destination.get_hexagon()[0],
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,
