@@ -28,6 +28,9 @@ class GeneralMetrics:
     def get_traveled_distance(self):
         return self._transactions["distance"].sum()
 
+    def __str__(self):
+        return self.print_summary()
+
     def print_summary(self):
         print("")
         print("#--------General Metrics--------")

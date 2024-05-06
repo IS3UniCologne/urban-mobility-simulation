@@ -1,13 +1,10 @@
-# ruff: noqa: E402
 import logging
 from pathlib import Path
 
 import h3
-import six
-import sys
 
-sys.modules["sklearn.externals.six"] = six
-import mlrose as mlrose
+# sys.modules["sklearn.externals.six"] = six # does this break the mlrose parts?
+import mlrose_hiive as mlrose
 import pandas as pd
 
 from simulation.helper.configuration.configuration import Configuration

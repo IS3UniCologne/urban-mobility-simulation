@@ -22,6 +22,9 @@ class CustomerMetrics:
 
         return wait_time_by_vehicle.sum()
 
+    def __str__(self):
+        return self.print_summary()
+
     def print_summary(self):
         print("")
         print("#--------Customer Metrics--------")
