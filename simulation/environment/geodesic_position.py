@@ -1,9 +1,12 @@
+from typing import Tuple
+
 import h3 as h3
 from haversine import Unit, haversine
-from shapely.geometry import Point
+from shapely.geometry import Point, Polygon
+
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 from ..helper.configuration.configuration import Configuration
-from .geodesic_environment import GeodesicEnvironment
 from .position import Position
 
 
@@ -17,6 +20,8 @@ class GeodesicPosition(Position):
             self._default_hexagon = default_hexagon
 
         self._geometry = Point(self._lng, self._lat)
+
+        self._geo_env = GeodesicEnvironment.getInstance()
 
     def getExactLocation(self, geojson=False):
         if geojson:
@@ -52,14 +57,7 @@ class GeodesicPosition(Position):
         """
         return haversine((self._lat, self._lng), (other._lat, other._lng), Unit.METERS)
 
-    def get_default_hexagon(self):
-        """
-        Return the hexagon ID from which this point was created (to avoid recomputation)
-        :return:
-        """
-        return self._default_hexagon
-
-    def get_hexagon(self, resolution=0):
+    def get_hexagon(self, resolution=0) -> Tuple[str, Polygon]:
         """
         Return h3 hexagon object based on current position (lng, lat)
         :param resolution: H3 Resolution (res = 0 <=> default => use global setting)
@@ -67,13 +65,19 @@ class GeodesicPosition(Position):
                  geometry: Hexagon geometry
         """
 
-        geo_env = GeodesicEnvironment.getInstance()
-
         # If resolution is set to default, use global settings
         if resolution == 0:
             resolution = Configuration.instance().spatial_resolution_value
 
-        layer = geo_env.getLayer(f"hex_{resolution}")
+        layer = self._geo_env.getLayer(f"hex_{resolution}")
+
+        if self._default_hexagon is None:
+            hex_id = h3.geo_to_h3(self._lat, self._lng, resolution)
+            self._default_hexagon = hex_id
+
+        geometry = layer.loc[self._default_hexagon].geometry
+
+        return self._default_hexagon, geometry
         #
         # point_gdf = gpd.GeoDataFrame([self._geometry], columns=["geometry"], crs="EPSG:4326")
         #
@@ -88,11 +92,6 @@ class GeodesicPosition(Position):
         #
         # hex_id = hexagon.iloc[0][f'hex_id_{resolution}']
         # geometry = hexagon.iloc[0]['geometry']
-
-        hex_id = h3.geo_to_h3(self._lat, self._lng, resolution)
-        geometry = layer.loc[hex_id].geometry
-
-        return hex_id, geometry
 
     def get_hexagon_id(self, resolution=0):
         """
