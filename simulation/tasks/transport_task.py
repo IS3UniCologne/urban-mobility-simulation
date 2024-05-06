@@ -54,6 +54,5 @@ class TransportTask:
     def actual_wait_time(self, value):
         self._actual_wait_time = value
 
-
     def __str__(self):
         return f"From {self._origin} to {self._destination}"
