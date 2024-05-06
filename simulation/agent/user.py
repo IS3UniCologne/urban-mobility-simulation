@@ -199,7 +199,7 @@ class User(Agent, DriverInterface):
 
             wait_time = start_driving_time - start_ordering_time
 
-            self._transport_task._actual_wait_time = wait_time
+            self._transport_task.actual_wait_time = wait_time
 
             yield self._env.process(self.start_driving(vehicle_allocation))
 
