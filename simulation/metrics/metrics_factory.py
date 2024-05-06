@@ -17,15 +17,15 @@ class MetricsFactory:
         return self._general_metrics
 
     @property
-    def service_provider_metrics(self):
+    def service_provider_metrics(self) -> ServiceProviderMetrics:
         return self._service_provider
 
     @property
-    def customer_metrics(self):
+    def customer_metrics(self) -> CustomerMetrics:
         return self._customer_metrics
 
     @property
-    def society_metrics(self):
+    def society_metrics(self) -> SocietyMetrics:
         return self._society_metrics
 
     def print_simulation_summary(
