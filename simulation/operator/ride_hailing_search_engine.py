@@ -155,8 +155,12 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": selected_transportation_alternative.route.origin.get_default_hexagon(),
-                "destination": selected_transportation_alternative.route.destination.get_default_hexagon(),
+                "origin": selected_transportation_alternative.route.origin.get_hexagon()[
+                    0
+                ],
+                "destination": selected_transportation_alternative.route.destination.get_hexagon()[
+                    0
+                ],
                 "time_start": transportation_task.time,
                 "time_end": self._env.now,
                 "price": selected_transportation_alternative.price,
@@ -195,8 +199,8 @@ class RideHailingSearchEngine(SearchEngineInterface, PaymentInterface):
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": transportation_task.origin.get_default_hexagon(),
-                "destination": transportation_task.destination.get_default_hexagon(),
+                "origin": transportation_task.origin.get_hexagon()[0],
+                "destination": transportation_task.destination.get_hexagon()[0],
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,
