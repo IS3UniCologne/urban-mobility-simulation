@@ -31,7 +31,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         """
         browser = TransportationAlternativeBrowser()
 
-        hexagon_origin = vehicle_search_task.agent_position.get_default_hexagon()
+        hexagon_origin, _ = vehicle_search_task.agent_position.get_hexagon()
 
         (cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area) = (
             self.fleet.get_available_vehicles(hexagon_origin)
@@ -39,9 +39,6 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
 
         origin = vehicle_search_task.transport_task.origin
         destination = vehicle_search_task.transport_task.destination
-
-        origin.get_default_hexagon()
-        destination.get_default_hexagon()
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
@@ -127,8 +124,12 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": selected_transportation_alternative.route.origin.get_default_hexagon(),
-                "destination": selected_transportation_alternative.route.destination.get_default_hexagon(),
+                "origin": selected_transportation_alternative.route.origin.get_hexagon()[
+                    0
+                ],
+                "destination": selected_transportation_alternative.route.destination.get_hexagon()[
+                    0
+                ],
                 "time_start": transportation_task.time,
                 "time_end": self._env.now,
                 "price": selected_transportation_alternative.price,
@@ -178,8 +179,8 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": transportation_task.origin.get_default_hexagon(),
-                "destination": transportation_task.destination.get_default_hexagon(),
+                "origin": transportation_task.origin.get_hexagon()[0],
+                "destination": transportation_task.destination.get_hexagon()[0],
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,
