@@ -273,4 +273,4 @@ logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
 env.run(until=50)
 
-logging.warning(f"Simulation Finished.", extra={"clazz": "main", "oid": ""})
+logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})

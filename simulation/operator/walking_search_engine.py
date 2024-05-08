@@ -28,7 +28,6 @@ class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
         """
         browser = TransportationAlternativeBrowser()
 
-
         origin = vehicle_search_task.transport_task.origin
         destination = vehicle_search_task.transport_task.destination
 
