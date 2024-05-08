@@ -226,6 +226,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
 
     return fleet
 
+
 def generate_mixed_fleet(env, fleet_config):
     """
     Generate a mixed shared vehicle fleet based on given fleet config.
