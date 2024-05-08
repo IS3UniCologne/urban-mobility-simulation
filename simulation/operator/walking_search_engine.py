@@ -6,9 +6,9 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 from simulation.operator.interface.fleet_interface import FleetInterface
 from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.walking_fleet import WalkingFleet
 from simulation.tasks.transport_task import TransportTask
 from simulation.tasks.transportation_search_task import TransportationSearchTask
+from simulation.vehicle.walking import Walking
 
 
 class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
@@ -16,7 +16,7 @@ class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
     def __init__(self, env):
         PaymentInterface.__init__(self)
         self._env = env
-        self._fleet = None
+        self._walking = Walking(env)
 
     def search_for_transportation_alternatives(self, vehicle_search_task: TransportationSearchTask) -> TransportationAlternativeBrowser:
         """
@@ -26,7 +26,6 @@ class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
         """
         browser = TransportationAlternativeBrowser()
 
-        walking = self.fleet.walking
 
         origin = vehicle_search_task.transport_task.origin
         destination = vehicle_search_task.transport_task.destination
@@ -38,13 +37,13 @@ class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
         distance = route.distance  # Euclidean Distance
 
         # Calc Duration
-        duration = distance/walking.velocity
+        duration = distance/self._walking.velocity
 
         # Calc Price
         price = 0
 
         # Put together
-        transportation_alternative = TransportationAlternative(walking, route, price, duration, distance, 3)
+        transportation_alternative = TransportationAlternative(self._walking, route, price, duration, distance, 3)
 
         browser.add_transportation_alternative(transportation_alternative)
 
@@ -55,12 +54,3 @@ class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
 
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         pass
-
-    def register_fleet(self, fleet: WalkingFleet):
-        self._fleet = fleet
-
-    @property
-    def fleet(self):
-        if self._fleet:
-            return self._fleet
-        raise Exception("Fleet was not registred. Inject fleet instance to search engine using register_fleet")
