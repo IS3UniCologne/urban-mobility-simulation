@@ -1,5 +1,4 @@
 from simpy import Environment
-import logging
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.vehicle.vehicle import Vehicle
@@ -9,7 +8,9 @@ from simulation.vehicle.vehicle import Vehicle
 class Walking(Vehicle):
     walking_id = 0
 
-    def __init__(self, env: Environment, velocity = 83.33):
+    def __init__(
+        self, env: Environment, velocity = 83.33
+    ):
         # Position of Walking actually just takes user position, so it does not matter
         super(Walking, self).__init__(env, GeodesicPosition(0, 0, None))
 
@@ -19,13 +20,13 @@ class Walking(Vehicle):
     @property
     def id(self):
         return self._id
-    
+
     @property
     def velocity(self):
         return self._velocity
 
     def move(self, route_segment):
         pass
-        
+
     def __str__(self):
-        return f'I am walking!'
+        return "I am walking!"
