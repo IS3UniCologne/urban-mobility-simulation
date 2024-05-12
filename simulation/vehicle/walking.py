@@ -24,7 +24,7 @@ class Walking(Vehicle):
         return self._velocity
 
     def move(self, route_segment):
-        pass
+        logging.warning("Warning: Method 'move' for walking called, even though it is not implemented!", extra={"clazz": "main", "oid": ""})
 
     def __str__(self):
         return "I am walking!"
