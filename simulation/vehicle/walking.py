@@ -1,4 +1,5 @@
 from simpy import Environment
+import logging
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.vehicle.vehicle import Vehicle
