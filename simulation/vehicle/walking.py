@@ -27,7 +27,7 @@ class Walking(Vehicle):
     def move(self, route_segment):
         logging.warning(
             "Warning: Method 'move' for walking called, even though it is not implemented!",
-            extra={"clazz": "main", "oid": ""},
+            extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
     def __str__(self):
