@@ -1,2 +1,3 @@
+# Jupyter Notebooks need some extra care
 *.ipynb	merge=jupyternotebook
-*.ipynb linguist-generated # exclude from lang stats
+*.ipynb linguist-generated 
