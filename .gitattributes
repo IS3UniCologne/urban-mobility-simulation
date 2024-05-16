@@ -1,1 +1,2 @@
 *.ipynb	merge=jupyternotebook
+*.ipynb linguist-generated # exclude from lang stats
