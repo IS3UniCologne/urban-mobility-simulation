@@ -402,4 +402,4 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     def __str__(self):
-        return f"I have {len(self.available_seats)} passengers on boards"
+        return f"I have {self.available_seats} passengers on boards"
