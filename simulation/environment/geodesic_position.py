@@ -1,9 +1,12 @@
+from typing import Tuple
+
 import h3 as h3
 from haversine import Unit, haversine
-from shapely.geometry import Point
+from shapely.geometry import Point, Polygon
+
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 from ..helper.configuration.configuration import Configuration
-from .geodesic_environment import GeodesicEnvironment
 from .position import Position
 
 
@@ -13,10 +16,15 @@ class GeodesicPosition(Position):
         self._lat = latitude
         self._lng = longitude
 
+        self._default_hexagon = {}
+        self._global_resolution = Configuration.instance().spatial_resolution_value
+
         if default_hexagon is not None:
-            self._default_hexagon = default_hexagon
+            self._default_hexagon[self._global_resolution] = default_hexagon
 
         self._geometry = Point(self._lng, self._lat)
+
+        self._geo_env = GeodesicEnvironment.getInstance()
 
     def getExactLocation(self, geojson=False):
         if geojson:
@@ -52,14 +60,7 @@ class GeodesicPosition(Position):
         """
         return haversine((self._lat, self._lng), (other._lat, other._lng), Unit.METERS)
 
-    def get_default_hexagon(self):
-        """
-        Return the hexagon ID from which this point was created (to avoid recomputation)
-        :return:
-        """
-        return self._default_hexagon
-
-    def get_hexagon(self, resolution=0):
+    def get_hexagon(self, resolution=0) -> Tuple[str, Polygon]:
         """
         Return h3 hexagon object based on current position (lng, lat)
         :param resolution: H3 Resolution (res = 0 <=> default => use global setting)
@@ -67,46 +68,21 @@ class GeodesicPosition(Position):
                  geometry: Hexagon geometry
         """
 
-        geo_env = GeodesicEnvironment.getInstance()
-
         # If resolution is set to default, use global settings
         if resolution == 0:
-            resolution = Configuration.instance().spatial_resolution_value
+            resolution = self._global_resolution
 
-        layer = geo_env.getLayer(f"hex_{resolution}")
-        #
-        # point_gdf = gpd.GeoDataFrame([self._geometry], columns=["geometry"], crs="EPSG:4326")
-        #
-        # hexagon = gpd.sjoin(layer, point_gdf, how="inner", op='intersects')
-        #
-        # resolution = 0
-        #
-        # if hexagon.shape[0] == 0:
-        #     raise Exception(f'Cannot find a hexagon for {self}.')
-        # elif hexagon.shape[0] > 1:
-        #     raise Exception(f'Surprisingly there are more than one hexagons on resolution {resolution} for {self}.')
-        #
-        # hex_id = hexagon.iloc[0][f'hex_id_{resolution}']
-        # geometry = hexagon.iloc[0]['geometry']
+        layer = self._geo_env.getLayer(f"hex_{resolution}")
 
-        hex_id = h3.geo_to_h3(self._lat, self._lng, resolution)
-        geometry = layer.loc[hex_id].geometry
+        try:
+            hex = self._default_hexagon[resolution]
 
-        # TODO: if resolution = default, cache hex as default and lazy load on calls to this method
+        except KeyError:
+            hex = h3.geo_to_h3(self._lat, self._lng, resolution)
+            self._default_hexagon[resolution] = hex
 
-        return hex_id, geometry
-
-    def get_hexagon_id(self, resolution=0):
-        """
-        Return h3 hexagon id based on current position (lng, lat)
-        :param resolution: H3 Resolution (res = 0 <=> default => use global setting)
-        :return: hex_id:   String
-        """
-        # If resolution is set to default, use global settings
-        if resolution == 0:
-            resolution = Configuration.instance().spatial_resolution_value
-
-        return h3.geo_to_h3(self._lat, self._lng, resolution)
+        geometry = layer.loc[hex].geometry
+        return hex, geometry
 
     def is_in_geometry(self, geometry):
         if self._geometry.intersects(geometry):
