@@ -3,10 +3,10 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.vehicle_fleet import VehicleFleet
+from simulation.vehicle.shared_bike import SharedBike
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
-from simulation.vehicle.shared_bike import SharedBike
 from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle.vehicle import VehicleState
 
@@ -51,7 +51,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
         geo_env = GeodesicEnvironment.getInstance()
         Configuration.instance()
-        geometry = geo_env.get_hexagon(region)
+        _, geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
             if car.position.is_in_geometry(geometry):
@@ -91,28 +91,28 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
         for car in self._cars:
             if (
-                car.position.get_default_hexagon() == region
+                car.position.get_hexagon()[0] == region
                 and car.state == VehicleState.PARKING
             ):
                 cars_in_area.append(car)
 
         for scooter in self._scooters:
             if (
-                scooter.position.get_default_hexagon() == region
+                scooter.position.get_hexagon()[0] == region
                 and scooter.state == VehicleState.PARKING
             ):
                 scooters_in_area.append(scooter)
 
         for kick_scooter in self._kick_scooters:
             if (
-                kick_scooter.position.get_default_hexagon() == region
+                kick_scooter.position.get_hexagon()[0] == region
                 and kick_scooter.state == VehicleState.PARKING
             ):
                 kick_scooters_in_area.append(kick_scooter)
 
         for bike in self._bikes:
             if (
-                bike.position.get_default_hexagon() == region
+                bike.position.get_hexagon()[0] == region
                 and bike.state == VehicleState.PARKING
             ):
                 bikes_in_area.append(bike)
@@ -225,7 +225,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_default_hexagon()
+                hex_id, _ = vehicle.position.get_hexagon()
 
                 if hex_id not in supply:
                     supply[hex_id] = dict(zip(available_vehicles, values))
@@ -268,7 +268,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_default_hexagon()
+                hex_id, _ = vehicle.position.get_hexagon()
 
                 if hex_id not in low_soc_supply:
                     low_soc_supply[hex_id] = dict(zip(available_vehicles, values))

@@ -50,7 +50,7 @@ class MixedRideHailingFleet(VehicleFleet):
 
         geo_env = GeodesicEnvironment.getInstance()
         Configuration.instance()
-        geometry = geo_env.get_hexagon(region)
+        _, geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
             if car.position.is_in_geometry(geometry):
@@ -72,7 +72,7 @@ class MixedRideHailingFleet(VehicleFleet):
 
         parking_cars = [car for car in self._cars if car.state == VehicleState.PARKING]
         for car in parking_cars:
-            if car.position.get_default_hexagon() == region:
+            if car.position.get_hexagon()[0] == region:
                 cars_in_area.append(car)
 
         return cars_in_area
@@ -198,7 +198,7 @@ class MixedRideHailingFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_default_hexagon()
+                hex_id, _ = vehicle.position.get_hexagon()
 
                 if hex_id not in supply:
                     supply[hex_id] = dict(zip(available_vehicles, values))
@@ -231,7 +231,7 @@ class MixedRideHailingFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_default_hexagon()
+                hex_id, _ = vehicle.position.get_hexagon()
 
                 if hex_id not in low_soc_supply:
                     low_soc_supply[hex_id] = dict(zip(available_vehicles, values))

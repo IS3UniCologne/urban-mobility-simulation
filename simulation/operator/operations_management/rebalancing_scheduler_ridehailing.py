@@ -99,7 +99,7 @@ class RebalancingSchedulerRidehailing:
         charging_plan = []
 
         for vehicle in vehicles_to_charge:
-            hex = vehicle.position.get_default_hexagon()
+            hex, _ = vehicle.position.get_hexagon()
 
             # Get nearest fleet base region (.loc -> destination, [[]] -> Origin)
             sorted_base_list = self._distance_matrix.loc[self._base_regions][

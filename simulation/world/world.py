@@ -4,20 +4,20 @@ from numpy.random import normal
 from simpy import Environment
 
 from simulation.agent import user
+from simulation.helper.configuration.configuration import Configuration
+from simulation.vehicle.vehicle import Vehicle
+from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
+from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
+    VehicleChoiceBehaviorInterface,
+)
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
 from simulation.tasks.transport_task import TransportTask
-from simulation.vehicle.vehicle import Vehicle
-from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
-from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
-    VehicleChoiceBehaviorInterface,
-)
 from simulation.world.population.PopulationFactory import PopulationFactory
 from tracking.tracking import Tracking
 
@@ -247,6 +247,29 @@ class World:
                 logging.debug(
                     f"Ride-hailing user {new_user.user_id, population_type} request a vehicle at {self._env.now}.",
                     extra={"clazz": self.__class__.__name__, "oid": " "},
+                )
+            elif mode == "walking":
+                # Generate Transportation Task
+                task = TransportTask(
+                    self._env.now,
+                    origin_position,
+                    destination_position,
+                    viable_vehicle_modes,
+                )
+
+                # Determine Consumer Type
+                population_type = self._population_factory.generatePopulationType()
+
+                new_user = user.User(
+                    fleet,
+                    origin_position,
+                    task,
+                    self._search_engine["walking"],
+                    self._payment_engine["walking"],
+                    self._vehicle_assignment_engine["walking"],
+                    self._vehicle_choice_behavior,
+                    population_type,
+                    self._env,
                 )
             else:
                 raise NotImplementedError('User mode "{mode}" not implemented.')

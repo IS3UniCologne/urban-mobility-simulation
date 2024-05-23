@@ -96,24 +96,28 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 ### Input Files
 # Input Files (Demand)
-demand_file_path = parser.get("DEMAND", "path_trip_demand")
+demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
 demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
 
-pop_prob_ridehailing = parser.get("RIDE_HAILING", "POPULATION_PROBABILITIES").split(",")
+# Input Files (Supply)
+supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
+# Get the supply probability from supply file
+supply_prob = pd.read_csv(supply_file_path)
+
+
+pop_prob_ridehailing = parser.get("RIDE_HAILING", "population_probabilities").split(",")
 pop_prob_ridehailing = [float(x) for x in pop_prob_ridehailing]
 
 mode_choice_model_path = parser.get("MODE_CHOICE_MODEL", "path_to_mode_choice_model")
 mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
 
-# Input Files (Supply)
-supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
-# Get the supply probability from supply file
-supply_prob = pd.read_csv(supply_file_path)
-
 # Initialize the mode choice config
 mc = ModeChoiceConfig(
-    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
+    mode_choice_strategy,
+    mode_choice_sub_boundary,
+    mode_choice_model_path,
+    path_to_model=None,
 )
 
 # Load the config to the global config
@@ -261,8 +265,8 @@ env = simpy.Environment(initial_time=0)
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
 population_factory = PopulationFactory(pop_prob_ridehailing, seed)
 
-# Load Spatial Environment
-load_environment()
+# Load Spatial Environment and the environment files
+load_environment(city)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -374,11 +378,7 @@ file_handler.setFormatter(formatter)
 file_handler.setLevel(log_level)
 
 # Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf_init)
-
-# Inject Simulation Environment to Logger (such that we can log the env time)
-cf = SimulationContextFilter(filter_name="add_env", extra=env)
+cf = SimulationContextFilter(filter_name="add_env", extra=[])
 edf = ExtraDefaultFilter(filter_name="add_default_value")
 logger.addFilter(cf)
 logger.addFilter(edf)

@@ -94,11 +94,11 @@ city = parser.get("WORLD", "city")
 global_config = Configuration.init(spatial_res, temporal_res, daily_res, city=city)
 
 # Input Files (Demand)
-demand_file_path = parser.get("DEMAND", "path_trip_demand")
+demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
 demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
 
 # Input Files (Supply)
-supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
+supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
 # Get the supply probability from supply file
 supply_prob = pd.read_csv(supply_file_path)
 
@@ -121,7 +121,10 @@ mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
 
 mc = ModeChoiceConfig(
-    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
+    mode_choice_strategy,
+    mode_choice_sub_boundary,
+    mode_choice_model_path,
+    path_to_model=None,
 )
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -152,8 +155,12 @@ for idx, vehicle_type in enumerate(
 
     if vehicle_type == "SHARED_CAR":
         initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
-    else:
-        initial_SoC = None
+    if vehicle_type != "SHARED_BIKE":
+        EV_relative_energy_consumption = parser.getfloat(
+            vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
+        )
+        cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
+        charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
 
     vc = SharedVehicleConfig(
         price_per_min,
@@ -244,9 +251,8 @@ env = simpy.Environment(initial_time=0)
 # Population Type
 population_factory = PopulationFactory(pop_prob_sharedvehicle, seed)
 
-# Load Spatial Environment
-load_environment(  # city=city
-)
+# Load Spatial Environment and the environment files
+load_environment(city)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
