@@ -2,16 +2,14 @@
 
 ##Imports
 # Standard library imports
+import logging
 import os
 import sys
-from pathlib import Path
 from configparser import ConfigParser
-import logging
+from pathlib import Path
 
-# Third-party library imports
-import simpy
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from simulation.vehicle.shared_bike import SharedBike
 from simulation.vehicle.shared_vehicle import SharedVehicle
@@ -19,24 +17,47 @@ from simulation.vehicle.shared_vehicle import SharedVehicle
 # Custom module imports
 from utils import load_environment
 from tracking.tracking import Tracking
+# Third-party library imports
+import simpy
 
 # Imports world related modules
 from simulation.agent.user import User
-from simulation.world.world import World
-from simulation.world.demand.demand_factory import DemandFactory
-from simulation.world.demand.demand_importer import DemandImporter
-from simulation.world.population.PopulationFactory import PopulationFactory
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import (
+    ChargingInfrastructureConfig,
     Configuration,
     ModeChoiceConfig,
     SharedVehicleConfig,
     SharedVehicleOperatorConfig,
-    ChargingInfrastructureConfig,
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.infrastructure.charging_stations.charging_infastructure import (
+    ChargingInfrastructure,
+)
+
+# Import infrastructure related modules
+from simulation.infrastructure.helper.distance_matrix_importer import (
+    DistanceMatrixImporter,
+)
+
+# Import operator related modules
+from simulation.operator.fleet_factory import (
+    generate_fleet_config,
+    generate_mixed_fleet,
+)
+from simulation.operator.operations_management.operations import Operations
+from simulation.operator.operations_management.relocation_scheduler import (
+    RelocationScheduler,
+)
+from simulation.operator.operations_management.service_worker import ServiceWorker
+from simulation.operator.operations_management.task_queue import TaskQueue
+from simulation.operator.shared_vehicle_allocation_engine import (
+    SharedVehicleAllocationEngine,
+)
+from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
 
 # Import vehicle types and vehicle choice options
 from simulation.vehicle.shared_car import SharedCar
@@ -45,31 +66,14 @@ from simulation.vehicle.shared_scooter import SharedScooter
 from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
     OnlyCarVehicleChoiceBehavior,
 )
+from simulation.world.demand.demand_factory import DemandFactory
+from simulation.world.demand.demand_importer import DemandImporter
+from simulation.world.population.PopulationFactory import PopulationFactory
+from simulation.world.world import World
+from tracking.tracking import Tracking
 
-# Import infrastructure related modules
-from simulation.infrastructure.helper.distance_matrix_importer import (
-    DistanceMatrixImporter,
-)
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
-)
-
-# Import operator related modules
-from simulation.operator.fleet_factory import (
-    generate_mixed_fleet,
-    generate_fleet_config,
-)
-from simulation.operator.shared_vehicle_allocation_engine import (
-    SharedVehicleAllocationEngine,
-)
-from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
-from simulation.operator.operations_management.relocation_scheduler import (
-    RelocationScheduler,
-)
-from simulation.operator.operations_management.operations import Operations
-from simulation.operator.operations_management.task_queue import TaskQueue
-from simulation.operator.operations_management.service_worker import ServiceWorker
+# Custom module imports
+from utils import load_environment
 
 # Import metrics
 from simulation.metrics import MetricsFactory
@@ -104,11 +108,11 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 ### Input Files
 # Input Files (Demand)
-demand_file_path = parser.get("DEMAND", "path_trip_demand")
+demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
 demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
 
 # Input Files (Supply)
-supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
+supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
 # Get the supply probability from supply file
 supply_prob = pd.read_csv(supply_file_path)
 
@@ -135,7 +139,10 @@ mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
 
 mc = ModeChoiceConfig(
-    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
+    mode_choice_strategy,
+    mode_choice_sub_boundary,
+    mode_choice_model_path,
+    path_to_model=None,
 )
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -164,11 +171,14 @@ for idx, vehicle_type in enumerate(
     daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
     if vehicle_type == "SHARED_CAR":
         initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
-    EV_relative_energy_consumption = parser.getfloat(
-        vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
-    )
-    cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
-    charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
+
+    if vehicle_type != "SHARED_BIKE":
+        EV_relative_energy_consumption = parser.getfloat(
+            vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
+        )
+        cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
+        charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
+        
     co2_per_km = parser.getfloat(vehicle_type, "KG_CO2_PER_KM")
 
     vc = SharedVehicleConfig(
@@ -271,8 +281,8 @@ env = simpy.Environment(initial_time=0)
 # Population Type
 population_factory = PopulationFactory(pop_prob_sharedvehicle, seed)
 
-# Load Spatial Environment
-load_environment()
+# Load Spatial Environment and the environment files
+load_environment(city)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #

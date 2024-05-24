@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import simpy
 
+from simulation.vehicle.walking import Walking
 import simulation.world.world as world
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from tracking.tracking_interface import TrackingInterface
@@ -172,34 +173,55 @@ class User(Agent, DriverInterface):
                 yield self._env.process(self.withdraw_request())
                 break
 
-            # Vehicle Found and allocated?
-            vehicle_allocation = yield self._env.process(
-                self.allocate_vehicle(selected_transportation_alternative)
-            )
-
-            # If not allocated, retry.
-            if not vehicle_allocation:
+            if isinstance(selected_transportation_alternative.vehicle, Walking):
                 logging.debug(
-                    " Vehicle allocation was not successful. Retrying with another vehicle.",
+                    f"User {self.id} chooses to walk to destination",
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
+                yield self._env.process(
+                    self.walk(
+                        self.position,
+                        selected_transportation_alternative.route.destination,
+                    )
+                )
 
-                # Reset Events (so far) and try again
-                self._transportation_alternatives_received = self._env.event()
-                self._transportation_alternatives_selected = self._env.event()
-                self._transportation_alternatives_not_found = self._env.event()
-                self._vehicle_allocated = self._env.event()
+                logging.debug(
+                    f"User {self.id} has reached walking destination",
+                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                )
+            else:
+                # Vehicle Found and allocated?
+                vehicle_allocation = yield self._env.process(
+                    self.allocate_vehicle(selected_transportation_alternative)
+                )
 
-                continue  # retry again until vehicle supply is depleted
-            yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
+                # If not allocated, retry.
+                if not vehicle_allocation:
+                    logging.debug(
+                        " Vehicle allocation was not successful. Retrying with another vehicle.",
+                        extra={"clazz": self.__class__.__name__, "oid": self._id},
+                    )
 
-            yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
+                    # Reset Events (so far) and try again
+                    self._transportation_alternatives_received = self._env.event()
+                    self._transportation_alternatives_selected = self._env.event()
+                    self._transportation_alternatives_not_found = self._env.event()
+                    self._vehicle_allocated = self._env.event()
+
+                    continue  # retry again until vehicle supply is depleted
 
             start_driving_time = self._env.now
 
             wait_time = start_driving_time - start_ordering_time
 
             self._transport_task.actual_wait_time = wait_time
+
+
+            yield self._env.process(
+                self.move_to_pick_up_position(vehicle_allocation)
+            )
+
+            yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
 
             yield self._env.process(self.start_driving(vehicle_allocation))
 
@@ -246,6 +268,16 @@ class User(Agent, DriverInterface):
         for (
             alternative
         ) in available_transportation_alternatives.transportation_alternatives:
+            if (
+                isinstance(alternative.vehicle, Walking)
+                and self._transport_task.viable_vehicle_modes[
+                    alternative.vehicle.__class__.__name__
+                ]
+            ):
+                filtered_list.append(
+                    (0, alternative.price, alternative.convenience, alternative)
+                )
+                continue
             distance_to_vehicle = self.position >> alternative.vehicle.position
             if self._transport_task.viable_vehicle_modes[
                 alternative.vehicle.__class__.__name__
@@ -888,8 +920,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def _demand_aligns(self, vehicle: Bus):
         if (
-            self.transport_task.origin.get_hexagon_id()
-            == self.transport_task.destination.get_hexagon_id()
+            self.transport_task.origin.get_hexagon()[0]
+            == self.transport_task.destination.get_hexagon()[0]
         ):
             # we don't want to service demands that board and unboard at the same station, they can walk
             return False
@@ -931,9 +963,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             self.mount_vehicle(vehicle)
 
         # drive in vehicle until destination hexagon is reached, this might not happen at all
-        while self.transport_task.destination.get_hexagon_id(
-            self._bus_res
-        ) != vehicle.position.get_hexagon_id(self._bus_res):
+        while (
+            self.transport_task.destination.get_hexagon(self._bus_res)[0]
+            != vehicle.position.get_hexagon(self._bus_res)[0]
+        ):
             yield vehicle._position_changed
 
         self.unmount_vehicle(vehicle)
@@ -966,9 +999,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             # drive in vehicle while
             # a) destination not reached
             # b) checkpoint not reached that is "beyond" the destination
-            at_dest = self.transport_task.destination.get_hexagon_id(
-                self._bus_res
-            ) == vehicle.position.get_hexagon_id(self._bus_res)
+            at_dest = (
+                self.transport_task.destination.get_hexagon(self._bus_res)[0]
+                == vehicle.position.get_hexagon(self._bus_res)[0]
+            )
             at_checkpoint = vehicle.state is PublicTransitVehicleState.AT_STOP
             unreachable_dest = False
 
@@ -1014,9 +1048,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def wait_for_transit(self, vehicle: Vehicle):
         # wait indefinitely for transit pick up
-        while self.position.get_hexagon_id(
-            self._bus_res
-        ) != vehicle.position.get_hexagon_id(self._bus_res):
+        while (
+            self.position.get_hexagon(self._bus_res)[0]
+            != vehicle.position.get_hexagon(self._bus_res)[0]
+        ):
             yield vehicle._position_changed
 
         self._assigned_vehicle_arrived.succeed()
