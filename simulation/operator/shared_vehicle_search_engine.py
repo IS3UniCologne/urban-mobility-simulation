@@ -124,6 +124,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         # Add Transaction to Log
         self._transactions.append(
             {
+                "vehicle_id": selected_transportation_alternative.vehicle.id,
                 "origin": selected_transportation_alternative.route.origin.get_hexagon()[
                     0
                 ],
@@ -135,6 +136,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
                 "price": selected_transportation_alternative.price,
                 "distance": selected_transportation_alternative.distance,
                 "duration": selected_transportation_alternative.duration,
+                "wait_time": transportation_task.actual_wait_time,
                 "energy_consumption": selected_transportation_alternative.energy_consumed,
                 "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__,
                 "state": "Fulfilled",
@@ -143,7 +145,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         )
 
         logging.info(
-            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
+            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue} for vehicle {selected_transportation_alternative.vehicle.id}.",
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
@@ -179,6 +181,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         # Add Transaction to Log
         self._transactions.append(
             {
+                "vehicle_id": "None",
                 "origin": transportation_task.origin.get_hexagon()[0],
                 "destination": transportation_task.destination.get_hexagon()[0],
                 "time_start": self._env.now,
@@ -187,6 +190,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
                 "distance": transportation_task.origin
                 >> transportation_task.destination,
                 "duration": 0.0,
+                "wait_time": 0.0,
                 "energy_consumption": 0.0,
                 "selected_vehicle_mode": "None",
                 "state": "Missed",

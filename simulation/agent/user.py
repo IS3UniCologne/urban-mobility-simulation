@@ -154,6 +154,8 @@ class User(Agent, DriverInterface):
         """
 
         while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
+            start_ordering_time = self._env.now
+
             ## Retrieve available transportation alternatives
             available_transportation_alternatives = yield self._env.process(
                 self.search_for_alternatives()
@@ -208,17 +210,24 @@ class User(Agent, DriverInterface):
 
                     continue  # retry again until vehicle supply is depleted
 
-                yield self._env.process(
-                    self.move_to_pick_up_position(vehicle_allocation)
-                )
+            start_driving_time = self._env.now
 
-                yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
+            wait_time = start_driving_time - start_ordering_time
 
-                yield self._env.process(self.start_driving(vehicle_allocation))
+            self._transport_task.actual_wait_time = wait_time
 
-                self._payment_service.pay_for_fulfilled_transportation_task(
-                    self, self._transport_task, selected_transportation_alternative
-                )
+
+            yield self._env.process(
+                self.move_to_pick_up_position(vehicle_allocation)
+            )
+
+            yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
+
+            yield self._env.process(self.start_driving(vehicle_allocation))
+
+            self._payment_service.pay_for_fulfilled_transportation_task(
+                self, self._transport_task, selected_transportation_alternative
+            )
 
             yield self._env.process(self.stop())
 
