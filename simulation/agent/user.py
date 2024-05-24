@@ -216,10 +216,7 @@ class User(Agent, DriverInterface):
 
             self._transport_task.actual_wait_time = wait_time
 
-
-            yield self._env.process(
-                self.move_to_pick_up_position(vehicle_allocation)
-            )
+            yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
             yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
 

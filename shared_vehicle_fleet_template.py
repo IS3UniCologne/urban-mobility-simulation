@@ -17,6 +17,7 @@ from simulation.vehicle.shared_vehicle import SharedVehicle
 # Custom module imports
 from utils import load_environment
 from tracking.tracking import Tracking
+
 # Third-party library imports
 import simpy
 
@@ -70,10 +71,8 @@ from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
-from tracking.tracking import Tracking
 
 # Custom module imports
-from utils import load_environment
 
 # Import metrics
 from simulation.metrics import MetricsFactory
@@ -178,7 +177,7 @@ for idx, vehicle_type in enumerate(
         )
         cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
         charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
-        
+
     co2_per_km = parser.getfloat(vehicle_type, "KG_CO2_PER_KM")
 
     vc = SharedVehicleConfig(
