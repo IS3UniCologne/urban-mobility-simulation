@@ -221,3 +221,15 @@ class DemandFactory:
     def stop(self):
         for demand_process in self._world.demand_processes:
             demand_process.interrupt()
+
+    def reset(self):
+        # Terminate all ongoing demand processes
+        self._world.stop_all_processes()
+
+        # Clear previous demand/user processes
+        self._world.demand_processes.clear()
+        self._world.user_processes.clear()
+        self._world.users.clear()
+
+        # Reset the global counter
+        DemandFactory.counter = 0
