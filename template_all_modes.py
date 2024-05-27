@@ -115,7 +115,6 @@ start_time = parser.getint("EXPERIMENT_MANAGEMENT", "START_TIME")
 end_time = parser.getint("EXPERIMENT_MANAGEMENT", "END_TIME")
 seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
 
-
 # World / Resolution Config
 spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
 temporal_res = parser.getint("WORLD", "TEMPORAL_RESOLUTION")
@@ -777,6 +776,68 @@ logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 env.run(until=end_time)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+
+
+### Things to do while changing the mode: ####
+
+# - Modify population factory (just comment out the other pop factories)
+# - To run RideHailing fleet comment out the running of the shared operator
+# - Switch to the correct payment engine
+# - Comment out all the operator modules from other fleets for the public operator
+
+
+def run_simulation(end_time, seed=4711, env=env):
+    # Before a new simulation run, reset everything
+    User.user_id = 0
+    SharedCar.car_id = 0
+    SharedKickScooter.shared_kick_scooter_id = 0
+    SharedScooter.shared_scooter_id = 0
+    DemandFactory.counter = 0
+    Vehicle.vehicle_id = 0
+    PublicTransitVehicle.public_transit_vehicle_id = 0
+    Bus.bus_id = GeodesicEnvironment.getInstance().reset_random_generator(seed)
+
+    # Inject Simulation Environment to Logger (such that we can log the env time)
+    cf = SimulationContextFilter(filter_name="add_env", extra=env)
+    edf = ExtraDefaultFilter(filter_name="add_default_value")
+    logger.addFilter(cf)
+    logger.addFilter(edf)
+
+    for sw in range(
+        global_config.ridehailing_operator_config.number_of_service_workers
+    ):
+        env.process(ServiceWorker(env, task_queue_ridehailing).run())
+
+    # for sw in range(global_config.shared_vehicle_operator_config.number_of_service_workers):
+    #    env.process(ServiceWorker(env, task_queue_shared_vehicle).run())
+
+    env.process(ops_ridehailing_0.timer())
+    env.process(ops_ridehailing_0.run_operations())
+
+    # env.process(shared_operator.timer())
+    # env.process(shared_operator.run_operations())
+
+    # env.process(public_operator._run())
+
+    # Use only if the configuration parameters stay unchanged to avoid reloading everytime
+    demand_factory.reset()
+
+    env.process(demand_factory.generate_demand())
+
+    logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+
+    # Run simulation
+
+    env.run(until=end_time)
+
+    logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+
+
+sum_iterations = 3
+for i in range(sum_iterations):
+    env = simpy.Environment(start_time)
+
+    run_simulation(end_time=end_time)
 
 
 ### Things to do while changing the mode: ####
