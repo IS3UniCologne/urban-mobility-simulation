@@ -121,10 +121,7 @@ mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
 
 mc = ModeChoiceConfig(
-    mode_choice_strategy,
-    mode_choice_sub_boundary,
-    mode_choice_model_path,
-    path_to_model=None,
+    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
 )
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -155,12 +152,15 @@ for idx, vehicle_type in enumerate(
 
     if vehicle_type == "SHARED_CAR":
         initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
+    else:
+        initial_SoC = None
+
     if vehicle_type != "SHARED_BIKE":
         EV_relative_energy_consumption = parser.getfloat(
             vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
         )
         cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
-        charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
+        charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COST_PER_KWH")
 
     vc = SharedVehicleConfig(
         price_per_min,

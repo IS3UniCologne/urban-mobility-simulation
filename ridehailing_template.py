@@ -114,10 +114,7 @@ mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_bo
 
 # Initialize the mode choice config
 mc = ModeChoiceConfig(
-    mode_choice_strategy,
-    mode_choice_sub_boundary,
-    mode_choice_model_path,
-    path_to_model=None,
+    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
 )
 
 # Load the config to the global config
