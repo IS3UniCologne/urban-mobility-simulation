@@ -51,7 +51,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
         geo_env = GeodesicEnvironment.getInstance()
         Configuration.instance()
-        _, geometry = geo_env.get_hexagon(region)
+        geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
             if car.position.is_in_geometry(geometry):
