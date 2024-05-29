@@ -75,7 +75,8 @@ class DemandImporter:
 
         # First try to load cache
         cache_path = Path(
-            "data/demand/", f"{city}_weekday_{temporal_column}_{hex_start_column}.csv"
+            "data/demand/",
+            f"{city}_weekday_{temporal_column}_{hex_start_column}.parquet",
         )
 
         if cache_path.exists():
@@ -84,7 +85,7 @@ class DemandImporter:
                 f"Demand File already existing for selected resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
-            return pd.read_csv(cache_path)
+            return pd.read_parquet(cache_path)
 
         logging.debug(
             f"Generating demand data based on mobility trip data for resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.",
@@ -92,7 +93,7 @@ class DemandImporter:
         )
 
         # Read Data
-        trip_data = pd.read_csv(trip_data_path)
+        trip_data = pd.read_parquet(trip_data_path)
 
         ##################################
         #### First Calculate Arrival Times
@@ -264,11 +265,11 @@ class DemandImporter:
         """
 
         cache_path = Path(
-            "data/demand/", f"weekday_{temporal_column}_{hex_start_column}.csv"
+            "data/demand/", f"weekday_{temporal_column}_{hex_start_column}.parquet"
         )
 
         # Cache results
-        result.to_csv(cache_path, index=False)
+        result.parquet(cache_path, index=False)
 
         return result
 
