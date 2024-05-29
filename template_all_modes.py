@@ -819,7 +819,7 @@ def run_simulation(end_time, seed=4711, env=env):
 
     # env.process(public_operator._run())
 
-    # Use only if the configuration parameters stay unchanged to avoid reloading everytime
+    # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
     demand_factory.reset()
 
     env.process(demand_factory.generate_demand())
@@ -833,11 +833,11 @@ def run_simulation(end_time, seed=4711, env=env):
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
 
-sum_iterations = 3
-for i in range(sum_iterations):
-    env = simpy.Environment(start_time)
+# sum_iterations = 3
+# for i in range(sum_iterations):
+#     env = simpy.Environment(start_time)
 
-    run_simulation(end_time=end_time)
+#     run_simulation(end_time=end_time)
 
 
 ### Things to do while changing the mode: ####

@@ -75,23 +75,17 @@ class DemandImporter:
 
         # First try to load cache
         cache_path = Path(
-            "data/demand/", f"{city}_weekday_{temporal_column}_{hex_start_column}"
+            "data/demand/",
+            f"{city}_weekday_{temporal_column}_{hex_start_column}.parquet",
         )
 
-        extensions = ["parquet", "csv"]
-
-        for ext in extensions:
-            cache_path = cache_path.with_suffix(f".{ext}")
-            if cache_path.exists():
-                # Load cached data and return
-                logging.debug(
-                    f"Demand File already existing for selected resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.",
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
-                )
-                if ext == "parquet":
-                    return pd.read_parquet(cache_path)
-                else:
-                    return pd.read_csv(cache_path)
+        if cache_path.exists():
+            # Load cached data and return
+            logging.debug(
+                f"Demand File already existing for selected resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
+            return pd.read_parquet(cache_path)
 
         logging.debug(
             f"Generating demand data based on mobility trip data for resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.",
@@ -99,7 +93,7 @@ class DemandImporter:
         )
 
         # Read Data
-        trip_data = pd.read_csv(trip_data_path)
+        trip_data = pd.read_parquet(trip_data_path)
 
         ##################################
         #### First Calculate Arrival Times
@@ -275,7 +269,7 @@ class DemandImporter:
         )
 
         # Cache results
-        result.to_parquet(cache_path, index=False)
+        result.parquet(cache_path, index=False)
 
         return result
 
