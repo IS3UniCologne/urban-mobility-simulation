@@ -761,7 +761,7 @@ env.process(public_operator._run())
 demand_factory = DemandFactory(
     env, demand_profile, di, world, [], seed, mode="ride_hailing"
 )
-env.process(demand_factory.generate_demand())
+# env.process(demand_factory.generate_demand())
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -769,11 +769,11 @@ env.process(demand_factory.generate_demand())
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-env.run(until=end_time)
+# env.run(until=end_time)
 
-logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
 
 ### Things to do while changing the mode: ####
@@ -817,7 +817,7 @@ def run_simulation(end_time, seed=4711, env=env):
 
     # env.process(public_operator._run())
 
-    # Use only if the configuration parameters stay unchanged to avoid reloading everytime
+    # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
     demand_factory.reset()
 
     env.process(demand_factory.generate_demand())
@@ -831,11 +831,11 @@ def run_simulation(end_time, seed=4711, env=env):
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
 
-sum_iterations = 3
-for i in range(sum_iterations):
-    env = simpy.Environment(start_time)
+# sum_iterations = 3
+# for i in range(sum_iterations):
+#     env = simpy.Environment(start_time)
 
-    run_simulation(end_time=end_time)
+#     run_simulation(end_time=end_time)
 
 
 ### Things to do while changing the mode: ####

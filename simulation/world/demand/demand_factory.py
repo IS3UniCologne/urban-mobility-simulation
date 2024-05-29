@@ -218,10 +218,6 @@ class DemandFactory:
             except simpy.Interrupt:
                 break
 
-    def stop(self):
-        for demand_process in self._world.demand_processes:
-            demand_process.interrupt()
-
     def reset(self):
         # Terminate all ongoing demand processes
         self._world.stop_all_processes()
