@@ -793,7 +793,8 @@ def run_simulation(end_time, seed=4711, env=env):
     DemandFactory.counter = 0
     Vehicle.vehicle_id = 0
     PublicTransitVehicle.public_transit_vehicle_id = 0
-    Bus.bus_id = GeodesicEnvironment.getInstance().reset_random_generator(seed)
+    Bus.bus_id = 0
+    GeodesicEnvironment.getInstance().reset_random_generator(seed)
 
     # Inject Simulation Environment to Logger (such that we can log the env time)
     cf = SimulationContextFilter(filter_name="add_env", extra=env)
@@ -836,11 +837,3 @@ def run_simulation(end_time, seed=4711, env=env):
 #     env = simpy.Environment(start_time)
 
 #     run_simulation(end_time=end_time)
-
-
-### Things to do while changing the mode: ####
-
-# - Modify population factory (just comment out the other pop factories)
-# - To run RideHailing fleet comment out the running of the shared operator
-# - Switch to the correct payment engine
-# - Comment out all the operator modules from other fleets for the public operator

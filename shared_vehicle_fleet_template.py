@@ -429,9 +429,9 @@ search_engine["shared_vehicle"].register_fleet(mixed_fleet)
 # Store Tasks which are processed by service workers --> service workers pick up the vehicles and either relocate them or bring them to the charging stations
 task_queue = TaskQueue(env)
 
-# Spawn Service Workers
-for sw in range(global_config.shared_vehicle_operator_config.number_of_service_workers):
-    env.process(ServiceWorker(env, task_queue).run())
+# # Spawn Service Workers
+# for sw in range(global_config.shared_vehicle_operator_config.number_of_service_workers):
+#     env.process(ServiceWorker(env, task_queue).run())
 
 # Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
 relocation_scheduler = RelocationScheduler(
@@ -482,15 +482,60 @@ world = World.init(
 demand_factory = DemandFactory(
     env, demand_profile, di, world, [], seed, mode="shared_vehicle"
 )
-env.process(demand_factory.generate_demand())
+# env.process(demand_factory.generate_demand())
 
 # Start the operations of the shared operator
-env.process(shared_operator.timer())
-env.process(shared_operator.run_operations())
+# env.process(shared_operator.timer())
+# env.process(shared_operator.run_operations())
 
-logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-# Run the simulation until end time
-env.run(until=50)
+# # Run the simulation until end time
+# env.run(until=50)
 
-logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+
+
+# For multiple simulation runs
+def run_simulation(end_time, seed=4711, env=env):
+    # Before a new simulation run, reset everything
+    User.user_id = 0
+    DemandFactory.counter = 0
+    SharedCar.car_id = 0
+    SharedKickScooter.shared_kick_scooter_id = 0
+    SharedScooter.shared_scooter_id = 0
+    DemandFactory.counter = 0
+
+    # Inject Simulation Environment to Logger (such that we can log the env time)
+    cf = SimulationContextFilter(filter_name="add_env", extra=env)
+    edf = ExtraDefaultFilter(filter_name="add_default_value")
+    logger.addFilter(cf)
+    logger.addFilter(edf)
+
+    for sw in range(
+        global_config.shared_vehicle_operator_config.number_of_service_workers
+    ):
+        env.process(ServiceWorker(env, task_queue).run())
+
+    env.process(shared_operator.timer())
+    env.process(shared_operator.run_operations())
+
+    # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
+    demand_factory.reset()
+
+    env.process(demand_factory.generate_demand())
+
+    logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+
+    # Run simulation
+
+    env.run(until=end_time)
+
+    logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+
+
+# sum_iterations = 3
+# for i in range(sum_iterations):
+#     env = simpy.Environment(start_time)
+
+#     run_simulation(end_time=end_time)

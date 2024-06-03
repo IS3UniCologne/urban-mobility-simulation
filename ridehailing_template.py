@@ -47,6 +47,7 @@ from simulation.operator.operations_management.operations_ridehailing import (
 from simulation.operator.operations_management.rebalancing_scheduler_ridehailing import (
     RebalancingSchedulerRidehailing,
 )
+from simulation.operator.operations_management.service_worker import ServiceWorker
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
@@ -485,8 +486,8 @@ world = World.init(
 )
 
 # Start operations
-env.process(ops_ridehailing_0.timer())
-env.process(ops_ridehailing_0.run_operations())
+# env.process(ops_ridehailing_0.timer())
+# env.process(ops_ridehailing_0.run_operations())
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -500,7 +501,7 @@ env.process(ops_ridehailing_0.run_operations())
 demand_factory = DemandFactory(
     env, demand_profile, di, world, [], seed, mode="ride_hailing"
 )
-env.process(demand_factory.generate_demand())
+# env.process(demand_factory.generate_demand())
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -508,8 +509,49 @@ env.process(demand_factory.generate_demand())
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-env.run(until=50)
+# env.run(until=50)
 
-logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+
+
+# For multiple simulation runs
+def run_simulation(end_time, seed=4711, env=env):
+    # Before a new simulation run, reset everything
+    User.user_id = 0
+    DemandFactory.counter = 0
+
+    # Inject Simulation Environment to Logger (such that we can log the env time)
+    cf = SimulationContextFilter(filter_name="add_env", extra=env)
+    edf = ExtraDefaultFilter(filter_name="add_default_value")
+    logger.addFilter(cf)
+    logger.addFilter(edf)
+
+    for sw in range(
+        global_config.ridehailing_operator_config.number_of_service_workers
+    ):
+        env.process(ServiceWorker(env, task_queue_ridehailing).run())
+
+    env.process(ops_ridehailing_0.timer())
+    env.process(ops_ridehailing_0.run_operations())
+
+    # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
+    demand_factory.reset()
+
+    env.process(demand_factory.generate_demand())
+
+    logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+
+    # Run simulation
+
+    env.run(until=end_time)
+
+    logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+
+
+# sum_iterations = 3
+# for i in range(sum_iterations):
+#     env = simpy.Environment(start_time)
+
+#     run_simulation(end_time=end_time)
