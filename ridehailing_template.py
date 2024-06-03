@@ -76,6 +76,38 @@ parser.read(sys.argv[1])
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
+# Logging                                 #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Log Level
+log_level = parser.get("SETTINGS", "log_level")
+
+# Make it beautiful
+# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+)
+
+logger = logging.getLogger()
+logger.setLevel(log_level)
+
+# Block Logger of third party software
+logging.getLogger("fiona").setLevel(logging.WARNING)
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+)
+file_handler = logging.FileHandler("report.log")
+file_handler.setFormatter(formatter)
+file_handler.setLevel(log_level)
+
+# Add Custom Init Filters (which work without the ENV obj)
+cf = SimulationContextFilter(filter_name="add_env", extra=[])
+logger.addFilter(cf)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
 # Basic Configuration                     #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
@@ -258,6 +290,12 @@ global_config.add_population_config(pc)
 
 env = simpy.Environment(initial_time=0)
 
+# Inject Simulation Environment to Logger (such that we can log the env time)
+cf = SimulationContextFilter(filter_name="add_env", extra=env)
+edf = ExtraDefaultFilter(filter_name="add_default_value")
+logger.addFilter(cf)
+logger.addFilter(edf)
+
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
 population_factory = PopulationFactory(pop_prob_ridehailing, seed)
@@ -345,40 +383,6 @@ global_config.set_store_results(store_results)
 global_config.set_output_path(output_folder)
 global_config.set_transaction_file(transaction_file)
 global_config.set_fleet_state_file(fleet_state_file)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Logging                                 #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-# Log Level
-log_level = parser.get("SETTINGS", "log_level")
-
-# Make it beautiful
-# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-)
-
-logger = logging.getLogger()
-logger.setLevel(log_level)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-file_handler = logging.FileHandler("report.log")
-file_handler.setFormatter(formatter)
-file_handler.setLevel(log_level)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf = SimulationContextFilter(filter_name="add_env", extra=[])
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-logger.addFilter(cf)
-logger.addFilter(edf)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #

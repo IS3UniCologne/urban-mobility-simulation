@@ -1,3 +1,8 @@
+# ALARM!: This template is not able to fulfil the purpose of running several modes
+# simultaneously, since the user refactoring will have to enable several modes at the same time.
+# This can then be used as a starting point
+
+
 ### This is the template for a simulation with a ridehailing and shared mobility fleet. #####
 
 ##Imports
