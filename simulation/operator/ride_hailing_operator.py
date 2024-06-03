@@ -59,6 +59,7 @@ class RideHailingOperator(Operator):
         # Add Transaction to Log
         self._transactions.append(
             {
+                "vehicle_id": selected_transportation_alternative.vehicle.id,
                 "origin": selected_transportation_alternative.route.origin.get_hexagon()[
                     0
                 ],
@@ -70,6 +71,7 @@ class RideHailingOperator(Operator):
                 "price": selected_transportation_alternative.price,
                 "distance": selected_transportation_alternative.distance,
                 "duration": selected_transportation_alternative.duration,
+                "wait_time": transportation_task.actual_wait_time,
                 "energy_consumption": selected_transportation_alternative.energy_consumed,
                 "waiting_time": selected_transportation_alternative.waiting_time,
                 "pick_up_time": selected_transportation_alternative.pick_up_time,

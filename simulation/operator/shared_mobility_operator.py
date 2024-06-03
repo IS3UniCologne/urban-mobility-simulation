@@ -74,6 +74,7 @@ class SharedMobilityOperator(Operator):
         # Add Transaction to Log
         self._transactions.append(
             {
+                "vehicle_id": None,
                 "origin": transportation_task.origin.get_hexagon()[0],
                 "destination": transportation_task.destination.get_hexagon()[0],
                 "time_start": self._env.now,
@@ -82,6 +83,7 @@ class SharedMobilityOperator(Operator):
                 "distance": transportation_task.origin
                 >> transportation_task.destination,
                 "duration": 0.0,
+                "wait_time": transportation_task.actual_wait_time,
                 "energy_consumption": 0.0,
                 "selected_vehicle_mode": "None",
                 "state": "Missed",

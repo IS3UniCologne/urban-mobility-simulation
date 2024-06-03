@@ -453,7 +453,7 @@ env.run(until=50)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
-transactions = search_engine["shared_vehicle"].get_transactions()
+transactions = operator.get_transactions()
 transactions.to_csv("data/output/transactions.csv", index=False)
 
 metrics_factory = MetricsFactory(transactions)
