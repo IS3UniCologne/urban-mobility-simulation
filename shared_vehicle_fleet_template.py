@@ -11,13 +11,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from simulation.vehicle.shared_bike import SharedBike
-from simulation.vehicle.shared_vehicle import SharedVehicle
-
-# Custom module imports
-from utils import load_environment
-from tracking.tracking import Tracking
-
 # Third-party library imports
 import simpy
 
@@ -44,6 +37,10 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
 )
 
+# Custom module imports
+# Import metrics
+from simulation.metrics.metrics_factory import MetricsFactory
+
 # Import operator related modules
 from simulation.operator.fleet_factory import (
     generate_fleet_config,
@@ -59,11 +56,13 @@ from simulation.operator.shared_vehicle_allocation_engine import (
     SharedVehicleAllocationEngine,
 )
 from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
+from simulation.vehicle.shared_bike import SharedBike
 
 # Import vehicle types and vehicle choice options
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
+from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
     OnlyCarVehicleChoiceBehavior,
 )
@@ -71,11 +70,10 @@ from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
+from tracking.tracking import Tracking
 
 # Custom module imports
-
-# Import metrics
-from simulation.metrics import MetricsFactory
+from utils import load_environment
 
 # Change working directory to path of this file
 working_dir = Path(__file__).parent
@@ -138,10 +136,7 @@ mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
 
 mc = ModeChoiceConfig(
-    mode_choice_strategy,
-    mode_choice_sub_boundary,
-    mode_choice_model_path,
-    path_to_model=None,
+    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
 )
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -505,12 +500,12 @@ env.process(shared_operator.run_operations())
 logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
 # Run the simulation until end time
-env.run(until=1440)
+env.run(until=50)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
 transactions = search_engine["shared_vehicle"].get_transactions()
-transactions.to_excel("./transactions.xlsx")
+transactions.to_csv("data/output/transactions.csv", index=False)
 
 metrics_factory = MetricsFactory(transactions)
 
