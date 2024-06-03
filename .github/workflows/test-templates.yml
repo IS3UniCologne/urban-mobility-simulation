@@ -1,0 +1,56 @@
+name: Test Templates Running
+
+on:
+    pull_request:
+    push:
+        branches: [main, develop]
+
+jobs:
+    main:
+        runs-on: macos-latest
+        steps:
+            #----------------------------------------------
+            #       check-out repo and set-up conda
+            #----------------------------------------------
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Cache conda
+              uses: actions/cache@v4
+              env:
+                # Increase this value to reset cache if environment.yml has not changed
+                CACHE_NUMBER: 0
+              with:
+                path: ~/conda_pkgs_dir
+                key:
+                  ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
+                  hashFiles('resources/environment/environment_torch_mac.yml') }}
+            - name: Cache pip
+              uses: actions/cache@v4
+              with:
+                path: ~/.cache/pip
+                key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+                restore-keys: |
+                    ${{ runner.os }}-pip-
+            - name: Set up conda
+              uses: conda-incubator/setup-miniconda@v3
+              with:
+                  auto-update-conda: true
+                  python-version: 3.9
+                  channels: conda-forge,pytorch,defaults
+                  channel-priority: strict
+                  conda-solver: libmamba
+                  auto-activate-base: false
+                  environment-file: resources/environment/environment_torch_mac.yml
+                  activate-environment: urban-mobility-simulation
+                  use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+
+            #----------------------------------------------
+            #       run tests
+            #----------------------------------------------
+            - name: Test running templates - Shared Vehicles
+              run: |
+                  python shared_vehicle_fleet_template.py resources/configurations/test-shared-vehicles.ini
+
+            - name: Test running templates - Ride Hailing
+              run: |
+                  python ride_hailing_fleet_template.py resources/configurations/test-ride-hailing.ini
