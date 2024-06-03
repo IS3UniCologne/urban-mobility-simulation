@@ -8,6 +8,9 @@ on:
 jobs:
     main:
         runs-on: macos-latest
+        defaults:
+            run:
+              shell: bash -el {0}
         steps:
             #----------------------------------------------
             #       check-out repo and set-up conda
@@ -53,4 +56,5 @@ jobs:
 
             - name: Test running templates - Ride Hailing
               run: |
+                  conda activate urban-mobility-simulation
                   python ride_hailing_fleet_template.py resources/configurations/test-ride-hailing.ini
