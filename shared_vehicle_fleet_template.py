@@ -449,12 +449,12 @@ env.process(operations.execute())
 logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
 # Run the simulation until end time
-env.run(until=1440)
+env.run(until=50)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
 transactions = search_engine["shared_vehicle"].get_transactions()
-transactions.to_excel("./transactions.xlsx")
+transactions.to_csv("data/output/transactions.csv", index=False)
 
 metrics_factory = MetricsFactory(transactions)
 
