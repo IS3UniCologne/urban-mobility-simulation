@@ -37,6 +37,10 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
 )
 
+# Custom module imports
+# Import metrics
+from simulation.metrics.metrics_factory import MetricsFactory
+
 # Import operator related modules
 from simulation.operator.fleet_factory import (
     generate_fleet_config,
@@ -52,11 +56,13 @@ from simulation.operator.shared_vehicle_allocation_engine import (
     SharedVehicleAllocationEngine,
 )
 from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
+from simulation.vehicle.shared_bike import SharedBike
 
 # Import vehicle types and vehicle choice options
 from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
+from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
     OnlyCarVehicleChoiceBehavior,
 )
@@ -130,10 +136,7 @@ mode_choice_strategy = parser.get("MODE_CHOICE_MODEL", "mode_choice_strategy")
 mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_boundary")
 
 mc = ModeChoiceConfig(
-    mode_choice_strategy,
-    mode_choice_sub_boundary,
-    mode_choice_model_path,
-    path_to_model=None,
+    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
 )
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -162,12 +165,15 @@ for idx, vehicle_type in enumerate(
     daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
     if vehicle_type == "SHARED_CAR":
         initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
+
     if vehicle_type != "SHARED_BIKE":
         EV_relative_energy_consumption = parser.getfloat(
             vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
         )
         cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
         charging_cost_per_kWh = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
+
+    co2_per_km = parser.getfloat(vehicle_type, "KG_CO2_PER_KM")
 
     vc = SharedVehicleConfig(
         price_per_min,
@@ -181,6 +187,7 @@ for idx, vehicle_type in enumerate(
         EV_relative_energy_consumption,
         cost_per_km,
         charging_cost_per_kWh,
+        co2_per_km,
     )
     global_config.add_shared_vehicle_config(vehicle_type_classes[idx], vc)
 
@@ -335,9 +342,11 @@ GeodesicEnvironment.getInstance().reset_random_generator(4711)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
+SharedVehicle.shared_vehicle_id = 0
 SharedCar.car_id = 0
 SharedKickScooter.shared_kick_scooter_id = 0
 SharedScooter.shared_scooter_id = 0
+SharedBike.shared_bike_id = 0
 User.user_id = 0
 DemandFactory.counter = 0
 
@@ -532,6 +541,27 @@ def run_simulation(end_time, seed=4711, env=env):
     env.run(until=end_time)
 
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+
+
+transactions = search_engine["shared_vehicle"].get_transactions()
+transactions.to_csv("data/output/transactions.csv", index=False)
+
+metrics_factory = MetricsFactory(transactions)
+
+num_vehicles = {
+    "SharedBike": n_bikes,
+    "SharedCar": n_cars,
+    "SharedKickScooter": n_kick_scooters,
+    "SharedScooter": n_scooters,
+}
+
+general_metrics = metrics_factory.general_metrics
+
+metrics_factory.print_simulation_summary(
+    num_vehicles,
+    global_config.get_cost_per_vehicle_km(),
+    global_config.get_co2_per_vehicle_km(),
+)
 
 
 # sum_iterations = 3

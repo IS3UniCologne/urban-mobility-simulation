@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import simpy
 
+from simulation.vehicle.walking import Walking
 import simulation.world.world as world
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from tracking.tracking_interface import TrackingInterface
@@ -153,6 +154,8 @@ class User(Agent, DriverInterface):
         """
 
         while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
+            start_ordering_time = self._env.now
+
             ## Retrieve available transportation alternatives
             available_transportation_alternatives = yield self._env.process(
                 self.search_for_alternatives()
@@ -170,25 +173,49 @@ class User(Agent, DriverInterface):
                 yield self._env.process(self.withdraw_request())
                 break
 
-            # Vehicle Found and allocated?
-            vehicle_allocation = yield self._env.process(
-                self.allocate_vehicle(selected_transportation_alternative)
-            )
-
-            # If not allocated, retry.
-            if not vehicle_allocation:
+            if isinstance(selected_transportation_alternative.vehicle, Walking):
                 logging.debug(
-                    " Vehicle allocation was not successful. Retrying with another vehicle.",
+                    f"User {self.id} chooses to walk to destination",
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
+                yield self._env.process(
+                    self.walk(
+                        self.position,
+                        selected_transportation_alternative.route.destination,
+                    )
+                )
 
-                # Reset Events (so far) and try again
-                self._transportation_alternatives_received = self._env.event()
-                self._transportation_alternatives_selected = self._env.event()
-                self._transportation_alternatives_not_found = self._env.event()
-                self._vehicle_allocated = self._env.event()
+                logging.debug(
+                    f"User {self.id} has reached walking destination",
+                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                )
+            else:
+                # Vehicle Found and allocated?
+                vehicle_allocation = yield self._env.process(
+                    self.allocate_vehicle(selected_transportation_alternative)
+                )
 
-                continue  # retry again until vehicle supply is depleted
+                # If not allocated, retry.
+                if not vehicle_allocation:
+                    logging.debug(
+                        " Vehicle allocation was not successful. Retrying with another vehicle.",
+                        extra={"clazz": self.__class__.__name__, "oid": self._id},
+                    )
+
+                    # Reset Events (so far) and try again
+                    self._transportation_alternatives_received = self._env.event()
+                    self._transportation_alternatives_selected = self._env.event()
+                    self._transportation_alternatives_not_found = self._env.event()
+                    self._vehicle_allocated = self._env.event()
+
+                    continue  # retry again until vehicle supply is depleted
+
+            start_driving_time = self._env.now
+
+            wait_time = start_driving_time - start_ordering_time
+
+            self._transport_task.actual_wait_time = wait_time
+
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
             yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
@@ -238,6 +265,16 @@ class User(Agent, DriverInterface):
         for (
             alternative
         ) in available_transportation_alternatives.transportation_alternatives:
+            if (
+                isinstance(alternative.vehicle, Walking)
+                and self._transport_task.viable_vehicle_modes[
+                    alternative.vehicle.__class__.__name__
+                ]
+            ):
+                filtered_list.append(
+                    (0, alternative.price, alternative.convenience, alternative)
+                )
+                continue
             distance_to_vehicle = self.position >> alternative.vehicle.position
             if self._transport_task.viable_vehicle_modes[
                 alternative.vehicle.__class__.__name__
