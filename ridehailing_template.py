@@ -43,14 +43,17 @@ from simulation.operator.fleet_factory import (
     generate_mixed_ride_hailing_fleet,
     generate_ridehailing_fleet_config,
 )
-from simulation.operator.operations_management.ridehailing_charging_operations import (
-    RideHailingChargingOperations,
+from simulation.operator.operations_management.operations_ridehailing import (
+    OperationsRidehailing,
 )
+from simulation.operator.operations_management.rebalancing_scheduler_ridehailing import (
+    RebalancingSchedulerRidehailing,
+)
+from simulation.operator.operations_management.service_worker import ServiceWorker
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
 )
-from simulation.operator.ride_hailing_operator import RideHailingOperator
 from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 
 # Import vehicle types and vehicle choice options
@@ -445,6 +448,7 @@ search_engine = {
     "ride_hailing_0": RideHailingSearchEngine(env),
     "ride_hailing_1": RideHailingSearchEngine(env),
 }
+payment_engine = search_engine
 
 vehicle_assignment_engine = {
     "ride_hailing_0": RideHailingAllocationEngine(env),
@@ -478,57 +482,37 @@ ride_hailing_fleet_1 = generate_mixed_ride_hailing_fleet(
 
 # Add the fleet to the search engine
 search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
-search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
-
-# Initialize fleet operations
-
-ridehailing_operations_0 = RideHailingChargingOperations(
-    env=env,
-    distance_matrix=distance_matrix,
-    time_between_operations=global_config.ridehailing_operator_config.operations_start,
-    operation_duration=global_config.ridehailing_operator_config.operations_duration,
-    available_modes=available_vehicle_modes_ridehailing,
-    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
-    state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-)
-
-ridehailing_operations_1 = RideHailingChargingOperations(
-    env=env,
-    distance_matrix=distance_matrix,
-    time_between_operations=global_config.ridehailing_operator_config.operations_start,
-    operation_duration=global_config.ridehailing_operator_config.operations_duration,
-    available_modes=available_vehicle_modes_ridehailing,
-    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
-    state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-)
-
-# Initialize operators
-
-ridehailing_operator_0 = RideHailingOperator(
-    env=env,
-    fleet=ride_hailing_fleet_0,
-    charging_infrastructure=charging_infrastructure,
-    operations=ridehailing_operations_0,
-    search_engine=search_engine["ride_hailing_0"],
-    allocation_engine=vehicle_assignment_engine["ride_hailing_0"],
-)
-
-ridehailing_operator_1 = RideHailingOperator(
-    env=env,
-    fleet=ride_hailing_fleet_1,
-    charging_infrastructure=charging_infrastructure,
-    operations=ridehailing_operations_1,
-    search_engine=search_engine["ride_hailing_1"],
-    allocation_engine=vehicle_assignment_engine["ride_hailing_1"],
-)
-
-payment_engine = {
-    "ride_hailing_0": ridehailing_operator_0,
-    "ride_hailing_1": ridehailing_operator_1,
-}
 
 # Initialize task queues
 task_queue_ridehailing = TaskQueue(env)
+
+# Rebalancing scheduler creates the charging schedule and relocations vehicle in the ridehailing fleet
+rs_ridehailing_0 = RebalancingSchedulerRidehailing(
+    distance_matrix,
+    ride_hailing_fleet_0,
+    global_config.ridehailing_operator_config.available_modes,
+    global_config.ridehailing_operator_config.available_modes_supply,
+    global_config.ridehailing_operator_config.number_of_service_workers,
+    global_config.ridehailing_operator_config.base_regions,
+    global_config.ridehailing_operator_config.base_capacity,
+    global_config.ridehailing_operator_config.recharge_threshold,
+    charging_infrastructure._chargers,
+)
+
+# Ridehailing operator manages all operations belonging to the ridehailing fleet
+ops_ridehailing_0 = OperationsRidehailing(
+    env,
+    ride_hailing_fleet_0,
+    global_config.ridehailing_operator_config.operations_start,
+    global_config.ridehailing_operator_config.operations_duration,
+    rs_ridehailing_0,
+    payment_engine["ride_hailing_0"],
+    global_config.ridehailing_operator_config.available_modes,
+    global_config.ridehailing_operator_config.available_modes_supply,
+    global_config.ridehailing_operator_config.recharge_threshold,
+    task_queue_ridehailing,
+    charging_infrastructure._chargers,
+)
 
 # Initialize World
 world = World.init(
@@ -542,6 +526,11 @@ world = World.init(
     reset=True,
 )
 
+# Start operations
+# env.process(ops_ridehailing_0.timer())
+# env.process(ops_ridehailing_0.run_operations())
+
+
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
 # Start Spawn Demand Processes.           #
@@ -553,7 +542,7 @@ world = World.init(
 demand_factory = DemandFactory(
     env, demand_profile, di, world, [], seed, mode="ride_hailing"
 )
-env.process(demand_factory.generate_demand())
+# env.process(demand_factory.generate_demand())
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -561,8 +550,49 @@ env.process(demand_factory.generate_demand())
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-env.run(until=end_time)
+# env.run(until=50)
 
-logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+
+
+# For multiple simulation runs
+def run_simulation(end_time, seed=4711, env=env):
+    # Before a new simulation run, reset everything
+    User.user_id = 0
+    DemandFactory.counter = 0
+
+    # Inject Simulation Environment to Logger (such that we can log the env time)
+    cf = SimulationContextFilter(filter_name="add_env", extra=env)
+    edf = ExtraDefaultFilter(filter_name="add_default_value")
+    logger.addFilter(cf)
+    logger.addFilter(edf)
+
+    for sw in range(
+        global_config.ridehailing_operator_config.number_of_service_workers
+    ):
+        env.process(ServiceWorker(env, task_queue_ridehailing).run())
+
+    env.process(ops_ridehailing_0.timer())
+    env.process(ops_ridehailing_0.run_operations())
+
+    # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
+    demand_factory.reset()
+
+    env.process(demand_factory.generate_demand())
+
+    logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+
+    # Run simulation
+
+    env.run(until=end_time)
+
+    logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+
+
+# sum_iterations = 3
+# for i in range(sum_iterations):
+#     env = simpy.Environment(start_time)
+
+#     run_simulation(end_time=end_time)

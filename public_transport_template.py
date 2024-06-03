@@ -1,53 +1,53 @@
 ##Imports
 # Standard library imports
+import logging
 import os
 import sys
-from pathlib import Path
 from configparser import ConfigParser
-import logging
+from pathlib import Path
 
 # Third-party library imports
 import simpy
 
-# Custom module imports
-from utils import load_environment
-from tracking.tracking import Tracking
-
 # Imports world related modules
-from simulation.agent.user import (
-    User,
-)  # must come before DemandFactory, otherwise circular imports
-from simulation.world.world import World
-from simulation.world.demand.demand_factory import DemandFactory
-from simulation.world.demand.demand_importer import DemandImporter
-from simulation.infrastructure.helper.timetable import Timetable
-from simulation.world.population.PopulationFactory import PopulationFactory
+from simulation.agent.user import User
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import (
     Configuration,
-    UserConfig,
     TransitOperatorConfig,
+    UserConfig,
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
-
-# Import vehicle types and vehicle choice options
-from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
-from simulation.vehicle.vehicle import Vehicle
-from simulation.vehicle.public_transit_bus import Bus
-from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import (
-    PublicTransitVehicleChoiceBehavior,
-)
 
 # Import infrastructure related modules
 from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
 )
-from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.infrastructure.helper.timetable import Timetable
 
 # Import operator related modules
 from simulation.operator.public_transit_operator import PublicTransitOperator
+from simulation.vehicle.public_transit_bus import Bus
+
+# Import vehicle types and vehicle choice options
+from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
+from simulation.vehicle.vehicle import Vehicle
+from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import (
+    PublicTransitVehicleChoiceBehavior,
+)
+from simulation.world.demand.demand_factory import DemandFactory
+from simulation.world.demand.demand_importer import DemandImporter
+from simulation.world.population.PopulationFactory import PopulationFactory
+
+# must come before DemandFactory, otherwise circular imports
+from simulation.world.world import World
+from tracking.tracking import Tracking
+
+# Custom module imports
+from utils import load_environment
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -101,7 +101,7 @@ price_sensitive_pop_prob = [float(x) for x in price_sensitive_pop_prob]
 
 # Operator Config
 transit_planning_lookahead = parser.get("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD")
-transit_max_busses = parser.get("TRANSIT_OPERATOR", "MAX_BUSSES")
+transit_max_busses = parser.getint("TRANSIT_OPERATOR", "MAX_BUSSES")
 
 # Create transit operator configuration
 transit_operator_config = TransitOperatorConfig(
@@ -137,7 +137,7 @@ env = simpy.Environment(initial_time=0)
 population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
 
 # Load Spatial Environment
-load_environment()
+load_environment(city)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -290,7 +290,7 @@ demand_factory = DemandFactory(
     env, demand_profile, di, world, demand_modifier_paths, seed, mode="public_transport"
 )
 
-env.process(demand_factory.generate_demand())
+# env.process(demand_factory.generate_demand())
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -298,10 +298,48 @@ env.process(demand_factory.generate_demand())
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-env.process(operator._run())
+# env.process(operator._run())
 
-logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-env.run(until=end_time)
+# env.run(until=end_time)
 
-logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+
+
+def run_simulation(end_time, seed=4711, env=env):
+    # Before a new simulation run, reset everything
+    User.user_id = 0
+    DemandFactory.counter = 0
+    Vehicle.vehicle_id = 0
+    PublicTransitVehicle.public_transit_vehicle_id = 0
+    Bus.bus_id = 0
+    GeodesicEnvironment.getInstance().reset_random_generator(seed)
+
+    # Inject Simulation Environment to Logger (such that we can log the env time)
+    cf = SimulationContextFilter(filter_name="add_env", extra=env)
+    edf = ExtraDefaultFilter(filter_name="add_default_value")
+    logger.addFilter(cf)
+    logger.addFilter(edf)
+
+    env.process(operator._run())
+
+    # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
+    demand_factory.reset()
+
+    env.process(demand_factory.generate_demand())
+
+    logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+
+    # Run simulation
+
+    env.run(until=end_time)
+
+    logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+
+
+# sum_iterations = 3
+# for i in range(sum_iterations):
+#     env = simpy.Environment(start_time)
+
+#     run_simulation(end_time=end_time)
