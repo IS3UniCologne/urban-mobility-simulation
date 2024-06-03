@@ -394,16 +394,19 @@ mixed_fleet = generate_mixed_fleet(env, shared_vehicle_fleet_config)
 search_engine.register_fleet(mixed_fleet)
 
 
-operations = IntegratedSharedMobilityOperations(
-    env=env,
-    time_between_operations=global_config.shared_vehicle_operator_config.operations_start,
-    operation_duration=global_config.shared_vehicle_operator_config.operations_duration,
-    distance_matrix=distance_matrix,
-    ordered_available_vehicle_modes=available_modes,
-    ordered_max_vehicle_supply=available_modes_supply,
-    state_of_charge_threshold=global_config.shared_vehicle_operator_config.recharge_threshold,
-    base_regions=global_config.shared_vehicle_operator_config.base_regions,
-    base_capacity=global_config.shared_vehicle_operator_config.base_capacity,
+# # Spawn Service Workers
+# for sw in range(global_config.shared_vehicle_operator_config.number_of_service_workers):
+#     env.process(ServiceWorker(env, task_queue).run())
+
+# Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
+relocation_scheduler = RelocationScheduler(
+    distance_matrix,
+    mixed_fleet,
+    global_config.shared_vehicle_operator_config.available_modes,
+    global_config.shared_vehicle_operator_config.available_modes_supply,
+    global_config.shared_vehicle_operator_config.number_of_service_workers,
+    global_config.shared_vehicle_operator_config.base_regions,
+    global_config.shared_vehicle_operator_config.base_capacity,
 )
 
 # Init operator
@@ -439,6 +442,18 @@ world = World.init(
 demand_factory = DemandFactory(
     env, demand_profile, di, world, [], seed, mode="shared_vehicle"
 )
+# env.process(demand_factory.generate_demand())
+
+# Start the operations of the shared operator
+# env.process(shared_operator.timer())
+# env.process(shared_operator.run_operations())
+
+# logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+
+# # Run the simulation until end time
+# env.run(until=50)
+
+# logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
 
 # For multiple simulation runs
@@ -457,7 +472,13 @@ def run_simulation(end_time, seed=4711, env=env):
     logger.addFilter(cf)
     logger.addFilter(edf)
 
-    env.process(operations.execute())
+    for sw in range(
+        global_config.shared_vehicle_operator_config.number_of_service_workers
+    ):
+        env.process(ServiceWorker(env, task_queue).run())
+
+    env.process(shared_operator.timer())
+    env.process(shared_operator.run_operations())
 
     # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
     demand_factory.reset()
@@ -466,34 +487,15 @@ def run_simulation(end_time, seed=4711, env=env):
 
     logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-    # Run the simulation until end time
+    # Run simulation
+
     env.run(until=end_time)
 
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
 
-transactions = operator.get_transactions()
-transactions.to_csv("data/output/transactions.csv", index=False)
+# sum_iterations = 3
+# for i in range(sum_iterations):
+#     env = simpy.Environment(start_time)
 
-metrics_factory = MetricsFactory(transactions)
-
-num_vehicles = {
-    "SharedBike": n_bikes,
-    "SharedCar": n_cars,
-    "SharedKickScooter": n_kick_scooters,
-    "SharedScooter": n_scooters,
-}
-
-general_metrics = metrics_factory.general_metrics
-
-metrics_factory.print_simulation_summary(
-    num_vehicles,
-    global_config.get_cost_per_vehicle_km(),
-    global_config.get_co2_per_vehicle_km(),
-)
-
-sum_iterations = 3
-for i in range(sum_iterations):
-    env = simpy.Environment(start_time)
-
-    run_simulation(end_time=end_time)
+#     run_simulation(end_time=end_time)

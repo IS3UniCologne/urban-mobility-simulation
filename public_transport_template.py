@@ -423,7 +423,6 @@ demand_factory = DemandFactory(
     env, demand_profile, di, world, demand_modifier_paths, seed, mode="public_transport"
 )
 
-
 # env.process(demand_factory.generate_demand())
 
 # # # # # # # # # # # # # # # # # # # # # #
