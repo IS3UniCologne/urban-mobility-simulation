@@ -36,8 +36,9 @@ jobs:
                     ${{ runner.os }}-pip-
             - name: Set up conda
               uses: conda-incubator/setup-miniconda@v3
+              env:
+                CONDA: /home/jmuires/miniconda3
               with:
-                  auto-update-conda: true
                   python-version: 3.9
                   channels: conda-forge,pytorch,defaults
                   channel-priority: strict
