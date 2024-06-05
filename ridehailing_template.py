@@ -117,7 +117,6 @@ mc = ModeChoiceConfig(
     mode_choice_strategy,
     mode_choice_sub_boundary,
     mode_choice_model_path,
-    path_to_model=None,
 )
 
 # Load the config to the global config
