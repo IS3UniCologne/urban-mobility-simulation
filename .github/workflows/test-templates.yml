@@ -39,6 +39,7 @@ jobs:
               env:
                 CONDA: /home/jmuires/miniconda3
               with:
+                  remove-profiles: false
                   python-version: 3.9
                   channels: conda-forge,pytorch,defaults
                   channel-priority: strict
