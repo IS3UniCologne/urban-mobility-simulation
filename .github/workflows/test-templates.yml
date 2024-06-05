@@ -55,6 +55,8 @@ jobs:
             - name: Test CWD
               run: |
                   python -c "import os; print(os.getcwd())"
+            - name: Find files in Tree
+              run: find data
             - name: Test running templates - Shared Vehicles
               run: |
                   python shared_vehicle_fleet_template.py resources/configurations/test-shared-vehicles.ini
