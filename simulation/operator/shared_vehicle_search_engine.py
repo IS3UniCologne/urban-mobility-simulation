@@ -1,6 +1,3 @@
-import logging
-
-from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
@@ -8,16 +5,12 @@ from simulation.operator.data_transfer_object.transportation_alternative import 
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
 )
-from simulation.operator.interface.fleet_interface import FleetInterface
-from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.tasks.transport_task import TransportTask
 from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 
-class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
+class SharedVehicleSearchEngine(SearchEngineInterface):
     def __init__(self, env):
-        PaymentInterface.__init__(self)
         self._env = env
         self._fleet = None
 
@@ -34,7 +27,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
         hexagon_origin, _ = vehicle_search_task.agent_position.get_hexagon()
 
         (cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area) = (
-            self.fleet.get_available_vehicles(hexagon_origin)
+            self._fleet.get_available_vehicles(hexagon_origin)
         )
 
         origin = vehicle_search_task.transport_task.origin
@@ -111,105 +104,3 @@ class SharedVehicleSearchEngine(SearchEngineInterface, PaymentInterface):
             browser.add_transportation_alternative(transportation_alternative)
 
         return browser
-
-    def pay_for_fulfilled_transportation_task(
-        self,
-        user,
-        transportation_task: TransportTask,
-        selected_transportation_alternative: TransportationAlternative,
-    ):
-        payment = selected_transportation_alternative.price
-        self.increase_total_revenue(payment)
-
-        # Add Transaction to Log
-        self._transactions.append(
-            {
-                "vehicle_id": selected_transportation_alternative.vehicle.id,
-                "origin": selected_transportation_alternative.route.origin.get_hexagon()[
-                    0
-                ],
-                "destination": selected_transportation_alternative.route.destination.get_hexagon()[
-                    0
-                ],
-                "time_start": transportation_task.time,
-                "time_end": self._env.now,
-                "price": selected_transportation_alternative.price,
-                "distance": selected_transportation_alternative.distance,
-                "duration": selected_transportation_alternative.duration,
-                "wait_time": transportation_task.actual_wait_time,
-                "energy_consumption": selected_transportation_alternative.energy_consumed,
-                "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__,
-                "state": "Fulfilled",
-                **transportation_task.viable_vehicle_modes,
-            }
-        )
-
-        logging.info(
-            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue} for vehicle {selected_transportation_alternative.vehicle.id}.",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )
-
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask):
-        # Get available vehicle types
-        vehicle_types = Configuration.instance().get_available_shared_vehicle_types()
-
-        # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
-        # We count the lost revenue for the "cheapest" mode
-        for vehicle_type in vehicle_types:
-            if (
-                vehicle_type in transportation_task.viable_vehicle_modes
-                and transportation_task.viable_vehicle_modes[vehicle_type] == 1
-            ):
-                distance = transportation_task.origin >> transportation_task.destination
-                velocity = (
-                    Configuration.instance()
-                    .get_shared_vehicle_config(vehicle_type)
-                    .velocity
-                )
-                price_per_min = (
-                    Configuration.instance()
-                    .get_shared_vehicle_config(vehicle_type)
-                    .price_per_min
-                )
-                missed_trip_cost = distance / velocity * price_per_min
-
-                if vehicle_type == "SharedKickScooter":
-                    missed_trip_cost += 1.0  # Unlock Fee
-
-        self.increase_total_missed_trips(missed_trip_cost)
-
-        # Add Transaction to Log
-        self._transactions.append(
-            {
-                "vehicle_id": "None",
-                "origin": transportation_task.origin.get_hexagon()[0],
-                "destination": transportation_task.destination.get_hexagon()[0],
-                "time_start": self._env.now,
-                "time_end": self._env.now,
-                "price": 0.0,
-                "distance": transportation_task.origin
-                >> transportation_task.destination,
-                "duration": 0.0,
-                "wait_time": 0.0,
-                "energy_consumption": 0.0,
-                "selected_vehicle_mode": "None",
-                "state": "Missed",
-                **transportation_task.viable_vehicle_modes,
-            }
-        )
-
-        logging.info(
-            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )
-
-    def register_fleet(self, fleet: FleetInterface):
-        self._fleet = fleet
-
-    @property
-    def fleet(self):
-        if self._fleet:
-            return self._fleet
-        raise Exception(
-            "Fleet was not registred. Inject fleet instance to search engine using register_fleet"
-        )

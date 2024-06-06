@@ -12,6 +12,8 @@ import pandas as pd
 # Third-party library imports
 import simpy
 
+import utils
+
 # Imports world related modules
 from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -41,16 +43,14 @@ from simulation.operator.fleet_factory import (
     generate_mixed_ride_hailing_fleet,
     generate_ridehailing_fleet_config,
 )
-from simulation.operator.operations_management.operations_ridehailing import (
-    OperationsRidehailing,
-)
-from simulation.operator.operations_management.rebalancing_scheduler_ridehailing import (
-    RebalancingSchedulerRidehailing,
+from simulation.operator.operations_management.ridehailing_charging_operations import (
+    RideHailingChargingOperations,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
 )
+from simulation.operator.ride_hailing_operator import RideHailingOperator
 from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 
 # Import vehicle types and vehicle choice options
@@ -73,6 +73,38 @@ os.chdir(working_dir)
 # Read args
 parser = ConfigParser()
 parser.read(sys.argv[1])
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Logging                                 #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Log Level
+log_level = parser.get("SETTINGS", "log_level")
+
+# Make it beautiful
+# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+)
+
+logger = logging.getLogger()
+logger.setLevel(log_level)
+
+# Block Logger of third party software
+logging.getLogger("fiona").setLevel(logging.WARNING)
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+)
+file_handler = logging.FileHandler("report.log")
+file_handler.setFormatter(formatter)
+file_handler.setLevel(log_level)
+
+# Add Custom Init Filters (which work without the ENV obj)
+cf = SimulationContextFilter(filter_name="add_env", extra=[])
+logger.addFilter(cf)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -120,6 +152,7 @@ mc = ModeChoiceConfig(
 # Load the config to the global config
 global_config.add_mode_choice_config(mc)
 
+
 if mode_choice_strategy == "substitution":
     vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
         ["AutonomousCar", "RideHailingCar"]
@@ -149,8 +182,9 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
     velocity = parser.getfloat(vehicle_type, "VELOCITY")
     max_available_seats = parser.getint(vehicle_type, "MAX_AVAILABLE_SEATS")
     initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
-    charging_cost_per_km = parser.getfloat(vehicle_type, "CHARGING_COSTS_PER_KM")
+    charging_cost_per_kwh = parser.getfloat(vehicle_type, "CHARGING_COST_PER_KWH")
     cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
+    daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
     EV_relative_energy_consumption = parser.getfloat(
         vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
     )
@@ -162,16 +196,17 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
         velocity,
         max_available_seats,
         initial_SoC,
-        charging_cost_per_km,
+        charging_cost_per_kwh,
         cost_per_km,
+        daily_total_cost,
         EV_relative_energy_consumption,
     )
     global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
 
 # Number of ridehailing cars in the fleet
-n_ridehailing_cars = parser.getint("RIDE_HAILING", "n_ridehailing_cars")
+n_ridehailing_cars = parser.getint("RIDE_HAILING", "N_RIDEHAILING_CARS")
 # Number of autonomous cars in the fleet
-n_autonomous_cars = parser.getint("RIDE_HAILING", "n_autonomous_cars")
+n_autonomous_cars = parser.getint("RIDE_HAILING", "N_AUTONOMOUS_CARS")
 # Not sure what this is for
 allocation = parser.get("RIDE_HAILING", "ALLOCATION")
 # A score that represents how much users trust autonomous vehicles. Not relevant for every simulation
@@ -196,23 +231,6 @@ recharge_threshold = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").s
 )
 recharge_threshold = [float(x) / 100 for x in recharge_threshold]
 
-charging_station_power = parser.getfloat(
-    "RIDE_HAILING_OPERATOR", "CHARGING_STATION_POWER"
-)  ### Maybe this should belong to charging infrastructure?
-# Service workers relocate the vehicles and bring them to charging stations
-number_of_service_workers = parser.getint(
-    "RIDE_HAILING_OPERATOR", "NUMBER_OF_SERVICE_WORKER"
-)
-# Base regions are city parts in which these service workers operate
-number_of_base_regions = parser.getint(
-    "RIDE_HAILING_OPERATOR", "NUMBER_OF_BASE_REGIONS"
-)
-# Base regions are defined as hexagons in the city
-base_regions = parser.get("RIDE_HAILING_OPERATOR", "BASE_REGIONS")
-base_regions = base_regions.split(",")[:number_of_base_regions]
-
-# Base capacity is the number of charging stations in the charging hub
-base_capacity = parser.getint("RIDE_HAILING_OPERATOR", "BASE_CAPACITY")
 operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
 vehicle_relocation_velocity = parser.getint(
@@ -225,24 +243,20 @@ drivers_availability = [
     round(float(x) * n_ridehailing_cars * (1 - AV_penetration))
     for x in drivers_availability
 ]
-available_modes = parser.get("RIDE_HAILING", "available_vehicle_modes_ridehailing")
+available_modes = parser.get("RIDE_HAILING", "AVAILABLE_VEHICLE_MODES_RIDEHAILING")
 available_modes = available_modes.split(",")
 available_modes_supply = [n_ridehailing_cars, n_autonomous_cars]
 
 rhoc = RideHailingOperatorConfig(
-    recharge_threshold,
-    charging_station_power,
-    number_of_service_workers,
-    base_regions,
-    base_capacity,
-    operations_start,
-    operations_duration,
-    vehicle_relocation_velocity,
-    available_modes,
-    available_modes_supply,
-    n_autonomous_cars,
-    n_ridehailing_cars,
-    allocation,
+    recharge_threshold=recharge_threshold,
+    operations_start=operations_start,
+    operations_duration=operations_duration,
+    vehicle_relocation_velocity=vehicle_relocation_velocity,
+    available_modes=available_modes,
+    available_modes_supply=available_modes_supply,
+    n_autonomous_cars=n_autonomous_cars,
+    n_ridehailing_cars=n_ridehailing_cars,
+    allocation=allocation,
 )
 
 global_config.add_ridehailing_operator_config(rhoc)
@@ -276,6 +290,12 @@ global_config.add_population_config(pc)
 
 env = simpy.Environment(initial_time=0)
 
+# Inject Simulation Environment to Logger (such that we can log the env time)
+cf = SimulationContextFilter(filter_name="add_env", extra=env)
+edf = ExtraDefaultFilter(filter_name="add_default_value")
+logger.addFilter(cf)
+logger.addFilter(edf)
+
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
 population_factory = PopulationFactory(pop_prob_ridehailing, seed)
@@ -288,26 +308,62 @@ load_environment(city)
 # Charging Infrastructure                 #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
-# Doubled Code --> actually the same as number of base capacity
+
+number_of_charging_locations = parser.getint(
+    "CHARGING_INFRASTRUCTURE", "NUMBER_OF_CHARGING_STATIONS"
+)
+# Locations are defined as hexagons (regions) in the city
+charging_station_locations = utils.parse_multiline_list(
+    "CHARGING_INFRASTRUCTURE", "LOCATIONS", delimiter=","
+)
+charging_station_locations = charging_station_locations[:number_of_charging_locations]
+
+charging_station_power = utils.parse_multiline_list(
+    "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_POWER", delimiter=",", cast=float
+)
+if len(charging_station_power) == 1:
+    charging_station_power = list(
+        np.full(number_of_charging_locations, charging_station_power[0])
+    )
+
+# Capacity is the number of charging stations in the charging hub (or plugs at a station)
+charging_station_capacity = utils.parse_multiline_list(
+    "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_CAPACITY", delimiter=",", cast=int
+)
+if len(charging_station_capacity) == 1:
+    charging_station_capacity = list(
+        np.full(number_of_charging_locations, charging_station_capacity[0])
+    )
+
 number_of_charging_stations = parser.getint(
-    "Charging_Infrastructure", "NUMBER_OF_CHARGING_STATIONS"
+    "CHARGING_INFRASTRUCTURE", "NUMBER_OF_CHARGING_STATIONS"
 )
-charging_location_list = parser.get("Charging_Infrastructure", "BASE_REGIONS").split(
-    ","
-)[:number_of_charging_stations]
-
-charging_power = parser.getint("Charging_Infrastructure", "CHARGING_POWER")
-charging_capacity = parser.getint("Charging_Infrastructure", "CHARGING_CAPACITY")
-charging_power_list = list(np.zeros(len(charging_location_list)) + charging_power)
-charging_capacity_list = list(np.zeros(len(charging_location_list)) + charging_capacity)
+charging_location_list = utils.parse_multiline_list(
+    "CHARGING_INFRASTRUCTURE", "LOCATIONS", delimiter=","
+)[:number_of_charging_locations]
+if isinstance(charging_station_power, list):
+    charging_station_power_list = charging_station_power
+else:
+    charging_station_power_list = list(
+        np.full(len(charging_location_list), charging_station_power)
+    )
+if isinstance(charging_station_capacity, list):
+    charging_station_capacity_list = charging_station_capacity
+else:
+    charging_station_capacity_list = list(
+        np.full(len(charging_location_list), charging_station_capacity)
+    )
 sic = ChargingInfrastructureConfig(
-    charging_location_list, charging_power_list, charging_capacity_list
+    charging_location_list, charging_station_power_list, charging_station_capacity_list
 )
-charging_infrastructure = ChargingInfrastructure(
-    env, charging_location_list, charging_power_list, charging_capacity_list, reset=True
-)
-
 global_config.add_charging_infrastructure_config(sic)
+charging_infrastructure = ChargingInfrastructure(
+    env,
+    charging_location_list,
+    charging_station_power_list,
+    charging_station_capacity_list,
+    reset=True,
+)
 
 #### End Charging Infrastructure Configuration #####
 
@@ -327,40 +383,6 @@ global_config.set_store_results(store_results)
 global_config.set_output_path(output_folder)
 global_config.set_transaction_file(transaction_file)
 global_config.set_fleet_state_file(fleet_state_file)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Logging                                 #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-# Log Level
-log_level = parser.get("SETTINGS", "log_level")
-
-# Make it beautiful
-# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-)
-
-logger = logging.getLogger()
-logger.setLevel(log_level)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-file_handler = logging.FileHandler("report.log")
-file_handler.setFormatter(formatter)
-file_handler.setLevel(log_level)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf = SimulationContextFilter(filter_name="add_env", extra=[])
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-logger.addFilter(cf)
-logger.addFilter(edf)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -416,58 +438,97 @@ DemandFactory.counter = 0
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-search_engine = {"ride_hailing_0": RideHailingSearchEngine(env)}
-
-payment_engine = search_engine
-
-vehicle_assignment_engine = {"ride_hailing_0": RideHailingAllocationEngine(env)}
-
 # Configure and generate / spawn fleet vehicles
 # Ride Hailing Fleet
+
+search_engine = {
+    "ride_hailing_0": RideHailingSearchEngine(env),
+    "ride_hailing_1": RideHailingSearchEngine(env),
+}
+
+vehicle_assignment_engine = {
+    "ride_hailing_0": RideHailingAllocationEngine(env),
+    "ride_hailing_1": RideHailingAllocationEngine(env),
+}
+
+available_vehicle_modes_ridehailing = ["RideHailingCar", "AutonomousCar"]
+available_vehicle_modes_supply_ride_hailing = [n_ridehailing_cars, n_autonomous_cars]
+
 ride_hailing_fleet_config_0 = generate_ridehailing_fleet_config(
     distribution=supply_prob,
-    n_cars=global_config.ridehailing_operator_config.n_ridehailing_cars,
-    n_AVs=global_config.ridehailing_operator_config.n_autonomous_cars,
+    n_cars=n_ridehailing_cars,
+    n_AVs=n_autonomous_cars,
     allocation_method="historical",
-    allocation=global_config.ridehailing_operator_config.allocation,
+    allocation=allocation,
 )
 ride_hailing_fleet_0 = generate_mixed_ride_hailing_fleet(
     env, ride_hailing_fleet_config_0
 )
 
+ride_hailing_fleet_config_1 = generate_ridehailing_fleet_config(
+    distribution=supply_prob,
+    n_cars=n_ridehailing_cars,
+    n_AVs=n_autonomous_cars,
+    allocation_method="historical",
+    allocation=allocation,
+)
+ride_hailing_fleet_1 = generate_mixed_ride_hailing_fleet(
+    env, ride_hailing_fleet_config_1
+)
+
 # Add the fleet to the search engine
 search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
+search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
+
+# Initialize fleet operations
+
+ridehailing_operations_0 = RideHailingChargingOperations(
+    env=env,
+    distance_matrix=distance_matrix,
+    time_between_operations=global_config.ridehailing_operator_config.operations_start,
+    operation_duration=global_config.ridehailing_operator_config.operations_duration,
+    available_modes=available_vehicle_modes_ridehailing,
+    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
+    state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+)
+
+ridehailing_operations_1 = RideHailingChargingOperations(
+    env=env,
+    distance_matrix=distance_matrix,
+    time_between_operations=global_config.ridehailing_operator_config.operations_start,
+    operation_duration=global_config.ridehailing_operator_config.operations_duration,
+    available_modes=available_vehicle_modes_ridehailing,
+    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
+    state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+)
+
+# Initialize operators
+
+ridehailing_operator_0 = RideHailingOperator(
+    env=env,
+    fleet=ride_hailing_fleet_0,
+    charging_infrastructure=charging_infrastructure,
+    operations=ridehailing_operations_0,
+    search_engine=search_engine["ride_hailing_0"],
+    allocation_engine=vehicle_assignment_engine["ride_hailing_0"],
+)
+
+ridehailing_operator_1 = RideHailingOperator(
+    env=env,
+    fleet=ride_hailing_fleet_1,
+    charging_infrastructure=charging_infrastructure,
+    operations=ridehailing_operations_1,
+    search_engine=search_engine["ride_hailing_1"],
+    allocation_engine=vehicle_assignment_engine["ride_hailing_1"],
+)
+
+payment_engine = {
+    "ride_hailing_0": ridehailing_operator_0,
+    "ride_hailing_1": ridehailing_operator_1,
+}
 
 # Initialize task queues
 task_queue_ridehailing = TaskQueue(env)
-
-# Rebalancing scheduler creates the charging schedule and relocations vehicle in the ridehailing fleet
-rs_ridehailing_0 = RebalancingSchedulerRidehailing(
-    distance_matrix,
-    ride_hailing_fleet_0,
-    global_config.ridehailing_operator_config.available_modes,
-    global_config.ridehailing_operator_config.available_modes_supply,
-    global_config.ridehailing_operator_config.number_of_service_workers,
-    global_config.ridehailing_operator_config.base_regions,
-    global_config.ridehailing_operator_config.base_capacity,
-    global_config.ridehailing_operator_config.recharge_threshold,
-    charging_infrastructure._chargers,
-)
-
-# Ridehailing operator manages all operations belonging to the ridehailing fleet
-ops_ridehailing_0 = OperationsRidehailing(
-    env,
-    ride_hailing_fleet_0,
-    global_config.ridehailing_operator_config.operations_start,
-    global_config.ridehailing_operator_config.operations_duration,
-    rs_ridehailing_0,
-    payment_engine["ride_hailing_0"],
-    global_config.ridehailing_operator_config.available_modes,
-    global_config.ridehailing_operator_config.available_modes_supply,
-    global_config.ridehailing_operator_config.recharge_threshold,
-    task_queue_ridehailing,
-    charging_infrastructure._chargers,
-)
 
 # Initialize World
 world = World.init(
@@ -480,11 +541,6 @@ world = World.init(
     charging_infrastructure,
     reset=True,
 )
-
-# Start operations
-env.process(ops_ridehailing_0.timer())
-env.process(ops_ridehailing_0.run_operations())
-
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -507,6 +563,6 @@ env.process(demand_factory.generate_demand())
 
 logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-env.run(until=50)
+env.run(until=end_time)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})

@@ -78,17 +78,17 @@ class ChargingTaskRidehailing(ServiceTask):
                 distance, Vertex(vehicle.position), Vertex(fleet_base_position)
             )
 
-            vehicle_relocation_velocity = Configuration.instance().shared_vehicle_operator_config.vehicle_relocation_velocity
+            vehicle_relocation_velocity = Configuration.instance().ridehailing_operator_config.vehicle_relocation_velocity
             relocation_duration_per_vehicle = (
                 distance / vehicle_relocation_velocity
             ) / len(selected_vehicles_to_charge)
 
-            # First relocate vehicle to base
+            # First relocate vehicle to charging site
             yield self._env.process(
                 vehicle.relocate(relocation_route, relocation_duration_per_vehicle)
             )
 
-            if vehicle._electric_vehicle:
+            if vehicle.is_electric:
                 vehicle.waiting_for_charging()
 
                 with self._charging_station.plugs.request() as req:
@@ -98,7 +98,7 @@ class ChargingTaskRidehailing(ServiceTask):
                     vehicle.plug_to_charging_station()
 
                     # Charge Vehicle
-                    vehicle_charging_power = Configuration.instance().shared_vehicle_operator_config.charging_station_power
+                    vehicle_charging_power = self._charging_station.power
                     charging_power = min(
                         vehicle_charging_power, self._charging_station.power
                     )

@@ -54,3 +54,6 @@ class TransportationAlternative:
     def set_energy_consumed(self, energy_consumption):
         # energy_consumption: in kWh
         self._energy_consumed = energy_consumption
+
+    def __str__(self) -> str:
+        return f"Vehicle {self._vehicle}, Price {self._price}, Duration {self._duration}, Distance {self._distance}, Convenience {self._convenience}"

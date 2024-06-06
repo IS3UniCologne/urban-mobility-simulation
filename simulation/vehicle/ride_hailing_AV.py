@@ -3,9 +3,10 @@ from simpy import Environment
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 
-class AutonomousCar(RideHailingVehicle):
-    # Shared Care Counter
-    ride_hailing_car_id = 0
+class RideHailingAV(RideHailingVehicle):
+    # Autonomous Ride Hailing Car Counter
+    ride_hailing_av_id = 0
+    vehicle_type = "ridehailing_AV"
 
     def __init__(
         self,
@@ -27,7 +28,7 @@ class AutonomousCar(RideHailingVehicle):
         :param energy_consumption: 15.2 kWh/100km as per Smart EQ specification
         :param velocity:
         """
-        super(AutonomousCar, self).__init__(
+        super(RideHailingAV, self).__init__(
             env,
             position,
             max_available_seats,
@@ -35,10 +36,10 @@ class AutonomousCar(RideHailingVehicle):
             energy_consumption,
             velocity,
             price_per_min,
+            is_electric=True,
         )
 
         # Increment Shared Car ID
-        self.car_id = AutonomousCar.ride_hailing_car_id
+        self.car_id = RideHailingAV.ride_hailing_av_id
         self._price_per_minute = price_per_min
-        self.electric_vehicle = True
-        AutonomousCar.ride_hailing_car_id += 1
+        RideHailingAV.ride_hailing_av_id += 1
