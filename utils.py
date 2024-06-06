@@ -56,5 +56,7 @@ def load_environment(city):
 def parse_multiline_list(
     section: str, key: str, delimiter: str, cast: Optional[type] = None
 ):
-    l = parser.get(section, key).replace("\n", "").replace(" ", "").split(delimiter)
-    return [cast(x) for x in l] if cast is not None else l
+    multiline = (
+        parser.get(section, key).replace("\n", "").replace(" ", "").split(delimiter)
+    )
+    return [cast(x) for x in multiline] if cast is not None else multiline
