@@ -8,6 +8,7 @@ from simulation.operator.data_transfer_object.transportation_alternative import 
 from simulation.tasks.transport_task import TransportTask
 
 
+# TODO: an interface should not implement functionality?
 class PaymentInterface(ABC):
     def __init__(self):
         self._total_revenue = 0

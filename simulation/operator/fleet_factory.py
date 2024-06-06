@@ -6,7 +6,7 @@ from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
-from simulation.vehicle.autonomous_car import AutonomousCar
+from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 from simulation.vehicle.shared_bike import SharedBike
 from simulation.vehicle.shared_car import SharedCar
@@ -203,7 +203,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                 rh_config.energy_consumption,
                 rh_config.velocity,
                 rh_config.price_per_min,
-                electric_vehicle=False,
+                is_electric=False,
             )
             fleet.add_shared_vehicle(car)
             car._fleet = fleet
@@ -212,7 +212,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
         for current_AV in range(AVs_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            autonomous_car = AutonomousCar(
+            autonomous_car = RideHailingAV(
                 env,
                 pos,
                 a_config.max_available_seats,
@@ -315,6 +315,7 @@ def generate_mixed_fleet(env, fleet_config):
                 env,
                 pos,
                 b_config.max_available_seats,
+                b_config.max_state_of_charge,
                 b_config.velocity,
                 b_config.price_per_min,
             )

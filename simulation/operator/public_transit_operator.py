@@ -37,6 +37,7 @@ walking_speed_in_kmh = 5  # TODO: move to config
 walking_speed_in_mpm = walking_speed_in_kmh * 1000 / 60  # TODO: move to config
 
 
+# TODO: refactor to adhere to base class "Operator"
 class PublicTransitOperator(
     SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface
 ):

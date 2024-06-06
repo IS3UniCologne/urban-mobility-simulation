@@ -6,6 +6,7 @@ from simulation.vehicle.shared_vehicle import SharedVehicle
 class SharedCar(SharedVehicle):
     # Shared Car Counter
     shared_car_id = 0
+    vehicle_type = "shared_car"
 
     def __init__(
         self,
