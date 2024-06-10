@@ -4,28 +4,26 @@ from simpy import Environment
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
-from simulation.operator.interface.fleet_interface import FleetInterface
-from simulation.vehicle.autonomous_car import AutonomousCar
+from simulation.operator.vehicle_fleet import VehicleFleet
+from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.vehicle import VehicleState
 
 
-class MixedRideHailingFleet(FleetInterface):
+class MixedRideHailingFleet(VehicleFleet):
     def __init__(self, env: Environment):
         super(MixedRideHailingFleet, self).__init__(env)
         self._env = env
+        self._config = Configuration.instance()
+
         self._cars = []
         self._ridehailing_cars = []
         self._autonomous_cars = []
-        self._distance_threshold_to_user = (
-            Configuration.instance().get_distance_threshold_to_user()
-        )
-        self._driver_availability_vector = (
-            Configuration.instance().get_driver_availability_vector()
-        )
+        self._distance_threshold_to_user = self._config.get_distance_threshold_to_user()
+        self._driver_availability_vector = self._config.get_driver_availability_vector()
         self._recharging_threshold = (
-            Configuration.instance().ridehailing_operator_config.recharge_threshold
+            self._config.ridehailing_operator_config.recharge_threshold
         )
         self._env.process(self.fleet_size_monitor())
 
@@ -34,11 +32,11 @@ class MixedRideHailingFleet(FleetInterface):
             self._cars.append(vehicle)
             self._ridehailing_cars.append(vehicle)
 
-        elif isinstance(vehicle, AutonomousCar):
+        elif isinstance(vehicle, RideHailingAV):
             self._cars.append(vehicle)
             self._autonomous_cars.append(vehicle)
 
-    def get_all_vehicles(self, region):
+    def vehicles_in_region(self, region):
         """
         Return all vehicles which are located in a region
 
@@ -149,7 +147,7 @@ class MixedRideHailingFleet(FleetInterface):
         operational_costs = 0
         all_vehicle_list = self._cars
         for vehicle in all_vehicle_list:
-            if isinstance(vehicle, AutonomousCar):
+            if isinstance(vehicle, RideHailingAV):
                 operational_costs += vehicle.travel_costs + vehicle.charging_costs
         return operational_costs
 
@@ -162,7 +160,7 @@ class MixedRideHailingFleet(FleetInterface):
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
         below_soc_level_vehicles = []
-        cars_in_area = self.get_all_vehicles(region)
+        cars_in_area = self.vehicles_in_region(region)
 
         for vehicle in [*cars_in_area]:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:

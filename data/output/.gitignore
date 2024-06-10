@@ -1,2 +1,13 @@
-# Ignore every CSV in this directory
-*.csv
+# Ignore everything in this directory
+*
+
+# Except this file
+!.gitignore
+
+# and relevant subdirs
+!benchmarks
+!figures
+!logs
+!returns
+!tracking
+!weights

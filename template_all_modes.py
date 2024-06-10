@@ -1,3 +1,8 @@
+# ALARM!: This template is not able to fulfil the purpose of running several modes
+# simultaneously, since the user refactoring will have to enable several modes at the same time.
+# This can then be used as a starting point
+
+
 ### This is the template for a simulation with a ridehailing and shared mobility fleet. #####
 
 ##Imports
@@ -147,10 +152,7 @@ mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_bo
 
 # Initialize the mode choice config
 mc = ModeChoiceConfig(
-    mode_choice_strategy,
-    mode_choice_sub_boundary,
-    mode_choice_model_path,
-    path_to_model=None,
+    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
 )
 
 # Load the config to the global config
@@ -680,7 +682,7 @@ rs_ridehailing_0 = RebalancingSchedulerRidehailing(
     global_config.ridehailing_operator_config.base_regions,
     global_config.ridehailing_operator_config.base_capacity,
     global_config.ridehailing_operator_config.recharge_threshold,
-    charging_infrastructure._chargers,
+    charging_infrastructure._charging_stations,
 )
 
 # Ridehailing operator manages all operations belonging to the ridehailing fleet
@@ -695,7 +697,7 @@ ops_ridehailing_0 = OperationsRidehailing(
     global_config.ridehailing_operator_config.available_modes_supply,
     global_config.ridehailing_operator_config.recharge_threshold,
     task_queue_ridehailing,
-    charging_infrastructure._chargers,
+    charging_infrastructure._charging_stations,
 )
 
 # Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
