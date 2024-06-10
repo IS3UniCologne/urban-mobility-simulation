@@ -1,0 +1,71 @@
+from abc import ABC, abstractmethod
+
+from simpy import Environment
+
+
+class BidMalformedException(Exception):
+    pass
+
+
+class AuctionClosedException(Exception):
+    pass
+
+
+class Auction(ABC):
+    __slots__ = (
+        "_env",
+        "_start_condition",
+        "_end_condition",
+        "_is_open",
+        "_bid_syntax",
+        "_bids",
+        "_result_syntax",
+        "_result",
+        "_process",
+    )
+
+    __bid_syntax: type
+    __result_syntax: type
+
+    def __init__(self, env: Environment, start_condition, end_condition) -> None:
+        self._env = env
+        self._start_condition = start_condition
+        self._end_condition = end_condition
+        self._is_open = False
+        self._bid_syntax = self.__bid_syntax
+        self._bids = []
+        self._result_syntax = self.__result_syntax
+        self._result = None
+
+        self._process = self._env.process(self.run())
+
+    @property
+    def result(self):
+        return self._result
+
+    @property
+    def is_open(self):
+        return self._is_open
+
+    @abstractmethod
+    def run(self):
+        pass
+
+    @abstractmethod
+    def clear(self):
+        pass
+
+    def place_bid(self, bid):
+        # check that bid conforms to the syntax
+        try:
+            assert isinstance(bid, self._bid_syntax)
+        except AssertionError as e:
+            raise BidMalformedException(
+                f"{bid} is not of type {self._bid_syntax}"
+            ) from e
+
+        # check that auction is still open
+        if not self._is_open:
+            raise AuctionClosedException()
+
+        self._bids.append(bid)
