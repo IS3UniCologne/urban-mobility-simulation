@@ -1,12 +1,11 @@
 import random
 from enum import Enum
-from typing import Deque, Optional, Union
+from typing import Deque, List, Optional, Union
 
 import numpy as np
 
-from learning.spaces.action_space import DiscreteActionSpace
-
 # from keras.callbacks import TensorBoard
+from learning.spaces.action_space import DiscreteActionSpace
 
 
 class TemporalBucket(Enum):
@@ -376,17 +375,21 @@ class Configuration:
     def add_MoD_coefficient_interval_adjuster(self, MoD_coefficient_interval_adjuster):
         self._MoD_coefficient_interval_adjuster = MoD_coefficient_interval_adjuster
 
-    def add_shared_vehicle_operator_config(self, shared_mobility_ops_config):
+    def add_shared_vehicle_operator_config(
+        self, shared_mobility_ops_config: "SharedVehicleOperatorConfig"
+    ):
         self._shared_vehicle_operator_config = shared_mobility_ops_config
 
-    def add_ridehailing_operator_config(self, ridehailing_ops_config):
+    def add_ridehailing_operator_config(
+        self, ridehailing_ops_config: "RideHailingOperatorConfig"
+    ):
         self._ridehailing_operator_config = ridehailing_ops_config
 
     def add_charging_infrastructure_config(self, charging_infrastructure_ops_config):
         self._charging_infrastructure_config = charging_infrastructure_ops_config
 
     def add_population_config(self, population_config):
-        self.population_config = population_config
+        self._population_config = population_config
 
     @property
     def shared_vehicle_operator_config(self):
@@ -396,7 +399,9 @@ class Configuration:
     def ridehailing_operator_config(self):
         return self._ridehailing_operator_config
 
-    def add_transit_operator_config(self, transit_operator_config):
+    def add_transit_operator_config(
+        self, transit_operator_config: "TransitOperatorConfig"
+    ):
         self._transit_operator_config = transit_operator_config
 
     @property
@@ -517,6 +522,7 @@ class RideHailingVehicleConfig:
         initial_SoC,
         charging_cost_per_kWh,
         cost_per_km,
+        daily_total_cost,
         EV_relative_energy_consumption,
     ):
         self.price_per_min = price_per_min
@@ -527,6 +533,7 @@ class RideHailingVehicleConfig:
         self.initial_SoC = initial_SoC
         self.charging_cost_per_kWh = charging_cost_per_kWh
         self.cost_per_km = cost_per_km
+        self.daily_total_cost = daily_total_cost
         self.EV_relative_energy_consumption = EV_relative_energy_consumption
 
 
@@ -559,10 +566,6 @@ class RideHailingOperatorConfig:
     def __init__(
         self,
         recharge_threshold,
-        charging_station_power,
-        number_of_service_worker,
-        base_regions,
-        base_capacity,
         operations_start,
         operations_duration,
         vehicle_relocation_velocity,
@@ -573,10 +576,6 @@ class RideHailingOperatorConfig:
         allocation,
     ):
         self.recharge_threshold = recharge_threshold
-        self.charging_station_power = charging_station_power
-        self.number_of_service_workers = number_of_service_worker
-        self.base_regions = base_regions
-        self.base_capacity = base_capacity
         self.operations_start = operations_start
         self.operations_duration = operations_duration
         self.vehicle_relocation_velocity = vehicle_relocation_velocity
@@ -622,8 +621,8 @@ class SharedVehicleOperatorConfig:
 
 
 class ChargingInfrastructureConfig:
-    def __init__(self, location, power, capacity):
-        self.location = location
+    def __init__(self, locations: List, power: List, capacity: List):
+        self.locations = locations
         self.power = power
         self.capacity = capacity
 

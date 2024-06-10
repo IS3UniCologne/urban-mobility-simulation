@@ -1,5 +1,4 @@
 import logging
-from abc import ABC
 
 from simpy import Environment
 
@@ -24,7 +23,7 @@ from .vehicle import Vehicle, VehicleState
 #     MOVING_TO_PICK_UP_POS = 1003
 
 
-class RideHailingVehicle(Vehicle, ABC):
+class RideHailingVehicle(Vehicle):
     ride_hailing_vehicle_id = 0
 
     def __init__(
@@ -37,7 +36,7 @@ class RideHailingVehicle(Vehicle, ABC):
         velocity=166.7,
         price_per_min=1,
         driver: DriverInterface = None,
-        electric_vehicle=True,
+        is_electric=True,
     ):
         super(RideHailingVehicle, self).__init__(env, position)
 
@@ -48,7 +47,7 @@ class RideHailingVehicle(Vehicle, ABC):
         self._seats = []
         self._driver = None
         self._velocity = velocity  # meter per minute (16.67m/min = 1kmh)
-        self._electric_vehicle = electric_vehicle
+        self._is_electric = is_electric
         self._fleet = None
         self.travel_costs = 0
         self.charging_costs = 0
@@ -64,7 +63,7 @@ class RideHailingVehicle(Vehicle, ABC):
             max_state_of_charge * initial_state_of_charge_percentage
         )  # in kWh #
         self._energy_consumption = energy_consumption  # in kWh/km
-        if not self._electric_vehicle:
+        if not self._is_electric:
             self._energy_consumption = (
                 energy_consumption
                 * Configuration.instance()
@@ -190,6 +189,10 @@ class RideHailingVehicle(Vehicle, ABC):
     @property
     def destination(self):
         return self._destination
+
+    @property
+    def is_electric(self):
+        return self._is_electric
 
     @destination.setter
     def destination(self, destination):

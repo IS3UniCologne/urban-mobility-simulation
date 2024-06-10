@@ -67,6 +67,7 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
             selected_vehicle,
             selected_transportation_alternative,
             selected_vehicle.position,
+            selected_transportation_alternative.pick_up_time,
         )
 
     def notify_user_arrival_at_pick_up_position(
