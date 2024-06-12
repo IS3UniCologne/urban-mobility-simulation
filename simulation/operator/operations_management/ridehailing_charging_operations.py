@@ -159,7 +159,7 @@ class RideHailingChargingOperations(OperationsInterface):
         charging_plan = []
 
         for vehicle in vehicles_to_charge:
-            hex = vehicle.position.get_hexagon()[0]
+            hex = vehicle.position.get_hexagon(return_geom=False)
 
             # Get nearest charging station (.loc -> destination, [[]] -> Origin)
             sorted_base_list = self._distance_matrix.loc[

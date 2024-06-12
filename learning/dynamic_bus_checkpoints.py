@@ -226,8 +226,8 @@ class DynamicBusCheckpointProblem(LearningInterface):
             (
                 len(
                     h3.h3_line(
-                        self.bus.position.get_hexagon()[0],
-                        self.bus.route.destination.get_hexagon()[0],
+                        self.bus.position.get_hexagon(return_geom=False),
+                        self.bus.route.destination.get_hexagon(return_geom=False),
                     )
                 )
                 - 1
