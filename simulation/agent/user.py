@@ -928,9 +928,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         self._arrived_at_last_stop.succeed()
 
     def _demand_aligns(self, vehicle: Bus):
-        if self.transport_task.origin.get_hexagon(
-            return_geom=False
-        ) == self.transport_task.destination.get_hexagon(return_geom=False):
+        if (
+            self.transport_task.origin.get_hexagon(return_geom=False)
+            == self.transport_task.destination.get_hexagon(return_geom=False)[0]
+        ):
             # we don't want to service demands that board and unboard at the same station, they can walk
             return False
 

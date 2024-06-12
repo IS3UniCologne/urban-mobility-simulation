@@ -145,10 +145,10 @@ class Operator:
         self._transactions.append(
             {
                 "vehicle_id": None,
-                "origin": transportation_task.origin.get_hexagon(return_geom=False),
+                "origin": transportation_task.origin.get_hexagon(return_geom=False)[0],
                 "destination": transportation_task.destination.get_hexagon(
                     return_geom=False
-                ),
+                )[0],
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,

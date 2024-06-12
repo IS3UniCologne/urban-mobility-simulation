@@ -91,28 +91,28 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
         for car in self._cars:
             if (
-                car.position.get_hexagon(return_geom=False) == region
+                car.position.get_hexagon(return_geom=False)[0] == region
                 and car.state == VehicleState.PARKING
             ):
                 cars_in_area.append(car)
 
         for scooter in self._scooters:
             if (
-                scooter.position.get_hexagon(return_geom=False) == region
+                scooter.position.get_hexagon(return_geom=False)[0] == region
                 and scooter.state == VehicleState.PARKING
             ):
                 scooters_in_area.append(scooter)
 
         for kick_scooter in self._kick_scooters:
             if (
-                kick_scooter.position.get_hexagon(return_geom=False) == region
+                kick_scooter.position.get_hexagon(return_geom=False)[0] == region
                 and kick_scooter.state == VehicleState.PARKING
             ):
                 kick_scooters_in_area.append(kick_scooter)
 
         for bike in self._bikes:
             if (
-                bike.position.get_hexagon(return_geom=False) == region
+                bike.position.get_hexagon(return_geom=False)[0] == region
                 and bike.state == VehicleState.PARKING
             ):
                 bikes_in_area.append(bike)
