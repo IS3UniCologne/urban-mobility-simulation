@@ -242,7 +242,7 @@ class PublicTransitOperator(
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": transportation_task.origin.get_hexagon(return_geom=False),
+                "origin": transportation_task.origin.get_hexagon(return_geom=False)[0],
                 "destination": transportation_task.destination.get_hexagon(
                     return_geom=False
                 ),
