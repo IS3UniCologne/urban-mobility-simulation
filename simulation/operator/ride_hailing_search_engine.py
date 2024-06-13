@@ -61,7 +61,7 @@ class RideHailingSearchEngine(SearchEngineInterface):
 
         # Add all available cars to alternative browser
         AVs_in_area = [
-            car for car in cars_in_area if car.__class__.__name__ == "AutonomousCar"
+            car for car in cars_in_area if car.__class__.__name__ == "RideHailingAV"
         ]
         CVs_in_area = [
             car for car in cars_in_area if car.__class__.__name__ == "RideHailingCar"
