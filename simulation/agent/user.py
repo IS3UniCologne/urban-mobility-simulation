@@ -341,6 +341,15 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
 
+        # TODO: Maybe use prbl. of choice model or closest
+        # Aber redundant aufrufen, damit der Dtanefluss in der Simulation nicht angepasst werden muss
+
+        prob = search_task.transport_task.viable_vehicle_modes
+
+        def get_probability(t):
+            vehicle_class_name = t[3].vehicle.__class__.__name__
+            return prob.get(vehicle_class_name, 0)
+
         # Determine Vehicle Preference based on Population Type
         # a) Price Sensitive Users will prefer cheapest option
         # b) Convenience/Sustainable Users prefer slightly more expensive option
@@ -353,6 +362,8 @@ class User(Agent, DriverInterface, TrackingInterface):
             # Sort based on Convenience Score => The lower the score, the better
             # KS = 1, Scooter = 2, Car = 3 (could also be regarded as a sustainability score)
             filtered_list.sort(key=lambda vehicle: (vehicle[2], vehicle[0]))
+
+        filtered_list = sorted(filtered_list, key=get_probability, reverse=True)
 
         if filtered_list:
             distance, price, convenience, filtered_list = zip(*filtered_list)
@@ -397,6 +408,14 @@ class User(Agent, DriverInterface, TrackingInterface):
         selected_transportation_alternative = (
             available_transportation_alternatives.transportation_alternatives[0]
         )
+
+        # TODO: Write Bug ticket
+        if selected_transportation_alternative.vehicle._driver is not None:
+            print('DRIVER NOT NONE')
+            veh = selected_transportation_alternative.vehicle
+            print('#'*200)
+
+            return
 
         # Trigger next event
         self._transportation_alternatives_selected.succeed(

@@ -256,6 +256,10 @@ def generate_mixed_fleet(env, fleet_config):
         # We need to spawn vehicles in this hexagon
         hex_id = row[hex_column]
 
+        if hex_id == '871f18854ffffff':
+            print('the unknown column')
+            continue
+
         # We need to spawn vehicles according to
         car_count = row["cars"]
         scooter_count = row["scooters"]
@@ -274,6 +278,7 @@ def generate_mixed_fleet(env, fleet_config):
                 c_config.energy_consumption,
                 c_config.velocity,
                 c_config.price_per_min,
+                c_config.unlock_fee
             )
             fleet.add_shared_vehicle(car)
 

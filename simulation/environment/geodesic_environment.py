@@ -7,7 +7,7 @@ from shapely.geometry import Point, Polygon
 
 from simulation.environment.environment import Environment
 from simulation.vehicle.vehicle import Vehicle
-
+import sys
 
 class GeodesicEnvironment(Environment):
     # There is only one instance of this class.
@@ -61,7 +61,12 @@ class GeodesicEnvironment(Environment):
         gdf = self.layer[layer_name]
 
         # Select Hexagon
-        geometry = gdf.loc[hex_id].geometry
+        if hex_id in gdf.index:
+            geometry = gdf.loc[hex_id].geometry
+        else:
+            print("Hexagon mit ID {} existiert nicht im DataFrame.".format(hex_id))
+            print(gdf)
+            sys.exit()
 
         # Sample random point within hexagon
         minx, miny, maxx, maxy = geometry.bounds

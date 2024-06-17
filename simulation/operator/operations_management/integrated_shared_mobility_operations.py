@@ -72,6 +72,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         while True:
             yield self._env.timeout(self._time_between_operations)
+            logging.info("Starting new operations shift")
 
             # Clean old jobs (if there are some left)
             self._operator_reference._workforce.task_queue.clear()
@@ -186,10 +187,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             self._charging_plan_updated = self._env.event()
 
             # While Shift is not over, recalculate relocation plans and execute them.
-            while (
-                self._env.now % self._time_between_operations
-                < self._duration_of_operations
-            ):
+            while (self._env.now % 1440) < (self._duration_of_operations + self._time_between_operations):
                 logging.info(
                     "Planning next relocation schedule.",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
@@ -303,6 +301,11 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     "Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan.",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
+
+            logging.info("Shift is over")
+            yield self._env.timeout(self._time_between_operations)
+            logging.info("Day is over")
+
 
     def generate_relocation_plan(self, transactions):
         """
@@ -588,6 +591,10 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 current_low_soc_supply, max_vehicle_supply
             )
         ]
+
+        print('low_fraction_per_mode')
+        print(low_fraction_per_mode)
+        print(' ')
 
         # Temporary Denom
         denominator = sum(low_fraction_per_mode)
@@ -1134,7 +1141,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         transactions["cheapest_vehicle_mode"] = ""
 
         for i in range(len(ordered_available_vehicle)):
-            query = "{} == {}".format(ordered_available_vehicle[i], 1)
+            query = "{} != {}".format(ordered_available_vehicle[i], 0)
             for k in range(i):
                 query += " & {} == {}".format(ordered_available_vehicle[k], 0)
 

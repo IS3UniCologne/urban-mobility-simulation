@@ -47,6 +47,6 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
 
         # Set Candidate Vehicle Choices to 1 based on given Trip Chars
         for key, value in result.items():
-            result[key] = 1 if value >= lower_bound else 0
+            result[key] = value if value >= lower_bound else 0
 
         return result

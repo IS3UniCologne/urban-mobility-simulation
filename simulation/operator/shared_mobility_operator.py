@@ -51,7 +51,7 @@ class SharedMobilityOperator(Operator):
         for vehicle_type in vehicle_types:
             if (
                 vehicle_type in transportation_task.viable_vehicle_modes
-                and transportation_task.viable_vehicle_modes[vehicle_type] == 1
+                and transportation_task.viable_vehicle_modes[vehicle_type] != 0
             ):
                 distance = transportation_task.origin >> transportation_task.destination
                 velocity = (
@@ -93,7 +93,7 @@ class SharedMobilityOperator(Operator):
             }
         )
 
-        logging.info(
+        logging.debug(
             f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )

@@ -17,6 +17,7 @@ class SharedKickScooter(SharedVehicle):
         energy_consumption=0.0072,
         velocity=333.33,
         price_per_min=0.19,
+        unlock_fee=1
     ):
         """
 
@@ -36,6 +37,7 @@ class SharedKickScooter(SharedVehicle):
             energy_consumption,
             velocity,
             price_per_min,
+            unlock_fee
         )
 
         # Increment Shared Car ID

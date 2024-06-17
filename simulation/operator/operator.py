@@ -133,7 +133,7 @@ class Operator:
             }
         )
 
-        logging.info(
+        logging.debug(
             f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )

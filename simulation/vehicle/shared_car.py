@@ -17,6 +17,7 @@ class SharedCar(SharedVehicle):
         energy_consumption=0.152,
         velocity=833.33,
         price_per_min=0.26,
+        unlock_fee=1
     ):
         """
 
@@ -36,6 +37,7 @@ class SharedCar(SharedVehicle):
             energy_consumption,
             velocity,
             price_per_min,
+            unlock_fee
         )
 
         # Increment Shared Car ID

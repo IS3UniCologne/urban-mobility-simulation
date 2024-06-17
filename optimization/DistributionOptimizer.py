@@ -1,0 +1,111 @@
+import random
+import numpy as np
+from deap import base, creator, tools, algorithms
+from .CandidateFactory import CandidateFactory
+
+
+class DistributionOptimizer:
+
+    def __init__(self, max_fleet_size):
+        self._max_fleet_size = max_fleet_size
+        self._toolbox = base.Toolbox()
+
+
+    def build(self, evaluate):
+
+        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        creator.create("Individual", list, fitness=creator.FitnessMax)
+
+
+        can_factory = CandidateFactory()
+
+        self._toolbox.register("individual", tools.initIterate, creator.Individual, can_factory.get_ind)
+        self._toolbox.register("population", tools.initRepeat, list, self._toolbox.individual)
+
+        self._toolbox.register("mate", self.crossover)
+        self._toolbox.register("select", tools.selTournament, tournsize=3)
+
+        self._toolbox.register("mutate", self.mutate)
+
+        self._toolbox.register("evaluate", evaluate)
+
+
+    # Crossover function to create two children elements based on two parents
+    def crossover(self, ind1, ind2):
+        size = len(ind1)
+        cxpoint1 = random.randint(1, size - 1)
+        cxpoint2 = random.randint(1, size - 1)
+        if cxpoint1 > cxpoint2:
+            cxpoint1, cxpoint2 = cxpoint2, cxpoint1
+
+        # Perform the crossover between the two points
+        temp1 = ind1[:cxpoint1] + ind2[cxpoint1:cxpoint2] + ind1[cxpoint2:]
+        temp2 = ind2[:cxpoint1] + ind1[cxpoint1:cxpoint2] + ind2[cxpoint2:]
+
+
+        # Apply the adjustment to ensure the sums are max fleet size
+        self.adjust_to_total(temp1, self._max_fleet_size)
+        self.adjust_to_total(temp2, self._max_fleet_size)
+
+        print(f'Crossover of: {ind1} {ind2}')
+
+        # Replace original individuals
+        ind1[:], ind2[:] = temp1, temp2
+
+        print(f'To: {ind1} {ind2}')
+        return ind1, ind2
+
+    # Adjust function to ensure no negative numbers and total is equal to the max fleet size
+    def adjust_to_total(self, individual, target_sum):
+        size = len(individual)
+        current_sum = sum(individual)
+        diff = target_sum - current_sum
+        adjustments = [0] * size
+        while diff != 0:
+            for i in range(size):
+                if diff > 0 and individual[i] + adjustments[i] < target_sum:
+                    adjustments[i] += 1
+                    diff -= 1
+                elif diff < 0 and individual[i] + adjustments[i] > 0:
+                    adjustments[i] -= 1
+                    diff += 1
+                if diff == 0:
+                    break
+
+        for i in range(size):
+            individual[i] += adjustments[i]
+
+        return individual
+
+    # Function to create a new mutation by changing one element of the list randomly up or down
+    def mutate(self, individual):
+        index = random.randrange(4)
+        max_increase = min(100, self._max_fleet_size - individual[index])
+
+        # So that the max decrease is max 0
+        max_decrease = min(100, individual[index])
+
+        change = random.randint(-max_decrease, max_increase)
+        individual[index] += change
+
+        # After the change we need to adjust the other elements, so that the sum of individual is not greater than MAX_FLEET_SIZE
+        while not sum(individual) == self._max_fleet_size:
+            other_index = random.choice([i for i in range(4) if i != index])
+
+            if individual[other_index] - change >= 0 & individual[other_index] - change <= self._max_fleet_size:
+                individual[other_index] -= change
+
+        print(f'Mutate: {individual}')
+        return individual,
+
+    def optimize(self, population_size, num_generations):
+
+        pop = self._toolbox.population(n=population_size)
+        hof = tools.HallOfFame(1)
+        stats = tools.Statistics(lambda ind: ind.fitness.values)
+        stats.register("avg", np.mean)
+        stats.register("min", np.min)
+        stats.register("max", np.max)
+        algorithms.eaSimple(pop, self._toolbox, cxpb=0.5, mutpb=0.2, ngen=num_generations, stats=stats, halloffame=hof, verbose=True)
+
+        print("Beste Lösung:", hof[0], "mit CO2-Ausstoß:", hof[0].fitness.values[0])

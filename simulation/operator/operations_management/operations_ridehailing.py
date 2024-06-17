@@ -128,7 +128,7 @@ class OperationsRidehailing:
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
 
-            logging.warning(
+            logging.debug(
                 f"There are {self._vehicle_fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )

@@ -46,7 +46,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
             duration = distance / car.velocity
 
             # Calc Price
-            price = duration * car.price_per_minute
+            price = duration * car.price_per_minute + car.unlock_fee
 
             # Put together
             transportation_alternative = TransportationAlternative(
@@ -62,7 +62,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
             duration = distance / scooter.velocity
 
             # Calc Price
-            price = duration * scooter.price_per_minute
+            price = duration * scooter.price_per_minute + scooter.unlock_fee
 
             # Put together
             transportation_alternative = TransportationAlternative(
@@ -78,7 +78,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
             duration = distance / kick_scooter.velocity
 
             # Calc Price
-            price = duration * kick_scooter.price_per_minute + 1.0  # 1€ Unlock Fee
+            price = duration * kick_scooter.price_per_minute + kick_scooter.unlock_fee
 
             # Put together
             transportation_alternative = TransportationAlternative(
@@ -94,7 +94,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
             duration = distance / bike.velocity
 
             # Calc Price
-            price = duration * bike.price_per_minute
+            price = duration * bike.price_per_minute + bike.unlock_fee
 
             # Put together
             transportation_alternative = TransportationAlternative(

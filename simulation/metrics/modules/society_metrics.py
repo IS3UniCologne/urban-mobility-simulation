@@ -11,6 +11,9 @@ class SocietyMetrics:
             "trip_emissions"
         ].sum()
 
+    def get_co2_emissions_sum(self, co2_per_km_per_vehicle):
+        return self.get_co2_emissions(co2_per_km_per_vehicle).sum()
+
     def print_summary(self, co2_per_km_per_vehicle: dict):
         print("")
         print("#--------Society Metrics--------")

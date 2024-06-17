@@ -15,6 +15,7 @@ class SharedBike(SharedVehicle):
         max_state_of_charge=0,
         velocity=47.0,
         price_per_min=0.08,
+        unlock_fee=1
     ):
         """
 
@@ -32,6 +33,7 @@ class SharedBike(SharedVehicle):
             0.0,
             velocity,
             price_per_min,
+            unlock_fee
         )
 
         # Increment Shared Car ID

@@ -26,7 +26,8 @@ class GeneralMetrics:
         )
 
     def get_traveled_distance(self):
-        return self._transactions["distance"].sum()
+        missed_transactions = self._transactions[self._transactions["state"] == "Missed"]
+        return missed_transactions["distance"].sum()
 
     def __str__(self):
         return self.print_summary()

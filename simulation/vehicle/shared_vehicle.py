@@ -30,12 +30,14 @@ class SharedVehicle(Vehicle, ABC):
         energy_consumption=0.01,
         velocity=166.7,
         price_per_min=1,
+        unlock_fee=1,
         driver: DriverInterface = None,
     ):
         super(SharedVehicle, self).__init__(env, position)
 
         self._id = SharedVehicle.shared_vehicle_id
         self._price_per_minute = price_per_min
+        self._unlock_fee = unlock_fee
         self._available_seats = max_available_seats
         self._max_available_seats = max_available_seats
         self._seats = []
@@ -91,6 +93,10 @@ class SharedVehicle(Vehicle, ABC):
     @price_per_minute.setter
     def price_per_minute(self, price_per_minute):
         self._price_per_minute = price_per_minute
+
+    @property
+    def unlock_fee(self):
+        return self._unlock_fee
 
     @property
     def reserved_for_user(self):
@@ -244,7 +250,7 @@ class SharedVehicle(Vehicle, ABC):
         self._driver_mounted.succeed()
         self._driver_mounted = self._env.event()
 
-        self._state == VehicleState.DRIVING
+        self._state = VehicleState.DRIVING
 
         logging.debug(
             f"Driver: {driver.identify_driver()} mounted vehicle.",
@@ -320,7 +326,7 @@ class SharedVehicle(Vehicle, ABC):
             or self.state == SharedVehicleState.RESERVED
             or len(self._seats) > 0
         ):
-            logging.debug(
+            logging.info(
                 f"Vehicle {self._id} has a driver. Revoke relocation task.",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
