@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 
 from simpy import Environment
 
+from simulation.helper.configuration.configuration import Configuration
+
 
 class BidMalformedException(Exception):
     pass
@@ -14,6 +16,7 @@ class AuctionClosedException(Exception):
 class Auction(ABC):
     __slots__ = (
         "_env",
+        "_config",
         "_start_condition",
         "_end_condition",
         "_is_open",
@@ -21,6 +24,7 @@ class Auction(ABC):
         "_bids",
         "_result_syntax",
         "_result",
+        "open_for_bidding",
         "_process",
     )
 
@@ -29,6 +33,7 @@ class Auction(ABC):
 
     def __init__(self, env: Environment, start_condition, end_condition) -> None:
         self._env = env
+        self._config = Configuration.instance()
         self._start_condition = start_condition
         self._end_condition = end_condition
         self._is_open = False
@@ -36,6 +41,8 @@ class Auction(ABC):
         self._bids = []
         self._result_syntax = self.__result_syntax
         self._result = None
+
+        self.open_for_bidding = self._env.event()
 
         self._process = self._env.process(self.run())
 
