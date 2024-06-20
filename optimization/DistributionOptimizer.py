@@ -1,23 +1,34 @@
 import random
 import numpy as np
+import pandas as pd
 from deap import base, creator, tools, algorithms
 from .CandidateFactory import CandidateFactory
+import os
+import pickle
+import multiprocessing
+from deap import algorithms
+import shutil
 
+def get_fitness_values(individual):
+    return individual.fitness.values
 
 class DistributionOptimizer:
 
-    def __init__(self, max_fleet_size):
+    def __init__(self, max_fleet_size, is_maximization):
         self._max_fleet_size = max_fleet_size
         self._toolbox = base.Toolbox()
-
+        self._is_maximization = is_maximization
 
     def build(self, evaluate):
 
-        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-        creator.create("Individual", list, fitness=creator.FitnessMax)
+        if self._is_maximization:
+            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+            creator.create("Individual", list, fitness=creator.FitnessMax)
+        else:
+            creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+            creator.create("Individual", list, fitness=creator.FitnessMin)
 
-
-        can_factory = CandidateFactory()
+        can_factory = CandidateFactory(self._max_fleet_size)
 
         self._toolbox.register("individual", tools.initIterate, creator.Individual, can_factory.get_ind)
         self._toolbox.register("population", tools.initRepeat, list, self._toolbox.individual)
@@ -41,7 +52,6 @@ class DistributionOptimizer:
         # Perform the crossover between the two points
         temp1 = ind1[:cxpoint1] + ind2[cxpoint1:cxpoint2] + ind1[cxpoint2:]
         temp2 = ind2[:cxpoint1] + ind1[cxpoint1:cxpoint2] + ind2[cxpoint2:]
-
 
         # Apply the adjustment to ensure the sums are max fleet size
         self.adjust_to_total(temp1, self._max_fleet_size)
@@ -98,14 +108,67 @@ class DistributionOptimizer:
         print(f'Mutate: {individual}')
         return individual,
 
-    def optimize(self, population_size, num_generations):
+    def save_checkpoint(self, population, halloffame, stats, gen, filename):
+        cp = dict(population=population, halloffame=halloffame, stats=stats, generation=gen)
+        with open(filename, "wb") as cp_file:
+            pickle.dump(cp, cp_file)
 
-        pop = self._toolbox.population(n=population_size)
-        hof = tools.HallOfFame(1)
-        stats = tools.Statistics(lambda ind: ind.fitness.values)
-        stats.register("avg", np.mean)
-        stats.register("min", np.min)
-        stats.register("max", np.max)
-        algorithms.eaSimple(pop, self._toolbox, cxpb=0.5, mutpb=0.2, ngen=num_generations, stats=stats, halloffame=hof, verbose=True)
+    def load_checkpoint(self, filename):
+        with open(filename, "rb") as cp_file:
+            cp = pickle.load(cp_file)
+        return cp['population'], cp['halloffame'], cp['stats'], cp['generation']
 
-        print("Beste Lösung:", hof[0], "mit CO2-Ausstoß:", hof[0].fitness.values[0])
+    def optimize(self, population_size, num_generations, checkpoint=None):
+
+        os.makedirs("data/output/simulation_logs/progress", exist_ok=True)
+        os.makedirs("data/output/simulation_logs/final", exist_ok=True)
+
+        if checkpoint:
+            pop, hof, stats, start_gen = self.load_checkpoint(checkpoint)
+        else:
+            pop = self._toolbox.population(n=population_size)
+            hof = tools.HallOfFame(1)
+            stats = tools.Statistics(get_fitness_values)
+            stats.register("avg", np.mean)
+            stats.register("min", np.min)
+            stats.register("max", np.max)
+            start_gen = 0
+
+        history = tools.Statistics(lambda ind: ind)
+        history.register('hof', lambda pop: hof[0])
+        mstats = tools.MultiStatistics(fitness=stats, history=history)
+
+        for gen in range(start_gen, num_generations):
+            pop, mlogbook = algorithms.eaSimple(pop, self._toolbox, cxpb=0.5, mutpb=0.2, ngen=num_generations - start_gen,
+                                                stats=mstats, halloffame=hof, verbose=True)
+            if gen % 2 == 0:
+                self.save_checkpoint(pop, hof, stats, gen,
+                                     f"data/output/simulation_logs/progress/checkpoint_gen_{gen}.pkl")
+
+        print("End of Optimization")
+        print("Beste Lösung:", hof[0], "Relative Revenue:", hof[0].fitness.values[0])
+        print(mlogbook.chapters["fitness"].select("gen"))
+        hof_list = mlogbook.chapters["history"].select("hof")
+
+        if self._is_maximization:
+            val_list = mlogbook.chapters["fitness"].select("max")
+        else:
+            val_list = mlogbook.chapters["fitness"].select("min")
+
+        print(hof)
+
+        unique_dict = {}
+        seen_elements = set()
+
+        for index, element in enumerate(hof_list):
+            if str(element) not in seen_elements:
+                unique_dict[index] = {"dist": element, "val": val_list[index]}
+                seen_elements.add(str(element))
+
+        for key, value in unique_dict.items():
+            tmp_list = pd.read_excel(
+                f'data/output/simulation_logs/progress/tran_c_{value["dist"][0]}_s_{value["dist"][1]}_ks_{value["dist"][2]}_b_{value["dist"][3]}.xlsx')
+            tmp_list.to_excel(
+                f'data/output/simulation_logs/final/gen_{key}_res_{value["val"]}_tran_c_{value["dist"][0]}_s_{value["dist"][1]}_ks_{value["dist"][2]}_b_{value["dist"][3]}.xlsx')
+
+        shutil.rmtree(f'data/output/simulation_logs/progress')

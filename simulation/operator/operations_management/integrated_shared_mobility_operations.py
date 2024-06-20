@@ -65,6 +65,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         # Shift Duration (OM shift duration)
         self._duration_of_operations = operation_duration  # mins
 
+        self._planned_charging_tasks = 0
+        self._planned_relocation_task = 0
+
     def execute(self):
         """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
@@ -182,6 +185,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
+            self._planned_charging_tasks += len(charging_events)
+
             # Notify listeners
             self._charging_plan_updated.succeed()
             self._charging_plan_updated = self._env.event()
@@ -228,6 +233,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                                     relocation_distance,
                                 ) = task
 
+                                self._planned_relocation_task += no_vehicle_to_relocate
+
                                 relocation_task = RelocationTask(
                                     self._env,
                                     origin,
@@ -258,6 +265,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                                 no_vehicle_to_relocate,
                                 relocation_distance,
                             ) = relocation_plan[0]
+
+                            self._planned_relocation_task += no_vehicle_to_relocate
 
                             relocation_task = RelocationTask(
                                 self._env,
@@ -1229,3 +1238,12 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 )
 
         return result
+
+    @property
+    def planned_charging_tasks(self):
+        return self._planned_charging_tasks
+
+    @property
+    def planned_relocation_task(self):
+        return self._planned_relocation_task
+

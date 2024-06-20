@@ -146,7 +146,7 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
     #                                         #
     # # # # # # # # # # # # # # # # # # # # # #
 
-    seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
+    seed = None
 
     # World / Resolution Config
     spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
@@ -473,12 +473,12 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
     logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
     # Run the simulation until end time
-    env.run(until=1440*2)
+    env.run(until=1440)
 
     logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
     transactions = operator.get_transactions()
-    transactions.to_excel("data/output/transactions.xlsx", index=False)
+    transactions.to_excel(f'data/output/simulation_logs/progress/tran_c_{n_cars}_s_{n_scooters}_ks_{n_kick_scooters}_b_{n_bikes}.xlsx', index=False)
 
     metrics_factory = MetricsFactory(transactions)
 
@@ -521,7 +521,9 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
         "n_scooters": n_scooters,
         "n_kick_scooters": n_kick_scooters,
         "n_bikes": n_bikes,
-        "exec_time": execution_time
+        "exec_time": execution_time,
+        "planned_charging_tasks": operations.planned_charging_tasks,
+        "planned_relocation_task": operations.planned_relocation_task
     }
 
     df_metrics.loc[len(df_metrics)] = metrics
@@ -572,7 +574,7 @@ columns = [
     "avg_fleet_util", "fleet_profit", "travel_time", "wait_time", "costs", "n_cars",
     "n_scooters",
     "n_kick_scooters",
-    "n_bikes", "exec_time"
+    "n_bikes", "exec_time", "planned_charging_tasks", "planned_relocation_task"
 ]
 df_metrics = pd.DataFrame(columns=columns)
 
@@ -613,8 +615,6 @@ def fleet_fulfillment_rate_convergence():
     plt.savefig('fulfillment_rate_plot.png')
 
 
-dis_optimizer = DistributionOptimizer(3500)
-
 
 def minimize_co2(individual):
     n_cars, n_scooters, n_kick_scooters, n_bikes = individual
@@ -634,11 +634,17 @@ def minimize_travel_time(individual):
     n_cars, n_scooters, n_kick_scooters, n_bikes = individual
     return run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, SimulationStrategy.MIN_TRAVEL_TIME, rn,
                           df_metrics),
+if __name__ == '__main__':
+    dis_optimizer = DistributionOptimizer(3500, is_maximization=True)
+    dis_optimizer.build(maximize_revenue)
+    dis_optimizer.optimize(6, 5)
+    df_metrics.to_excel('./sim_metrics.xlsx')
 
-
-fleet_fulfillment_rate_convergence()
+#fleet_fulfillment_rate_convergence()
 
 sys.exit()
+# TODO: In the end filter the sim_metrics though the hall of fame
+df_metrics.to_excel('./sim_metrics.xlsx')
+sys.exit()
 dis_optimizer.build(maximize_revenue)
-dis_optimizer.optimize(5, 2)
 df_metrics.to_excel('./sim_metrics.xlsx')
