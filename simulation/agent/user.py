@@ -27,7 +27,6 @@ from ..operator.data_transfer_object.transportation_alternative_ridehailing impo
     TransportationAlternativeRideHailing,
 )
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
-from ..operator.interface.payment_interface import PaymentInterface
 from ..operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
