@@ -8,6 +8,7 @@ import numpy as np
 import simpy
 
 import simulation.world.world as world
+from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.vehicle.walking import Walking
 from tracking.tracking_interface import TrackingInterface
