@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import simpy
 
-from simulation.vehicle.walking import Walking
 import simulation.world.world as world
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.vehicle.walking import Walking
 from tracking.tracking_interface import TrackingInterface
 
 from ..environment.geodesic_environment import GeodesicEnvironment
@@ -929,8 +929,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def _demand_aligns(self, vehicle: Bus):
         if (
-            self.transport_task.origin.get_hexagon()[0]
-            == self.transport_task.destination.get_hexagon()[0]
+            self.transport_task.origin.get_hexagon(return_geom=False)
+            == self.transport_task.destination.get_hexagon(return_geom=False)[0]
         ):
             # we don't want to service demands that board and unboard at the same station, they can walk
             return False
