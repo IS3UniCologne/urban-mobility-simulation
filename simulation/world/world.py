@@ -4,20 +4,19 @@ from numpy.random import normal
 from simpy import Environment
 
 from simulation.agent import user
-from simulation.helper.configuration.configuration import Configuration
-from simulation.vehicle.vehicle import Vehicle
-from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
-from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
-    VehicleChoiceBehaviorInterface,
-)
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.operator.interface.payment_interface import PaymentInterface
+from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
 from simulation.tasks.transport_task import TransportTask
+from simulation.vehicle.vehicle import Vehicle
+from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
+from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
+    VehicleChoiceBehaviorInterface,
+)
 from simulation.world.population.PopulationFactory import PopulationFactory
 from tracking.tracking import Tracking
 
@@ -63,7 +62,7 @@ class World:
         self,
         env: Environment,
         search_engine: SearchEngineInterface,
-        payment_engine: PaymentInterface,
+        payment_engine,
         vehicle_assignment_engine: VehicleAllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_factory: PopulationFactory,
