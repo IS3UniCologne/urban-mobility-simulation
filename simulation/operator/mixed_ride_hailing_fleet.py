@@ -104,26 +104,14 @@ class MixedRideHailingFleet(VehicleFleet):
         :return: Lists of vehicles in area
         """
 
-        # TODO: this can be made faster by using np.array and boolean indexing probably
-        parking_state = VehicleState.PARKING
-        parking_cars = [
-            car
-            for car in self._vehicles
-            if car.state == parking_state and not car._suggested
-        ]
-        parking_cars_in_area = (
-            np.array(parking_cars)[
-                haversine_vector(
-                    [(c.position._lat, c.position._lng) for c in parking_cars],
-                    [(origin._lat, origin._lng)],
-                    comb=True,
-                    unit=Unit.METERS,
-                )[0]
-                <= self._distance_threshold_to_user
-            ]
-            if parking_cars
-            else np.array([])
-        )
+        # TODO: this could be improved in terms of speed by vectorizing the distance calculation and conditioning on the vector < threshold
+        parking_cars = [car for car in self._cars if car.state == VehicleState.PARKING]
+        for car in parking_cars:
+            if (
+                car.position >> origin <= self._distance_threshold_to_user
+                and not car._suggested
+            ):
+                cars_in_area.append(car)
 
         serving_state = VehicleState.DRIVING
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
