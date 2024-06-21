@@ -1,3 +1,5 @@
+import random
+from collections import Counter
 from typing import Dict, Tuple
 
 import pandas as pd
@@ -48,6 +50,7 @@ class FleetChargingAuction(Auction):
             # wait for bids?
 
             self._clear()
+            assert isinstance(self._result, self._result_syntax)
             self._announce_results()
 
             self._next_timeslot = (
@@ -84,23 +87,52 @@ class FleetChargingAuction(Auction):
             bids_df["cumulative_capacity"] >= capacity, "bid_price"
         ].values[0]
 
-        result = pd.concat(
-            [
-                bids_df.loc[
-                    bids_df["cumulative_capacity"] <= capacity,
-                    ["bidder_id", "capacity", "cumulative_capacity"],
-                ],
-                bids_df.loc[
-                    bids_df["cumulative_capacity"] > capacity,
-                    ["bidder_id", "capacity", "cumulative_capacity"],
-                ].head(1),
-            ],
-            ignore_index=True,
-        )
+        if len(bids_df.loc[bids_df["bid_price"] == clearing_price, "bidder_id"]) > 1:
+            capacity_to_tiebreak = (
+                capacity
+                - bids_df.loc[bids_df["bid_price"] > clearing_price, "capacity"].sum()
+            )
 
-        result.loc[result.index[-1], "capacity"] = result.loc[
-            result.index[-1], "capacity"
-        ] - (result.loc[result.index[-1], "cumulative_capacity"] - capacity)
+            bidders_to_tiebreak = bids_df.loc[
+                bids_df["bid_price"] == clearing_price, "bidder_id"
+            ].values
+
+            counts = Counter(
+                self.__tiebreak_capacity(
+                    capacity_to_tiebreak, bidders_to_tiebreak.tolist()
+                )
+            )
+            tiebreak_allocation = [(id_, count) for id_, count in counts.items()]
+
+            result = pd.concat(
+                [
+                    bids_df.loc[
+                        bids_df["bid_price"] > clearing_price, ["bidder_id", "capacity"]
+                    ],
+                    pd.DataFrame(
+                        tiebreak_allocation, columns=["bidder_id", "capacity"]
+                    ),
+                ],
+                ignore_index=True,
+            )
+        else:
+            result = pd.concat(
+                [
+                    bids_df.loc[
+                        bids_df["cumulative_capacity"] <= capacity,
+                        ["bidder_id", "capacity", "cumulative_capacity"],
+                    ],
+                    bids_df.loc[
+                        bids_df["cumulative_capacity"] > capacity,
+                        ["bidder_id", "capacity", "cumulative_capacity"],
+                    ].head(1),
+                ],
+                ignore_index=True,
+            )
+
+            result.loc[result.index[-1], "capacity"] = result.loc[
+                result.index[-1], "capacity"
+            ] - (result.loc[result.index[-1], "cumulative_capacity"] - capacity)
 
         result = (
             bids_df[["bidder_id"]]
@@ -132,9 +164,30 @@ class FleetChargingAuction(Auction):
         for p in self._participants:
             p.result_announced.succeed(self._result[p])
 
+        self._charging_locations.update(self._location_results)
+
     @property
     def result(self):
         # it is illegal for other participants to know the full results in this type of auction
         raise NotImplementedError(
             "Not implemented for FleetChargingAuction, results are distributed through events"
         )
+
+    @staticmethod
+    def __tiebreak_capacity(capacity, among):
+        if len(among) >= capacity:
+            return random.sample(among, capacity)
+        else:
+            n = int((len(among) - 1) / capacity) + 1
+            num_ids_to_allocate_n = n * capacity
+            allocated_ids = (
+                among * (num_ids_to_allocate_n // len(among))
+                + among[: num_ids_to_allocate_n % len(among)]
+            )
+            random.shuffle(allocated_ids)
+            remaining_ids = allocated_ids[capacity:]
+            allocated_ids = allocated_ids[:capacity]
+            allocated_ids.extend(
+                random.sample(remaining_ids, capacity - len(allocated_ids))
+            )
+            return allocated_ids
