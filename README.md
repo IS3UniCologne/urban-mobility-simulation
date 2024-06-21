@@ -9,12 +9,12 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 * Because this simulation requires a lot of dependencies, using a conda environment created by `conda env create -f ./resources/environment/environment.yml` is highly recommended.
 * Because we want to support as many platforms as possible, we need to stick to certain Python versions as defined in `environment.yml`.
 Other Python versions are untested!
-> If you are on newer Macs (Apple Silicon) please use `environment_mac.yml` with special tensorflow dependencies!
 
 ## Running an experiment
-> We provide a template at `experiment_template.py` for most common use cases, please refer to this!
+> We provide templates (`*_template.py`) for most common use cases, please refer to this!
+> At the moment, `template_all_modes.py` is not working, we first need to fix several issues for true multi-modal users.
 
-Provide configuration files as the first argument after the experiment file name such as `python experiment_template.py ./resources/configurations/app-remote.ini`
+Provide configuration files as the first argument after the experiment file name such as `python experiment_template.py ./resources/configurations/tempalte.ini`
 
 ## Simulation Components
 > The simulation consists of three different types of mobility services: 
