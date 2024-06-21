@@ -289,7 +289,7 @@ class World:
             # self._env.process(self._cleanup_user(new_user, new_user_uid))
 
             if len(self._users) == self._user_limit:
-                logging.info(
+                logging.debug(
                     f"Reached User Limit of {self._user_limit}. Not adding more users to world.",
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )

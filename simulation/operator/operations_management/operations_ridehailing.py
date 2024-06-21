@@ -133,7 +133,7 @@ class OperationsRidehailing:
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
-            logging.info(
+            logging.debug(
                 f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )

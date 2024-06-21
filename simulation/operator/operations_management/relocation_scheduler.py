@@ -503,7 +503,7 @@ class RelocationScheduler:
 
                 # Break loop if there is no "excess" supply
                 if len(local_relocation_schedule) == 0:
-                    logging.info(
+                    logging.debug(
                         f"Cannot calculate relocation plan for {mode} as there are no regions with excess supply.",
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )

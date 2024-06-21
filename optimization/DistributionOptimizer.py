@@ -2,6 +2,8 @@ import random
 import numpy as np
 import pandas as pd
 from deap import base, creator, tools, algorithms
+from deap.algorithms import varAnd
+
 from .CandidateFactory import CandidateFactory
 import os
 import pickle
@@ -118,32 +120,80 @@ class DistributionOptimizer:
             cp = pickle.load(cp_file)
         return cp['population'], cp['halloffame'], cp['stats'], cp['generation']
 
-    def optimize(self, population_size, num_generations, checkpoint=None):
+    def optimize(self, population_size, num_generations, rn, checkpoint=None):
 
         os.makedirs("data/output/simulation_logs/progress", exist_ok=True)
         os.makedirs("data/output/simulation_logs/final", exist_ok=True)
+        verbose = True
+        cxpb = 0.5
+        mutpb = 0.5
 
-        if checkpoint:
-            pop, hof, stats, start_gen = self.load_checkpoint(checkpoint)
-        else:
-            pop = self._toolbox.population(n=population_size)
-            hof = tools.HallOfFame(1)
-            stats = tools.Statistics(get_fitness_values)
-            stats.register("avg", np.mean)
-            stats.register("min", np.min)
-            stats.register("max", np.max)
-            start_gen = 0
+        pop = self._toolbox.population(n=population_size)
+        hof = tools.HallOfFame(1)
+        stats = tools.Statistics(get_fitness_values)
+        stats.register("avg", np.mean)
+        stats.register("min", np.min)
+        stats.register("max", np.max)
 
         history = tools.Statistics(lambda ind: ind)
         history.register('hof', lambda pop: hof[0])
         mstats = tools.MultiStatistics(fitness=stats, history=history)
 
-        for gen in range(start_gen, num_generations):
-            pop, mlogbook = algorithms.eaSimple(pop, self._toolbox, cxpb=0.5, mutpb=0.2, ngen=num_generations - start_gen,
-                                                stats=mstats, halloffame=hof, verbose=True)
-            if gen % 2 == 0:
-                self.save_checkpoint(pop, hof, stats, gen,
-                                     f"data/output/simulation_logs/progress/checkpoint_gen_{gen}.pkl")
+        logbook = tools.Logbook()
+        logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+
+        # Evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+        fitnesses = self._toolbox.map(self._toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+
+        if hof is not None:
+            hof.update(pop)
+
+        record = stats.compile(pop) if stats else {}
+        logbook.record(gen=0, nevals=len(invalid_ind), **record)
+        if verbose:
+            print(logbook.stream)
+
+        # Begin the generational process
+        for gen in range(1, num_generations + 1):
+            # Select the next generation individuals
+            offspring = self._toolbox.select(pop, len(pop))
+
+            # Vary the pool of individuals
+            offspring = varAnd(offspring, self._toolbox, cxpb, mutpb)
+
+            # Evaluate the individuals with an invalid fitness
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            fitnesses = self._toolbox.map(self._toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+
+            # Update the hall of fame with the generated individuals
+            if hof is not None:
+                hof.update(offspring)
+
+            # Replace the current population by the offspring
+            pop[:] = offspring
+
+            # Append the current generation statistics to the logbook
+            record = stats.compile(pop) if stats else {}
+            logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+            if verbose:
+                print(logbook.stream)
+
+            rn.increase_gen()
+
+
+        pop, mlogbook = algorithms.eaSimple(pop, self._toolbox, cxpb=0.5, mutpb=0.5, ngen=num_generations,
+                                            stats=mstats, halloffame=hof, verbose=True)
+
+        # for gen in range(start_gen, num_generations):
+        #
+        #     if gen % 2 == 0:
+        #         self.save_checkpoint(pop, hof, stats, gen,
+        #                              f"data/output/simulation_logs/progress/checkpoint_gen_{gen}.pkl")
 
         print("End of Optimization")
         print("Beste Lösung:", hof[0], "Relative Revenue:", hof[0].fitness.values[0])

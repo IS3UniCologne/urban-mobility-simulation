@@ -136,7 +136,7 @@ logger.addFilter(cf)
 
 def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, df_metrics):
     print(
-        f'Sim: {rn._num} num vehicles: cars: {n_cars}, scooters: {n_scooters}, kick_scooters: {n_kick_scooters}, bikes: {n_bikes}, Sum: {(n_cars + n_scooters + n_kick_scooters + n_bikes)}')
+        f'Gen: {rn._gen} Sim: {rn._num} num vehicles: cars: {n_cars}, scooters: {n_scooters}, kick_scooters: {n_kick_scooters}, bikes: {n_bikes}, Sum: {(n_cars + n_scooters + n_kick_scooters + n_bikes)}')
 
     start_time = time.time()
 
@@ -473,7 +473,7 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
     logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
     # Run the simulation until end time
-    env.run(until=1440)
+    env.run(until=30)
 
     logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
@@ -496,7 +496,6 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
 
     print(f'Co2: {society_metrics.get_co2_emissions(global_config.get_co2_per_vehicle_km()).sum()}')
     print(f'Revenue: {service_provider_metrics.get_revenue()}')
-    print(f'Travel Time: {customer_metrics.get_travel_time()}')
     rn.increase()
 
     print('Ful rate: ', general_metrics.get_fulfillment_rate())
@@ -507,13 +506,14 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
     print(f"Execution time: {execution_time / 60} min")
 
     metrics = {
+        "gen": rn._gen,
         "num_ful_trips": general_metrics.get_num_fulfilled_trips(),
         "num_miss_trips": general_metrics.get_num_missed_trips(),
         "ful_rate": general_metrics.get_fulfillment_rate(),
         "distance": general_metrics.get_traveled_distance(),
         "co2_emissions": society_metrics.get_co2_emissions(global_config.get_co2_per_vehicle_km()).sum(),
         "avg_fleet_util": service_provider_metrics.get_avg_fleet_utilization(num_vehicles),
-        "fleet_profit": service_provider_metrics.get_fleet_profit(global_config.get_cost_per_vehicle_km()).sum(),
+        "fleet_revenue": service_provider_metrics.get_revenue(),
         "travel_time": customer_metrics.get_travel_time(),
         "wait_time": customer_metrics.get_avg_waiting_time(),
         "costs": customer_metrics.get_cost(),
@@ -562,16 +562,20 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
 
 class RefNum:
     _num = 1
+    _gen = 0
 
     def increase(self):
         self._num = self._num + 1
+
+    def increase_gen(self):
+        self._gen = self._gen + 1
 
 
 rn = RefNum()
 
 columns = [
-    "num_ful_trips", "num_miss_trips", "ful_rate", "distance", "co2_emissions",
-    "avg_fleet_util", "fleet_profit", "travel_time", "wait_time", "costs", "n_cars",
+    "gen", "num_ful_trips", "num_miss_trips", "ful_rate", "distance", "co2_emissions",
+    "avg_fleet_util", "fleet_revenue", "travel_time", "wait_time", "costs", "n_cars",
     "n_scooters",
     "n_kick_scooters",
     "n_bikes", "exec_time", "planned_charging_tasks", "planned_relocation_task"
@@ -618,6 +622,7 @@ def fleet_fulfillment_rate_convergence():
 
 def minimize_co2(individual):
     n_cars, n_scooters, n_kick_scooters, n_bikes = individual
+    gen = 0
     return run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, SimulationStrategy.MIN_CO2, rn, df_metrics),
 
 
@@ -632,18 +637,20 @@ def maximize_revenue(individual):
 
 def minimize_travel_time(individual):
     n_cars, n_scooters, n_kick_scooters, n_bikes = individual
+    gen = 0
     return run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, SimulationStrategy.MIN_TRAVEL_TIME, rn,
                           df_metrics),
 if __name__ == '__main__':
     dis_optimizer = DistributionOptimizer(3500, is_maximization=True)
     dis_optimizer.build(maximize_revenue)
-    dis_optimizer.optimize(6, 5)
+    dis_optimizer.optimize(2, 3, rn)
     df_metrics.to_excel('./sim_metrics.xlsx')
 
 #fleet_fulfillment_rate_convergence()
 
 sys.exit()
-# TODO: In the end filter the sim_metrics though the hall of fame
+# TODO: In the end filter the sim_metrics though the hall of fame, but keep the distributions that the algorithm tested
+# to analyze the space the algorizhm searched for
 df_metrics.to_excel('./sim_metrics.xlsx')
 sys.exit()
 dis_optimizer.build(maximize_revenue)

@@ -326,7 +326,7 @@ class SharedVehicle(Vehicle, ABC):
             or self.state == SharedVehicleState.RESERVED
             or len(self._seats) > 0
         ):
-            logging.info(
+            logging.debug(
                 f"Vehicle {self._id} has a driver. Revoke relocation task.",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )

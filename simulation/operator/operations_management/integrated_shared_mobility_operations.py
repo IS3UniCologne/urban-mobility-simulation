@@ -75,7 +75,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         while True:
             yield self._env.timeout(self._time_between_operations)
-            logging.info("Starting new operations shift")
+            logging.debug("Starting new operations shift")
 
             # Clean old jobs (if there are some left)
             self._operator_reference._workforce.task_queue.clear()
@@ -175,12 +175,12 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 self._scheduled_tasks
             )
 
-            logging.info(
+            logging.debug(
                 f"There are {len(self._operator_reference.fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold))} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
-            logging.info(
+            logging.debug(
                 f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
@@ -193,7 +193,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
             # While Shift is not over, recalculate relocation plans and execute them.
             while (self._env.now % 1440) < (self._duration_of_operations + self._time_between_operations):
-                logging.info(
+                logging.debug(
                     "Planning next relocation schedule.",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
@@ -298,7 +298,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     # Wait for Charging events
                     yield self._env.all_of(charging_events)
 
-                    logging.info(
+                    logging.debug(
                         "All Charging Tasks have been fulfilled. Re-Generating Relocation Plan.",
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
@@ -306,14 +306,14 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 # Wait for relocation events to be processed
                 yield self._env.all_of(relocation_events)
 
-                logging.info(
+                logging.debug(
                     "Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan.",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
 
-            logging.info("Shift is over")
+            logging.debug("Shift is over")
             yield self._env.timeout(self._time_between_operations)
-            logging.info("Day is over")
+            logging.debug("Day is over")
 
 
     def generate_relocation_plan(self, transactions):
@@ -791,7 +791,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
                 # Break loop if there is no "excess" supply
                 if len(local_relocation_schedule) == 0:
-                    logging.info(
+                    logging.debug(
                         f"Cannot calculate relocation plan for {mode} as there are no regions with excess supply.",
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )

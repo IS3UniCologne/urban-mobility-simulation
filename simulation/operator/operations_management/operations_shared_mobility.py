@@ -179,12 +179,12 @@ class Operations:
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
 
-            logging.info(
+            logging.debug(
                 f"There are {self._vehicle_fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
-            logging.info(
+            logging.debug(
                 f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
@@ -198,7 +198,7 @@ class Operations:
                 self._env.now % self._time_between_operations
                 < self._duration_of_operations
             ):
-                logging.info(
+                logging.debug(
                     "Planning next relocation schedule.",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
@@ -299,7 +299,7 @@ class Operations:
                     # Wait for Charging events
                     yield self._env.all_of(charging_events)
 
-                    logging.info(
+                    logging.debug(
                         "All Charging Tasks have been fulfilled. Re-Generating Relocation Plan.",
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
@@ -307,7 +307,7 @@ class Operations:
                 # Wait for relocation events to be processed
                 yield self._env.all_of(relocation_events)
 
-                logging.info(
+                logging.debug(
                     "Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan.",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
