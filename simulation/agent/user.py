@@ -8,6 +8,7 @@ import numpy as np
 import simpy
 
 import simulation.world.world as world
+from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.vehicle.walking import Walking
 from tracking.tracking_interface import TrackingInterface
@@ -27,7 +28,6 @@ from ..operator.data_transfer_object.transportation_alternative_ridehailing impo
     TransportationAlternativeRideHailing,
 )
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
-from ..operator.interface.payment_interface import PaymentInterface
 from ..operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
