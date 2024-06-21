@@ -89,6 +89,7 @@ class MixedRideHailingFleet(VehicleFleet):
         """
         cars_in_area = []
 
+        # TODO: this could be improved in terms of speed by vectorizing the distance calculation and conditioning on the vector < threshold
         parking_cars = [car for car in self._cars if car.state == VehicleState.PARKING]
         for car in parking_cars:
             if (
