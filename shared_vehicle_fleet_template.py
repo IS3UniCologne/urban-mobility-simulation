@@ -112,7 +112,7 @@ log_level = parser.get("SETTINGS", "log_level")
 
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(
+logging.basicConfig(filename='programm.log',
     format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",
 )
@@ -135,8 +135,8 @@ logger.addFilter(cf)
 
 
 def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, df_metrics):
-    print(
-        f'Gen: {rn._gen} Sim: {rn._num} num vehicles: cars: {n_cars}, scooters: {n_scooters}, kick_scooters: {n_kick_scooters}, bikes: {n_bikes}, Sum: {(n_cars + n_scooters + n_kick_scooters + n_bikes)}')
+    logging.info(
+        f'Gen: {rn._gen} Sim: {rn._num} num vehicles: cars: {n_cars}, scooters: {n_scooters}, kick_scooters: {n_kick_scooters}, bikes: {n_bikes}, Sum: {(n_cars + n_scooters + n_kick_scooters + n_bikes)}', extra={"clazz": "main", "oid": ""})
 
     start_time = time.time()
 

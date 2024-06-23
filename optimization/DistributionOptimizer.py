@@ -10,6 +10,7 @@ import pickle
 import multiprocessing
 from deap import algorithms
 import shutil
+import logging
 
 def get_fitness_values(individual):
     return individual.fitness.values
@@ -59,12 +60,12 @@ class DistributionOptimizer:
         self.adjust_to_total(temp1, self._max_fleet_size)
         self.adjust_to_total(temp2, self._max_fleet_size)
 
-        print(f'Crossover of: {ind1} {ind2}')
+        logging.info(f'Crossover of: {ind1} {ind2}')
 
         # Replace original individuals
         ind1[:], ind2[:] = temp1, temp2
 
-        print(f'To: {ind1} {ind2}')
+        logging.info(f'To: {ind1} {ind2}')
         return ind1, ind2
 
     # Adjust function to ensure no negative numbers and total is equal to the max fleet size
@@ -107,7 +108,7 @@ class DistributionOptimizer:
             if individual[other_index] - change >= 0 & individual[other_index] - change <= self._max_fleet_size:
                 individual[other_index] -= change
 
-        print(f'Mutate: {individual}')
+        logging.info(f'Mutate: {individual}')
         return individual,
 
     def save_checkpoint(self, population, halloffame, stats, gen, filename):
@@ -120,6 +121,9 @@ class DistributionOptimizer:
             cp = pickle.load(cp_file)
         return cp['population'], cp['halloffame'], cp['stats'], cp['generation']
 
+
+    # TODO Add checkpoint
+    # TODO add lo
     def optimize(self, population_size, num_generations, rn, checkpoint=None):
 
         os.makedirs("data/output/simulation_logs/progress", exist_ok=True)
@@ -128,12 +132,16 @@ class DistributionOptimizer:
         cxpb = 0.5
         mutpb = 0.5
 
-        pop = self._toolbox.population(n=population_size)
-        hof = tools.HallOfFame(1)
-        stats = tools.Statistics(get_fitness_values)
-        stats.register("avg", np.mean)
-        stats.register("min", np.min)
-        stats.register("max", np.max)
+        if checkpoint:
+            pop, hof, stats, start_gen = self.load_checkpoint(checkpoint)
+        else:
+            pop = self._toolbox.population(n=population_size)
+            hof = tools.HallOfFame(1)
+            stats = tools.Statistics(get_fitness_values)
+            stats.register("avg", np.mean)
+            stats.register("min", np.min)
+            stats.register("max", np.max)
+            start_gen = 0
 
         history = tools.Statistics(lambda ind: ind)
         history.register('hof', lambda pop: hof[0])
@@ -154,7 +162,7 @@ class DistributionOptimizer:
         record = stats.compile(pop) if stats else {}
         logbook.record(gen=0, nevals=len(invalid_ind), **record)
         if verbose:
-            print(logbook.stream)
+            logging.info(logbook.stream)
 
         # Begin the generational process
         for gen in range(1, num_generations + 1):
@@ -181,9 +189,12 @@ class DistributionOptimizer:
             record = stats.compile(pop) if stats else {}
             logbook.record(gen=gen, nevals=len(invalid_ind), **record)
             if verbose:
-                print(logbook.stream)
+                logging.info(logbook.stream)
 
             rn.increase_gen()
+
+            if gen % 10 == 0:
+                self.save_checkpoint(pop, hof, stats, gen, f"data/output/simulation_logs/progress/checkpoint_gen_{gen}.pkl")
 
 
         pop, mlogbook = algorithms.eaSimple(pop, self._toolbox, cxpb=0.5, mutpb=0.5, ngen=num_generations,
@@ -195,9 +206,9 @@ class DistributionOptimizer:
         #         self.save_checkpoint(pop, hof, stats, gen,
         #                              f"data/output/simulation_logs/progress/checkpoint_gen_{gen}.pkl")
 
-        print("End of Optimization")
-        print("Beste Lösung:", hof[0], "Relative Revenue:", hof[0].fitness.values[0])
-        print(mlogbook.chapters["fitness"].select("gen"))
+        logging.info("End of Optimization")
+        logging.info("Beste Lösung:", hof[0], "Relative Revenue:", hof[0].fitness.values[0])
+        logging.info(mlogbook.chapters["fitness"].select("gen"))
         hof_list = mlogbook.chapters["history"].select("hof")
 
         if self._is_maximization:
@@ -205,7 +216,7 @@ class DistributionOptimizer:
         else:
             val_list = mlogbook.chapters["fitness"].select("min")
 
-        print(hof)
+        logging.info(hof)
 
         unique_dict = {}
         seen_elements = set()
