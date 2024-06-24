@@ -26,6 +26,7 @@ from simulation.helper.configuration.configuration import (
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.helper.time import SimulationVelocityConverter
 
 # Import infrastructure related modules
 from simulation.infrastructure.helper.distance_matrix_importer import (
@@ -201,7 +202,7 @@ for idx, vehicle_type in enumerate(
         price_per_min,
         max_state_of_charge,
         energy_consumption,
-        velocity,
+        SimulationVelocityConverter.convert_speed(velocity),
         max_available_seats,
         max_walking_distance,
         daily_total_cost,
@@ -258,7 +259,7 @@ svoc = SharedVehicleOperatorConfig(
     base_capacity,
     operations_start,
     operations_duration,
-    vehicle_relocation_velocity,
+    SimulationVelocityConverter.convert_speed(vehicle_relocation_velocity),
     available_modes,
     available_modes_supply,
     n_cars,
