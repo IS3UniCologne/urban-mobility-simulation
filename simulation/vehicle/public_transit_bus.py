@@ -29,8 +29,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         route: PublicTransitRoute,
         position: GeodesicPosition,
         use_learning_agent: bool,
-        max_available_seats=100,
-        velocity=500,
+        max_available_seats,
+        velocity,
     ):
         """
 
