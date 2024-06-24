@@ -60,10 +60,11 @@ class GeodesicPosition(Position):
         """
         return haversine((self._lat, self._lng), (other._lat, other._lng), Unit.METERS)
 
-    def get_hexagon(self, resolution=0) -> Tuple[str, Polygon]:
+    def get_hexagon(self, resolution=0, return_geom=True) -> Tuple[str, Polygon]:
         """
         Return h3 hexagon object based on current position (lng, lat)
         :param resolution: H3 Resolution (res = 0 <=> default => use global setting)
+        :param return_geom: Boolean indicating if geometry should be returned, ATTENTION: slows down a lot
         :return: hex_id:   String
                  geometry: Hexagon geometry
         """
@@ -81,7 +82,10 @@ class GeodesicPosition(Position):
             hex = h3.geo_to_h3(self._lat, self._lng, resolution)
             self._default_hexagon[resolution] = hex
 
-        geometry = layer.loc[hex].geometry
+        if return_geom:
+            geometry = layer.loc[hex].geometry
+        else:
+            geometry = None
         return hex, geometry
 
     def is_in_geometry(self, geometry):

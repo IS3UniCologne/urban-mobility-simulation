@@ -72,7 +72,7 @@ class MixedRideHailingFleet(VehicleFleet):
 
         parking_cars = [car for car in self._cars if car.state == VehicleState.PARKING]
         for car in parking_cars:
-            if car.position.get_hexagon()[0] == region:
+            if car.position.get_hexagon(return_geom=False)[0] == region:
                 cars_in_area.append(car)
 
         return cars_in_area
