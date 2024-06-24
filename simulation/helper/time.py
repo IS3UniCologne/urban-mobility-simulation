@@ -138,3 +138,9 @@ class SimulationTimeConverter:
         return (time % (24 * 60)) // (
             temporal_resolution * 60
         )  # Reduce to one day, then get day of week
+
+
+class SimulationVelocityConverter:
+    # Convert the velocity of kilometer/hour to simulation velocity of meter/minute
+    def convert_speed(velocity: float):
+        return (velocity * 1000) / 60
