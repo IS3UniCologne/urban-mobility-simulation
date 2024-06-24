@@ -29,7 +29,6 @@ from simulation.helper.configuration.configuration import (
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
-from simulation.helper.time import SimulationVelocityConverter
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -197,7 +196,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
         price_per_min,
         max_state_of_charge,
         energy_consumption,
-        SimulationVelocityConverter.convert_speed(velocity),
+        velocity,
         max_available_seats,
         initial_SoC,
         charging_cost_per_kwh,
@@ -255,9 +254,7 @@ rhoc = RideHailingOperatorConfig(
     recharge_threshold=recharge_threshold,
     operations_start=operations_start,
     operations_duration=operations_duration,
-    vehicle_relocation_velocity=SimulationVelocityConverter.convert_speed(
-        vehicle_relocation_velocity
-    ),
+    vehicle_relocation_velocity=vehicle_relocation_velocity,
     available_modes=available_modes,
     available_modes_supply=available_modes_supply,
     n_autonomous_cars=n_autonomous_cars,
