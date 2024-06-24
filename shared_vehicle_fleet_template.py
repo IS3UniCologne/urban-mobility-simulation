@@ -284,7 +284,7 @@ global_config.add_shared_vehicle_operator_config(svoc)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-env = simpy.Environment(initial_time=0)
+env = simpy.Environment(initial_time=start_time)
 
 # Inject Simulation Environment to Logger (such that we can log the env time)
 cf = SimulationContextFilter(filter_name="add_env", extra=env)
@@ -472,11 +472,11 @@ def run_simulation(end_time, seed=4711, env=env):
 
     logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-    # Run simulation
 
-    env.run(until=end_time)
+# Run the simulation until end time
+env.run(until=end_time)
 
-    logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
 
 transactions = operator.get_transactions()
