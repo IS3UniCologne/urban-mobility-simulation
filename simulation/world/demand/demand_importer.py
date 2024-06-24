@@ -99,7 +99,7 @@ class DemandImporter:
         )
 
         # Read Data
-        trip_data = pd.read_parquet(trip_data_path)
+        trip_data = pd.read_csv(trip_data_path)
 
         ##################################
         #### First Calculate Arrival Times
