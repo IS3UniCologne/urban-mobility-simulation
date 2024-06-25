@@ -4,9 +4,16 @@ from shapely.geometry import shape
 
 
 class ChargingStation:
-    def __init__(self, id, env, location, power, capacity):
+    def __init__(
+        self,
+        id: int,
+        env: simpy.Environment,
+        location: str,
+        power: float,
+        capacity: int,
+    ):
         self._env = env
-        self._capacity = capacity
+        self._capacity = int(capacity)
         self._polygon = shape(
             {
                 "type": "Polygon",
@@ -18,7 +25,7 @@ class ChargingStation:
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
         self._id = id
         self._location = location
-        self._power = power  # kwh/hr
+        self._power = float(power)  # kwh/hr
         self._queue = []
         # self.position = self.location.find_zone(zones)
 
