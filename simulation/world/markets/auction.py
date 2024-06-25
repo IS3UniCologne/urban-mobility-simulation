@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from simpy import Environment
 
@@ -28,18 +29,15 @@ class Auction(ABC):
         "_process",
     )
 
-    __bid_syntax: type
-    __result_syntax: type
-
     def __init__(self, env: Environment, start_condition, end_condition) -> None:
         self._env = env
         self._config = Configuration.instance()
         self._start_condition = start_condition
         self._end_condition = end_condition
         self._is_open = False
-        self._bid_syntax = self.__bid_syntax
+        self._bid_syntax: type = Any
         self._bids = []
-        self._result_syntax = self.__result_syntax
+        self._result_syntax: type = Any
         self._result = None
 
         self.open_for_bidding = self._env.event()
