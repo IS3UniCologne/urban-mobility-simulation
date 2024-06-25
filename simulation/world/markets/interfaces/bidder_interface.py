@@ -1,5 +1,3 @@
-from abc import abstractmethod
-
 from simpy import Environment
 
 from simulation.world.markets.auction import Auction
@@ -13,8 +11,8 @@ class BidderInterface:
         # Events
         self.result_announced = self._env.event()
 
-    @abstractmethod
-    def wait_for_bidding(self):
-        """
-        The bidder should wait for the auction to open and is expected to then place their bids.
-        """
+    # @abstractmethod
+    # def wait_for_bidding(self):
+    #     """
+    #     The bidder should wait for the auction to open and is expected to then place their bids.
+    #     """
