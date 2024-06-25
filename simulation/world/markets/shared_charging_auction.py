@@ -11,9 +11,10 @@ from simulation.infrastructure.charging_stations.virtual_charging_infrastructure
 )
 from simulation.world.markets.auction import Auction
 from simulation.world.markets.interfaces.bidder_interface import BidderInterface
+from tracking.tracking_interface import TrackingInterface
 
 
-class FleetChargingAuction(Auction):
+class SharedChargingAuction(Auction, TrackingInterface):
     __slots__ = (
         "_participants",
         "_charging_locations",
@@ -21,10 +22,7 @@ class FleetChargingAuction(Auction):
         "_location_results",
     )
 
-    # bids are n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
-    __bid_syntax = Dict(str, Tuple(int, float, int))
-    # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
-    __result_syntax = Dict(int, Dict(str, Tuple(int, float)))
+    exposes = ["_next_timeslot", "_bids", "_location_results"]
 
     def __init__(
         self,
@@ -34,6 +32,13 @@ class FleetChargingAuction(Auction):
         charging_infrastructure: VirtualChargingInfrastructure,
     ) -> None:
         super().__init__(env, start_condition, end_condition)
+
+        # bids are n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
+        self._bid_syntax = Dict[str, Tuple[int, float, int]]
+
+        # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
+        self._result_syntax = Dict[int, Dict[str, Tuple[int, float]]]
+
         self._participants = []
         self._charging_locations = charging_infrastructure
         self._location_results = {}
@@ -49,7 +54,7 @@ class FleetChargingAuction(Auction):
 
             # wait for bids?
 
-            self._clear()
+            self.clear()
             assert isinstance(self._result, self._result_syntax)
             self._announce_results()
 
@@ -58,10 +63,11 @@ class FleetChargingAuction(Auction):
             )
             self._is_open = False
 
-    def register_participant(self, participant: BidderInterface) -> None:
+    def register_participant(self, participant: BidderInterface) -> int:
         self._participants.append(participant)
+        return len(self._participants)
 
-    def _clear(self) -> None:
+    def clear(self) -> None:
         for c in self._charging_locations:
             self._clear_single(c)
 
@@ -69,6 +75,7 @@ class FleetChargingAuction(Auction):
         self._result = pd.DataFrame(self._location_results).transpose().to_dict()
 
     def _clear_single(self, charging_location: ChargingStation) -> None:
+        # uniform price clearing of capacity with fair tie breaking
         location_id = charging_location.location
         location_bids = self._bids[charging_location]
         capacity = charging_location.capacity
@@ -173,6 +180,10 @@ class FleetChargingAuction(Auction):
             "Not implemented for FleetChargingAuction, results are distributed through events"
         )
 
+    @property
+    def next_timeslot(self):
+        return self._next_timeslot
+
     @staticmethod
     def __tiebreak_capacity(capacity, among):
         if len(among) >= capacity:
@@ -191,3 +202,10 @@ class FleetChargingAuction(Auction):
                 random.sample(remaining_ids, capacity - len(allocated_ids))
             )
             return allocated_ids
+
+    def dump(self, exposed_only: bool = True) -> Dict:
+        return {
+            "_next_timeslot": self._next_timeslot,
+            "_bids": self._bids,
+            "_location_results": self._location_results,
+        }

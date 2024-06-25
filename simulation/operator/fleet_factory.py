@@ -143,6 +143,55 @@ def generate_ridehailing_fleet_config(
     return fleet_config
 
 
+def generate_AV_fleet(env, distribution, n=500, seed=4711):
+    # Random Number Generator
+    random = np.random.RandomState(seed)
+    config = Configuration.instance()
+    av_config = config.get_ridehailing_vehicle_config("AutonomousCar")
+
+    # Sample Supply Distribution for Cars
+    prob_arr = distribution["cars_prob"].to_numpy()
+    car_cnt = pd.DataFrame(
+        random.multinomial(n, prob_arr, size=1).transpose(), columns=["car_count"]
+    )
+    car_cnt.index = distribution.index
+    distribution["AVs"] = car_cnt["car_count"]
+
+    hex_column = Configuration.instance().spatial_resolution_column
+
+    # Slice fleet config
+    fleet_config = distribution[[hex_column, "AVs"]]
+
+    # New Fleet Object
+    fleet = MixedRideHailingFleet(env)
+
+    # Access to underlying geodesic environment
+    geo_env = GeodesicEnvironment.getInstance()
+
+    for index, row in fleet_config.iterrows():
+        # We need to spawn vehicles in this hexagon
+        hex_id = row[hex_column]
+        count = row["AVs"]
+
+        # Add AVs
+        for current_AV in range(count):
+            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
+            autonomous_car = RideHailingAV(
+                env,
+                pos,
+                av_config.max_available_seats,
+                av_config.max_state_of_charge,
+                av_config.energy_consumption,
+                av_config.velocity,
+                av_config.price_per_min,
+            )
+            fleet.add_shared_vehicle(autonomous_car)
+            autonomous_car._fleet = fleet
+
+    return fleet
+
+
 def generate_mixed_ride_hailing_fleet(env, fleet_config):
     """
     Generate a mixed shared vehicle fleet based on given fleet config.
