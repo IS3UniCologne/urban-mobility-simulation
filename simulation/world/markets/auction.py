@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
+from beartype.roar import BeartypeDoorHintViolation
 from simpy import Environment
 
 from simulation.helper.configuration.configuration import Configuration
@@ -36,9 +38,9 @@ class Auction(ABC):
         self._end_condition = end_condition
         self._is_open = False
         self._bid_syntax: type = Any
-        self._bids = []
+        self._bids: self._bid_syntax = None
         self._result_syntax: type = Any
-        self._result = None
+        self._result: self._result_syntax = None
 
         self.open_for_bidding = self._env.event()
 
@@ -63,8 +65,8 @@ class Auction(ABC):
     def place_bid(self, bid):
         # check that bid conforms to the syntax
         try:
-            assert isinstance(bid, self._bid_syntax)
-        except AssertionError as e:
+            die_if_unbearable(bid, self._bid_syntax)
+        except BeartypeDoorHintViolation as e:
             raise BidMalformedException(
                 f"{bid} is not of type {self._bid_syntax}"
             ) from e
@@ -73,4 +75,10 @@ class Auction(ABC):
         if not self._is_open:
             raise AuctionClosedException()
 
-        self._bids.append(bid)
+        self._update_bids(bid)
+
+    @abstractmethod
+    def _update_bids(self, single_bid):
+        """
+        This method updates the auction's bids. The auctioneer should implement the specifics per auction type."""
+        pass

@@ -1,5 +1,8 @@
 from typing import Dict
 
+from beartype.door import die_if_unbearable
+from beartype.roar import BeartypeDoorHintViolation
+
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -27,14 +30,20 @@ class VirtualChargingInfrastructure:
         raise NotImplementedError
 
     def get_available_locations(self, at_timeslot: int):
-        all_charging_stations = self._charging_infrastructure.charging_stations
-        available_charging_stations = [
-            charging_station.location
-            for charging_station in all_charging_stations
-            if self._availability[at_timeslot].get(charging_station.id, 0) > 0
-        ]
+        try:
+            return [
+                location
+                for location, capacity in self._availability[at_timeslot].items()
+                if capacity > 0
+            ]
+        except KeyError as e:
+            raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-        return available_charging_stations
+    def get_available_capacity(self, at_timeslot: int):
+        try:
+            return self._availability[at_timeslot]
+        except KeyError as e:
+            raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
     def get_locations(self):
         """
@@ -43,4 +52,10 @@ class VirtualChargingInfrastructure:
         return self._charging_infrastructure.get_available_locations(self._env.now())
 
     def update(self, timeslot: int, availability: Dict[str, int]):
-        self._availability[timeslot] = availability
+        try:
+            die_if_unbearable(availability, Dict[str, int])
+            self._availability[timeslot] = availability
+        except BeartypeDoorHintViolation as e:
+            raise ValueError(
+                "Availability must be a dict of (location, capacity)"
+            ) from e

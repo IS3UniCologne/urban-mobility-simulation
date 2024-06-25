@@ -10,6 +10,7 @@ class BidderInterface:
 
         # Events
         self.result_announced = self._env.event()
+        self.bidding_done = self._env.event()
 
     # @abstractmethod
     # def wait_for_bidding(self):
