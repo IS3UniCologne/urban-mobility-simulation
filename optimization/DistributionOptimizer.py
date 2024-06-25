@@ -7,7 +7,6 @@ from deap.algorithms import varAnd
 from .CandidateFactory import CandidateFactory
 import os
 import pickle
-import multiprocessing
 from deap import algorithms
 import shutil
 import logging
@@ -92,6 +91,9 @@ class DistributionOptimizer:
 
     # Function to create a new mutation by changing one element of the list randomly up or down
     def mutate(self, individual):
+        logging.info(f'Call Mutate: {type(individual)}')
+        logging.info(f'Call Mutate: {individual}')
+
         index = random.randrange(4)
         max_increase = min(100, self._max_fleet_size - individual[index])
 
@@ -124,16 +126,24 @@ class DistributionOptimizer:
 
     # TODO Add checkpoint
     # TODO add lo
-    def optimize(self, population_size, num_generations, rn, checkpoint=None):
+    def optimize(self, population_size, num_generations, current_sim_id, checkpoint=None):
 
-        os.makedirs("data/output/simulation_logs/progress", exist_ok=True)
-        os.makedirs("data/output/simulation_logs/final", exist_ok=True)
+        os.makedirs(f'data/output/simulation_logs/{current_sim_id}/final', exist_ok=True)
         verbose = True
         cxpb = 0.5
         mutpb = 0.5
 
         if checkpoint:
             pop, hof, stats, start_gen = self.load_checkpoint(checkpoint)
+            print('check-----')
+            print(pop, hof, stats, start_gen)
+            history = tools.Statistics(lambda ind: ind)
+            history.register('hof', lambda pop: hof[0])
+            mstats = tools.MultiStatistics(fitness=stats, history=history)
+
+            logbook = tools.Logbook()
+            logbook.header = ['gen', 'nevals'] + (mstats.fields if mstats else [])
+
         else:
             pop = self._toolbox.population(n=population_size)
             hof = tools.HallOfFame(1)
@@ -141,42 +151,49 @@ class DistributionOptimizer:
             stats.register("avg", np.mean)
             stats.register("min", np.min)
             stats.register("max", np.max)
+            os.makedirs(f'data/output/simulation_logs/{current_sim_id}/gen_0', exist_ok=True)
+            os.makedirs(f'data/output/simulation_logs/{current_sim_id}/gen_0/transactions', exist_ok=True)
             start_gen = 0
 
-        history = tools.Statistics(lambda ind: ind)
-        history.register('hof', lambda pop: hof[0])
-        mstats = tools.MultiStatistics(fitness=stats, history=history)
+            history = tools.Statistics(lambda ind: ind)
+            history.register('hof', lambda pop: hof[0])
+            mstats = tools.MultiStatistics(fitness=stats, history=history)
 
-        logbook = tools.Logbook()
-        logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+            logbook = tools.Logbook()
+            logbook.header = ['gen', 'nevals'] + (mstats.fields if mstats else [])
 
-        # Evaluate the individuals with an invalid fitness
-        invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-        fitnesses = self._toolbox.map(self._toolbox.evaluate, invalid_ind)
-        for ind, fit in zip(invalid_ind, fitnesses):
-            ind.fitness.values = fit
+            # Evaluate the individuals with an invalid fitness
+            invalid_ind = [(ind, start_gen) for ind in pop if not ind.fitness.valid]
+            fitnesses = self._toolbox.map(self._toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind[0].fitness.values = fit
 
-        if hof is not None:
-            hof.update(pop)
+            if hof is not None:
+                hof.update(pop)
 
-        record = stats.compile(pop) if stats else {}
-        logbook.record(gen=0, nevals=len(invalid_ind), **record)
-        if verbose:
-            logging.info(logbook.stream)
+            record = mstats.compile(pop) if mstats else {}
+            logbook.record(gen=start_gen, nevals=len(invalid_ind), **record)
+            if verbose:
+                logging.info(logbook.stream)
 
         # Begin the generational process
-        for gen in range(1, num_generations + 1):
+        for gen in range(start_gen+1, num_generations + 1):
+            os.makedirs(f'data/output/simulation_logs/{current_sim_id}/gen_{gen}', exist_ok=True)
+            os.makedirs(f'data/output/simulation_logs/{current_sim_id}/gen_{gen}/transactions', exist_ok=True)
+            os.makedirs(f'data/output/simulation_logs/{current_sim_id}/gen_{gen}/checkpoint', exist_ok=True)
+
             # Select the next generation individuals
             offspring = self._toolbox.select(pop, len(pop))
 
             # Vary the pool of individuals
             offspring = varAnd(offspring, self._toolbox, cxpb, mutpb)
 
-            # Evaluate the individuals with an invalid fitness
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            # Evaluate the individuals with an invalid fitness, create a tuple of ind and gen
+            # TODO: Idea for making it parallelizeable, [(ind, gen) for ind in offspring if not ind.fitness.valid]
+            invalid_ind = [(ind, gen) for ind in offspring if not ind.fitness.valid]
             fitnesses = self._toolbox.map(self._toolbox.evaluate, invalid_ind)
             for ind, fit in zip(invalid_ind, fitnesses):
-                ind.fitness.values = fit
+                ind[0].fitness.values = fit
 
             # Update the hall of fame with the generated individuals
             if hof is not None:
@@ -186,50 +203,25 @@ class DistributionOptimizer:
             pop[:] = offspring
 
             # Append the current generation statistics to the logbook
-            record = stats.compile(pop) if stats else {}
+            record = mstats.compile(pop) if mstats else {}
             logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+
+            logging.info("logbook-------")
+            logging.info(logbook)
+
+            logging.info("hof-------")
+            logging.info(hof)
+
             if verbose:
                 logging.info(logbook.stream)
 
-            rn.increase_gen()
-
-            if gen % 10 == 0:
-                self.save_checkpoint(pop, hof, stats, gen, f"data/output/simulation_logs/progress/checkpoint_gen_{gen}.pkl")
-
-
-        pop, mlogbook = algorithms.eaSimple(pop, self._toolbox, cxpb=0.5, mutpb=0.5, ngen=num_generations,
-                                            stats=mstats, halloffame=hof, verbose=True)
-
-        # for gen in range(start_gen, num_generations):
-        #
-        #     if gen % 2 == 0:
-        #         self.save_checkpoint(pop, hof, stats, gen,
-        #                              f"data/output/simulation_logs/progress/checkpoint_gen_{gen}.pkl")
+            # Save checkpoint of current generation
+            self.save_checkpoint(pop, hof, stats, gen, f"data/output/simulation_logs/{current_sim_id}/gen_{gen}/checkpoint/gen_{gen}.pkl")
 
         logging.info("End of Optimization")
-        logging.info("Beste Lösung:", hof[0], "Relative Revenue:", hof[0].fitness.values[0])
-        logging.info(mlogbook.chapters["fitness"].select("gen"))
-        hof_list = mlogbook.chapters["history"].select("hof")
+        logging.info(f'Best Solution: {hof[0]} Relative Revenue: {hof[0].fitness.values[0]}')
+        logging.info(logbook.chapters["fitness"].select("gen"))
 
-        if self._is_maximization:
-            val_list = mlogbook.chapters["fitness"].select("max")
-        else:
-            val_list = mlogbook.chapters["fitness"].select("min")
+        df_log = pd.DataFrame(logbook.chapters["history"])
+        df_log.to_excel(f'data/output/simulation_logs/{current_sim_id}/ea_alg_metrics.xlsx')
 
-        logging.info(hof)
-
-        unique_dict = {}
-        seen_elements = set()
-
-        for index, element in enumerate(hof_list):
-            if str(element) not in seen_elements:
-                unique_dict[index] = {"dist": element, "val": val_list[index]}
-                seen_elements.add(str(element))
-
-        for key, value in unique_dict.items():
-            tmp_list = pd.read_excel(
-                f'data/output/simulation_logs/progress/tran_c_{value["dist"][0]}_s_{value["dist"][1]}_ks_{value["dist"][2]}_b_{value["dist"][3]}.xlsx')
-            tmp_list.to_excel(
-                f'data/output/simulation_logs/final/gen_{key}_res_{value["val"]}_tran_c_{value["dist"][0]}_s_{value["dist"][1]}_ks_{value["dist"][2]}_b_{value["dist"][3]}.xlsx')
-
-        shutil.rmtree(f'data/output/simulation_logs/progress')

@@ -10,6 +10,7 @@ from configparser import ConfigParser
 import logging
 import time
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 # Third-party library imports
 import simpy
@@ -93,6 +94,10 @@ os.chdir(working_dir)
 parser = ConfigParser()
 parser.read(sys.argv[1])
 
+checkpoint = None
+
+if len(sys.argv) == 3:
+    checkpoint = sys.argv[2]
 
 class SimulationStrategy(Enum):
     MIN_CO2 = 0
@@ -106,16 +111,19 @@ class SimulationStrategy(Enum):
 # Logging                                 #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
+now = datetime.now()
+current_sim_id = "sim_" + now.strftime("%d_%m_%H:%M")
+os.makedirs("data/output/simulation_logs/" + current_sim_id, exist_ok=True)
 
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
 
 # Make it beautiful
 # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(filename='programm.log',
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-)
+logging.basicConfig(filename=f'{"data/output/simulation_logs/" + current_sim_id}/{current_sim_id}.log',
+                    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
+                    datefmt="%m/%d/%Y %I:%M:%S %p",
+                    )
 
 logger = logging.getLogger()
 logger.setLevel(log_level)
@@ -134,9 +142,10 @@ cf = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf)
 
 
-def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, df_metrics):
+def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, df_metrics, gen):
     logging.info(
-        f'Gen: {rn._gen} Sim: {rn._num} num vehicles: cars: {n_cars}, scooters: {n_scooters}, kick_scooters: {n_kick_scooters}, bikes: {n_bikes}, Sum: {(n_cars + n_scooters + n_kick_scooters + n_bikes)}', extra={"clazz": "main", "oid": ""})
+        f'Gen: {gen} Sim: {rn._num} num vehicles: cars: {n_cars}, scooters: {n_scooters}, kick_scooters: {n_kick_scooters}, bikes: {n_bikes}, Sum: {(n_cars + n_scooters + n_kick_scooters + n_bikes)}',
+        extra={"clazz": "main", "oid": ""})
 
     start_time = time.time()
 
@@ -473,12 +482,14 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
     logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
     # Run the simulation until end time
-    env.run(until=30)
+    env.run(until=100)
 
     logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
     transactions = operator.get_transactions()
-    transactions.to_excel(f'data/output/simulation_logs/progress/tran_c_{n_cars}_s_{n_scooters}_ks_{n_kick_scooters}_b_{n_bikes}.xlsx', index=False)
+    transactions.to_excel(
+        f'data/output/simulation_logs/{current_sim_id}/gen_{gen}/transactions/tran_c_{n_cars}_s_{n_scooters}_ks_{n_kick_scooters}_b_{n_bikes}.xlsx',
+        index=False)
 
     metrics_factory = MetricsFactory(transactions)
 
@@ -505,8 +516,24 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
     execution_time = end_time - start_time
     print(f"Execution time: {execution_time / 60} min")
 
+    # return society_metrics.get_co2_emissions(global_config.get_co2_per_vehicle_km()).sum()
+
+    fulfillment_rate = general_metrics.get_fulfillment_rate()
+
+    relative_value = None
+
+    # Penalty
+    if fulfillment_rate < 0.8:
+        if strategy == SimulationStrategy.MIN_CO2:
+            relative_value = (1 - fulfillment_rate) * society_metrics.get_co2_emissions(
+                global_config.get_co2_per_vehicle_km()).sum()
+        elif strategy == SimulationStrategy.MAX_REVENUE:
+            relative_value = fulfillment_rate * service_provider_metrics.get_revenue()
+        elif strategy == SimulationStrategy.MIN_TRAVEL_TIME:
+            relative_value = (1 - fulfillment_rate) * customer_metrics.get_travel_time()
+
     metrics = {
-        "gen": rn._gen,
+        "gen": gen,
         "num_ful_trips": general_metrics.get_num_fulfilled_trips(),
         "num_miss_trips": general_metrics.get_num_missed_trips(),
         "ful_rate": general_metrics.get_fulfillment_rate(),
@@ -523,25 +550,18 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
         "n_bikes": n_bikes,
         "exec_time": execution_time,
         "planned_charging_tasks": operations.planned_charging_tasks,
-        "planned_relocation_task": operations.planned_relocation_task
+        "planned_relocation_task": operations.planned_relocation_task,
+        "relative_value": relative_value
     }
 
     df_metrics.loc[len(df_metrics)] = metrics
+    df_metrics.to_excel(f'data/output/simulation_logs/{current_sim_id}/sim_metrics.xlsx')
 
-    # return society_metrics.get_co2_emissions(global_config.get_co2_per_vehicle_km()).sum()
 
-    fulfillment_rate = general_metrics.get_fulfillment_rate()
+    if relative_value is not None:
+        return relative_value
 
-    # Penalty
-    if fulfillment_rate < 0.8:
-        if strategy == SimulationStrategy.MIN_CO2:
-            return (1 - fulfillment_rate) * society_metrics.get_co2_emissions(
-                global_config.get_co2_per_vehicle_km()).sum()
-        elif strategy == SimulationStrategy.MAX_REVENUE:
-            return fulfillment_rate * service_provider_metrics.get_revenue()
-        elif strategy == SimulationStrategy.MIN_TRAVEL_TIME:
-            return (1 - fulfillment_rate) * customer_metrics.get_travel_time()
-
+    # No penalty continue
     if strategy == SimulationStrategy.MIN_CO2:
         return society_metrics.get_co2_emissions(global_config.get_co2_per_vehicle_km()).sum()
     elif strategy == SimulationStrategy.MAX_REVENUE:
@@ -562,13 +582,9 @@ def run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, strategy, rn, d
 
 class RefNum:
     _num = 1
-    _gen = 0
 
     def increase(self):
         self._num = self._num + 1
-
-    def increase_gen(self):
-        self._gen = self._gen + 1
 
 
 rn = RefNum()
@@ -578,7 +594,7 @@ columns = [
     "avg_fleet_util", "fleet_revenue", "travel_time", "wait_time", "costs", "n_cars",
     "n_scooters",
     "n_kick_scooters",
-    "n_bikes", "exec_time", "planned_charging_tasks", "planned_relocation_task"
+    "n_bikes", "exec_time", "planned_charging_tasks", "planned_relocation_task", "relative_value"
 ]
 df_metrics = pd.DataFrame(columns=columns)
 
@@ -619,7 +635,6 @@ def fleet_fulfillment_rate_convergence():
     plt.savefig('fulfillment_rate_plot.png')
 
 
-
 def minimize_co2(individual):
     n_cars, n_scooters, n_kick_scooters, n_bikes = individual
     gen = 0
@@ -627,8 +642,8 @@ def minimize_co2(individual):
 
 
 def maximize_revenue(individual):
-    n_cars, n_scooters, n_kick_scooters, n_bikes = individual
-    res = run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, SimulationStrategy.MAX_REVENUE, rn, df_metrics),
+    n_cars, n_scooters, n_kick_scooters, n_bikes = individual[0]
+    res = run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, SimulationStrategy.MAX_REVENUE, rn, df_metrics, individual[1]),
 
     print(f'Simulation Res: {res}')
 
@@ -640,13 +655,18 @@ def minimize_travel_time(individual):
     gen = 0
     return run_simulation(n_cars, n_scooters, n_kick_scooters, n_bikes, SimulationStrategy.MIN_TRAVEL_TIME, rn,
                           df_metrics),
+
+
+# TODO: Check if an exception will be caught in the logs
+# TODO: Try parallel processing on VM
+
 if __name__ == '__main__':
     dis_optimizer = DistributionOptimizer(3500, is_maximization=True)
     dis_optimizer.build(maximize_revenue)
-    dis_optimizer.optimize(2, 3, rn)
+    dis_optimizer.optimize(2, 3, current_sim_id, checkpoint)
     df_metrics.to_excel('./sim_metrics.xlsx')
 
-#fleet_fulfillment_rate_convergence()
+# fleet_fulfillment_rate_convergence()
 
 sys.exit()
 # TODO: In the end filter the sim_metrics though the hall of fame, but keep the distributions that the algorithm tested
