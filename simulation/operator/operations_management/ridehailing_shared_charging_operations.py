@@ -1,3 +1,4 @@
+import logging
 from random import random
 
 from simpy import Environment
@@ -40,6 +41,14 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         # timeslots are denoted by their start time and have length `self._config.shared_charging_config.timeslot_duration`
         auctioned_timeslot = self._auction.next_timeslot
         auctioned_capacity = self._auction.get_auctioned_capacity()
+        logging.debug(
+            "Auction opened for timeslot %s",
+            auctioned_timeslot,
+            extra={
+                "clazz": self.__class__.__name__,
+                "oid": self._auction_participant_id,
+            },
+        )
 
         # TODO: implement real bid logic
         bid = {
@@ -50,9 +59,25 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._auction.place_bid(bid)
         self.bidding_done.succeed()
         self.bidding_done = self._env.event()
+        logging.debug(
+            "Bids placed for timeslot %s",
+            auctioned_timeslot,
+            extra={
+                "clazz": self.__class__.__name__,
+                "oid": self._auction_participant_id,
+            },
+        )
 
         result = yield self.result_announced
         self.result_announced = self._env.event()
+        logging.debug(
+            "Results received for timeslot %s",
+            auctioned_timeslot,
+            extra={
+                "clazz": self.__class__.__name__,
+                "oid": self._auction_participant_id,
+            },
+        )
 
         self._virtual_charging_infrastructure.update(
             auctioned_timeslot, {k: v[0] for k, v in result.items()}
