@@ -72,17 +72,32 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
     def run(self):
         while True:
-            if (
-                self._env.now
-                < self._next_timeslot
+            open_at = (
+                self._next_timeslot
                 - self._config.shared_charging_config.auction_interval
-            ):
-                yield self._env.timeout(self._next_timeslot - self._env.now)
+            )
+
+            if self._env.now <= open_at:
+                yield self._env.timeout(open_at - self._env.now)
 
             self._is_open = True
             self.open_for_bidding.succeed()
+            logging.info(
+                "Auction open. Auctionable capacity for next timeslot (%s): %s",
+                self._next_timeslot,
+                sum(
+                    self._charging_infrastructure.get_available_capacity(
+                        self._next_timeslot
+                    ).values()
+                ),
+                extra={"clazz": self.__class__.__name__, "oid": " "},
+            )
 
             yield AllOf(self._env, [x.bidding_done for x in self._participants])
+            logging.debug(
+                "Bids received. Starting clearing",
+                extra={"clazz": self.__class__.__name__, "oid": " "},
+            )
 
             self.clear()
             try:
@@ -98,6 +113,11 @@ class SharedChargingAuction(Auction, TrackingInterface):
             self._next_timeslot = (
                 self._next_timeslot
                 + self._config.shared_charging_config.auction_interval
+            )
+            logging.debug(
+                "Results announced. Closing auction until %s",
+                self._next_timeslot,
+                extra={"clazz": self.__class__.__name__, "oid": " "},
             )
 
             self._is_open = False
