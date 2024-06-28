@@ -16,7 +16,12 @@ class VirtualChargingInfrastructure:
     This class replicates the public API of ChargingInfrastructure.
     """
 
-    __slots__ = ("_env", "_availability", "_charging_infrastructure")
+    __slots__ = (
+        "_env",
+        "_availability",
+        "_charging_infrastructure",
+        "_virtual_charging_stations",
+    )
 
     def __init__(self, env, charging_infrastructure: ChargingInfrastructure):
         self._env = env
@@ -24,6 +29,7 @@ class VirtualChargingInfrastructure:
         self._availability: Dict[int, Dict[str, int]] = {}
 
         self._charging_infrastructure = charging_infrastructure
+        self._virtual_charging_stations: Dict[int, Dict[str, int]] = {}
 
     def charging_stations(self):
         # TODO: implement
@@ -59,3 +65,11 @@ class VirtualChargingInfrastructure:
             raise ValueError(
                 "Availability must be a dict of (location, capacity)"
             ) from e
+
+        # recreate all virtual charging stations
+        self._virtual_charging_stations[timeslot] = []
+        for cs in self._charging_infrastructure.charging_stations:
+            charging_station = VirtualChargingStation(
+                cs, available_capacity=availability[cs.location]
+            )
+            self._virtual_charging_stations[timeslot].append(charging_station)
