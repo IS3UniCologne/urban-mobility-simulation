@@ -66,10 +66,10 @@ class VirtualChargingInfrastructure:
                 "Availability must be a dict of (location, capacity)"
             ) from e
 
-        # recreate all virtual charging stations
-        self._virtual_charging_stations[timeslot] = []
-        for cs in self._charging_infrastructure.charging_stations:
-            charging_station = VirtualChargingStation(
-                cs, available_capacity=availability[cs.location]
-            )
-            self._virtual_charging_stations[timeslot].append(charging_station)
+        # TODO: recreate all as virtual charging stations
+        # self._virtual_charging_stations[timeslot] = []
+        # for cs in self._charging_infrastructure.charging_stations:
+        #     charging_station = VirtualChargingStation(
+        #         cs, available_capacity=availability[cs.location]
+        #     )
+        #     self._virtual_charging_stations[timeslot].append(charging_station)
