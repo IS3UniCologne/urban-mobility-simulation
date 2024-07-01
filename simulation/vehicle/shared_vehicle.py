@@ -25,11 +25,11 @@ class SharedVehicle(Vehicle, ABC):
         self,
         env: Environment,
         position,
-        max_available_seats,
-        max_state_of_charge,
-        energy_consumption,
         velocity,
-        price_per_min,
+        max_available_seats=1,
+        max_state_of_charge=1,
+        energy_consumption=0.01,
+        price_per_min=1,
         driver: DriverInterface = None,
     ):
         super(SharedVehicle, self).__init__(env, position)

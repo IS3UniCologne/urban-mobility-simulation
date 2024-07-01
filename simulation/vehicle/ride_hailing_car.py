@@ -30,11 +30,11 @@ class RideHailingCar(RideHailingVehicle):
         self,
         env: Environment,
         position: GeodesicPosition,
-        max_available_seats,
-        max_state_of_charge,
-        energy_consumption,
         velocity,
-        price_per_min,
+        max_available_seats=4,
+        max_state_of_charge=16.7,
+        energy_consumption=0.152,
+        price_per_min=0.26,
         is_electric=True,
     ):
         """
@@ -50,10 +50,10 @@ class RideHailingCar(RideHailingVehicle):
         super(RideHailingCar, self).__init__(
             env,
             position,
+            velocity,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
-            velocity,
             price_per_min,
             is_electric=is_electric,
         )
