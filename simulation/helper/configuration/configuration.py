@@ -640,7 +640,7 @@ class TransitOperatorConfig:
 
 class BusConfig:
     def __init__(self, velocity: float, max_available_seats: int):
-        self.velocity = SimulationVelocityConverter(velocity)
+        self.velocity = SimulationVelocityConverter.convert_speed(velocity)
         self.max_available_seats = max_available_seats
 
 
