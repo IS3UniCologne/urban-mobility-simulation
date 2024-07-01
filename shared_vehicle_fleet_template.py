@@ -35,6 +35,7 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 # Custom module imports
 # Import metrics
 # Import operator related modules
+from simulation.metrics.metrics_factory import MetricsFactory
 from simulation.operator.fleet_factory import (
     generate_fleet_config,
     generate_mixed_fleet,
@@ -439,13 +440,6 @@ demand_factory = DemandFactory(
     env, demand_profile, di, world, [], seed, mode="shared_vehicle"
 )
 
-# logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
-
-# # Run the simulation until end time
-# env.run(until=end_time)
-
-# logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
-
 
 # For multiple simulation runs
 def run_simulation(end_time, seed=4711, env=env):
@@ -472,32 +466,31 @@ def run_simulation(end_time, seed=4711, env=env):
 
     logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
+    # Run the simulation until end time
+    env.run(until=end_time)
 
-# Run the simulation until end time
-env.run(until=end_time)
-
-logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+    logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
 
 transactions = operator.get_transactions()
 transactions.to_csv("data/output/transactions.csv", index=False)
 
-# metrics_factory = MetricsFactory(transactions)
+metrics_factory = MetricsFactory(transactions)
 
-# num_vehicles = {
-#     "SharedBike": n_bikes,
-#     "SharedCar": n_cars,
-#     "SharedKickScooter": n_kick_scooters,
-#     "SharedScooter": n_scooters,
-# }
+num_vehicles = {
+    "SharedBike": n_bikes,
+    "SharedCar": n_cars,
+    "SharedKickScooter": n_kick_scooters,
+    "SharedScooter": n_scooters,
+}
 
-# general_metrics = metrics_factory.general_metrics
+general_metrics = metrics_factory.general_metrics
 
-# metrics_factory.print_simulation_summary(
-#     num_vehicles,
-#     global_config.get_cost_per_vehicle_km(),
-#     global_config.get_co2_per_vehicle_km(),
-# )
+metrics_factory.print_simulation_summary(
+    num_vehicles,
+    global_config.get_cost_per_vehicle_km(),
+    global_config.get_co2_per_vehicle_km(),
+)
 
 sum_iterations = 3
 for i in range(sum_iterations):
