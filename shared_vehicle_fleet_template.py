@@ -448,13 +448,6 @@ demand_factory = DemandFactory(
 # env.process(shared_operator.timer())
 # env.process(shared_operator.run_operations())
 
-# logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
-
-# # Run the simulation until end time
-# env.run(until=50)
-
-# logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
-
 
 # For multiple simulation runs
 def run_simulation(end_time, seed=4711, env=env):
@@ -487,8 +480,7 @@ def run_simulation(end_time, seed=4711, env=env):
 
     logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-    # Run simulation
-
+    # Run the simulation until end time
     env.run(until=end_time)
 
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
@@ -498,4 +490,25 @@ def run_simulation(end_time, seed=4711, env=env):
 # for i in range(sum_iterations):
 #     env = simpy.Environment(start_time)
 
-#     run_simulation(end_time=end_time)
+metrics_factory = MetricsFactory(transactions)
+
+num_vehicles = {
+    "SharedBike": n_bikes,
+    "SharedCar": n_cars,
+    "SharedKickScooter": n_kick_scooters,
+    "SharedScooter": n_scooters,
+}
+
+general_metrics = metrics_factory.general_metrics
+
+metrics_factory.print_simulation_summary(
+    num_vehicles,
+    global_config.get_cost_per_vehicle_km(),
+    global_config.get_co2_per_vehicle_km(),
+)
+
+sum_iterations = 3
+for i in range(sum_iterations):
+    env = simpy.Environment(start_time)
+
+    run_simulation(end_time=end_time)
