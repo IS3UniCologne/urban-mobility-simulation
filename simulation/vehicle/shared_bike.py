@@ -11,10 +11,10 @@ class SharedBike(SharedVehicle):
         self,
         env: Environment,
         position,
-        max_available_seats,
-        max_state_of_charge,
         velocity,
-        price_per_min,
+        max_available_seats=1,
+        max_state_of_charge=0,
+        price_per_min=0.08,
     ):
         """
 
@@ -27,10 +27,10 @@ class SharedBike(SharedVehicle):
         super(SharedBike, self).__init__(
             env,
             position,
+            velocity,
             max_available_seats,
             max_state_of_charge,
             0.0,
-            velocity,
             price_per_min,
         )
 

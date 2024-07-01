@@ -29,8 +29,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         route: PublicTransitRoute,
         position: GeodesicPosition,
         use_learning_agent: bool,
-        max_available_seats,
         velocity,
+        max_available_seats=100,
     ):
         """
 
@@ -39,7 +39,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         :param max_available_seats: depends on type of bus
         :param velocity: e.g. 16.67 m/min * 30 (average in city)
         """
-        super(Bus, self).__init__(env, route, position, max_available_seats, velocity)
+        super(Bus, self).__init__(env, route, position, velocity, max_available_seats)
 
         self._id = Bus.bus_id
         self._time = SimulationTime(self._env)
