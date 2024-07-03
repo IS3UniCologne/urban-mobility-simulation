@@ -264,10 +264,10 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             autonomous_car = RideHailingAV(
                 env,
                 pos,
+                a_config.velocity,
                 a_config.max_available_seats,
                 a_config.max_state_of_charge,
                 a_config.energy_consumption,
-                a_config.velocity,
                 a_config.price_per_min,
             )
             fleet.add_vehicle(autonomous_car)
