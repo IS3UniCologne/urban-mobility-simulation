@@ -52,7 +52,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
         # TODO: implement real bid logic
         bid = {
-            k: (v, random(), self._auction_participant_id)
+            k: [(v, random(), self._auction_participant_id)]
             for k, v in auctioned_capacity.items()
         }
 

@@ -1,7 +1,7 @@
 import logging
 import random
 from collections import Counter
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import pandas as pd
 from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
@@ -38,8 +38,8 @@ class SharedChargingAuction(Auction, TrackingInterface):
     ) -> None:
         super().__init__(env, start_condition, end_condition)
 
-        # bids are n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
-        self._bid_syntax = Dict[str, Tuple[int, float, int]]
+        # bids are a list of n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
+        self._bid_syntax = Dict[str, List[Tuple[int, float, int]]]
 
         # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
         self._result_syntax = Dict[int, Dict[str, Tuple[int, float]]]
@@ -269,7 +269,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         for location, bid in single_bid.items():
             if location not in self._bids:
                 self._bids[location] = []
-            self._bids[location].append(bid)
+            self._bids[location].extend(bid)
 
     @staticmethod
     def __tiebreak_capacity(capacity, among):
