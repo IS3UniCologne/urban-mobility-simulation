@@ -241,10 +241,10 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     def mount_driver(self, driver: DriverInterface):
-        if self._driver is not None:
-            raise Exception(
-                f"Vehicle {self._id} has already a driver {self._driver.identify_driver()}. Unable to mount driver."
-            )
+        #if self._driver is not None:
+        #    raise Exception(
+        #        f"Vehicle {self._id} has already a driver {self._driver.identify_driver()}. Unable to mount driver."
+        #    )
 
         self._driver = driver
         self._driver_mounted.succeed()
@@ -259,19 +259,23 @@ class SharedVehicle(Vehicle, ABC):
 
     def unmount_driver(self):
         if self._driver is None:
-            raise Exception("Vehicle has no driver to unmount.")
+            self._driver_unmounted.succeed()
+            self._driver_unmounted = self._env.event()
+            self._state == VehicleState.PARKING
+            #raise Exception("Vehicle has no driver to unmount.")
 
-        tmp_driver_id = self._driver.identify_driver()
-        self._driver = None
-        self._driver_unmounted.succeed()
-        self._driver_unmounted = self._env.event()
+        else:
+            tmp_driver_id = self._driver.identify_driver()
+            self._driver = None
+            self._driver_unmounted.succeed()
+            self._driver_unmounted = self._env.event()
 
-        self._state == VehicleState.PARKING
+            self._state == VehicleState.PARKING
 
-        logging.debug(
-            f"Driver: {tmp_driver_id} unmounted vehicle.",
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
-        )
+            logging.debug(
+                f"Driver: {tmp_driver_id} unmounted vehicle.",
+                extra={"clazz": self.__class__.__name__, "oid": self._id},
+            )
 
     def mount_passenger(self, passenger: PassengerInterface):
         if len(self._seats) < self._available_seats:

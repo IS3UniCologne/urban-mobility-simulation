@@ -1,14 +1,13 @@
 name: urban-mobility-simulation
 channels:
   - conda-forge
+  - pytorch
   - defaults
 dependencies:
   - python>=3.9.2,<3.10
-  - cudatoolkit=11.2
-  - cudnn=8.1.0
+  - austin
   - ipython
   - geopandas
-  - h3-py>=3.7.1,<4
   - haversine
   - matplotlib
   - notebook
@@ -18,13 +17,18 @@ dependencies:
   - simpy>=4.0.1
   - statsmodels
   - tqdm
-  - pip
+  - pip>20.3
   - pip:
+      - h3>=3.7.1,<4
       - partridge[full]
+      - peartree
       - gtfs_kit
-      - git+https://github.com/gkhayes/mlrose.git
+      - git+https://github.com/hiive/mlrose.git
       - line-profiler-pycharm
       - pqdm
       - psutil
-      - tensorflow
+      - torch
+      - lovely-tensors
       - ruff
+      - deap
+      - openpyxl

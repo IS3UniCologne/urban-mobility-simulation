@@ -7,9 +7,10 @@ from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
 
 
 class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInterface):
-    def __init__(self, path_to_choice_model, substitution_boundary, available_vehicles):
+    def __init__(self, path_to_choice_model, substitution_boundary, available_vehicles, choice_model):
         # Load Choice Model
-        self._choice_model = load_pickle(path_to_choice_model)
+        #self._choice_model = load_pickle(path_to_choice_model)
+        self._choice_model = choice_model
 
         self._substitution_boundary = substitution_boundary
 
