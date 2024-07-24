@@ -138,7 +138,16 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
     def _clear_single(self, location: str, capacity: int) -> None:
         # uniform price clearing of capacity with fair tie breaking
-        location_bids = self._bids[location]
+
+        try:
+            assert len(self._bids) > 0
+            location_bids = self._bids[location]
+        except (AssertionError, KeyError):
+            result = {}
+            for participant in self._participants:
+                result[participant.auction_participant_id] = (0, 0.0)
+            self._location_results[location] = result
+            return
 
         bids_df = pd.DataFrame.from_records(
             location_bids, columns=["capacity", "bid_price", "bidder_id"]
@@ -150,9 +159,12 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
         bids_df["cumulative_capacity"] = bids_df["capacity"].cumsum()
 
-        clearing_price = bids_df.loc[
-            bids_df["cumulative_capacity"] >= capacity, "bid_price"
-        ].values[0]
+        if (bids_df["cumulative_capacity"] > capacity).any():
+            clearing_price = bids_df.loc[
+                bids_df["cumulative_capacity"] > capacity, "bid_price"
+            ].values[0]
+        else:
+            clearing_price = 0
 
         if len(bids_df.loc[bids_df["bid_price"] == clearing_price, "bidder_id"]) > 1:
             capacity_to_tiebreak = (
@@ -201,17 +213,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
                 result.index[-1], "capacity"
             ] - (result.loc[result.index[-1], "cumulative_capacity"] - capacity)
 
-        result = (
-            bids_df[["bidder_id"]]
-            .merge(
-                result[["bidder_id", "capacity"]],
-                left_on="bidder_id",
-                right_on="bidder_id",
-                how="left",
-            )
-            .fillna(0)
-        )
-
+        result = result.groupby("bidder_id").agg({"capacity": "sum"}).reset_index()
         result["clearing_price"] = clearing_price
 
         # result.sort_values(by="bidder_id", inplace=True)
@@ -224,6 +226,11 @@ class SharedChargingAuction(Auction, TrackingInterface):
                 index=False, name=None
             )
         )
+
+        submitted_ids = [result[0] for result in result_list]
+        for participant in self._participants:
+            if participant.auction_participant_id not in submitted_ids:
+                result_list.append((participant.auction_participant_id, 0, 0.0))
 
         self._location_results[location] = {t[0]: (t[1], t[2]) for t in result_list}
 
