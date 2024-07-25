@@ -37,18 +37,14 @@ class MixedRideHailingFleet(VehicleFleet):
         )
         self._env.process(self.fleet_size_monitor())
 
-    def add_vehicle(self, vehicle: RideHailingVehicle):
-        if vehicle not in self._vehicles:
-            if isinstance(vehicle, RideHailingCar):
-                self._vehicles.append(vehicle)
-                self._ridehailing_cars.append(vehicle)
-            elif isinstance(vehicle, RideHailingAV):
-                self._vehicles.append(vehicle)
-                self._autonomous_cars.append(vehicle)
+    def add_shared_vehicle(self, vehicle: RideHailingVehicle):
+        if isinstance(vehicle, RideHailingCar):
+            self._vehicles.append(vehicle)
+            self._ridehailing_cars.append(vehicle)
 
-            self._tracking.register(vehicle)
-        else:
-            raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
+        elif isinstance(vehicle, RideHailingAV):
+            self._vehicles.append(vehicle)
+            self._autonomous_cars.append(vehicle)
 
     def vehicles_in_region(self, region):
         """
@@ -105,7 +101,9 @@ class MixedRideHailingFleet(VehicleFleet):
         """
 
         # TODO: this could be improved in terms of speed by vectorizing the distance calculation and conditioning on the vector < threshold
-        parking_cars = [car for car in self._cars if car.state == VehicleState.PARKING]
+        parking_cars = [
+            car for car in self._vehicles if car.state == VehicleState.PARKING
+        ]
         for car in parking_cars:
             if (
                 car.position >> origin <= self._distance_threshold_to_user
@@ -113,18 +111,9 @@ class MixedRideHailingFleet(VehicleFleet):
             ):
                 cars_in_area.append(car)
 
-        serving_state = VehicleState.DRIVING
-        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
-        state_of_charge_threshold = self._recharging_threshold[hour]
         serving_cars = [
-            car
-            for car in self._vehicles
-            if car.state == serving_state
-            and not car._suggested
-            and car.current_relative_state_of_charge > state_of_charge_threshold + 5
+            car for car in self._vehicles if car.state == VehicleState.DRIVING
         ]
-
-        serving_cars_in_area = []
         for car in serving_cars:
             distance_to_current_destination = (
                 car.estimated_completion_time - self._env.now
@@ -155,6 +144,8 @@ class MixedRideHailingFleet(VehicleFleet):
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
+        below_soc_level_vehicles = []
+        all_vehicle_list = self._vehicles
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
         return sum(

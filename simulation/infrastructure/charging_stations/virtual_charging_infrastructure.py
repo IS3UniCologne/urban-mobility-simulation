@@ -54,8 +54,9 @@ class VirtualChargingInfrastructure:
     def get_locations(self):
         """
         Defaults to `get_available_locations() at current time`
+        TODO: shouldn't this incorporate a lookahead?
         """
-        return self._charging_infrastructure.get_available_locations(self._env.now())
+        return self.get_available_locations(self._env.now)
 
     def update(self, timeslot: int, availability: Dict[str, int]):
         try:
