@@ -1,7 +1,9 @@
 import logging
+from collections import namedtuple
 
 from simpy import Environment
 
+from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
@@ -25,7 +27,6 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         bidding_parameters: dict,
         state_of_charge_threshold: float,
         distance_matrix=None,
-        charging_operations: RideHailingChargingOperations = None,
     ):
         OperationsInterface.__init__(self, env)
         BidderInterface.__init__(self, env, auction)
@@ -34,9 +35,12 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
         # self._bidding_strategy = bidding_strategy
         self._bidding_parameters = bidding_parameters
-        self._charging_operations = charging_operations
         self._state_of_charge_threshold = state_of_charge_threshold
         self._distance_matrix = distance_matrix
+
+        self._config = Configuration.instance()
+
+        self._charging_operations = None
 
     @property
     def auction_participant_id(self):
@@ -47,13 +51,37 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             self._env, self._operator_reference.charging_infrastructure
         )
+
+        self._charging_operations = RideHailingChargingOperations(
+            env=self._env,
+            distance_matrix=self._distance_matrix,
+            time_between_operations=self._config.ridehailing_operator_config.operations_start,
+            operation_duration=self._config.ridehailing_operator_config.operations_duration,
+            available_modes=self._config.ridehailing_operator_config.available_modes,
+            available_modes_supply=self._config.ridehailing_operator_config.available_modes_supply,
+            state_of_charge_threshold=self._state_of_charge_threshold,
+        )
+
+        # hack a virtual operator reference into it?
+        VirtualOperator = namedtuple(
+            "VirtualOperator", ["fleet", "charging_infrastructure"]
+        )
+        self._charging_operations.register_operator_reference(
+            VirtualOperator(
+                fleet=self._operator_reference.fleet,
+                charging_infrastructure=self._virtual_charging_infrastructure,
+            )
+        )
+
+        self._env.process(self._charging_operations.execute())
+
         while True:
             # this operator has two jobs to do:
             # 1) bid for capacity
             # 2) charge vehicles
 
             yield self._env.process(self._bid_for_capacity())
-            yield self._env.process(self._charge_vehicles())
+            # yield self._env.process(self._charge_vehicles())
 
     def _bid_for_capacity(self):
         yield self._auction.open_for_bidding
@@ -69,7 +97,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
             },
         )
 
-        # TODO: implement real bid logic
+        # TODO: refactor to be a method of somethign like "BiddingStrategy"
         bid = get_bid(
             auctioned_timeslot=auctioned_timeslot,
             auctioned_capacity=auctioned_capacity,
@@ -109,11 +137,6 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
                 "oid": self._auction_participant_id,
             },
         )
-
-        try:
-            {k: v[0] for k, v in result.items()}
-        except Exception:
-            pass
 
         self._virtual_charging_infrastructure.update(
             auctioned_timeslot, {k: v[0] for k, v in result.items()}
