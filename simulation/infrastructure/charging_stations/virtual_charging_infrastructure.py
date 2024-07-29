@@ -91,9 +91,14 @@ class VirtualChargingInfrastructure:
     def _update_virtual_cs(self, init=False):
         for cs in self._virtual_charging_stations:
             cs.update_capacity(
-                self._availability[self._default_lookahead][cs.location]
+                capacity=self._availability[self._default_lookahead][cs.location]
                 if not init
-                else 0
+                else 0,
+                valid_timeframe=(
+                    self._default_lookahead,
+                    self._default_lookahead
+                    + self._config.shared_charging_config.timeslot_duration,
+                ),
             )
 
     def update(self, timeslot: int, availability: Dict[str, int]):

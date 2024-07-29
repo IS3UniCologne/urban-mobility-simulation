@@ -194,41 +194,58 @@ class RideHailingChargingOperations(OperationsInterface):
         if not self._operator_reference.charging_infrastructure.get_locations():
             logging.warning(
                 "No charging stations available. No charging plan generated.",
-                extra={
-                    "clazz": self.__class__.__name__,
-                    "oid": self._operator_reference.id,
-                },
+                extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             return charging_plan
-
-        if not self._allow_queue:
-            # for virtual CS, we can use the capacity, as it gets updated
-            if is_bearable(
-                self._operator_reference.charging_infrastructure,
-                VirtualChargingInfrastructure,
-            ):
-                capacity_to_consider = {
-                    x.location: x.capacity
-                    for x in self._operator_reference.charging_infrastructure.charging_stations
-                    if x.capacity > 0
-                }
-            else:
-                # otherwise we need to consider capacity minus current plugged in vehicles:
-                capacity_to_consider = {
-                    x.location: x.capacity - len(x.plugs.users)
-                    for x in self._operator_reference.charging_infrastructure.charging_stations
-                    if x.capacity - len(x.plugs.users) > 0
-                }
 
         for vehicle in vehicles_to_charge:
             hex = vehicle.position.get_hexagon(return_geom=False)[0]
 
             # Get nearest charging station (.loc -> destination, [[]] -> Origin)
-            if not self._allow_queue:
-                # considering only the ones with remaining capacity from other charging plans
-                sorted_base_list = self._distance_matrix.loc[
-                    list(capacity_to_consider.keys())
-                ][[hex]].sort_values(by=hex, ascending=True)
+            sorted_base_list = self._distance_matrix.loc[
+                self._operator_reference.charging_infrastructure.get_locations()
+            ][[hex]].sort_values(by=hex, ascending=True)
+
+            selected_base_distance = None
+            # Select Nearest Base
+            if vehicle.is_electric:
+                # we prioritize based on the queue
+                for queue in [0, 2, 5, 10]:
+                    for index_base, row_base in sorted_base_list.iterrows():
+                        selected_base = index_base
+                        available_charging_stations = [
+                            x
+                            for x in self._operator_reference.charging_infrastructure.charging_stations
+                            if len(x.plugs.queue) <= queue
+                        ]
+                        if len(available_charging_stations) > 0:
+                            selected_charging_station = [
+                                x
+                                for x in available_charging_stations
+                                if x.location == selected_base
+                            ]
+                            if len(selected_charging_station) > 0:
+                                selected_charging_station = selected_charging_station[0]
+                                selected_base_distance = row_base[hex]
+                                break
+                # sometimes the queue is too long and we have to disregard it
+                if not selected_base_distance:
+                    for index_base, row_base in sorted_base_list.iterrows():
+                        selected_base = index_base
+                        available_charging_stations = [
+                            x
+                            for x in self._operator_reference.charging_infrastructure.charging_stations
+                        ]
+                        if len(available_charging_stations) > 0:
+                            selected_charging_station = [
+                                x
+                                for x in available_charging_stations
+                                if x.location == selected_base
+                            ]
+                            if len(selected_charging_station) > 0:
+                                selected_charging_station = selected_charging_station[0]
+                                selected_base_distance = row_base[hex]
+                                break
 
                 if sorted_base_list.empty:
                     # no charging stations available because capacity exhausted

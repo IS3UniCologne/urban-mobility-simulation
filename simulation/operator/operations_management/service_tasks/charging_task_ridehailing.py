@@ -5,7 +5,6 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
-from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
@@ -26,14 +25,10 @@ class ChargingTaskRidehailing(ServiceTask):
         "_number_of_vehicles_to_charge",
         "_vehicle_mode",
         "_distance_to_fleet_base",
+        "_vehicle_fleet",
         "_state_of_charge_threshold",
         "_charging_station",
         "_vehicle",
-        "_waiting_time",
-        "_charging_duration",
-        "_kWh_charged",
-        "_scheduled_time",
-        "_config",
     )
 
     def __init__(
@@ -128,6 +123,17 @@ class ChargingTaskRidehailing(ServiceTask):
                 vehicle.relocate(relocation_route, relocation_duration_per_vehicle)
             )
 
+            scheduled_time = None
+
+            if isinstance(self._charging_station, VirtualChargingStation):
+                # if we are in a context of shared capacity, we need to wait for the reservation
+                scheduled_time = self._charging_station.valid_timeframe[0]
+                logging.debug(
+                    f"Vehicle {vehicle.id} waits {scheduled_time - self._env.now} minutes for reserved slot.",
+                    extra={"clazz": self.__class__.__name__},
+                )
+                yield self._env.timeout(max(0, scheduled_time - self._env.now))
+
             if vehicle.is_electric:
                 vehicle.waiting_for_charging()
 
@@ -175,24 +181,10 @@ class ChargingTaskRidehailing(ServiceTask):
                         / charging_power
                         * 60
                     )
-                    if self._scheduled_time is not None:
+                    if scheduled_time is not None:
                         charging_duration = min(
-                            charging_duration,
-                            (self._scheduled_time + 60) - self._env.now,
+                            charging_duration, (scheduled_time + 60) - self._env.now
                         )
-
-                    charging_duration -= 1e-6 if charging_duration > 1e-6 else 0
-
-                    # Plugin Vehicle to Charging Station
-                    vehicle.plug_to_charging_station()
-
-                    if not isinstance(self._charging_station, VirtualChargingStation):
-                        waiting_stop = self._env.now
-                        self._waiting_time = waiting_stop - waiting_start
-
-                    self._charging_duration = charging_duration
-                    self._kWh_charged = charging_duration / 60 * charging_power
-                    self._state = TaskState.EXECUTING_CHARGING
 
                     yield self._env.process(vehicle.charge(charging_duration))
             else:

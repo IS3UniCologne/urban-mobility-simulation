@@ -1,9 +1,12 @@
+from typing import Tuple
+
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 
 
 class VirtualChargingStation:
     __slots = (
         "_env",
+        "_valid_timeframe",
         "_capacity",
         "_polygon",
         "_centre",
@@ -16,6 +19,7 @@ class VirtualChargingStation:
 
     def __init__(self, charging_station: ChargingStation):
         self._env = charging_station._env
+        self._valid_timeframe = None
         self._capacity = charging_station.capacity
         self._polygon = charging_station.polygon
         self._centre = [self._polygon.centroid.y, self._polygon.centroid.x]
@@ -25,8 +29,13 @@ class VirtualChargingStation:
         self._power = charging_station.power
         self._queue = charging_station._queue
 
-    def update_capacity(self, capacity):
+    def update_capacity(self, capacity, valid_timeframe: Tuple[float, float]):
         self._capacity = capacity
+        self._valid_timeframe = valid_timeframe
+
+    @property
+    def valid_timeframe(self):
+        return self._valid_timeframe
 
     @property
     def capacity(self):
