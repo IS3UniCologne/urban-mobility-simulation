@@ -1,8 +1,13 @@
+import logging
+
 from simpy import Environment
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.infrastructure.charging_stations.virtual_charging_station import (
+    VirtualChargingStation,
+)
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
@@ -12,6 +17,18 @@ from simulation.vehicle.vehicle import VehicleState
 
 
 class ChargingTaskRidehailing(ServiceTask):
+    __slots = (
+        "_origin",
+        "_destination",
+        "_number_of_vehicles_to_charge",
+        "_vehicle_mode",
+        "_distance_to_fleet_base",
+        "_vehicle_fleet",
+        "_state_of_charge_threshold",
+        "_charging_station",
+        "_vehicle",
+    )
+
     def __init__(
         self,
         env: Environment,
@@ -88,6 +105,17 @@ class ChargingTaskRidehailing(ServiceTask):
                 vehicle.relocate(relocation_route, relocation_duration_per_vehicle)
             )
 
+            scheduled_time = None
+
+            if isinstance(self._charging_station, VirtualChargingStation):
+                # if we are in a context of shared capacity, we need to wait for the reservation
+                scheduled_time = self._charging_station.valid_timeframe[0]
+                logging.debug(
+                    f"Vehicle {vehicle.id} waits {scheduled_time - self._env.now} minutes for reserved slot.",
+                    extra={"clazz": self.__class__.__name__},
+                )
+                yield self._env.timeout(max(0, scheduled_time - self._env.now))
+
             if vehicle.is_electric:
                 vehicle.waiting_for_charging()
 
@@ -104,16 +132,19 @@ class ChargingTaskRidehailing(ServiceTask):
                     )
                     # Note: See text regarding linearization
                     # *60 as state of charge is in kWh => kWmin
-                    charging_duration_per_vehicles = (
+                    charging_duration = (
                         (vehicle.max_state_of_charge - vehicle.current_state_of_charge)
                         / charging_power
                         * 60
                     )
+                    if scheduled_time is not None:
+                        charging_duration = min(
+                            charging_duration, (scheduled_time + 60) - self._env.now
+                        )
 
-                    yield self._env.process(
-                        vehicle.charge(charging_duration_per_vehicles)
-                    )
+                    yield self._env.process(vehicle.charge(charging_duration))
             else:
+                # TODO: this usage of "charge" for possibly ICE vehicles is confusing
                 vehicle._state = VehicleState.PRE_SERVICE
                 vehicle.plug_to_charging_station()
                 yield self._env.process(vehicle.charge(charging_time=5))
