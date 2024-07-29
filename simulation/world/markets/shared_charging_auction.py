@@ -55,7 +55,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         # init auction view on charging infrastructure
         # this is a view that tells the auctioneer how much capacity is up for auction
         self._charging_infrastructure = VirtualChargingInfrastructure(
-            self._env, charging_infrastructure
+            self._env, charging_infrastructure, use_virtual_cs=False
         )
         for timeslot in range(
             self._config.auction_config.auction_start,
