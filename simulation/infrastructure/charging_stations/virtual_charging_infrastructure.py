@@ -3,8 +3,12 @@ from typing import Dict
 from beartype.door import die_if_unbearable
 from beartype.roar import BeartypeDoorHintViolation
 
+from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
+)
+from simulation.infrastructure.charging_stations.virtual_charging_station import (
+    VirtualChargingStation,
 )
 
 
@@ -18,22 +22,48 @@ class VirtualChargingInfrastructure:
 
     __slots__ = (
         "_env",
+        "_config",
+        "_default_lookahead",
         "_availability",
         "_charging_infrastructure",
         "_virtual_charging_stations",
     )
 
-    def __init__(self, env, charging_infrastructure: ChargingInfrastructure):
+    def __init__(
+        self, env, charging_infrastructure: ChargingInfrastructure, use_virtual_cs=True
+    ):
         self._env = env
+        self._config = Configuration.instance()
+
+        self._default_lookahead = (
+            self._config.auction_config.auction_start
+            + self._config.shared_charging_config.auction_interval
+        )
 
         self._availability: Dict[int, Dict[str, int]] = {}
 
         self._charging_infrastructure = charging_infrastructure
-        self._virtual_charging_stations: Dict[int, Dict[str, int]] = {}
+        if use_virtual_cs:
+            self._virtual_charging_stations = [
+                VirtualChargingStation(cs)
+                for cs in self._charging_infrastructure.charging_stations
+            ]
 
+            self._update_virtual_cs(init=True)
+        else:
+            self._virtual_charging_stations = None
+
+    @property
     def charging_stations(self):
-        # TODO: implement
-        raise NotImplementedError
+        return self._charging_stations()
+
+    def _charging_stations(self):
+        if self._virtual_charging_stations is None:
+            raise NotImplementedError(
+                "This virtual charging infrastructure was initialized without virtual charging stations!"
+            )
+        else:
+            return self._virtual_charging_stations
 
     def get_available_locations(self, at_timeslot: int):
         try:
@@ -53,10 +83,18 @@ class VirtualChargingInfrastructure:
 
     def get_locations(self):
         """
-        Defaults to `get_available_locations() at current time`
-        TODO: shouldn't this incorporate a lookahead?
+        Defaults to `get_available_locations() at self._default_lookahead`
+        which is the next timeslot that was already auctioned.
         """
-        return self.get_available_locations(self._env.now)
+        return self.get_available_locations(self._default_lookahead)
+
+    def _update_virtual_cs(self, init=False):
+        for cs in self._virtual_charging_stations:
+            cs.update_capacity(
+                self._availability[self._default_lookahead][cs.location]
+                if not init
+                else 0
+            )
 
     def update(self, timeslot: int, availability: Dict[str, int]):
         try:
@@ -67,10 +105,11 @@ class VirtualChargingInfrastructure:
                 "Availability must be a dict of (location, capacity)"
             ) from e
 
-        # TODO: recreate all as virtual charging stations
-        # self._virtual_charging_stations[timeslot] = []
-        # for cs in self._charging_infrastructure.charging_stations:
-        #     charging_station = VirtualChargingStation(
-        #         cs, available_capacity=availability[cs.location]
-        #     )
-        #     self._virtual_charging_stations[timeslot].append(charging_station)
+        # update the default lookahead to be the next auctioned slot
+        self._default_lookahead = self._env.now + (
+            self._config.shared_charging_config.auction_interval
+            - (self._env.now % self._config.shared_charging_config.auction_interval)
+        )
+
+        if self._virtual_charging_stations is not None:
+            self._update_virtual_cs()
