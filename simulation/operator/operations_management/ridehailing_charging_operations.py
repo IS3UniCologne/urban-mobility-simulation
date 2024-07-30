@@ -8,8 +8,6 @@ from simulation.operator.operations_management.task_queue import TaskQueue
 
 
 class RideHailingChargingOperations(OperationsInterface):
-    # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
-
     def __init__(
         self,
         env,
