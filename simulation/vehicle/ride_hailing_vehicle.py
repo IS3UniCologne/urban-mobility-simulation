@@ -519,4 +519,4 @@ class RideHailingVehicle(Vehicle):
         )
 
     def __str__(self):
-        return f"I have {self.available_seats} passengers on boards"
+        return f"ID: {self._id}, Position: {self._position}, State: {self._state}"

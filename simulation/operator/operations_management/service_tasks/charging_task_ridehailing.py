@@ -107,17 +107,17 @@ class ChargingTaskRidehailing(ServiceTask):
 
             scheduled_time = None
 
-            if isinstance(self._charging_station, VirtualChargingStation):
-                # if we are in a context of shared capacity, we need to wait for the reservation
-                scheduled_time = self._charging_station.valid_timeframe[0]
-                logging.debug(
-                    f"Vehicle {vehicle.id} waits {scheduled_time - self._env.now} minutes for reserved slot.",
-                    extra={"clazz": self.__class__.__name__},
-                )
-                yield self._env.timeout(max(0, scheduled_time - self._env.now))
-
             if vehicle.is_electric:
                 vehicle.waiting_for_charging()
+
+                if isinstance(self._charging_station, VirtualChargingStation):
+                    # if we are in a context of shared capacity, we need to wait for the reservation
+                    scheduled_time = self._charging_station.valid_timeframe[0]
+                    logging.debug(
+                        f"Vehicle {vehicle.id} waits {scheduled_time - self._env.now} minutes for reserved slot.",
+                        extra={"clazz": self.__class__.__name__},
+                    )
+                    yield self._env.timeout(max(0, scheduled_time - self._env.now))
 
                 with self._charging_station.plugs.request() as req:
                     yield req
