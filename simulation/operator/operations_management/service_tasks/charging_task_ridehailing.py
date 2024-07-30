@@ -125,46 +125,17 @@ class ChargingTaskRidehailing(ServiceTask):
 
             scheduled_time = None
 
-            if isinstance(self._charging_station, VirtualChargingStation):
-                # if we are in a context of shared capacity, we need to wait for the reservation
-                scheduled_time = self._charging_station.valid_timeframe[0]
-                logging.debug(
-                    f"Vehicle {vehicle.id} waits {scheduled_time - self._env.now} minutes for reserved slot.",
-                    extra={"clazz": self.__class__.__name__},
-                )
-                yield self._env.timeout(max(0, scheduled_time - self._env.now))
-
             if vehicle.is_electric:
                 vehicle.waiting_for_charging()
 
-                waiting_start = self._env.now
-
                 if isinstance(self._charging_station, VirtualChargingStation):
                     # if we are in a context of shared capacity, we need to wait for the reservation
-
-                    scheduled_timeslot_end = (
-                        self._scheduled_time
-                        + self._config.shared_charging_config.timeslot_duration
+                    scheduled_time = self._charging_station.valid_timeframe[0]
+                    logging.debug(
+                        f"Vehicle {vehicle.id} waits {scheduled_time - self._env.now} minutes for reserved slot.",
+                        extra={"clazz": self.__class__.__name__},
                     )
-                    self._waiting_time = self._scheduled_time - self._env.now
-                    if self._waiting_time > 0:
-                        logging.debug(
-                            f"Vehicle {vehicle.id} waits {self._waiting_time} minutes for reserved slot.",
-                            extra={"clazz": self.__class__.__name__},
-                        )
-                        self._state = TaskState.EXECUTING_WAITING
-                        yield self._env.timeout(max(0, self._waiting_time))
-                    elif scheduled_timeslot_end <= self._env.now:
-                        logging.warning(
-                            "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
-                            vehicle.id,
-                            self._env.now - scheduled_timeslot_end,
-                            extra={"clazz": self.__class__.__name__, "oid": vehicle.id},
-                        )
-                        self._state = TaskState.MISSED_TIMESLOT
-                        vehicle.state = VehicleState.PARKING
-                        self._task_finished.succeed()
-                        return
+                    yield self._env.timeout(max(0, scheduled_time - self._env.now))
 
                 with self._charging_station.plugs.request() as req:
                     yield req
