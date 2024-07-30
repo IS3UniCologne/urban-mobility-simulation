@@ -75,3 +75,6 @@ class Vehicle(ABC):
     @abstractmethod
     def __str__(self):
         pass
+
+    def __repr__(self) -> str:
+        return self.__str__()

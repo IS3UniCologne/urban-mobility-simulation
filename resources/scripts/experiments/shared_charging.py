@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from configparser import ConfigParser
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -82,29 +83,29 @@ parser.read(sys.argv[1])
 
 # Log Level
 log_level = parser.get("SETTINGS", "log_level")
-
-# Make it beautiful
-# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-)
-
-logger = logging.getLogger()
-logger.setLevel(log_level)
+file_log_level = parser.get("SETTINGS", "file_log_level")
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+
+logger = logging.getLogger()
+
+# Make it beautiful
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+    filename=f"data/output/logs/{datetime.strftime(datetime.now(), '%Y%m%d_%H:%M:%S')}.log",
+    encoding="utf-8",
+    level=file_log_level,  # set it to lowest so the handlers can decide
 )
-file_handler = logging.FileHandler("report.log")
-file_handler.setFormatter(formatter)
-file_handler.setLevel(log_level)
 
 # Add Custom Init Filters (which work without the ENV obj)
 cf = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf)
+
+consolehandler = logging.StreamHandler()
+consolehandler.setLevel(log_level)
+logger.addHandler(consolehandler)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -262,6 +263,11 @@ global_config.add_ride_hailing_info(
     driver_payment_share, AV_price_reduction, price_params
 )
 
+# Bidding Streategy Parameters
+bid_default = parser.getfloat("RIDE_HAILING_OPERATOR", "BID_DEFAULT")
+bid_decay = parser.getfloat("RIDE_HAILING_OPERATOR", "BID_DECAY")
+bidding_parameters = {"bid_default": bid_default, "bid_decay": bid_decay}
+
 ###### End RideHailing Fleet Configuration ######
 
 #### Population Configuration ####
@@ -290,6 +296,7 @@ cf = SimulationContextFilter(filter_name="add_env", extra=env)
 edf = ExtraDefaultFilter(filter_name="add_default_value")
 logger.addFilter(cf)
 logger.addFilter(edf)
+
 
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
@@ -489,11 +496,19 @@ search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
 # Initialize fleet operations
 ridehailing_operations_0 = RideHailingSharedChargingOperations(
-    env=env, auction=charging_auction
+    env=env,
+    auction=charging_auction,
+    bidding_parameters=bidding_parameters,
+    state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+    distance_matrix=distance_matrix,
 )
 
 ridehailing_operations_1 = RideHailingSharedChargingOperations(
-    env=env, auction=charging_auction
+    env=env,
+    auction=charging_auction,  #
+    bidding_parameters=bidding_parameters,
+    state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+    distance_matrix=distance_matrix,
 )
 
 # Initialize operators
