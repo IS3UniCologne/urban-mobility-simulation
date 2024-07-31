@@ -504,6 +504,36 @@ ride_hailing_fleet_0 = generate_AV_fleet(env, supply_prob, n_autonomous_cars, se
 
 ride_hailing_fleet_1 = generate_AV_fleet(env, supply_prob, n_autonomous_cars, seed=4711)
 
+# track vehicles in fleets
+vehicles_track = []
+
+
+def track_fleets(fleet_id):
+    while True:
+        yield env.timeout(1)
+        envtime, values = (
+            env._now,
+            {
+                "_fleet": fleet_id,
+                "_state": [
+                    tracking.get(x, "_state")[1]
+                    for x in tracking.list_tracked("RideHailingAV")
+                    if tracking.get(x, "_fleet")[1].id == fleet_id
+                ],
+                "_current_state_of_charge": [
+                    tracking.get(x, "_current_state_of_charge")[1]
+                    for x in tracking.list_tracked("RideHailingAV")
+                    if tracking.get(x, "_fleet")[1].id == fleet_id
+                ],
+            },
+        )
+        vehicles_track.append({"time": envtime, **values})
+
+
+env.process(track_fleets(ride_hailing_fleet_0.id))
+env.process(track_fleets(ride_hailing_fleet_1.id))
+
+
 # Add the fleet to the search engine
 search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
 search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
@@ -589,4 +619,16 @@ env.run(until=end_time)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
-pd.DataFrame.from_records(auction_track).to_csv("data/output/tracking/auction.csv")
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Save Tracking Data                      #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+pd.DataFrame.from_records(auction_track).to_csv(
+    "data/output/tracking/auction.csv", index=False
+)
+
+pd.DataFrame.from_records(vehicles_track).to_csv(
+    "data/output/tracking/vehicles.csv", index=False
+)

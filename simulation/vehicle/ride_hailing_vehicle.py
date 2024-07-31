@@ -41,7 +41,7 @@ class RideHailingVehicle(Vehicle):
 
     ride_hailing_vehicle_id = 0
 
-    exposes = Vehicle.exposes + ["_fleet", "_current_state_of_charge", "_suggested"]
+    exposes = Vehicle.exposes + ["_fleet", "_current_state_of_charge"]
 
     def __init__(
         self,
