@@ -51,12 +51,11 @@ class Tracking:
         """
 
         classname = to_track.__class__.__name__
-        if id is None:
-            try:
-                id = to_track.id
-            except AttributeError:
-                # no id associated, is it a single class instance? (like operator)
-                id = "singleton"
+        try:
+            id = to_track.id
+        except AttributeError:
+            # no id associated, is it a single class instance? (like operator)
+            id = "singleton"
         uid = f"{classname}_{id}"
 
         if not isinstance(to_track, TrackingInterface):
@@ -64,11 +63,12 @@ class Tracking:
                 f"Something tried to register {classname}, but it"
                 f"does not implement the necessary TrackingInterface!"
             )
-        self.tracked[uid] = {"class": classname, "id": id, "reference": to_track}
-        logging.debug(
-            f"Registered {classname} with ID {id}",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )
+        else:
+            self.tracked[uid] = {"class": classname, "id": id, "reference": to_track}
+            logging.debug(
+                f"Registered {classname} with ID {id}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
 
         return uid
 

@@ -464,6 +464,20 @@ charging_auction = SharedChargingAuction(
     charging_infrastructure=charging_infrastructure,
 )
 
+auction_tracking = tracking.register(charging_auction)
+
+auction_track = []
+
+
+def track_auction():
+    while True:
+        yield env.timeout(1)
+        envtime, values = tracking.dump(auction_tracking)
+        auction_track.append({"time": envtime, **values})
+
+
+env.process(track_auction())
+
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
 # Init. Simulation Modules                #
@@ -574,3 +588,5 @@ logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 env.run(until=end_time)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+
+pd.DataFrame.from_records(auction_track).to_csv("data/output/tracking/auction.csv")
