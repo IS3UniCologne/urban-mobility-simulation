@@ -15,8 +15,7 @@ class TrackingInterface(ABC):
         super().__init_subclass__(**kwargs)
         if cls.exposes is NotImplemented:
             raise NotImplementedError(
-                "Please implement the `exposes` class variable for any class that implements the"
-                "TrackingIntercace AbstractBaseClass"
+                "Please implement the `exposes` class variable for any class that implements the TrackingInterface AbstractBaseClass"
             )
 
     def get(self, attribute: str):

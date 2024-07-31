@@ -62,12 +62,11 @@ class Tracking:
                 f"Something tried to register {classname}, but it"
                 f"does not implement the necessary TrackingInterface!"
             )
-        else:
-            self.tracked[uid] = {"class": classname, "id": id, "reference": to_track}
-            logging.debug(
-                f"Registered {classname} with ID {id}",
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
+        self.tracked[uid] = {"class": classname, "id": id, "reference": to_track}
+        logging.debug(
+            f"Registered {classname} with ID {id}",
+            extra={"clazz": self.__class__.__name__, "oid": ""},
+        )
 
         return uid
 
