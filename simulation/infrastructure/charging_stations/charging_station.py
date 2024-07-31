@@ -4,7 +4,22 @@ from shapely.geometry import shape
 
 from tracking.tracking_interface import TrackingInterface
 
-class ChargingStation:
+
+class ChargingStation(TrackingInterface):
+    __slots__ = (
+        "_env",
+        "_capacity",
+        "_polygon",
+        "_centre",
+        "_plugs",
+        "_id",
+        "_location",
+        "_power",
+        "_queue",
+    )
+
+    exposes = ["_id", "_plugs"]
+
     def __init__(
         self,
         id: int,
