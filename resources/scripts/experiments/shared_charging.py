@@ -297,6 +297,14 @@ edf = ExtraDefaultFilter(filter_name="add_default_value")
 logger.addFilter(cf)
 logger.addFilter(edf)
 
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Init. Tracking                          #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+tracking = Tracking.init(env)
+
 
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
@@ -367,6 +375,25 @@ charging_infrastructure = ChargingInfrastructure(
     reset=True,
 )
 
+# track charging stations
+charging_stations_track = []
+
+
+def track_charging_stations():
+    while True:
+        yield env.timeout(1)
+        values = [
+            {"time": env._now, "_id": d["_id"], "_plugs.count": d["_plugs"].count}
+            for d in [
+                tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
+            ]
+        ]
+        charging_stations_track.extend(values)
+
+
+env.process(track_charging_stations())
+
+
 #### End Charging Infrastructure Configuration #####
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -402,14 +429,6 @@ global_config.set_store_results(store_results)
 global_config.set_output_path(output_folder)
 global_config.set_transaction_file(transaction_file)
 global_config.set_fleet_state_file(fleet_state_file)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Init. Tracking                          #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-tracking = Tracking.init(env)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -631,4 +650,8 @@ pd.DataFrame.from_records(auction_track).to_csv(
 
 pd.DataFrame.from_records(vehicles_track).to_csv(
     "data/output/tracking/vehicles.csv", index=False
+)
+
+pd.DataFrame.from_records(charging_stations_track).to_csv(
+    "data/output/tracking/charging_stations.csv", index=False
 )
