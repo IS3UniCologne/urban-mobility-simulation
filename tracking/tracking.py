@@ -51,10 +51,11 @@ class Tracking:
 
         classname = to_track.__class__.__name__
         try:
-            uid = f"{classname}_{to_track._id}"
+            id = to_track.id
         except AttributeError:
             # no id associated, is it a single class instance? (like operator)
-            uid = classname
+            id = "singleton"
+        uid = f"{classname}_{id}"
 
         if not isinstance(to_track, TrackingInterface):
             raise NotImplementedError(
@@ -62,13 +63,9 @@ class Tracking:
                 f"does not implement the necessary TrackingInterface!"
             )
         else:
-            self.tracked[uid] = {
-                "class": classname,
-                "id": to_track._id,
-                "reference": to_track,
-            }
+            self.tracked[uid] = {"class": classname, "id": id, "reference": to_track}
             logging.debug(
-                f"Registered {classname} with ID {to_track._id}",
+                f"Registered {classname} with ID {id}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
