@@ -146,7 +146,7 @@ class DemandFactory:
 
                 # TODO: to define the target fleet
                 random_number = np.random.random(1)
-                if random_number < 1:
+                if random_number < 0.5:
                     fleet = 0
                 else:
                     fleet = 1

@@ -24,7 +24,23 @@ from .vehicle import Vehicle, VehicleState
 
 
 class RideHailingVehicle(Vehicle):
+    __slots__ = (
+        "_price_per_minute",
+        "_available_seats",
+        "_max_available_seats",
+        "_seats",
+        "_driver",
+        "_velocity",
+        "_is_electric",
+        "_fleet",
+        "_current_state_of_charge",
+        "travel_costs",
+        "charging_costs",
+    )
+
     ride_hailing_vehicle_id = 0
+
+    exposes = Vehicle.exposes + ["_fleet", "_current_state_of_charge"]
 
     def __init__(
         self,

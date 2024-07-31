@@ -186,7 +186,7 @@ def generate_AV_fleet(env, distribution, n=500, seed=4711):
                 av_config.velocity,
                 av_config.price_per_min,
             )
-            fleet.add_shared_vehicle(autonomous_car)
+            fleet.add_vehicle(autonomous_car)
             autonomous_car._fleet = fleet
 
     return fleet
@@ -237,7 +237,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                 rh_config.velocity,
                 rh_config.price_per_min,
             )
-            fleet.add_shared_vehicle(car)
+            fleet.add_vehicle(car)
             car._fleet = fleet
 
         # Add Regular Ridehailing
@@ -254,7 +254,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                 rh_config.price_per_min,
                 is_electric=False,
             )
-            fleet.add_shared_vehicle(car)
+            fleet.add_vehicle(car)
             car._fleet = fleet
 
         # Add AVs
@@ -270,7 +270,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                 a_config.velocity,
                 a_config.price_per_min,
             )
-            fleet.add_shared_vehicle(autonomous_car)
+            fleet.add_vehicle(autonomous_car)
             autonomous_car._fleet = fleet
 
     return fleet

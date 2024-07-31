@@ -5,6 +5,7 @@ from simpy import Environment
 
 from simulation.environment.position import Position
 from simulation.infrastructure.network.edge import Edge
+from tracking.tracking_interface import TrackingInterface
 
 
 class VehicleState:
@@ -22,9 +23,13 @@ class VehicleState:
     MOVING_TO_PICK_UP_POS = 1003
 
 
-class Vehicle(ABC):
+class Vehicle(TrackingInterface, ABC):
     vehicle_id = 0
     vehicle_type: str
+
+    __slots__ = ("_id", "_state", "_env", "_position", "_position_changed")
+
+    exposes = ["_id", "_state", "position"]
 
     def __init__(self, env: Environment, position):
         self._id = Vehicle.vehicle_id
@@ -66,6 +71,12 @@ class Vehicle(ABC):
             f"Position updated {self._position}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
+
+    def dump(self, exposed_only=True) -> dict:
+        if exposed_only:
+            return {x: self.get(x) for x in self.exposes}
+        else:
+            return {x: self.get(x) for x in self.__slots__}
 
     # Methods
     @abstractmethod
