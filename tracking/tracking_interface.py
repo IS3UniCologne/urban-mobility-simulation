@@ -36,6 +36,8 @@ class TrackingInterface(ABC):
         included. This is especially important for "old" agents that do not implement private attributes. There, all
         attributes would be dumped otherwise, leading to overhead.
 
+        TODO: with the introduction of slots we could potentially implement this in a more efficient way and without every class needing to implement this
+
         :param exposed_only: Can optionally be set to False to dump more than only explicitly exposed attributes,
         subject to the implementation of this method. Default: True
         :return: dictionary of type {attribute name: attribute value}
