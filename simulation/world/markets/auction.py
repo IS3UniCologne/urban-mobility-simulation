@@ -28,6 +28,7 @@ class Auction(ABC):
         "_result_syntax",
         "_result",
         "open_for_bidding",
+        "cleared",
         "_process",
     )
 
@@ -43,6 +44,7 @@ class Auction(ABC):
         self._result: self._result_syntax = None
 
         self.open_for_bidding = self._env.event()
+        self.cleared = self._env.event()
 
         self._process = self._env.process(self.run())
 
