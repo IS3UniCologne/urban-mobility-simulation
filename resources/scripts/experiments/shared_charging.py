@@ -383,7 +383,11 @@ def track_charging_stations():
     while True:
         yield env.timeout(1)
         values = [
-            {"time": env._now, "_id": d["_id"], "_plugs.count": d["_plugs"].count}
+            {
+                "time": env._now,
+                "_location": d["_location"],
+                "_plugs.count": d["_plugs"].count,
+            }
             for d in [
                 tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
             ]
@@ -490,9 +494,29 @@ auction_track = []
 
 def track_auction():
     while True:
-        yield env.timeout(1)
+        yield charging_auction.cleared
         envtime, values = tracking.dump(auction_tracking)
-        auction_track.append({"time": envtime, **values})
+        bids = [
+            {
+                "time": env._now,
+                "timeslot": values["_next_timeslot"],
+                "location": l,
+                "bids": b,
+            }
+            for l, b in values["_bids"].items()
+        ]
+        results = [
+            {
+                "time": env._now,
+                "timeslot": values["_next_timeslot"],
+                "location": l,
+                "results.capacity": r[1][0] + r[2][0],
+                "results.clearing_price": r[1][1],
+            }
+            for l, r in values["_location_results"].items()
+        ]
+        auction_track.extend(bids)
+        auction_track.extend(results)
 
 
 env.process(track_auction())
@@ -654,4 +678,20 @@ pd.DataFrame.from_records(vehicles_track).to_csv(
 
 pd.DataFrame.from_records(charging_stations_track).to_csv(
     "data/output/tracking/charging_stations.csv", index=False
+)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Save Transaction Data                   #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+fleet_0_transactions = ridehailing_operator_0.get_transactions()
+fleet_1_transactions = ridehailing_operator_1.get_transactions()
+
+fleet_0_transactions.to_csv(
+    "data/output/transactions/fleet_0_transactions.csv", index=False
+)
+fleet_1_transactions.to_csv(
+    "data/output/transactions/fleet_1_transactions.csv", index=False
 )
