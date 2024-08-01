@@ -18,7 +18,7 @@ class ChargingStation(TrackingInterface):
         "_queue",
     )
 
-    exposes = ["_id", "_plugs"]
+    exposes = ["_location", "_plugs"]
 
     def __init__(
         self,
