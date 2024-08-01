@@ -235,6 +235,9 @@ class SharedChargingAuction(Auction, TrackingInterface):
         self._location_results[location] = {t[0]: (t[1], t[2]) for t in result_list}
 
     def _announce_results(self) -> None:
+        self.cleared.succeed()
+        self.cleared = self._env.event()
+
         for p in self._participants:
             p.result_announced.succeed(self._result[p.auction_participant_id])
 
