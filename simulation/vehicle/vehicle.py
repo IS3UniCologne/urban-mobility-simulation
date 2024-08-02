@@ -27,15 +27,18 @@ class Vehicle(TrackingInterface, ABC):
     vehicle_id = 0
     vehicle_type: str
 
-    __slots__ = ("_id", "_state", "_env", "_position", "_position_changed")
+    __slots__ = ("_id", "_state", "_env", "_position", "_position_changed", "_vdt")
 
-    exposes = ["_id", "_state", "position"]
+    exposes = ["_id", "_state", "position", "_vdt"]
 
     def __init__(self, env: Environment, position):
         self._id = Vehicle.vehicle_id
         Vehicle.vehicle_id += 1  # Increment Vehicle Id
         self._env = env
         self._position = position
+
+        # Vehicle Distance Traveled
+        self._vdt = 0
 
         # Spatial Events
         self._position_changed = self._env.event()
@@ -62,13 +65,15 @@ class Vehicle(TrackingInterface, ABC):
 
     @position.setter
     def position(self, position: Position):
+        self._vdt += self._position >> position
+
         self._position = position
 
         self._position_changed.succeed(self._position)
         self._position_changed = self._env.event()
 
         logging.debug(
-            f"Position updated {self._position}.",
+            f"Position updated {self._position}. VDT increased to {self._vdt}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
