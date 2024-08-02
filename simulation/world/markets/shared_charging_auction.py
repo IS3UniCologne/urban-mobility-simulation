@@ -59,7 +59,8 @@ class SharedChargingAuction(Auction, TrackingInterface):
         )
         for timeslot in range(
             self._config.auction_config.auction_start,
-            self._config.auction_config.auction_end,
+            self._config.auction_config.auction_end
+            + self._config.shared_charging_config.auction_interval,
             self._config.shared_charging_config.auction_interval,
         ):
             self._charging_infrastructure.update(
@@ -72,6 +73,17 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
     def run(self):
         while True:
+            if (
+                self._next_timeslot
+                > self._config.auction_config.auction_end
+                - self._config.shared_charging_config.timeslot_duration
+            ):
+                logging.info(
+                    "Auction stops, last timeslot reached.",
+                    extra={"clazz": self.__class__.__name__, "oid": " "},
+                )
+                break
+
             open_at = (
                 self._next_timeslot
                 - self._config.shared_charging_config.auction_interval
