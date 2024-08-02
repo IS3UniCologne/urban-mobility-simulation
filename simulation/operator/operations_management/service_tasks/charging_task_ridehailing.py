@@ -131,11 +131,20 @@ class ChargingTaskRidehailing(ServiceTask):
                 if isinstance(self._charging_station, VirtualChargingStation):
                     # if we are in a context of shared capacity, we need to wait for the reservation
                     scheduled_time = self._charging_station.valid_timeframe[0]
-                    logging.debug(
-                        f"Vehicle {vehicle.id} waits {scheduled_time - self._env.now} minutes for reserved slot.",
-                        extra={"clazz": self.__class__.__name__},
-                    )
-                    yield self._env.timeout(max(0, scheduled_time - self._env.now))
+                    if scheduled_time - self._env.now > 0:
+                        logging.debug(
+                            f"Vehicle {vehicle.id} waits {scheduled_time - self._env.now} minutes for reserved slot.",
+                            extra={"clazz": self.__class__.__name__},
+                        )
+                        yield self._env.timeout(max(0, scheduled_time - self._env.now))
+                    elif scheduled_time - self._env.now < 0:
+                        logging.warning(
+                            "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
+                            vehicle.id,
+                            self._env.now - scheduled_time,
+                            extra={"clazz": self.__class__.__name__, "oid": vehicle.id},
+                        )
+                        return
 
                 with self._charging_station.plugs.request() as req:
                     yield req
@@ -156,6 +165,9 @@ class ChargingTaskRidehailing(ServiceTask):
                         charging_duration = min(
                             charging_duration, (scheduled_time + 60) - self._env.now
                         )
+
+                    # Plugin Vehicle to Charging Station
+                    vehicle.plug_to_charging_station()
 
                     yield self._env.process(vehicle.charge(charging_duration))
             else:

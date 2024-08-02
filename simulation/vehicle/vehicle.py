@@ -27,9 +27,9 @@ class Vehicle(TrackingInterface, ABC):
     vehicle_id = 0
     vehicle_type: str
 
-    __slots__ = ("_id", "_state", "_env", "_position", "_position_changed")
+    __slots__ = ("_id", "_state", "_env", "_position", "_position_changed", "_vdt")
 
-    exposes = ["_id", "_state", "position"]
+    exposes = ["_id", "_state", "position", "_vdt"]
 
     def __init__(self, env: Environment, position):
         self._id = Vehicle.vehicle_id
