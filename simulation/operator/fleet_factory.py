@@ -238,7 +238,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                 rh_config.price_per_min,
             )
             fleet.add_vehicle(car)
-            car._fleet = fleet
+            car.fleet = fleet
 
         # Add Regular Ridehailing
         for current_car in range(car_count):
@@ -255,7 +255,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                 is_electric=False,
             )
             fleet.add_vehicle(car)
-            car._fleet = fleet
+            car.fleet = fleet
 
         # Add AVs
         for current_AV in range(AVs_count):
@@ -271,7 +271,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
                 a_config.price_per_min,
             )
             fleet.add_vehicle(autonomous_car)
-            autonomous_car._fleet = fleet
+            autonomous_car.fleet = fleet
 
     return fleet
 

@@ -81,6 +81,9 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
             yield self._env.process(self._bid_for_capacity())
 
+    def get_task_transactions(self):
+        return self._charging_operations.task_transactions
+
     def _bid_for_capacity(self):
         yield self._auction.open_for_bidding
         # timeslots are denoted by their start time and have length `self._config.shared_charging_config.timeslot_duration`
@@ -96,6 +99,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         )
 
         # TODO: refactor to be a method of somethign like "BiddingStrategy"
+        # TODO: right now we track bids through the auction, maybe we can use transactions for that?
         bid = get_bid(
             auctioned_timeslot=auctioned_timeslot,
             auctioned_capacity=auctioned_capacity,

@@ -5,6 +5,7 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
@@ -25,17 +26,19 @@ class ChargingTaskRidehailing(ServiceTask):
         "_number_of_vehicles_to_charge",
         "_vehicle_mode",
         "_distance_to_fleet_base",
-        "_vehicle_fleet",
         "_state_of_charge_threshold",
         "_charging_station",
         "_vehicle",
+        "_waiting_time",
+        "_charging_duration",
+        "_kWh_charged",
     )
 
     def __init__(
         self,
         env: Environment,
-        origin: str,
-        destination: str,
+        origin: GeodesicPosition,
+        destination: GeodesicPosition,
         number_of_vehicles_to_charge,
         distance_to_fleet_base,
         state_of_charge_threshold,
@@ -56,11 +59,9 @@ class ChargingTaskRidehailing(ServiceTask):
         self._charging_station = charging_station
         self._vehicle = vehicle
 
-        self._scheduled_time = scheduled_time
         self._waiting_time = None
         self._charging_duration = None
         self._kWh_charged = None
-        self._config = Configuration.instance()
 
     @property
     def waiting_time(self):
@@ -131,19 +132,24 @@ class ChargingTaskRidehailing(ServiceTask):
                 if isinstance(self._charging_station, VirtualChargingStation):
                     # if we are in a context of shared capacity, we need to wait for the reservation
                     scheduled_time = self._charging_station.valid_timeframe[0]
-                    if scheduled_time - self._env.now > 0:
+                    scheduled_timeslot_end = self._charging_station.valid_timeframe[0]
+                    self._waiting_time = scheduled_time - self._env.now
+                    if scheduled_time < self._env.now:
                         logging.debug(
                             f"Vehicle {vehicle.id} waits {scheduled_time - self._env.now} minutes for reserved slot.",
                             extra={"clazz": self.__class__.__name__},
                         )
+                        self._state = TaskState.EXECUTING_WAITING
                         yield self._env.timeout(max(0, scheduled_time - self._env.now))
-                    elif scheduled_time - self._env.now < 0:
+                    elif scheduled_timeslot_end <= self._env.now:
                         logging.warning(
                             "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
                             vehicle.id,
-                            self._env.now - scheduled_time,
+                            self._env.now - scheduled_timeslot_end,
                             extra={"clazz": self.__class__.__name__, "oid": vehicle.id},
                         )
+                        self._state = TaskState.MISSED_TIMESLOT
+                        self._task_finished.succeed()
                         return
 
                 with self._charging_station.plugs.request() as req:
@@ -168,6 +174,9 @@ class ChargingTaskRidehailing(ServiceTask):
 
                     # Plugin Vehicle to Charging Station
                     vehicle.plug_to_charging_station()
+                    self._charging_duration = charging_duration
+                    self._kWh_charged = charging_duration / 60 * charging_power
+                    self._state = TaskState.EXECUTING_CHARGING
 
                     yield self._env.process(vehicle.charge(charging_duration))
             else:

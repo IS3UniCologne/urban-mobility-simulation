@@ -1,15 +1,6 @@
 import logging
 
 import pandas as pd
-from beartype.door import is_bearable
-from simpy import AnyOf
-
-from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
-    VirtualChargingInfrastructure,
-)
-from simulation.infrastructure.charging_stations.virtual_charging_station import (
-    VirtualChargingStation,
-)
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operations_management.service_tasks.charging_task_ridehailing import (
     ChargingTaskRidehailing,
@@ -81,6 +72,9 @@ class RideHailingChargingOperations(OperationsInterface):
             if not charging_plans:
                 continue
 
+            # No Vehicles to be charged
+            no_vehicles_scheduled_to_charge = {}
+
             for charging_plan in charging_plans:
                 (
                     origin,
@@ -107,15 +101,6 @@ class RideHailingChargingOperations(OperationsInterface):
 
                 # Schedule to Queue
                 self._scheduled_tasks.append(charging_task)
-                # update virtual charging infrastructure
-                # if is_bearable(
-                #     self._operator_reference.charging_infrastructure,
-                #     VirtualChargingInfrastructure,
-                # ):
-                #     charging_station.update_capacity(
-                #         charging_station.capacity - 1, charging_station.valid_timeframe
-                #     )
-
                 # Track task completion
                 self._env.process(self._track_task(charging_task))
 
@@ -133,11 +118,8 @@ class RideHailingChargingOperations(OperationsInterface):
             )
 
             logging.info(
-                f"Charging Tasks scheduled. In total {len(charging_plans)} charging tasks are generated.",
-                extra={
-                    "clazz": self.__class__.__name__,
-                    "oid": self._operator_reference.id,
-                },
+                f"Charging Tasks scheduled. In total {len(charging_plans)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             # Notify listeners
             self._charging_plan_updated.succeed()
@@ -376,12 +358,11 @@ class RideHailingChargingOperations(OperationsInterface):
         return max_capacity_per_unit
 
     def _track_task(self, task):
-        yield AnyOf(self._env, [task.task_finished, self._world.simulation_finished])
+        yield task.task_finished
 
         self._task_transactions.append(
             {
                 "start_time": task._start_time,
-                "scheduled_time": task._scheduled_time,
                 "end_time": self._env.now,
                 "vehicle": task._vehicle.id,
                 "state": task.state,
