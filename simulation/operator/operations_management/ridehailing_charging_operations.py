@@ -1,5 +1,7 @@
 import logging
 
+import pandas as pd
+
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operations_management.service_tasks.charging_task_ridehailing import (
     ChargingTaskRidehailing,
@@ -33,6 +35,8 @@ class RideHailingChargingOperations(OperationsInterface):
         self._task_queue = TaskQueue(env)
         self._scheduled_tasks = []
 
+        self._task_transactions = []
+
         # Events
         self._charging_plan_updated = env.event()
         self._operations_started = env.event()
@@ -42,7 +46,6 @@ class RideHailingChargingOperations(OperationsInterface):
 
         # Shift Duration (OM shift duration)
         self._duration_of_operations = operation_duration  # mins
-        self._counter = 0
 
     @property
     def charging_plan_updated(self):
@@ -60,8 +63,8 @@ class RideHailingChargingOperations(OperationsInterface):
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
             charging_plans = self.generate_charging_plan()
 
-            # We track the charging events
-            charging_events = []
+            if not charging_plans:
+                continue
 
             # No Vehicles to be charged
             no_vehicles_scheduled_to_charge = {}
@@ -82,7 +85,6 @@ class RideHailingChargingOperations(OperationsInterface):
                     destination,
                     no_vehicle_to_charge,
                     distance_to_base,
-                    self._operator_reference.fleet,
                     self._state_of_charge_threshold,
                     charging_station,
                     vehicle,
@@ -90,8 +92,8 @@ class RideHailingChargingOperations(OperationsInterface):
 
                 # Schedule to Queue
                 self._scheduled_tasks.append(charging_task)
-                # Remember event for multi service tasks
-                charging_events.append(charging_task.task_finished)
+                # Track task completion
+                self._env.process(self._track_task(charging_task))
 
                 # Count Vehicles to be charged
                 # no_vehicles_scheduled_to_charge['a'] += no_vehicle_to_charge
@@ -104,21 +106,20 @@ class RideHailingChargingOperations(OperationsInterface):
             )
 
             logging.info(
-                f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+                f"Charging Tasks scheduled. In total {len(charging_plans)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             # Notify listeners
             self._charging_plan_updated.succeed()
             self._charging_plan_updated = self._env.event()
+
             while self._task_queue.count > 0:
                 next_task = self._task_queue.popleft()
                 logging.debug(
                     f"Processing following task: {next_task}.",
                     extra={"clazz": self.__class__.__name__},
                 )
-                # TODO: we do not need a service ID here
-                self._env.process(next_task.execute(0))
-                self._counter += 1
+                self._env.process(next_task.execute())
 
             # ### TODO: activate relocation for ridehailing later
 
@@ -343,3 +344,24 @@ class RideHailingChargingOperations(OperationsInterface):
         else:
             raise NotImplementedError("Not Implemented")
         return max_capacity_per_unit
+
+    def _track_task(self, task):
+        yield task.task_finished
+
+        self._task_transactions.append(
+            {
+                "start_time": task._start_time,
+                "end_time": self._env.now,
+                "vehicle": task._vehicle.id,
+                "state": task.state,
+                "fleet": task._vehicle.fleet.id,
+                "charging_station": task._charging_station.location,
+                "waiting_time": task.waiting_time,
+                "charging_duration": task.charging_duration,
+                "kWh_charged": task.kWh_charged,
+            }
+        )
+
+    @property
+    def task_transactions(self):
+        return pd.DataFrame(self._task_transactions)

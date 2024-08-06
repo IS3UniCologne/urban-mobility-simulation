@@ -105,6 +105,7 @@ logger.addFilter(cf)
 
 consolehandler = logging.StreamHandler()
 consolehandler.setLevel(log_level)
+consolehandler.addFilter(cf)
 logger.addHandler(consolehandler)
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -294,6 +295,7 @@ env = simpy.Environment(initial_time=0)
 # Inject Simulation Environment to Logger (such that we can log the env time)
 cf = SimulationContextFilter(filter_name="add_env", extra=env)
 edf = ExtraDefaultFilter(filter_name="add_default_value")
+
 logger.addFilter(cf)
 logger.addFilter(edf)
 
@@ -699,4 +701,14 @@ fleet_0_transactions.to_csv(
 )
 fleet_1_transactions.to_csv(
     "data/output/transactions/fleet_1_transactions.csv", index=False
+)
+
+fleet_0_task_transactions = ridehailing_operations_0.get_task_transactions()
+fleet_1_task_transactions = ridehailing_operations_1.get_task_transactions()
+
+fleet_0_task_transactions.to_csv(
+    "data/output/transactions/fleet_0_task_transactions.csv", index=False
+)
+fleet_1_task_transactions.to_csv(
+    "data/output/transactions/fleet_1_task_transactions.csv", index=False
 )

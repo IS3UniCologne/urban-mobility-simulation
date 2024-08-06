@@ -5,6 +5,7 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
@@ -12,8 +13,9 @@ from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
     ServiceTask,
+    TaskState,
 )
-from simulation.vehicle.vehicle import VehicleState
+from simulation.vehicle.vehicle import Vehicle, VehicleState
 
 
 # TODO: refactor to not be a copy of ChargingTask that was used for SharedVehicles
@@ -24,23 +26,24 @@ class ChargingTaskRidehailing(ServiceTask):
         "_number_of_vehicles_to_charge",
         "_vehicle_mode",
         "_distance_to_fleet_base",
-        "_vehicle_fleet",
         "_state_of_charge_threshold",
         "_charging_station",
         "_vehicle",
+        "_waiting_time",
+        "_charging_duration",
+        "_kWh_charged",
     )
 
     def __init__(
         self,
         env: Environment,
-        origin,
-        destination,
+        origin: GeodesicPosition,
+        destination: GeodesicPosition,
         number_of_vehicles_to_charge,
         distance_to_fleet_base,
-        vehicle_fleet,
         state_of_charge_threshold,
-        charging_station=None,
-        vehicle=None,
+        charging_station: ChargingStation = None,
+        vehicle: Vehicle = None,
         vehicle_mode=None,
     ):
         super(ChargingTaskRidehailing, self).__init__(env)
@@ -51,16 +54,30 @@ class ChargingTaskRidehailing(ServiceTask):
         self._vehicle_mode = vehicle_mode
         self._distance_to_fleet_base = distance_to_fleet_base
 
-        self._vehicle_fleet = vehicle_fleet
         self._state_of_charge_threshold = state_of_charge_threshold
         self._charging_station = charging_station
         self._vehicle = vehicle
 
-    def execute(self, *args):
+        self._waiting_time = None
+        self._charging_duration = None
+        self._kWh_charged = None
+
+    @property
+    def waiting_time(self):
+        return self._waiting_time
+
+    @property
+    def charging_duration(self):
+        return self._charging_duration
+
+    @property
+    def kWh_charged(self):
+        return self._kWh_charged
+
+    def execute(self):
         """
-            Execute charging tasks
+        Execute charging tasks
         :param simpy_env: SimPy Environment
-        :param args: args[0] typically service worker id
         :return:
         """
         # Get position of fleet base (centroid of hexagon)
@@ -69,8 +86,6 @@ class ChargingTaskRidehailing(ServiceTask):
         fleet_base_position = GeodesicPosition(
             fleet_base_lat, fleet_base_lng, self._destination
         )
-
-        # with self._vehicle_fleet.resource.request() as req:
 
         # Identify vehicles to relocate
         potential_vehicles_to_charge = [self._vehicle]
@@ -101,6 +116,8 @@ class ChargingTaskRidehailing(ServiceTask):
                 distance / vehicle_relocation_velocity
             ) / len(selected_vehicles_to_charge)
 
+            self._state = TaskState.EXECUTING_RELOCATION
+
             # First relocate vehicle to charging site
             yield self._env.process(
                 vehicle.relocate(relocation_route, relocation_duration_per_vehicle)
@@ -114,19 +131,24 @@ class ChargingTaskRidehailing(ServiceTask):
                 if isinstance(self._charging_station, VirtualChargingStation):
                     # if we are in a context of shared capacity, we need to wait for the reservation
                     scheduled_time = self._charging_station.valid_timeframe[0]
-                    if scheduled_time - self._env.now > 0:
+                    scheduled_timeslot_end = self._charging_station.valid_timeframe[0]
+                    self._waiting_time = scheduled_time - self._env.now
+                    if scheduled_time < self._env.now:
                         logging.debug(
                             f"Vehicle {vehicle.id} waits {scheduled_time - self._env.now} minutes for reserved slot.",
                             extra={"clazz": self.__class__.__name__},
                         )
+                        self._state = TaskState.EXECUTING_WAITING
                         yield self._env.timeout(max(0, scheduled_time - self._env.now))
-                    elif scheduled_time - self._env.now < 0:
+                    elif scheduled_timeslot_end <= self._env.now:
                         logging.warning(
                             "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
                             vehicle.id,
-                            self._env.now - scheduled_time,
+                            self._env.now - scheduled_timeslot_end,
                             extra={"clazz": self.__class__.__name__, "oid": vehicle.id},
                         )
+                        self._state = TaskState.MISSED_TIMESLOT
+                        self._task_finished.succeed()
                         return
 
                 with self._charging_station.plugs.request() as req:
@@ -151,6 +173,9 @@ class ChargingTaskRidehailing(ServiceTask):
 
                     # Plugin Vehicle to Charging Station
                     vehicle.plug_to_charging_station()
+                    self._charging_duration = charging_duration
+                    self._kWh_charged = charging_duration / 60 * charging_power
+                    self._state = TaskState.EXECUTING_CHARGING
 
                     yield self._env.process(vehicle.charge(charging_duration))
             else:
@@ -160,10 +185,10 @@ class ChargingTaskRidehailing(ServiceTask):
                 yield self._env.process(vehicle.charge(charging_time=5))
             # Unplug Vehicle from Charging Station
             vehicle.unplug_from_charging_station()
+            self._state = TaskState.FINISHED
+
         # Notify all
         self._task_finished.succeed()
-        # Notify all
-        self._task_finished = self._env.event()
 
     def __str__(self):
         return f"Charging Task for {self._number_of_vehicles_to_charge} from {self._origin} to {self._destination} (distance = {self._distance_to_fleet_base})"
