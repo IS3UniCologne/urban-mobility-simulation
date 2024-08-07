@@ -489,39 +489,39 @@ charging_auction = SharedChargingAuction(
     charging_infrastructure=charging_infrastructure,
 )
 
-auction_tracking = tracking.register(charging_auction)
+# auction_tracking = tracking.register(charging_auction)
 
-auction_track = []
-
-
-def track_auction():
-    while True:
-        yield charging_auction.cleared
-        envtime, values = tracking.dump(auction_tracking)
-        bids = [
-            {
-                "time": env._now,
-                "timeslot": values["_next_timeslot"],
-                "location": l,
-                "bids": b,
-            }
-            for l, b in values["_bids"].items()
-        ]
-        results = [
-            {
-                "time": env._now,
-                "timeslot": values["_next_timeslot"],
-                "location": l,
-                "results.capacity": r[1][0] + r[2][0],
-                "results.clearing_price": r[1][1],
-            }
-            for l, r in values["_location_results"].items()
-        ]
-        auction_track.extend(bids)
-        auction_track.extend(results)
+# auction_track = []
 
 
-env.process(track_auction())
+# def track_auction():
+#     while True:
+#         yield charging_auction.cleared
+#         envtime, values = tracking.dump(auction_tracking)
+#         bids = [
+#             {
+#                 "time": env._now,
+#                 "timeslot": values["_next_timeslot"],
+#                 "location": l,
+#                 "bids": b,
+#             }
+#             for l, b in values["_bids"].items()
+#         ]
+#         results = [
+#             {
+#                 "time": env._now,
+#                 "timeslot": values["_next_timeslot"],
+#                 "location": l,
+#                 "results.capacity": r[1][0] + r[2][0],
+#                 "results.clearing_price": r[1][1],
+#             }
+#             for l, r in values["_location_results"].items()
+#         ]
+#         auction_track.extend(bids)
+#         auction_track.extend(results)
+
+
+# env.process(track_auction())
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -605,6 +605,52 @@ ridehailing_operations_1 = RideHailingSharedChargingOperations(
     distance_matrix=distance_matrix,
 )
 
+# Track Bidding Behavior (and Results)
+bidders_to_track = []
+bidders_to_track.append(
+    tracking.register(
+        ridehailing_operations_0, id=ridehailing_operations_0.auction_participant_id
+    )
+)
+bidders_to_track.append(
+    tracking.register(
+        ridehailing_operations_1, id=ridehailing_operations_1.auction_participant_id
+    )
+)
+bidding_track = []
+
+
+def track_bidders(bidder_uid):
+    while True:
+        yield charging_auction.cleared
+        envtime, participant = tracking.get(bidder_uid, "auction_participant_id")
+        envtime, bids = tracking.get(bidder_uid, "_bids")
+        envtime, results = tracking.get(bidder_uid, "_result")
+
+        if bids is None or results is None:
+            continue
+        bidding_track.extend(
+            [
+                {
+                    "time": envtime,
+                    "participant_id": participant,
+                    "location": l,
+                    "_bids": b[
+                        :-1
+                    ],  # get rid of participant id (last element in the tuple)
+                    "_result": r,
+                }
+                for l, b in bids.items()
+                for lr, r in results.items()
+                if l == lr
+            ]
+        )
+
+
+for bidder in bidders_to_track:
+    env.process(track_bidders(bidder))
+
+
 # Initialize operators
 ridehailing_operator_0 = RideHailingOperator(
     env=env,
@@ -665,6 +711,8 @@ env.process(demand_factory.generate_demand())
 
 logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
+env.run(until=end_time - 1e-8)
+world.simulation_finished.succeed()
 env.run(until=end_time)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
@@ -675,7 +723,7 @@ logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-pd.DataFrame.from_records(auction_track).to_csv(
+pd.DataFrame.from_records(bidding_track).to_csv(
     "data/output/tracking/auction.csv", index=False
 )
 
