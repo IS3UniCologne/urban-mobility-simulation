@@ -111,6 +111,7 @@ class World:
 
         # Events
         self._changed = self._env.event()
+        self._simulation_finished = self._env.event()
 
         self._user_limit = 10_000_000
 
@@ -319,6 +320,10 @@ class World:
     @property
     def charging_infrastructure(self):
         return self._charging_infrastructure
+
+    @property
+    def simulation_finished(self):
+        return self._simulation_finished
 
     @property
     def changed(self):

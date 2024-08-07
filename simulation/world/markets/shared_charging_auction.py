@@ -1,7 +1,7 @@
 import logging
 import random
 from collections import Counter
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import pandas as pd
 from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
@@ -39,7 +39,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         super().__init__(env, start_condition, end_condition)
 
         # bids are a list of n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
-        self._bid_syntax = Dict[str, List[Tuple[int, float, int]]]
+        self._bid_syntax = Dict[str, List[Tuple[int, Union[int, float], int]]]
 
         # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
         self._result_syntax = Dict[int, Dict[str, Tuple[int, float]]]
@@ -137,7 +137,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
     def register_participant(self, participant: BidderInterface) -> int:
         self._participants.append(participant)
-        return len(self._participants)
+        return len(self._participants) - 1
 
     def clear(self) -> None:
         for location, capacity in self._charging_infrastructure.get_available_capacity(
@@ -247,11 +247,11 @@ class SharedChargingAuction(Auction, TrackingInterface):
         self._location_results[location] = {t[0]: (t[1], t[2]) for t in result_list}
 
     def _announce_results(self) -> None:
-        self.cleared.succeed()
-        self.cleared = self._env.event()
-
         for p in self._participants:
             p.result_announced.succeed(self._result[p.auction_participant_id])
+
+        self.cleared.succeed()
+        self.cleared = self._env.event()
 
     def _update_auctionable_capacity(self) -> None:
         # update auctionable capacity for (next_timeslot, ..., next_timeslot + timeslot_duration)
