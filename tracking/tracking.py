@@ -51,11 +51,12 @@ class Tracking:
         """
 
         classname = to_track.__class__.__name__
-        try:
-            id = to_track.id
-        except AttributeError:
-            # no id associated, is it a single class instance? (like operator)
-            id = "singleton"
+        if id is None:
+            try:
+                id = to_track.id
+            except AttributeError:
+                # no id associated, is it a single class instance? (like operator)
+                id = "singleton"
         uid = f"{classname}_{id}"
 
         if not isinstance(to_track, TrackingInterface):

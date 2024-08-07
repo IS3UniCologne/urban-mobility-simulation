@@ -30,7 +30,6 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         OperationsInterface.__init__(self, env)
         BidderInterface.__init__(self, env, auction)
 
-        self._auction_participant_id = self._auction.register_participant(self)
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
         # self._bidding_strategy = bidding_strategy
         self._bidding_parameters = bidding_parameters
@@ -40,10 +39,6 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._config = Configuration.instance()
 
         self._charging_operations = None
-
-    @property
-    def auction_participant_id(self):
-        return self._auction_participant_id
 
     def execute(self):
         # defer some of the initialization to after the operator has registered everything
@@ -100,7 +95,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
         # TODO: refactor to be a method of somethign like "BiddingStrategy"
         # TODO: right now we track bids through the auction, maybe we can use transactions for that?
-        bid = get_bid(
+        self._bids = get_bid(
             auctioned_timeslot=auctioned_timeslot,
             auctioned_capacity=auctioned_capacity,
             bidding_parameters=self._bidding_parameters,
@@ -115,8 +110,8 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         # }
         # self._bidding_strategy.get_bid(auctioned_timeslot, auctioned_capacity)
 
-        if bid is not None:
-            self._auction.place_bid(bid)
+        if self._bids is not None:
+            self._auction.place_bid(self._bids)
 
         self.bidding_done.succeed()
         self.bidding_done = self._env.event()
@@ -129,7 +124,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
             },
         )
 
-        result = yield self.result_announced
+        self._result = yield self.result_announced
         self.result_announced = self._env.event()
         logging.debug(
             "Results received for timeslot %s",
@@ -141,5 +136,5 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         )
 
         self._virtual_charging_infrastructure.update(
-            auctioned_timeslot, {k: v[0] for k, v in result.items()}
+            auctioned_timeslot, {k: v[0] for k, v in self._result.items()}
         )

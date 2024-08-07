@@ -1,6 +1,8 @@
 import logging
 
 import pandas as pd
+from simpy import AnyOf
+
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operations_management.service_tasks.charging_task_ridehailing import (
     ChargingTaskRidehailing,
@@ -23,7 +25,7 @@ class RideHailingChargingOperations(OperationsInterface):
     ):
         super(RideHailingChargingOperations, self).__init__(env=env)
 
-        self._world = None  # defer
+        self._world = World.instance()
 
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
@@ -358,7 +360,7 @@ class RideHailingChargingOperations(OperationsInterface):
         return max_capacity_per_unit
 
     def _track_task(self, task):
-        yield task.task_finished
+        yield AnyOf(self._env, [task.task_finished, self._world.simulation_finished])
 
         self._task_transactions.append(
             {
