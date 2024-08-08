@@ -74,9 +74,6 @@ class RideHailingChargingOperations(OperationsInterface):
             if not charging_plans:
                 continue
 
-            # No Vehicles to be charged
-            no_vehicles_scheduled_to_charge = {}
-
             for charging_plan in charging_plans:
                 (
                     origin,
