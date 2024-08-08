@@ -148,8 +148,6 @@ class MixedRideHailingFleet(VehicleFleet):
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
-        below_soc_level_vehicles = []
-        all_vehicle_list = self._vehicles
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
         return sum(

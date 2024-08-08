@@ -37,8 +37,8 @@ class ChargingTaskRidehailing(ServiceTask):
     def __init__(
         self,
         env: Environment,
-        origin: GeodesicPosition,
-        destination: GeodesicPosition,
+        origin: str,
+        destination: str,
         number_of_vehicles_to_charge,
         distance_to_fleet_base,
         state_of_charge_threshold,
@@ -132,7 +132,7 @@ class ChargingTaskRidehailing(ServiceTask):
                 if isinstance(self._charging_station, VirtualChargingStation):
                     # if we are in a context of shared capacity, we need to wait for the reservation
                     scheduled_time = self._charging_station.valid_timeframe[0]
-                    scheduled_timeslot_end = self._charging_station.valid_timeframe[0]
+                    scheduled_timeslot_end = self._charging_station.valid_timeframe[1]
                     self._waiting_time = scheduled_time - self._env.now
                     if scheduled_time < self._env.now:
                         logging.debug(
@@ -140,7 +140,7 @@ class ChargingTaskRidehailing(ServiceTask):
                             extra={"clazz": self.__class__.__name__},
                         )
                         self._state = TaskState.EXECUTING_WAITING
-                        yield self._env.timeout(max(0, scheduled_time - self._env.now))
+                        yield self._env.timeout(max(0, self._waiting_time))
                     elif scheduled_timeslot_end <= self._env.now:
                         logging.warning(
                             "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
