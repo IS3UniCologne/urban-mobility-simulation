@@ -250,6 +250,18 @@ class SharedChargingAuction(Auction, TrackingInterface):
         for p in self._participants:
             p.result_announced.succeed(self._result[p.auction_participant_id])
 
+        logging.debug(
+            "Total Capacity Auctioned: %s",
+            sum(
+                [
+                    result[0]
+                    for location_id, location in self._location_results.items()
+                    for participant, result in location.items()
+                ]
+            ),
+            extra={"clazz": self.__class__.__name__, "oid": ""},
+        )
+
         self.cleared.succeed()
         self.cleared = self._env.event()
 
