@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -52,9 +53,13 @@ def get_bid(
         auctioned_capacity[cs] for cs in sorted_stations.loc[:, "CS"].values
     ]
 
-    distances["bid"] = (bid_default - bid_decay * distances["distance"]).apply(
-        lambda x: max(0, x)
-    )
+    # LINEAR DECAY -> will lead to zero
+    # distances["bid"] = (bid_default - bid_decay * distances["distance"]).apply(
+    #     lambda x: max(0, x)
+    # )
+
+    # EXPONENTIAL DECAY -> will not lead to zero bids
+    distances["bid"] = np.exp(-bid_decay * distances["distance"]) * bid_default
 
     bid_log = []  # list of tuple (CS, id, bid) -> can also use this to see which cars already submitted bids
     blacklist = []  # vehicle ids for which bids already have been submitted are not considered for additional charging
