@@ -19,6 +19,8 @@ from simulation.tasks.transport_task import TransportTask
 
 
 class Operator:
+    operator_id = 0
+
     def __init__(
         self,
         env: Environment,
@@ -28,6 +30,9 @@ class Operator:
         search_engine: SearchEngineInterface,
         allocation_engine: VehicleAllocationEngineInterface,
     ):
+        self.id = Operator.operator_id
+        Operator.operator_id += 1
+
         self._env = env
         self._fleet = fleet
         self._charging_infrastructure = charging_infrastructure
