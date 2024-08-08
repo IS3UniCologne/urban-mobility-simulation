@@ -146,21 +146,19 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return all_vehicle_list
 
-    def get_all_vehicles_below_soc_level(self, state_of_charge_threshold):
+    def count_vehicles_below_soc_level(self, state_of_charge_threshold):
         """
         Return all vehicles that need to be refueled/recharged
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
-        below_soc_level_vehicles = []
-        all_vehicle_list = self._vehicles
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
-        for vehicle in all_vehicle_list:
-            if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
-                below_soc_level_vehicles.append(vehicle)
-
-        return len(below_soc_level_vehicles)
+        return sum(
+            1
+            for vehicle in self._vehicles
+            if vehicle.current_relative_state_of_charge < state_of_charge_threshold
+        )
 
     def get_operational_costs(self):
         operational_costs = 0

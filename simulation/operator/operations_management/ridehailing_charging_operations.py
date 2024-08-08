@@ -21,6 +21,7 @@ class RideHailingChargingOperations(OperationsInterface):
         available_modes,
         available_modes_supply,
         state_of_charge_threshold,
+        allow_queue=True,
     ):
         super(RideHailingChargingOperations, self).__init__(env=env)
 
@@ -34,6 +35,7 @@ class RideHailingChargingOperations(OperationsInterface):
         self._available_modes_supply = available_modes_supply  # Number of Vehicles in Fleet per Mode e.g., [100, 100, 50]
 
         self._state_of_charge_threshold = state_of_charge_threshold
+        self._allow_queue = allow_queue
 
         # Task List
         self._task_queue = TaskQueue(env)
@@ -45,10 +47,10 @@ class RideHailingChargingOperations(OperationsInterface):
         self._charging_plan_updated = env.event()
         self._operations_started = env.event()
 
-        # When to start operations (every 1440 min)
+        # When to start operations
         self._time_between_operations = time_between_operations
 
-        # Shift Duration (OM shift duration)
+        # Shift Duration
         self._duration_of_operations = operation_duration  # mins
 
     @property
@@ -105,13 +107,19 @@ class RideHailingChargingOperations(OperationsInterface):
             self._task_queue.bulk_append(self._scheduled_tasks)
 
             logging.warning(
-                f"There are {self._operator_reference.fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+                f"There are {self._operator_reference.fleet.count_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
+                extra={
+                    "clazz": self.__class__.__name__,
+                    "oid": self._operator_reference.id,
+                },
             )
 
             logging.info(
-                f"Charging Tasks scheduled. In total {len(charging_plans)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+                f"Charging Tasks scheduled. In total {len(charging_plans)} charging tasks are generated.",
+                extra={
+                    "clazz": self.__class__.__name__,
+                    "oid": self._operator_reference.id,
+                },
             )
             # Notify listeners
             self._charging_plan_updated.succeed()
@@ -121,7 +129,10 @@ class RideHailingChargingOperations(OperationsInterface):
                 next_task = self._task_queue.popleft()
                 logging.debug(
                     f"Processing following task: {next_task}.",
-                    extra={"clazz": self.__class__.__name__},
+                    extra={
+                        "clazz": self.__class__.__name__,
+                        "oid": self._operator_reference.id,
+                    },
                 )
                 self._env.process(next_task.execute())
 
@@ -165,74 +176,114 @@ class RideHailingChargingOperations(OperationsInterface):
         if not self._operator_reference.charging_infrastructure.get_locations():
             logging.warning(
                 "No charging stations available. No charging plan generated.",
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+                extra={
+                    "clazz": self.__class__.__name__,
+                    "oid": self._operator_reference.id,
+                },
             )
             return charging_plan
+
+        if not self._allow_queue:
+            capacity_to_consider = {
+                x.location: x.capacity
+                for x in self._operator_reference.charging_infrastructure.charging_stations
+                if x.capacity > 0
+            }
 
         for vehicle in vehicles_to_charge:
             hex = vehicle.position.get_hexagon(return_geom=False)[0]
 
             # Get nearest charging station (.loc -> destination, [[]] -> Origin)
-            sorted_base_list = self._distance_matrix.loc[
-                self._operator_reference.charging_infrastructure.get_locations()
-            ][[hex]].sort_values(by=hex, ascending=True)
+            if not self._allow_queue:
+                # considering only the ones with remaining capacity from other charging plans
+                sorted_base_list = self._distance_matrix.loc[
+                    list(capacity_to_consider.keys())
+                ][[hex]].sort_values(by=hex, ascending=True)
 
-            selected_base_distance = None
-            # Select Nearest Base
-            if vehicle.is_electric:
-                # we prioritize based on the queue
-                for queue in [0, 2, 5, 10]:
+                if sorted_base_list.empty:
+                    # no charging stations available because capacity exhausted
+                    logging.debug(
+                        "Reserved capacity at all charging stations exhausted, skipping creation of charging tasks after %s tasks were created.",
+                        len(charging_plan),
+                        extra={
+                            "clazz": self.__class__.__name__,
+                            "oid": self._operator_reference.id,
+                        },
+                    )
+                    break
+
+                # Select Nearest Base
+                selected_base_distance = sorted_base_list.iat[0, 0]
+                selected_base = sorted_base_list.index[0]
+                selected_charging_station = [
+                    x
+                    for x in self._operator_reference.charging_infrastructure.charging_stations
+                    if x.location == selected_base
+                ][0]
+            else:
+                sorted_base_list = self._distance_matrix.loc[
+                    self._operator_reference.charging_infrastructure.get_locations()
+                ][[hex]].sort_values(by=hex, ascending=True)
+
+                selected_base_distance = None
+                if vehicle.is_electric:
+                    # we prioritize based on the queue
+                    for queue in [0, 2, 5, 10]:
+                        for index_base, row_base in sorted_base_list.iterrows():
+                            selected_base = index_base
+                            available_charging_stations = [
+                                x
+                                for x in self._operator_reference.charging_infrastructure.charging_stations
+                                if len(x.plugs.queue) <= queue
+                            ]
+                            if len(available_charging_stations) > 0:
+                                selected_charging_station = [
+                                    x
+                                    for x in available_charging_stations
+                                    if x.location == selected_base
+                                ]
+                                if len(selected_charging_station) > 0:
+                                    selected_charging_station = (
+                                        selected_charging_station[0]
+                                    )
+                                    selected_base_distance = row_base[hex]
+                                    break
+                    # sometimes the queue is too long and we have to disregard it
+                    if not selected_base_distance:
+                        for index_base, row_base in sorted_base_list.iterrows():
+                            selected_base = index_base
+                            available_charging_stations = [
+                                x
+                                for x in self._operator_reference.charging_infrastructure.charging_stations
+                            ]
+                            if len(available_charging_stations) > 0:
+                                selected_charging_station = [
+                                    x
+                                    for x in available_charging_stations
+                                    if x.location == selected_base
+                                ]
+                                if len(selected_charging_station) > 0:
+                                    selected_charging_station = (
+                                        selected_charging_station[0]
+                                    )
+                                    selected_base_distance = row_base[hex]
+                                    break
+
+                if not vehicle.is_electric:
                     for index_base, row_base in sorted_base_list.iterrows():
                         selected_base = index_base
                         available_charging_stations = [
                             x
                             for x in self._operator_reference.charging_infrastructure.charging_stations
-                            if len(x.plugs.queue) <= queue
                         ]
                         if len(available_charging_stations) > 0:
                             selected_charging_station = [
                                 x
                                 for x in available_charging_stations
                                 if x.location == selected_base
-                            ]
-                            if len(selected_charging_station) > 0:
-                                selected_charging_station = selected_charging_station[0]
-                                selected_base_distance = row_base[hex]
-                                break
-                # sometimes the queue is too long and we have to disregard it
-                if not selected_base_distance:
-                    for index_base, row_base in sorted_base_list.iterrows():
-                        selected_base = index_base
-                        available_charging_stations = [
-                            x
-                            for x in self._operator_reference.charging_infrastructure.charging_stations
-                        ]
-                        if len(available_charging_stations) > 0:
-                            selected_charging_station = [
-                                x
-                                for x in available_charging_stations
-                                if x.location == selected_base
-                            ]
-                            if len(selected_charging_station) > 0:
-                                selected_charging_station = selected_charging_station[0]
-                                selected_base_distance = row_base[hex]
-                                break
-
-            if not vehicle.is_electric:
-                for index_base, row_base in sorted_base_list.iterrows():
-                    selected_base = index_base
-                    available_charging_stations = [
-                        x
-                        for x in self._operator_reference.charging_infrastructure.charging_stations
-                    ]
-                    if len(available_charging_stations) > 0:
-                        selected_charging_station = [
-                            x
-                            for x in available_charging_stations
-                            if x.location == selected_base
-                        ][0]
-                        selected_base_distance = row_base[hex]
-                        break
+                            ][0]
+                            selected_base_distance = row_base[hex]
+                            break
 
             # How many vehicles can we move to the base and charge?
             pick_up_vehicles = 1
@@ -250,6 +301,11 @@ class RideHailingChargingOperations(OperationsInterface):
                 vehicle,
             )
 
+            if not self._allow_queue:
+                capacity_to_consider[selected_base] -= pick_up_vehicles
+                if capacity_to_consider[selected_base] == 0:
+                    del capacity_to_consider[selected_base]
+
             # Add main chargin task to charging tasks
             if pick_up_vehicles > 0:
                 chargings_tasks.append(charging_task)
@@ -261,83 +317,6 @@ class RideHailingChargingOperations(OperationsInterface):
             # Save Charging Plan of Vehicle Mode
 
         return charging_plan
-
-    def calculate_resource_capacity_split_for_charging(
-        self,
-        fleet_state,
-        available_vehicle_modes,
-        max_vehicle_supply,
-        number_of_service_units,
-    ):
-        """
-            Determine Service Worker Split Between Modes (How many workers should be assigned to charge how many vehicles)
-
-            Process: Calculate Fraction of Low SOC Vehicles per Mode. Then calculate weighted sum.
-                1. frac_i = #low_soc_vehicle_i*weight_i/max_vehicle_supply_i
-                    1.1. We calculate weight as the inverse of "get_max_capacity_per_unit" for each vehicle mode
-                    1.2. Thus, we ensure that not too many service workers are assigned to vehicles that can be pooled
-                2. total_frac = sum frac_i
-                3. Calculate how many service workers are assigned to charge vehicle mode i
-                   capacity_i = frac_i/total_frac * number_of_service_units_i
-        :param fleet_state: Resulting data frame from function calculate_residual_supply
-        :param available_vehicle_modes: List of available vehicle modes (["SharedKickScooter", "SharedScooter", "SharedCar"]
-        :param max_vehicle_supply: List of maximum number of available vehicles (order is aligned with available_vehicle_modes)
-                                for example: [10, 5, 12] => 10 kick scooter, 5 scooter, 12 cars
-        :param number_of_service_units: Available Service Worker Capacity
-        :return: List of assigned resource workers to vehicle modes (order is aligned with available_vehicle_modes)
-                        for example: Input 25 Service Workers
-                                    => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
-        """
-
-        current_low_soc_supply = []
-
-        for mode in self._available_modes:
-            # Service Worker Charging Capacity per Mode
-            max_capacity_per_unit = self.get_max_capacity_per_unit(mode)
-
-            # Normalize the vehicle weight;
-            # otherwise all resources are bound to kick scooters as there are way more low soc kick scooters
-            # One Service Worker can "process" 40 units of kick scooters compared to 1 sw for one car.
-            current_low_soc_supply.append(
-                fleet_state[f"{mode}_Low_SoC"].sum() / max_capacity_per_unit
-            )
-
-        low_fraction_per_mode = [
-            curr_low_supply / max_supply
-            for curr_low_supply, max_supply in zip(
-                current_low_soc_supply, max_vehicle_supply
-            )
-        ]
-
-        # Temporary Denom
-        denominator = sum(low_fraction_per_mode)
-
-        if denominator == 0.0:
-            # No Charging Needed => No Workers assigned
-            return len(low_fraction_per_mode) * [0]
-
-        # Split capacity based on the following fraction
-        capacity_fraction = low_fraction_per_mode / denominator
-
-        capacity = capacity_fraction * number_of_service_units
-
-        capacity = [round(x) for x in capacity]
-
-        # Rounding Fractions => Sum of Residual don't add up to available units
-        # We fix this by adding or subtracting the residual to the max. element
-        # Happens very rarely
-        residual = number_of_service_units - sum(capacity)
-
-        max_element = max(capacity)
-        arg_max = capacity.index(max_element)
-
-        if residual > 0:
-            # We add excess supply to mode where most workforce is needed
-            capacity[arg_max] += residual
-        elif residual < 0:
-            capacity[arg_max] = max(capacity[arg_max] + residual, 0)
-
-        return capacity
 
     def get_max_capacity_per_unit(self, mode):
         # Mode Specific Collection Capacity per Service Worker (i.e., how many vehicles can one sw collect)

@@ -50,25 +50,27 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._charging_operations = RideHailingChargingOperations(
             env=self._env,
             distance_matrix=self._distance_matrix,
-            time_between_operations=self._config.ridehailing_operator_config.operations_start,
-            operation_duration=self._config.ridehailing_operator_config.operations_duration,
+            time_between_operations=self._config.shared_charging_config.auction_interval,
+            operation_duration=None,  # does not matter
             available_modes=self._config.ridehailing_operator_config.available_modes,
             available_modes_supply=self._config.ridehailing_operator_config.available_modes_supply,
             state_of_charge_threshold=self._state_of_charge_threshold,
+            allow_queue=False,
         )
 
         # hack a virtual operator reference into it?
         VirtualOperator = namedtuple(
-            "VirtualOperator", ["fleet", "charging_infrastructure"]
+            "VirtualOperator", ["id", "fleet", "charging_infrastructure"]
         )
         self._charging_operations.register_operator_reference(
             VirtualOperator(
+                id=self._operator_reference.id,
                 fleet=self._operator_reference.fleet,
                 charging_infrastructure=self._virtual_charging_infrastructure,
             )
         )
 
-        self._env.process(self._charging_operations.execute())
+        self._env.process(self._delay_charging_operations())
 
         while True:
             # this operator has two jobs to do:
@@ -139,3 +141,9 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._virtual_charging_infrastructure.update(
             auctioned_timeslot, {k: v[0] for k, v in self._result.items()}
         )
+
+    def _delay_charging_operations(self):
+        # Logic: Wait until t=1 because we start auctions at t=0+(auction_interval) and then the charging operations process can run in intervals of auction_interval, this works because the auction is instant from simulation-time perspective
+
+        yield self._env.timeout(1)
+        self._env.process(self._charging_operations.execute())
