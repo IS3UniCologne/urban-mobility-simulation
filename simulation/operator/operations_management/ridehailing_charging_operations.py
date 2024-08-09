@@ -25,7 +25,7 @@ class RideHailingChargingOperations(OperationsInterface):
     ):
         super(RideHailingChargingOperations, self).__init__(env=env)
 
-        self._world = World.instance()
+        self._world = None  # defer
 
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix

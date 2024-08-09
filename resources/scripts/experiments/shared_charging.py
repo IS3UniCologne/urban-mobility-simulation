@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+import time
 from configparser import ConfigParser
 from datetime import datetime
 from pathlib import Path
@@ -90,11 +91,15 @@ logging.getLogger("fiona").setLevel(logging.WARNING)
 
 logger = logging.getLogger()
 
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+# Record the start time
+real_start_time = time.time()
+
 # Make it beautiful
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",
-    filename=f"data/output/logs/{datetime.strftime(datetime.now(), '%Y%m%d_%H:%M:%S')}.log",
+    filename=f"data/output/logs/{output_timestamp}.log",
     encoding="utf-8",
     level=file_log_level,  # set it to lowest so the handlers can decide
 )
@@ -724,15 +729,15 @@ logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 # # # # # # # # # # # # # # # # # # # # # #
 
 pd.DataFrame.from_records(bidding_track).to_csv(
-    "data/output/tracking/auction.csv", index=False
+    f"data/output/tracking/{output_timestamp}_auction.csv", index=False
 )
 
 pd.DataFrame.from_records(vehicles_track).to_csv(
-    "data/output/tracking/vehicles.csv", index=False
+    f"data/output/tracking/{output_timestamp}_vehicles.csv", index=False
 )
 
 pd.DataFrame.from_records(charging_stations_track).to_csv(
-    "data/output/tracking/charging_stations.csv", index=False
+    f"data/output/tracking/{output_timestamp}_charging_stations.csv", index=False
 )
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -745,18 +750,43 @@ fleet_0_transactions = ridehailing_operator_0.get_transactions()
 fleet_1_transactions = ridehailing_operator_1.get_transactions()
 
 fleet_0_transactions.to_csv(
-    "data/output/transactions/fleet_0_transactions.csv", index=False
+    f"data/output/transactions/{output_timestamp}_fleet_0_transactions.csv", index=False
 )
 fleet_1_transactions.to_csv(
-    "data/output/transactions/fleet_1_transactions.csv", index=False
+    f"data/output/transactions/{output_timestamp}_fleet_1_transactions.csv", index=False
 )
 
 fleet_0_task_transactions = ridehailing_operations_0.get_task_transactions()
 fleet_1_task_transactions = ridehailing_operations_1.get_task_transactions()
 
 fleet_0_task_transactions.to_csv(
-    "data/output/transactions/fleet_0_task_transactions.csv", index=False
+    f"data/output/transactions/{output_timestamp}_fleet_0_task_transactions.csv",
+    index=False,
 )
 fleet_1_task_transactions.to_csv(
-    "data/output/transactions/fleet_1_task_transactions.csv", index=False
+    f"data/output/transactions/{output_timestamp}_fleet_1_task_transactions.csv",
+    index=False,
 )
+
+# write down the configs used for that run
+import csv
+
+# Open the CSV file in append mode
+with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as file:
+    # Create a CSV writer object
+    writer = csv.writer(file)
+
+    # Write a row to the CSV file
+    writer.writerow(
+        [
+            output_timestamp,
+            __file__,
+            end_time,
+            time.time() - real_start_time,
+            n_autonomous_cars,
+            number_of_charging_locations,
+            charging_station_capacity,
+            charging_station_power,
+            seed,
+        ]
+    )
