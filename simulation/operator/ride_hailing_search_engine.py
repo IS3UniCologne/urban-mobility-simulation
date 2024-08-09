@@ -1,5 +1,3 @@
-from line_profiler_pycharm import profile
-
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
@@ -33,7 +31,6 @@ class RideHailingSearchEngine(SearchEngineInterface):
             3
         ]
 
-    @profile
     def search_for_transportation_alternatives(
         self, vehicle_search_task: TransportationSearchTask
     ) -> TransportationAlternativeBrowser:

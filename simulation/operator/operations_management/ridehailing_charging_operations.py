@@ -25,7 +25,7 @@ class RideHailingChargingOperations(OperationsInterface):
     ):
         super(RideHailingChargingOperations, self).__init__(env=env)
 
-        self._world = World.instance()
+        self._world = None  # defer
 
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
@@ -58,6 +58,8 @@ class RideHailingChargingOperations(OperationsInterface):
         return self._charging_plan_updated
 
     def execute(self):
+        self._world = World.instance()
+
         "Below, we combine the old operational logic from operations_ridehailing.py and rebalancing_scheduler_ridehailing.py"
 
         while True:
