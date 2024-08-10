@@ -780,13 +780,13 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
     writer.writerow(
         [
             output_timestamp,
-            __file__,
+            os.path.basename(__file__),
             end_time,
             time.time() - real_start_time,
             n_autonomous_cars,
             number_of_charging_locations,
-            charging_station_capacity,
-            charging_station_power,
+            charging_station_capacity[0],
+            charging_station_power[0],
             seed,
         ]
     )
