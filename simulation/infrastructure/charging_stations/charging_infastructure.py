@@ -21,7 +21,7 @@ class ChargingInfrastructure:
         return ChargingInfrastructure.__instance
 
     def __init__(
-        self, env, id, location_list, power_list, capacity_list, reset: bool = False
+        self, env, location_list, power_list, capacity_list, reset: bool = False
     ):
         """Virtually private constructor."""
         if ChargingInfrastructure.__instance is not None and not reset:
@@ -30,7 +30,6 @@ class ChargingInfrastructure:
             ChargingInfrastructure.__instance = self
             super(ChargingInfrastructure, self).__init__()
         self._env = env
-        self._id = id
         self._tracking = Tracking.instance()
         self._location_list = location_list
         self._power_list = power_list
