@@ -375,7 +375,6 @@ global_config.add_charging_infrastructure_config(sic)
 separate_charging_capacity_list = [c / 2 for c in charging_station_capacity]
 charging_infrastructure_0 = ChargingInfrastructure(
     env,
-    0,
     charging_location_list,
     charging_station_power_list,
     separate_charging_capacity_list,
@@ -384,7 +383,6 @@ charging_infrastructure_0 = ChargingInfrastructure(
 
 charging_infrastructure_1 = ChargingInfrastructure(
     env,
-    1,
     charging_location_list,
     charging_station_power_list,
     separate_charging_capacity_list,
@@ -396,13 +394,12 @@ charging_stations_track_0 = []
 charging_stations_track_1 = []
 
 
-def track_charging_stations_0(charging_infrastructure_id):
+def track_charging_stations_0():
     while True:
         yield env.timeout(1)
         values = [
             {
                 "time": env._now,
-                "charging_infrastructure_id": charging_infrastructure_id,
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
             }
@@ -413,13 +410,12 @@ def track_charging_stations_0(charging_infrastructure_id):
         charging_stations_track_0.extend(values)
 
 
-def track_charging_stations_1(charging_infrastructure_id):
+def track_charging_stations_1():
     while True:
         yield env.timeout(1)
         values = [
             {
                 "time": env._now,
-                "charging_infrastructure_id": charging_infrastructure_id,
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
             }
@@ -430,8 +426,8 @@ def track_charging_stations_1(charging_infrastructure_id):
         charging_stations_track_1.extend(values)
 
 
-env.process(track_charging_stations_0(charging_infrastructure_0._id))
-env.process(track_charging_stations_1(charging_infrastructure_1._id))
+env.process(track_charging_stations_0())
+env.process(track_charging_stations_1())
 
 
 #### End Charging Infrastructure Configuration #####
