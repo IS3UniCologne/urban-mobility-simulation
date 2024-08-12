@@ -1,6 +1,5 @@
 ##Imports
 # Standard library imports
-import csv
 import logging
 import os
 import sys
@@ -376,6 +375,7 @@ global_config.add_charging_infrastructure_config(sic)
 separate_charging_capacity_list = [c / 2 for c in charging_station_capacity]
 charging_infrastructure_0 = ChargingInfrastructure(
     env,
+    0,
     charging_location_list,
     charging_station_power_list,
     separate_charging_capacity_list,
@@ -384,6 +384,7 @@ charging_infrastructure_0 = ChargingInfrastructure(
 
 charging_infrastructure_1 = ChargingInfrastructure(
     env,
+    1,
     charging_location_list,
     charging_station_power_list,
     separate_charging_capacity_list,
@@ -395,29 +396,42 @@ charging_stations_track_0 = []
 charging_stations_track_1 = []
 
 
-def track_charging_stations(infra, target):
+def track_charging_stations_0(charging_infrastructure_id):
     while True:
         yield env.timeout(1)
         values = [
             {
                 "time": env._now,
+                "charging_infrastructure_id": charging_infrastructure_id,
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
-                "_plugs.queuesize": len(d["_plugs"].queue),
             }
             for d in [
-                tracking.dump(tracking._get_uid(x))[1] for x in infra.charging_stations
+                tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
             ]
         ]
-        target.extend(values)
+        charging_stations_track_0.extend(values)
 
 
-env.process(
-    track_charging_stations(charging_infrastructure_0, charging_stations_track_0)
-)
-env.process(
-    track_charging_stations(charging_infrastructure_1, charging_stations_track_1)
-)
+def track_charging_stations_1(charging_infrastructure_id):
+    while True:
+        yield env.timeout(1)
+        values = [
+            {
+                "time": env._now,
+                "charging_infrastructure_id": charging_infrastructure_id,
+                "_location": d["_location"],
+                "_plugs.count": d["_plugs"].count,
+            }
+            for d in [
+                tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
+            ]
+        ]
+        charging_stations_track_1.extend(values)
+
+
+env.process(track_charging_stations_0(charging_infrastructure_0._id))
+env.process(track_charging_stations_1(charging_infrastructure_1._id))
 
 
 #### End Charging Infrastructure Configuration #####
@@ -510,9 +524,6 @@ vehicles_track = []
 
 
 def track_fleets(fleet_id):
-    # attention: this only works because we do not dynamically create and destroy vehicles like we do with users!
-    tracked_list = tracking.list_tracked("RideHailingAV")
-
     while True:
         yield env.timeout(1)
         envtime, values = (
@@ -521,22 +532,17 @@ def track_fleets(fleet_id):
                 "_fleet": fleet_id,
                 "_state": [
                     tracking.get(x, "_state")[1]
-                    for x in tracked_list
+                    for x in tracking.list_tracked("RideHailingAV")
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_current_state_of_charge": [
                     tracking.get(x, "_current_state_of_charge")[1]
-                    for x in tracked_list
+                    for x in tracking.list_tracked("RideHailingAV")
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_vdt": [
                     tracking.get(x, "_vdt")[1]
-                    for x in tracked_list
-                    if tracking.get(x, "_fleet")[1].id == fleet_id
-                ],
-                "_suggested": [
-                    tracking.get(x, "_suggested")[1]
-                    for x in tracked_list
+                    for x in tracking.list_tracked("RideHailingAV")
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
             },
@@ -561,7 +567,6 @@ ridehailing_operations_0 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    allow_queue=False,
 )
 
 ridehailing_operations_1 = RideHailingChargingOperations(
@@ -572,7 +577,6 @@ ridehailing_operations_1 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    allow_queue=False,
 )
 
 
@@ -624,7 +628,7 @@ world = World.init(
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, demand_modifier_paths, seed, mode="ride_hailing"
+    env, demand_profile, di, world, [], seed, mode="ride_hailing"
 )
 env.process(demand_factory.generate_demand())
 
@@ -652,14 +656,12 @@ pd.DataFrame.from_records(vehicles_track).to_csv(
     f"data/output/tracking/{output_timestamp}_vehicles.csv", index=False
 )
 
-# stack charging infra tracks
-c0 = pd.DataFrame.from_records(charging_stations_track_0)
-c1 = pd.DataFrame.from_records(charging_stations_track_1)
-c0["infra"] = 0
-c1["infra"] = 1
+pd.DataFrame.from_records(charging_stations_track_0).to_csv(
+    f"data/output/tracking/{output_timestamp}_charging_stations_0.csv", index=False
+)
 
-pd.concat([c0, c1]).to_csv(
-    f"data/output/tracking/{output_timestamp}_charging_stations.csv", index=False
+pd.DataFrame.from_records(charging_stations_track_1).to_csv(
+    f"data/output/tracking/{output_timestamp}_charging_stations_1.csv", index=False
 )
 
 avg_infra_util_0 = (
@@ -711,6 +713,7 @@ fleet_1_task_transactions.to_csv(
 )
 
 # write down the configs used for that run
+import csv
 
 # Open the CSV file in append mode
 with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as file:
