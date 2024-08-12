@@ -1,4 +1,5 @@
 import logging
+import random
 
 from simpy import Environment
 
@@ -75,6 +76,9 @@ class RideHailingVehicle(Vehicle):
             ._ridehailing_vehicle_configs["RideHailingCar"]
             .initial_SoC
         )
+        if initial_state_of_charge_percentage == 0:
+            initial_state_of_charge_percentage = random.uniform(0.2, 0.8)
+
         self._current_state_of_charge = (
             max_state_of_charge * initial_state_of_charge_percentage
         )  # in kWh #
