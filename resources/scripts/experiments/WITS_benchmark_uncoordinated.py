@@ -694,5 +694,7 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_0,
             service_rate_fleet_1,
             avg_infra_util,
+            None,
+            "random_SOC_init",
         ]
     )
