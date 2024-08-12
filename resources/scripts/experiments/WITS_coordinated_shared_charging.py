@@ -807,6 +807,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util,
             None,
-            "random_SOC_init",
+            "random_SOC_init" if initial_SoC == 0 else None,
         ]
     )
