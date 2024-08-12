@@ -22,14 +22,12 @@ from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import (
-    AuctionConfig,
     ChargingInfrastructureConfig,
     Configuration,
     ModeChoiceConfig,
     PopulationConfig,
     RideHailingOperatorConfig,
     RideHailingVehicleConfig,
-    SharedChargingConfig,
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
@@ -44,8 +42,8 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 
 # Import operator related modules
 from simulation.operator.fleet_factory import generate_AV_fleet
-from simulation.operator.operations_management.ridehailing_shared_charging_operations import (
-    RideHailingSharedChargingOperations,
+from simulation.operator.operations_management.ridehailing_charging_operations import (
+    RideHailingChargingOperations,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
@@ -60,7 +58,6 @@ from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
 )
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.demand.demand_importer import DemandImporter
-from simulation.world.markets.shared_charging_auction import SharedChargingAuction
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 from tracking.tracking import Tracking
@@ -409,23 +406,6 @@ env.process(track_charging_stations())
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
-# Shared Charging Configuration           #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-auction_start = parser.getint("AUCTION", "auction_start")
-auction_end = parser.getint("AUCTION", "auction_end")
-ac = AuctionConfig(auction_start, auction_end)
-global_config.auction_config = ac
-
-auction_interval = parser.getint("SHARED_CHARGING_AUCTION", "auction_interval")
-timeslot_duration = parser.getint("SHARED_CHARGING_AUCTION", "timeslot_duration")
-sc = SharedChargingConfig(auction_interval, timeslot_duration)
-global_config.shared_charging_config = sc
-
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
 # Output Configuration                    #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
@@ -480,53 +460,6 @@ GeodesicEnvironment.getInstance().reset_random_generator(4711)
 User.user_id = 0
 DemandFactory.counter = 0
 # Add a counter for ridehailing car too
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Market Modules                          #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-charging_auction = SharedChargingAuction(
-    env=env,
-    start_condition=None,
-    end_condition=None,
-    charging_infrastructure=charging_infrastructure,
-)
-
-# auction_tracking = tracking.register(charging_auction)
-
-# auction_track = []
-
-
-# def track_auction():
-#     while True:
-#         yield charging_auction.cleared
-#         envtime, values = tracking.dump(auction_tracking)
-#         bids = [
-#             {
-#                 "time": env._now,
-#                 "timeslot": values["_next_timeslot"],
-#                 "location": l,
-#                 "bids": b,
-#             }
-#             for l, b in values["_bids"].items()
-#         ]
-#         results = [
-#             {
-#                 "time": env._now,
-#                 "timeslot": values["_next_timeslot"],
-#                 "location": l,
-#                 "results.capacity": r[1][0] + r[2][0],
-#                 "results.clearing_price": r[1][1],
-#             }
-#             for l, r in values["_location_results"].items()
-#         ]
-#         auction_track.extend(bids)
-#         auction_track.extend(results)
-
-
-# env.process(track_auction())
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -594,66 +527,25 @@ search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
 search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
 # Initialize fleet operations
-ridehailing_operations_0 = RideHailingSharedChargingOperations(
+ridehailing_operations_0 = RideHailingChargingOperations(
     env=env,
-    auction=charging_auction,
-    bidding_parameters=bidding_parameters,
-    state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
     distance_matrix=distance_matrix,
+    time_between_operations=global_config.ridehailing_operator_config.operations_start,
+    operation_duration=global_config.ridehailing_operator_config.operations_duration,
+    available_modes=available_vehicle_modes_ridehailing,
+    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
+    state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
 )
 
-ridehailing_operations_1 = RideHailingSharedChargingOperations(
+ridehailing_operations_1 = RideHailingChargingOperations(
     env=env,
-    auction=charging_auction,  #
-    bidding_parameters=bidding_parameters,
-    state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
     distance_matrix=distance_matrix,
+    time_between_operations=global_config.ridehailing_operator_config.operations_start,
+    operation_duration=global_config.ridehailing_operator_config.operations_duration,
+    available_modes=available_vehicle_modes_ridehailing,
+    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
+    state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
 )
-
-# Track Bidding Behavior (and Results)
-bidders_to_track = []
-bidders_to_track.append(
-    tracking.register(
-        ridehailing_operations_0, id=ridehailing_operations_0.auction_participant_id
-    )
-)
-bidders_to_track.append(
-    tracking.register(
-        ridehailing_operations_1, id=ridehailing_operations_1.auction_participant_id
-    )
-)
-bidding_track = []
-
-
-def track_bidders(bidder_uid):
-    while True:
-        yield charging_auction.cleared
-        envtime, participant = tracking.get(bidder_uid, "auction_participant_id")
-        envtime, bids = tracking.get(bidder_uid, "_bids")
-        envtime, results = tracking.get(bidder_uid, "_result")
-
-        if bids is None or results is None:
-            continue
-        bidding_track.extend(
-            [
-                {
-                    "time": envtime,
-                    "participant_id": participant,
-                    "location": l,
-                    "_bids": b[
-                        :-1
-                    ],  # get rid of participant id (last element in the tuple)
-                    "_result": r,
-                }
-                for l, b in bids.items()
-                for lr, r in results.items()
-                if l == lr
-            ]
-        )
-
-
-for bidder in bidders_to_track:
-    env.process(track_bidders(bidder))
 
 
 # Initialize operators
@@ -728,10 +620,6 @@ logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-pd.DataFrame.from_records(bidding_track).to_csv(
-    f"data/output/tracking/{output_timestamp}_auction.csv", index=False
-)
-
 pd.DataFrame.from_records(vehicles_track).to_csv(
     f"data/output/tracking/{output_timestamp}_vehicles.csv", index=False
 )
@@ -739,6 +627,11 @@ pd.DataFrame.from_records(vehicles_track).to_csv(
 pd.DataFrame.from_records(charging_stations_track).to_csv(
     f"data/output/tracking/{output_timestamp}_charging_stations.csv", index=False
 )
+
+avg_infra_util = (
+    pd.DataFrame.from_records(charging_stations_track)["_plugs.count"]
+    / charging_station_capacity[0]
+).mean()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -756,8 +649,18 @@ fleet_1_transactions.to_csv(
     f"data/output/transactions/{output_timestamp}_fleet_1_transactions.csv", index=False
 )
 
-fleet_0_task_transactions = ridehailing_operations_0.get_task_transactions()
-fleet_1_task_transactions = ridehailing_operations_1.get_task_transactions()
+service_rate_fleet_0 = (
+    fleet_0_transactions["state"].value_counts()["Fulfilled"]
+    / fleet_0_transactions.shape[0]
+)
+
+service_rate_fleet_1 = (
+    fleet_1_transactions["state"].value_counts()["Fulfilled"]
+    / fleet_1_transactions.shape[0]
+)
+
+fleet_0_task_transactions = ridehailing_operations_0.task_transactions
+fleet_1_task_transactions = ridehailing_operations_1.task_transactions
 
 fleet_0_task_transactions.to_csv(
     f"data/output/transactions/{output_timestamp}_fleet_0_task_transactions.csv",
@@ -788,5 +691,8 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             charging_station_capacity[0],
             charging_station_power[0],
             seed,
+            service_rate_fleet_0,
+            service_rate_fleet_1,
+            avg_infra_util,
         ]
     )
