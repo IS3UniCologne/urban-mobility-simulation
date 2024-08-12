@@ -372,7 +372,7 @@ sic = ChargingInfrastructureConfig(
 )
 global_config.add_charging_infrastructure_config(sic)
 
-separate_charging_capacity_list = [c / 2 for c  in charging_station_capacity]
+separate_charging_capacity_list = [c / 2 for c in charging_station_capacity]
 charging_infrastructure_0 = ChargingInfrastructure(
     env,
     0,
@@ -412,6 +412,7 @@ def track_charging_stations_0(charging_infrastructure_id):
         ]
         charging_stations_track_0.extend(values)
 
+
 def track_charging_stations_1(charging_infrastructure_id):
     while True:
         yield env.timeout(1)
@@ -431,7 +432,6 @@ def track_charging_stations_1(charging_infrastructure_id):
 
 env.process(track_charging_stations_0(charging_infrastructure_0._id))
 env.process(track_charging_stations_1(charging_infrastructure_1._id))
-
 
 
 #### End Charging Infrastructure Configuration #####
@@ -736,5 +736,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util_0,
             avg_infra_util_1,
+            "random_SOC_init" if initial_SoC == 0 else None,
         ]
     )
