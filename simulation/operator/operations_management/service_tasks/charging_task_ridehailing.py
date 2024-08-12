@@ -128,6 +128,8 @@ class ChargingTaskRidehailing(ServiceTask):
             if vehicle.is_electric:
                 vehicle.waiting_for_charging()
 
+                waiting_start = self._env.now
+
                 if isinstance(self._charging_station, VirtualChargingStation):
                     # if we are in a context of shared capacity, we need to wait for the reservation
                     scheduled_time = self._charging_station.valid_timeframe[0]
@@ -173,6 +175,11 @@ class ChargingTaskRidehailing(ServiceTask):
 
                     # Plugin Vehicle to Charging Station
                     vehicle.plug_to_charging_station()
+
+                    if not isinstance(self._charging_station, VirtualChargingStation):    
+                        waiting_stop = self._env.now
+                        self._waiting_time = waiting_stop - waiting_start
+
                     self._charging_duration = charging_duration
                     self._kWh_charged = charging_duration / 60 * charging_power
                     self._state = TaskState.EXECUTING_CHARGING
