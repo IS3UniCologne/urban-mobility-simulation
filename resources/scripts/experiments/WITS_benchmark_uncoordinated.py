@@ -1,6 +1,5 @@
 ##Imports
 # Standard library imports
-import csv
 import logging
 import os
 import sys
@@ -392,7 +391,6 @@ def track_charging_stations():
                 "time": env._now,
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
-                "_plugs.queuesize": len(d["_plugs"].queue),
             }
             for d in [
                 tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
@@ -494,9 +492,6 @@ vehicles_track = []
 
 
 def track_fleets(fleet_id):
-    # attention: this only works because we do not dynamically create and destroy vehicles like we do with users!
-    tracked_list = tracking.list_tracked("RideHailingAV")
-
     while True:
         yield env.timeout(1)
         envtime, values = (
@@ -505,22 +500,17 @@ def track_fleets(fleet_id):
                 "_fleet": fleet_id,
                 "_state": [
                     tracking.get(x, "_state")[1]
-                    for x in tracked_list
+                    for x in tracking.list_tracked("RideHailingAV")
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_current_state_of_charge": [
                     tracking.get(x, "_current_state_of_charge")[1]
-                    for x in tracked_list
+                    for x in tracking.list_tracked("RideHailingAV")
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_vdt": [
                     tracking.get(x, "_vdt")[1]
-                    for x in tracked_list
-                    if tracking.get(x, "_fleet")[1].id == fleet_id
-                ],
-                "_suggested": [
-                    tracking.get(x, "_suggested")[1]
-                    for x in tracked_list
+                    for x in tracking.list_tracked("RideHailingAV")
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
             },
@@ -545,7 +535,6 @@ ridehailing_operations_0 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    allow_queue=False,
 )
 
 ridehailing_operations_1 = RideHailingChargingOperations(
@@ -556,7 +545,6 @@ ridehailing_operations_1 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    allow_queue=False,
 )
 
 
@@ -608,7 +596,7 @@ world = World.init(
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, demand_modifier_paths, seed, mode="ride_hailing"
+    env, demand_profile, di, world, [], seed, mode="ride_hailing"
 )
 env.process(demand_factory.generate_demand())
 
@@ -684,6 +672,7 @@ fleet_1_task_transactions.to_csv(
 )
 
 # write down the configs used for that run
+import csv
 
 # Open the CSV file in append mode
 with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as file:
@@ -705,7 +694,5 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_0,
             service_rate_fleet_1,
             avg_infra_util,
-            None,
-            "random_SOC_init" if initial_SoC == 0 else None,
         ]
     )

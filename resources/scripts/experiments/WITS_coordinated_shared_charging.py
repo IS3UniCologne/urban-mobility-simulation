@@ -1,6 +1,5 @@
 ##Imports
 # Standard library imports
-import csv
 import logging
 import os
 import sys
@@ -273,14 +272,7 @@ global_config.add_ride_hailing_info(
 # Bidding Streategy Parameters
 bid_default = parser.getfloat("RIDE_HAILING_OPERATOR", "BID_DEFAULT")
 bid_decay = parser.getfloat("RIDE_HAILING_OPERATOR", "BID_DECAY")
-random_overbidding = parser.getboolean("RIDE_HAILING_OPERATOR", "RANDOM_OVERBIDDING")
-overbid_prob = parser.getfloat("RIDE_HAILING_OPERATOR", "OVERBID_PROB")
-bidding_parameters = {
-    "bid_default": bid_default,
-    "bid_decay": bid_decay,
-    "random_overbidding": random_overbidding,
-    "overbid_prob": overbid_prob,
-}
+bidding_parameters = {"bid_default": bid_default, "bid_decay": bid_decay}
 
 ###### End RideHailing Fleet Configuration ######
 
@@ -402,7 +394,6 @@ def track_charging_stations():
                 "time": env._now,
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
-                "_plugs.queuesize": len(d["_plugs"].queue),
             }
             for d in [
                 tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
@@ -424,14 +415,12 @@ env.process(track_charging_stations())
 
 auction_start = parser.getint("AUCTION", "auction_start")
 auction_end = parser.getint("AUCTION", "auction_end")
-
 ac = AuctionConfig(auction_start, auction_end)
 global_config.auction_config = ac
 
 auction_interval = parser.getint("SHARED_CHARGING_AUCTION", "auction_interval")
 timeslot_duration = parser.getint("SHARED_CHARGING_AUCTION", "timeslot_duration")
-auction_lookahead = parser.getint("SHARED_CHARGING_AUCTION", "AUCTION_LOOKAHEAD")
-sc = SharedChargingConfig(auction_interval, timeslot_duration, auction_lookahead)
+sc = SharedChargingConfig(auction_interval, timeslot_duration)
 global_config.shared_charging_config = sc
 
 
@@ -570,9 +559,6 @@ vehicles_track = []
 
 
 def track_fleets(fleet_id):
-    # attention: this only works because we do not dynamically create and destroy vehicles like we do with users!
-    tracked_list = tracking.list_tracked("RideHailingAV")
-
     while True:
         yield env.timeout(1)
         envtime, values = (
@@ -581,22 +567,17 @@ def track_fleets(fleet_id):
                 "_fleet": fleet_id,
                 "_state": [
                     tracking.get(x, "_state")[1]
-                    for x in tracked_list
+                    for x in tracking.list_tracked("RideHailingAV")
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_current_state_of_charge": [
                     tracking.get(x, "_current_state_of_charge")[1]
-                    for x in tracked_list
+                    for x in tracking.list_tracked("RideHailingAV")
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_vdt": [
                     tracking.get(x, "_vdt")[1]
-                    for x in tracked_list
-                    if tracking.get(x, "_fleet")[1].id == fleet_id
-                ],
-                "_suggested": [
-                    tracking.get(x, "_suggested")[1]
-                    for x in tracked_list
+                    for x in tracking.list_tracked("RideHailingAV")
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
             },
@@ -651,22 +632,22 @@ def track_bidders(bidder_uid):
         envtime, bids = tracking.get(bidder_uid, "_bids")
         envtime, results = tracking.get(bidder_uid, "_result")
 
-        if not bids:
+        if bids is None or results is None:
             continue
         bidding_track.extend(
             [
                 {
                     "time": envtime,
                     "participant_id": participant,
-                    "location": loc,
-                    "_bids": [
-                        (x[0], x[1]) for x in b
+                    "location": l,
+                    "_bids": b[
+                        :-1
                     ],  # get rid of participant id (last element in the tuple)
                     "_result": r,
                 }
-                for loc, b in bids.items()
+                for l, b in bids.items()
                 for lr, r in results.items()
-                if loc == lr
+                if l == lr
             ]
         )
 
@@ -723,7 +704,7 @@ world = World.init(
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, demand_modifier_paths, seed, mode="ride_hailing"
+    env, demand_profile, di, world, [], seed, mode="ride_hailing"
 )
 env.process(demand_factory.generate_demand())
 
@@ -803,6 +784,7 @@ fleet_1_task_transactions.to_csv(
 )
 
 # write down the configs used for that run
+import csv
 
 # Open the CSV file in append mode
 with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as file:
@@ -824,7 +806,5 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_0,
             service_rate_fleet_1,
             avg_infra_util,
-            None,
-            f'{"random_SOC_init" if initial_SoC == 0 else ""}, overbidding: ({str(random_overbidding)}, {str(overbid_prob)}), auction_interval: {str(auction_interval)}, timeslot_duration: {str(timeslot_duration)}, auction_lookahead: {str(auction_lookahead)}',
         ]
     )
