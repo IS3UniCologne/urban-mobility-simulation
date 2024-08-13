@@ -394,7 +394,7 @@ charging_stations_track_0 = []
 charging_stations_track_1 = []
 
 
-def track_charging_stations_0():
+def track_charging_stations(infra, target):
     while True:
         yield env.timeout(1)
         values = [
@@ -404,30 +404,18 @@ def track_charging_stations_0():
                 "_plugs.count": d["_plugs"].count,
             }
             for d in [
-                tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
+                tracking.dump(tracking._get_uid(x))[1] for x in infra.charging_stations
             ]
         ]
-        charging_stations_track_0.extend(values)
+        target.extend(values)
 
 
-def track_charging_stations_1():
-    while True:
-        yield env.timeout(1)
-        values = [
-            {
-                "time": env._now,
-                "_location": d["_location"],
-                "_plugs.count": d["_plugs"].count,
-            }
-            for d in [
-                tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
-            ]
-        ]
-        charging_stations_track_1.extend(values)
-
-
-env.process(track_charging_stations_0())
-env.process(track_charging_stations_1())
+env.process(
+    track_charging_stations(charging_infrastructure_0, charging_stations_track_0)
+)
+env.process(
+    track_charging_stations(charging_infrastructure_1, charging_stations_track_1)
+)
 
 
 #### End Charging Infrastructure Configuration #####
