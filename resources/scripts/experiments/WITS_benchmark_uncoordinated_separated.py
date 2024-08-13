@@ -508,6 +508,9 @@ vehicles_track = []
 
 
 def track_fleets(fleet_id):
+    # attention: this only works because we do not dynamically create and destroy vehicles like we do with users!
+    tracked_list = tracking.list_tracked("RideHailingAV")
+
     while True:
         yield env.timeout(1)
         envtime, values = (
@@ -516,17 +519,17 @@ def track_fleets(fleet_id):
                 "_fleet": fleet_id,
                 "_state": [
                     tracking.get(x, "_state")[1]
-                    for x in tracking.list_tracked("RideHailingAV")
+                    for x in tracked_list
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_current_state_of_charge": [
                     tracking.get(x, "_current_state_of_charge")[1]
-                    for x in tracking.list_tracked("RideHailingAV")
+                    for x in tracked_list
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_vdt": [
                     tracking.get(x, "_vdt")[1]
-                    for x in tracking.list_tracked("RideHailingAV")
+                    for x in tracked_list
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
             },
