@@ -26,25 +26,28 @@ def get_bid(
     bid_default = bidding_parameters["bid_default"]
     bid_decay = bidding_parameters["bid_decay"]
 
-    distances = pd.DataFrame({"vehicle_id": [], "CS": [], "distance": []})
-    charging_lists = {}
+    distances = []
+
+    relevant_distance_matrix = distance_matrix.loc[auctioned_capacity.keys()]
     for vehicle in vehicles_to_charge:
         hex = vehicle.position.get_hexagon(return_geom=False)[0]
         id = vehicle.id
 
         # Get nearest charging station (.loc -> destination, [[]] -> Origin)
-        sorted_charging_station_list = distance_matrix.loc[
-            [key for key, _ in auctioned_capacity.items()]
-        ][[hex]].sort_values(by=hex, ascending=True)
-        charging_lists["vehicle_id"] = sorted_charging_station_list
+        sorted_charging_station_list = (
+            relevant_distance_matrix[hex].sort_values(ascending=True).to_dict()
+        )
 
         for cs in auctioned_capacity:
-            distance = sorted_charging_station_list[
-                sorted_charging_station_list.index == cs
-            ].values[0][0]
-            row = {"vehicle_id": [id], "CS": [cs], "distance": [distance]}
-            distances = pd.concat([distances, pd.DataFrame(row)])
+            distances.append(
+                {
+                    "vehicle_id": id,
+                    "CS": cs,
+                    "distance": sorted_charging_station_list[cs],
+                }
+            )
 
+    distances = pd.DataFrame.from_records(distances)
     cumulative_distances = (
         distances.loc[:, ["CS", "distance"]].groupby("CS").sum().reset_index()
     )

@@ -20,7 +20,7 @@ class TrackingInterface(ABC):
 
     def get(self, attribute: str):
         if attribute in self.exposes and hasattr(self, attribute):
-            return self.__getattribute__(attribute)
+            return getattr(self, attribute)
         else:
             logging.debug(
                 f"Tracking tried to request an unexposed or private attribute ({attribute}) from this object",
