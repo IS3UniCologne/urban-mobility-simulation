@@ -640,12 +640,14 @@ pd.DataFrame.from_records(vehicles_track).to_csv(
     f"data/output/tracking/{output_timestamp}_vehicles.csv", index=False
 )
 
-pd.DataFrame.from_records(charging_stations_track_0).to_csv(
-    f"data/output/tracking/{output_timestamp}_charging_stations_0.csv", index=False
-)
+# stack charging infra tracks
+c0 = pd.DataFrame.from_records(charging_stations_track_0)
+c1 = pd.DataFrame.from_records(charging_stations_track_1)
+c0["infra"] = 0
+c1["infra"] = 1
 
-pd.DataFrame.from_records(charging_stations_track_1).to_csv(
-    f"data/output/tracking/{output_timestamp}_charging_stations_1.csv", index=False
+pd.concat([c0, c1]).to_csv(
+    f"data/output/tracking/{output_timestamp}_charging_stations.csv", index=False
 )
 
 avg_infra_util_0 = (
