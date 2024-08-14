@@ -84,7 +84,7 @@ def get_bid(
         vehicle_ids = to_log["vehicle_id"].tolist()
         blacklist.extend(
             np.random.choice(
-                vehicle_ids, len(vehicle_ids) // (1 / overbid_prob), replace=False
+                vehicle_ids, int(len(vehicle_ids) / (1 / overbid_prob)), replace=False
             )
             if random_overbidding
             else vehicle_ids
