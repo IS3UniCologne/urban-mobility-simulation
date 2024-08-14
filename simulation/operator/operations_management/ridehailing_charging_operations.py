@@ -1,8 +1,12 @@
 import logging
 
 import pandas as pd
+from beartype.door import is_bearable
 from simpy import AnyOf
 
+from simulation.infrastructure.charging_stations.virtual_charging_station import (
+    VirtualChargingStation,
+)
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operations_management.service_tasks.charging_task_ridehailing import (
     ChargingTaskRidehailing,
@@ -93,10 +97,22 @@ class RideHailingChargingOperations(OperationsInterface):
                     self._state_of_charge_threshold,
                     charging_station,
                     vehicle,
+                    scheduled_time=charging_station.valid_timeframe[0]
+                    if is_bearable(charging_station, VirtualChargingStation)
+                    else None,
                 )
 
                 # Schedule to Queue
                 self._scheduled_tasks.append(charging_task)
+                # update virtual charging infrastructure
+                # if is_bearable(
+                #     self._operator_reference.charging_infrastructure,
+                #     VirtualChargingInfrastructure,
+                # ):
+                #     charging_station.update_capacity(
+                #         charging_station.capacity - 1, charging_station.valid_timeframe
+                #     )
+
                 # Track task completion
                 self._env.process(self._track_task(charging_task))
 
@@ -299,6 +315,18 @@ class RideHailingChargingOperations(OperationsInterface):
                 selected_charging_station,
                 vehicle,
             )
+
+            # if (
+            #     len(
+            #         [
+            #             x
+            #             for x in selected_charging_station.plugs.users
+            #             if x.time > (self._env.now - 46)
+            #         ]
+            #     )
+            #     == 4
+            # ):
+            #     raise
 
             if not self._allow_queue:
                 capacity_to_consider[selected_base] -= pick_up_vehicles

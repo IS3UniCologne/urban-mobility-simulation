@@ -32,6 +32,8 @@ class ChargingTaskRidehailing(ServiceTask):
         "_waiting_time",
         "_charging_duration",
         "_kWh_charged",
+        "_scheduled_time",
+        "_config",
     )
 
     def __init__(
@@ -45,6 +47,7 @@ class ChargingTaskRidehailing(ServiceTask):
         charging_station: ChargingStation = None,
         vehicle: Vehicle = None,
         vehicle_mode=None,
+        scheduled_time=None,
     ):
         super(ChargingTaskRidehailing, self).__init__(env)
 
@@ -58,9 +61,11 @@ class ChargingTaskRidehailing(ServiceTask):
         self._charging_station = charging_station
         self._vehicle = vehicle
 
+        self._scheduled_time = scheduled_time
         self._waiting_time = None
         self._charging_duration = None
         self._kWh_charged = None
+        self._config = Configuration.instance()
 
     @property
     def waiting_time(self):
@@ -123,8 +128,6 @@ class ChargingTaskRidehailing(ServiceTask):
                 vehicle.relocate(relocation_route, relocation_duration_per_vehicle)
             )
 
-            scheduled_time = None
-
             if vehicle.is_electric:
                 vehicle.waiting_for_charging()
 
@@ -132,9 +135,12 @@ class ChargingTaskRidehailing(ServiceTask):
 
                 if isinstance(self._charging_station, VirtualChargingStation):
                     # if we are in a context of shared capacity, we need to wait for the reservation
-                    scheduled_time = self._charging_station.valid_timeframe[0]
-                    scheduled_timeslot_end = self._charging_station.valid_timeframe[1]
-                    self._waiting_time = scheduled_time - self._env.now
+
+                    scheduled_timeslot_end = (
+                        self._scheduled_time
+                        + self._config.shared_charging_config.auction_interval
+                    )
+                    self._waiting_time = self._scheduled_time - self._env.now
                     if self._waiting_time > 0:
                         logging.debug(
                             f"Vehicle {vehicle.id} waits {self._waiting_time} minutes for reserved slot.",
@@ -168,15 +174,18 @@ class ChargingTaskRidehailing(ServiceTask):
                         / charging_power
                         * 60
                     )
-                    if scheduled_time is not None:
+                    if self._scheduled_time is not None:
                         charging_duration = min(
-                            charging_duration, (scheduled_time + 60) - self._env.now
+                            charging_duration,
+                            (self._scheduled_time + 60) - self._env.now,
                         )
+
+                    charging_duration -= 1e-6 if charging_duration > 1e-6 else 0
 
                     # Plugin Vehicle to Charging Station
                     vehicle.plug_to_charging_station()
 
-                    if not isinstance(self._charging_station, VirtualChargingStation):    
+                    if not isinstance(self._charging_station, VirtualChargingStation):
                         waiting_stop = self._env.now
                         self._waiting_time = waiting_stop - waiting_start
 

@@ -284,6 +284,9 @@ class MixedRideHailingFleet(VehicleFleet):
             ):
                 low_soc_supply.append(vehicle)
 
+        low_soc_supply = sorted(
+            low_soc_supply, key=lambda x: x.current_relative_state_of_charge
+        )
         return low_soc_supply
 
     def get_online_vehicles(self):
