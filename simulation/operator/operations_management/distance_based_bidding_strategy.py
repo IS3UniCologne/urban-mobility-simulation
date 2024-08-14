@@ -10,8 +10,6 @@ def get_bid(
     participant_id,
     state_of_charge_threshold,
     distance_matrix,
-    # random_bidding_again= FALSE,
-    # bid_again_prob = None,
     # return_bid_log=False,
 ):
     auctioned_capacity = auctioned_capacity
@@ -27,6 +25,8 @@ def get_bid(
 
     bid_default = bidding_parameters["bid_default"]
     bid_decay = bidding_parameters["bid_decay"]
+    random_overbidding = bidding_parameters["random_overbidding"]
+    overbid_prob = bidding_parameters["overbid_prob"]
 
     distances = []
 
@@ -68,7 +68,6 @@ def get_bid(
 
     bid_log = []  # list of tuple (CS, id, bid) -> can also use this to see which cars already submitted bids
     blacklist = []  # vehicle ids for which bids already have been submitted are not considered for additional charging
-    # TODO: make probability modular and random proliferation optional
     sorted_stations_capacity = sorted_stations.set_index("cs")["capacity"].to_dict()
 
     for cs in sorted_stations["cs"].values:
@@ -84,9 +83,12 @@ def get_bid(
 
         vehicle_ids = to_log["vehicle_id"].tolist()
         blacklist.extend(
-            np.random.choice(vehicle_ids, len(vehicle_ids) // 2, replace=False)
+            np.random.choice(
+                vehicle_ids, len(vehicle_ids) // (1 / overbid_prob), replace=False
+            )
+            if random_overbidding
+            else vehicle_ids
         )
-        # TODO: make random choice modular and random proliferation optional
 
     df = pd.DataFrame.from_records(bid_log, columns=["cs", "vehicle_id", "bid"])
     grouped = df.groupby(["cs", "bid"]).size().reset_index(name="count")
