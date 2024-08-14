@@ -10,6 +10,8 @@ def get_bid(
     participant_id,
     state_of_charge_threshold,
     distance_matrix,
+    # random_bidding_again= FALSE,
+    # bid_again_prob = None,
     # return_bid_log=False,
 ):
     auctioned_capacity = auctioned_capacity
@@ -42,18 +44,18 @@ def get_bid(
             distances.append(
                 {
                     "vehicle_id": id,
-                    "CS": cs,
+                    "cs": cs,
                     "distance": sorted_charging_station_list[cs],
                 }
             )
 
     distances = pd.DataFrame.from_records(distances)
     cumulative_distances = (
-        distances.loc[:, ["CS", "distance"]].groupby("CS").sum().reset_index()
+        distances.loc[:, ["cs", "distance"]].groupby("cs").sum().reset_index()
     )
     sorted_stations = cumulative_distances.sort_values(by="distance", ascending=True)
     sorted_stations["capacity"] = [
-        auctioned_capacity[cs] for cs in sorted_stations.loc[:, "CS"].values
+        auctioned_capacity[cs] for cs in sorted_stations.loc[:, "cs"].values
     ]
 
     # LINEAR DECAY -> will lead to zero
@@ -66,18 +68,25 @@ def get_bid(
 
     bid_log = []  # list of tuple (CS, id, bid) -> can also use this to see which cars already submitted bids
     blacklist = []  # vehicle ids for which bids already have been submitted are not considered for additional charging
-    for cs in sorted_stations["CS"].values:
-        blacklist = [i[1] for i in bid_log]  # reads id from bid log
-        distances = distances[~distances["vehicle_id"].isin(blacklist)]
-        capacity = sorted_stations.loc[sorted_stations["CS"] == cs, "capacity"].values[
-            0
+    # TODO: make probability modular and random proliferation optional
+    sorted_stations_capacity = sorted_stations.set_index("cs")["capacity"].to_dict()
+
+    for cs in sorted_stations["cs"].values:
+        dist_frame = distances[
+            (distances["cs"] == cs) & (~distances["vehicle_id"].isin(blacklist))
         ]
-        distances = distances.head(capacity)
-        distances["cs"] = cs
-        to_log = distances.loc[:, ["cs", "vehicle_id", "bid"]]
+        capacity = sorted_stations_capacity[cs]
+        dist_frame = dist_frame.head(capacity)
+        to_log = dist_frame.loc[:, ["cs", "vehicle_id", "bid"]]
 
         for row in to_log.itertuples(index=False, name=None):
             bid_log.append(tuple(row))
+
+        vehicle_ids = to_log["vehicle_id"].tolist()
+        blacklist.extend(
+            np.random.choice(vehicle_ids, len(vehicle_ids) // 2, replace=False)
+        )
+        # TODO: make random choice modular and random proliferation optional
 
     df = pd.DataFrame.from_records(bid_log, columns=["cs", "vehicle_id", "bid"])
     grouped = df.groupby(["cs", "bid"]).size().reset_index(name="count")

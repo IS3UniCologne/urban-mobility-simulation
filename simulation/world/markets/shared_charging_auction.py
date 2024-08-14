@@ -120,6 +120,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
             self._announce_results()
+            self._bids = {}
             self._update_auctionable_capacity()
 
             self._next_timeslot = (
@@ -140,6 +141,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         return len(self._participants) - 1
 
     def clear(self) -> None:
+        self._location_results = {}
         for location, capacity in self._charging_infrastructure.get_available_capacity(
             self._next_timeslot
         ).items():
@@ -152,7 +154,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         # uniform price clearing of capacity with fair tie breaking
 
         try:
-            assert len(self._bids) > 0
+            assert len(self._bids[location]) > 0
             location_bids = self._bids[location]
         except (AssertionError, KeyError):
             result = {}
@@ -223,7 +225,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
             result.loc[result.index[-1], "capacity"] = result.loc[
                 result.index[-1], "capacity"
-            ] - (result.loc[result.index[-1], "cumulative_capacity"] - capacity)
+            ] - max((result.loc[result.index[-1], "cumulative_capacity"] - capacity), 0)
 
         result = result.groupby("bidder_id").agg({"capacity": "sum"}).reset_index()
         result["clearing_price"] = clearing_price
