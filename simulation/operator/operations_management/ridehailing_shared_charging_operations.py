@@ -112,7 +112,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         # }
         # self._bidding_strategy.get_bid(auctioned_timeslot, auctioned_capacity)
 
-        if self._bids is not None:
+        if self._bids:
             self._auction.place_bid(self._bids)
 
         self.bidding_done.succeed()

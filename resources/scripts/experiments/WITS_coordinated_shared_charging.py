@@ -394,6 +394,7 @@ def track_charging_stations():
                 "time": env._now,
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
+                "_plugs.queuesize": len(d["_plugs"].queue),
             }
             for d in [
                 tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
@@ -635,7 +636,7 @@ def track_bidders(bidder_uid):
         envtime, bids = tracking.get(bidder_uid, "_bids")
         envtime, results = tracking.get(bidder_uid, "_result")
 
-        if bids is None or results is None:
+        if not bids:
             continue
         bidding_track.extend(
             [
@@ -643,8 +644,8 @@ def track_bidders(bidder_uid):
                     "time": envtime,
                     "participant_id": participant,
                     "location": l,
-                    "_bids": b[
-                        :-1
+                    "_bids": [
+                        (x[0], x[1]) for x in b
                     ],  # get rid of participant id (last element in the tuple)
                     "_result": r,
                 }
