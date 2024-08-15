@@ -391,6 +391,7 @@ def track_charging_stations():
                 "time": env._now,
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
+                "_plugs.queuesize": len(d["_plugs"].queue),
             }
             for d in [
                 tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
