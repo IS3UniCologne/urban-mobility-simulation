@@ -272,7 +272,14 @@ global_config.add_ride_hailing_info(
 # Bidding Streategy Parameters
 bid_default = parser.getfloat("RIDE_HAILING_OPERATOR", "BID_DEFAULT")
 bid_decay = parser.getfloat("RIDE_HAILING_OPERATOR", "BID_DECAY")
-bidding_parameters = {"bid_default": bid_default, "bid_decay": bid_decay}
+random_overbidding = parser.getboolean("RIDE_HAILING_OPERATOR", "RANDOM_OVERBIDDING")
+overbid_prob = parser.getfloat("RIDE_HAILING_OPERATOR", "OVERBID_PROB")
+bidding_parameters = {
+    "bid_default": bid_default,
+    "bid_decay": bid_decay,
+    "random_overbidding": random_overbidding,
+    "overbid_prob": overbid_prob,
+}
 
 ###### End RideHailing Fleet Configuration ######
 
@@ -811,6 +818,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util,
             None,
-            "random_SOC_init" if initial_SoC == 0 else None,
+            f'{"random_SOC_init" if initial_SoC == 0 else ""}, overbidding: ({str(random_overbidding)}, {str(overbid_prob)})',
         ]
     )
