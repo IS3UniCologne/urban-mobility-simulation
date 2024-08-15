@@ -423,12 +423,14 @@ env.process(track_charging_stations())
 
 auction_start = parser.getint("AUCTION", "auction_start")
 auction_end = parser.getint("AUCTION", "auction_end")
+
 ac = AuctionConfig(auction_start, auction_end)
 global_config.auction_config = ac
 
 auction_interval = parser.getint("SHARED_CHARGING_AUCTION", "auction_interval")
 timeslot_duration = parser.getint("SHARED_CHARGING_AUCTION", "timeslot_duration")
-sc = SharedChargingConfig(auction_interval, timeslot_duration)
+auction_lookahead = parser.getint("SHARED_CHARGING_AUCTION", "AUCTION_LOOKAHEAD")
+sc = SharedChargingConfig(auction_interval, timeslot_duration, auction_lookahead)
 global_config.shared_charging_config = sc
 
 
@@ -818,6 +820,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util,
             None,
-            f'{"random_SOC_init" if initial_SoC == 0 else ""}, overbidding: ({str(random_overbidding)}, {str(overbid_prob)})',
+            f'{"random_SOC_init" if initial_SoC == 0 else ""}, overbidding: ({str(random_overbidding)}, {str(overbid_prob)}), auction_interval: {str(auction_interval)}, timeslot_duration: {str(timeslot_duration)}, auction_lookahead: {str(auction_lookahead)}',
         ]
     )
