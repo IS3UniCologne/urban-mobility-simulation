@@ -64,7 +64,12 @@ def get_bid(
     # )
 
     # EXPONENTIAL DECAY -> will not lead to zero bids
-    distances["bid"] = np.exp(-bid_decay * distances["distance"]) * bid_default
+    # TODO: parametrize bidding cutoff - here we use 10km
+    distances["bid"] = np.where(
+        distances["distance"] <= 10000,
+        np.exp(-bid_decay * distances["distance"]) * bid_default,
+        0,
+    )
 
     bid_log = []  # list of tuple (CS, id, bid) -> can also use this to see which cars already submitted bids
     blacklist = []  # vehicle ids for which bids already have been submitted are not considered for additional charging
@@ -74,6 +79,7 @@ def get_bid(
         dist_frame = distances[
             (distances["cs"] == cs) & (~distances["vehicle_id"].isin(blacklist))
         ]
+        dist_frame = dist_frame[dist_frame["bid"] != 0]
         capacity = sorted_stations_capacity[cs]
         dist_frame = dist_frame.head(capacity)
         to_log = dist_frame.loc[:, ["cs", "vehicle_id", "bid"]]
