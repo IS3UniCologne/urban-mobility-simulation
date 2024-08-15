@@ -361,6 +361,7 @@ class RideHailingChargingOperations(OperationsInterface):
         self._task_transactions.append(
             {
                 "start_time": task._start_time,
+                "scheduled_time": task._scheduled_time,
                 "end_time": self._env.now,
                 "vehicle": task._vehicle.id,
                 "state": task.state,
