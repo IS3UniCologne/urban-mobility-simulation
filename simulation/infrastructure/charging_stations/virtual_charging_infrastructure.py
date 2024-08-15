@@ -37,7 +37,7 @@ class VirtualChargingInfrastructure:
 
         self._default_lookahead = (
             self._config.auction_config.auction_start
-            + self._config.shared_charging_config.auction_interval
+            + self._config.shared_charging_config.auction_lookahead
         )
 
         self._availability: Dict[int, Dict[str, int]] = {}
@@ -112,7 +112,7 @@ class VirtualChargingInfrastructure:
 
         # update the default lookahead to be the next auctioned slot
         self._default_lookahead = self._env.now + (
-            self._config.shared_charging_config.auction_interval
+            self._config.shared_charging_config.auction_lookahead
             - (self._env.now % self._config.shared_charging_config.auction_interval)
         )
 

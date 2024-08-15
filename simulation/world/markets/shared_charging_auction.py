@@ -49,7 +49,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         self._location_results = {}
         self._next_timeslot = (
             self._config.auction_config.auction_start
-            + self._config.shared_charging_config.auction_interval
+            + self._config.shared_charging_config.auction_lookahead
         )
 
         # init auction view on charging infrastructure
@@ -86,7 +86,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
             open_at = (
                 self._next_timeslot
-                - self._config.shared_charging_config.auction_interval
+                - self._config.shared_charging_config.auction_lookahead
             )
 
             if self._env.now <= open_at:
