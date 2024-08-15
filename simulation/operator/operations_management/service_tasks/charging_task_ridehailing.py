@@ -138,7 +138,7 @@ class ChargingTaskRidehailing(ServiceTask):
 
                     scheduled_timeslot_end = (
                         self._scheduled_time
-                        + self._config.shared_charging_config.auction_interval
+                        + self._config.shared_charging_config.timeslot_duration
                     )
                     self._waiting_time = self._scheduled_time - self._env.now
                     if self._waiting_time > 0:
@@ -156,6 +156,7 @@ class ChargingTaskRidehailing(ServiceTask):
                             extra={"clazz": self.__class__.__name__, "oid": vehicle.id},
                         )
                         self._state = TaskState.MISSED_TIMESLOT
+                        vehicle.state = VehicleState.PARKING
                         self._task_finished.succeed()
                         return
 
