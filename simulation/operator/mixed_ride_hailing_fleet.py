@@ -1,5 +1,7 @@
 import logging
 
+import numpy as np
+from haversine import Unit, haversine_vector
 from simpy import Environment
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -101,37 +103,50 @@ class MixedRideHailingFleet(VehicleFleet):
         :param region: Hexagon ID
         :return: Lists of vehicles in area
         """
-        cars_in_area = []
 
-        # TODO: this could be improved in terms of speed by vectorizing the distance calculation and conditioning on the vector < threshold
+        # TODO: this can be made faster by using np.array and boolean indexing probably
+        parking_state = VehicleState.PARKING
         parking_cars = [
-            car for car in self._vehicles if car.state == VehicleState.PARKING
+            car
+            for car in self._vehicles
+            if car.state == parking_state and not car._suggested
         ]
-        for car in parking_cars:
-            if (
-                car.position >> origin <= self._distance_threshold_to_user
-                and not car._suggested
-            ):
-                cars_in_area.append(car)
+        parking_cars_in_area = (
+            np.array(parking_cars)[
+                haversine_vector(
+                    [(c.position._lat, c.position._lng) for c in parking_cars],
+                    [(origin._lat, origin._lng)],
+                    comb=True,
+                    unit=Unit.METERS,
+                )[0]
+                <= self._distance_threshold_to_user
+            ]
+            if parking_cars
+            else np.array([])
+        )
 
+        serving_state = VehicleState.DRIVING
+        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+        state_of_charge_threshold = self._recharging_threshold[hour]
         serving_cars = [
-            car for car in self._vehicles if car.state == VehicleState.DRIVING
+            car
+            for car in self._vehicles
+            if car.state == serving_state
+            and not car._suggested
+            and car.current_relative_state_of_charge > state_of_charge_threshold + 5
         ]
+
+        serving_cars_in_area = []
         for car in serving_cars:
             distance_to_current_destination = (
                 car.estimated_completion_time - self._env.now
             ) * car.velocity
             if (
-                (car.destination.position >> origin) + distance_to_current_destination
-                <= self._distance_threshold_to_user
-                and not car._suggested
-            ):
-                hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
-                state_of_charge_threshold = self._recharging_threshold[hour]
-                if car.current_relative_state_of_charge > state_of_charge_threshold + 5:
-                    cars_in_area.append(car)
+                car.destination.position >> origin
+            ) + distance_to_current_destination <= self._distance_threshold_to_user:
+                serving_cars_in_area.append(car)
 
-        return cars_in_area
+        return parking_cars_in_area.tolist() + serving_cars_in_area
 
     def get_all_available_vehicles(self, region):
         """
