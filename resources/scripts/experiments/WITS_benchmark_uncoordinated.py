@@ -539,6 +539,7 @@ ridehailing_operations_0 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+    allow_queue=False,
 )
 
 ridehailing_operations_1 = RideHailingChargingOperations(
@@ -549,6 +550,7 @@ ridehailing_operations_1 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+    allow_queue=False,
 )
 
 
@@ -600,7 +602,7 @@ world = World.init(
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, [], seed, mode="ride_hailing"
+    env, demand_profile, di, world, demand_modifier_paths, seed, mode="ride_hailing"
 )
 env.process(demand_factory.generate_demand())
 

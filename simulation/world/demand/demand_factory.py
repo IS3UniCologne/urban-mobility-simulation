@@ -174,9 +174,10 @@ class DemandFactory:
                             break
 
                         # TODO: is this a viable way of modifying exponential sampling using the scale factor?
+                        # TODO: if we wait for longer than the timebucket is long, we should probably consider no demand (otherwise we spawn this in the next timebucket and skew the real demand distribution)
                         inter_arrival_time = (
                             self._random.exponential(
-                                1.0 / poisson_lambda * self._modifiers[spatial_unit]
+                                1.0 / poisson_lambda / self._modifiers[spatial_unit]
                             )
                             * self._demand_importer._get_temporal_duration_in_hours()
                             * 60
