@@ -22,7 +22,6 @@ dependencies:
   - tqdm
   - pip>20.3
   - pip:
-      - beartype
       - h3>=3.7.1,<4
       - partridge[full]
       - peartree
