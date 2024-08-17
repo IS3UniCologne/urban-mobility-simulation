@@ -23,7 +23,7 @@ class DemandFactory:
         modifiers,
         seed,
         mode,
-        maximal_demand=1_000_000,
+        maximal_demand=3_000_000,
     ):
         self._env = env
         self._time = SimulationTime(env)
