@@ -1227,6 +1227,7 @@ class RideHailingUser(Agent, DriverInterface):
                 self._vehicle_allocated = self._env.event()
 
                 continue  # retry again until vehicle supply is depleted
+                # TODO: vehicle is never available again if it was _suggested at this point, we need to clear this if the allocation fails
             # Vehicle is allocated
             # We do not yield the following process again
             self._env.process(self.wait_for_vehicle(vehicle_allocation))

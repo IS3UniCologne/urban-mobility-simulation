@@ -593,6 +593,11 @@ def track_fleets(fleet_id):
                     for x in tracked_list
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
+                "_suggested": [
+                    tracking.get(x, "_suggested")[1]
+                    for x in tracked_list
+                    if tracking.get(x, "_fleet")[1].id == fleet_id
+                ],
             },
         )
         vehicles_track.append({"time": envtime, **values})

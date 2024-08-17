@@ -4,6 +4,9 @@ import pandas as pd
 from beartype.door import is_bearable
 from simpy import AnyOf
 
+from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
+    VirtualChargingInfrastructure,
+)
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
@@ -199,11 +202,23 @@ class RideHailingChargingOperations(OperationsInterface):
             return charging_plan
 
         if not self._allow_queue:
-            capacity_to_consider = {
-                x.location: x.capacity
-                for x in self._operator_reference.charging_infrastructure.charging_stations
-                if x.capacity > 0
-            }
+            # for virtual CS, we can use the capacity, as it gets updated
+            if is_bearable(
+                self._operator_reference.charging_infrastructure,
+                VirtualChargingInfrastructure,
+            ):
+                capacity_to_consider = {
+                    x.location: x.capacity
+                    for x in self._operator_reference.charging_infrastructure.charging_stations
+                    if x.capacity > 0
+                }
+            else:
+                # otherwise we need to consider capacity minus current plugged in vehicles:
+                capacity_to_consider = {
+                    x.location: x.capacity - len(x.plugs.users)
+                    for x in self._operator_reference.charging_infrastructure.charging_stations
+                    if x.capacity - len(x.plugs.users) > 0
+                }
 
         for vehicle in vehicles_to_charge:
             hex = vehicle.position.get_hexagon(return_geom=False)[0]
@@ -315,18 +330,6 @@ class RideHailingChargingOperations(OperationsInterface):
                 selected_charging_station,
                 vehicle,
             )
-
-            # if (
-            #     len(
-            #         [
-            #             x
-            #             for x in selected_charging_station.plugs.users
-            #             if x.time > (self._env.now - 46)
-            #         ]
-            #     )
-            #     == 4
-            # ):
-            #     raise
 
             if not self._allow_queue:
                 capacity_to_consider[selected_base] -= pick_up_vehicles
