@@ -296,6 +296,7 @@ class MixedRideHailingFleet(VehicleFleet):
             if (
                 vehicle.current_relative_state_of_charge < state_of_charge_threshold
                 and vehicle.state == VehicleState.PARKING
+                and not vehicle._suggested
             ):
                 low_soc_supply.append(vehicle)
 
