@@ -1,3 +1,5 @@
+import logging
+
 from simulation.agent.user import RideHailingUser
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
@@ -17,10 +19,11 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
         self._vehicles_assigned_to_users = self._env.event()
         self._env.process(self.run())
         self._vehicle_assignment_requests = []
+        self._vehicle_assignment_ids = set()
 
     def run(self):
         while True:
-            yield self._env.timeout(2)
+            yield self._env.timeout(1)
 
             # ################## # ###################### #
             # Matching Algorithm : First Come First Serve #
@@ -35,6 +38,7 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
             self._vehicles_assigned_to_users.succeed()
             self._vehicles_assigned_to_users = self._env.event()
             self._vehicle_assignment_requests.clear()
+            self._vehicle_assignment_ids.clear()
 
     def request_vehicle_allocation(
         self,
@@ -48,9 +52,13 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
         :return:
         """
 
-        self._vehicle_assignment_requests.append(
-            (user, selected_transportation_alternative)
-        )
+        try:
+            self._add_request(user, selected_transportation_alternative)
+        except Exception:
+            logging.error(
+                f"Vehicle {selected_transportation_alternative.vehicle.id} already assigned to user {selected_transportation_alternative.vehicle.reserved_for_user.id}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
 
         yield self._vehicles_assigned_to_users
 
@@ -80,6 +88,13 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
         # from simulation.environment.geodesic_position import GeodesicPosition
         # vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
         # self._env.process(self.test(vehicle_assignment, old_position))
+
+    def _add_request(self, user, vehicle_assignment):
+        if vehicle_assignment.vehicle.id not in self._vehicle_assignment_ids:
+            self._vehicle_assignment_requests.append((user, vehicle_assignment))
+            self._vehicle_assignment_ids.add(vehicle_assignment.vehicle.id)
+        else:
+            raise Exception
 
     def test(self, vehicle_assignment, old_position):
         # Notify operator that user has arrived at location
