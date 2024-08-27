@@ -1,5 +1,6 @@
 ##Imports
 # Standard library imports
+import csv
 import logging
 import os
 import sys
@@ -683,7 +684,6 @@ fleet_1_task_transactions.to_csv(
 )
 
 # write down the configs used for that run
-import csv
 
 # Open the CSV file in append mode
 with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as file:
