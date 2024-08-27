@@ -1,5 +1,6 @@
 ##Imports
 # Standard library imports
+import csv
 import logging
 import os
 import sys
@@ -657,15 +658,15 @@ def track_bidders(bidder_uid):
                 {
                     "time": envtime,
                     "participant_id": participant,
-                    "location": l,
+                    "location": loc,
                     "_bids": [
                         (x[0], x[1]) for x in b
                     ],  # get rid of participant id (last element in the tuple)
                     "_result": r,
                 }
-                for l, b in bids.items()
+                for loc, b in bids.items()
                 for lr, r in results.items()
-                if l == lr
+                if loc == lr
             ]
         )
 
@@ -802,7 +803,6 @@ fleet_1_task_transactions.to_csv(
 )
 
 # write down the configs used for that run
-import csv
 
 # Open the CSV file in append mode
 with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as file:
