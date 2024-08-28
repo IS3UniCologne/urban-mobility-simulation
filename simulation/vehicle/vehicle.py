@@ -5,6 +5,7 @@ from simpy import Environment
 
 from simulation.environment.position import Position
 from simulation.infrastructure.network.edge import Edge
+from tracking.tracking_interface import TrackingInterface
 
 
 class VehicleState:
@@ -22,15 +23,22 @@ class VehicleState:
     MOVING_TO_PICK_UP_POS = 1003
 
 
-class Vehicle(ABC):
+class Vehicle(TrackingInterface, ABC):
     vehicle_id = 0
     vehicle_type: str
+
+    __slots__ = ("_id", "_state", "_env", "_position", "_position_changed", "_vdt")
+
+    exposes = ["_id", "_state", "position", "_vdt"]
 
     def __init__(self, env: Environment, position):
         self._id = Vehicle.vehicle_id
         Vehicle.vehicle_id += 1  # Increment Vehicle Id
         self._env = env
         self._position = position
+
+        # Vehicle Distance Traveled
+        self._vdt = 0
 
         # Spatial Events
         self._position_changed = self._env.event()
@@ -57,15 +65,23 @@ class Vehicle(ABC):
 
     @position.setter
     def position(self, position: Position):
+        self._vdt += self._position >> position
+
         self._position = position
 
         self._position_changed.succeed(self._position)
         self._position_changed = self._env.event()
 
         logging.debug(
-            f"Position updated {self._position}.",
+            f"Position updated {self._position}. VDT increased to {self._vdt}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
+
+    def dump(self, exposed_only=True) -> dict:
+        if exposed_only:
+            return {x: self.get(x) for x in self.exposes}
+        else:
+            return {x: self.get(x) for x in self.__slots__}
 
     # Methods
     @abstractmethod
