@@ -656,9 +656,12 @@ class AuctionConfig:
 
 
 class SharedChargingConfig:
-    def __init__(self, auction_interval: int, timeslot_duration: int):
+    def __init__(
+        self, auction_interval: int, timeslot_duration: int, auction_lookahead: int
+    ):
         self.auction_interval = auction_interval
         self.timeslot_duration = timeslot_duration
+        self.auction_lookahead = auction_lookahead
 
 
 class TransitOperatorConfig:

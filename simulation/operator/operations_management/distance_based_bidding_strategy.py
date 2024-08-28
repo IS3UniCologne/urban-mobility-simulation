@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -24,52 +25,76 @@ def get_bid(
 
     bid_default = bidding_parameters["bid_default"]
     bid_decay = bidding_parameters["bid_decay"]
+    random_overbidding = bidding_parameters["random_overbidding"]
+    overbid_prob = bidding_parameters["overbid_prob"]
 
-    distances = pd.DataFrame({"vehicle_id": [], "CS": [], "distance": []})
-    charging_lists = {}
+    distances = []
+
+    relevant_distance_matrix = distance_matrix.loc[auctioned_capacity.keys()]
     for vehicle in vehicles_to_charge:
         hex = vehicle.position.get_hexagon(return_geom=False)[0]
         id = vehicle.id
 
         # Get nearest charging station (.loc -> destination, [[]] -> Origin)
-        sorted_charging_station_list = distance_matrix.loc[
-            [key for key, _ in auctioned_capacity.items()]
-        ][[hex]].sort_values(by=hex, ascending=True)
-        charging_lists["vehicle_id"] = sorted_charging_station_list
+        sorted_charging_station_list = (
+            relevant_distance_matrix[hex].sort_values(ascending=True).to_dict()
+        )
 
         for cs in auctioned_capacity:
-            distance = sorted_charging_station_list[
-                sorted_charging_station_list.index == cs
-            ].values[0][0]
-            row = {"vehicle_id": [id], "CS": [cs], "distance": [distance]}
-            distances = pd.concat([distances, pd.DataFrame(row)])
+            distances.append(
+                {
+                    "vehicle_id": id,
+                    "cs": cs,
+                    "distance": sorted_charging_station_list[cs],
+                }
+            )
 
+    distances = pd.DataFrame.from_records(distances)
     cumulative_distances = (
-        distances.loc[:, ["CS", "distance"]].groupby("CS").sum().reset_index()
+        distances.loc[:, ["cs", "distance"]].groupby("cs").sum().reset_index()
     )
     sorted_stations = cumulative_distances.sort_values(by="distance", ascending=True)
     sorted_stations["capacity"] = [
-        auctioned_capacity[cs] for cs in sorted_stations.loc[:, "CS"].values
+        auctioned_capacity[cs] for cs in sorted_stations.loc[:, "cs"].values
     ]
 
-    distances["bid"] = (bid_default - bid_decay * distances["distance"]).apply(
-        lambda x: max(0, x)
+    # LINEAR DECAY -> will lead to zero
+    # distances["bid"] = (bid_default - bid_decay * distances["distance"]).apply(
+    #     lambda x: max(0, x)
+    # )
+
+    # EXPONENTIAL DECAY -> will not lead to zero bids
+    # TODO: parametrize bidding cutoff - here we use 10km
+    distances["bid"] = np.where(
+        distances["distance"] <= 10000,
+        np.exp(-bid_decay * distances["distance"]) * bid_default,
+        0,
     )
 
     bid_log = []  # list of tuple (CS, id, bid) -> can also use this to see which cars already submitted bids
     blacklist = []  # vehicle ids for which bids already have been submitted are not considered for additional charging
-    for cs in sorted_stations["CS"].values:
-        blacklist = [i[1] for i in bid_log]  # reads id from bid log
-        distances = distances[~distances["vehicle_id"].isin(blacklist)]
-        capacity = sorted_stations.loc[sorted_stations["CS"] == cs, "capacity"].values[
-            0
+    sorted_stations_capacity = sorted_stations.set_index("cs")["capacity"].to_dict()
+
+    for cs in sorted_stations["cs"].values:
+        dist_frame = distances[
+            (distances["cs"] == cs) & (~distances["vehicle_id"].isin(blacklist))
         ]
-        distances = distances.head(capacity)
-        distances["cs"] = cs
-        to_log = distances.loc[:, ["cs", "vehicle_id", "bid"]]
+        dist_frame = dist_frame[dist_frame["bid"] != 0]
+        capacity = sorted_stations_capacity[cs]
+        dist_frame = dist_frame.head(capacity)
+        to_log = dist_frame.loc[:, ["cs", "vehicle_id", "bid"]]
 
         for row in to_log.itertuples(index=False, name=None):
             bid_log.append(tuple(row))
+
+        vehicle_ids = to_log["vehicle_id"].tolist()
+        blacklist.extend(
+            np.random.choice(
+                vehicle_ids, int(len(vehicle_ids) / (1 / overbid_prob)), replace=False
+            )
+            if random_overbidding
+            else vehicle_ids
+        )
 
     df = pd.DataFrame.from_records(bid_log, columns=["cs", "vehicle_id", "bid"])
     grouped = df.groupby(["cs", "bid"]).size().reset_index(name="count")

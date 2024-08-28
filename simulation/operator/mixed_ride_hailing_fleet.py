@@ -1,5 +1,7 @@
 import logging
 
+import numpy as np
+from haversine import Unit, haversine_vector
 from simpy import Environment
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -12,6 +14,15 @@ from simulation.vehicle.vehicle import VehicleState
 
 
 class MixedRideHailingFleet(VehicleFleet):
+    __slots__ = (
+        "_config",
+        "_ridehailing_cars",
+        "_autonomous_cars",
+        "_distance_threshold_to_user",
+        "_driver_availability_vector",
+        "_recharging_threshold",
+    )
+
     def __init__(self, env: Environment):
         super(MixedRideHailingFleet, self).__init__(env)
         self._env = env
@@ -26,14 +37,18 @@ class MixedRideHailingFleet(VehicleFleet):
         )
         self._env.process(self.fleet_size_monitor())
 
-    def add_shared_vehicle(self, vehicle: RideHailingVehicle):
-        if isinstance(vehicle, RideHailingCar):
-            self._vehicles.append(vehicle)
-            self._ridehailing_cars.append(vehicle)
+    def add_vehicle(self, vehicle: RideHailingVehicle):
+        if vehicle not in self._vehicles:
+            if isinstance(vehicle, RideHailingCar):
+                self._vehicles.append(vehicle)
+                self._ridehailing_cars.append(vehicle)
+            elif isinstance(vehicle, RideHailingAV):
+                self._vehicles.append(vehicle)
+                self._autonomous_cars.append(vehicle)
 
-        elif isinstance(vehicle, RideHailingAV):
-            self._vehicles.append(vehicle)
-            self._autonomous_cars.append(vehicle)
+            self._tracking.register(vehicle)
+        else:
+            raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
 
     def vehicles_in_region(self, region):
         """
@@ -88,37 +103,50 @@ class MixedRideHailingFleet(VehicleFleet):
         :param region: Hexagon ID
         :return: Lists of vehicles in area
         """
-        cars_in_area = []
 
-        # TODO: this could be improved in terms of speed by vectorizing the distance calculation and conditioning on the vector < threshold
+        # TODO: this can be made faster by using np.array and boolean indexing probably
+        parking_state = VehicleState.PARKING
         parking_cars = [
-            car for car in self._vehicles if car.state == VehicleState.PARKING
+            car
+            for car in self._vehicles
+            if car.state == parking_state and not car._suggested
         ]
-        for car in parking_cars:
-            if (
-                car.position >> origin <= self._distance_threshold_to_user
-                and not car._suggested
-            ):
-                cars_in_area.append(car)
+        parking_cars_in_area = (
+            np.array(parking_cars)[
+                haversine_vector(
+                    [(c.position._lat, c.position._lng) for c in parking_cars],
+                    [(origin._lat, origin._lng)],
+                    comb=True,
+                    unit=Unit.METERS,
+                )[0]
+                <= self._distance_threshold_to_user
+            ]
+            if parking_cars
+            else np.array([])
+        )
 
+        serving_state = VehicleState.DRIVING
+        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+        state_of_charge_threshold = self._recharging_threshold[hour]
         serving_cars = [
-            car for car in self._vehicles if car.state == VehicleState.DRIVING
+            car
+            for car in self._vehicles
+            if car.state == serving_state
+            and not car._suggested
+            and car.current_relative_state_of_charge > state_of_charge_threshold + 5
         ]
+
+        serving_cars_in_area = []
         for car in serving_cars:
             distance_to_current_destination = (
                 car.estimated_completion_time - self._env.now
             ) * car.velocity
             if (
-                (car.destination.position >> origin) + distance_to_current_destination
-                <= self._distance_threshold_to_user
-                and not car._suggested
-            ):
-                hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
-                state_of_charge_threshold = self._recharging_threshold[hour]
-                if car.current_relative_state_of_charge > state_of_charge_threshold + 5:
-                    cars_in_area.append(car)
+                car.destination.position >> origin
+            ) + distance_to_current_destination <= self._distance_threshold_to_user:
+                serving_cars_in_area.append(car)
 
-        return cars_in_area
+        return parking_cars_in_area.tolist() + serving_cars_in_area
 
     def get_all_available_vehicles(self, region):
         """
@@ -133,21 +161,19 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return all_vehicle_list
 
-    def get_all_vehicles_below_soc_level(self, state_of_charge_threshold):
+    def count_vehicles_below_soc_level(self, state_of_charge_threshold):
         """
         Return all vehicles that need to be refueled/recharged
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
-        below_soc_level_vehicles = []
-        all_vehicle_list = self._vehicles
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
-        for vehicle in all_vehicle_list:
-            if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
-                below_soc_level_vehicles.append(vehicle)
-
-        return len(below_soc_level_vehicles)
+        return sum(
+            1
+            for vehicle in self._vehicles
+            if vehicle.current_relative_state_of_charge < state_of_charge_threshold
+        )
 
     def get_operational_costs(self):
         operational_costs = 0
@@ -270,9 +296,13 @@ class MixedRideHailingFleet(VehicleFleet):
             if (
                 vehicle.current_relative_state_of_charge < state_of_charge_threshold
                 and vehicle.state == VehicleState.PARKING
+                and not vehicle._suggested
             ):
                 low_soc_supply.append(vehicle)
 
+        low_soc_supply = sorted(
+            low_soc_supply, key=lambda x: x.current_relative_state_of_charge
+        )
         return low_soc_supply
 
     def get_online_vehicles(self):
