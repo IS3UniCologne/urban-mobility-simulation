@@ -92,6 +92,10 @@ class Configuration:
 
         self._ridehailing_vehicle_configs = {}
 
+        self._auction_config = None
+
+        self._shared_charging_config = None
+
         # [cst, price, waiting_time, EV, trip_duration, cst_AV, cst_HV, trust_AV, trust_HV]
         MoD_coefficients = np.array(
             [
@@ -399,6 +403,24 @@ class Configuration:
     def ridehailing_operator_config(self):
         return self._ridehailing_operator_config
 
+    @property
+    def auction_config(self):
+        return self._auction_config
+
+    @auction_config.setter
+    def auction_config(self, auction_config: "AuctionConfig"):
+        assert isinstance(auction_config, AuctionConfig)
+        self._auction_config = auction_config
+
+    @property
+    def shared_charging_config(self):
+        return self._shared_charging_config
+
+    @shared_charging_config.setter
+    def shared_charging_config(self, shared_charging_config: "SharedChargingConfig"):
+        assert isinstance(shared_charging_config, SharedChargingConfig)
+        self._shared_charging_config = shared_charging_config
+
     def add_transit_operator_config(
         self, transit_operator_config: "TransitOperatorConfig"
     ):
@@ -625,6 +647,21 @@ class ChargingInfrastructureConfig:
         self.locations = locations
         self.power = power
         self.capacity = capacity
+
+
+class AuctionConfig:
+    def __init__(self, auction_start: int, auction_end: int):
+        self.auction_start = auction_start
+        self.auction_end = auction_end
+
+
+class SharedChargingConfig:
+    def __init__(
+        self, auction_interval: int, timeslot_duration: int, auction_lookahead: int
+    ):
+        self.auction_interval = auction_interval
+        self.timeslot_duration = timeslot_duration
+        self.auction_lookahead = auction_lookahead
 
 
 class TransitOperatorConfig:
