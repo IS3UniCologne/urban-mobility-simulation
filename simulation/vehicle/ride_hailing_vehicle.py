@@ -1,4 +1,5 @@
 import logging
+import random
 
 from simpy import Environment
 
@@ -24,7 +25,23 @@ from .vehicle import Vehicle, VehicleState
 
 
 class RideHailingVehicle(Vehicle):
+    __slots__ = (
+        "_price_per_minute",
+        "_available_seats",
+        "_max_available_seats",
+        "_seats",
+        "_driver",
+        "_velocity",
+        "_is_electric",
+        "_fleet",
+        "_current_state_of_charge",
+        "travel_costs",
+        "charging_costs",
+    )
+
     ride_hailing_vehicle_id = 0
+
+    exposes = Vehicle.exposes + ["_fleet", "_current_state_of_charge", "_suggested"]
 
     def __init__(
         self,
@@ -59,6 +76,9 @@ class RideHailingVehicle(Vehicle):
             ._ridehailing_vehicle_configs["RideHailingCar"]
             .initial_SoC
         )
+        if initial_state_of_charge_percentage == 0:
+            initial_state_of_charge_percentage = random.uniform(0.2, 0.8)
+
         self._current_state_of_charge = (
             max_state_of_charge * initial_state_of_charge_percentage
         )  # in kWh #
@@ -519,4 +539,4 @@ class RideHailingVehicle(Vehicle):
         )
 
     def __str__(self):
-        return f"I have {self.available_seats} passengers on boards"
+        return f"ID: {self._id}, Position: {self._position}, State: {self._state}"

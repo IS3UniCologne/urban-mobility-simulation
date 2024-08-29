@@ -23,7 +23,7 @@ class DemandFactory:
         modifiers,
         seed,
         mode,
-        maximal_demand=1_000_000,
+        maximal_demand=3_000_000,
     ):
         self._env = env
         self._time = SimulationTime(env)
@@ -146,7 +146,7 @@ class DemandFactory:
 
                 # TODO: to define the target fleet
                 random_number = np.random.random(1)
-                if random_number < 1:
+                if random_number < 0.5:
                     fleet = 0
                 else:
                     fleet = 1
@@ -174,9 +174,10 @@ class DemandFactory:
                             break
 
                         # TODO: is this a viable way of modifying exponential sampling using the scale factor?
+                        # TODO: if we wait for longer than the timebucket is long, we should probably consider no demand (otherwise we spawn this in the next timebucket and skew the real demand distribution)
                         inter_arrival_time = (
                             self._random.exponential(
-                                1.0 / poisson_lambda * self._modifiers[spatial_unit]
+                                1.0 / poisson_lambda / self._modifiers[spatial_unit]
                             )
                             * self._demand_importer._get_temporal_duration_in_hours()
                             * 60
