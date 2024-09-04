@@ -643,7 +643,7 @@ pd.DataFrame.from_records(charging_stations_track).to_csv(
 
 avg_infra_util = (
     pd.DataFrame.from_records(charging_stations_track)["_plugs.count"]
-    / charging_station_capacity[0]
+    / charging_station_capacity_list[0]
 ).mean()
 
 # # # # # # # # # # # # # # # # # # # # # #
