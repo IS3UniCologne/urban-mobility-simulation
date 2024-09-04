@@ -154,14 +154,19 @@ recharge_threshold = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").s
 )
 recharge_threshold = [float(x) / 100 for x in recharge_threshold]
 
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Charging Infrastructure                 #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
 number_of_charging_locations = parser.getint(
     "CHARGING_INFRASTRUCTURE", "NUMBER_OF_CHARGING_STATIONS"
 )
 # Locations are defined as hexagons (regions) in the city
-charging_station_locations = utils.parse_multiline_list(
+charging_location_list = utils.parse_multiline_list(
     "CHARGING_INFRASTRUCTURE", "LOCATIONS", delimiter=","
-)
-charging_station_locations = charging_station_locations[:number_of_charging_locations]
+)[:number_of_charging_locations]
 
 charging_station_power = utils.parse_multiline_list(
     "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_POWER", delimiter=",", cast=float
@@ -175,10 +180,41 @@ if len(charging_station_power) == 1:
 charging_station_capacity = utils.parse_multiline_list(
     "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_CAPACITY", delimiter=",", cast=int
 )
-if len(charging_station_capacity) == 1:
-    charging_station_capacity = list(
-        np.full(number_of_charging_locations, charging_station_capacity[0])
+
+# Queue size is the maximum allowed vehicles queuing at a time for a charging station that is fully utilized
+charging_station_queue_size = utils.parse_multiline_list(
+    "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_QUEUE_SIZE", delimiter=",", cast=int
+)
+
+if isinstance(charging_station_power, list):
+    charging_station_power_list = charging_station_power
+else:
+    charging_station_power_list = list(
+        np.full(len(charging_location_list), charging_station_power)
     )
+if isinstance(charging_station_capacity, list):
+    charging_station_capacity_list = charging_station_capacity
+else:
+    charging_station_capacity_list = list(
+        np.full(len(charging_location_list), charging_station_capacity)
+    )
+if isinstance(charging_station_queue_size, list):
+    charging_station_queue_size_list = charging_station_queue_size
+else:
+    charging_station_queue_size_list = list(
+        np.full(len(charging_location_list), charging_station_queue_size)
+    )
+
+sic = ChargingInfrastructureConfig(
+    charging_location_list,
+    charging_station_power_list,
+    charging_station_capacity_list,
+    charging_station_queue_size_list,
+)
+
+global_config.add_charging_infrastructure_config(sic)
+
+
 operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
 vehicle_relocation_velocity = parser.getint(
@@ -492,32 +528,12 @@ def run_single_simulation(
     # Population Type
     population_factory = PopulationFactory(pop_prob, seed)
 
-    # Charging Infrastructure
-    number_of_charging_locations = parser.getint(
-        "CHARGING_INFRASTRUCTURE", "NUMBER_OF_CHARGING_STATIONS"
-    )
-    charging_location_list = utils.parse_multiline_list(
-        "CHARGING_INFRASTRUCTURE", "LOCATIONS", delimiter=","
-    )[:number_of_charging_locations]
-    if isinstance(charging_power, list):
-        charging_power_list = charging_power
-    else:
-        charging_power_list = list(np.full(len(charging_location_list), charging_power))
-    if isinstance(charging_capacity, list):
-        charging_capacity_list = charging_capacity
-    else:
-        charging_capacity_list = list(
-            np.full(len(charging_location_list), charging_capacity)
-        )
-    sic = ChargingInfrastructureConfig(
-        charging_location_list, charging_power_list, charging_capacity_list
-    )
-    global_config.add_charging_infrastructure_config(sic)
     charging_infrastructure = ChargingInfrastructure(
         env,
         charging_location_list,
-        charging_power_list,
-        charging_capacity_list,
+        charging_station_power_list,
+        charging_station_capacity_list,
+        charging_station_queue_size_list,
         reset=True,
     )
 
