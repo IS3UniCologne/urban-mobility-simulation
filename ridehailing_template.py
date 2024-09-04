@@ -320,10 +320,6 @@ charging_location_list = utils.parse_multiline_list(
 charging_station_power = utils.parse_multiline_list(
     "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_POWER", delimiter=",", cast=float
 )
-if len(charging_station_power) == 1:
-    charging_station_power = list(
-        np.full(number_of_charging_locations, charging_station_power[0])
-    )
 
 # Capacity is the number of charging stations in the charging hub (or plugs at a station)
 charging_station_capacity = utils.parse_multiline_list(
@@ -487,6 +483,10 @@ search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
 # Initialize fleet operations
 
+# if queue sizes at charging stations are all zero, we should account for that in the operations
+# there can be more clever and nuanced approaches, but as a rule of thumb, we should not allow operations to send vehicles to charging stations that are full if we don't allow queueing
+allow_queue = sum(charging_station_queue_size_list) > 0
+
 ridehailing_operations_0 = RideHailingChargingOperations(
     env=env,
     distance_matrix=distance_matrix,
@@ -495,6 +495,7 @@ ridehailing_operations_0 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+    allow_queue=allow_queue,
 )
 
 ridehailing_operations_1 = RideHailingChargingOperations(
@@ -505,6 +506,7 @@ ridehailing_operations_1 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+    allow_queue=allow_queue,
 )
 
 # Initialize operators
