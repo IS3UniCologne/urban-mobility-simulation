@@ -8,8 +8,6 @@ from simulation.operator.operations_management.task_queue import TaskQueue
 
 
 class RideHailingChargingOperations(OperationsInterface):
-    # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
-
     def __init__(
         self,
         env,
@@ -158,6 +156,14 @@ class RideHailingChargingOperations(OperationsInterface):
 
         charging_plan = []
 
+        # Account for the possibility that there is no charging station available (could happen in coordinated shared infrastructure, e.g.)
+        if not self._operator_reference.charging_infrastructure.get_locations():
+            logging.warning(
+                "No charging stations available. No charging plan generated.",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
+            return charging_plan
+
         for vehicle in vehicles_to_charge:
             hex = vehicle.position.get_hexagon(return_geom=False)[0]
 
@@ -165,6 +171,7 @@ class RideHailingChargingOperations(OperationsInterface):
             sorted_base_list = self._distance_matrix.loc[
                 self._operator_reference.charging_infrastructure.get_locations()
             ][[hex]].sort_values(by=hex, ascending=True)
+
             selected_base_distance = None
             # Select Nearest Base
             if vehicle.is_electric:
