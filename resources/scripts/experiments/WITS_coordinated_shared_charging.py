@@ -1,8 +1,10 @@
 ##Imports
 # Standard library imports
+import csv
 import logging
 import os
 import sys
+import time
 from configparser import ConfigParser
 from datetime import datetime
 from pathlib import Path
@@ -90,11 +92,15 @@ logging.getLogger("fiona").setLevel(logging.WARNING)
 
 logger = logging.getLogger()
 
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+# Record the start time
+real_start_time = time.time()
+
 # Make it beautiful
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",
-    filename=f"data/output/logs/{datetime.strftime(datetime.now(), '%Y%m%d_%H:%M:%S')}.log",
+    filename=f"data/output/logs/{output_timestamp}.log",
     encoding="utf-8",
     level=file_log_level,  # set it to lowest so the handlers can decide
 )
@@ -105,6 +111,7 @@ logger.addFilter(cf)
 
 consolehandler = logging.StreamHandler()
 consolehandler.setLevel(log_level)
+consolehandler.addFilter(cf)
 logger.addHandler(consolehandler)
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -266,7 +273,14 @@ global_config.add_ride_hailing_info(
 # Bidding Streategy Parameters
 bid_default = parser.getfloat("RIDE_HAILING_OPERATOR", "BID_DEFAULT")
 bid_decay = parser.getfloat("RIDE_HAILING_OPERATOR", "BID_DECAY")
-bidding_parameters = {"bid_default": bid_default, "bid_decay": bid_decay}
+random_overbidding = parser.getboolean("RIDE_HAILING_OPERATOR", "RANDOM_OVERBIDDING")
+overbid_prob = parser.getfloat("RIDE_HAILING_OPERATOR", "OVERBID_PROB")
+bidding_parameters = {
+    "bid_default": bid_default,
+    "bid_decay": bid_decay,
+    "random_overbidding": random_overbidding,
+    "overbid_prob": overbid_prob,
+}
 
 ###### End RideHailing Fleet Configuration ######
 
@@ -294,8 +308,17 @@ env = simpy.Environment(initial_time=0)
 # Inject Simulation Environment to Logger (such that we can log the env time)
 cf = SimulationContextFilter(filter_name="add_env", extra=env)
 edf = ExtraDefaultFilter(filter_name="add_default_value")
+
 logger.addFilter(cf)
 logger.addFilter(edf)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Init. Tracking                          #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+tracking = Tracking.init(env)
 
 
 # Population Type
@@ -367,6 +390,30 @@ charging_infrastructure = ChargingInfrastructure(
     reset=True,
 )
 
+# track charging stations
+charging_stations_track = []
+
+
+def track_charging_stations():
+    while True:
+        yield env.timeout(1)
+        values = [
+            {
+                "time": env._now,
+                "_location": d["_location"],
+                "_plugs.count": d["_plugs"].count,
+                "_plugs.queuesize": len(d["_plugs"].queue),
+            }
+            for d in [
+                tracking.dump(x)[1] for x in tracking.list_tracked("ChargingStation")
+            ]
+        ]
+        charging_stations_track.extend(values)
+
+
+env.process(track_charging_stations())
+
+
 #### End Charging Infrastructure Configuration #####
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -377,12 +424,14 @@ charging_infrastructure = ChargingInfrastructure(
 
 auction_start = parser.getint("AUCTION", "auction_start")
 auction_end = parser.getint("AUCTION", "auction_end")
+
 ac = AuctionConfig(auction_start, auction_end)
 global_config.auction_config = ac
 
 auction_interval = parser.getint("SHARED_CHARGING_AUCTION", "auction_interval")
 timeslot_duration = parser.getint("SHARED_CHARGING_AUCTION", "timeslot_duration")
-sc = SharedChargingConfig(auction_interval, timeslot_duration)
+auction_lookahead = parser.getint("SHARED_CHARGING_AUCTION", "AUCTION_LOOKAHEAD")
+sc = SharedChargingConfig(auction_interval, timeslot_duration, auction_lookahead)
 global_config.shared_charging_config = sc
 
 
@@ -402,14 +451,6 @@ global_config.set_store_results(store_results)
 global_config.set_output_path(output_folder)
 global_config.set_transaction_file(transaction_file)
 global_config.set_fleet_state_file(fleet_state_file)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Init. Tracking                          #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-tracking = Tracking.init(env)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -464,6 +505,40 @@ charging_auction = SharedChargingAuction(
     charging_infrastructure=charging_infrastructure,
 )
 
+# auction_tracking = tracking.register(charging_auction)
+
+# auction_track = []
+
+
+# def track_auction():
+#     while True:
+#         yield charging_auction.cleared
+#         envtime, values = tracking.dump(auction_tracking)
+#         bids = [
+#             {
+#                 "time": env._now,
+#                 "timeslot": values["_next_timeslot"],
+#                 "location": l,
+#                 "bids": b,
+#             }
+#             for l, b in values["_bids"].items()
+#         ]
+#         results = [
+#             {
+#                 "time": env._now,
+#                 "timeslot": values["_next_timeslot"],
+#                 "location": l,
+#                 "results.capacity": r[1][0] + r[2][0],
+#                 "results.clearing_price": r[1][1],
+#             }
+#             for l, r in values["_location_results"].items()
+#         ]
+#         auction_track.extend(bids)
+#         auction_track.extend(results)
+
+
+# env.process(track_auction())
+
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
 # Init. Simulation Modules                #
@@ -490,6 +565,49 @@ ride_hailing_fleet_0 = generate_AV_fleet(env, supply_prob, n_autonomous_cars, se
 
 ride_hailing_fleet_1 = generate_AV_fleet(env, supply_prob, n_autonomous_cars, seed=4711)
 
+# track vehicles in fleets
+vehicles_track = []
+
+
+def track_fleets(fleet_id):
+    # attention: this only works because we do not dynamically create and destroy vehicles like we do with users!
+    tracked_list = tracking.list_tracked("RideHailingAV")
+
+    while True:
+        yield env.timeout(1)
+        envtime, values = (
+            env._now,
+            {
+                "_fleet": fleet_id,
+                "_state": [
+                    tracking.get(x, "_state")[1]
+                    for x in tracked_list
+                    if tracking.get(x, "_fleet")[1].id == fleet_id
+                ],
+                "_current_state_of_charge": [
+                    tracking.get(x, "_current_state_of_charge")[1]
+                    for x in tracked_list
+                    if tracking.get(x, "_fleet")[1].id == fleet_id
+                ],
+                "_vdt": [
+                    tracking.get(x, "_vdt")[1]
+                    for x in tracked_list
+                    if tracking.get(x, "_fleet")[1].id == fleet_id
+                ],
+                "_suggested": [
+                    tracking.get(x, "_suggested")[1]
+                    for x in tracked_list
+                    if tracking.get(x, "_fleet")[1].id == fleet_id
+                ],
+            },
+        )
+        vehicles_track.append({"time": envtime, **values})
+
+
+env.process(track_fleets(ride_hailing_fleet_0.id))
+env.process(track_fleets(ride_hailing_fleet_1.id))
+
+
 # Add the fleet to the search engine
 search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
 search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
@@ -510,6 +628,52 @@ ridehailing_operations_1 = RideHailingSharedChargingOperations(
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
     distance_matrix=distance_matrix,
 )
+
+# Track Bidding Behavior (and Results)
+bidders_to_track = []
+bidders_to_track.append(
+    tracking.register(
+        ridehailing_operations_0, id=ridehailing_operations_0.auction_participant_id
+    )
+)
+bidders_to_track.append(
+    tracking.register(
+        ridehailing_operations_1, id=ridehailing_operations_1.auction_participant_id
+    )
+)
+bidding_track = []
+
+
+def track_bidders(bidder_uid):
+    while True:
+        yield charging_auction.cleared
+        envtime, participant = tracking.get(bidder_uid, "auction_participant_id")
+        envtime, bids = tracking.get(bidder_uid, "_bids")
+        envtime, results = tracking.get(bidder_uid, "_result")
+
+        if not bids:
+            continue
+        bidding_track.extend(
+            [
+                {
+                    "time": envtime,
+                    "participant_id": participant,
+                    "location": loc,
+                    "_bids": [
+                        (x[0], x[1]) for x in b
+                    ],  # get rid of participant id (last element in the tuple)
+                    "_result": r,
+                }
+                for loc, b in bids.items()
+                for lr, r in results.items()
+                if loc == lr
+            ]
+        )
+
+
+for bidder in bidders_to_track:
+    env.process(track_bidders(bidder))
+
 
 # Initialize operators
 ridehailing_operator_0 = RideHailingOperator(
@@ -559,7 +723,7 @@ world = World.init(
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, [], seed, mode="ride_hailing"
+    env, demand_profile, di, world, demand_modifier_paths, seed, mode="ride_hailing"
 )
 env.process(demand_factory.generate_demand())
 
@@ -571,6 +735,96 @@ env.process(demand_factory.generate_demand())
 
 logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
+env.run(until=end_time - 1e-8)
+world.simulation_finished.succeed()
 env.run(until=end_time)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Save Tracking Data                      #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+pd.DataFrame.from_records(bidding_track).to_csv(
+    f"data/output/tracking/{output_timestamp}_auction.csv", index=False
+)
+
+pd.DataFrame.from_records(vehicles_track).to_csv(
+    f"data/output/tracking/{output_timestamp}_vehicles.csv", index=False
+)
+
+pd.DataFrame.from_records(charging_stations_track).to_csv(
+    f"data/output/tracking/{output_timestamp}_charging_stations.csv", index=False
+)
+
+avg_infra_util = (
+    pd.DataFrame.from_records(charging_stations_track)["_plugs.count"]
+    / charging_station_capacity[0]
+).mean()
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Save Transaction Data                   #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+fleet_0_transactions = ridehailing_operator_0.get_transactions()
+fleet_1_transactions = ridehailing_operator_1.get_transactions()
+
+fleet_0_transactions.to_csv(
+    f"data/output/transactions/{output_timestamp}_fleet_0_transactions.csv", index=False
+)
+fleet_1_transactions.to_csv(
+    f"data/output/transactions/{output_timestamp}_fleet_1_transactions.csv", index=False
+)
+
+service_rate_fleet_0 = (
+    fleet_0_transactions["state"].value_counts()["Fulfilled"]
+    / fleet_0_transactions.shape[0]
+)
+
+service_rate_fleet_1 = (
+    fleet_1_transactions["state"].value_counts()["Fulfilled"]
+    / fleet_1_transactions.shape[0]
+)
+
+fleet_0_task_transactions = ridehailing_operations_0.get_task_transactions()
+fleet_1_task_transactions = ridehailing_operations_1.get_task_transactions()
+
+fleet_0_task_transactions.to_csv(
+    f"data/output/transactions/{output_timestamp}_fleet_0_task_transactions.csv",
+    index=False,
+)
+fleet_1_task_transactions.to_csv(
+    f"data/output/transactions/{output_timestamp}_fleet_1_task_transactions.csv",
+    index=False,
+)
+
+# write down the configs used for that run
+
+# Open the CSV file in append mode
+with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as file:
+    # Create a CSV writer object
+    writer = csv.writer(file)
+
+    # Write a row to the CSV file
+    writer.writerow(
+        [
+            output_timestamp,
+            os.path.basename(__file__),
+            end_time,
+            time.time() - real_start_time,
+            n_autonomous_cars,
+            number_of_charging_locations,
+            charging_station_capacity[0],
+            charging_station_power[0],
+            seed,
+            service_rate_fleet_0,
+            service_rate_fleet_1,
+            avg_infra_util,
+            None,
+            f'{"random_SOC_init" if initial_SoC == 0 else ""}, overbidding: ({str(random_overbidding)}, {str(overbid_prob)}), auction_interval: {str(auction_interval)}, timeslot_duration: {str(timeslot_duration)}, auction_lookahead: {str(auction_lookahead)}',
+        ]
+    )

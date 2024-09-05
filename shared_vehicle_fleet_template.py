@@ -34,9 +34,8 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 
 # Custom module imports
 # Import metrics
-from simulation.metrics.metrics_factory import MetricsFactory
-
 # Import operator related modules
+from simulation.metrics.metrics_factory import MetricsFactory
 from simulation.operator.fleet_factory import (
     generate_fleet_config,
     generate_mixed_fleet,
@@ -394,7 +393,6 @@ mixed_fleet = generate_mixed_fleet(env, shared_vehicle_fleet_config)
 # Add the fleet to the search engine
 search_engine.register_fleet(mixed_fleet)
 
-# Init Operations Module
 
 operations = IntegratedSharedMobilityOperations(
     env=env,
@@ -441,17 +439,38 @@ world = World.init(
 demand_factory = DemandFactory(
     env, demand_profile, di, world, [], seed, mode="shared_vehicle"
 )
-env.process(demand_factory.generate_demand())
 
-# Start the operations of the shared operator
-env.process(operations.execute())
 
-logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+# For multiple simulation runs
+def run_simulation(end_time, seed=4711, env=env):
+    # Before a new simulation run, reset everything
+    User.user_id = 0
+    DemandFactory.counter = 0
+    SharedCar.car_id = 0
+    SharedKickScooter.shared_kick_scooter_id = 0
+    SharedScooter.shared_scooter_id = 0
+    DemandFactory.counter = 0
 
-# Run the simulation until end time
-env.run(until=end_time)
+    # Inject Simulation Environment to Logger (such that we can log the env time)
+    cf = SimulationContextFilter(filter_name="add_env", extra=env)
+    edf = ExtraDefaultFilter(filter_name="add_default_value")
+    logger.addFilter(cf)
+    logger.addFilter(edf)
 
-logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+    env.process(operations.execute())
+
+    # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
+    demand_factory.reset()
+
+    env.process(demand_factory.generate_demand())
+
+    logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+
+    # Run the simulation until end time
+    env.run(until=end_time)
+
+    logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+
 
 transactions = operator.get_transactions()
 transactions.to_csv("data/output/transactions.csv", index=False)
@@ -472,3 +491,9 @@ metrics_factory.print_simulation_summary(
     global_config.get_cost_per_vehicle_km(),
     global_config.get_co2_per_vehicle_km(),
 )
+
+sum_iterations = 3
+for i in range(sum_iterations):
+    env = simpy.Environment(start_time)
+
+    run_simulation(end_time=end_time)

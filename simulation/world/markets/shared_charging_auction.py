@@ -1,7 +1,7 @@
 import logging
 import random
 from collections import Counter
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import pandas as pd
 from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
@@ -39,7 +39,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         super().__init__(env, start_condition, end_condition)
 
         # bids are a list of n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
-        self._bid_syntax = Dict[str, List[Tuple[int, float, int]]]
+        self._bid_syntax = Dict[str, List[Tuple[int, Union[int, float], int]]]
 
         # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
         self._result_syntax = Dict[int, Dict[str, Tuple[int, float]]]
@@ -49,7 +49,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         self._location_results = {}
         self._next_timeslot = (
             self._config.auction_config.auction_start
-            + self._config.shared_charging_config.auction_interval
+            + self._config.shared_charging_config.auction_lookahead
         )
 
         # init auction view on charging infrastructure
@@ -59,7 +59,8 @@ class SharedChargingAuction(Auction, TrackingInterface):
         )
         for timeslot in range(
             self._config.auction_config.auction_start,
-            self._config.auction_config.auction_end,
+            self._config.auction_config.auction_end
+            + self._config.shared_charging_config.auction_interval,
             self._config.shared_charging_config.auction_interval,
         ):
             self._charging_infrastructure.update(
@@ -72,9 +73,20 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
     def run(self):
         while True:
+            if (
+                self._next_timeslot
+                > self._config.auction_config.auction_end
+                - self._config.shared_charging_config.timeslot_duration
+            ):
+                logging.info(
+                    "Auction stops, last timeslot reached.",
+                    extra={"clazz": self.__class__.__name__, "oid": " "},
+                )
+                break
+
             open_at = (
                 self._next_timeslot
-                - self._config.shared_charging_config.auction_interval
+                - self._config.shared_charging_config.auction_lookahead
             )
 
             if self._env.now <= open_at:
@@ -108,6 +120,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
             self._announce_results()
+            self._bids = {}
             self._update_auctionable_capacity()
 
             self._next_timeslot = (
@@ -125,9 +138,10 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
     def register_participant(self, participant: BidderInterface) -> int:
         self._participants.append(participant)
-        return len(self._participants)
+        return len(self._participants) - 1
 
     def clear(self) -> None:
+        self._location_results = {}
         for location, capacity in self._charging_infrastructure.get_available_capacity(
             self._next_timeslot
         ).items():
@@ -140,7 +154,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         # uniform price clearing of capacity with fair tie breaking
 
         try:
-            assert len(self._bids) > 0
+            assert len(self._bids[location]) > 0
             location_bids = self._bids[location]
         except (AssertionError, KeyError):
             result = {}
@@ -211,7 +225,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
             result.loc[result.index[-1], "capacity"] = result.loc[
                 result.index[-1], "capacity"
-            ] - (result.loc[result.index[-1], "cumulative_capacity"] - capacity)
+            ] - max((result.loc[result.index[-1], "cumulative_capacity"] - capacity), 0)
 
         result = result.groupby("bidder_id").agg({"capacity": "sum"}).reset_index()
         result["clearing_price"] = clearing_price
@@ -237,6 +251,21 @@ class SharedChargingAuction(Auction, TrackingInterface):
     def _announce_results(self) -> None:
         for p in self._participants:
             p.result_announced.succeed(self._result[p.auction_participant_id])
+
+        logging.debug(
+            "Total Capacity Auctioned: %s",
+            sum(
+                [
+                    result[0]
+                    for location_id, location in self._location_results.items()
+                    for participant, result in location.items()
+                ]
+            ),
+            extra={"clazz": self.__class__.__name__, "oid": ""},
+        )
+
+        self.cleared.succeed()
+        self.cleared = self._env.event()
 
     def _update_auctionable_capacity(self) -> None:
         # update auctionable capacity for (next_timeslot, ..., next_timeslot + timeslot_duration)
