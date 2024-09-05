@@ -1,6 +1,7 @@
 [tool.ruff]
 fix = true
 output-format = "grouped"
+extend-exclude = ["*.ipynb"]
 [tool.ruff.format]
 skip-magic-trailing-comma = true
 [tool.ruff.lint.mccabe]
