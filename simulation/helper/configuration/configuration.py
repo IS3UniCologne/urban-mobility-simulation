@@ -522,7 +522,7 @@ class SharedVehicleConfig:
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
         self.energy_consumption = energy_consumption
-        self.velocity = SimulationVelocityConverter.convert_speed(velocity)
+        self.velocity = SimulationVelocityConverter.convert_kmh(velocity)
         self.max_available_seats = max_available_seats
         # TODO: move max_walking_distance to UserConfig?
         self.max_walking_distance = max_walking_distance
@@ -551,7 +551,7 @@ class RideHailingVehicleConfig:
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
         self.energy_consumption = energy_consumption
-        self.velocity = SimulationVelocityConverter.convert_speed(velocity)
+        self.velocity = SimulationVelocityConverter.convert_kmh(velocity)
         self.max_available_seats = max_available_seats
         self.initial_SoC = initial_SoC
         self.charging_cost_per_kWh = charging_cost_per_kWh
@@ -603,7 +603,7 @@ class RideHailingOperatorConfig:
         self.operations_start = operations_start
         self.operations_duration = operations_duration
         self.vehicle_relocation_velocity = (
-            SimulationVelocityConverter.convert_speed(vehicle_relocation_velocity),
+            SimulationVelocityConverter.convert_kmh(vehicle_relocation_velocity),
         )
         self.available_modes = available_modes
         self.available_modes_supply = available_modes_supply
@@ -637,7 +637,7 @@ class SharedVehicleOperatorConfig:
         self.base_capacity = base_capacity
         self.operations_start = operations_start
         self.operations_duration = operations_duration
-        self.vehicle_relocation_velocity = SimulationVelocityConverter.convert_speed(
+        self.vehicle_relocation_velocity = SimulationVelocityConverter.convert_kmh(
             vehicle_relocation_velocity
         )
         self.available_modes = available_modes
@@ -675,7 +675,7 @@ class TransitOperatorConfig:
 
 class BusConfig:
     def __init__(self, velocity: float, max_available_seats: int):
-        self.velocity = SimulationVelocityConverter.convert_speed(velocity)
+        self.velocity = SimulationVelocityConverter.convert_kmh(velocity)
         self.max_available_seats = max_available_seats
 
 
