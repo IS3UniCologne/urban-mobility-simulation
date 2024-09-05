@@ -12,7 +12,7 @@ from simulation.operator.operations_management.operations_public_transport impor
 )
 from simulation.tasks.transportation_search_task import TransportationSearchTask
 
-# Move to config
+# TODO: Move to config
 walking_speed_in_mpm = 5
 
 

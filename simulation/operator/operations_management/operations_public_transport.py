@@ -6,31 +6,50 @@ import pandas as pd
 import simpy
 from simpy import Environment
 
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.time import SimulationTimeConverter
+from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.time import SimulationTime, SimulationTimeConverter
+from simulation.infrastructure.helper.timetable import Timetable
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
 from simulation.infrastructure.transit_network.stop import Stop
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.vehicle.public_transit_bus import Bus
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
+from simulation.world.world import World
+from tracking.tracking import Tracking
 
 # Move to config
 walking_speed_in_mpm = 5
-grace_period = 10
+grace_period = 10  # in minutes?
 
 
 class BusOperations(OperationsInterface):
-    def __init__(self, env: Environment, timetable):
+    def __init__(self, env: Environment, timetable: Timetable):
         self.env = env
-        self.timetable = timetable
-        self.busess = []
+        self._timetable = timetable
+        self._busses = []
+        self._time = SimulationTime(env)
+        self._operator_config = self._config.transit_operator_config
+
+        # Config
+        self._config = Configuration.instance()
+
+        # Environment
+        self._geodesic_env = GeodesicEnvironment.getInstance()
+        self._world = (
+            None  # defer loading to run process, otherwise circular dependency
+        )
 
     # Idea: Add busses to a sort of fleet like the ridehailing and shared mobility fleet
     # Check the distance each user has to any bus station that is in the same hexagon with any station
 
     # Run
-    def _run_(self):
+    def run_operations(self):
+        self._world = World.instance()
+        self._tracking = Tracking.instance()
+
         while True:
             try:
                 # Check number of busses do not exceed max no of busses
@@ -54,7 +73,7 @@ class BusOperations(OperationsInterface):
                                 trip_start_time = trip.start_time
 
                                 # Check if a trip with the same ID and similar start time is already in progress
-                                # TODO: Add grace period to config?
+                                # TODO: Add grace period to as a buffer to config? We spawn a new bus only if the buffer is exceeded
                                 if trip_id not in active_trip_ids or (
                                     trip_start_time - self._time > grace_period
                                 ):
