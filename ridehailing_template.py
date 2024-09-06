@@ -233,7 +233,7 @@ recharge_threshold = [float(x) / 100 for x in recharge_threshold]
 
 operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
-vehicle_relocation_velocity = parser.getint(
+vehicle_relocation_velocity = parser.getfloat(
     "RIDE_HAILING_OPERATOR", "VEHICLE_RELOCATION_VELOCITY"
 )
 
