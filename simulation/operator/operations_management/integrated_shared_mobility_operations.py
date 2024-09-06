@@ -2,41 +2,307 @@ import logging
 from pathlib import Path
 
 import h3
-
-# sys.modules["sklearn.externals.six"] = six # does this break the mlrose parts?
 import mlrose_hiive as mlrose
 import pandas as pd
+from pandas import DataFrame
 
 from simulation.helper.configuration.configuration import Configuration
+from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.operations_management.service_tasks.charging_task import (
+    ChargingTask,
+)
+from simulation.operator.operations_management.service_tasks.multi_service_task import (
+    MultiServiceTask,
+)
+from simulation.operator.operations_management.service_tasks.relocation_task import (
+    RelocationTask,
+)
 
 
-class RelocationScheduler:
+class IntegratedSharedMobilityOperations(OperationsInterface):
+    # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
+
     def __init__(
         self,
+        env,
+        time_between_operations,
+        operation_duration,
         distance_matrix,
-        fleet,
         ordered_available_vehicle_modes,
         ordered_max_vehicle_supply,
-        number_of_service_units,
+        state_of_charge_threshold,
         base_regions,
         base_capacity,
     ):
+        super(IntegratedSharedMobilityOperations, self).__init__(env=env)
+
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
-
-        # Vehicle Fleet
-        self._fleet = fleet
 
         # List needs to be ordered such that:
         # In case of neutral demand, we count the demand for the less expensive option
         # For example: If we observe a demand for KickScooter and Scooter, we count that
         # demand to KickScooter. This ordering is defined according to the following list
         # (from left to right)
-        self._available_vehicle_modes = ordered_available_vehicle_modes
-        self._max_vehicle_supply = ordered_max_vehicle_supply
-        self._number_of_service_units = number_of_service_units
+        self._available_vehicle_modes = (
+            ordered_available_vehicle_modes  # TODO: get from fleet
+        )
+        self._max_vehicle_supply = ordered_max_vehicle_supply  # TODO: get from fleet
         self._base_regions = base_regions
         self._base_capacity = base_capacity
+
+        self._state_of_charge_threshold = state_of_charge_threshold
+
+        self._scheduled_tasks = []  # TODO: move to workforce? or internal schedule?
+
+        # Events
+        self._charging_plan_updated = env.event()
+        self._operations_started = env.event()
+
+        # When to start operations (every 1440 min)
+        self._time_between_operations = time_between_operations
+
+        # Shift Duration (OM shift duration)
+        self._duration_of_operations = operation_duration  # mins
+
+    def execute(self):
+        """
+        Below, we combine the old operational logic from operations.py and relocation_strategy.py
+        """
+
+        while True:
+            yield self._env.timeout(self._time_between_operations)
+
+            # Clean old jobs (if there are some left)
+            self._operator_reference._workforce.task_queue.clear()
+
+            # Retrieve Vehicle Transactions
+            transactions = self._operator_reference.get_transactions()
+
+            condition = (
+                transactions["selected_vehicle_mode"].apply(lambda x: x == "None")
+            ).all()
+
+            if condition:
+                logging.debug(
+                    "Skip operations, cause there has not been one successful transaction yet"
+                )
+                continue
+
+            # Retrieve Charging Plan to Charge Vehicles with low State of Charge
+            charging_plans, used_capacity = self.generate_charging_plan(transactions)
+
+            # We track the charging events
+            charging_events = []
+
+            # No Vehicles to be charged
+            no_vehicles_scheduled_to_charge = {}
+
+            for mode in self._available_vehicle_modes:
+                charging_plans_for_current_mode = charging_plans[mode]
+
+                # Set Counter to 0
+                if mode not in no_vehicles_scheduled_to_charge:
+                    no_vehicles_scheduled_to_charge[mode] = 0
+
+                for charging_plan in charging_plans_for_current_mode:
+                    if len(charging_plan) > 1:
+                        multi_service_task = MultiServiceTask(self._env)
+                        # Pooled Task
+                        for task in charging_plan:
+                            (
+                                origin,
+                                destination,
+                                no_vehicle_to_charge,
+                                distance_to_base,
+                            ) = task
+
+                            charging_task = ChargingTask(
+                                self._env,
+                                origin,
+                                destination,
+                                no_vehicle_to_charge,
+                                mode,
+                                distance_to_base,
+                                self._operator_reference.fleet,
+                                self._state_of_charge_threshold,
+                            )
+
+                            multi_service_task.append_task(charging_task)
+
+                            # Count Vehicles to be charged
+                            no_vehicles_scheduled_to_charge[mode] += (
+                                no_vehicle_to_charge
+                            )
+
+                        # Schedule to Queue
+                        self._scheduled_tasks.append(multi_service_task)
+
+                        # Remember event for multi service tasks
+                        charging_events.append(multi_service_task.task_finished)
+                    else:
+                        # Single Task
+                        origin, destination, no_vehicle_to_charge, distance_to_base = (
+                            charging_plan[0]
+                        )
+
+                        charging_task = ChargingTask(
+                            self._env,
+                            origin,
+                            destination,
+                            no_vehicle_to_charge,
+                            mode,
+                            distance_to_base,
+                            self._operator_reference.fleet,
+                            self._state_of_charge_threshold,
+                        )
+
+                        # Schedule to Queue
+                        self._scheduled_tasks.append(charging_task)
+
+                        # Remember event for multi service tasks
+                        charging_events.append(charging_task.task_finished)
+
+                        # Count Vehicles to be charged
+                        no_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
+
+            # Insert Tasks into Task Queue
+            self._operator_reference._workforce.task_queue.bulk_append(
+                self._scheduled_tasks
+            )
+
+            logging.info(
+                f"There are {len(self._operator_reference.fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold))} vehicles with low state of charge.",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
+
+            logging.info(
+                f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
+
+            # Notify listeners
+            self._charging_plan_updated.succeed()
+            self._charging_plan_updated = self._env.event()
+
+            # While Shift is not over, recalculate relocation plans and execute them.
+            while (
+                self._env.now % self._time_between_operations
+                < self._duration_of_operations
+            ):
+                logging.info(
+                    "Planning next relocation schedule.",
+                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                )
+
+                # Reset Scheduled Tasks
+                self._scheduled_tasks.clear()
+
+                # Wait 2 Minutes, then (re-)schedule relocation
+                yield self._env.timeout(2)
+
+                transactions = self._operator_reference.get_transactions()
+
+                relocations = self.generate_relocation_plan(transactions)
+
+                # We track the charging events
+                relocation_events = []
+
+                # No Vehicles to be charged
+                no_vehicles_scheduled_to_relocate = {}
+
+                for mode in self._available_vehicle_modes:
+                    relocation_plans_for_current_mode = relocations[mode]
+
+                    # Set Counter to 0
+                    if mode not in no_vehicles_scheduled_to_relocate:
+                        no_vehicles_scheduled_to_relocate[mode] = 0
+
+                    for relocation_plan in relocation_plans_for_current_mode:
+                        if len(relocation_plan) > 1:
+                            multi_service_task = MultiServiceTask(self._env)
+                            # Pooled Task
+                            for task in relocation_plan:
+                                (
+                                    origin,
+                                    destination,
+                                    no_vehicle_to_relocate,
+                                    relocation_distance,
+                                ) = task
+
+                                relocation_task = RelocationTask(
+                                    self._env,
+                                    origin,
+                                    destination,
+                                    no_vehicle_to_relocate,
+                                    relocation_distance,
+                                    mode,
+                                    self._operator_reference.fleet,
+                                )
+
+                                multi_service_task.append_task(relocation_task)
+
+                                # Count Vehicles to be charged
+                                no_vehicles_scheduled_to_relocate[mode] += (
+                                    no_vehicle_to_relocate
+                                )
+
+                            # Schedule to Queue
+                            self._scheduled_tasks.append(multi_service_task)
+
+                            # Remember event for multi service tasks
+                            relocation_events.append(multi_service_task.task_finished)
+                        else:
+                            # Single Task
+                            (
+                                origin,
+                                destination,
+                                no_vehicle_to_relocate,
+                                relocation_distance,
+                            ) = relocation_plan[0]
+
+                            relocation_task = RelocationTask(
+                                self._env,
+                                origin,
+                                destination,
+                                no_vehicle_to_relocate,
+                                relocation_distance,
+                                mode,
+                                self._operator_reference.fleet,
+                            )
+
+                            # Schedule to Queue
+                            self._scheduled_tasks.append(relocation_task)
+
+                            # Remember event for multi service tasks
+                            relocation_events.append(relocation_task.task_finished)
+
+                            # Count Vehicles to be charged
+                            no_vehicles_scheduled_to_relocate[mode] += (
+                                no_vehicle_to_relocate
+                            )
+
+                # Insert Tasks into Task Queue
+                self._operator_reference._workforce.task_queue.bulk_append(
+                    self._scheduled_tasks
+                )
+
+                if len(charging_events):
+                    # Wait for Charging events
+                    yield self._env.all_of(charging_events)
+
+                    logging.info(
+                        "All Charging Tasks have been fulfilled. Re-Generating Relocation Plan.",
+                        extra={"clazz": self.__class__.__name__, "oid": ""},
+                    )
+
+                # Wait for relocation events to be processed
+                yield self._env.all_of(relocation_events)
+
+                logging.info(
+                    "Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan.",
+                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                )
 
     def generate_relocation_plan(self, transactions):
         """
@@ -45,7 +311,9 @@ class RelocationScheduler:
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows (from PaymentEngine)
         :return: Dict of potential relocations {"SharedCar": [(origin, destination, no, distance)], ..}
         """
-        state = self.calculate_residual_supply(self._fleet, transactions)
+        state = self.calculate_residual_supply(
+            self._operator_reference.fleet, transactions
+        )
 
         relocation_plans = self.identify_potential_relocations(state)
 
@@ -60,7 +328,9 @@ class RelocationScheduler:
                 **used_capacity**: How many service workers are planned to cope with charging needs
         """
         # Get Current Fleet State
-        state = self.calculate_residual_supply(self._fleet, transactions)
+        state = self.calculate_residual_supply(
+            self._operator_reference.fleet, transactions
+        )
 
         config = Configuration.instance()
         if config.store_results:
@@ -80,7 +350,6 @@ class RelocationScheduler:
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
-        :param number_of_service_units: Number of  Available Service Workers
         :param available_vehicle_modes: List of available vehicle modes
         :param max_vehicle_supply: List of number of available vehicle most (supply per mode)
         :param base_regions: Possible Fleet Base Regions for charging
@@ -98,7 +367,9 @@ class RelocationScheduler:
         state = fleet_state
 
         # How much capacity is already "used"
-        dict(zip(self._base_regions, [self._base_capacity] * len(self._base_regions)))
+        # free_base_capacity = dict(
+        #     zip(self._base_regions, [self._base_capacity] * len(self._base_regions))
+        # )
 
         # Split available service worker resources among vehicle types
         # (prioritize vehicles where most low soc vehicles are present)
@@ -106,7 +377,7 @@ class RelocationScheduler:
             state,
             self._available_vehicle_modes,
             self._max_vehicle_supply,
-            self._number_of_service_units,
+            self._operator_reference._workforce.number_service_workers,
         )
 
         # We calculate for each vehicle mode dedicated charging plans based on the available resources
@@ -121,7 +392,7 @@ class RelocationScheduler:
             max_capacity_per_unit = self.get_max_capacity_per_unit(mode)
 
             # Mode Specific Service Unit Resources (i.e., how many service workers have we assigned to collect the current mode)
-            number_of_service_units_per_mode = capacity_per_mode[i]
+            number_service_workers_per_mode = capacity_per_mode[i]
 
             # Keep track of vehicles which are already scheduled for pick up and charging per region
             already_scheduled_low_vehicles = {}
@@ -143,7 +414,7 @@ class RelocationScheduler:
                 next_hex_id = row["hex_id"]
 
                 # Break loop if service worker resources are depleted
-                if len(charging_plan) == number_of_service_units_per_mode:
+                if len(charging_plan) == number_service_workers_per_mode:
                     # No more service worker capacity, stop planning
                     break
 
@@ -162,7 +433,7 @@ class RelocationScheduler:
                     selected_base_distance = row_base[next_hex_id]
 
                 while (
-                    len(charging_plan) != number_of_service_units_per_mode
+                    len(charging_plan) != number_service_workers_per_mode
                     and already_scheduled_low_vehicles[next_hex_id]
                     != row[f"{mode}_Low_SoC"]
                 ):
@@ -276,7 +547,7 @@ class RelocationScheduler:
         fleet_state,
         available_vehicle_modes,
         max_vehicle_supply,
-        number_of_service_units,
+        number_service_workers_per_mode,
     ):
         """
             Determine Service Worker Split Between Modes (How many workers should be assigned to charge how many vehicles)
@@ -287,12 +558,12 @@ class RelocationScheduler:
                     1.2. Thus, we ensure that not too many service workers are assigned to vehicles that can be pooled
                 2. total_frac = sum frac_i
                 3. Calculate how many service workers are assigned to charge vehicle mode i
-                   capacity_i = frac_i/total_frac * number_of_service_units_i
+                   capacity_i = frac_i/total_frac * number_service_workers_i
         :param fleet_state: Resulting data frame from function calculate_residual_supply
         :param available_vehicle_modes: List of available vehicle modes (["SharedKickScooter", "SharedScooter", "SharedCar"]
         :param max_vehicle_supply: List of maximum number of available vehicles (order is aligned with available_vehicle_modes)
                                 for example: [10, 5, 12] => 10 kick scooter, 5 scooter, 12 cars
-        :param number_of_service_units: Available Service Worker Capacity
+        :param number_service_workers: Available Service Worker Capacity
         :return: List of assigned resource workers to vehicle modes (order is aligned with available_vehicle_modes)
                         for example: Input 25 Service Workers
                                     => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
@@ -328,14 +599,14 @@ class RelocationScheduler:
         # Split capacity based on the following fraction
         capacity_fraction = low_fraction_per_mode / denominator
 
-        capacity = capacity_fraction * number_of_service_units
+        capacity = capacity_fraction * number_service_workers_per_mode
 
         capacity = [round(x) for x in capacity]
 
         # Rounding Fractions => Sum of Residual don't add up to available units
         # We fix this by adding or subtracting the residual to the max. element
         # Happens very rarely
-        residual = number_of_service_units - sum(capacity)
+        residual = number_service_workers_per_mode - sum(capacity)
 
         max_element = max(capacity)
         arg_max = capacity.index(max_element)
@@ -352,12 +623,12 @@ class RelocationScheduler:
         # Mode Specific Collection Capacity per Service Worker (i.e., how many vehicles can one sw collect)
         if mode == "SharedKickScooter":
             max_capacity_per_unit = 40
+        elif mode == "SharedBike":
+            max_capacity_per_unit = 8
         elif mode == "SharedScooter":
             max_capacity_per_unit = 8
         elif mode == "SharedCar":
             max_capacity_per_unit = 1
-        elif mode == "SharedBike":
-            max_capacity_per_unit = 8
         else:
             raise NotImplementedError("Not Implemented")
         return max_capacity_per_unit
@@ -404,7 +675,7 @@ class RelocationScheduler:
             state,
             self._available_vehicle_modes,
             self._max_vehicle_supply,
-            self._number_of_service_units,
+            self._operator_reference._workforce.number_service_workers,
         )
         for i, mode in enumerate(self._available_vehicle_modes):
             # Relocation List containing tuples (origin, destination, number_of_vehicles_to_be_relocated, distance)
@@ -417,7 +688,7 @@ class RelocationScheduler:
             max_capacity_per_unit = self.get_max_capacity_per_unit(mode)
 
             # Mode Specific Service Unit Resources (i.e., how many service workers have we assigned to collect the current mode)
-            number_of_service_units_per_mode = capacity_per_mode[i]
+            number_service_workers_per_mode = capacity_per_mode[i]
 
             # Already Relocated Vehicles
             hexagons = list(state["hex_id"].unique())
@@ -430,8 +701,8 @@ class RelocationScheduler:
                 state[f"Residual_Supply_{mode}"] < 0
             ].iterrows():
                 """
-                Iterate through each hexagon where we expect a negative supply (i.e., demand and supply don't match)
-                Start with hexagon with highest lack of vehicle supply
+                  Iterate through each hexagon where we expect a negative supply (i.e., demand and supply don't match)
+                  Start with hexagon with highest lack of vehicle supply
                 """
                 next_hex_id = next_hex["hex_id"]
                 residual_supply = next_hex[f"Residual_Supply_{mode}"]
@@ -440,7 +711,7 @@ class RelocationScheduler:
                 relocated_vehicles = 0
 
                 # Break loop if service worker resources are depleted
-                if len(relocation_list) == number_of_service_units_per_mode:
+                if len(relocation_list) == number_service_workers_per_mode:
                     # No more service worker capacity, stop planning
                     break
 
@@ -525,7 +796,7 @@ class RelocationScheduler:
                     while (
                         distance_to_other_hexagons.loc[index, f"Relocate_{mode}"]
                         >= max_capacity_per_unit
-                        and len(relocation_list) < number_of_service_units_per_mode
+                        and len(relocation_list) < number_service_workers_per_mode
                     ):
                         relocation_list.append(
                             [
@@ -542,7 +813,7 @@ class RelocationScheduler:
                             - max_capacity_per_unit
                         )
 
-                    if len(relocation_list) == number_of_service_units_per_mode:
+                    if len(relocation_list) == number_service_workers_per_mode:
                         # No more service worker capacity, stop planning
                         break
 
@@ -586,7 +857,7 @@ class RelocationScheduler:
                         tmp_counter = 0
 
                 if (
-                    len(relocation_list) < number_of_service_units_per_mode
+                    len(relocation_list) < number_service_workers_per_mode
                     and len(tmp_list) > 0
                 ):
                     relocation_list.append(tmp_list)
@@ -623,8 +894,8 @@ class RelocationScheduler:
                     )
 
                     # Solve problem using the genetic algorithm (keep random state constant)
-                    best_state, best_fitness = mlrose.genetic_alg(
-                        problem_fit, random_state=1337
+                    best_state, best_fitness, _ = mlrose.genetic_alg(
+                        problem_fit, random_state=1337, curve=False
                     )
 
                     # Convert Numpy Array to List
@@ -684,7 +955,7 @@ class RelocationScheduler:
         fleet_state,
         available_vehicle_modes,
         max_vehicle_supply,
-        number_of_service_units,
+        number_service_workers_per_mode,
     ):
         """
             Determine Service Worker Split Between Modes (How many workers should be assigned to relocate how many vehicles)
@@ -734,7 +1005,7 @@ class RelocationScheduler:
         # Split capacity based on the following fraction
         capacity_fraction = current_supply_mismatch / denominator
 
-        capacity = capacity_fraction * number_of_service_units
+        capacity = capacity_fraction * number_service_workers_per_mode
 
         capacity = [round(x) for x in capacity]
 
@@ -746,7 +1017,7 @@ class RelocationScheduler:
         # Rounding Fractions => Sum of Residual don't add up to available units
         # We fix this by adding or subtracting the residual to the max. element
         # Happens very rarely
-        residual = number_of_service_units - sum(capacity)
+        residual = number_service_workers_per_mode - sum(capacity)
 
         # Residual ensures that we deplete all available service workers
         # the second condition ensures that we only do this until we have reached "needed" capacity to do operations.
@@ -816,7 +1087,7 @@ class RelocationScheduler:
 
         return state
 
-    def estimate_delta_demand(self, transactions, ordered_available_vehicle):
+    def estimate_delta_demand(self, transactions: DataFrame, ordered_available_vehicle):
         """
         Compute the expected demand in a hexagon based on collected rental transactions from the simulation.
 
@@ -939,6 +1210,7 @@ class RelocationScheduler:
         result.fillna(0, inplace=True)
 
         # Calculate Delta (Expected Inflow - Expected Outflow - Missed Demand)
+
         for vehicle in ordered_available_vehicle:
             if vehicle not in vehicle_columns:
                 result["Delta_{}".format(vehicle)] = 0

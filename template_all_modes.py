@@ -1,3 +1,8 @@
+# ALARM!: This template is not able to fulfil the purpose of running several modes
+# simultaneously, since the user refactoring will have to enable several modes at the same time.
+# This can then be used as a starting point
+
+
 ### This is the template for a simulation with a ridehailing and shared mobility fleet. #####
 
 ##Imports
@@ -110,7 +115,6 @@ start_time = parser.getint("EXPERIMENT_MANAGEMENT", "START_TIME")
 end_time = parser.getint("EXPERIMENT_MANAGEMENT", "END_TIME")
 seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
 
-
 # World / Resolution Config
 spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
 temporal_res = parser.getint("WORLD", "TEMPORAL_RESOLUTION")
@@ -148,10 +152,7 @@ mode_choice_sub_boundary = parser.getfloat("MODE_CHOICE_MODEL", "substitution_bo
 
 # Initialize the mode choice config
 mc = ModeChoiceConfig(
-    mode_choice_strategy,
-    mode_choice_sub_boundary,
-    mode_choice_model_path,
-    path_to_model=None,
+    mode_choice_strategy, mode_choice_sub_boundary, mode_choice_model_path
 )
 
 # Load the config to the global config
@@ -681,7 +682,7 @@ rs_ridehailing_0 = RebalancingSchedulerRidehailing(
     global_config.ridehailing_operator_config.base_regions,
     global_config.ridehailing_operator_config.base_capacity,
     global_config.ridehailing_operator_config.recharge_threshold,
-    charging_infrastructure._chargers,
+    charging_infrastructure._charging_stations,
 )
 
 # Ridehailing operator manages all operations belonging to the ridehailing fleet
@@ -696,7 +697,7 @@ ops_ridehailing_0 = OperationsRidehailing(
     global_config.ridehailing_operator_config.available_modes_supply,
     global_config.ridehailing_operator_config.recharge_threshold,
     task_queue_ridehailing,
-    charging_infrastructure._chargers,
+    charging_infrastructure._charging_stations,
 )
 
 # Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
@@ -762,7 +763,7 @@ env.process(public_operator._run())
 demand_factory = DemandFactory(
     env, demand_profile, di, world, [], seed, mode="ride_hailing"
 )
-env.process(demand_factory.generate_demand())
+# env.process(demand_factory.generate_demand())
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -770,11 +771,11 @@ env.process(demand_factory.generate_demand())
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-env.run(until=end_time)
+# env.run(until=end_time)
 
-logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
 
 ### Things to do while changing the mode: ####
@@ -783,3 +784,58 @@ logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 # - To run RideHailing fleet comment out the running of the shared operator
 # - Switch to the correct payment engine
 # - Comment out all the operator modules from other fleets for the public operator
+
+
+def run_simulation(end_time, seed=4711, env=env):
+    # Before a new simulation run, reset everything
+    User.user_id = 0
+    SharedCar.car_id = 0
+    SharedKickScooter.shared_kick_scooter_id = 0
+    SharedScooter.shared_scooter_id = 0
+    DemandFactory.counter = 0
+    Vehicle.vehicle_id = 0
+    PublicTransitVehicle.public_transit_vehicle_id = 0
+    Bus.bus_id = 0
+    GeodesicEnvironment.getInstance().reset_random_generator(seed)
+
+    # Inject Simulation Environment to Logger (such that we can log the env time)
+    cf = SimulationContextFilter(filter_name="add_env", extra=env)
+    edf = ExtraDefaultFilter(filter_name="add_default_value")
+    logger.addFilter(cf)
+    logger.addFilter(edf)
+
+    for sw in range(
+        global_config.ridehailing_operator_config.number_of_service_workers
+    ):
+        env.process(ServiceWorker(env, task_queue_ridehailing).run())
+
+    # for sw in range(global_config.shared_vehicle_operator_config.number_of_service_workers):
+    #    env.process(ServiceWorker(env, task_queue_shared_vehicle).run())
+
+    env.process(ops_ridehailing_0.timer())
+    env.process(ops_ridehailing_0.run_operations())
+
+    # env.process(shared_operator.timer())
+    # env.process(shared_operator.run_operations())
+
+    # env.process(public_operator._run())
+
+    # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
+    demand_factory.reset()
+
+    env.process(demand_factory.generate_demand())
+
+    logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+
+    # Run simulation
+
+    env.run(until=end_time)
+
+    logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+
+
+# sum_iterations = 3
+# for i in range(sum_iterations):
+#     env = simpy.Environment(start_time)
+
+#     run_simulation(end_time=end_time)

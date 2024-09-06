@@ -37,6 +37,7 @@ walking_speed_in_kmh = 5  # TODO: move to config
 walking_speed_in_mpm = walking_speed_in_kmh * 1000 / 60  # TODO: move to config
 
 
+# TODO: refactor to adhere to base class "Operator"
 class PublicTransitOperator(
     SearchEngineInterface, VehicleAllocationEngineInterface, PaymentInterface
 ):
@@ -241,8 +242,10 @@ class PublicTransitOperator(
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": transportation_task.origin.get_hexagon()[0],
-                "destination": transportation_task.destination.get_hexagon()[0],
+                "origin": transportation_task.origin.get_hexagon(return_geom=False)[0],
+                "destination": transportation_task.destination.get_hexagon(
+                    return_geom=False
+                ),
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,

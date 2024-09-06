@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import simpy
 
-from simulation.vehicle.walking import Walking
 import simulation.world.world as world
+from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.vehicle.walking import Walking
 from tracking.tracking_interface import TrackingInterface
 
 from ..environment.geodesic_environment import GeodesicEnvironment
@@ -27,7 +28,6 @@ from ..operator.data_transfer_object.transportation_alternative_ridehailing impo
     TransportationAlternativeRideHailing,
 )
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
-from ..operator.interface.payment_interface import PaymentInterface
 from ..operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
@@ -74,8 +74,9 @@ class UserState(Enum):
     MOVING_TO_DESTINATION = 102  # walk after last transit stop
 
 
-class User(Agent, DriverInterface):
+class User(Agent, DriverInterface, TrackingInterface):
     user_id = 0
+    exposes = ["_position"]
 
     def __init__(
         self,
@@ -355,8 +356,6 @@ class User(Agent, DriverInterface):
 
         if filtered_list:
             distance, price, convenience, filtered_list = zip(*filtered_list)
-            # distance, price, *convenience,filtered_list = zip(*filtered_list)
-            # distance, price, *filtered_list = zip(*filtered_list)
             filtered_list = list(filtered_list)
 
         # Only Consider Alternatives matching Customer needs
@@ -603,6 +602,19 @@ class User(Agent, DriverInterface):
 
     def __str__(self):
         return f"User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"
+
+    def dump(self, exposed_only: bool = True) -> dict:
+        if exposed_only:
+            return {x: self.get(x) for x in self.exposes}
+        else:
+            dump_attr = [
+                "_transport_task",
+                "_vehicle_choice_behavior",
+                "_population_type",
+                "_position",
+                "_state",
+            ]
+            return {x: self.get(x) for x in dump_attr}
 
 
 class TransitUser(User, PassengerInterface, TrackingInterface):
@@ -917,8 +929,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def _demand_aligns(self, vehicle: Bus):
         if (
-            self.transport_task.origin.get_hexagon()[0]
-            == self.transport_task.destination.get_hexagon()[0]
+            self.transport_task.origin.get_hexagon(return_geom=False)
+            == self.transport_task.destination.get_hexagon(return_geom=False)[0]
         ):
             # we don't want to service demands that board and unboard at the same station, they can walk
             return False
@@ -1215,6 +1227,7 @@ class RideHailingUser(Agent, DriverInterface):
                 self._vehicle_allocated = self._env.event()
 
                 continue  # retry again until vehicle supply is depleted
+            # Vehicle is allocated
             # We do not yield the following process again
             self._env.process(self.wait_for_vehicle(vehicle_allocation))
             yield self._env.process(

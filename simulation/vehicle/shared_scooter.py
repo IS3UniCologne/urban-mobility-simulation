@@ -6,15 +6,16 @@ from simulation.vehicle.shared_vehicle import SharedVehicle
 class SharedScooter(SharedVehicle):
     # Shared Scooter Counter
     shared_scooter_id = 0
+    vehicle_type = "shared_scooter"
 
     def __init__(
         self,
         env: Environment,
         position,
+        velocity,
         max_available_seats=1,
         max_state_of_charge=4.8,
         energy_consumption=0.01,
-        velocity=500,
         price_per_min=0.23,
     ):
         """
@@ -29,10 +30,10 @@ class SharedScooter(SharedVehicle):
         super(SharedScooter, self).__init__(
             env,
             position,
+            velocity,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
-            velocity,
             price_per_min,
         )
 

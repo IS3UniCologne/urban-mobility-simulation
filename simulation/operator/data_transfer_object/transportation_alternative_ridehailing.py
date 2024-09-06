@@ -44,7 +44,7 @@ class TransportationAlternativeRideHailing:
             )
 
     def set_environment(self):
-        if self._vehicle.electric_vehicle:
+        if self._vehicle.is_electric:
             return 1
         else:
             return 0
@@ -139,3 +139,9 @@ class TransportationAlternativeRideHailing:
     def set_waiting_time(self, waiting_time):
         # energy_consumption: in kWh
         self._waiting_time += waiting_time
+
+    def __str__(self) -> str:
+        return f"Vehicle {self._vehicle}, Price {self._price}, Duration {self._duration}, Distance {self._distance}, Convenience {self._convenience}, Distance to pickup {self._distance_to_pickup}, Pick up time {self._pick_up_time}"
+
+    def __repr__(self) -> str:
+        return self.__str__()

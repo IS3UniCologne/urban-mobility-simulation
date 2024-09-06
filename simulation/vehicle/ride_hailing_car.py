@@ -24,17 +24,18 @@ from simulation.vehicle.vehicle import VehicleState
 class RideHailingCar(RideHailingVehicle):
     # Shared Care Counter
     ride_hailing_car_id = 0
+    vehicle_type = "ridehailing_car"  # TODO: make explicit that it's a human-driven car
 
     def __init__(
         self,
         env: Environment,
         position: GeodesicPosition,
+        velocity,
         max_available_seats=4,
         max_state_of_charge=16.7,
         energy_consumption=0.152,
-        velocity=833.33,
         price_per_min=0.26,
-        electric_vehicle=True,
+        is_electric=True,
     ):
         """
 
@@ -49,17 +50,16 @@ class RideHailingCar(RideHailingVehicle):
         super(RideHailingCar, self).__init__(
             env,
             position,
+            velocity,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
-            velocity,
             price_per_min,
-            electric_vehicle=electric_vehicle,
+            is_electric=is_electric,
         )
 
         # Increment Shared Car ID
         self.car_id = RideHailingCar.ride_hailing_car_id
-        self.electric_vehicle = electric_vehicle
         self._price_per_minute = price_per_min
         self._total_earn = 0
         self._shift_earn = 0

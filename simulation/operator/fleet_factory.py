@@ -6,7 +6,7 @@ from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
-from simulation.vehicle.autonomous_car import AutonomousCar
+from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 from simulation.vehicle.shared_bike import SharedBike
 from simulation.vehicle.shared_car import SharedCar
@@ -143,6 +143,55 @@ def generate_ridehailing_fleet_config(
     return fleet_config
 
 
+def generate_AV_fleet(env, distribution, n=500, seed=4711):
+    # Random Number Generator
+    random = np.random.RandomState(seed)
+    config = Configuration.instance()
+    av_config = config.get_ridehailing_vehicle_config("AutonomousCar")
+
+    # Sample Supply Distribution for Cars
+    prob_arr = distribution["cars_prob"].to_numpy()
+    car_cnt = pd.DataFrame(
+        random.multinomial(n, prob_arr, size=1).transpose(), columns=["car_count"]
+    )
+    car_cnt.index = distribution.index
+    distribution["AVs"] = car_cnt["car_count"]
+
+    hex_column = Configuration.instance().spatial_resolution_column
+
+    # Slice fleet config
+    fleet_config = distribution[[hex_column, "AVs"]]
+
+    # New Fleet Object
+    fleet = MixedRideHailingFleet(env)
+
+    # Access to underlying geodesic environment
+    geo_env = GeodesicEnvironment.getInstance()
+
+    for index, row in fleet_config.iterrows():
+        # We need to spawn vehicles in this hexagon
+        hex_id = row[hex_column]
+        count = row["AVs"]
+
+        # Add AVs
+        for current_AV in range(count):
+            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
+            autonomous_car = RideHailingAV(
+                env,
+                pos,
+                av_config.max_available_seats,
+                av_config.max_state_of_charge,
+                av_config.energy_consumption,
+                av_config.velocity,
+                av_config.price_per_min,
+            )
+            fleet.add_vehicle(autonomous_car)
+            autonomous_car._fleet = fleet
+
+    return fleet
+
+
 def generate_mixed_ride_hailing_fleet(env, fleet_config):
     """
     Generate a mixed shared vehicle fleet based on given fleet config.
@@ -182,14 +231,14 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             car = RideHailingCar(
                 env,
                 pos,
+                rh_config.velocity,
                 rh_config.max_available_seats,
                 rh_config.max_state_of_charge,
                 rh_config.energy_consumption,
-                rh_config.velocity,
                 rh_config.price_per_min,
             )
-            fleet.add_shared_vehicle(car)
-            car._fleet = fleet
+            fleet.add_vehicle(car)
+            car.fleet = fleet
 
         # Add Regular Ridehailing
         for current_car in range(car_count):
@@ -198,31 +247,31 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             car = RideHailingCar(
                 env,
                 pos,
+                rh_config.velocity,
                 rh_config.max_available_seats,
                 rh_config.max_state_of_charge,
                 rh_config.energy_consumption,
-                rh_config.velocity,
                 rh_config.price_per_min,
-                electric_vehicle=False,
+                is_electric=False,
             )
-            fleet.add_shared_vehicle(car)
-            car._fleet = fleet
+            fleet.add_vehicle(car)
+            car.fleet = fleet
 
         # Add AVs
         for current_AV in range(AVs_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            autonomous_car = AutonomousCar(
+            autonomous_car = RideHailingAV(
                 env,
                 pos,
+                a_config.velocity,
                 a_config.max_available_seats,
                 a_config.max_state_of_charge,
                 a_config.energy_consumption,
-                a_config.velocity,
                 a_config.price_per_min,
             )
-            fleet.add_shared_vehicle(autonomous_car)
-            autonomous_car._fleet = fleet
+            fleet.add_vehicle(autonomous_car)
+            autonomous_car.fleet = fleet
 
     return fleet
 
@@ -269,10 +318,10 @@ def generate_mixed_fleet(env, fleet_config):
             car = SharedCar(
                 env,
                 pos,
+                c_config.velocity,
                 c_config.max_available_seats,
                 c_config.max_state_of_charge,
                 c_config.energy_consumption,
-                c_config.velocity,
                 c_config.price_per_min,
             )
             fleet.add_shared_vehicle(car)
@@ -284,10 +333,10 @@ def generate_mixed_fleet(env, fleet_config):
             scooter = SharedScooter(
                 env,
                 pos,
+                s_config.velocity,
                 s_config.max_available_seats,
                 s_config.max_state_of_charge,
                 s_config.energy_consumption,
-                s_config.velocity,
                 s_config.price_per_min,
             )
             fleet.add_shared_vehicle(scooter)
@@ -299,10 +348,10 @@ def generate_mixed_fleet(env, fleet_config):
             kick_scooter = SharedKickScooter(
                 env,
                 pos,
+                ks_config.velocity,
                 ks_config.max_available_seats,
                 ks_config.max_state_of_charge,
                 ks_config.energy_consumption,
-                ks_config.velocity,
                 ks_config.price_per_min,
             )
             fleet.add_shared_vehicle(kick_scooter)
@@ -314,8 +363,9 @@ def generate_mixed_fleet(env, fleet_config):
             bike = SharedBike(
                 env,
                 pos,
-                b_config.max_available_seats,
                 b_config.velocity,
+                b_config.max_available_seats,
+                b_config.max_state_of_charge,
                 b_config.price_per_min,
             )
             fleet.add_shared_vehicle(bike)

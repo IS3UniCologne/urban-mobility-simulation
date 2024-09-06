@@ -64,6 +64,7 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
             selected_vehicle,
             selected_transportation_alternative,
             selected_vehicle.position,
+            None,
         )
 
     def notify_user_arrival_at_pick_up_position(
