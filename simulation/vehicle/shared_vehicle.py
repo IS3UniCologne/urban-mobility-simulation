@@ -25,10 +25,10 @@ class SharedVehicle(Vehicle, ABC):
         self,
         env: Environment,
         position,
+        velocity,
         max_available_seats=1,
         max_state_of_charge=1,
         energy_consumption=0.01,
-        velocity=166.7,
         price_per_min=1,
         driver: DriverInterface = None,
     ):
