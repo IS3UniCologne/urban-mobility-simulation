@@ -12,10 +12,10 @@ class SharedCar(SharedVehicle):
         self,
         env: Environment,
         position,
+        velocity,
         max_available_seats=4,
         max_state_of_charge=16.7,
         energy_consumption=0.152,
-        velocity=833.33,
         price_per_min=0.26,
     ):
         """
@@ -31,10 +31,10 @@ class SharedCar(SharedVehicle):
         super(SharedCar, self).__init__(
             env,
             position,
+            velocity,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
-            velocity,
             price_per_min,
         )
 
