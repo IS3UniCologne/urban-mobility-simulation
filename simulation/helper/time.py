@@ -68,7 +68,11 @@ class SimulationTimeConverter:
 
     @staticmethod
     def hours(time: float):
-        return int((time / 60) % 60)
+        return int((time / 60) % 24)
+
+    @staticmethod
+    def days(time: float):
+        return int(time / (24 * 60)) + 1
 
     @staticmethod
     def dayofweek(time: float):
@@ -95,6 +99,20 @@ class SimulationTimeConverter:
     @classmethod
     def as_time(cls, time: float):
         return datetime.time(cls.hours(time), cls.minutes(time), cls.seconds(time))
+
+    @classmethod
+    def as_datetime(cls, time: float):
+        # ATTENTION:
+        # 1. we use some month where the first day is a monday, this does not align with seasons or anything
+        # 2. simulation times of more than one month are not well defined
+        return datetime.datetime(
+            2024,
+            1,
+            cls.days(time),
+            cls.hours(time),
+            cls.minutes(time),
+            cls.seconds(time),
+        )
 
     @staticmethod
     def duration_between(
@@ -138,3 +156,9 @@ class SimulationTimeConverter:
         return (time % (24 * 60)) // (
             temporal_resolution * 60
         )  # Reduce to one day, then get day of week
+
+
+class SimulationVelocityConverter:
+    # Convert the velocity of kilometer/hour to simulation velocity of meter/minute
+    def convert_kmh(velocity: float):
+        return (velocity * 1000) / 60

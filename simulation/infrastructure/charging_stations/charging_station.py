@@ -2,8 +2,24 @@ import h3
 import simpy
 from shapely.geometry import shape
 
+from tracking.tracking_interface import TrackingInterface
 
-class ChargingStation:
+
+class ChargingStation(TrackingInterface):
+    __slots__ = (
+        "_env",
+        "_capacity",
+        "_polygon",
+        "_centre",
+        "_plugs",
+        "_id",
+        "_location",
+        "_power",
+        "_queue",
+    )
+
+    exposes = ["_location", "_plugs"]
+
     def __init__(
         self,
         id: int,
@@ -56,3 +72,9 @@ class ChargingStation:
     @property
     def polygon(self):
         return self._polygon
+
+    def dump(self, exposed_only: bool = True) -> dict:
+        if exposed_only:
+            return {x: self.get(x) for x in self.exposes}
+        else:
+            return {x: self.get(x) for x in self.__slots__}

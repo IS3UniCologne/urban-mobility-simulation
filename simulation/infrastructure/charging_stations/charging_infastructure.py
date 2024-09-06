@@ -1,4 +1,5 @@
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
+from tracking.tracking import Tracking
 
 
 class ChargingInfrastructure:
@@ -29,6 +30,7 @@ class ChargingInfrastructure:
             ChargingInfrastructure.__instance = self
             super(ChargingInfrastructure, self).__init__()
         self._env = env
+        self._tracking = Tracking.instance()
         self._location_list = location_list
         self._power_list = power_list
         self._capacity_list = capacity_list
@@ -45,6 +47,7 @@ class ChargingInfrastructure:
                 capacity=self._capacity_list[i],
             )
             self._charging_stations.append(charging_station)
+            self._tracking.register(charging_station)
 
     @property
     def charging_stations(self):

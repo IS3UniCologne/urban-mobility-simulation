@@ -12,10 +12,10 @@ class SharedKickScooter(SharedVehicle):
         self,
         env: Environment,
         position,
+        velocity,
         max_available_seats=1,
         max_state_of_charge=0.288,
         energy_consumption=0.0072,
-        velocity=333.33,
         price_per_min=0.19,
     ):
         """
@@ -31,10 +31,10 @@ class SharedKickScooter(SharedVehicle):
         super(SharedKickScooter, self).__init__(
             env,
             position,
+            velocity,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
-            velocity,
             price_per_min,
         )
 

@@ -186,7 +186,7 @@ def generate_AV_fleet(env, distribution, n=500, seed=4711):
                 av_config.velocity,
                 av_config.price_per_min,
             )
-            fleet.add_shared_vehicle(autonomous_car)
+            fleet.add_vehicle(autonomous_car)
             autonomous_car._fleet = fleet
 
     return fleet
@@ -231,14 +231,14 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             car = RideHailingCar(
                 env,
                 pos,
+                rh_config.velocity,
                 rh_config.max_available_seats,
                 rh_config.max_state_of_charge,
                 rh_config.energy_consumption,
-                rh_config.velocity,
                 rh_config.price_per_min,
             )
-            fleet.add_shared_vehicle(car)
-            car._fleet = fleet
+            fleet.add_vehicle(car)
+            car.fleet = fleet
 
         # Add Regular Ridehailing
         for current_car in range(car_count):
@@ -247,15 +247,15 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             car = RideHailingCar(
                 env,
                 pos,
+                rh_config.velocity,
                 rh_config.max_available_seats,
                 rh_config.max_state_of_charge,
                 rh_config.energy_consumption,
-                rh_config.velocity,
                 rh_config.price_per_min,
                 is_electric=False,
             )
-            fleet.add_shared_vehicle(car)
-            car._fleet = fleet
+            fleet.add_vehicle(car)
+            car.fleet = fleet
 
         # Add AVs
         for current_AV in range(AVs_count):
@@ -264,14 +264,14 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             autonomous_car = RideHailingAV(
                 env,
                 pos,
+                a_config.velocity,
                 a_config.max_available_seats,
                 a_config.max_state_of_charge,
                 a_config.energy_consumption,
-                a_config.velocity,
                 a_config.price_per_min,
             )
-            fleet.add_shared_vehicle(autonomous_car)
-            autonomous_car._fleet = fleet
+            fleet.add_vehicle(autonomous_car)
+            autonomous_car.fleet = fleet
 
     return fleet
 
@@ -318,10 +318,10 @@ def generate_mixed_fleet(env, fleet_config):
             car = SharedCar(
                 env,
                 pos,
+                c_config.velocity,
                 c_config.max_available_seats,
                 c_config.max_state_of_charge,
                 c_config.energy_consumption,
-                c_config.velocity,
                 c_config.price_per_min,
             )
             fleet.add_shared_vehicle(car)
@@ -333,10 +333,10 @@ def generate_mixed_fleet(env, fleet_config):
             scooter = SharedScooter(
                 env,
                 pos,
+                s_config.velocity,
                 s_config.max_available_seats,
                 s_config.max_state_of_charge,
                 s_config.energy_consumption,
-                s_config.velocity,
                 s_config.price_per_min,
             )
             fleet.add_shared_vehicle(scooter)
@@ -348,10 +348,10 @@ def generate_mixed_fleet(env, fleet_config):
             kick_scooter = SharedKickScooter(
                 env,
                 pos,
+                ks_config.velocity,
                 ks_config.max_available_seats,
                 ks_config.max_state_of_charge,
                 ks_config.energy_consumption,
-                ks_config.velocity,
                 ks_config.price_per_min,
             )
             fleet.add_shared_vehicle(kick_scooter)
@@ -363,9 +363,9 @@ def generate_mixed_fleet(env, fleet_config):
             bike = SharedBike(
                 env,
                 pos,
+                b_config.velocity,
                 b_config.max_available_seats,
                 b_config.max_state_of_charge,
-                b_config.velocity,
                 b_config.price_per_min,
             )
             fleet.add_shared_vehicle(bike)
