@@ -676,10 +676,10 @@ def run_single_simulation(
 
     # Daily Total Cost (CAPEX+OPEX) (cost derived from RevCalc excel in iCloud folder)
     no_vehicles_to_be_charged = {
-        "ride_hailing_0": ride_hailing_fleet_0.get_all_vehicles_below_soc_level(
+        "ride_hailing_0": ride_hailing_fleet_0.count_vehicles_below_soc_level(
             global_config.ridehailing_operator_config.recharge_threshold
         ),
-        "ride_hailing_1": ride_hailing_fleet_1.get_all_vehicles_below_soc_level(
+        "ride_hailing_1": ride_hailing_fleet_1.count_vehicles_below_soc_level(
             global_config.ridehailing_operator_config.recharge_threshold
         ),
     }

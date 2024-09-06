@@ -44,8 +44,8 @@ class PublicTransitVehicle(Vehicle, ABC):
         env: Environment,
         route: PublicTransitRoute,
         position,
+        velocity,
         max_available_seats=100,
-        velocity=833.5,
     ):
         super(PublicTransitVehicle, self).__init__(env, position)
 

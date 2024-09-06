@@ -6,6 +6,7 @@ import numpy as np
 
 # from keras.callbacks import TensorBoard
 from learning.spaces.action_space import DiscreteActionSpace
+from simulation.helper.time import SimulationVelocityConverter
 
 
 class TemporalBucket(Enum):
@@ -521,7 +522,7 @@ class SharedVehicleConfig:
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
         self.energy_consumption = energy_consumption
-        self.velocity = velocity
+        self.velocity = SimulationVelocityConverter.convert_kmh(velocity)
         self.max_available_seats = max_available_seats
         # TODO: move max_walking_distance to UserConfig?
         self.max_walking_distance = max_walking_distance
@@ -550,7 +551,7 @@ class RideHailingVehicleConfig:
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
         self.energy_consumption = energy_consumption
-        self.velocity = velocity
+        self.velocity = SimulationVelocityConverter.convert_kmh(velocity)
         self.max_available_seats = max_available_seats
         self.initial_SoC = initial_SoC
         self.charging_cost_per_kWh = charging_cost_per_kWh
@@ -600,7 +601,9 @@ class RideHailingOperatorConfig:
         self.recharge_threshold = recharge_threshold
         self.operations_start = operations_start
         self.operations_duration = operations_duration
-        self.vehicle_relocation_velocity = vehicle_relocation_velocity
+        self.vehicle_relocation_velocity = (
+            SimulationVelocityConverter.convert_kmh(vehicle_relocation_velocity),
+        )
         self.available_modes = available_modes
         self.available_modes_supply = available_modes_supply
         self.n_autonomous_cars = n_autonomous_cars
@@ -633,7 +636,9 @@ class SharedVehicleOperatorConfig:
         self.base_capacity = base_capacity
         self.operations_start = operations_start
         self.operations_duration = operations_duration
-        self.vehicle_relocation_velocity = vehicle_relocation_velocity
+        self.vehicle_relocation_velocity = SimulationVelocityConverter.convert_kmh(
+            vehicle_relocation_velocity
+        )
         self.available_modes = available_modes
         self.available_modes_supply = available_modes_supply
         self.n_cars = n_cars
@@ -656,9 +661,12 @@ class AuctionConfig:
 
 
 class SharedChargingConfig:
-    def __init__(self, auction_interval: int, timeslot_duration: int):
+    def __init__(
+        self, auction_interval: int, timeslot_duration: int, auction_lookahead: int
+    ):
         self.auction_interval = auction_interval
         self.timeslot_duration = timeslot_duration
+        self.auction_lookahead = auction_lookahead
 
 
 class TransitOperatorConfig:
@@ -669,7 +677,7 @@ class TransitOperatorConfig:
 
 class BusConfig:
     def __init__(self, velocity: float, max_available_seats: int):
-        self.velocity = velocity
+        self.velocity = SimulationVelocityConverter.convert_kmh(velocity)
         self.max_available_seats = max_available_seats
 
 
