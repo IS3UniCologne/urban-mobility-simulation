@@ -142,7 +142,7 @@ base_regions = base_regions.split(",")
 base_capacity = parser.getint("SHARED_VEHICLE_OPERATOR", "BASE_CAPACITY")
 operations_start = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("SHARED_VEHICLE_OPERATOR", "OPERATIONS_DURATION")
-vehicle_relocation_velocity = parser.getint(
+vehicle_relocation_velocity = parser.getfloat(
     "SHARED_VEHICLE_OPERATOR", "VEHICLE_RELOCATION_VELOCITY"
 )
 
