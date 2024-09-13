@@ -2,6 +2,7 @@ import h3
 import simpy
 from shapely.geometry import shape
 
+from simulation.environment.geodesic_position import GeodesicPosition
 from tracking.tracking_interface import TrackingInterface
 
 
@@ -37,7 +38,9 @@ class ChargingStation(TrackingInterface):
                 "properties": "",
             }
         )
-        self._centre = [self._polygon.centroid.y, self._polygon.centroid.x]
+        self._centre = GeodesicPosition(
+            self._polygon.centroid.y, self._polygon.centroid.x
+        )
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
         self._id = id
         self._location = location

@@ -7,7 +7,7 @@ from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
-from simulation.operator.operations_management.distance_based_bidding_strategy import (
+from simulation.operator.operations_management.algorithms.distance_based_bidding_strategy import (
     get_bid,
 )
 from simulation.operator.operations_management.operations import OperationsInterface
