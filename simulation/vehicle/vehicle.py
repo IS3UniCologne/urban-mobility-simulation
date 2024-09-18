@@ -46,6 +46,9 @@ class Vehicle(TrackingInterface, ABC):
         # Initial State
         self._state = VehicleState.INITIALIZED
 
+        # Store current task (if any)
+        self._current_task = None
+
     # Properties
     @property
     def id(self):
@@ -62,6 +65,10 @@ class Vehicle(TrackingInterface, ABC):
     @property
     def position(self) -> Position:
         return self._position
+
+    @property
+    def current_task(self):
+        return self._current_task
 
     @position.setter
     def position(self, position: Position):
@@ -87,6 +94,11 @@ class Vehicle(TrackingInterface, ABC):
     @abstractmethod
     def move(self, route_segment: Edge):
         pass
+
+    # As of now, this is only used with TransportTask
+    # TODO: As part of the vehicle interface refactoring, this should be used to have transparency about a vehicles current task at all time
+    def set_current_task(self, task):
+        self._current_task = task
 
     @abstractmethod
     def __str__(self):

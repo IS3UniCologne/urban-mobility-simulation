@@ -284,6 +284,7 @@ class RideHailingVehicle(Vehicle):
 
     def stop_driving(self):
         self.state = VehicleState.PARKING
+        self.set_current_task(None)
 
         logging.debug(
             "Driving stopped.",
