@@ -1354,7 +1354,7 @@ class RideHailingUser(Agent, DriverInterface):
             [
                 1,
                 alternative.price,
-                alternative.waiting_time,
+                alternative.pick_up_time,
                 alternative.electric_vehicle,
                 alternative.duration,
                 alternative.autonomous_vehicle,
@@ -1494,6 +1494,8 @@ class RideHailingUser(Agent, DriverInterface):
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
+            # notify vehicle of its current task
+            vehicle_allocation.vehicle.set_current_task(self._transport_task)
             # Return vehicle allocation
             return vehicle_allocation
         else:
