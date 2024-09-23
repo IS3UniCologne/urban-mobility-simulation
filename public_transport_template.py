@@ -133,9 +133,7 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
-demand_modifier_paths = (
-    parser.get("DEMAND", "path_demand_modifiers").format(city=city).split(",")
-)
+demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
 
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
@@ -474,8 +472,8 @@ def run_simulation(end_time, seed=4711, env=env):
     transactions.to_csv("data/output/transactions.csv", index=False)
 
 
-sum_iterations = 2
-for i in range(sum_iterations):
+sum_iterations = 1 # throws Exception if value > 1: ValueError until (1440) must be greater than the current simulation time
+for i in range(sum_iterations): 
     env = simpy.Environment(initial_time=start_time)
 
     run_simulation(end_time=end_time)
