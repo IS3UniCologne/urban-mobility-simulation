@@ -731,7 +731,7 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             n_autonomous_cars,
             number_of_charging_locations,
             separate_charging_capacity_list[0],
-            charging_station_power[0],
+            charging_station_power_list[0],
             seed,
             service_rate_fleet_0,
             service_rate_fleet_1,
