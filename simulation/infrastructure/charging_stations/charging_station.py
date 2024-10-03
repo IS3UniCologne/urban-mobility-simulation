@@ -10,6 +10,7 @@ class ChargingStation(TrackingInterface):
     __slots__ = (
         "_env",
         "_capacity",
+        "_queue_size",
         "_polygon",
         "_centre",
         "_plugs",
@@ -28,6 +29,7 @@ class ChargingStation(TrackingInterface):
         location: str,
         power: float,
         capacity: int,
+        queue_size: int,
     ):
         self._env = env
         self._capacity = int(capacity)
@@ -46,6 +48,7 @@ class ChargingStation(TrackingInterface):
         self._location = location
         self._power = float(power)  # kwh/hr
         self._queue = []
+        self._queue_size = queue_size
         # self.position = self.location.find_zone(zones)
 
     @property
@@ -75,6 +78,10 @@ class ChargingStation(TrackingInterface):
     @property
     def polygon(self):
         return self._polygon
+
+    @property
+    def queue_size(self):
+        return self._queue_size
 
     def dump(self, exposed_only: bool = True) -> dict:
         if exposed_only:
