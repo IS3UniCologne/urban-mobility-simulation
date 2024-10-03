@@ -160,6 +160,24 @@ class ChargingTaskRidehailing(ServiceTask):
                         self._task_finished.succeed()
                         return
 
+                elif (
+                    len(self._charging_station.plugs.users)
+                    - self._charging_station.capacity
+                    == 0
+                    and self._charging_station.queue_size
+                    <= len(self._charging_station.plugs.queue)
+                ):
+                    # charging station is at capacity and the queue is also full
+                    logging.info(
+                        "Vehicle %s arrived charging station, but the queue is full. Cannot charge!",
+                        vehicle.id,
+                        extra={"clazz": self.__class__.__name__, "oid": vehicle.id},
+                    )
+                    self._state = TaskState.MISSED_QUEUE_FULL
+                    vehicle.state = VehicleState.PARKING
+                    self._task_finished.succeed()
+                    return
+
                 with self._charging_station.plugs.request() as req:
                     yield req
 
