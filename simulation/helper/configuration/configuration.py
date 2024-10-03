@@ -648,10 +648,17 @@ class SharedVehicleOperatorConfig:
 
 
 class ChargingInfrastructureConfig:
-    def __init__(self, locations: List, power: List, capacity: List):
+    def __init__(
+        self,
+        locations: List[str],
+        power: List[float],
+        capacity: List[int],
+        queue_size: List[int],
+    ):
         self.locations = locations
         self.power = power
         self.capacity = capacity
+        self.queue_size = queue_size
 
 
 class AuctionConfig:
