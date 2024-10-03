@@ -1,3 +1,5 @@
+from typing import List
+
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from tracking.tracking import Tracking
 
@@ -14,14 +16,29 @@ class ChargingInfrastructure:
             return ChargingInfrastructure.__instance
 
     @staticmethod
-    def init(env, location_list, power_list, capacity_list, reset=False):
+    def init(
+        env,
+        location_list: List[str],
+        power_list: List[float],
+        capacity_list: List[int],
+        queue_size: List[int],
+        reset=False,
+    ):
         """Static access method."""
         if ChargingInfrastructure.__instance is None or reset is True:
-            ChargingInfrastructure(env, location_list, power_list, capacity_list, reset)
+            ChargingInfrastructure(
+                env, location_list, power_list, capacity_list, queue_size, reset
+            )
         return ChargingInfrastructure.__instance
 
     def __init__(
-        self, env, location_list, power_list, capacity_list, reset: bool = False
+        self,
+        env,
+        location_list: List[str],
+        power_list: List[float],
+        capacity_list: List[int],
+        queue_size: List[int],
+        reset: bool = False,
     ):
         """Virtually private constructor."""
         if ChargingInfrastructure.__instance is not None and not reset:
@@ -34,6 +51,7 @@ class ChargingInfrastructure:
         self._location_list = location_list
         self._power_list = power_list
         self._capacity_list = capacity_list
+        self._queue_size = queue_size
         self._charging_stations = []  # a list of charger objects
         self._initialise_charging_stations()
 
@@ -45,6 +63,7 @@ class ChargingInfrastructure:
                 location=location,
                 power=self._power_list[i],
                 capacity=self._capacity_list[i],
+                queue_size=self._queue_size[i],
             )
             self._charging_stations.append(charging_station)
             self._tracking.register(charging_station)
