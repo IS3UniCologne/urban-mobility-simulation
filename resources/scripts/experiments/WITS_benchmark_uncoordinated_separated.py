@@ -43,8 +43,11 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 
 # Import operator related modules
 from simulation.operator.fleet_factory import generate_AV_fleet
-from simulation.operator.operations_management.ridehailing_charging_operations import (
-    RideHailingChargingOperations,
+from simulation.operator.operations_management.algorithms.charging_station_allocation import (
+    TimeMin,
+)
+from simulation.operator.operations_management.ridehailing_MP_charging_operations import (
+    RideHailingMPChargingOperations,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
@@ -86,6 +89,7 @@ file_log_level = parser.get("SETTINGS", "file_log_level")
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
+logging.getLogger("docplex.util.environment.logger").setLevel(logging.WARNING)
 
 logger = logging.getLogger()
 
@@ -374,7 +378,7 @@ sic = ChargingInfrastructureConfig(
 global_config.add_charging_infrastructure_config(sic)
 
 # for this scenario, we assume same locations, but split up capacity
-separate_charging_capacity_list = [c / 2 for c in charging_station_capacity]
+separate_charging_capacity_list = [c / 2 for c in charging_station_capacity_list]
 
 charging_infrastructure_0 = ChargingInfrastructure(
     env,
@@ -556,27 +560,31 @@ env.process(track_fleets(ride_hailing_fleet_1.id))
 search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
 search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
+time_minimizing_charging_allocation = TimeMin()
+
 # Initialize fleet operations
-ridehailing_operations_0 = RideHailingChargingOperations(
+ridehailing_operations_0 = RideHailingMPChargingOperations(
     env=env,
-    distance_matrix=distance_matrix,
+    #    distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
-    operation_duration=global_config.ridehailing_operator_config.operations_duration,
-    available_modes=available_vehicle_modes_ridehailing,
-    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
+    #    operation_duration=global_config.ridehailing_operator_config.operations_duration,
+    #    available_modes=available_vehicle_modes_ridehailing,
+    #    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    allow_queue=False,
+    #    allow_queue=False,
+    algo=time_minimizing_charging_allocation,
 )
 
-ridehailing_operations_1 = RideHailingChargingOperations(
+ridehailing_operations_1 = RideHailingMPChargingOperations(
     env=env,
-    distance_matrix=distance_matrix,
+    #    distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
-    operation_duration=global_config.ridehailing_operator_config.operations_duration,
-    available_modes=available_vehicle_modes_ridehailing,
-    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
+    #    operation_duration=global_config.ridehailing_operator_config.operations_duration,
+    #    available_modes=available_vehicle_modes_ridehailing,
+    #    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    allow_queue=False,
+    #    allow_queue=False,
+    algo=time_minimizing_charging_allocation,
 )
 
 
