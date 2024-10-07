@@ -597,6 +597,7 @@ class RideHailingOperatorConfig:
         n_autonomous_cars,
         n_ridehailing_cars,
         allocation,
+        allocation_penalty=None,
     ):
         self.recharge_threshold = recharge_threshold
         self.operations_start = operations_start
@@ -609,6 +610,7 @@ class RideHailingOperatorConfig:
         self.n_autonomous_cars = n_autonomous_cars
         self.n_ridehailing_cars = n_ridehailing_cars
         self.allocation = allocation
+        self.allocation_penalty = allocation_penalty
 
 
 class SharedVehicleOperatorConfig:

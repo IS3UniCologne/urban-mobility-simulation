@@ -242,6 +242,9 @@ recharge_threshold = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").s
 )
 recharge_threshold = [float(x) / 100 for x in recharge_threshold]
 
+# charging allocation optimization low soc penalty
+allocation_penalty = parser.getint("RIDE_HAILING_OPERATOR", "LOW_SOC_PENALTY")
+
 operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
 vehicle_relocation_velocity = parser.getfloat(
@@ -262,6 +265,7 @@ rhoc = RideHailingOperatorConfig(
     n_autonomous_cars=n_autonomous_cars,
     n_ridehailing_cars=0,
     allocation=allocation,
+    allocation_penalty=allocation_penalty,
 )
 
 global_config.add_ridehailing_operator_config(rhoc)
@@ -745,6 +749,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util_0,
             avg_infra_util_1,
-            "random_SOC_init" if initial_SoC == 0 else None,
+            f'{"random_SOC_init" if initial_SoC == 0 else ""}, allocation_penalty: {allocation_penalty}',
         ]
     )
