@@ -70,6 +70,9 @@ class TimeMin:
                 self._av_config.energy_consumption
             )  # charging consumption per distance in kWh/km
             beta = self._av_config.max_state_of_charge  # max state of charge in kWh
+            rho = (
+                self._config.ridehailing_operator_config.allocation_penalty
+            )  # penalty for not allocating vehicles to CSs, scaled by 1 - SOC
 
             # x : main allocation variable; x_ij: if CS i is assigned to vehicle j
             x = mdl.binary_var_matrix(CSs_range, vehicle_range, name="x")
@@ -125,17 +128,17 @@ class TimeMin:
 
             # minimizing sum of (driving_time + queue_time + charging_time) for all vehicles + a high penalty to missed demands
             # you can move the penalty term to a constraint, but it gets infeasible if supply>demand
+            # we enforce priority of low SOC vehicles by scaling the penalty
             mdl.minimize(
                 mdl.sum(
                     T_d[i.id, j.id] + T_c[i.id, j.id] for i in CSs for j in vehicles
                 )
                 # + mdl.sum(T_q[i.id] for i in CSs)
-                + mdl.sum((1 - mdl.sum(x[i.id, j.id] for i in CSs)) for j in vehicles)
-                * 100000
+                + mdl.sum(
+                    (1 - mdl.sum(x[i.id, j.id] for i in CSs)) * ((1 - SoC[j.id]) * rho)
+                    for j in vehicles
+                )
             )
-
-            # TODO: use penalty to enfore priority?
-            # multiply with 1 - SOC[j.id] to enforce priority
 
             mdl.solve()
             # mdl.report()
@@ -145,7 +148,7 @@ class TimeMin:
                     if x[i.id, j.id].solution_value != 0:
                         pairs.append(dict(vehicle=j, charging_station=i))
             logging.info(
-                f"Number of vehicles = {len(vehicles)}, Number of pairs = {len(pairs)}",
+                f"Number of vehicles with low SOC = {len(vehicles)}, Number of allocations = {len(pairs)}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             T_d_sum = mdl.sum(
@@ -156,8 +159,12 @@ class TimeMin:
             ).solution_value
             # T_q_sum = mdl.sum(T_q[i.id] for i in CSs).solution_value
             # logging.info(f"T_d = {T_d_sum}, T_c = {T_c_sum}, T_q = {T_q_sum}")
-            logging.info(
+            logging.debug(
                 f"T_d = {T_d_sum}, T_c = {T_c_sum}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
+            logging.debug(
+                f"Penalty for not charging vehicles = {mdl.sum((1 - mdl.sum(x[i.id, j.id] for i in CSs)) * ((1 - SoC[j.id]) * rho) for j in vehicles).solution_value}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
         """except:
