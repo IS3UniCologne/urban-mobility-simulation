@@ -161,7 +161,7 @@ class SharedVehicle(Vehicle, ABC):
 
     def stop_driving(self):
         self.state = SharedVehicleState.PARKING
-
+        self.set_current_task(None)
         logging.debug(
             "Driving stopped.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
