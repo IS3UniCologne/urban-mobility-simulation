@@ -66,7 +66,11 @@ class RideHailingSearchEngine(SearchEngineInterface):
         # if vehicle_search_task.transport_task.viable_vehicle_modes['RideHailingCar'] == 1:
         for car in CVs_in_area:
             # Calc waiting time
-            route_to_pick_up = Route(car.position, origin)
+            if car.state == VehicleState.PARKING:
+                route_to_pick_up = Route(car.position, origin)
+            else:
+                route_to_pick_up = Route(car.current_task.destination, origin)
+
             distance_to_pick_up = route_to_pick_up.distance
 
             # Calc Duration
@@ -95,7 +99,11 @@ class RideHailingSearchEngine(SearchEngineInterface):
         # if vehicle_search_task.transport_task.viable_vehicle_modes['AutonomousCar'] == 1:
         for car in AVs_in_area:
             # Calc waiting time
-            route_to_pick_up = Route(car.position, origin)
+            if car.state == VehicleState.PARKING:
+                route_to_pick_up = Route(car.position, origin)
+            else:
+                route_to_pick_up = Route(car.current_task.destination, origin)
+
             distance_to_pick_up = route_to_pick_up.distance
 
             # Calc Duration
