@@ -32,6 +32,7 @@ class ChargingTaskRidehailing(ServiceTask):
         "_waiting_time",
         "_charging_duration",
         "_kWh_charged",
+        "_distance",
         "_scheduled_time",
         "_config",
     )
@@ -65,6 +66,7 @@ class ChargingTaskRidehailing(ServiceTask):
         self._waiting_time = None
         self._charging_duration = None
         self._kWh_charged = None
+        self._distance = None
         self._config = Configuration.instance()
 
     @property
@@ -111,14 +113,14 @@ class ChargingTaskRidehailing(ServiceTask):
         # Start Charging Process
         for vehicle in selected_vehicles_to_charge:
             # Relocation Route from origin of vehicle to fleet base
-            distance = vehicle.position >> fleet_base_position
+            self._distance = vehicle.position >> fleet_base_position
             relocation_route = Edge(
-                distance, Vertex(vehicle.position), Vertex(fleet_base_position)
+                self._distance, Vertex(vehicle.position), Vertex(fleet_base_position)
             )
 
             vehicle_relocation_velocity = Configuration.instance().ridehailing_operator_config.vehicle_relocation_velocity
             relocation_duration_per_vehicle = (
-                distance / vehicle_relocation_velocity
+                self._distance / vehicle_relocation_velocity
             ) / len(selected_vehicles_to_charge)
 
             self._state = TaskState.EXECUTING_RELOCATION
@@ -226,7 +228,7 @@ class ChargingTaskRidehailing(ServiceTask):
         self._task_finished.succeed()
 
     def __str__(self):
-        return f"Charging Task for {self._number_of_vehicles_to_charge} from {self._origin} to {self._destination} (distance = {self._distance_to_fleet_base})"
+        return f"Charging Task for Vehicle {self._vehicle.id} from {self._origin} to {self._destination} (distance = {self._distance})"
 
     def __repr__(self):
         return self.__str__()

@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List
 
+import numpy as np
 from docplex.mp.model import Model
 
 from simulation.helper.configuration.configuration import Configuration
@@ -20,7 +21,7 @@ class TimeMin:
         self, vehicles, CSs
     ) -> List[Dict[RideHailingVehicle, ChargingStation]]:
         """
-            This is a function of allocating charging vehicles to stations
+        This is a function of allocating charging vehicles to stations, using minimum downtime
         :param vehicles: a list of vehicle objects that need to charge
         :param CSs: a list of charging stations
         :return: pair of matched CSs and vehicles
@@ -95,7 +96,6 @@ class TimeMin:
             T_d = {}  # driving time in min
             T_c = {}  # charging time in min
 
-            # TODO: remove queue time completely from this problem by not having a queue for AAMAS
             # TODO: for later versions we should use remaining charging times and charging demands of the current queue, for this we need to have a way to know the charging vehicles' estimated completion time, probably clever to do this in a service task and have the current executing task associated with every vehicle
             # vehicle.current_task.completion_time
             # for currently queueing vehicles,
@@ -114,9 +114,14 @@ class TimeMin:
                     T_d[i.id, j.id] = (
                         d[i.id, j.id] / self._av_config.velocity * x[i.id, j.id]
                     )
+                    # for charging time we need to connsider the amount of SOC depleted while going to a station
                     T_c[i.id, j.id] = (
-                        (1 - SoC[j.id])
-                        * self._av_config.max_state_of_charge
+                        (
+                            1
+                            - SoC[j.id]
+                            + (x[i.id, j.id] * d[i.id, j.id] / 1000 * alpha / beta)
+                        )
+                        * beta
                         / S[i.id]
                         * 60
                         * x[i.id, j.id]
@@ -128,20 +133,22 @@ class TimeMin:
 
             # minimizing sum of (driving_time + queue_time + charging_time) for all vehicles + a high penalty to missed demands
             # you can move the penalty term to a constraint, but it gets infeasible if supply>demand
-            # we enforce priority of low SOC vehicles by scaling the penalty
+            # we enforce priority of low SOC vehicles by scaling a penalty of cumulated distance sum
+
             mdl.minimize(
                 mdl.sum(
                     T_d[i.id, j.id] + T_c[i.id, j.id] for i in CSs for j in vehicles
                 )
-                # + mdl.sum(T_q[i.id] for i in CSs)
                 + mdl.sum(
-                    (1 - mdl.sum(x[i.id, j.id] for i in CSs)) * ((1 - SoC[j.id]) * rho)
+                    mdl.sum(d[i.id, j.id] for i in CSs)
+                    * np.exp(1 - SoC[j.id])
+                    * (1 - mdl.sum(x[i.id, j.id] for i in CSs))
                     for j in vehicles
                 )
             )
 
             mdl.solve()
-            # mdl.report()
+
             pairs = []
             for i in CSs:
                 for j in vehicles:
@@ -157,28 +164,15 @@ class TimeMin:
             T_c_sum = mdl.sum(
                 T_c[i.id, j.id] for i in CSs for j in vehicles
             ).solution_value
-            # T_q_sum = mdl.sum(T_q[i.id] for i in CSs).solution_value
-            # logging.info(f"T_d = {T_d_sum}, T_c = {T_c_sum}, T_q = {T_q_sum}")
+
             logging.debug(
                 f"T_d = {T_d_sum}, T_c = {T_c_sum}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             logging.debug(
-                f"Penalty for not charging vehicles = {mdl.sum((1 - mdl.sum(x[i.id, j.id] for i in CSs)) * ((1 - SoC[j.id]) * rho) for j in vehicles).solution_value}",
+                f"Penalty for not charging vehicles = {mdl.sum( mdl.sum(d[i.id, j.id] for i in CSs) * (1 - SoC[j.id]) * (1 - mdl.sum(x[i.id, j.id] for i in CSs)) for j in vehicles )}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
-        """except:
-            lg.info('Central charging fails')
-            pairs = []
-            for vehicle in vehicles:
-                charging_station = closest_facility(CSs, vehicle)
-                pairs.append(dict(vehicle=vehicle, charging_station=charging_station))
-            lg.info(f'Number of vehicles = {len(vehicles)}, Number of pairs = {len(pairs)}')
-        q = []
-        for i in CSs:
-            q.append(len(i.plugs.queue) + i.plugs.count)
-        q = np.array(q)
-        lg.info(f'queue = {q}')"""
         return pairs
 
 
