@@ -1,16 +1,12 @@
-# Make the buss drive according to the timetable
-
 import logging
 
 import pandas as pd
 import simpy
-from simpy import Environment
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
-from simulation.infrastructure.helper.timetable import Timetable
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
 from simulation.infrastructure.transit_network.stop import Stop
@@ -25,73 +21,64 @@ walking_speed_in_mpm = 5
 grace_period = 10  # in minutes?
 
 
-class BusOperations(OperationsInterface):
-    def __init__(self, env: Environment, timetable: Timetable):
-        self.env = env
+class OperationsPublicTransport(OperationsInterface):
+    def __init__(self, env, timetable):
+        super(OperationsPublicTransport, self).__init__(env=env)
+        self._env = env
         self._timetable = timetable
         self._busses = []
         self._time = SimulationTime(env)
-        self._operator_config = self._config.transit_operator_config
-
         # Config
         self._config = Configuration.instance()
-
+        self._operator_config = self._config.transit_operator_config
         # Environment
         self._geodesic_env = GeodesicEnvironment.getInstance()
         self._world = (
             None  # defer loading to run process, otherwise circular dependency
         )
+        # Tracking
+        self._tracking = (
+            None  # defer loading to run process, otherwise circular dependency
+        )
 
-    # Idea: Add busses to a sort of fleet like the ridehailing and shared mobility fleet
-    # Check the distance each user has to any bus station that is in the same hexagon with any station
-
-    # Run
-    def run_operations(self):
+    def execute(self):
+        """
+        TransitOperator Lifecycle
+        """
         self._world = World.instance()
         self._tracking = Tracking.instance()
 
         while True:
             try:
-                # Check number of busses do not exceed max no of busses
+                logging.debug(
+                    f"TransitOperator is at time {self._time.now_as_str()}",
+                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                )
+
                 if len(self._busses) < self._operator_config.max_busses:
                     trips = self._timetable.next_trips(
                         self._time, self._operator_config.planning_lookahead
                     )
-                    if trips:
-                        # Iterate over the tripIDs from upcoming trips that do not have a corresponding bus already spawned
+
+                    if trips:  # non-empty list is True
+                        # spawn busses only for trips that are not yet spawned
+                        # TODO: can there be a case of overlapping trips with the same trip id? i.e. extreme delay?
                         for trip_id in (
                             t
                             for t in trips
                             if t not in [b.route.trip_id for b in self._busses]
                         ):
-                            # How to make sure we do not spawn a new bus when the old instance of the same tripID has a delay and is still driving?
-                            # Just an idea as a sanity check:
+                            trip = self._timetable.trip_by_id(trip_id)
+                            route = self._build_route(trip)
+                            bus = self._spawn_bus(route)
 
-                            active_trip_ids = {b.route.trip_id for b in self._busses}
-                            for trip in trips:
-                                trip_id = trip.id
-                                trip_start_time = trip.start_time
+                            # also spawn a cleanup process that waits for completion of trip
+                            self._env.process(self._clean_up_bus(bus))
 
-                                # Check if a trip with the same ID and similar start time is already in progress
-                                # TODO: Add grace period to as a buffer to config? We spawn a new bus only if the buffer is exceeded
-                                if trip_id not in active_trip_ids or (
-                                    trip_start_time - self._time > grace_period
-                                ):
-                                    trip = self._timetable.trip_by_id(trip_id)
+                            if len(self._busses) >= self._operator_config.max_busses:
+                                break
 
-                                    route = self._build_route(trip)
-
-                                    bus = self._spawn_bus(route)
-
-                                    # also spawn a cleanup process that waits for completion of trip
-                                    self._env.process(self._clean_up_bus(bus))
-
-                                # Reached the max no of busses allowed
-                                if (
-                                    len(self._busses)
-                                    >= self._operator_config.max_busses
-                                ):
-                                    break
+                yield self._env.timeout(1)
             except simpy.Interrupt:
                 # quit this process
                 break
@@ -100,7 +87,9 @@ class BusOperations(OperationsInterface):
     def _spawn_bus(self, route: PublicTransitRoute):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
 
-        bus = Bus(env=self._env, route=route, position=init_position)
+        bus = Bus(
+            env=self._env, route=route, position=init_position, use_learning_agent=False
+        )
 
         self._busses.append(bus)
         self._world.add_vehicle(bus)

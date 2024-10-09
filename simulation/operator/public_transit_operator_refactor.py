@@ -10,13 +10,13 @@ from simulation.infrastructure.helper import timetable
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
+from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operator import Operator
-
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transport_task import TransportTask
 
@@ -39,8 +39,10 @@ class PublicTransitOperator(Operator):
             search_engine,
             allocation_engine,
         )
+        PaymentInterface.__init__(self)
         self._timetable = timetable
         self._env = env
+        self._fleet = fleet
         self._time = SimulationTime(env)
         self._busses = []
 
@@ -59,7 +61,6 @@ class PublicTransitOperator(Operator):
         # Check that all variables do really exist for the bus
         self._transactions.append(
             {
-                "vehicle_id": selected_transportation_alternative.vehicle.id,
                 "origin": selected_transportation_alternative.route.origin.get_hexagon()[
                     0
                 ],
@@ -71,13 +72,7 @@ class PublicTransitOperator(Operator):
                 "price": selected_transportation_alternative.price,
                 "distance": selected_transportation_alternative.distance,
                 "duration": selected_transportation_alternative.duration,
-                "wait_time": transportation_task.actual_wait_time,
-                "waiting_time": selected_transportation_alternative.waiting_time,
-                "pick_up_time": selected_transportation_alternative.pick_up_time,
-                "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__
-                + "_"
-                + str(selected_transportation_alternative.vehicle.is_electric),
-                "selected_vehicle_EV": selected_transportation_alternative.vehicle.is_electric,
+                "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__,
                 "state": "Fulfilled",
                 **transportation_task.viable_vehicle_modes,
             }
@@ -87,8 +82,9 @@ class PublicTransitOperator(Operator):
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask, state=None):
-
+    def withdraw_transportation_task(
+        self, user, transportation_task: TransportTask, state=None
+    ):
         self.increase_total_missed_trips(0)
 
         self.increase_total_missed_trips(1)

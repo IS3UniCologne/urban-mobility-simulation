@@ -1,18 +1,18 @@
-
-
-
-
-from simulation.operator.data_transfer_object.transportation_alternative import TransportationAlternative
-from simulation.operator.data_transfer_object.vehicle_allocation import VehicleAllocation
-from simulation.operator.interface.vehicle_allocation_engine_interface import VehicleAllocationEngineInterface
+from simulation.operator.data_transfer_object.transportation_alternative import (
+    TransportationAlternative,
+)
+from simulation.operator.data_transfer_object.vehicle_allocation import (
+    VehicleAllocation,
+)
+from simulation.operator.interface.vehicle_allocation_engine_interface import (
+    VehicleAllocationEngineInterface,
+)
 
 
 class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
     def __init__(self, env):
         self._env = env
         self._vehicles_assigned_to_users = self._env.event()
-        self._env.process(self.run())
-        self._vehicle_assignment_requests = []
 
     def request_vehicle_allocation(
         self, user, selected_transportation_alternative: TransportationAlternative
@@ -39,11 +39,8 @@ class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
             )
         else:
             return None
-        
-    # Pass notify_user_at_pick_up_position
-    
 
-    
-
-
-    
+    def notify_user_arrival_at_pick_up_position(
+        self, vehicle_assignment: VehicleAllocation
+    ):
+        pass

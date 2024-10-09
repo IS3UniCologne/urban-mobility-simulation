@@ -8,7 +8,7 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.operations_management.operations_public_transport import (
-    BusOperations,
+    OperationsPublicTransport,
 )
 from simulation.tasks.transportation_search_task import TransportationSearchTask
 
@@ -30,7 +30,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         browser = TransportationAlternativeBrowser()
         search_time = transportation_search_task.transport_task.time
 
-        for viable_transit in BusOperations.find_viable_transit(
+        for viable_transit in OperationsPublicTransport.find_viable_transit(
             transportation_search_task,
             user_config.spatial_strategy,
             user_config.max_wait,

@@ -12,7 +12,6 @@ class TransportationAlternative:
         self._distance = distance
         self._route = route
         self._convenience = convenience  # the ranking (the lower, the better)
-
         self._energy_consumed = 0.0  # Is set after successful trip
         self._waiting_time = 0
 
