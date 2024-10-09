@@ -321,7 +321,10 @@ class RideHailingVehicle(Vehicle):
         :param distance: in meter
         :return:
         """
-        if self.energy_consumption * distance / 1000 >= self._current_state_of_charge:
+        if (
+            self.energy_consumption * distance / 1000
+            >= self._current_state_of_charge - 0.1 * self._max_state_of_charge
+        ):
             return False
         return True
 

@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List
 
 import numpy as np
+import pandas as pd
 from docplex.mp.model import Model
 
 from simulation.helper.configuration.configuration import Configuration
@@ -137,12 +138,21 @@ class TimeMin:
 
             mdl.minimize(
                 mdl.sum(
-                    T_d[i.id, j.id] + T_c[i.id, j.id] for i in CSs for j in vehicles
+                    T_d[i.id, j.id]  # driving time
+                    # + T_c[i.id, j.id]
+                    for i in CSs
+                    for j in vehicles
                 )
                 + mdl.sum(
-                    mdl.sum(d[i.id, j.id] for i in CSs)
-                    * np.exp(1 - SoC[j.id])
-                    * (1 - mdl.sum(x[i.id, j.id] for i in CSs))
+                    # mdl.sum(
+                    #     d[i.id, j.id] for i in CSs
+                    # )  # cumsum to all CS for vehicle j
+                    # * np.exp(1 - SoC[j.id])  # exp(1-SOC) of vehicle j
+                    np.exp(1 - SoC[j.id])  # exp(1-SOC) of vehicle j
+                    * rho  # large number O_O
+                    * (
+                        1 - mdl.sum(x[i.id, j.id] for i in CSs)
+                    )  # allocation (0) or not (1) of vehicle j to any charging station i
                     for j in vehicles
                 )
             )
@@ -171,6 +181,34 @@ class TimeMin:
             )
             logging.debug(
                 f"Penalty for not charging vehicles = {mdl.sum(mdl.sum(d[i.id, j.id] for i in CSs) * (1 - SoC[j.id]) * (1 - mdl.sum(x[i.id, j.id] for i in CSs)) for j in vehicles ).solution_value}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
+
+            stats_allocations = (
+                pd.Series(
+                    [
+                        v.current_relative_state_of_charge
+                        for i in pairs
+                        for k, v in i.items()
+                        if k == "vehicle"
+                    ]
+                )
+                .describe()
+                .__str__()
+                .split("\n")
+            )
+            logging.debug(
+                f"Stats of allocations: {stats_allocations}",
+                extra={"clazz": self.__class__.__name__, "oid": ""},
+            )
+            stats_candidates = (
+                pd.Series([v.current_relative_state_of_charge for v in vehicles])
+                .describe()
+                .__str__()
+                .split("\n")
+            )
+            logging.debug(
+                f"Stats of candidates: {stats_candidates}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
         return pairs
