@@ -44,7 +44,10 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
     def execute(self):
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
-            self._env, self._operator_reference.charging_infrastructure
+            env=self._env,
+            charging_infrastructure=self._operator_reference.charging_infrastructure,
+            default_lookahead=self._config.auction_config.auction_start
+            + self._config.shared_charging_config.auction_lookahead,
         )
 
         self._charging_operations = RideHailingChargingOperations(

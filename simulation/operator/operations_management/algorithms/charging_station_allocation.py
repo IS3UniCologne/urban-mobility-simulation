@@ -44,13 +44,15 @@ class TimeMin:
                     # if isinstance(d[i.id, j.id], list):
                     #     d[i.id, j.id] = float([i.id, j.id][0])
 
-            N = {}  # number of vehicles in the queue
-            M = {}  # charging capacity + queue capacity (e.g., 10)
-            C = {}  # charging capacity
+            Q = {}  # number of vehicles in the queue
+            N = {}  # number of vehicles currently charging
+            M = {}  # capacity + queue capacity (e.g., 10) of the CS
+            C = {}  # capacity of the CS
             for i in CSs:
-                N[i.id] = len(i.plugs.queue)
-                if isinstance(N[i.id], list):
-                    N[i.id] = float(N[i.id][0])
+                Q[i.id] = len(i.plugs.queue)
+                if isinstance(Q[i.id], list):
+                    Q[i.id] = float(Q[i.id][0])
+                N[i.id] = len(i.plugs.users)
                 M[i.id] = i.capacity + i.queue_size
                 if isinstance(M[i.id], list):
                     M[i.id] = float(M[i.id][0])
@@ -92,7 +94,9 @@ class TimeMin:
             # capacity feasibility constraint
             for i in CSs:
                 mdl.add_constraint(
-                    N[i.id] + mdl.sum(x[i.id, j.id] for j in vehicles) <= M[i.id], "C2"
+                    Q[i.id] + N[i.id] + mdl.sum(x[i.id, j.id] for j in vehicles)
+                    <= M[i.id],
+                    "C2",
                 )
             T_d = {}  # driving time in min
             T_c = {}  # charging time in min

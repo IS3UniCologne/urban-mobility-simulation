@@ -30,15 +30,20 @@ class VirtualChargingInfrastructure:
     )
 
     def __init__(
-        self, env, charging_infrastructure: ChargingInfrastructure, use_virtual_cs=True
+        self,
+        env,
+        charging_infrastructure: ChargingInfrastructure,
+        default_lookahead: int,
+        use_virtual_cs=True,
     ):
         self._env = env
         self._config = Configuration.instance()
 
-        self._default_lookahead = (
-            self._config.auction_config.auction_start
-            + self._config.shared_charging_config.auction_lookahead
-        )
+        # self._default_lookahead = (
+        #     self._config.auction_config.auction_start
+        #     + self._config.shared_charging_config.auction_lookahead
+        # )
+        self._default_lookahead = default_lookahead
 
         self._availability: Dict[int, Dict[str, int]] = {}
 
@@ -52,6 +57,8 @@ class VirtualChargingInfrastructure:
             self._update_virtual_cs(init=True)
         else:
             self._virtual_charging_stations = None
+
+    # TODO: listen for start and end charge events from charging stations to update virtual charging stations, using ids of vehicles to check
 
     @property
     def charging_stations(self):
