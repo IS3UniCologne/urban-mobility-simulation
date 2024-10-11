@@ -69,13 +69,13 @@ class RideHailingVehicle(Vehicle):
         self.travel_costs = 0
         self.charging_costs = 0
 
+        self._config = Configuration.instance()
+
         # State Of Charge
         self._max_state_of_charge = max_state_of_charge  # in kWh
-        initial_state_of_charge_percentage = (
-            Configuration.instance()
-            ._ridehailing_vehicle_configs["RideHailingCar"]
-            .initial_SoC
-        )
+        initial_state_of_charge_percentage = self._config._ridehailing_vehicle_configs[
+            "RideHailingCar"
+        ].initial_SoC
         if initial_state_of_charge_percentage == 0:
             initial_state_of_charge_percentage = random.uniform(0.2, 0.8)
 
@@ -86,9 +86,9 @@ class RideHailingVehicle(Vehicle):
         if not self._is_electric:
             self._energy_consumption = (
                 energy_consumption
-                * Configuration.instance()
-                ._ridehailing_vehicle_configs["RideHailingCar"]
-                .EV_relative_energy_consumption
+                * self._config._ridehailing_vehicle_configs[
+                    "RideHailingCar"
+                ].EV_relative_energy_consumption
             )
 
         #### Vehicle Events
@@ -129,16 +129,14 @@ class RideHailingVehicle(Vehicle):
         self._destination = None
 
         # costs
-        self._cost_km = (
-            Configuration.instance()
-            ._ridehailing_vehicle_configs["RideHailingCar"]
-            .cost_per_km
-        )
-        self._charging_cost_per_kWh = (
-            Configuration.instance()
-            ._ridehailing_vehicle_configs["RideHailingCar"]
-            .charging_cost_per_kWh
-        )
+        self._cost_km = self._config._ridehailing_vehicle_configs[
+            "RideHailingCar"
+        ].cost_per_km
+        self._charging_cost_per_kWh = self._config._ridehailing_vehicle_configs[
+            "RideHailingCar"
+        ].charging_cost_per_kWh
+
+        self._emergency_buffer_percent: float
 
         RideHailingVehicle.ride_hailing_vehicle_id += 1
 
@@ -323,7 +321,8 @@ class RideHailingVehicle(Vehicle):
         """
         if (
             self.energy_consumption * distance / 1000
-            >= self._current_state_of_charge - 0.1 * self._max_state_of_charge
+            >= self._current_state_of_charge
+            - self._emergency_buffer_percent * self._max_state_of_charge
         ):
             return False
         return True
@@ -339,6 +338,7 @@ class RideHailingVehicle(Vehicle):
 
         if self._current_state_of_charge < 0:
             # TODO: this should not happen and throw something like a SimulationConstraintException
+            raise Exception
             self._current_state_of_charge = 0.0
 
         logging.debug(
@@ -348,6 +348,7 @@ class RideHailingVehicle(Vehicle):
 
     def _update_positions(self, new_position: Position):
         # Update Vehicle Position
+        old_position = self.position
         self.position = new_position
 
         # Update Position of Driver
@@ -361,7 +362,7 @@ class RideHailingVehicle(Vehicle):
         region_id, _ = self._position.get_hexagon()
 
         logging.debug(
-            f"Current position {self._position} in region {region_id}.",
+            f"Old position {old_position} > Current position {self._position} in region {region_id}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -438,12 +439,12 @@ class RideHailingVehicle(Vehicle):
         else:
             raise Exception("Agent is not in vehicle.")
 
-    def relocate(self, route_segment: Edge, time):
+    def relocate(self, route_segment: Edge):
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
         :param time:
-        :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
+        :param relocator: The exact entity (e.g., Servic^e Worker ID) that relocated the vehicle
         :return:
         """
         if self._driver is not None or len(self._seats) > 0:
@@ -463,27 +464,18 @@ class RideHailingVehicle(Vehicle):
         # Invoke event to notify listeners that relocation started
         self._vehicle_relocation_started.succeed()
         self._vehicle_relocation_started = self._env.event()
-
         self._state = VehicleState.RELOCATING
+        logging.debug(
+            "Relocating...", extra={"clazz": self.__class__.__name__, "oid": self._id}
+        )
 
-        yield self._env.timeout(time)
-
-        # Save old position for logging purposes
-        old_position = self._position
-
-        # Update new position of vehicle
-        self._update_positions(route_segment.destination.position)
+        self.move(route_segment=route_segment)
 
         # Invoke event to notify listeners that relocation ended
         self._vehicle_relocation_finished.succeed()
         self._vehicle_relocation_finished = self._env.event()
 
-        self._state = VehicleState.PARKING
-
-        logging.debug(
-            f"Vehicle relocated from {old_position} to {self._position} in {time} minutes.",
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
-        )
+        self.park()
 
     def waiting_for_charging(self):
         self._state = VehicleState.PRE_SERVICE
