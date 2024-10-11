@@ -244,6 +244,8 @@ class RideHailingChargingOperations(OperationsInterface):
 
                 # Select Nearest Base
                 selected_base_distance = sorted_base_list.iat[0, 0]
+                if not vehicle.has_enough_state_of_charge(selected_base_distance):
+                    continue
                 selected_base = sorted_base_list.index[0]
                 selected_charging_station = [
                     x
@@ -278,6 +280,12 @@ class RideHailingChargingOperations(OperationsInterface):
                                     )
                                     selected_base_distance = row_base[hex]
                                     break
+                        else:
+                            # if we broke out the inner loop, we did so, because we found a charging station
+                            # only if that's not the case we need to continue with the outer loop looking for longer queue ones
+                            continue
+                        break
+
                     # sometimes the queue is too long and we have to disregard it
                     if not selected_base_distance:
                         for index_base, row_base in sorted_base_list.iterrows():
@@ -298,6 +306,9 @@ class RideHailingChargingOperations(OperationsInterface):
                                     )
                                     selected_base_distance = row_base[hex]
                                     break
+
+                    if not vehicle.has_enough_state_of_charge(selected_base_distance):
+                        continue
 
                 if not vehicle.is_electric:
                     for index_base, row_base in sorted_base_list.iterrows():

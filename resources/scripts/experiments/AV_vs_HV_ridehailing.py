@@ -114,18 +114,20 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
     EV_relative_energy_consumption = parser.getfloat(
         vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
     )
+    emergency_soc_buffer = parser.getfloat(vehicle_type, "EMERGENCY_SOC_BUFFER")
 
     rvc = RideHailingVehicleConfig(
-        price_per_min=price_per_min,
-        max_state_of_charge=max_state_of_charge,
-        energy_consumption=energy_consumption,
-        velocity=velocity,
-        max_available_seats=max_available_seats,
-        initial_SoC=initial_SoC,
-        charging_cost_per_kWh=charging_cost_per_kWh,
-        cost_per_km=cost_per_km,
-        daily_total_cost=daily_total_cost,
-        EV_relative_energy_consumption=EV_relative_energy_consumption,
+        price_per_min,
+        max_state_of_charge,
+        energy_consumption,
+        velocity,
+        max_available_seats,
+        initial_SoC,
+        charging_cost_per_kWh,
+        cost_per_km,
+        daily_total_cost,
+        EV_relative_energy_consumption,
+        emergency_buffer=emergency_soc_buffer,
     )
     global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
 

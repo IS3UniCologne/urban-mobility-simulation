@@ -86,7 +86,7 @@ class RideHailingOperator(Operator):
 
         logging.info(
             f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
+            extra={"clazz": self.__class__.__name__, "oid": self._fleet.id},
         )
 
     def withdraw_transportation_task(
@@ -122,5 +122,5 @@ class RideHailingOperator(Operator):
 
         logging.info(
             f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
+            extra={"clazz": self.__class__.__name__, "oid": self._fleet.id},
         )
