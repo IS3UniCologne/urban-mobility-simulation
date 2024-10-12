@@ -216,14 +216,16 @@ class RideHailingVehicle(Vehicle):
     def destination(self, destination):
         self._destination = destination
 
-    def move(self, route_segment: Edge):
+    def move(self, route_segment: Edge, relocating=False):
         distance = route_segment.distance
         velocity = self._velocity
         time = distance / velocity
         self.estimated_completion_time = self._env.now + time
         self.destination = route_segment.destination
 
-        if not self.has_enough_state_of_charge(distance):
+        if not self.has_enough_state_of_charge(
+            distance, consider_buffer=not relocating
+        ):
             raise RuntimeError(
                 f"{str(self.__class__.__name__)} {self._id} has been tried to move but has not enough state of charge."
             )
@@ -313,16 +315,21 @@ class RideHailingVehicle(Vehicle):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def has_enough_state_of_charge(self, distance):
+    def has_enough_state_of_charge(self, distance, consider_buffer=True):
         """
         Check if vehicle has enough SoC left for trip
         :param distance: in meter
+        :param consider_buffer: if True (default), self._emergency_buffer_percent is taken into account
         :return:
         """
         if (
             self.energy_consumption * distance / 1000
             >= self._current_state_of_charge
-            - self._emergency_buffer_percent * self._max_state_of_charge
+            - (
+                self._emergency_buffer_percent * self._max_state_of_charge
+                if consider_buffer
+                else 0
+            )
         ):
             return False
         return True
@@ -469,7 +476,7 @@ class RideHailingVehicle(Vehicle):
             "Relocating...", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
-        yield self._env.process(self.move(route_segment=route_segment))
+        yield self._env.process(self.move(route_segment=route_segment, relocating=True))
 
         # Invoke event to notify listeners that relocation ended
         self._vehicle_relocation_finished.succeed()
