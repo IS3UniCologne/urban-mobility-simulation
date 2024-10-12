@@ -2,6 +2,7 @@ from typing import Dict, Optional
 
 from beartype.door import die_if_unbearable
 from beartype.roar import BeartypeDoorHintViolation
+from simpy import AnyOf
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.charging_infastructure import (
@@ -24,6 +25,7 @@ class VirtualChargingInfrastructure:
         "_env",
         "_config",
         "_lookahead",
+        "_use_virtual_cs",
         "_availability",
         "_charging_infrastructure",
         "_virtual_charging_stations",
@@ -43,6 +45,7 @@ class VirtualChargingInfrastructure:
         # otherwise, (if lookahead is None) be a mirror of the real underlying infrastructure, that can be updated from outside as needed
 
         self._lookahead = lookahead
+        self._use_virtual_cs = use_virtual_cs
 
         if self._lookahead is None:
             self._availability: Dict[str, int] = {
@@ -63,7 +66,9 @@ class VirtualChargingInfrastructure:
         else:
             self._virtual_charging_stations = None
 
-    # TODO: listen for start and end charge events from charging stations to update virtual charging stations, using ids of vehicles to check
+        if self._lookahead is None and self._use_virtual_cs:
+            for cs in self._virtual_charging_stations:
+                self._env.process(self._sync_with_real(cs))
 
     @property
     def charging_stations(self):
@@ -94,7 +99,7 @@ class VirtualChargingInfrastructure:
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_available_capacity(self, at_timeslot: int):
+    def get_available_capacity(self, at_timeslot: Optional[int] = None):
         if self._lookahead is None:
             return self._availability
         try:
@@ -148,3 +153,27 @@ class VirtualChargingInfrastructure:
 
         if self._virtual_charging_stations is not None:
             self._update_virtual_cs()
+
+    def _sync_with_real(self, charging_station: VirtualChargingStation):
+        cs = charging_station._physical_charging_station
+        while True:
+            event = yield AnyOf(
+                self._env, [cs.vehicle_plugged_in, cs.vehicle_unplugged]
+            )
+
+            if cs.vehicle_plugged_in in event:
+                self._availability[charging_station.location] -= (
+                    1 if not self._availability[charging_station.location] == 0 else 0
+                )
+                if self._virtual_charging_stations is not None:
+                    self._update_virtual_cs()
+                cs._vehicle_plugged_in = self._env.event()
+            elif cs.vehicle_unplugged in event:
+                self._availability[charging_station.location] += (
+                    1
+                    if not self._availability[charging_station.location] == cs.capacity
+                    else 0
+                )
+                if self._virtual_charging_stations is not None:
+                    self._update_virtual_cs()
+                cs._vehicle_unplugged = self._env.event()

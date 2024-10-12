@@ -73,6 +73,10 @@ class ChargingTaskRidehailing(ServiceTask):
         self._arrived_at_charging_station = self._env.event()
 
     @property
+    def destination(self):
+        return self._destination
+
+    @property
     def waiting_time(self):
         return self._waiting_time
 
@@ -133,31 +137,36 @@ class ChargingTaskRidehailing(ServiceTask):
                 waiting_start = self._env.now
 
                 if isinstance(self._charging_station, VirtualChargingStation):
-                    # if we are in a context of shared capacity, we need to wait for the reservation
+                    # only in this case we can check for the next condition, otherwise AttributeError gets thrown
+                    if self._charging_station.valid_timeframe is not None:
+                        # if we are in a context of shared capacity, we need to wait for the reservation
 
-                    scheduled_timeslot_end = (
-                        self._scheduled_time
-                        + self._config.shared_charging_config.timeslot_duration
-                    )
-                    self._waiting_time = self._scheduled_time - self._env.now
-                    if self._waiting_time > 0:
-                        logging.debug(
-                            f"Vehicle {vehicle.id} waits {self._waiting_time} minutes for reserved slot.",
-                            extra={"clazz": self.__class__.__name__},
+                        scheduled_timeslot_end = (
+                            self._scheduled_time
+                            + self._config.shared_charging_config.timeslot_duration
                         )
-                        self._state = TaskState.EXECUTING_WAITING
-                        yield self._env.timeout(max(0, self._waiting_time))
-                    elif scheduled_timeslot_end <= self._env.now:
-                        logging.warning(
-                            "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
-                            vehicle.id,
-                            self._env.now - scheduled_timeslot_end,
-                            extra={"clazz": self.__class__.__name__, "oid": vehicle.id},
-                        )
-                        self._state = TaskState.MISSED_TIMESLOT
-                        vehicle.state = VehicleState.PARKING
-                        self._task_finished.succeed()
-                        return
+                        self._waiting_time = self._scheduled_time - self._env.now
+                        if self._waiting_time > 0:
+                            logging.debug(
+                                f"Vehicle {vehicle.id} waits {self._waiting_time} minutes for reserved slot.",
+                                extra={"clazz": self.__class__.__name__},
+                            )
+                            self._state = TaskState.EXECUTING_WAITING
+                            yield self._env.timeout(max(0, self._waiting_time))
+                        elif scheduled_timeslot_end <= self._env.now:
+                            logging.warning(
+                                "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
+                                vehicle.id,
+                                self._env.now - scheduled_timeslot_end,
+                                extra={
+                                    "clazz": self.__class__.__name__,
+                                    "oid": vehicle.id,
+                                },
+                            )
+                            self._state = TaskState.MISSED_TIMESLOT
+                            vehicle.state = VehicleState.PARKING
+                            self._task_finished.succeed()
+                            return
 
                 elif (
                     len(self._charging_station.plugs.users)
@@ -204,6 +213,7 @@ class ChargingTaskRidehailing(ServiceTask):
 
                     # Plugin Vehicle to Charging Station
                     vehicle.plug_to_charging_station()
+                    self._charging_station.plug_in_notify()
 
                     if not isinstance(self._charging_station, VirtualChargingStation):
                         waiting_stop = self._env.now
@@ -221,6 +231,7 @@ class ChargingTaskRidehailing(ServiceTask):
                 yield self._env.process(vehicle.charge(charging_time=5))
             # Unplug Vehicle from Charging Station
             vehicle.unplug_from_charging_station()
+            self._charging_station.plug_out_notify()
             self._state = TaskState.FINISHED
 
         # Notify all
