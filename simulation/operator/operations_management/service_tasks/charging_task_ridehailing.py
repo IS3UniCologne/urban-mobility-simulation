@@ -69,6 +69,9 @@ class ChargingTaskRidehailing(ServiceTask):
         self._distance = None
         self._config = Configuration.instance()
 
+        # Events
+        self._arrived_at_charging_station = self._env.event()
+
     @property
     def waiting_time(self):
         return self._waiting_time
@@ -125,6 +128,7 @@ class ChargingTaskRidehailing(ServiceTask):
 
             if vehicle.is_electric:
                 vehicle.waiting_for_charging()
+                self._arrived_at_charging_station.succeed()
 
                 waiting_start = self._env.now
 
@@ -172,6 +176,8 @@ class ChargingTaskRidehailing(ServiceTask):
                     vehicle.state = VehicleState.PARKING
                     self._task_finished.succeed()
                     return
+                else:
+                    self._state = TaskState.EXECUTING_WAITING
 
                 with self._charging_station.plugs.request() as req:
                     yield req

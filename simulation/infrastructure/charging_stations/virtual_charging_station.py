@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 
@@ -29,7 +29,7 @@ class VirtualChargingStation:
         self._power = charging_station.power
         self._queue = charging_station._queue
 
-    def update_capacity(self, capacity, valid_timeframe: Tuple[float, float]):
+    def update_capacity(self, capacity, valid_timeframe: Optional[Tuple[float, float]]):
         self._capacity = capacity
         self._valid_timeframe = valid_timeframe
 

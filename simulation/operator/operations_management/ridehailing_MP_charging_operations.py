@@ -40,9 +40,12 @@ class RideHailingMPChargingOperations(OperationsInterface):
 
     def execute(self) -> None:
         # defer some of the initialization to after the operator has registered everything
-        # self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
-        #     self._env, self._operator_reference.charging_infrastructure
-        # )
+        self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
+            env=self._env,
+            charging_infrastructure=self._operator_reference.charging_infrastructure,
+            lookahead=None,
+            use_virtual_cs=True,
+        )
 
         #
         # at each time step the optimization needs to know the number of free slots in each charging station

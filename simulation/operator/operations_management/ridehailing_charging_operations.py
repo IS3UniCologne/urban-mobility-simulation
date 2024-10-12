@@ -124,7 +124,7 @@ class RideHailingChargingOperations(OperationsInterface):
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
 
-            logging.warning(
+            logging.info(
                 f"There are {self._operator_reference.fleet.count_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
                 extra={
                     "clazz": self.__class__.__name__,
@@ -192,7 +192,7 @@ class RideHailingChargingOperations(OperationsInterface):
 
         # Account for the possibility that there is no charging station available (could happen in coordinated shared infrastructure, e.g.)
         if not self._operator_reference.charging_infrastructure.get_locations():
-            logging.warning(
+            logging.info(
                 "No charging stations available. No charging plan generated.",
                 extra={
                     "clazz": self.__class__.__name__,
