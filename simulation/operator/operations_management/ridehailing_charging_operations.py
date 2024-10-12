@@ -1,9 +1,11 @@
 import logging
 
+import h3
 import pandas as pd
 from beartype.door import is_bearable
 from simpy import AnyOf
 
+from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
@@ -33,9 +35,13 @@ class RideHailingChargingOperations(OperationsInterface):
         super(RideHailingChargingOperations, self).__init__(env=env)
 
         self._world = None  # defer
+        self._config = Configuration.instance()
 
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
+        self._base_buffer = h3.edge_length(
+            self._config.spatial_resolution_value - 1, unit="m"
+        )  # use a buffer when calculating distances to charging stations of next coarser grid level edge length (radius)
 
         # To access vehicle transactions
         self._available_modes = available_modes  # Modes in Fleet
@@ -244,6 +250,8 @@ class RideHailingChargingOperations(OperationsInterface):
 
                 # Select Nearest Base
                 selected_base_distance = sorted_base_list.iat[0, 0]
+                # add safety buffer when vehicle is unluckily positioned at the very edge of the hexagon
+                selected_base_distance += self._base_buffer
                 selected_base = sorted_base_list.index[0]
                 if not vehicle.has_enough_state_of_charge(
                     selected_base_distance, consider_buffer=False
@@ -288,6 +296,7 @@ class RideHailingChargingOperations(OperationsInterface):
                                         selected_charging_station[0]
                                     )
                                     selected_base_distance = row_base[hex]
+                                    selected_base_distance += self._base_buffer
                                     break
                         else:
                             # if we broke out the inner loop, we did so, because we found a charging station
@@ -314,6 +323,7 @@ class RideHailingChargingOperations(OperationsInterface):
                                         selected_charging_station[0]
                                     )
                                     selected_base_distance = row_base[hex]
+                                    selected_base_distance += self._base_buffer
                                     break
 
                     if not vehicle.has_enough_state_of_charge(
