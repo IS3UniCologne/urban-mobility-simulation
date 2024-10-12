@@ -444,7 +444,7 @@ class RideHailingVehicle(Vehicle):
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
         :param time:
-        :param relocator: The exact entity (e.g., Servic^e Worker ID) that relocated the vehicle
+        :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
         :return:
         """
         if self._driver is not None or len(self._seats) > 0:
@@ -469,7 +469,7 @@ class RideHailingVehicle(Vehicle):
             "Relocating...", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
-        self.move(route_segment=route_segment)
+        yield self._env.process(self.move(route_segment=route_segment))
 
         # Invoke event to notify listeners that relocation ended
         self._vehicle_relocation_finished.succeed()
