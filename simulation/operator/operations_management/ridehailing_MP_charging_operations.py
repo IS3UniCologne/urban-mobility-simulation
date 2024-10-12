@@ -73,7 +73,7 @@ class RideHailingMPChargingOperations(OperationsInterface):
             # list of pairs {vehicle: V, charging_station: C}
             allocations = self._algo.generate_charging_allocation(
                 vehicles_to_charge,
-                self._operator_reference.charging_infrastructure.charging_stations,
+                self._virtual_charging_infrastructure.charging_stations,
             )
 
             if not allocations:
@@ -99,8 +99,6 @@ class RideHailingMPChargingOperations(OperationsInterface):
                 # Track task completion
                 self._env.process(self._track_task(charging_task))
 
-                # TODO: update view of available charging infra?
-
             while self._task_queue.count > 0:
                 next_task = self._task_queue.popleft()
                 logging.debug(
@@ -111,6 +109,22 @@ class RideHailingMPChargingOperations(OperationsInterface):
                     },
                 )
                 self._env.process(next_task.execute())
+
+                # Update virtual capacity when sending out a vehicle
+                availability = (
+                    self._virtual_charging_infrastructure.get_available_capacity()
+                )
+                availability[next_task.destination] -= 1
+                self._virtual_charging_infrastructure.update(availability=availability)
+                # and look out for when it arrives
+                self._env.process(self._update_after_arrival(next_task))
+
+    def _update_after_arrival(self, task):
+        # as soon as the vehicle really arrives, we can undo this because its then reflected in the capacity
+        yield task._arrived_at_charging_station
+        availability = self._virtual_charging_infrastructure.get_available_capacity()
+        availability[task.destination] += 1
+        self._virtual_charging_infrastructure.update(availability=availability)
 
     def _track_task(self, task):
         yield AnyOf(self._env, [task.task_finished, self._world.simulation_finished])

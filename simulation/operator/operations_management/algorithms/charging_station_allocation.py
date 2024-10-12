@@ -34,6 +34,8 @@ class TimeMin:
             CSs_range = []
 
             for i in CSs:
+                if i.capacity < 0:
+                    raise ValueError("Capacity of CS must be positive")
                 CSs_range.append(i.id)
 
             d = {}  # distance matrix
@@ -45,20 +47,19 @@ class TimeMin:
                     #     d[i.id, j.id] = float([i.id, j.id][0])
 
             Q = {}  # number of vehicles in the queue
-            N = {}  # number of vehicles currently charging
+            N = {}  # available capacity
             M = {}  # capacity + queue capacity (e.g., 10) of the CS
             C = {}  # capacity of the CS
             for i in CSs:
                 Q[i.id] = len(i.plugs.queue)
                 if isinstance(Q[i.id], list):
                     Q[i.id] = float(Q[i.id][0])
-                N[i.id] = len(i.plugs.users)
-                M[i.id] = i.capacity + i.queue_size
-                if isinstance(M[i.id], list):
-                    M[i.id] = float(M[i.id][0])
-                C[i.id] = i.capacity
+                N[i.id] = i.capacity
+                C[i.id] = i._physical_charging_station.capacity
                 if isinstance(C[i.id], list):
                     C[i.id] = float(C[i.id][0])
+                M[i.id] = C[i.id] + Q[i.id]
+
             SoC = {}  # state of charge for vehicles that need to charge
             for j in vehicles:
                 SoC[j.id] = j.current_relative_state_of_charge
@@ -92,11 +93,16 @@ class TimeMin:
                         "C1",
                     )
             # capacity feasibility constraint
+            # for i in CSs:
+            #     mdl.add_constraint(
+            #         Q[i.id] + N[i.id] + mdl.sum(x[i.id, j.id] for j in vehicles)
+            #         <= M[i.id],
+            #         "C2",
+            #     )
+
             for i in CSs:
                 mdl.add_constraint(
-                    Q[i.id] + N[i.id] + mdl.sum(x[i.id, j.id] for j in vehicles)
-                    <= M[i.id],
-                    "C2",
+                    mdl.sum(x[i.id, j.id] for j in vehicles) <= N[i.id], "C2"
                 )
             T_d = {}  # driving time in min
             T_c = {}  # charging time in min

@@ -51,6 +51,10 @@ class ChargingStation(TrackingInterface):
         self._queue_size = queue_size
         # self.position = self.location.find_zone(zones)
 
+        # Events
+        self._vehicle_plugged_in = self._env.event()
+        self._vehicle_unplugged = self._env.event()
+
     @property
     def capacity(self):
         return self._capacity
@@ -83,8 +87,25 @@ class ChargingStation(TrackingInterface):
     def queue_size(self):
         return self._queue_size
 
+    @property
+    def vehicle_plugged_in(self):
+        return self._vehicle_plugged_in
+
+    @property
+    def vehicle_unplugged(self):
+        return self._vehicle_unplugged
+
+    def plug_in_notify(self):
+        self._vehicle_plugged_in.succeed()
+
+    def plug_out_notify(self):
+        self._vehicle_unplugged.succeed()
+
     def dump(self, exposed_only: bool = True) -> dict:
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}
         else:
             return {x: self.get(x) for x in self.__slots__}
+
+    def __str__(self):
+        return f"ID: {self._id}, Location: {self._location}, Current Users: {len(self._plugs.users)}, Current Queue Size: {len(self._queue)}"
