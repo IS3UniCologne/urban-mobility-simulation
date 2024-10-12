@@ -245,6 +245,13 @@ class RideHailingChargingOperations(OperationsInterface):
                 # Select Nearest Base
                 selected_base_distance = sorted_base_list.iat[0, 0]
                 if not vehicle.has_enough_state_of_charge(selected_base_distance):
+                    logging.debug(
+                        f"Vehicle {vehicle.id} considered for charging at {selected_charging_station} has not enough state of charge to relocate there, skipping.",
+                        extra={
+                            "clazz": self.__class__.__name__,
+                            "oid": self._operator_reference.id,
+                        },
+                    )
                     continue
                 selected_base = sorted_base_list.index[0]
                 selected_charging_station = [
@@ -308,6 +315,13 @@ class RideHailingChargingOperations(OperationsInterface):
                                     break
 
                     if not vehicle.has_enough_state_of_charge(selected_base_distance):
+                        logging.debug(
+                            f"Vehicle {vehicle.id} considered for charging at {selected_charging_station} has not enough state of charge to relocate there, skipping.",
+                            extra={
+                                "clazz": self.__class__.__name__,
+                                "oid": self._operator_reference.id,
+                            },
+                        )
                         continue
 
                 if not vehicle.is_electric:
