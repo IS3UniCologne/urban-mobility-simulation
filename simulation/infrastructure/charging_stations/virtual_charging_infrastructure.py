@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from beartype.door import die_if_unbearable
 from beartype.roar import BeartypeDoorHintViolation
@@ -23,7 +23,7 @@ class VirtualChargingInfrastructure:
     __slots__ = (
         "_env",
         "_config",
-        "_default_lookahead",
+        "_lookahead",
         "_availability",
         "_charging_infrastructure",
         "_virtual_charging_stations",
@@ -33,19 +33,24 @@ class VirtualChargingInfrastructure:
         self,
         env,
         charging_infrastructure: ChargingInfrastructure,
-        default_lookahead: int,
+        lookahead: Optional[int] = None,
         use_virtual_cs=True,
     ):
         self._env = env
         self._config = Configuration.instance()
 
-        # self._default_lookahead = (
-        #     self._config.auction_config.auction_start
-        #     + self._config.shared_charging_config.auction_lookahead
-        # )
-        self._default_lookahead = default_lookahead
+        # if virtual charging infra is used to create a completely artificial plan of infrastructure, including future timeslots, use lookahead
+        # otherwise, (if lookahead is None) be a mirror of the real underlying infrastructure, that can be updated from outside as needed
 
-        self._availability: Dict[int, Dict[str, int]] = {}
+        self._lookahead = lookahead
+
+        if self._lookahead is None:
+            self._availability: Dict[str, int] = {
+                station.location: station.capacity
+                for station in charging_infrastructure.charging_stations
+            }
+        else:
+            self._availability: Dict[int, Dict[str, int]] = {}
 
         self._charging_infrastructure = charging_infrastructure
         if use_virtual_cs:
@@ -53,8 +58,8 @@ class VirtualChargingInfrastructure:
                 VirtualChargingStation(cs)
                 for cs in self._charging_infrastructure.charging_stations
             ]
-
-            self._update_virtual_cs(init=True)
+            if self._lookahead is not None:
+                self._update_virtual_cs(init=True)
         else:
             self._virtual_charging_stations = None
 
@@ -72,7 +77,14 @@ class VirtualChargingInfrastructure:
         else:
             return self._virtual_charging_stations
 
-    def get_available_locations(self, at_timeslot: int):
+    def get_available_locations(self, at_timeslot: Optional[int]):
+        if at_timeslot is None:
+            return [
+                location
+                for location, capacity in self._availability.items()
+                if capacity > 0
+            ]
+
         try:
             return [
                 location
@@ -83,6 +95,8 @@ class VirtualChargingInfrastructure:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
     def get_available_capacity(self, at_timeslot: int):
+        if self._lookahead is None:
+            return self._availability
         try:
             return self._availability[at_timeslot]
         except KeyError as e:
@@ -91,37 +105,46 @@ class VirtualChargingInfrastructure:
     def get_locations(self):
         """
         Defaults to `get_available_locations() at self._default_lookahead`
-        which is the next timeslot that was already auctioned.
+        which is the next timeslot that was already auctioned, or None
         """
-        return self.get_available_locations(self._default_lookahead)
+        return self.get_available_locations(self._lookahead)
 
     def _update_virtual_cs(self, init=False):
         for cs in self._virtual_charging_stations:
             cs.update_capacity(
-                capacity=self._availability[self._default_lookahead][cs.location]
+                capacity=(
+                    self._availability[self._lookahead][cs.location]
+                    if self._lookahead is not None
+                    else self._availability[cs.location]
+                )
                 if not init
                 else 0,
                 valid_timeframe=(
-                    self._default_lookahead,
-                    self._default_lookahead
+                    self._lookahead,
+                    self._lookahead
                     + self._config.shared_charging_config.timeslot_duration,
-                ),
+                )
+                if self._lookahead is not None
+                else None,
             )
 
-    def update(self, timeslot: int, availability: Dict[str, int]):
+    def update(self, availability: Dict[str, int], timeslot: Optional[int] = None):
         try:
             die_if_unbearable(availability, Dict[str, int])
-            self._availability[timeslot] = availability
+            if self._lookahead is None:
+                self._availability = availability
+            else:
+                self._availability[timeslot] = availability
         except BeartypeDoorHintViolation as e:
             raise ValueError(
                 "Availability must be a dict of (location, capacity)"
             ) from e
-
-        # update the default lookahead to be the next auctioned slot
-        self._default_lookahead = self._env.now + (
-            self._config.shared_charging_config.auction_lookahead
-            - (self._env.now % self._config.shared_charging_config.auction_interval)
-        )
+        if self._lookahead is not None:
+            # update the default lookahead to be the next auctioned slot
+            self._lookahead = self._env.now + (
+                self._config.shared_charging_config.auction_lookahead
+                - (self._env.now % self._config.shared_charging_config.auction_interval)
+            )
 
         if self._virtual_charging_stations is not None:
             self._update_virtual_cs()

@@ -46,7 +46,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             env=self._env,
             charging_infrastructure=self._operator_reference.charging_infrastructure,
-            default_lookahead=self._config.auction_config.auction_start
+            lookahead=self._config.auction_config.auction_start
             + self._config.shared_charging_config.auction_lookahead,
         )
 
@@ -142,7 +142,8 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         )
 
         self._virtual_charging_infrastructure.update(
-            auctioned_timeslot, {k: v[0] for k, v in self._result.items()}
+            availability={k: v[0] for k, v in self._result.items()},
+            timeslot=auctioned_timeslot,
         )
 
     def _delay_charging_operations(self):

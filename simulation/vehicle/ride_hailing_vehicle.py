@@ -480,9 +480,6 @@ class RideHailingVehicle(Vehicle):
     def waiting_for_charging(self):
         self._state = VehicleState.PRE_SERVICE
 
-        # self._charging_station_plugged_in.succeed()
-        # self._charging_station_plugged_in = self._env.event()
-
         logging.debug(
             "Vehicle started waiting in the queue.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},

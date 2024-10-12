@@ -57,7 +57,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         self._charging_infrastructure = VirtualChargingInfrastructure(
             env=self._env,
             charging_infrastructure=charging_infrastructure,
-            default_lookahead=self._config.auction_config.auction_start
+            lookahead=self._config.auction_config.auction_start
             + self._config.shared_charging_config.auction_lookahead,
             use_virtual_cs=False,
         )
@@ -68,11 +68,11 @@ class SharedChargingAuction(Auction, TrackingInterface):
             self._config.shared_charging_config.auction_interval,
         ):
             self._charging_infrastructure.update(
-                timeslot,
-                {
+                availability={
                     station.location: station.capacity
                     for station in charging_infrastructure.charging_stations
                 },
+                timeslot=timeslot,
             )
 
     def run(self):
@@ -289,7 +289,9 @@ class SharedChargingAuction(Auction, TrackingInterface):
                     timeslot
                 ).items()
             }
-            self._charging_infrastructure.update(timeslot, remaining_capacity)
+            self._charging_infrastructure.update(
+                availability=remaining_capacity, timeslot=timeslot
+            )
 
     @property
     def result(self):
