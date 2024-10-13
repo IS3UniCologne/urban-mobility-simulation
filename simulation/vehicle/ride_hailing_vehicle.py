@@ -472,9 +472,6 @@ class RideHailingVehicle(Vehicle):
         self._vehicle_relocation_started.succeed()
         self._vehicle_relocation_started = self._env.event()
         self._state = VehicleState.RELOCATING
-        logging.debug(
-            "Relocating...", extra={"clazz": self.__class__.__name__, "oid": self._id}
-        )
 
         yield self._env.process(self.move(route_segment=route_segment, relocating=True))
 

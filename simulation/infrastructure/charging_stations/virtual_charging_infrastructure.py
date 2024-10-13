@@ -1,3 +1,5 @@
+import logging
+from types import SimpleNamespace
 from typing import Dict, Optional
 
 from beartype.door import die_if_unbearable
@@ -29,6 +31,7 @@ class VirtualChargingInfrastructure:
         "_availability",
         "_charging_infrastructure",
         "_virtual_charging_stations",
+        "_listeners",
     )
 
     def __init__(
@@ -67,8 +70,11 @@ class VirtualChargingInfrastructure:
             self._virtual_charging_stations = None
 
         if self._lookahead is None and self._use_virtual_cs:
+            self._listeners = {}
             for cs in self._virtual_charging_stations:
                 self._env.process(self._sync_with_real(cs))
+        else:
+            self._listeners = None
 
     @property
     def charging_stations(self):
@@ -116,14 +122,18 @@ class VirtualChargingInfrastructure:
 
     def _update_virtual_cs(self, init=False):
         for cs in self._virtual_charging_stations:
-            cs.update_capacity(
-                capacity=(
+            # availability might be negative if we account for some vehicle on the way and in the meantime another vehicle arrives at the already full station
+            bounded_capa = max(
+                0,
+                min(
                     self._availability[self._lookahead][cs.location]
                     if self._lookahead is not None
-                    else self._availability[cs.location]
-                )
-                if not init
-                else 0,
+                    else self._availability[cs.location],
+                    cs._physical_charging_station.capacity,
+                ),
+            )
+            cs.update_capacity(
+                capacity=bounded_capa if not init else 0,
                 valid_timeframe=(
                     self._lookahead,
                     self._lookahead
@@ -156,24 +166,48 @@ class VirtualChargingInfrastructure:
 
     def _sync_with_real(self, charging_station: VirtualChargingStation):
         cs = charging_station._physical_charging_station
+        # Listener = namedtuple(
+        #     "Listener", ["processed_plug_in_event", "processed_plug_out_event"]
+        # )
+        self._listeners[cs.id] = SimpleNamespace(
+            processed_plug_in_event=self._env.event(),
+            processed_plug_out_event=self._env.event(),
+        )
+        # self._listeners[cs.id] = {
+        #     "processed_plug_in_event": self._env.event(),
+        #     "processed_plug_out_event": self._env.event(),
+        # }
+        cs.register_event_subscriber(self._listeners[cs.id])
+
         while True:
+            if (
+                self._listeners[cs.id].processed_plug_in_event.triggered
+                or self._listeners[cs.id].processed_plug_out_event.triggered
+            ):
+                # another listener has not processed the event, so the charging station hasn't reset ours yet
+                yield self._env.timeout(1e-6)
+                continue
+
+            # listen for events from charging station
             event = yield AnyOf(
                 self._env, [cs.vehicle_plugged_in, cs.vehicle_unplugged]
             )
 
             if cs.vehicle_plugged_in in event:
-                self._availability[charging_station.location] -= (
-                    1 if not self._availability[charging_station.location] == 0 else 0
-                )
-                if self._virtual_charging_stations is not None:
+                self._availability[charging_station.location] -= 1
+                if self._use_virtual_cs:
                     self._update_virtual_cs()
-                cs._vehicle_plugged_in = self._env.event()
+                logging.debug(
+                    f"Plugged in registered at {charging_station.location}.",
+                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                )
+                self._listeners[cs.id].processed_plug_in_event.succeed()
             elif cs.vehicle_unplugged in event:
-                self._availability[charging_station.location] += (
-                    1
-                    if not self._availability[charging_station.location] == cs.capacity
-                    else 0
-                )
-                if self._virtual_charging_stations is not None:
+                self._availability[charging_station.location] += 1
+                if self._use_virtual_cs:
                     self._update_virtual_cs()
-                cs._vehicle_unplugged = self._env.event()
+                logging.debug(
+                    f"Plugged out registered at {charging_station.location}.",
+                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                )
+                self._listeners[cs.id].processed_plug_out_event.succeed()

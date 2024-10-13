@@ -32,10 +32,12 @@ class VirtualChargingStation:
         self._queue_size = charging_station._queue_size
 
     def plug_in_notify(self):
-        self._physical_charging_station.plug_in_notify()
+        yield self._env.process(self._physical_charging_station.plug_in_notify())
+        assert self._plugs.users == self._physical_charging_station.plugs.users
 
     def plug_out_notify(self):
-        self._physical_charging_station.plug_out_notify()
+        yield self._env.process(self._physical_charging_station.plug_out_notify())
+        assert self._plugs.users == self._physical_charging_station.plugs.users
 
     def update_capacity(self, capacity, valid_timeframe: Optional[Tuple[float, float]]):
         self._capacity = capacity
