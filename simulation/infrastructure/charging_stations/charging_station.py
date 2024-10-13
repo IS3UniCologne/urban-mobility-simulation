@@ -20,9 +20,10 @@ class ChargingStation(TrackingInterface):
         "_location",
         "_power",
         "_queue",
+        "_current_queue_time",
     )
 
-    exposes = ["_location", "_plugs"]
+    exposes = ["_location", "_plugs", "_current_queue_time"]
 
     def __init__(
         self,
@@ -51,7 +52,7 @@ class ChargingStation(TrackingInterface):
         self._power = float(power)  # kwh/hr
         self._queue = []
         self._queue_size = queue_size
-        # self.position = self.location.find_zone(zones)
+        self._current_queue_time = 0
 
         # Events
         self._vehicle_plugged_in = self._env.event()
@@ -63,6 +64,8 @@ class ChargingStation(TrackingInterface):
 
         # List of listening entities for the above events, in case of massive parallel access of competing fleets
         self._event_subscribers = []
+
+        self._env.process(self.calc_current_queue_time())
 
     @property
     def capacity(self):
@@ -95,6 +98,10 @@ class ChargingStation(TrackingInterface):
     @property
     def queue_size(self):
         return self._queue_size
+
+    @property
+    def current_queue_time(self):
+        return self._current_queue_time
 
     @property
     def vehicle_plugged_in(self):
@@ -141,6 +148,46 @@ class ChargingStation(TrackingInterface):
                     x.processed_plug_out_event = self._env.event()
 
             self._vehicle_unplugged = self._env.event()
+
+    def calc_current_queue_time(self):
+        # a charging station could expose the current expected queue time (if a vehicle would request charging right now) from the remaining charging times of vehicles in it and requests in the queue
+        while True:
+            yield self._env.timeout(1)
+            # first we get the most trivial scenario out of the way
+            if len(self._plugs.users) < self._capacity:
+                self._current_queue_time = 0
+                continue
+
+            # that seems really hacky but the only way to directly access the caller that initiated the request to the simpy ressource, if you find a better way feel free to raise a pull request :)
+            ongoing_charging_tasks = [
+                x.proc._generator.gi_frame.f_locals["self"] for x in self._plugs.users
+            ]
+            queued_tasks = [
+                x.proc._generator.gi_frame.f_locals["self"] for x in self._plugs.queue
+            ]
+
+            ongoing_tasks_completion_time_asc = sorted(
+                [x._estimated_completion_time for x in ongoing_charging_tasks]
+            )
+            queued_tasks_charging_time = [x.charging_duration for x in queued_tasks]
+
+            # calculate rolling finish times
+            finish_times = (
+                ongoing_tasks_completion_time_asc.copy()
+            )  # init for currently charging
+            for i, charging_time in enumerate(queued_tasks_charging_time):
+                if i < self._capacity:
+                    # if the queue is short, the queued vehicles finish time is just the end time of the i-th next finished vehicle plus its own charging time
+                    finish_times[i] += charging_time
+                else:
+                    # if multiple vehicles need to rotate from the queue we need to cumulate the waiting times
+                    earliest_finish_time = min(finish_times)
+                    finish_times[finish_times.index(earliest_finish_time)] = (
+                        earliest_finish_time + charging_time
+                    )
+
+            # the current queue time for a new vehicle is then the difference between the earliest possible finish time and the current time
+            self._current_queue_time = min(finish_times) - self._env.now
 
     def dump(self, exposed_only: bool = True) -> dict:
         if exposed_only:

@@ -31,6 +31,7 @@ class ChargingTaskRidehailing(ServiceTask):
         "_vehicle",
         "_waiting_time",
         "_charging_duration",
+        "_estimated_completion_time",
         "_kWh_charged",
         "_distance",
         "_scheduled_time",
@@ -69,12 +70,14 @@ class ChargingTaskRidehailing(ServiceTask):
         self._scheduled_time = scheduled_time
         self._waiting_time = None
         self._charging_duration = None
+        self._estimated_completion_time = None
         self._kWh_charged = None
         self._distance = vehicle.position >> self._destination_position
         self._config = Configuration.instance()
 
         # Events
         self._arrived_at_charging_station = self._env.event()
+        self._started_charging = self._env.event()
 
     @property
     def destination(self):
@@ -189,27 +192,30 @@ class ChargingTaskRidehailing(ServiceTask):
                     self._state = TaskState.EXECUTING_WAITING
 
                 with self._charging_station.plugs.request() as req:
-                    yield req
-
-                    # Charge Vehicle
+                    # This information already needs to be available in the queue
                     vehicle_charging_power = self._charging_station.power
                     charging_power = min(
                         vehicle_charging_power, self._charging_station.power
                     )
                     # Note: See text regarding linearization
-                    # *60 as state of charge is in kWh => kWmin
-                    charging_duration = (
+                    # * 60 as state of charge is in kWh => kWmin
+                    self._charging_duration = (
                         (vehicle.max_state_of_charge - vehicle.current_state_of_charge)
                         / charging_power
                         * 60
                     )
+
+                    yield req
+
                     if self._scheduled_time is not None:
-                        charging_duration = min(
-                            charging_duration,
+                        self._charging_duration = min(
+                            self._charging_duration,
                             (self._scheduled_time + 60) - self._env.now,
                         )
 
-                    charging_duration -= 1e-6 if charging_duration > 1e-6 else 0
+                    self._charging_duration -= (
+                        1e-6 if self._charging_duration > 1e-6 else 0
+                    )
 
                     # Plugin Vehicle to Charging Station
                     vehicle.plug_to_charging_station()
@@ -219,11 +225,15 @@ class ChargingTaskRidehailing(ServiceTask):
                         waiting_stop = self._env.now
                         self._waiting_time = waiting_stop - waiting_start
 
-                    self._charging_duration = charging_duration
-                    self._kWh_charged = charging_duration / 60 * charging_power
+                    self._kWh_charged = self._charging_duration / 60 * charging_power
+                    self._estimated_completion_time = (
+                        self._env.now + self._charging_duration
+                    )
                     self._state = TaskState.EXECUTING_CHARGING
 
-                    yield self._env.process(vehicle.charge(charging_duration))
+                    self._started_charging.succeed(self._env.now)
+
+                    yield self._env.process(vehicle.charge(self._charging_duration))
             else:
                 # TODO: this usage of "charge" for possibly ICE vehicles is confusing
                 vehicle._state = VehicleState.PRE_SERVICE
