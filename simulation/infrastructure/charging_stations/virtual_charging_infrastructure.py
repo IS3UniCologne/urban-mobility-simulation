@@ -123,17 +123,21 @@ class VirtualChargingInfrastructure:
     def _update_virtual_cs(self, init=False):
         for cs in self._virtual_charging_stations:
             # availability might be negative if we account for some vehicle on the way and in the meantime another vehicle arrives at the already full station
-            bounded_capa = max(
-                0,
-                min(
-                    self._availability[self._lookahead][cs.location]
-                    if self._lookahead is not None
-                    else self._availability[cs.location],
-                    cs._physical_charging_station.capacity,
-                ),
+            bounded_capa = (
+                max(
+                    0,
+                    min(
+                        self._availability[self._lookahead][cs.location]
+                        if self._lookahead is not None
+                        else self._availability[cs.location],
+                        cs._physical_charging_station.capacity,
+                    ),
+                )
+                if not init
+                else 0
             )
             cs.update_capacity(
-                capacity=bounded_capa if not init else 0,
+                capacity=bounded_capa,
                 valid_timeframe=(
                     self._lookahead,
                     self._lookahead
