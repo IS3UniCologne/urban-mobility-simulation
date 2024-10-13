@@ -1,3 +1,5 @@
+import logging
+
 import h3
 import simpy
 from shapely.geometry import shape
@@ -55,6 +57,13 @@ class ChargingStation(TrackingInterface):
         self._vehicle_plugged_in = self._env.event()
         self._vehicle_unplugged = self._env.event()
 
+        # and Locks for parallel access
+        self._plug_in_lock = simpy.Resource(self._env, capacity=1)
+        self._plug_out_lock = simpy.Resource(self._env, capacity=1)
+
+        # List of listening entities for the above events, in case of massive parallel access of competing fleets
+        self._event_subscribers = []
+
     @property
     def capacity(self):
         return self._capacity
@@ -95,11 +104,43 @@ class ChargingStation(TrackingInterface):
     def vehicle_unplugged(self):
         return self._vehicle_unplugged
 
+    def register_event_subscriber(self, subscriber):
+        self._event_subscribers.append(subscriber)
+
     def plug_in_notify(self):
-        self._vehicle_plugged_in.succeed()
+        with self._plug_in_lock.request() as req:
+            yield req
+            self._vehicle_plugged_in.succeed()
+            if self._event_subscribers:
+                yield simpy.AllOf(
+                    self._env,
+                    [x.processed_plug_in_event for x in self._event_subscribers],
+                )
+                logging.debug(
+                    "All listeners have processed the plug in event, resetting",
+                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                )
+                for x in self._event_subscribers:
+                    x.processed_plug_in_event = self._env.event()
+            self._vehicle_plugged_in = self._env.event()
 
     def plug_out_notify(self):
-        self._vehicle_unplugged.succeed()
+        with self._plug_out_lock.request() as req:
+            yield req
+            self._vehicle_unplugged.succeed()
+            if self._event_subscribers:
+                yield simpy.AllOf(
+                    self._env,
+                    [x.processed_plug_out_event for x in self._event_subscribers],
+                )
+                logging.debug(
+                    "All listeners have processed the plug out event, resetting",
+                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                )
+                for x in self._event_subscribers:
+                    x.processed_plug_out_event = self._env.event()
+
+            self._vehicle_unplugged = self._env.event()
 
     def dump(self, exposed_only: bool = True) -> dict:
         if exposed_only:

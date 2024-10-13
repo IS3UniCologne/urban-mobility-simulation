@@ -11,8 +11,8 @@ from simulation.operator.operations_management.algorithms.distance_based_bidding
     get_bid,
 )
 from simulation.operator.operations_management.operations import OperationsInterface
-from simulation.operator.operations_management.ridehailing_charging_operations import (
-    RideHailingChargingOperations,
+from simulation.operator.operations_management.ridehailing_base_charging_operations import (
+    RideHailingBaseChargingOperations,
 )
 from simulation.world.markets.auction import Auction
 from simulation.world.markets.interfaces.bidder_interface import BidderInterface
@@ -50,7 +50,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
             + self._config.shared_charging_config.auction_lookahead,
         )
 
-        self._charging_operations = RideHailingChargingOperations(
+        self._charging_operations = RideHailingBaseChargingOperations(
             env=self._env,
             distance_matrix=self._distance_matrix,
             time_between_operations=self._config.shared_charging_config.auction_interval,

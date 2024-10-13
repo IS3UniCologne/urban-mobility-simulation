@@ -35,8 +35,8 @@ from simulation.operator.fleet_factory import (
     generate_mixed_ride_hailing_fleet,
     generate_ridehailing_fleet_config,
 )
-from simulation.operator.operations_management.ridehailing_charging_operations import (
-    RideHailingChargingOperations,
+from simulation.operator.operations_management.ridehailing_base_charging_operations import (
+    RideHailingBaseChargingOperations,
 )
 from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
@@ -579,7 +579,7 @@ def run_single_simulation(
 
     # Initialize Rule Based Relocation Scheduler
     # For RideHailing Fleets
-    ridehailing_operations_0 = RideHailingChargingOperations(
+    ridehailing_operations_0 = RideHailingBaseChargingOperations(
         env=env,
         distance_matrix=distance_matrix,
         time_between_operations=global_config.ridehailing_operator_config.operations_start,
@@ -589,7 +589,7 @@ def run_single_simulation(
         state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
     )
 
-    ridehailing_operations_1 = RideHailingChargingOperations(
+    ridehailing_operations_1 = RideHailingBaseChargingOperations(
         env=env,
         distance_matrix=distance_matrix,
         time_between_operations=global_config.ridehailing_operator_config.operations_start,

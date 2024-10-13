@@ -52,8 +52,12 @@ class ChargingTaskRidehailing(ServiceTask):
     ):
         super(ChargingTaskRidehailing, self).__init__(env)
 
+        _geo_env = GeodesicEnvironment.getInstance()
         self._origin = origin
         self._destination = destination
+        self._destination_position = GeodesicPosition(
+            *_geo_env.get_centroid(self._destination), self._destination
+        )
         self._number_of_vehicles_to_charge = number_of_vehicles_to_charge
         self._vehicle_mode = vehicle_mode
         self._distance_to_fleet_base = distance_to_fleet_base
@@ -66,7 +70,7 @@ class ChargingTaskRidehailing(ServiceTask):
         self._waiting_time = None
         self._charging_duration = None
         self._kWh_charged = None
-        self._distance = None
+        self._distance = vehicle.position >> self._destination_position
         self._config = Configuration.instance()
 
         # Events
@@ -94,12 +98,6 @@ class ChargingTaskRidehailing(ServiceTask):
         :param simpy_env: SimPy Environment
         :return:
         """
-        # Get position of fleet base (centroid of hexagon)
-        geo_env = GeodesicEnvironment.getInstance()
-        fleet_base_lat, fleet_base_lng = geo_env.get_centroid(self._destination)
-        fleet_base_position = GeodesicPosition(
-            fleet_base_lat, fleet_base_lng, self._destination
-        )
 
         # Identify vehicles to relocate
         potential_vehicles_to_charge = [self._vehicle]
@@ -120,9 +118,11 @@ class ChargingTaskRidehailing(ServiceTask):
         # Start Charging Process
         for vehicle in selected_vehicles_to_charge:
             # Relocation Route from origin of vehicle to fleet base
-            self._distance = vehicle.position >> fleet_base_position
+
             relocation_route = Edge(
-                self._distance, Vertex(vehicle.position), Vertex(fleet_base_position)
+                self._distance,
+                Vertex(vehicle.position),
+                Vertex(self._destination_position),
             )
 
             self._state = TaskState.EXECUTING_RELOCATION
@@ -168,7 +168,7 @@ class ChargingTaskRidehailing(ServiceTask):
                             self._task_finished.succeed()
                             return
 
-                elif (
+                if (
                     len(self._charging_station.plugs.users)
                     - self._charging_station.capacity
                     == 0
@@ -213,7 +213,7 @@ class ChargingTaskRidehailing(ServiceTask):
 
                     # Plugin Vehicle to Charging Station
                     vehicle.plug_to_charging_station()
-                    self._charging_station.plug_in_notify()
+                    self._env.process(self._charging_station.plug_in_notify())
 
                     if not isinstance(self._charging_station, VirtualChargingStation):
                         waiting_stop = self._env.now
@@ -231,7 +231,7 @@ class ChargingTaskRidehailing(ServiceTask):
                 yield self._env.process(vehicle.charge(charging_time=5))
             # Unplug Vehicle from Charging Station
             vehicle.unplug_from_charging_station()
-            self._charging_station.plug_out_notify()
+            self._env.process(self._charging_station.plug_out_notify())
             self._state = TaskState.FINISHED
 
         # Notify all

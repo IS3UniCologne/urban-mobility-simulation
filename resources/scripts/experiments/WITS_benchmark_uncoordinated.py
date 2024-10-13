@@ -43,8 +43,8 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 
 # Import operator related modules
 from simulation.operator.fleet_factory import generate_AV_fleet
-from simulation.operator.operations_management.ridehailing_charging_operations import (
-    RideHailingChargingOperations,
+from simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations import (
+    RideHailingUncoordinatedChargingOperations,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
@@ -540,7 +540,7 @@ search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
 search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
 # Initialize fleet operations
-ridehailing_operations_0 = RideHailingChargingOperations(
+ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
     env=env,
     distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
@@ -551,7 +551,7 @@ ridehailing_operations_0 = RideHailingChargingOperations(
     allow_queue=False,
 )
 
-ridehailing_operations_1 = RideHailingChargingOperations(
+ridehailing_operations_1 = RideHailingUncoordinatedChargingOperations(
     env=env,
     distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,

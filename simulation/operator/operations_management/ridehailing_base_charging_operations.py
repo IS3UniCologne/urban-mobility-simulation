@@ -20,7 +20,7 @@ from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.world.world import World
 
 
-class RideHailingChargingOperations(OperationsInterface):
+class RideHailingBaseChargingOperations(OperationsInterface):
     def __init__(
         self,
         env,
@@ -30,9 +30,9 @@ class RideHailingChargingOperations(OperationsInterface):
         available_modes,
         available_modes_supply,
         state_of_charge_threshold,
-        allow_queue=True,
+        allow_queue,
     ):
-        super(RideHailingChargingOperations, self).__init__(env=env)
+        super(RideHailingBaseChargingOperations, self).__init__(env=env)
 
         self._world = None  # defer
         self._config = Configuration.instance()
@@ -59,6 +59,7 @@ class RideHailingChargingOperations(OperationsInterface):
         # Events
         self._charging_plan_updated = env.event()
         self._operations_started = env.event()
+        self._task_executed = env.event()
 
         # When to start operations
         self._time_between_operations = time_between_operations
@@ -69,6 +70,10 @@ class RideHailingChargingOperations(OperationsInterface):
     @property
     def charging_plan_updated(self):
         return self._charging_plan_updated
+
+    @property
+    def task_executed(self):
+        return self._task_executed
 
     def execute(self):
         self._world = World.instance()
@@ -97,6 +102,16 @@ class RideHailingChargingOperations(OperationsInterface):
                     vehicle,
                 ) = charging_plan[0]
 
+                # we need to do some differentiation here, because we need to check if the charging station is virtual, and if it is, we need to check if we are in a context with reserved timeslots
+                scheduled_time = None
+                if is_bearable(charging_station, VirtualChargingStation):
+                    scheduled_time = charging_station.valid_timeframe
+                    try:
+                        scheduled_time = scheduled_time[0]
+                    except TypeError:
+                        # 'NoneType' object is not subscriptable > not using reservation timeslots
+                        scheduled_time = None
+
                 charging_task = ChargingTaskRidehailing(
                     self._env,
                     origin,
@@ -106,9 +121,7 @@ class RideHailingChargingOperations(OperationsInterface):
                     self._state_of_charge_threshold,
                     charging_station,
                     vehicle,
-                    scheduled_time=charging_station.valid_timeframe[0]
-                    if is_bearable(charging_station, VirtualChargingStation)
-                    else None,
+                    scheduled_time=scheduled_time,
                 )
 
                 # Schedule to Queue
@@ -159,6 +172,8 @@ class RideHailingChargingOperations(OperationsInterface):
                     },
                 )
                 self._env.process(next_task.execute())
+                self._task_executed.succeed(next_task)
+                self._task_executed = self._env.event()
 
             # ### TODO: activate relocation for ridehailing later
 
