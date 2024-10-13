@@ -15,6 +15,8 @@ class VirtualChargingStation:
         "_location",
         "_power",
         "_queue",
+        "_queue_size",
+        "_current_queue_time",
     )
 
     def __init__(self, charging_station: ChargingStation):
@@ -30,6 +32,7 @@ class VirtualChargingStation:
         self._power = charging_station.power
         self._queue = charging_station._queue
         self._queue_size = charging_station._queue_size
+        self._current_queue_time = charging_station._current_queue_time
 
     def plug_in_notify(self):
         yield self._env.process(self._physical_charging_station.plug_in_notify())
@@ -78,3 +81,7 @@ class VirtualChargingStation:
     @property
     def queue_size(self):
         return self._queue_size
+
+    @property
+    def current_queue_time(self):
+        return self._physical_charging_station.current_queue_time
