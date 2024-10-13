@@ -97,5 +97,6 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         availability[task.destination] += 1
         self._virtual_charging_infrastructure.update(availability=availability)
 
+    @property
     def task_transactions(self):
         return self._charging_operations.task_transactions
