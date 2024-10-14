@@ -17,7 +17,7 @@ from simulation.world.world import World
 from tracking.tracking import Tracking
 
 # Move to config
-walking_speed_in_mpm = 5
+# walking_speed_in_mpm = 5
 grace_period = 10  # in minutes?
 
 
@@ -40,6 +40,8 @@ class OperationsPublicTransport(OperationsInterface):
         self._tracking = (
             None  # defer loading to run process, otherwise circular dependency
         )
+
+        self._walking_speed_mpm = self._config.user_config.walking_speed_mpm,
 
     def execute(self):
         """
@@ -305,6 +307,7 @@ class OperationsPublicTransport(OperationsInterface):
 
     @staticmethod
     def _reachable_in_time(
+        self,
         stop: Stop,
         vehicle: PublicTransitVehicle,
         current_time,
@@ -315,7 +318,7 @@ class OperationsPublicTransport(OperationsInterface):
         # reachable within the specified temporal_lookahead and depart after arrival by foot
         reachable = (
             SimulationTimeConverter.as_str(
-                current_time + (walking_dist / walking_speed_in_mpm)
+                current_time + (walking_dist / self._walking_speed_mpm)
             )
             <= vehicle.prognose_arrival(stop)
             <= latest_departure

@@ -165,9 +165,10 @@ env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 # User configuration
 max_waiting_time = parser.get("USER", "TRANSIT_MAX_WAIT")
 spatial_strategy = parser.get("USER", "SPATIAL_STRATEGY")
+walking_speed_mpm = parser.get("USER", "WALKING_SPEED_MPM")
 
 # Create user configuration
-user_config = UserConfig(spatial_strategy, max_waiting_time)
+user_config = UserConfig(spatial_strategy, max_waiting_time, walking_speed_mpm)
 
 # Register all configurations
 global_config.add_user_config(user_config)
