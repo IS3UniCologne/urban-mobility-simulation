@@ -563,6 +563,10 @@ env.process(track_fleets(ride_hailing_fleet_1.id))
 search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
 search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
+# if queue sizes at charging stations are all zero, we should account for that in the operations
+# there can be more clever and nuanced approaches, but as a rule of thumb, we should not allow operations to send vehicles to charging stations that are full if we don't allow queueing
+allow_queue = sum(charging_station_queue_size_list) > 0
+
 # Initialize fleet operations
 ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
     env=env,
@@ -572,7 +576,7 @@ ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    allow_queue=False,
+    allow_queue=allow_queue,
 )
 
 ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
@@ -583,7 +587,7 @@ ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    allow_queue=False,
+    allow_queue=allow_queue,
 )
 
 
