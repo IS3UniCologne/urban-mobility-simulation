@@ -1,5 +1,6 @@
 import logging
 
+from beartype.door import is_bearable
 from simpy import Environment
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -139,7 +140,7 @@ class ChargingTaskRidehailing(ServiceTask):
 
                 waiting_start = self._env.now
 
-                if isinstance(self._charging_station, VirtualChargingStation):
+                if is_bearable(self._charging_station, VirtualChargingStation):
                     # only in this case we can check for the next condition, otherwise AttributeError gets thrown
                     if self._charging_station.valid_timeframe is not None:
                         # if we are in a context of shared capacity, we need to wait for the reservation
@@ -172,11 +173,14 @@ class ChargingTaskRidehailing(ServiceTask):
                             return
 
                 if (
-                    len(self._charging_station.plugs.users)
-                    - self._charging_station.capacity
-                    == 0
-                    and self._charging_station.queue_size
-                    <= len(self._charging_station.plugs.queue)
+                    (
+                        len(self._charging_station.plugs.users)
+                        - self._charging_station.capacity
+                    )
+                    if not is_bearable(self._charging_station, VirtualChargingStation)
+                    else self._charging_station.capacity
+                ) == 0 and self._charging_station.queue_size <= len(
+                    self._charging_station.plugs.queue
                 ):
                     # charging station is at capacity and the queue is also full
                     logging.info(
