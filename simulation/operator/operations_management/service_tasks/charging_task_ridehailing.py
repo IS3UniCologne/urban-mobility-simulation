@@ -172,14 +172,20 @@ class ChargingTaskRidehailing(ServiceTask):
                             self._task_finished.succeed()
                             return
 
-                if (
-                    (
-                        len(self._charging_station.plugs.users)
-                        - self._charging_station.capacity
-                    )
-                    if not is_bearable(self._charging_station, VirtualChargingStation)
-                    else self._charging_station.capacity
-                ) == 0 and self._charging_station.queue_size <= len(
+                check_station_full = False
+                if is_bearable(self._charging_station, VirtualChargingStation):
+                    if self._charging_station.valid_timeframe is None:
+                        # usually with VirtualChargingStations we utilize the capacity attribute as an up-to-date remaining capacity
+                        check_station_full = self._charging_station.capacity == 0
+                    else:
+                        # in the other case, we are in a context of reserved timeslots, where we utilize the capacity attribute as total reserved capacity
+                        check_station_full = (
+                            len(self._charging_station.plugs.users)
+                            - self._charging_station.capacity
+                            == 0
+                        )
+
+                if check_station_full and self._charging_station.queue_size <= len(
                     self._charging_station.plugs.queue
                 ):
                     # charging station is at capacity and the queue is also full
