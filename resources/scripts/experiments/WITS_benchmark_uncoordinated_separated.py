@@ -43,11 +43,8 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 
 # Import operator related modules
 from simulation.operator.fleet_factory import generate_AV_fleet
-from simulation.operator.operations_management.algorithms.charging_station_allocation import (
-    TimeMin,
-)
-from simulation.operator.operations_management.ridehailing_MP_charging_operations import (
-    RideHailingMPChargingOperations,
+from simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations import (
+    RideHailingUncoordinatedChargingOperations,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
@@ -566,31 +563,27 @@ env.process(track_fleets(ride_hailing_fleet_1.id))
 search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
 search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
-time_minimizing_charging_allocation = TimeMin()
-
 # Initialize fleet operations
-ridehailing_operations_0 = RideHailingMPChargingOperations(
+ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
     env=env,
-    #    distance_matrix=distance_matrix,
+    distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
-    #    operation_duration=global_config.ridehailing_operator_config.operations_duration,
-    #    available_modes=available_vehicle_modes_ridehailing,
-    #    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
+    operation_duration=global_config.ridehailing_operator_config.operations_duration,
+    available_modes=available_vehicle_modes_ridehailing,
+    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    #    allow_queue=False,
-    algo=time_minimizing_charging_allocation,
+    allow_queue=False,
 )
 
-ridehailing_operations_1 = RideHailingMPChargingOperations(
+ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
     env=env,
-    #    distance_matrix=distance_matrix,
+    distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
-    #    operation_duration=global_config.ridehailing_operator_config.operations_duration,
-    #    available_modes=available_vehicle_modes_ridehailing,
-    #    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
+    operation_duration=global_config.ridehailing_operator_config.operations_duration,
+    available_modes=available_vehicle_modes_ridehailing,
+    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    #    allow_queue=False,
-    algo=time_minimizing_charging_allocation,
+    allow_queue=False,
 )
 
 

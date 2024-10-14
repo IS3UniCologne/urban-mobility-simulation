@@ -45,7 +45,7 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 # Import operator related modules
 from simulation.operator.fleet_factory import generate_AV_fleet
 from simulation.operator.operations_management.algorithms.charging_station_allocation import (
-    TimeMin,
+    DowntimeMinWithoutLookahead,
 )
 from simulation.operator.operations_management.ridehailing_MP_charging_operations import (
     RideHailingMPChargingOperations,
@@ -570,7 +570,7 @@ env.process(track_fleets(ride_hailing_fleet_1.id))
 search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
 search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
-time_minimizing_charging_allocation = TimeMin()
+time_minimizing_charging_allocation = DowntimeMinWithoutLookahead()
 
 # Initialize fleet operations
 ridehailing_operations_0 = RideHailingMPChargingOperations(
