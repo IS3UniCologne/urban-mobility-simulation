@@ -58,7 +58,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
             available_modes=self._config.ridehailing_operator_config.available_modes,
             available_modes_supply=self._config.ridehailing_operator_config.available_modes_supply,
             state_of_charge_threshold=self._state_of_charge_threshold,
-            allow_queue=False,
+            allow_queue=False,  # no queue, only reserved slots
         )
 
         # hack a virtual operator reference into it?
