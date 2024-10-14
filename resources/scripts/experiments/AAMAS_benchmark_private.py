@@ -3,6 +3,7 @@
 import csv
 import logging
 import os
+import shutil
 import sys
 import time
 from configparser import ConfigParser
@@ -120,6 +121,9 @@ logger.addHandler(consolehandler)
 # Basic Configuration                     #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
+
+# make a copy of the used config file that references this run
+shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.ini")
 
 # Experiment Management
 start_time = parser.getint("EXPERIMENT_MANAGEMENT", "START_TIME")
