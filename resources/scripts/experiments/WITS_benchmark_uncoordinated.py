@@ -709,6 +709,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util,
             None,
-            "random_SOC_init" if initial_SoC == 0 else None,
+            f'{"random_SOC_init" if initial_SoC == 0 else ""}, queue_size:{charging_station_queue_size_list[0]}',
         ]
     )
