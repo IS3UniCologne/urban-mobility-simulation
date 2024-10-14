@@ -292,6 +292,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                 selected_base_distance = None
                 if vehicle.is_electric:
                     # we prioritize based on the queue
+                    # TODO: priorize based on CS.current_queue_time
                     for queue in [0, 2, 5, 10]:
                         for index_base, row_base in sorted_base_list.iterrows():
                             selected_base = index_base

@@ -20,7 +20,7 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         available_modes,
         available_modes_supply,
         state_of_charge_threshold,
-        allow_queue=True,
+        allow_queue,
     ):
         super(RideHailingUncoordinatedChargingOperations, self).__init__(env=env)
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
