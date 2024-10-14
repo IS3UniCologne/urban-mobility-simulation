@@ -42,6 +42,7 @@ class OperationsPublicTransport(OperationsInterface):
         )
 
         self._walking_speed_mpm = self._config.user_config.walking_speed_mpm,
+        self._bus_velocity = self._config.bus_config.velocity,
 
     def execute(self):
         """
@@ -90,7 +91,7 @@ class OperationsPublicTransport(OperationsInterface):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
 
         bus = Bus(
-            env=self._env, route=route, position=init_position, use_learning_agent=False
+            env=self._env, route=route, position=init_position, use_learning_agent=False, velocity = self._bus_velocity
         )
 
         self._busses.append(bus)

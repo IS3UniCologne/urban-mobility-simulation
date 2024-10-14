@@ -21,6 +21,7 @@ from simulation.helper.configuration.configuration import (
     RideHailingVehicleConfig,
     TransitOperatorConfig,
     UserConfig,
+    BusConfig,
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
@@ -170,8 +171,14 @@ walking_speed_mpm = parser.get("USER", "WALKING_SPEED_MPM")
 # Create user configuration
 user_config = UserConfig(spatial_strategy, max_waiting_time, walking_speed_mpm)
 
+# Bus configuration
+bus_seats = parser.getint("BUS", "SEATS")
+bus_velocity = parser.getfloat("BUS", "VELOCITY")
+bus_config = BusConfig(bus_velocity, bus_seats)
+
 # Register all configurations
 global_config.add_user_config(user_config)
+global_config.add_bus_config(bus_config)
 global_config.add_transit_operator_config(transit_operator_config)
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
@@ -238,7 +245,7 @@ recharge_threshold = [float(x) / 100 for x in recharge_threshold]
 
 operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
-vehicle_relocation_velocity = parser.getint(
+vehicle_relocation_velocity = parser.getfloat(
     "RIDE_HAILING_OPERATOR", "VEHICLE_RELOCATION_VELOCITY"
 )
 
