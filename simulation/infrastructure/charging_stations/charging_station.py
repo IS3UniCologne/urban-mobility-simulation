@@ -158,6 +158,10 @@ class ChargingStation(TrackingInterface):
                 self._current_queue_time = 0
                 continue
 
+            yield self._env.timeout(
+                1e-6
+            )  # this might be necessary for process order, when charging tasks are making the switch from queue to plugs
+
             # that seems really hacky but the only way to directly access the caller that initiated the request to the simpy ressource, if you find a better way feel free to raise a pull request :)
             ongoing_charging_tasks = [
                 x.proc._generator.gi_frame.f_locals["self"] for x in self._plugs.users
@@ -167,7 +171,11 @@ class ChargingStation(TrackingInterface):
             ]
 
             ongoing_tasks_completion_time_asc = sorted(
-                [x._estimated_completion_time for x in ongoing_charging_tasks]
+                [
+                    x._estimated_completion_time
+                    for x in ongoing_charging_tasks
+                    if x._estimated_completion_time is not None
+                ]
             )
             queued_tasks_charging_time = [x.charging_duration for x in queued_tasks]
 
