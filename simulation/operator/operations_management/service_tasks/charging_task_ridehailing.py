@@ -208,6 +208,21 @@ class ChargingTaskRidehailing(ServiceTask):
                             - self._env.now,
                         )
 
+                    if self._charging_duration <= 0:
+                        logging.info(
+                            "Vehicle %s has a fishy charging time of %s minutes at. Cannot charge!",
+                            self._vehicle.id,
+                            self._charging_duration,
+                            extra={
+                                "clazz": self.__class__.__name__,
+                                "oid": self._vehicle.id,
+                            },
+                        )
+                        self._state = TaskState.MISSED_TIMESLOT
+                        self._vehicle.state = VehicleState.PARKING
+                        self._task_finished.succeed()
+                        return
+
                     self._charging_duration -= (
                         1e-6 if self._charging_duration > 1e-6 else 0
                     )
