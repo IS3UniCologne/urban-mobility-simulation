@@ -56,6 +56,7 @@ class DowntimeMinWithoutLookahead:
             for i in CSs:
                 Q[i.id] = i.current_queue_time
                 N[i.id] = i.capacity  # this only works with VirtualChargingStations !!
+                # TODO: M should incorporate overflow of capa
                 M[i.id] = i.capacity + (i.queue_size - len(i.plugs.queue))
                 C[i.id] = i.plugs.capacity
 
@@ -158,9 +159,8 @@ class DowntimeMinWithoutLookahead:
 
                     # the queueing time will vary based on how many vehicles are send there, we need to take this into account
                     # because exact solution approaches are intractible in realtime scenarios, we use approximation for how long one other assignment would potentially increase our queueing time
-                    T_q[i.id, j.id] = (
-                        mdl.max(0, Q[i.id] - T_d[i.id, j.id])
-                        + charging_time_faster_vehicles[i.id, j.id] / i.plugs.capacity
+                    T_q[i.id, j.id] = mdl.max(0, Q[i.id] - T_d[i.id, j.id]) + (
+                        charging_time_faster_vehicles[i.id, j.id] / i.plugs.capacity
                     )
 
             # assign each vehicle at max to one CS
@@ -205,7 +205,9 @@ class DowntimeMinWithoutLookahead:
             T_c_sum = mdl.sum(
                 T_c[i.id, j.id] for i in CSs for j in vehicles
             ).solution_value
-            T_q_sum = mdl.sum(Q[i.id] for i in CSs).solution_value
+            T_q_sum = mdl.sum(
+                T_q[i.id, j.id] for i in CSs for j in vehicles
+            ).solution_value
 
             logging.debug(
                 f"T_d = {T_d_sum}, T_c = {T_c_sum}, T_q = {T_q_sum}",

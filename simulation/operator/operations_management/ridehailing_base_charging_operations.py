@@ -419,6 +419,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         self._task_transactions.append(
             {
                 "start_time": task._start_time,
+                "estimated_arrival_time": task._estimated_arrival_time,
                 "scheduled_time": task._scheduled_time,
                 "end_time": self._env.now,
                 "vehicle": task._vehicle.id,
@@ -427,6 +428,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                 "charging_station": task._charging_station.location,
                 "waiting_time": task.waiting_time,
                 "charging_duration": task.charging_duration,
+                "estimated_completion_time": task._estimated_completion_time,
                 "kWh_charged": task.kWh_charged,
             }
         )
