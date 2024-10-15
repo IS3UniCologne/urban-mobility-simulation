@@ -62,7 +62,8 @@ class SharedChargingAuction(Auction, TrackingInterface):
             use_virtual_cs=False,
         )
         for timeslot in range(
-            self._config.auction_config.auction_start,
+            self._config.auction_config.auction_start
+            + self._config.shared_charging_config.auction_lookahead,
             self._config.auction_config.auction_end
             + self._config.shared_charging_config.auction_interval,
             self._config.shared_charging_config.auction_interval,
