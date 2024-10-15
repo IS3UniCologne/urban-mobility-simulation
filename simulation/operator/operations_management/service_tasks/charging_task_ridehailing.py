@@ -201,7 +201,11 @@ class ChargingTaskRidehailing(ServiceTask):
                     if self._scheduled_time is not None:
                         self._charging_duration = min(
                             self._charging_duration,
-                            (self._scheduled_time + 60) - self._env.now,
+                            (
+                                self._scheduled_time
+                                + self._config.shared_charging_config.timeslot_duration
+                            )
+                            - self._env.now,
                         )
 
                     self._charging_duration -= (
