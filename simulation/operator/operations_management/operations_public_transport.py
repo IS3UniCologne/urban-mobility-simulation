@@ -41,8 +41,8 @@ class OperationsPublicTransport(OperationsInterface):
             None  # defer loading to run process, otherwise circular dependency
         )
 
-        self._walking_speed_mpm = self._config.user_config.walking_speed_mpm,
-        self._bus_velocity = self._config.bus_config.velocity,
+        self._walking_speed_mpm = self._config.user_config.walking_speed_mpm
+        self._bus_velocity = self._config.bus_config.velocity
 
     def execute(self):
         """

@@ -120,7 +120,7 @@ logger.addFilter(cf)
 
 # Experiment Management
 start_time = parser.getint("EXPERIMENT_MANAGEMENT", "START_TIME")
-end_time = parser.getint("EXPERIMENT_MANAGEMENT", "END_TIME")
+end_time = parser.getfloat("EXPERIMENT_MANAGEMENT", "END_TIME")
 seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
 
 # World / Resolution Config
