@@ -284,6 +284,7 @@ class RideHailingVehicle(Vehicle):
 
     def stop_driving(self):
         self.state = VehicleState.PARKING
+        self.set_current_task(None)
 
         logging.debug(
             "Driving stopped.",
@@ -334,6 +335,7 @@ class RideHailingVehicle(Vehicle):
         self._current_state_of_charge -= energy_consumed
 
         if self._current_state_of_charge < 0:
+            # TODO: this should not happen and throw something like a SimulationConstraintException
             self._current_state_of_charge = 0.0
 
         logging.debug(

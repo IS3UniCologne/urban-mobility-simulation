@@ -601,8 +601,8 @@ class RideHailingOperatorConfig:
         self.recharge_threshold = recharge_threshold
         self.operations_start = operations_start
         self.operations_duration = operations_duration
-        self.vehicle_relocation_velocity = (
-            SimulationVelocityConverter.convert_kmh(vehicle_relocation_velocity),
+        self.vehicle_relocation_velocity = SimulationVelocityConverter.convert_kmh(
+            vehicle_relocation_velocity
         )
         self.available_modes = available_modes
         self.available_modes_supply = available_modes_supply
@@ -648,10 +648,17 @@ class SharedVehicleOperatorConfig:
 
 
 class ChargingInfrastructureConfig:
-    def __init__(self, locations: List, power: List, capacity: List):
+    def __init__(
+        self,
+        locations: List[str],
+        power: List[float],
+        capacity: List[int],
+        queue_size: List[int],
+    ):
         self.locations = locations
         self.power = power
         self.capacity = capacity
+        self.queue_size = queue_size
 
 
 class AuctionConfig:
