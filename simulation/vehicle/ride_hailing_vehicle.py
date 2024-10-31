@@ -198,6 +198,10 @@ class RideHailingVehicle(Vehicle):
     def fleet(self):
         return self._fleet
 
+    @fleet.setter
+    def fleet(self, fleet):
+        self._fleet = fleet
+
     @property
     def estimated_completion_time(self):
         return self._estimated_completion_time

@@ -187,7 +187,7 @@ def generate_AV_fleet(env, distribution, n=500, seed=4711):
                 price_per_min=av_config.price_per_min,
             )
             fleet.add_vehicle(autonomous_car)
-            autonomous_car._fleet = fleet
+            autonomous_car.fleet = fleet
 
     return fleet
 

@@ -129,7 +129,11 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 ### Input Files
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
-demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
+demand_modifier_paths = parser.get(
+    "DEMAND", "path_demand_modifiers", fallback=""
+).split(",")
+if demand_modifier_paths == [""]:
+    demand_modifier_paths = []
 
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
@@ -305,6 +309,14 @@ load_environment(city)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
+# Init. Tracking                          #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+tracking = Tracking.init(env)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
 # Charging Infrastructure                 #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
@@ -385,13 +397,6 @@ global_config.set_output_path(output_folder)
 global_config.set_transaction_file(transaction_file)
 global_config.set_fleet_state_file(fleet_state_file)
 
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Init. Tracking                          #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-tracking = Tracking.init(env)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -558,7 +563,7 @@ world = World.init(
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, [], seed, mode="ride_hailing"
+    env, demand_profile, di, world, demand_modifier_paths, seed, mode="ride_hailing"
 )
 # env.process(demand_factory.generate_demand())
 
