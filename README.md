@@ -22,7 +22,7 @@ Provide configuration files as the first argument after the experiment file name
 - *ride-hailing fleet (autonomous vehicles and ride-hailing cars)*
 - *shared mobility fleet (Cars, scooters, kickscooters and bikes)*
 
-The configurations of these fleets and their operator modules together with other components such as the charging infrastructure, spatial/temporal resolution and world are initialized with the information set in the `app-remote.ini`
+The configurations of these fleets and their operator modules together with other components such as the charging infrastructure, spatial/temporal resolution and world are initialized with the information set in the `template.ini`
 
 This file is used to set various parameters in the following blocks that are required in every simulation:
 
