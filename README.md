@@ -14,7 +14,7 @@ Other Python versions are untested!
 > We provide templates (`*_template.py`) for most common use cases, please refer to this!
 > At the moment, `template_all_modes.py` is not working, we first need to fix several issues for true multi-modal users.
 
-Provide configuration files as the first argument after the experiment file name such as `python experiment_template.py ./resources/configurations/tempalte.ini`
+Provide configuration files as the first argument after the experiment file name such as `python experiment_template.py ./resources/configurations/template.ini`
 
 ## Simulation Components
 > The simulation consists of three different types of mobility services: 
