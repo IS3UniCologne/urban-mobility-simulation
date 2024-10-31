@@ -84,8 +84,13 @@ city = parser.get("WORLD", "city")
 global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 # Input Files (Demand)
-demand_file_path = parser.get("DEMAND", "path_trip_demand")
-demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
+demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
+demand_modifier_paths = parser.get(
+    "DEMAND", "path_demand_modifiers", fallback=""
+).split(",")
+if demand_modifier_paths == [""]:
+    demand_modifier_paths = []
+
 
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
