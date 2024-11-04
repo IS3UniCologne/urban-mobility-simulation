@@ -7,6 +7,7 @@ from configparser import ConfigParser
 from pathlib import Path
 
 # Third-party library imports
+import pandas as pd
 import simpy
 
 # Imports world related modules
@@ -16,8 +17,11 @@ from simulation.environment.geodesic_environment import GeodesicEnvironment
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import (
     Configuration,
+    RideHailingOperatorConfig,
+    RideHailingVehicleConfig,
     TransitOperatorConfig,
     UserConfig,
+    BusConfig,
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
@@ -29,7 +33,20 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 from simulation.infrastructure.helper.timetable import Timetable
 
 # Import operator related modules
-from simulation.operator.public_transit_operator import PublicTransitOperator
+from simulation.operator.fleet_factory import (
+    generate_mixed_ride_hailing_fleet,
+    generate_ridehailing_fleet_config,
+)
+from simulation.operator.operations_management.operations_public_transport import (
+    OperationsPublicTransport,
+)
+from simulation.operator.public_transit_operator_refactor import PublicTransitOperator
+from simulation.operator.public_transport_allocation_engine import (
+    PublicTransportAllocationEngine,
+)
+from simulation.operator.public_transport_search_engine import (
+    PublicTransportSearchEngine,
+)
 from simulation.vehicle.public_transit_bus import Bus
 
 # Import vehicle types and vehicle choice options
@@ -65,13 +82,45 @@ parser.read(sys.argv[1])
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
+# Logging                                 #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Log Level
+log_level = parser.get("SETTINGS", "log_level")
+
+# Make it beautiful
+# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+)
+
+logger = logging.getLogger()
+logger.setLevel(log_level)
+
+# Block Logger of third party software
+logging.getLogger("fiona").setLevel(logging.WARNING)
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+)
+file_handler = logging.FileHandler("report.log")
+file_handler.setFormatter(formatter)
+file_handler.setLevel(log_level)
+
+# Add Custom Init Filters (which work without the ENV obj)
+cf = SimulationContextFilter(filter_name="add_env", extra=[])
+logger.addFilter(cf)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
 # Basic Configuration                     #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
 # Experiment Management
 start_time = parser.getint("EXPERIMENT_MANAGEMENT", "START_TIME")
-end_time = parser.getint("EXPERIMENT_MANAGEMENT", "END_TIME")
+end_time = parser.getfloat("EXPERIMENT_MANAGEMENT", "END_TIME")
 seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
 
 # World / Resolution Config
@@ -85,12 +134,7 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
-demand_modifier_paths = parser.get(
-    "DEMAND", "path_demand_modifiers", fallback=""
-).split(",")
-if demand_modifier_paths == [""]:
-    demand_modifier_paths = []
-
+demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
 
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
@@ -122,13 +166,119 @@ env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 # User configuration
 max_waiting_time = parser.get("USER", "TRANSIT_MAX_WAIT")
 spatial_strategy = parser.get("USER", "SPATIAL_STRATEGY")
+walking_speed_mpm = parser.get("USER", "WALKING_SPEED_MPM")
 
 # Create user configuration
-user_config = UserConfig(spatial_strategy, max_waiting_time)
+user_config = UserConfig(spatial_strategy, max_waiting_time, walking_speed_mpm)
+
+# Bus configuration
+bus_seats = parser.getint("BUS", "SEATS")
+bus_velocity = parser.getfloat("BUS", "VELOCITY")
+bus_config = BusConfig(bus_velocity, bus_seats)
 
 # Register all configurations
 global_config.add_user_config(user_config)
+global_config.add_bus_config(bus_config)
 global_config.add_transit_operator_config(transit_operator_config)
+# Input Files (Supply)
+supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
+# Get the supply probability from supply file
+supply_prob = pd.read_csv(supply_file_path)
+
+# Initialize config for different vehicle types
+for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
+    vehicle_type_classes = ["AutonomousCar", "RideHailingCar"]
+    price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
+    max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
+    energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
+    velocity = parser.getfloat(vehicle_type, "VELOCITY")
+    max_available_seats = parser.getint(vehicle_type, "MAX_AVAILABLE_SEATS")
+    initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
+    charging_cost_per_kwh = parser.getfloat(vehicle_type, "CHARGING_COST_PER_KWH")
+    cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
+    daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
+    EV_relative_energy_consumption = parser.getfloat(
+        vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
+    )
+
+    rvc = RideHailingVehicleConfig(
+        price_per_min,
+        max_state_of_charge,
+        energy_consumption,
+        velocity,
+        max_available_seats,
+        initial_SoC,
+        charging_cost_per_kwh,
+        cost_per_km,
+        daily_total_cost,
+        EV_relative_energy_consumption,
+    )
+    global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
+
+# Number of ridehailing cars in the fleet
+n_ridehailing_cars = parser.getint("RIDE_HAILING", "N_RIDEHAILING_CARS")
+# Number of autonomous cars in the fleet
+n_autonomous_cars = parser.getint("RIDE_HAILING", "N_AUTONOMOUS_CARS")
+# Not sure what this is for
+allocation = parser.get("RIDE_HAILING", "ALLOCATION")
+# A score that represents how much users trust autonomous vehicles. Not relevant for every simulation
+AV_trust = parser.get("MODE_CHOICE_MODEL", "AV_trust").split(",")
+AV_trust = [float(x) for x in AV_trust]
+AV_price_reduction = parser.getfloat("RIDE_HAILING", "AV_PRICE_REDUCTION")
+discount_rate = parser.getint("RIDE_HAILING", "DISCOUNT_RATE")
+
+AV_penetration = parser.getfloat("SUPPLY", "AV_penetration")
+EV_penetration = parser.getfloat("SUPPLY", "EV_penetration")
+# Drivers share of the revenue made with each ride
+driver_payment_share = parser.getfloat("RIDE_HAILING", "DRIVER_PAYMENT_SHARE")
+price_params = parser.get("RIDE_HAILING", "PRICE_PARAMS")
+price_params = price_params.split(",")
+price_params = [float(x) * (1 - discount_rate) for x in price_params]
+# Maximumn pickuo distance that is ok for the users
+distance_threshold = parser.getfloat("RIDE_HAILING", "MAX_PICKUP_DISTANCE")
+global_config.add_distance_threshold_to_user(distance_threshold)
+# Vehicles whose state of charge is below the threshold value are to be charged
+recharge_threshold = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").split(
+    ","
+)
+recharge_threshold = [float(x) / 100 for x in recharge_threshold]
+
+operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
+operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
+vehicle_relocation_velocity = parser.getfloat(
+    "RIDE_HAILING_OPERATOR", "VEHICLE_RELOCATION_VELOCITY"
+)
+
+# Read drivers availability distribution
+drivers_availability = parser.get("SUPPLY", "RH_availability").split(",")
+drivers_availability = [
+    round(float(x) * n_ridehailing_cars * (1 - AV_penetration))
+    for x in drivers_availability
+]
+available_modes = parser.get("RIDE_HAILING", "AVAILABLE_VEHICLE_MODES_RIDEHAILING")
+available_modes = available_modes.split(",")
+available_modes_supply = [n_ridehailing_cars, n_autonomous_cars]
+
+rhoc = RideHailingOperatorConfig(
+    recharge_threshold=recharge_threshold,
+    operations_start=operations_start,
+    operations_duration=operations_duration,
+    vehicle_relocation_velocity=vehicle_relocation_velocity,
+    available_modes=available_modes,
+    available_modes_supply=available_modes_supply,
+    n_autonomous_cars=n_autonomous_cars,
+    n_ridehailing_cars=n_ridehailing_cars,
+    allocation=allocation,
+)
+
+global_config.add_ridehailing_operator_config(rhoc)
+global_config.add_tech_penetration(EV_penetration, AV_penetration)
+global_config.add_AV_trust(AV_trust)
+global_config.add_driver_availability_vector(drivers_availability)
+global_config.add_ride_hailing_info(
+    driver_payment_share, AV_price_reduction, price_params
+)
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -136,7 +286,7 @@ global_config.add_transit_operator_config(transit_operator_config)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-env = simpy.Environment(initial_time=0)
+env = simpy.Environment(initial_time=start_time)
 
 # Population Type
 population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
@@ -218,54 +368,39 @@ tracking = Tracking.init(env)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
-# Logging                                 #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-# Log Level
-log_level = parser.get("SETTINGS", "log_level")
-
-
-# Make it beautiful
-# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-)
-
-logger = logging.getLogger()
-logger.setLevel(log_level)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-file_handler = logging.FileHandler("report.log")
-file_handler.setFormatter(formatter)
-file_handler.setLevel(log_level)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf_init)
-
-# Inject Simulation Environment to Logger (such that we can log the env time)
-cf = SimulationContextFilter(filter_name="add_env", extra=env)
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-logger.addFilter(cf)
-logger.addFilter(edf)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
 # Init. Simulation Modules                #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
+# Operations Module
+operations = OperationsPublicTransport(env, timetable)
+
+fleet_config = generate_ridehailing_fleet_config(
+    distribution=supply_prob,
+    n_cars=0,
+    n_AVs=0,
+    allocation_method="historical",
+    allocation=allocation,
+)
+fleet = generate_mixed_ride_hailing_fleet(env, fleet_config)
 
 # Operator Modules
-operator = PublicTransitOperator(env, timetable)
-search_engine = operator
+search_engine = PublicTransportSearchEngine(env)
+
+vehicle_assignment_engine = PublicTransportAllocationEngine(env)
+
+# Operator Module
+operator = PublicTransitOperator(
+    env,
+    fleet=fleet,
+    charging_infrastructure=None,
+    operations=operations,
+    search_engine=search_engine,
+    allocation_engine=vehicle_assignment_engine,
+)
+
 payment_engine = operator
-vehicle_assignment_engine = operator
+
+search_engine.register_fleet(fleet)
 
 # Vehicle Choice Model
 vehicle_choice_model = PublicTransitVehicleChoiceBehavior(["Bus"])
@@ -277,7 +412,7 @@ population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
 world = World.init(
     env,
     search_engine,
-    search_engine,
+    payment_engine,
     vehicle_assignment_engine,
     vehicle_choice_model,
     population_factory,
@@ -327,8 +462,6 @@ def run_simulation(end_time, seed=4711, env=env):
     logger.addFilter(cf)
     logger.addFilter(edf)
 
-    env.process(operator._run())
-
     # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
     demand_factory.reset()
 
@@ -342,9 +475,12 @@ def run_simulation(end_time, seed=4711, env=env):
 
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
+    transactions = operator.get_transactions()
+    transactions.to_csv("data/output/transactions.csv", index=False)
 
-# sum_iterations = 3
-# for i in range(sum_iterations):
-#     env = simpy.Environment(start_time)
 
-#     run_simulation(end_time=end_time)
+sum_iterations = 1 # throws Exception if value > 1: ValueError until (1440) must be greater than the current simulation time
+for i in range(sum_iterations): 
+    env = simpy.Environment(initial_time=start_time)
+
+    run_simulation(end_time=end_time)
