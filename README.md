@@ -69,7 +69,10 @@ This file is used to set various parameters in the following blocks that are req
 
 
 
-## Pull Requests
+## Development
+We mostly try to adhere to [trunk-based development](https://trunkbaseddevelopment.com/) with `develop` being our "trunk".
+What this means is that we do issues that translate to feature branches that should be short-lived, but if they stick around for longer, you need to make sure to be up-to-date with `develop` by merging it to this branch from time to time.
+All active feature branches should have an active pull request associated to track progress.
 
 All pull requests must conform in formatting and linting to the interpretation of *ruff* on *blacks* code style and to the PEP definitions and their interpretation. In case a pull request's check of the *ruff* style fails, you have to run ruff locally. Simply use the following command:
 ```
