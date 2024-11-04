@@ -87,7 +87,11 @@ class OperationsPublicTransport(OperationsInterface):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
 
         bus = Bus(
-            env=self._env, route=route, position=init_position, use_learning_agent=False, velocity = self._bus_velocity
+            env=self._env,
+            route=route,
+            position=init_position,
+            use_learning_agent=False,
+            velocity=self._bus_velocity,
         )
 
         self._busses.append(bus)
