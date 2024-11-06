@@ -40,7 +40,7 @@ from simulation.operator.fleet_factory import (
 from simulation.operator.operations_management.operations_public_transport import (
     OperationsPublicTransport,
 )
-from simulation.operator.public_transit_operator_refactor import PublicTransitOperator
+from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.operator.public_transport_allocation_engine import (
     PublicTransportAllocationEngine,
 )
