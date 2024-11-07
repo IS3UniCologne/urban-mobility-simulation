@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Deque, List, Optional, Union
 
 import numpy as np
+from beartype import beartype
 
 # from keras.callbacks import TensorBoard
 from learning.spaces.action_space import DiscreteActionSpace
@@ -44,30 +45,11 @@ class Configuration:
     def instance() -> "Configuration":
         """Static access method."""
         if Configuration.__instance is None:
-            Configuration(
-                spatial_resolution=7,
-                temporal_resolution=4,
-                daily_resolution=1,
-                city="berlin",
-            )
+            Configuration()
         return Configuration.__instance
 
-    @staticmethod
-    def init(spatial_resolution, temporal_resolution, daily_resolution, city):
-        """Static access method."""
-        if Configuration.__instance is None:
-            Configuration(
-                spatial_resolution, temporal_resolution, daily_resolution, city
-            )
-        return Configuration.__instance
-
-    def __init__(
-        self,
-        spatial_resolution: int,
-        temporal_resolution: int,
-        daily_resolution: int,
-        city: str,
-    ):
+    @beartype
+    def __init__(self):
         """Virtually private constructor."""
         if Configuration.__instance is not None:
             raise Exception("This class is a singleton!")
@@ -75,15 +57,21 @@ class Configuration:
             Configuration.__instance = self
             super(Configuration, self).__init__()
 
-        self._spatial_resolution = SpatialResolution(spatial_resolution)
-        self._temporal_resolution = TemporalBucket(temporal_resolution)
-        self._daily_resolution = DailyResolution(daily_resolution)
-        self._city = city
+        self._spatial_resolution = None
+        self._temporal_resolution = None
+        self._daily_resolution = None
+        self._city = None
 
-        self._store_results = False
-        self._output_path = ""
-        self._transaction_file = ""
-        self._fleet_state_file = ""
+        self._store_results: bool = None
+        self._output_path: str = ""
+        self._transaction_file: str = ""
+        self._fleet_state_file: str = ""
+        self._track_agent: bool = None
+
+        self._bounding_box_file = ""
+        self._env_layer_hex_7_file = ""
+        self._env_layer_hex_8_file = ""
+        self._env_layer_hex_9_file = ""
 
         self._shared_vehicle_configs = {}
 
@@ -181,13 +169,13 @@ class Configuration:
 
         self._AV_trust = None
 
-        self._shared_vehicle_operator_config = None
+        self._shared_vehicle_operator_config: SharedVehicleOperatorConfig = None
 
-        self._ridehailing_operator_config = None
+        self._ridehailing_operator_config: RideHailingOperatorConfig = None
 
-        self._population_config = None
+        self._population_config: PopulationConfig = None
 
-        self._charging_infrastructure_config = None
+        self._charging_infrastructure_config: ChargingInfrastructureConfig = None
 
         self._recharging_threshold = None
 
@@ -205,21 +193,132 @@ class Configuration:
 
         self._DQN_config = None
 
-        self._distance_threshold_to_user = None
+        self._distance_threshold_to_user: int = None
 
-        self._driver_payment_share = None
+        self._driver_payment_share: float = None
 
-        self._AV_price_reduction = None
+        self._AV_price_reduction: float = None
 
-        self._price_params = None
+        self._price_params: List[float] = None
 
-        self._distance_threshold_to_user = None
+        self._start_time: int = None
+        self._end_time: int = None
+        self._seed: int = None
 
-        self._driver_payment_share = None
+        self._trip_demand_file: str = None
+        self._demand_modifier_files: List[str] = []
 
-        self._AV_price_reduction = None
+        self._log_level: str = None
+        self._file_log_level: str = None
 
-        self._price_params = None
+        self._vehicle_supply_file: str = None
+
+        self._transit_population_probabilities: List[float] = None
+
+        self._ride_hailing_population_probabilities: List[float] = None
+
+    @property
+    def ride_hailing_population_probabilities(self):
+        return self._ride_hailing_population_probabilities
+
+    @ride_hailing_population_probabilities.setter
+    @beartype
+    def ride_hailing_population_probabilities(
+        self, ride_hailing_population_probabilities
+    ):
+        self._ride_hailing_population_probabilities = (
+            ride_hailing_population_probabilities
+        )
+
+    @property
+    def transit_population_probabilities(self):
+        return self._transit_population_probabilities
+
+    @transit_population_probabilities.setter
+    @beartype
+    def transit_population_probabilities(self, transit_population_probabilities):
+        self._transit_population_probabilities = transit_population_probabilities
+
+    @property
+    def vehicle_supply_file(self):
+        return self._vehicle_supply_file
+
+    @vehicle_supply_file.setter
+    @beartype
+    def vehicle_supply_file(self, vehicle_supply_file):
+        self._vehicle_supply_file = vehicle_supply_file
+
+    @property
+    def track_agent(self):
+        return self._track_agent
+
+    @track_agent.setter
+    @beartype
+    def track_agent(self, track_agent):
+        self._track_agent = track_agent
+
+    @property
+    def log_level(self):
+        return self._log_level
+
+    @log_level.setter
+    @beartype
+    def log_level(self, log_level):
+        self._log_level = log_level
+
+    @property
+    def file_log_level(self):
+        return self._file_log_level
+
+    @file_log_level.setter
+    @beartype
+    def file_log_level(self, file_log_level):
+        self._file_log_level = file_log_level
+
+    @property
+    def trip_demand_file(self):
+        return self._trip_demand_file
+
+    @trip_demand_file.setter
+    @beartype
+    def trip_demand_file(self, trip_demand_file):
+        self._trip_demand_file = trip_demand_file
+
+    @property
+    def demand_modifier_files(self):
+        return self._demand_modifier_files
+
+    @demand_modifier_files.setter
+    @beartype
+    def demand_modifier_files(self, demand_modifier_files):
+        self._demand_modifier_files = demand_modifier_files
+
+    @property
+    def seed(self) -> int:
+        return self._seed
+
+    @seed.setter
+    @beartype
+    def seed(self, value: int):
+        self._seed = value
+
+    @property
+    def start_time(self) -> int:
+        return self._start_time
+
+    @start_time.setter
+    @beartype
+    def start_time(self, value: int):
+        self._start_time = value
+
+    @property
+    def end_time(self) -> int:
+        return self._end_time
+
+    @end_time.setter
+    @beartype
+    def end_time(self, value: int):
+        self._end_time = value
 
     @property
     def spatial_resolution(self):
@@ -233,6 +332,11 @@ class Configuration:
     def city(self):
         return self._city
 
+    @city.setter
+    @beartype
+    def city(self, city: str):
+        self._city = city
+
     @property
     def spatial_resolution_value(self):
         return self._spatial_resolution.value
@@ -241,6 +345,11 @@ class Configuration:
     def temporal_resolution(self):
         return self._temporal_resolution
 
+    @temporal_resolution.setter
+    @beartype
+    def temporal_resolution(self, temporal_resolution: int):
+        self._temporal_resolution = TemporalBucket(temporal_resolution)
+
     @property
     def spatial_resolution_column(self):
         return f"hex_id_{self.spatial_resolution_value}"
@@ -248,6 +357,11 @@ class Configuration:
     @property
     def daily_resolution(self):
         return self._daily_resolution
+
+    @daily_resolution.setter
+    @beartype
+    def daily_resolution(self, daily_resolution: int):
+        self._daily_resolution = DailyResolution(daily_resolution)
 
     @property
     def store_results(self):
@@ -264,6 +378,22 @@ class Configuration:
     @property
     def fleet_state_file(self):
         return self._fleet_state_file
+
+    @property
+    def bounding_box_file(self) -> str:
+        return self._bounding_box_file
+
+    @property
+    def env_layer_hex_7_file(self) -> str:
+        return self._env_layer_hex_7_file
+
+    @property
+    def env_layer_hex_8_file(self) -> str:
+        return self._env_layer_hex_8_file
+
+    @property
+    def env_layer_hex_9_file(self) -> str:
+        return self._env_layer_hex_9_file
 
     def add_ride_hailing_info(
         self, driver_payment_share, AV_price_reduction, price_params
@@ -393,6 +523,9 @@ class Configuration:
     def add_charging_infrastructure_config(self, charging_infrastructure_ops_config):
         self._charging_infrastructure_config = charging_infrastructure_ops_config
 
+    def get_charging_infrastructure_config(self):
+        return self._charging_infrastructure_config
+
     def add_population_config(self, population_config):
         self._population_config = population_config
 
@@ -418,8 +551,8 @@ class Configuration:
         return self._shared_charging_config
 
     @shared_charging_config.setter
+    @beartype
     def shared_charging_config(self, shared_charging_config: "SharedChargingConfig"):
-        assert isinstance(shared_charging_config, SharedChargingConfig)
         self._shared_charging_config = shared_charging_config
 
     def add_transit_operator_config(
@@ -471,6 +604,18 @@ class Configuration:
 
     def set_fleet_state_file(self, file):
         self._fleet_state_file = file
+
+    def set_bounding_box_file(self, file):
+        self._bounding_box_file = file
+
+    def set_env_layer_hex_7_file(self, file):
+        self._env_layer_hex_7_file = file
+
+    def set_env_layer_hex_8_file(self, file):
+        self._env_layer_hex_8_file = file
+
+    def set_env_layer_hex_9_file(self, file):
+        self._env_layer_hex_9_file = file
 
     def get_available_shared_vehicle_types(self):
         return list(self._shared_vehicle_configs.keys())
@@ -535,18 +680,19 @@ class SharedVehicleConfig:
 
 
 class RideHailingVehicleConfig:
+    @beartype
     def __init__(
         self,
-        price_per_min,
-        max_state_of_charge,
-        energy_consumption,
-        velocity,
-        max_available_seats,
-        initial_SoC,
-        charging_cost_per_kWh,
-        cost_per_km,
-        daily_total_cost,
-        EV_relative_energy_consumption,
+        price_per_min: float,
+        max_state_of_charge: float,
+        energy_consumption: float,
+        velocity: float,
+        max_available_seats: int,
+        initial_SoC: float,
+        charging_cost_per_kWh: float,
+        cost_per_km: float,
+        daily_total_cost: float,
+        EV_relative_energy_consumption: float,
     ):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
@@ -561,6 +707,7 @@ class RideHailingVehicleConfig:
 
 
 class ModeChoiceConfig:
+    @beartype
     def __init__(self, mode_choice_strategy, substitution_boundary, path_to_model):
         if mode_choice_strategy == "random":
             self.mode_choice_strategy = ModeChoiceStrategy.RANDOM
@@ -568,34 +715,41 @@ class ModeChoiceConfig:
             self.mode_choice_strategy = ModeChoiceStrategy.SUBSTITUTION_AWARE
         elif mode_choice_strategy == "no_sub":
             self.mode_choice_strategy = ModeChoiceStrategy.NO_SUBSTITUTION
+        else:
+            raise NotImplementedError(
+                f"Mode Choice Model '{mode_choice_strategy}' not implemented"
+            )
 
-        self.substitution_boundary = substitution_boundary
-        self.path_to_model = path_to_model
+        self.substitution_boundary: float = substitution_boundary
+        self.path_to_model: str = path_to_model
 
 
 class PopulationConfig:
+    @beartype
     def __init__(self, population_probabilities, type_paths):
-        self.population_probabilities = population_probabilities
-        self.type_paths = type_paths
+        self.population_probabilities: List[float] = population_probabilities
+        self.type_paths: List = type_paths
 
 
 class UserConfig:
+    @beartype
     def __init__(self, spatial_strategy: str, max_wait: int):
         self.spatial_strategy = spatial_strategy
         self.max_wait = int(max_wait)
 
 
 class RideHailingOperatorConfig:
+    @beartype
     def __init__(
         self,
-        recharge_threshold,
-        operations_start,
-        operations_duration,
-        vehicle_relocation_velocity,
-        available_modes,
-        available_modes_supply,
-        n_autonomous_cars,
-        n_ridehailing_cars,
+        recharge_threshold: List[float],
+        operations_start: int,
+        operations_duration: int,
+        vehicle_relocation_velocity: float,
+        available_modes: List[str],
+        available_modes_supply: List[int],
+        n_autonomous_cars: int,
+        n_ridehailing_cars: int,
         allocation,
     ):
         self.recharge_threshold = recharge_threshold
@@ -612,6 +766,7 @@ class RideHailingOperatorConfig:
 
 
 class SharedVehicleOperatorConfig:
+    @beartype
     def __init__(
         self,
         recharge_threshold,
@@ -648,6 +803,7 @@ class SharedVehicleOperatorConfig:
 
 
 class ChargingInfrastructureConfig:
+    @beartype
     def __init__(
         self,
         locations: List[str],
@@ -662,12 +818,14 @@ class ChargingInfrastructureConfig:
 
 
 class AuctionConfig:
+    @beartype
     def __init__(self, auction_start: int, auction_end: int):
         self.auction_start = auction_start
         self.auction_end = auction_end
 
 
 class SharedChargingConfig:
+    @beartype
     def __init__(
         self, auction_interval: int, timeslot_duration: int, auction_lookahead: int
     ):
@@ -677,18 +835,21 @@ class SharedChargingConfig:
 
 
 class TransitOperatorConfig:
+    @beartype
     def __init__(self, planning_lookahead: int, max_busses: int):
         self.planning_lookahead = planning_lookahead
         self.max_busses = max_busses
 
 
 class BusConfig:
+    @beartype
     def __init__(self, velocity: float, max_available_seats: int):
         self.velocity = SimulationVelocityConverter.convert_kmh(velocity)
         self.max_available_seats = max_available_seats
 
 
 class DynamicRoutingConfig:
+    @beartype
     def __init__(
         self,
         action_space: DiscreteActionSpace,
@@ -713,6 +874,7 @@ class DynamicRoutingConfig:
 
 
 class DynamicCheckpointRoutingConfig:
+    @beartype
     def __init__(
         self,
         action_space: DiscreteActionSpace,
@@ -749,6 +911,7 @@ class DynamicCheckpointRoutingConfig:
 
 class DQNConfig:
     # TODO: sort alphabetically or by some grouping logic
+    @beartype
     def __init__(
         self,
         episode: int,
