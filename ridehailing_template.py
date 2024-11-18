@@ -107,31 +107,9 @@ logger.addFilter(cf)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Experiment Management
-start_time = configuration.start_time
-end_time = configuration.end_time
-seed = configuration.seed
 
-# World / Resolution Config
-# spatial_res = configuration.spatial_resolution
-temporal_res = configuration.temporal_resolution
-daily_res = configuration.daily_resolution
-city = configuration.city
-
-### Input Files
-# Input Files (Demand)
-demand_file_path = configuration.trip_demand_file
-demand_modifier_paths = configuration.demand_modifier_files
-
-
-# Get the supply probability from supply file
-supply_prob = pd.read_csv(configuration.vehicle_supply_file)
-
-
-if (
-    configuration.get_mode_choice_config().mode_choice_strategy
-    == ModeChoiceStrategy.SUBSTITUTION_AWARE
-):
+mode_choice_strategy = configuration.get_mode_choice_config().mode_choice_strategy
+if mode_choice_strategy == ModeChoiceStrategy.SUBSTITUTION_AWARE:
     vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
         ["AutonomousCar", "RideHailingCar"]
     )  ## Needs to be modified depending on the modus
@@ -161,7 +139,7 @@ logger.addFilter(edf)
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
 population_factory = PopulationFactory(
-    configuration.ride_hailing_population_probabilities, seed
+    configuration.ride_hailing_population_probabilities, configuration.seed
 )
 
 # Load Spatial Environment and the environment files
@@ -200,7 +178,7 @@ charging_infrastructure = ChargingInfrastructure(
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-p = Path(demand_file_path)
+p = Path(configuration.trip_demand_file)
 di = DemandImporter(
     spatial_resolution=configuration.spatial_resolution,
     temporal_resolution=configuration.temporal_resolution,
@@ -221,7 +199,10 @@ hexagons = geodesic_environment.getLayer(
     f"hex_{configuration.spatial_resolution.value}"
 ).index.tolist()
 dmi = DistanceMatrixImporter(
-    hexagons, configuration.spatial_resolution.value, "./data/infrastructure", city
+    hexagons,
+    configuration.spatial_resolution.value,
+    "./data/infrastructure",
+    configuration.city,
 )
 distance_matrix = dmi.load_distance_matrix()
 
@@ -262,6 +243,9 @@ available_vehicle_modes_supply_ride_hailing = [
     configuration.ridehailing_operator_config.n_ridehailing_cars,
     configuration.ridehailing_operator_config.n_autonomous_cars,
 ]
+
+# Get the supply probability from supply file
+supply_prob = pd.read_csv(configuration.vehicle_supply_file)
 
 ride_hailing_fleet_config_0 = generate_ridehailing_fleet_config(
     distribution=supply_prob,
@@ -366,7 +350,13 @@ world = World.init(
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, demand_modifier_paths, seed, mode="ride_hailing"
+    env,
+    demand_profile,
+    di,
+    world,
+    configuration.demand_modifier_files,
+    configuration.seed,
+    mode="ride_hailing",
 )
 # env.process(demand_factory.generate_demand())
 
@@ -407,5 +397,5 @@ def run_simulation(end_time, seed=4711, env=env):
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
 
-env = simpy.Environment(start_time)
-run_simulation(end_time=end_time)
+env = simpy.Environment(configuration.start_time)
+run_simulation(end_time=configuration.end_time)
