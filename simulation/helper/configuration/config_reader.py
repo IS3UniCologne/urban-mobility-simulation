@@ -72,13 +72,20 @@ class ConfigReader:
 
     def load_config(self):
         """
-        Reads the configuration file and populates the Configuration singleton with the values.
+        Reads the configuration file and populates the Configuration singleton.
         """
-        self._parser.read(self._config_file)
+        if not self._parser.read(self._config_file):
+            raise FileNotFoundError(f"Config file '{self._config_file}' not found.")
         self._parse_config_sections()
         self._load_all_configs()
 
     def _parse_config_sections(self):
+        """
+        Creates a ConfigSection object for each section in the configuration file.
+        """
+        if not self._parser.sections():
+            raise ValueError("Config file has no valid sections.")
+
         for section in self._parser.sections():
             setattr(
                 self,
@@ -88,7 +95,7 @@ class ConfigReader:
 
     def _load_all_configs(self):
         """
-        Calls the appropriate load function for each section in the configuration file.
+        Calls the appropriate load function for each ConfigSection.
         """
         for section in self._parser.sections():
             if ":" in section:
@@ -107,6 +114,11 @@ class ConfigReader:
                 )  # call function with suffix (e.g. vehicle type)
             else:
                 getattr(self, func_name)()
+
+    """
+    Everything below this line are section-specific load functions.
+    Ideally they should be moved to separate classes in the future.
+    """
 
     def _load_bus_config(self):
         bus_config = BusConfig(
