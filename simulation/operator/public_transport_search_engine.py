@@ -10,10 +10,8 @@ from simulation.operator.interface.search_engine_interface import SearchEngineIn
 from simulation.operator.operations_management.operations_public_transport import (
     OperationsPublicTransport,
 )
+from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transportation_search_task import TransportationSearchTask
-
-# TODO: Move to config
-walking_speed_in_mpm = 5
 
 
 class PublicTransportSearchEngine(SearchEngineInterface):
@@ -51,7 +49,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
             duration = SimulationTimeConverter.duration_between(
                 SimulationTimeConverter.as_str(search_time),
                 vehicle.prognose_arrival(subroute.destination),
-            ) + (walking_dist_to_destination / walking_speed_in_mpm)
+            ) + (walking_dist_to_destination / user_config.walking_speed_kph)
 
             # TODO: convenience=0 is only a placeholder
             transportation_alternative = TransportationAlternative(
@@ -60,3 +58,6 @@ class PublicTransportSearchEngine(SearchEngineInterface):
             browser.add_transportation_alternative(transportation_alternative)
 
         return browser
+
+    def register_fleet(self, fleet: VehicleFleet):
+        pass

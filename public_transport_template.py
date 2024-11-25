@@ -16,12 +16,10 @@ from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import (
+    BusConfig,
     Configuration,
-    RideHailingOperatorConfig,
-    RideHailingVehicleConfig,
     TransitOperatorConfig,
     UserConfig,
-    BusConfig,
 )
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
@@ -33,10 +31,6 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 from simulation.infrastructure.helper.timetable import Timetable
 
 # Import operator related modules
-from simulation.operator.fleet_factory import (
-    generate_mixed_ride_hailing_fleet,
-    generate_ridehailing_fleet_config,
-)
 from simulation.operator.operations_management.operations_public_transport import (
     OperationsPublicTransport,
 )
@@ -120,7 +114,7 @@ logger.addFilter(cf)
 
 # Experiment Management
 start_time = parser.getint("EXPERIMENT_MANAGEMENT", "START_TIME")
-end_time = parser.getfloat("EXPERIMENT_MANAGEMENT", "END_TIME")
+end_time = parser.getint("EXPERIMENT_MANAGEMENT", "END_TIME")
 seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
 
 # World / Resolution Config
@@ -166,10 +160,10 @@ env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
 # User configuration
 max_waiting_time = parser.get("USER", "TRANSIT_MAX_WAIT")
 spatial_strategy = parser.get("USER", "SPATIAL_STRATEGY")
-walking_speed_mpm = parser.get("USER", "WALKING_SPEED_MPM")
+walking_speed_kph = parser.getfloat("USER", "WALKING_SPEED_KPH")
 
 # Create user configuration
-user_config = UserConfig(spatial_strategy, max_waiting_time, walking_speed_mpm)
+user_config = UserConfig(spatial_strategy, max_waiting_time, walking_speed_kph)
 
 # Bus configuration
 bus_seats = parser.getint("BUS", "SEATS")
@@ -184,101 +178,6 @@ global_config.add_transit_operator_config(transit_operator_config)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
 # Get the supply probability from supply file
 supply_prob = pd.read_csv(supply_file_path)
-
-# Initialize config for different vehicle types
-for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
-    vehicle_type_classes = ["AutonomousCar", "RideHailingCar"]
-    price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
-    max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
-    energy_consumption = parser.getfloat(vehicle_type, "ENERGY_CONSUMPTION")
-    velocity = parser.getfloat(vehicle_type, "VELOCITY")
-    max_available_seats = parser.getint(vehicle_type, "MAX_AVAILABLE_SEATS")
-    initial_SoC = parser.getfloat(vehicle_type, "INITIAL_SOC")
-    charging_cost_per_kwh = parser.getfloat(vehicle_type, "CHARGING_COST_PER_KWH")
-    cost_per_km = parser.getfloat(vehicle_type, "COST_PER_KM")
-    daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
-    EV_relative_energy_consumption = parser.getfloat(
-        vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
-    )
-
-    rvc = RideHailingVehicleConfig(
-        price_per_min,
-        max_state_of_charge,
-        energy_consumption,
-        velocity,
-        max_available_seats,
-        initial_SoC,
-        charging_cost_per_kwh,
-        cost_per_km,
-        daily_total_cost,
-        EV_relative_energy_consumption,
-    )
-    global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
-
-# Number of ridehailing cars in the fleet
-n_ridehailing_cars = parser.getint("RIDE_HAILING", "N_RIDEHAILING_CARS")
-# Number of autonomous cars in the fleet
-n_autonomous_cars = parser.getint("RIDE_HAILING", "N_AUTONOMOUS_CARS")
-# Not sure what this is for
-allocation = parser.get("RIDE_HAILING", "ALLOCATION")
-# A score that represents how much users trust autonomous vehicles. Not relevant for every simulation
-AV_trust = parser.get("MODE_CHOICE_MODEL", "AV_trust").split(",")
-AV_trust = [float(x) for x in AV_trust]
-AV_price_reduction = parser.getfloat("RIDE_HAILING", "AV_PRICE_REDUCTION")
-discount_rate = parser.getint("RIDE_HAILING", "DISCOUNT_RATE")
-
-AV_penetration = parser.getfloat("SUPPLY", "AV_penetration")
-EV_penetration = parser.getfloat("SUPPLY", "EV_penetration")
-# Drivers share of the revenue made with each ride
-driver_payment_share = parser.getfloat("RIDE_HAILING", "DRIVER_PAYMENT_SHARE")
-price_params = parser.get("RIDE_HAILING", "PRICE_PARAMS")
-price_params = price_params.split(",")
-price_params = [float(x) * (1 - discount_rate) for x in price_params]
-# Maximumn pickuo distance that is ok for the users
-distance_threshold = parser.getfloat("RIDE_HAILING", "MAX_PICKUP_DISTANCE")
-global_config.add_distance_threshold_to_user(distance_threshold)
-# Vehicles whose state of charge is below the threshold value are to be charged
-recharge_threshold = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").split(
-    ","
-)
-recharge_threshold = [float(x) / 100 for x in recharge_threshold]
-
-operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
-operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
-vehicle_relocation_velocity = parser.getfloat(
-    "RIDE_HAILING_OPERATOR", "VEHICLE_RELOCATION_VELOCITY"
-)
-
-# Read drivers availability distribution
-drivers_availability = parser.get("SUPPLY", "RH_availability").split(",")
-drivers_availability = [
-    round(float(x) * n_ridehailing_cars * (1 - AV_penetration))
-    for x in drivers_availability
-]
-available_modes = parser.get("RIDE_HAILING", "AVAILABLE_VEHICLE_MODES_RIDEHAILING")
-available_modes = available_modes.split(",")
-available_modes_supply = [n_ridehailing_cars, n_autonomous_cars]
-
-rhoc = RideHailingOperatorConfig(
-    recharge_threshold=recharge_threshold,
-    operations_start=operations_start,
-    operations_duration=operations_duration,
-    vehicle_relocation_velocity=vehicle_relocation_velocity,
-    available_modes=available_modes,
-    available_modes_supply=available_modes_supply,
-    n_autonomous_cars=n_autonomous_cars,
-    n_ridehailing_cars=n_ridehailing_cars,
-    allocation=allocation,
-)
-
-global_config.add_ridehailing_operator_config(rhoc)
-global_config.add_tech_penetration(EV_penetration, AV_penetration)
-global_config.add_AV_trust(AV_trust)
-global_config.add_driver_availability_vector(drivers_availability)
-global_config.add_ride_hailing_info(
-    driver_payment_share, AV_price_reduction, price_params
-)
-
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -374,15 +273,6 @@ tracking = Tracking.init(env)
 # Operations Module
 operations = OperationsPublicTransport(env, timetable)
 
-fleet_config = generate_ridehailing_fleet_config(
-    distribution=supply_prob,
-    n_cars=0,
-    n_AVs=0,
-    allocation_method="historical",
-    allocation=allocation,
-)
-fleet = generate_mixed_ride_hailing_fleet(env, fleet_config)
-
 # Operator Modules
 search_engine = PublicTransportSearchEngine(env)
 
@@ -391,7 +281,7 @@ vehicle_assignment_engine = PublicTransportAllocationEngine(env)
 # Operator Module
 operator = PublicTransitOperator(
     env,
-    fleet=fleet,
+    fleet=None,
     charging_infrastructure=None,
     operations=operations,
     search_engine=search_engine,
@@ -400,7 +290,7 @@ operator = PublicTransitOperator(
 
 payment_engine = operator
 
-search_engine.register_fleet(fleet)
+search_engine.register_fleet(None)
 
 # Vehicle Choice Model
 vehicle_choice_model = PublicTransitVehicleChoiceBehavior(["Bus"])
