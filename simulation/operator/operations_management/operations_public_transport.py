@@ -37,7 +37,7 @@ class OperationsPublicTransport(OperationsInterface):
             None  # defer loading to run process, otherwise circular dependency
         )
 
-        self._walking_speed_mpm = self._config.user_config.walking_speed_mpm
+        self._walking_speed_kph = self._config.user_config.walking_speed_kph
         self._bus_velocity = self._config.bus_config.velocity
 
     def execute(self):
@@ -319,7 +319,7 @@ class OperationsPublicTransport(OperationsInterface):
         # reachable within the specified temporal_lookahead and depart after arrival by foot
         reachable = (
             SimulationTimeConverter.as_str(
-                current_time + (walking_dist / self._walking_speed_mpm)
+                current_time + (walking_dist / self._walking_speed_kph)
             )
             <= vehicle.prognose_arrival(stop)
             <= latest_departure
