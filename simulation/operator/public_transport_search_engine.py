@@ -49,7 +49,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
             duration = SimulationTimeConverter.duration_between(
                 SimulationTimeConverter.as_str(search_time),
                 vehicle.prognose_arrival(subroute.destination),
-            ) + (walking_dist_to_destination / user_config.walking_speed_kph)
+            ) + (walking_dist_to_destination / user_config.walking_speed)
 
             # TODO: convenience=0 is only a placeholder
             transportation_alternative = TransportationAlternative(
