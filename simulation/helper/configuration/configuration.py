@@ -580,12 +580,10 @@ class PopulationConfig:
 
 
 class UserConfig:
-    def __init__(self, spatial_strategy: str, max_wait: int, walking_speed_kph: int):
+    def __init__(self, spatial_strategy: str, max_wait: int, walking_speed: int):
         self.spatial_strategy = spatial_strategy
         self.max_wait = int(max_wait)
-        self.walking_speed_kph = SimulationVelocityConverter.convert_kmh(
-            walking_speed_kph
-        )
+        self.walking_speed = SimulationVelocityConverter.convert_kmh(walking_speed)
 
 
 class RideHailingOperatorConfig:
