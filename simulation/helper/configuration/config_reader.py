@@ -10,6 +10,8 @@ from simulation.helper.configuration.configuration import (
     RideHailingOperatorConfig,
     RideHailingVehicleConfig,
     SharedChargingConfig,
+    SharedVehicleConfig,
+    SharedVehicleOperatorConfig,
     TransitOperatorConfig,
     UserConfig,
 )
@@ -90,7 +92,7 @@ class ConfigReader:
         """
         for section in self._parser.sections():
             if ":" in section:
-                prefix, suffix = section.split(":")
+                prefix, suffix = section.split(":")  # split for vehicle types etc.
                 func_name = f"_load_{prefix.lower()}_config"
             else:
                 func_name = f"_load_{section.lower()}_config"
@@ -100,7 +102,9 @@ class ConfigReader:
                     f"No load function found for section '{section}' in the ConfigReader."
                 )
             if suffix is not None:
-                getattr(self, func_name)(suffix)
+                getattr(self, func_name)(
+                    suffix
+                )  # call function with suffix (e.g. vehicle type)
             else:
                 getattr(self, func_name)()
 
@@ -122,13 +126,69 @@ class ConfigReader:
         self._global_config.track_agent = self.output.track_agent
 
     def _load_shared_vehicle_operator_config(self):
-        # TODO: Set this up from shared fleet tepmlate
+        recharge_threshold = (self.shared_vehicle_operator.recharge_threshold) / 100.0
+
+        self._global_config.shared_vehicle_population_probabilities = [
+            float(self.shared_vehicle_operator.population_probabilities)
+        ]  # TODO: is this ever a list ? If not we might want to change how this works.
+
+        charging_station_power = self.shared_vehicle_operator.charging_station_power
+
+        number_of_base_regions = self.shared_vehicle_operator.number_of_base_regions
+        base_regions = self.shared_vehicle_operator.base_regions[
+            :number_of_base_regions
+        ]  # clamp to number of base regions
+
+        number_of_service_workers = (
+            self.shared_vehicle_operator.number_of_service_worker
+        )
+
+        base_capacity = self.shared_vehicle_operator.base_capacity
+
+        operations_start = self.shared_vehicle_operator.operations_start
+        operations_duration = self.shared_vehicle_operator.operations_duration
+
+        vehicle_relocation_velocity = (
+            self.shared_vehicle_operator.vehicle_relocation_velocity
+        )
+
+        n_cars = self.experiment_management.n_cars
+        n_kick_scooters = self.experiment_management.n_kickscooters
+        n_bikes = self.experiment_management.n_bikes
+        n_scooters = self.experiment_management.n_scooters
+
+        available_modes = (
+            self.shared_vehicle_operator.available_vehicle_modes_shared_vehicle
+        )
+
+        available_modes_supply = [n_cars, n_scooters, n_kick_scooters, n_bikes]
+
+        svoc = SharedVehicleOperatorConfig(
+            recharge_threshold,
+            charging_station_power,
+            number_of_service_workers,
+            base_regions,
+            base_capacity,
+            operations_start,
+            operations_duration,
+            vehicle_relocation_velocity,
+            available_modes,
+            available_modes_supply,
+            n_cars,
+            n_scooters,
+            n_kick_scooters,
+            n_bikes,
+        )
+
+        self._global_config.add_shared_vehicle_operator_config(svoc)
         return
 
     def _load_experiment_management_config(self):
         self._global_config.start_time = self.experiment_management.start_time
         self._global_config.end_time = self.experiment_management.end_time
         self._global_config.seed = self.experiment_management.seed
+
+        self
 
     def _load_demand_config(self):
         self._global_config.trip_demand_file = self.demand.path_trip_demand.format(
@@ -284,6 +344,30 @@ class ConfigReader:
             ridehailing_vehicle_config=ride_hailing_vehicle_config,
         )
 
+    def _load_shared_vehicle_config(self, vehicle_type: str):
+        # concatenate "shared_vehicle_" with vehicle type to get full section name
+        section = getattr(self, f"shared_vehicle_{vehicle_type.lower()}")
+
+        shared_vehicle_config = SharedVehicleConfig(
+            price_per_min=section.price_per_min,
+            max_state_of_charge=section.max_state_of_charge,
+            energy_consumption=section.energy_consumption,
+            velocity=section.velocity,
+            max_available_seats=section.max_available_seats,
+            max_walking_distance=section.walking_distance,
+            daily_total_cost=section.daily_total_cost,
+            initial_SoC=getattr(section, "initial_soc", None),
+            EV_relative_energy_consumption=getattr(
+                section, "ev_relative_energy_consumption", None
+            ),
+            cost_per_km=getattr(section, "cost_per_km", None),
+            charging_cost_per_kWh=getattr(section, "charging_cost_per_kwh", None),
+            co2_per_km=getattr(section, "kg_co2_per_km", None),
+        )
+        self._global_config.add_shared_vehicle_config(
+            vehicle_type_name=vehicle_type, shared_vehicle_config=shared_vehicle_config
+        )
+
     def _load_charging_infrastructure_config(self):
         locations = self.charging_infrastructure.locations[
             : self.charging_infrastructure.number_of_charging_stations
@@ -322,22 +406,6 @@ class ConfigReader:
         self._global_config.transit_population_probabilities = (
             self.transit_operator.population_probabilities
         )
-
-    def _load_shared_car_config(self):
-        # TODO
-        return
-
-    def _load_shared_scooter_config(self):
-        # TODO
-        return
-
-    def _load_shared_kick_scooter_config(self):
-        # TODO
-        return
-
-    def _load_shared_bike_config(self):
-        # TODO
-        return
 
     def _load_auction_config(self):
         auction_config = AuctionConfig(

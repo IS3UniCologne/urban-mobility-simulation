@@ -216,13 +216,13 @@ class Configuration:
         self._transit_population_probabilities: List[float] = None
 
         self._ride_hailing_population_probabilities: List[float] = None
+        self._shared_vehicle_population_probabilities: List[float] = None
 
     @property
     def ride_hailing_population_probabilities(self):
         return self._ride_hailing_population_probabilities
 
     @ride_hailing_population_probabilities.setter
-    @beartype
     def ride_hailing_population_probabilities(
         self, ride_hailing_population_probabilities
     ):
@@ -231,11 +231,22 @@ class Configuration:
         )
 
     @property
+    def shared_vehicle_population_probabilities(self):
+        return self._shared_vehicle_population_probabilities
+
+    @shared_vehicle_population_probabilities.setter
+    def shared_vehicle_population_probabilities(
+        self, shared_vehicle_population_probabilities
+    ):
+        self._shared_vehicle_population_probabilities = (
+            shared_vehicle_population_probabilities
+        )
+
+    @property
     def transit_population_probabilities(self):
         return self._transit_population_probabilities
 
     @transit_population_probabilities.setter
-    @beartype
     def transit_population_probabilities(self, transit_population_probabilities):
         self._transit_population_probabilities = transit_population_probabilities
 
@@ -244,7 +255,6 @@ class Configuration:
         return self._vehicle_supply_file
 
     @vehicle_supply_file.setter
-    @beartype
     def vehicle_supply_file(self, vehicle_supply_file):
         self._vehicle_supply_file = vehicle_supply_file
 
@@ -253,7 +263,6 @@ class Configuration:
         return self._track_agent
 
     @track_agent.setter
-    @beartype
     def track_agent(self, track_agent):
         self._track_agent = track_agent
 
@@ -262,7 +271,6 @@ class Configuration:
         return self._log_level
 
     @log_level.setter
-    @beartype
     def log_level(self, log_level):
         self._log_level = log_level
 
@@ -271,7 +279,6 @@ class Configuration:
         return self._file_log_level
 
     @file_log_level.setter
-    @beartype
     def file_log_level(self, file_log_level):
         self._file_log_level = file_log_level
 
@@ -280,7 +287,6 @@ class Configuration:
         return self._trip_demand_file
 
     @trip_demand_file.setter
-    @beartype
     def trip_demand_file(self, trip_demand_file):
         self._trip_demand_file = trip_demand_file
 
@@ -289,7 +295,6 @@ class Configuration:
         return self._demand_modifier_files
 
     @demand_modifier_files.setter
-    @beartype
     def demand_modifier_files(self, demand_modifier_files):
         self._demand_modifier_files = demand_modifier_files
 
@@ -298,7 +303,6 @@ class Configuration:
         return self._seed
 
     @seed.setter
-    @beartype
     def seed(self, value: int):
         self._seed = value
 
@@ -307,7 +311,6 @@ class Configuration:
         return self._start_time
 
     @start_time.setter
-    @beartype
     def start_time(self, value: int):
         self._start_time = value
 
@@ -316,7 +319,6 @@ class Configuration:
         return self._end_time
 
     @end_time.setter
-    @beartype
     def end_time(self, value: int):
         self._end_time = value
 
@@ -333,7 +335,6 @@ class Configuration:
         return self._city
 
     @city.setter
-    @beartype
     def city(self, city: str):
         self._city = city
 
@@ -346,7 +347,6 @@ class Configuration:
         return self._temporal_resolution
 
     @temporal_resolution.setter
-    @beartype
     def temporal_resolution(self, temporal_resolution: int):
         self._temporal_resolution = TemporalBucket(temporal_resolution)
 
@@ -359,7 +359,6 @@ class Configuration:
         return self._daily_resolution
 
     @daily_resolution.setter
-    @beartype
     def daily_resolution(self, daily_resolution: int):
         self._daily_resolution = DailyResolution(daily_resolution)
 
@@ -551,7 +550,6 @@ class Configuration:
         return self._shared_charging_config
 
     @shared_charging_config.setter
-    @beartype
     def shared_charging_config(self, shared_charging_config: "SharedChargingConfig"):
         self._shared_charging_config = shared_charging_config
 
