@@ -1109,6 +1109,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         "_population_type",
         "_env",
         "_vehicle_choice_behavior",
+        "_mode_choice_coefficients",
+        "_AV_truster",
         "_state",
     )
 
