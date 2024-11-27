@@ -1114,7 +1114,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         "_state",
     )
 
-    exposes = ["_position", "_state" "_transport_task"]
+    exposes = ["_position", "_state", "_transport_task"]
 
     def __init__(
         self,
