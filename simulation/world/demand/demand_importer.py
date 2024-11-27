@@ -271,7 +271,7 @@ class DemandImporter:
         """
 
         cache_path = Path(
-            "data/demand/", f"weekday_{temporal_column}_{hex_start_column}.parquet"
+            "data/demand/", f"{city}_weekday_{temporal_column}_{hex_start_column}.parquet"
         )
 
         # Cache results
