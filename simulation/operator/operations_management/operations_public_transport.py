@@ -11,13 +11,16 @@ from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
 from simulation.infrastructure.transit_network.stop import Stop
 from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.public_transport_search_engine import (
+    PublicTransportSearchEngine,
+)
 from simulation.vehicle.public_transit_bus import Bus
 from simulation.world.world import World
 from tracking.tracking import Tracking
 
 
 class OperationsPublicTransport(OperationsInterface):
-    def __init__(self, env, timetable):
+    def __init__(self, env, timetable, search_engine: PublicTransportSearchEngine):
         super(OperationsPublicTransport, self).__init__(env=env)
         self._env = env
         self._timetable = timetable
@@ -38,6 +41,7 @@ class OperationsPublicTransport(OperationsInterface):
 
         self._walking_speed = self._config.user_config.walking_speed
         self._bus_velocity = self._config.bus_config.velocity
+        self._search_engine = search_engine
 
     def execute(self):
         """
@@ -97,6 +101,7 @@ class OperationsPublicTransport(OperationsInterface):
         self._world.add_vehicle(bus)
 
         self._tracking.register(bus)
+        self._search_engine.register_bus(bus)
 
         return bus
 

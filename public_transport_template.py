@@ -270,11 +270,13 @@ tracking = Tracking.init(env)
 # Init. Simulation Modules                #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
-# Operations Module
-operations = OperationsPublicTransport(env, timetable)
 
 # Operator Modules
 search_engine = PublicTransportSearchEngine(env)
+
+# Operations Module
+operations = OperationsPublicTransport(env, timetable, search_engine)
+
 
 vehicle_assignment_engine = PublicTransportAllocationEngine(env)
 
@@ -371,6 +373,6 @@ def run_simulation(end_time, seed=4711, env=env):
 
 sum_iterations = 1  # throws Exception if value > 1: ValueError until (1440) must be greater than the current simulation time
 for i in range(sum_iterations):
-    env = simpy.Environment(initial_time=start_time)
+    env = simpy.Environment(initial_time=600)
 
-    run_simulation(end_time=end_time)
+    run_simulation(end_time=1440)
