@@ -676,7 +676,6 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         Life Cycle of TransitUser
         :return:
         """
-
         while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
             try:
                 if not self._passive:
@@ -731,6 +730,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                         self, self._transport_task, selected_transportation_alternative
                     )
                 else:
+                    # The passive user only works with the dynamic bus agent
                     # TODO: even this opportunistic user should just walk in certain scenarios and withdraw its demand
 
                     # wait for some transit to spawn

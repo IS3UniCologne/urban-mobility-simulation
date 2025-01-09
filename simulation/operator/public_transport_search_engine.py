@@ -28,6 +28,9 @@ class PublicTransportSearchEngine(SearchEngineInterface):
     def register_fleet(self, fleet: VehicleFleet):
         pass
 
+    def register_bus(self, bus):
+        self._busses.append(bus)
+
     def find_viable_transit(
         self,
         transportation_search_task,
@@ -214,7 +217,6 @@ class PublicTransportSearchEngine(SearchEngineInterface):
                 "Other strategies for aligning travel demands are not implemented."
             )
 
-    @staticmethod
     def _reachable_in_time(
         self,
         stop: Stop,
