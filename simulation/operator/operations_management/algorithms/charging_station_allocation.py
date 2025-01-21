@@ -214,7 +214,7 @@ class DowntimeMinWithoutLookahead:
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             logging.debug(
-                f"Penalty for not charging vehicles = {mdl.sum(mdl.sum(d[i.id, j.id] for i in CSs) * (1 - SoC[j.id]) * (1 - mdl.sum(x[i.id, j.id] for i in CSs)) for j in vehicles ).solution_value}",
+                f"Penalty for not charging vehicles = {mdl.sum(mdl.sum(d[i.id, j.id] for i in CSs) * (1 - SoC[j.id]) * (1 - mdl.sum(x[i.id, j.id] for i in CSs)) for j in vehicles).solution_value}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
