@@ -579,7 +579,7 @@ ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
     allow_queue=allow_queue,
 )
 
-ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
+ridehailing_operations_1 = RideHailingUncoordinatedChargingOperations(
     env=env,
     distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
