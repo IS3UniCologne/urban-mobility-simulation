@@ -100,7 +100,7 @@ class DowntimeMinWithoutLookahead:
             T_c = {}  # charging time in min
             T_q = {}  # queueing time in min
 
-            id_map = {i: v.id for i, v in enumerate(vehicles)}
+            # id_map = {i: v.id for i, v in enumerate(vehicles)}
             id_reverse_map = {v.id: i for i, v in enumerate(vehicles)}
 
             d_matrix = np.zeros((len(CSs), len(vehicles)))
