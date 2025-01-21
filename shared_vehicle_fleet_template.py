@@ -131,7 +131,11 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city=ci
 
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
-demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
+demand_modifier_paths = parser.get(
+    "DEMAND", "path_demand_modifiers", fallback=""
+).split(",")
+if demand_modifier_paths == [""]:
+    demand_modifier_paths = []
 
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
@@ -437,7 +441,7 @@ world = World.init(
 
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, [], seed, mode="shared_vehicle"
+    env, demand_profile, di, world, demand_modifier_paths, seed, mode="shared_vehicle"
 )
 
 
@@ -471,29 +475,24 @@ def run_simulation(end_time, seed=4711, env=env):
 
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
+    transactions = operator.get_transactions()
+    if transactions.size > 0:
+        transactions.to_csv("data/output/transactions.csv", index=False)
 
-transactions = operator.get_transactions()
-transactions.to_csv("data/output/transactions.csv", index=False)
+        metrics_factory = MetricsFactory(transactions)
 
-metrics_factory = MetricsFactory(transactions)
+        num_vehicles = {
+            "SharedBike": n_bikes,
+            "SharedCar": n_cars,
+            "SharedKickScooter": n_kick_scooters,
+            "SharedScooter": n_scooters,
+        }
 
-num_vehicles = {
-    "SharedBike": n_bikes,
-    "SharedCar": n_cars,
-    "SharedKickScooter": n_kick_scooters,
-    "SharedScooter": n_scooters,
-}
+        metrics_factory.print_simulation_summary(
+            num_vehicles,
+            global_config.get_cost_per_vehicle_km(),
+            global_config.get_co2_per_vehicle_km(),
+        )
 
-general_metrics = metrics_factory.general_metrics
 
-metrics_factory.print_simulation_summary(
-    num_vehicles,
-    global_config.get_cost_per_vehicle_km(),
-    global_config.get_co2_per_vehicle_km(),
-)
-
-sum_iterations = 3
-for i in range(sum_iterations):
-    env = simpy.Environment(start_time)
-
-    run_simulation(end_time=end_time)
+run_simulation(end_time=end_time)
