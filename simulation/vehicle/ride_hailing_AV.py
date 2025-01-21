@@ -42,4 +42,7 @@ class RideHailingAV(RideHailingVehicle):
         # Increment Shared Car ID
         self.car_id = RideHailingAV.ride_hailing_av_id
         self._price_per_minute = price_per_min
+        self._emergency_buffer_percent = self._config.get_ridehailing_vehicle_config(
+            "AutonomousCar"
+        ).emergency_buffer
         RideHailingAV.ride_hailing_av_id += 1

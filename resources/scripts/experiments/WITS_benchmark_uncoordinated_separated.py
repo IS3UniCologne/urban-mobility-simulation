@@ -43,8 +43,8 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 
 # Import operator related modules
 from simulation.operator.fleet_factory import generate_AV_fleet
-from simulation.operator.operations_management.ridehailing_charging_operations import (
-    RideHailingChargingOperations,
+from simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations import (
+    RideHailingUncoordinatedChargingOperations,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
@@ -86,6 +86,7 @@ file_log_level = parser.get("SETTINGS", "file_log_level")
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
+logging.getLogger("docplex.util.environment.logger").setLevel(logging.WARNING)
 
 logger = logging.getLogger()
 
@@ -196,6 +197,7 @@ daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
 EV_relative_energy_consumption = parser.getfloat(
     vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
 )
+emergency_soc_buffer = parser.getfloat(vehicle_type, "EMERGENCY_SOC_BUFFER")
 
 rvc = RideHailingVehicleConfig(
     price_per_min,
@@ -208,6 +210,7 @@ rvc = RideHailingVehicleConfig(
     cost_per_km,
     daily_total_cost,
     EV_relative_energy_consumption,
+    emergency_buffer=emergency_soc_buffer,
 )
 global_config.add_ridehailing_vehicle_config("AutonomousCar", rvc)
 global_config.add_ridehailing_vehicle_config("RideHailingCar", rvc)
@@ -238,6 +241,9 @@ recharge_threshold = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").s
 )
 recharge_threshold = [float(x) / 100 for x in recharge_threshold]
 
+# charging allocation optimization low soc penalty
+allocation_penalty = parser.getint("RIDE_HAILING_OPERATOR", "LOW_SOC_PENALTY")
+
 operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
 vehicle_relocation_velocity = parser.getfloat(
@@ -258,6 +264,7 @@ rhoc = RideHailingOperatorConfig(
     n_autonomous_cars=n_autonomous_cars,
     n_ridehailing_cars=0,
     allocation=allocation,
+    allocation_penalty=allocation_penalty,
 )
 
 global_config.add_ridehailing_operator_config(rhoc)
@@ -374,7 +381,7 @@ sic = ChargingInfrastructureConfig(
 global_config.add_charging_infrastructure_config(sic)
 
 # for this scenario, we assume same locations, but split up capacity
-separate_charging_capacity_list = [c / 2 for c in charging_station_capacity]
+separate_charging_capacity_list = [c / 2 for c in charging_station_capacity_list]
 
 charging_infrastructure_0 = ChargingInfrastructure(
     env,
@@ -556,8 +563,12 @@ env.process(track_fleets(ride_hailing_fleet_1.id))
 search_engine["ride_hailing_0"].register_fleet(ride_hailing_fleet_0)
 search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
+# if queue sizes at charging stations are all zero, we should account for that in the operations
+# there can be more clever and nuanced approaches, but as a rule of thumb, we should not allow operations to send vehicles to charging stations that are full if we don't allow queueing
+allow_queue = sum(charging_station_queue_size_list) > 0
+
 # Initialize fleet operations
-ridehailing_operations_0 = RideHailingChargingOperations(
+ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
     env=env,
     distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
@@ -565,10 +576,10 @@ ridehailing_operations_0 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    allow_queue=False,
+    allow_queue=allow_queue,
 )
 
-ridehailing_operations_1 = RideHailingChargingOperations(
+ridehailing_operations_1 = RideHailingUncoordinatedChargingOperations(
     env=env,
     distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
@@ -576,7 +587,7 @@ ridehailing_operations_1 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
-    allow_queue=False,
+    allow_queue=allow_queue,
 )
 
 
@@ -737,6 +748,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util_0,
             avg_infra_util_1,
-            "random_SOC_init" if initial_SoC == 0 else None,
+            f"{'random_SOC_init' if initial_SoC == 0 else ''}, queue_size:{charging_station_queue_size_list[0]}",
         ]
     )

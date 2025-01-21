@@ -1,9 +1,11 @@
 import logging
 
+import h3
 import pandas as pd
 from beartype.door import is_bearable
 from simpy import AnyOf
 
+from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
@@ -18,7 +20,7 @@ from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.world.world import World
 
 
-class RideHailingChargingOperations(OperationsInterface):
+class RideHailingBaseChargingOperations(OperationsInterface):
     def __init__(
         self,
         env,
@@ -28,14 +30,18 @@ class RideHailingChargingOperations(OperationsInterface):
         available_modes,
         available_modes_supply,
         state_of_charge_threshold,
-        allow_queue=True,
+        allow_queue,
     ):
-        super(RideHailingChargingOperations, self).__init__(env=env)
+        super(RideHailingBaseChargingOperations, self).__init__(env=env)
 
         self._world = None  # defer
+        self._config = Configuration.instance()
 
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
+        self._base_buffer = h3.edge_length(
+            self._config.spatial_resolution_value - 1, unit="m"
+        )  # use a buffer when calculating distances to charging stations of next coarser grid level edge length (radius)
 
         # To access vehicle transactions
         self._available_modes = available_modes  # Modes in Fleet
@@ -53,6 +59,7 @@ class RideHailingChargingOperations(OperationsInterface):
         # Events
         self._charging_plan_updated = env.event()
         self._operations_started = env.event()
+        self._task_executed = env.event()
 
         # When to start operations
         self._time_between_operations = time_between_operations
@@ -63,6 +70,10 @@ class RideHailingChargingOperations(OperationsInterface):
     @property
     def charging_plan_updated(self):
         return self._charging_plan_updated
+
+    @property
+    def task_executed(self):
+        return self._task_executed
 
     def execute(self):
         self._world = World.instance()
@@ -91,6 +102,16 @@ class RideHailingChargingOperations(OperationsInterface):
                     vehicle,
                 ) = charging_plan[0]
 
+                # we need to do some differentiation here, because we need to check if the charging station is virtual, and if it is, we need to check if we are in a context with reserved timeslots
+                scheduled_time = None
+                if is_bearable(charging_station, VirtualChargingStation):
+                    scheduled_time = charging_station.valid_timeframe
+                    try:
+                        scheduled_time = scheduled_time[0]
+                    except TypeError:
+                        # 'NoneType' object is not subscriptable > not using reservation timeslots
+                        scheduled_time = None
+
                 charging_task = ChargingTaskRidehailing(
                     self._env,
                     origin,
@@ -100,9 +121,7 @@ class RideHailingChargingOperations(OperationsInterface):
                     self._state_of_charge_threshold,
                     charging_station,
                     vehicle,
-                    scheduled_time=charging_station.valid_timeframe[0]
-                    if is_bearable(charging_station, VirtualChargingStation)
-                    else None,
+                    scheduled_time=scheduled_time,
                 )
 
                 # Schedule to Queue
@@ -124,7 +143,7 @@ class RideHailingChargingOperations(OperationsInterface):
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
 
-            logging.warning(
+            logging.info(
                 f"There are {self._operator_reference.fleet.count_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",
                 extra={
                     "clazz": self.__class__.__name__,
@@ -153,6 +172,8 @@ class RideHailingChargingOperations(OperationsInterface):
                     },
                 )
                 self._env.process(next_task.execute())
+                self._task_executed.succeed(next_task)
+                self._task_executed = self._env.event()
 
             # ### TODO: activate relocation for ridehailing later
 
@@ -192,7 +213,7 @@ class RideHailingChargingOperations(OperationsInterface):
 
         # Account for the possibility that there is no charging station available (could happen in coordinated shared infrastructure, e.g.)
         if not self._operator_reference.charging_infrastructure.get_locations():
-            logging.warning(
+            logging.info(
                 "No charging stations available. No charging plan generated.",
                 extra={
                     "clazz": self.__class__.__name__,
@@ -244,7 +265,20 @@ class RideHailingChargingOperations(OperationsInterface):
 
                 # Select Nearest Base
                 selected_base_distance = sorted_base_list.iat[0, 0]
+                # add safety buffer when vehicle is unluckily positioned at the very edge of the hexagon
+                selected_base_distance += self._base_buffer
                 selected_base = sorted_base_list.index[0]
+                if not vehicle.has_enough_state_of_charge(
+                    selected_base_distance, consider_buffer=False
+                ):
+                    logging.debug(
+                        f"Vehicle {vehicle.id} considered for charging at {selected_base} has not enough state of charge to relocate there, skipping.",
+                        extra={
+                            "clazz": self.__class__.__name__,
+                            "oid": self._operator_reference.id,
+                        },
+                    )
+                    continue
                 selected_charging_station = [
                     x
                     for x in self._operator_reference.charging_infrastructure.charging_stations
@@ -258,6 +292,7 @@ class RideHailingChargingOperations(OperationsInterface):
                 selected_base_distance = None
                 if vehicle.is_electric:
                     # we prioritize based on the queue
+                    # TODO: priorize based on CS.current_queue_time
                     for queue in [0, 2, 5, 10]:
                         for index_base, row_base in sorted_base_list.iterrows():
                             selected_base = index_base
@@ -277,7 +312,14 @@ class RideHailingChargingOperations(OperationsInterface):
                                         selected_charging_station[0]
                                     )
                                     selected_base_distance = row_base[hex]
+                                    selected_base_distance += self._base_buffer
                                     break
+                        else:
+                            # if we broke out the inner loop, we did so, because we found a charging station
+                            # only if that's not the case we need to continue with the outer loop looking for longer queue ones
+                            continue
+                        break
+
                     # sometimes the queue is too long and we have to disregard it
                     if not selected_base_distance:
                         for index_base, row_base in sorted_base_list.iterrows():
@@ -297,7 +339,20 @@ class RideHailingChargingOperations(OperationsInterface):
                                         selected_charging_station[0]
                                     )
                                     selected_base_distance = row_base[hex]
+                                    selected_base_distance += self._base_buffer
                                     break
+
+                    if not vehicle.has_enough_state_of_charge(
+                        selected_base_distance, consider_buffer=False
+                    ):
+                        logging.debug(
+                            f"Vehicle {vehicle.id} considered for charging at {selected_charging_station} has not enough state of charge to relocate there, skipping.",
+                            extra={
+                                "clazz": self.__class__.__name__,
+                                "oid": self._operator_reference.id,
+                            },
+                        )
+                        continue
 
                 if not vehicle.is_electric:
                     for index_base, row_base in sorted_base_list.iterrows():
@@ -364,6 +419,7 @@ class RideHailingChargingOperations(OperationsInterface):
         self._task_transactions.append(
             {
                 "start_time": task._start_time,
+                "estimated_arrival_time": task._estimated_arrival_time,
                 "scheduled_time": task._scheduled_time,
                 "end_time": self._env.now,
                 "vehicle": task._vehicle.id,
@@ -372,6 +428,7 @@ class RideHailingChargingOperations(OperationsInterface):
                 "charging_station": task._charging_station.location,
                 "waiting_time": task.waiting_time,
                 "charging_duration": task.charging_duration,
+                "estimated_completion_time": task._estimated_completion_time,
                 "kWh_charged": task.kWh_charged,
             }
         )

@@ -3,6 +3,7 @@
 import csv
 import logging
 import os
+import shutil
 import sys
 import time
 from configparser import ConfigParser
@@ -120,6 +121,9 @@ logger.addHandler(consolehandler)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
+# make a copy of the used config file that references this run
+shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.ini")
+
 # Experiment Management
 start_time = parser.getint("EXPERIMENT_MANAGEMENT", "START_TIME")
 end_time = parser.getint("EXPERIMENT_MANAGEMENT", "END_TIME")
@@ -199,6 +203,7 @@ daily_total_cost = parser.getfloat(vehicle_type, "DAILY_TOTAL_COST")
 EV_relative_energy_consumption = parser.getfloat(
     vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
 )
+emergency_soc_buffer = parser.getfloat(vehicle_type, "EMERGENCY_SOC_BUFFER")
 
 rvc = RideHailingVehicleConfig(
     price_per_min,
@@ -211,6 +216,7 @@ rvc = RideHailingVehicleConfig(
     cost_per_km,
     daily_total_cost,
     EV_relative_energy_consumption,
+    emergency_buffer=emergency_soc_buffer,
 )
 global_config.add_ridehailing_vehicle_config("AutonomousCar", rvc)
 global_config.add_ridehailing_vehicle_config("RideHailingCar", rvc)
@@ -826,6 +832,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util,
             None,
-            f'{"random_SOC_init" if initial_SoC == 0 else ""}, overbidding: ({str(random_overbidding)}, {str(overbid_prob)}), auction_interval: {str(auction_interval)}, timeslot_duration: {str(timeslot_duration)}, auction_lookahead: {str(auction_lookahead)}',
+            f"{'random_SOC_init' if initial_SoC == 0 else ''}, queue_size: {charging_station_queue_size_list[0]}, overbidding: ({str(random_overbidding)}, {str(overbid_prob)}), auction_interval: {str(auction_interval)}, timeslot_duration: {str(timeslot_duration)}, auction_lookahead: {str(auction_lookahead)}",
         ]
     )
