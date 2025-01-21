@@ -117,17 +117,17 @@ def plot_CS_Benchmark(dg):
 df_raw_results = pd.DataFrame()
 dg = {}
 for i in range(5):
-    base_path = f"/home/rahadi/Projects/urban-mobility-simulation/data/output/scenario_{i+1}_500_all_simulation_results.csv"
+    base_path = f"/home/rahadi/Projects/urban-mobility-simulation/data/output/scenario_{i + 1}_500_all_simulation_results.csv"
     new_df = pd.read_csv(base_path)
-    new_df["scenario"] = f"{i+1}"
+    new_df["scenario"] = f"{i + 1}"
     df_raw_results = pd.concat([df_raw_results, new_df], axis=0)
     # dg[i] = data_preparation(df_raw_results)
 dg[0] = data_preparation(df_raw_results)
 df_raw_results = pd.DataFrame()
 for i in range(5):
-    base_path = f"/home/rahadi/Projects/urban-mobility-simulation/data/output/scenario_{i+6}_500_all_simulation_results.csv"
+    base_path = f"/home/rahadi/Projects/urban-mobility-simulation/data/output/scenario_{i + 6}_500_all_simulation_results.csv"
     new_df = pd.read_csv(base_path)
-    new_df["scenario"] = f"{i+6}"
+    new_df["scenario"] = f"{i + 6}"
     df_raw_results = pd.concat([df_raw_results, new_df], axis=0)
     # dg[i] = data_preparation(df_raw_results)
 dg[1] = data_preparation(df_raw_results)
