@@ -4,28 +4,27 @@ import pandas as pd
 import simpy
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.time import SimulationTime
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
 from simulation.infrastructure.transit_network.stop import Stop
 from simulation.operator.operations_management.operations import OperationsInterface
-from simulation.operator.public_transport_search_engine import (
-    PublicTransportSearchEngine,
+from simulation.operator.public_transport_vehicle_fleet import (
+    PublicTransportVehicleFleet,
 )
-from simulation.vehicle.public_transit_bus import Bus
 from simulation.world.world import World
 from tracking.tracking import Tracking
 
 
 class OperationsPublicTransport(OperationsInterface):
-    def __init__(self, env, timetable, search_engine: PublicTransportSearchEngine):
+    def __init__(self, env, timetable, fleet: PublicTransportVehicleFleet):
         super(OperationsPublicTransport, self).__init__(env=env)
         self._env = env
         self._timetable = timetable
-        self._busses = []
         self._time = SimulationTime(env)
+        self._fleet = fleet
+
         # Config
         self._config = Configuration.instance()
         self._operator_config = self._config.transit_operator_config
@@ -38,10 +37,8 @@ class OperationsPublicTransport(OperationsInterface):
         self._tracking = (
             None  # defer loading to run process, otherwise circular dependency
         )
-
         self._walking_speed = self._config.user_config.walking_speed
         self._bus_velocity = self._config.bus_config.velocity
-        self._search_engine = search_engine
 
     def execute(self):
         """
@@ -57,7 +54,7 @@ class OperationsPublicTransport(OperationsInterface):
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
 
-                if len(self._busses) < self._operator_config.max_busses:
+                if len(self._fleet._busses) < self._operator_config.max_busses:
                     trips = self._timetable.next_trips(
                         self._time, self._operator_config.planning_lookahead
                     )
@@ -68,42 +65,25 @@ class OperationsPublicTransport(OperationsInterface):
                         for trip_id in (
                             t
                             for t in trips
-                            if t not in [b.route.trip_id for b in self._busses]
+                            if t not in [b.route.trip_id for b in self._fleet._busses]
                         ):
                             trip = self._timetable.trip_by_id(trip_id)
                             route = self._build_route(trip)
-                            bus = self._spawn_bus(route)
+                            bus = self._fleet.spawn_bus(route)
 
                             # also spawn a cleanup process that waits for completion of trip
-                            self._env.process(self._clean_up_bus(bus))
+                            self._env.process(self._fleet.clean_up_bus(bus))
 
-                            if len(self._busses) >= self._operator_config.max_busses:
+                            if (
+                                len(self._fleet.get_busses())
+                                >= self._operator_config.max_busses
+                            ):
                                 break
 
                 yield self._env.timeout(1)
             except simpy.Interrupt:
                 # quit this process
                 break
-
-    # Add the bus
-    def _spawn_bus(self, route: PublicTransitRoute):
-        init_position = GeodesicPosition(*route.origin.getExactLocation())
-
-        bus = Bus(
-            env=self._env,
-            route=route,
-            position=init_position,
-            use_learning_agent=False,
-            velocity=self._bus_velocity,
-        )
-
-        self._busses.append(bus)
-        self._world.add_vehicle(bus)
-
-        self._tracking.register(bus)
-        self._search_engine.register_bus(bus)
-
-        return bus
 
     def _build_route(self, trip: pd.DataFrame) -> PublicTransitRoute:
         origin_row = trip.iloc[0]
@@ -160,18 +140,3 @@ class OperationsPublicTransport(OperationsInterface):
             total_traveled += distance
 
         return route
-
-    def _clean_up_bus(self, bus: Bus):
-        yield bus._has_reached_terminal
-
-        self._busses.remove(bus)
-        self._world.remove_vehicle(bus)
-        self._tracking.unregister_by_obj(bus)
-
-        # Check this again, what happens when the trip time is over but there are still passengers in the bus?
-        # TODO: unmount all remaining passengers - is there a need for this?
-        logging.debug(
-            f"There are still {str(len(bus._seats))} passengers onboard the bus",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )
-        self._unserved_passengers = len(bus._seats)
