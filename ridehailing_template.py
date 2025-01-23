@@ -43,8 +43,8 @@ from simulation.operator.fleet_factory import (
     generate_mixed_ride_hailing_fleet,
     generate_ridehailing_fleet_config,
 )
-from simulation.operator.operations_management.ridehailing_charging_operations import (
-    RideHailingChargingOperations,
+from simulation.operator.operations_management.ridehailing_base_charging_operations import (
+    RideHailingBaseChargingOperations,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
@@ -192,6 +192,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
     EV_relative_energy_consumption = parser.getfloat(
         vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
     )
+    emergency_soc_buffer = parser.getfloat(vehicle_type, "EMERGENCY_SOC_BUFFER")
 
     rvc = RideHailingVehicleConfig(
         price_per_min,
@@ -204,6 +205,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
         cost_per_km,
         daily_total_cost,
         EV_relative_energy_consumption,
+        emergency_buffer=emergency_soc_buffer,
     )
     global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
 
@@ -492,7 +494,7 @@ search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 # there can be more clever and nuanced approaches, but as a rule of thumb, we should not allow operations to send vehicles to charging stations that are full if we don't allow queueing
 allow_queue = sum(charging_station_queue_size_list) > 0
 
-ridehailing_operations_0 = RideHailingChargingOperations(
+ridehailing_operations_0 = RideHailingBaseChargingOperations(
     env=env,
     distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
@@ -503,7 +505,7 @@ ridehailing_operations_0 = RideHailingChargingOperations(
     allow_queue=allow_queue,
 )
 
-ridehailing_operations_1 = RideHailingChargingOperations(
+ridehailing_operations_1 = RideHailingBaseChargingOperations(
     env=env,
     distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
