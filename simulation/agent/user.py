@@ -647,6 +647,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         self._id = TransitUser.transit_user_id  # User ID
         TransitUser.transit_user_id += 1  # Increment User Id
 
+        self._waiting_time = 0  # TODO: this is just to avoid null pointer exception
+
         # if the user is "passive", no vehicle allocation happens, rather the user opportunistically
         # boards transit that happens to move through the same hexagon. Another word for passive could be dumb.
         self._passive = passive
