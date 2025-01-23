@@ -547,6 +547,7 @@ class RideHailingVehicleConfig:
         cost_per_km,
         daily_total_cost,
         EV_relative_energy_consumption,
+        emergency_buffer,
     ):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
@@ -558,6 +559,7 @@ class RideHailingVehicleConfig:
         self.cost_per_km = cost_per_km
         self.daily_total_cost = daily_total_cost
         self.EV_relative_energy_consumption = EV_relative_energy_consumption
+        self.emergency_buffer = emergency_buffer
 
 
 class ModeChoiceConfig:
@@ -598,6 +600,7 @@ class RideHailingOperatorConfig:
         n_autonomous_cars,
         n_ridehailing_cars,
         allocation,
+        allocation_penalty=None,
     ):
         self.recharge_threshold = recharge_threshold
         self.operations_start = operations_start
@@ -610,6 +613,7 @@ class RideHailingOperatorConfig:
         self.n_autonomous_cars = n_autonomous_cars
         self.n_ridehailing_cars = n_ridehailing_cars
         self.allocation = allocation
+        self.allocation_penalty = allocation_penalty
 
 
 class SharedVehicleOperatorConfig:
