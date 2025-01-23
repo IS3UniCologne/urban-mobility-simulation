@@ -11,25 +11,20 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
     TransportationAlternativeBrowser,
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.vehicle_fleet import VehicleFleet
+from simulation.operator.public_transport_vehicle_fleet import (
+    PublicTransportVehicleFleet,
+)
 from simulation.tasks.transportation_search_task import TransportationSearchTask
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 
 
 class PublicTransportSearchEngine(SearchEngineInterface):
-    def __init__(self, env):
+    def __init__(self, env, fleet: PublicTransportVehicleFleet):
         self._env = env
-        self._fleet = None
-        self._busses = []
+        self._fleet = fleet
         self._config = Configuration.instance()
         self._operator_config = self._config.transit_operator_config
         self._user_config = self._config.user_config
-
-    def register_fleet(self, fleet: VehicleFleet):
-        pass
-
-    def register_bus(self, bus):
-        self._busses.append(bus)
 
     def find_viable_transit(
         self,
@@ -47,8 +42,9 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         )
 
         viable_transit = []
+        busses = self._fleet.get_busses()
 
-        if not self._busses:
+        if not busses:
             # No busses are en-route, report no viable alternative
             # TODO: fallback to timetable if temporal_lookahead > transit operator planning window?
             if temporal_lookahead > self._operator_config.planning_lookahead:
@@ -56,7 +52,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
                     "temporal lookahead of user > planning lookahead of operator currently not supported"
                 )
 
-        for vehicle in self._busses:
+        for vehicle in busses:
             viable_stops = self._check_viable_stops(
                 vehicle,
                 spatial_strategy,

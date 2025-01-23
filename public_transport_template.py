@@ -41,6 +41,9 @@ from simulation.operator.public_transport_allocation_engine import (
 from simulation.operator.public_transport_search_engine import (
     PublicTransportSearchEngine,
 )
+from simulation.operator.public_transport_vehicle_fleet import (
+    PublicTransportVehicleFleet,
+)
 from simulation.vehicle.public_transit_bus import Bus
 
 # Import vehicle types and vehicle choice options
@@ -143,7 +146,7 @@ price_sensitive_pop_prob = parser.get(
 price_sensitive_pop_prob = [float(x) for x in price_sensitive_pop_prob]
 
 # Operator Config
-transit_planning_lookahead = parser.get("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD")
+transit_planning_lookahead = parser.getint("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD")
 transit_max_busses = parser.getint("TRANSIT_OPERATOR", "MAX_BUSSES")
 
 # Create transit operator configuration
@@ -271,19 +274,20 @@ tracking = Tracking.init(env)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
+fleet = PublicTransportVehicleFleet(env)
+
 # Operator Modules
-search_engine = PublicTransportSearchEngine(env)
+search_engine = PublicTransportSearchEngine(env, fleet)
 
 # Operations Module
-operations = OperationsPublicTransport(env, timetable, search_engine)
-
+operations = OperationsPublicTransport(env, timetable, fleet)
 
 vehicle_assignment_engine = PublicTransportAllocationEngine(env)
 
 # Operator Module
 operator = PublicTransitOperator(
     env,
-    fleet=None,
+    fleet=fleet,
     charging_infrastructure=None,
     operations=operations,
     search_engine=search_engine,
@@ -291,8 +295,6 @@ operator = PublicTransitOperator(
 )
 
 payment_engine = operator
-
-search_engine.register_fleet(None)
 
 # Vehicle Choice Model
 vehicle_choice_model = PublicTransitVehicleChoiceBehavior(["Bus"])
