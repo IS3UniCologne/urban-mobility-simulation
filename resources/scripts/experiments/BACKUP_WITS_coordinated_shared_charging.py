@@ -122,6 +122,8 @@ logger.addHandler(consolehandler)
 # # # # # # # # # # # # # # # # # # # # # #
 
 # make a copy of the used config file that references this run
+if not os.path.exists("data/output/configs"):
+    os.makedirs("data/output/configs")
 shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.ini")
 
 # Experiment Management
