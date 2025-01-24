@@ -819,8 +819,8 @@ class ChargingInfrastructureConfig:
         self,
         locations: List[str],
         power: List[float],
-        capacity: List[int],
-        queue_size: List[int],
+        capacity: List[Union[int, np.int64]],
+        queue_size: List[Union[int, np.int64]],
     ):
         self.locations = locations
         self.power = power

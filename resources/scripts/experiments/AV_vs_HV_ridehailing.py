@@ -15,6 +15,7 @@ from simulation.agent.user import (
     User,  # must come before DemandFactory, otherwise circular imports
 )
 from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.helper.configuration.config_reader import ConfigReader
 from simulation.helper.configuration.configuration import (
     ChargingInfrastructureConfig,
     Configuration,
@@ -78,20 +79,31 @@ daily_res = parser.getint("WORLD", "daily_resolution")
 city = parser.get("WORLD", "city")
 
 # Input Files (Demand)
-demand_file_path = parser.get("DEMAND", "path_trip_demand")
+demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
 demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
 
 # Input Files (Supply)
-supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
+supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
 
 # Environment files
-bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
-env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7")
-env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8")
-env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
+bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box").format(city=city)
+env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7").format(
+    city=city
+)
+env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8").format(
+    city=city
+)
+env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9").format(
+    city=city
+)
 
 # Create Global Config File
-global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
+# Initialize an empty Configuration object
+global_config = Configuration.instance()
+
+# Initialize ConfigReader with the configuration file and the Configuration object
+config_reader = ConfigReader(sys.argv[1])
+config_reader.load_config()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -100,7 +112,9 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 # # # # # # # # # # # # # # # # # # # # # #
 
 # Initialize config for different vehicle types
-for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
+for idx, vehicle_type in enumerate(
+    ["RIDE_HAILING_VEHICLE:AutonomousCar", "RIDE_HAILING_VEHICLE:RideHailingCar"]
+):
     vehicle_type_classes = ["AutonomousCar", "RideHailingCar"]
     price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
     max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
@@ -114,7 +128,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
     EV_relative_energy_consumption = parser.getfloat(
         vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
     )
-    emergency_soc_buffer = parser.getfloat(vehicle_type, "EMERGENCY_SOC_BUFFER")
+    emergency_soc_buffer = parser.getfloat(vehicle_type, "EMERGENCY_BUFFER")
 
     rvc = RideHailingVehicleConfig(
         price_per_min,
@@ -393,7 +407,7 @@ def load_environment():
 
 
 # Load Spatial Environment
-load_environment()
+utils.load_geodesic_environment()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -526,6 +540,8 @@ def run_single_simulation(
     # Population Type
     population_factory = PopulationFactory(pop_prob, seed)
 
+    Tracking.init(env)
+
     charging_infrastructure = ChargingInfrastructure(
         env,
         charging_location_list,
@@ -577,6 +593,10 @@ def run_single_simulation(
     available_vehicle_modes_ridehailing = ["RideHailingCar", "AutonomousCar"]
     available_vehicle_modes_supply_ride_hailing = [n_cars, n_cars]
 
+    # if queue sizes at charging stations are all zero, we should account for that in the operations
+    # there can be more clever and nuanced approaches, but as a rule of thumb, we should not allow operations to send vehicles to charging stations that are full if we don't allow queueing
+    allow_queue = sum(charging_station_queue_size_list) > 0
+
     # Initialize Rule Based Relocation Scheduler
     # For RideHailing Fleets
     ridehailing_operations_0 = RideHailingBaseChargingOperations(
@@ -587,6 +607,7 @@ def run_single_simulation(
         available_modes=available_vehicle_modes_ridehailing,
         available_modes_supply=available_vehicle_modes_supply_ride_hailing,
         state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+        allow_queue=allow_queue,
     )
 
     ridehailing_operations_1 = RideHailingBaseChargingOperations(
@@ -597,6 +618,7 @@ def run_single_simulation(
         available_modes=available_vehicle_modes_ridehailing,
         available_modes_supply=available_vehicle_modes_supply_ride_hailing,
         state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+        allow_queue=allow_queue,
     )
 
     # Operator Modules
@@ -634,7 +656,6 @@ def run_single_simulation(
     }
 
     # World
-    Tracking.init(env)
     world = World.init(
         env,
         search_engine,
