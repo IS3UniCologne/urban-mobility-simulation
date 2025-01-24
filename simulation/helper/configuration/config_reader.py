@@ -211,20 +211,16 @@ class ConfigReader:
             demand_modifier_files = self.demand.path_demand_modifiers
             if not isinstance(demand_modifier_files, list):
                 demand_modifier_files = [demand_modifier_files]
-                demand_modifier_files = [
-                    file.format(city=self.world.city) for file in demand_modifier_files
-                ]
-                self._global_config.demand_modifier_files = demand_modifier_files
+            demand_modifier_files = [
+                file.format(city=self.world.city) for file in demand_modifier_files
+            ]
+            self._global_config.demand_modifier_files = demand_modifier_files
 
     def _load_world_config(self):
         self._global_config.spatial_resolution = self.world.spatial_resolution
         self._global_config.temporal_resolution = self.world.temporal_resolution
         self._global_config.daily_resolution = self.world.daily_resolution
         self._global_config.city = self.world.city
-
-    def _load_infrastructure_config(self):
-        # TODO: Implement this function or remove frome template.ini
-        return
 
     def _load_environment_config(self):
         self._global_config.set_bounding_box_file(
@@ -417,6 +413,7 @@ class ConfigReader:
         user_config = UserConfig(
             spatial_strategy=self.user.spatial_strategy,
             max_wait=self.user.transit_max_wait,
+            walking_speed=self.user.walking_speed_kph,
         )
         self._global_config.add_user_config(user_config)
 

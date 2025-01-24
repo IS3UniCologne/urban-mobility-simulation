@@ -25,7 +25,19 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 from simulation.infrastructure.helper.timetable import Timetable
 
 # Import operator related modules
+from simulation.operator.operations_management.operations_public_transport import (
+    OperationsPublicTransport,
+)
 from simulation.operator.public_transit_operator import PublicTransitOperator
+from simulation.operator.public_transport_allocation_engine import (
+    PublicTransportAllocationEngine,
+)
+from simulation.operator.public_transport_search_engine import (
+    PublicTransportSearchEngine,
+)
+from simulation.operator.public_transport_vehicle_fleet import (
+    PublicTransportVehicleFleet,
+)
 from simulation.vehicle.public_transit_bus import Bus
 
 # Import vehicle types and vehicle choice options
@@ -108,14 +120,13 @@ logger.addFilter(cf_init)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-env = simpy.Environment(initial_time=0)
+env = simpy.Environment(initial_time=config.start_time)
 
 # Inject Simulation Environment to Logger (such that we can log the env time)
 cf = SimulationContextFilter(filter_name="add_env", extra=env)
 edf = ExtraDefaultFilter(filter_name="add_default_value")
 logger.addFilter(cf)
 logger.addFilter(edf)
-
 
 # Load Spatial Environment
 load_geodesic_environment()
@@ -192,11 +203,27 @@ GeodesicEnvironment.getInstance().reset_random_generator(config.seed)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
+fleet = PublicTransportVehicleFleet(env)
+
 # Operator Modules
-operator = PublicTransitOperator(env, timetable)
-search_engine = operator
+search_engine = PublicTransportSearchEngine(env, fleet)
+
+# Operations Module
+operations = OperationsPublicTransport(env, timetable, fleet)
+
+vehicle_assignment_engine = PublicTransportAllocationEngine(env)
+
+# Operator Module
+operator = PublicTransitOperator(
+    env,
+    fleet=fleet,
+    charging_infrastructure=None,
+    operations=operations,
+    search_engine=search_engine,
+    allocation_engine=vehicle_assignment_engine,
+)
+
 payment_engine = operator
-vehicle_assignment_engine = operator
 
 # Vehicle Choice Model
 vehicle_choice_model = PublicTransitVehicleChoiceBehavior(["Bus"])
@@ -206,12 +233,11 @@ population_factory = PopulationFactory(
     config.transit_population_probabilities, config.seed
 )
 
-
 # World --> Charging Infrastructure is irrelevant for the public operator so this is set to None
 world = World.init(
     env,
     search_engine,
-    search_engine,
+    payment_engine,
     vehicle_assignment_engine,
     vehicle_choice_model,
     population_factory,
@@ -267,8 +293,6 @@ def run_simulation(end_time, seed=4711, env=env):
     logger.addFilter(cf)
     logger.addFilter(edf)
 
-    env.process(operator._run())
-
     # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
     demand_factory.reset()
 
@@ -282,11 +306,12 @@ def run_simulation(end_time, seed=4711, env=env):
 
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
+    transactions = operator.get_transactions()
+    transactions.to_csv("data/output/transactions.csv", index=False)
 
-run_simulation(end_time=config.end_time, seed=config.seed, env=env)
 
-# sum_iterations = 3
-# for i in range(sum_iterations):
-#     env = simpy.Environment(start_time)
+sum_iterations = 1  # throws Exception if value > 1: ValueError until (1440) must be greater than the current simulation time
+for i in range(sum_iterations):
+    env = simpy.Environment(initial_time=600)
 
-#     run_simulation(end_time=end_time)
+    run_simulation(end_time=config.end_time, seed=config.seed)
