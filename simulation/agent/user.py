@@ -647,6 +647,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         self._id = TransitUser.transit_user_id  # User ID
         TransitUser.transit_user_id += 1  # Increment User Id
 
+        self._waiting_time = 0  # TODO: this is just to avoid null pointer exception
+
         # if the user is "passive", no vehicle allocation happens, rather the user opportunistically
         # boards transit that happens to move through the same hexagon. Another word for passive could be dumb.
         self._passive = passive
@@ -676,7 +678,6 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         Life Cycle of TransitUser
         :return:
         """
-
         while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
             try:
                 if not self._passive:
@@ -731,6 +732,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                         self, self._transport_task, selected_transportation_alternative
                     )
                 else:
+                    # The passive user only works with the dynamic bus agent
                     # TODO: even this opportunistic user should just walk in certain scenarios and withdraw its demand
 
                     # wait for some transit to spawn

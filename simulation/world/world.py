@@ -191,7 +191,6 @@ class World:
                     self._vehicle_choice_behavior,
                     population_type,
                     self._env,
-                    passive=True,
                 )
             elif mode == "shared_vehicle":
                 # Generate Transportation Task
