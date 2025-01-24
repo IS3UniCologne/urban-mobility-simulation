@@ -3,7 +3,6 @@
 import logging
 import os
 import sys
-from configparser import ConfigParser
 from pathlib import Path
 
 # Third-party library imports
@@ -14,11 +13,8 @@ from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 # Import configurations and extra logging filters
-from simulation.helper.configuration.configuration import (
-    Configuration,
-    TransitOperatorConfig,
-    UserConfig,
-)
+from simulation.helper.configuration.config_reader import ConfigReader
+from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 
@@ -47,7 +43,7 @@ from simulation.world.world import World
 from tracking.tracking import Tracking
 
 # Custom module imports
-from utils import load_environment
+from utils import load_geodesic_environment
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -59,9 +55,45 @@ from utils import load_environment
 working_dir = Path(__file__).parent
 os.chdir(working_dir)
 
-# Read args
-parser = ConfigParser()
-parser.read(sys.argv[1])
+# Initialize an empty Configuration object
+config = Configuration.instance()
+
+# Initialize ConfigReader with the configuration file and the Configuration object
+config_reader = ConfigReader(sys.argv[1])
+config_reader.load_config()
+
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Logging                                 #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+
+# Make it beautiful
+# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+)
+
+logger = logging.getLogger()
+logger.setLevel(config.log_level)
+
+# Block Logger of third party software
+logging.getLogger("fiona").setLevel(logging.WARNING)
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+)
+file_handler = logging.FileHandler("report.log")
+file_handler.setFormatter(formatter)
+file_handler.setLevel(config.file_log_level)
+logger.addHandler(file_handler)
+
+# Add Custom Init Filters (which work without the ENV obj)
+cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
+logger.addFilter(cf_init)
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -69,66 +101,6 @@ parser.read(sys.argv[1])
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Experiment Management
-start_time = parser.getint("EXPERIMENT_MANAGEMENT", "START_TIME")
-end_time = parser.getint("EXPERIMENT_MANAGEMENT", "END_TIME")
-seed = parser.getint("EXPERIMENT_MANAGEMENT", "SEED")
-
-# World / Resolution Config
-spatial_res = parser.getint("WORLD", "SPATIAL_RESOLUTION")
-temporal_res = parser.getint("WORLD", "TEMPORAL_RESOLUTION")
-daily_res = parser.getint("WORLD", "daily_resolution")
-city = parser.get("WORLD", "city")
-
-# Create Global Config File
-global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
-
-# Input Files (Demand)
-demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
-demand_modifier_paths = parser.get(
-    "DEMAND", "path_demand_modifiers", fallback=""
-).split(",")
-if demand_modifier_paths == [""]:
-    demand_modifier_paths = []
-
-
-# Input Files (Supply)
-supply_file_path = parser.get("SUPPLY", "path_vehicle_supply")
-
-# Input Files (Infrastructure)
-transit_timetable_path = parser.get("INFRASTRUCTURE", "path_transit_timetable")
-
-# Probability of the population to be price sensitive
-price_sensitive_pop_prob = parser.get(
-    "SHARED_VEHICLE_OPERATOR", "population_probabilities"
-).split(",")
-price_sensitive_pop_prob = [float(x) for x in price_sensitive_pop_prob]
-
-# Operator Config
-transit_planning_lookahead = parser.get("TRANSIT_OPERATOR", "TRANSIT_LOOKAHEAD")
-transit_max_busses = parser.getint("TRANSIT_OPERATOR", "MAX_BUSSES")
-
-# Create transit operator configuration
-transit_operator_config = TransitOperatorConfig(
-    transit_planning_lookahead, transit_max_busses
-)
-
-# Environment files
-bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
-env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7")
-env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8")
-env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
-
-# User configuration
-max_waiting_time = parser.get("USER", "TRANSIT_MAX_WAIT")
-spatial_strategy = parser.get("USER", "SPATIAL_STRATEGY")
-
-# Create user configuration
-user_config = UserConfig(spatial_strategy, max_waiting_time)
-
-# Register all configurations
-global_config.add_user_config(user_config)
-global_config.add_transit_operator_config(transit_operator_config)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -138,11 +110,24 @@ global_config.add_transit_operator_config(transit_operator_config)
 
 env = simpy.Environment(initial_time=0)
 
-# Population Type
-population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
+# Inject Simulation Environment to Logger (such that we can log the env time)
+cf = SimulationContextFilter(filter_name="add_env", extra=env)
+edf = ExtraDefaultFilter(filter_name="add_default_value")
+logger.addFilter(cf)
+logger.addFilter(edf)
+
 
 # Load Spatial Environment
-load_environment(city)
+load_geodesic_environment()
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Init. Tracking                          #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+tracking = Tracking.init(env)
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -150,15 +135,16 @@ load_environment(city)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-p = Path(demand_file_path)
+p = Path(config.trip_demand_file)
 di = DemandImporter(
-    spatial_resolution=global_config.spatial_resolution,
-    temporal_resolution=global_config.temporal_resolution,
-    daily_resolution=global_config.daily_resolution,
-    city=global_config.city,
+    spatial_resolution=config.spatial_resolution,
+    temporal_resolution=config.temporal_resolution,
+    daily_resolution=config.daily_resolution,
+    city=config.city,
 )
 
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -167,8 +153,12 @@ demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 # # # # # # # # # # # # # # # # # # # # # #
 
 geodesic_environment = GeodesicEnvironment.getInstance()
-hexagons = geodesic_environment.getLayer(f"hex_{spatial_res}").index.tolist()
-dmi = DistanceMatrixImporter(hexagons, spatial_res, "./data/infrastructure", city)
+hexagons = geodesic_environment.getLayer(
+    f"hex_{config.spatial_resolution.value}"
+).index.tolist()
+dmi = DistanceMatrixImporter(
+    hexagons, config.spatial_resolution.value, "./data/infrastructure", config.city
+)
 distance_matrix = dmi.load_distance_matrix()
 
 
@@ -178,7 +168,7 @@ distance_matrix = dmi.load_distance_matrix()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-timetable = Timetable(transit_timetable_path)
+timetable = Timetable(config.get_infrastructure_config().path_transit_timetable)
 timetable.import_timetable()
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -193,67 +183,8 @@ PublicTransitVehicle.public_transit_vehicle_id = 0
 Bus.bus_id = 0
 User.user_id = 0
 DemandFactory.counter = 0
-GeodesicEnvironment.getInstance().reset_random_generator(seed)
+GeodesicEnvironment.getInstance().reset_random_generator(config.seed)
 
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Output Configuration                    #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-# Output Config
-output_folder = parser.get("OUTPUT", "output_folder")
-transaction_file = parser.get("OUTPUT", "transaction_file")
-
-global_config.set_output_path(output_folder)
-global_config.set_transaction_file(transaction_file)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Init. Tracking                          #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-tracking = Tracking.init(env)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Logging                                 #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-# Log Level
-log_level = parser.get("SETTINGS", "log_level")
-
-
-# Make it beautiful
-# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-)
-
-logger = logging.getLogger()
-logger.setLevel(log_level)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-file_handler = logging.FileHandler("report.log")
-file_handler.setFormatter(formatter)
-file_handler.setLevel(log_level)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf_init)
-
-# Inject Simulation Environment to Logger (such that we can log the env time)
-cf = SimulationContextFilter(filter_name="add_env", extra=env)
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-logger.addFilter(cf)
-logger.addFilter(edf)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -271,7 +202,10 @@ vehicle_assignment_engine = operator
 vehicle_choice_model = PublicTransitVehicleChoiceBehavior(["Bus"])
 
 # Population Type
-population_factory = PopulationFactory(price_sensitive_pop_prob, seed)
+population_factory = PopulationFactory(
+    config.transit_population_probabilities, config.seed
+)
+
 
 # World --> Charging Infrastructure is irrelevant for the public operator so this is set to None
 world = World.init(
@@ -292,7 +226,13 @@ world = World.init(
 # # # # # # # # # # # # # # # # # # # # # #
 
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, demand_modifier_paths, seed, mode="public_transport"
+    env,
+    demand_profile,
+    di,
+    world,
+    config.demand_modifier_files,
+    config.seed,
+    mode="public_transport",
 )
 
 # env.process(demand_factory.generate_demand())
@@ -342,6 +282,8 @@ def run_simulation(end_time, seed=4711, env=env):
 
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
+
+run_simulation(end_time=config.end_time, seed=config.seed, env=env)
 
 # sum_iterations = 3
 # for i in range(sum_iterations):

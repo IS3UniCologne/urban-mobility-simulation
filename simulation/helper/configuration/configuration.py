@@ -177,6 +177,8 @@ class Configuration:
 
         self._charging_infrastructure_config: ChargingInfrastructureConfig = None
 
+        self._infrastructure_config: InfrastructureConfig = None
+
         self._recharging_threshold = None
 
         self._add_driver_availability_vector = None
@@ -525,6 +527,12 @@ class Configuration:
     def get_charging_infrastructure_config(self):
         return self._charging_infrastructure_config
 
+    def add_infrastructure_config(self, infrastructure_config):
+        self._infrastructure_config = infrastructure_config
+
+    def get_infrastructure_config(self):
+        return self._infrastructure_config
+
     def add_population_config(self, population_config):
         self._population_config = population_config
 
@@ -691,6 +699,7 @@ class RideHailingVehicleConfig:
         cost_per_km: float,
         daily_total_cost: float,
         EV_relative_energy_consumption: float,
+        emergency_buffer: float,
     ):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
@@ -702,6 +711,7 @@ class RideHailingVehicleConfig:
         self.cost_per_km = cost_per_km
         self.daily_total_cost = daily_total_cost
         self.EV_relative_energy_consumption = EV_relative_energy_consumption
+        self.emergency_buffer = emergency_buffer
 
 
 class ModeChoiceConfig:
@@ -749,6 +759,7 @@ class RideHailingOperatorConfig:
         n_autonomous_cars: int,
         n_ridehailing_cars: int,
         allocation,
+        allocation_penalty=None,
     ):
         self.recharge_threshold = recharge_threshold
         self.operations_start = operations_start
@@ -761,6 +772,7 @@ class RideHailingOperatorConfig:
         self.n_autonomous_cars = n_autonomous_cars
         self.n_ridehailing_cars = n_ridehailing_cars
         self.allocation = allocation
+        self.allocation_penalty = allocation_penalty
 
 
 class SharedVehicleOperatorConfig:
@@ -869,6 +881,13 @@ class DynamicRoutingConfig:
         self.problem = None  # defer initialization
         self.reward = reward
         self.timelimit_multiplier = timelimit_multiplier
+
+
+class InfrastructureConfig:
+    @beartype
+    def __init__(self, path_transit_timetable: str, path_transit_shapes: str):
+        self.path_transit_timetable = path_transit_timetable
+        self.path_transit_shapes = path_transit_shapes
 
 
 class DynamicCheckpointRoutingConfig:

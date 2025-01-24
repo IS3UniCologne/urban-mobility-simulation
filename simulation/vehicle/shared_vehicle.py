@@ -211,7 +211,7 @@ class SharedVehicle(Vehicle, ABC):
             self._current_state_of_charge = 0.0
 
         logging.debug(
-            f"Current state of charge {round(self.current_state_of_charge, 2)}/{self.max_state_of_charge} ({round(self.current_state_of_charge/self.max_state_of_charge*100, 2)}%).",
+            f"Current state of charge {round(self.current_state_of_charge, 2)}/{self.max_state_of_charge} ({round(self.current_state_of_charge / self.max_state_of_charge * 100, 2)}%).",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 

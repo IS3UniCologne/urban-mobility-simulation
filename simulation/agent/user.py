@@ -1095,8 +1095,26 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         return f"TransitUser with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"
 
 
-class RideHailingUser(Agent, DriverInterface):
+class RideHailingUser(Agent, DriverInterface, TrackingInterface):
     user_id = 0
+
+    __slots__ = (
+        "_id",
+        "_position",
+        "_transport_task",
+        "_fleet",
+        "_transportation_search_service",
+        "_vehicle_assignment_service",
+        "_payment_service",
+        "_population_type",
+        "_env",
+        "_vehicle_choice_behavior",
+        "_mode_choice_coefficients",
+        "_AV_truster",
+        "_state",
+    )
+
+    exposes = ["_position", "_state", "_transport_task"]
 
     def __init__(
         self,
@@ -1648,6 +1666,12 @@ class RideHailingUser(Agent, DriverInterface):
 
     def identify_driver(self):
         return f"User {self._id}"
+
+    def dump(self, exposed_only: bool = True) -> dict:
+        if exposed_only:
+            return {x: self.get(x) for x in self.exposes}
+        else:
+            return {x: self.get(x) for x in self.__slots__}
 
     """
         Auxiliary Functions
