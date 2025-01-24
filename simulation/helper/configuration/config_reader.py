@@ -5,6 +5,7 @@ from simulation.helper.configuration.configuration import (
     BusConfig,
     ChargingInfrastructureConfig,
     Configuration,
+    InfrastructureConfig,
     ModeChoiceConfig,
     PopulationConfig,
     RideHailingOperatorConfig,
@@ -347,9 +348,10 @@ class ConfigReader:
             max_available_seats=section.max_available_seats,
             initial_SoC=section.initial_soc,
             charging_cost_per_kWh=section.charging_cost_per_kwh,
-            EV_relative_energy_consumption=section.ev_relative_energy_consumption,
             cost_per_km=section.cost_per_km,
             daily_total_cost=section.daily_total_cost,
+            EV_relative_energy_consumption=section.ev_relative_energy_consumption,
+            emergency_buffer=section.emergency_buffer,
         )
         self._global_config.add_ridehailing_vehicle_config(
             vehicle_type_name=vehicle_type,
@@ -400,6 +402,16 @@ class ConfigReader:
             locations=locations, power=power, capacity=capacity, queue_size=queue_size
         )
         self._global_config.add_charging_infrastructure_config(ci_config)
+
+    def _load_infrastructure_config(self):
+        path_transit_timetable = self.infrastructure.path_transit_timetable
+        path_transit_shapes = self.infrastructure.path_transit_shapes
+
+        infrastructure_config = InfrastructureConfig(
+            path_transit_timetable=path_transit_timetable,
+            path_transit_shapes=path_transit_shapes,
+        )
+        self._global_config.add_infrastructure_config(infrastructure_config)
 
     def _load_user_config(self):
         user_config = UserConfig(

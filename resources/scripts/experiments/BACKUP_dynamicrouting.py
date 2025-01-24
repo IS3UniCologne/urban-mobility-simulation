@@ -101,7 +101,7 @@ transit_operator_config = TransitOperatorConfig(
 )
 
 # Custom tensorboard object
-logdir = f'./data/output/logs/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
+logdir = f"./data/output/logs/{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}"
 tensorboard = ModifiedTensorBoard(log_dir=logdir)
 # debugging slows down tensorflow a lot, so be careful
 # tf.debugging.experimental.enable_dump_debug_info(logdir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)

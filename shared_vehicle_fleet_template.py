@@ -103,6 +103,7 @@ formatter = logging.Formatter(
 file_handler = logging.FileHandler("report.log")
 file_handler.setFormatter(formatter)
 file_handler.setLevel(config.file_log_level)
+logger.addHandler(file_handler)
 
 # Add Custom Init Filters (which work without the ENV obj)
 cf = SimulationContextFilter(filter_name="add_env", extra=[])
