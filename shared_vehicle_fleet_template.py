@@ -4,7 +4,9 @@
 # Standard library imports
 import logging
 import os
+import shutil
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -77,6 +79,12 @@ config = Configuration.instance()
 # Initialize ConfigReader with the configuration file and the Configuration object
 config_reader = ConfigReader(sys.argv[1])
 config_reader.load_config()
+
+# make a copy of the used config file that references this run
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+if not os.path.exists("data/output/configs"):
+    os.makedirs("data/output/configs")
+shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.ini")
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
