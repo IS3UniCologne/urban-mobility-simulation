@@ -303,6 +303,7 @@ class ConfigReader:
             n_autonomous_cars=self.ride_hailing.n_autonomous_cars,
             n_ridehailing_cars=self.ride_hailing.n_ridehailing_cars,
             allocation=self.ride_hailing.allocation,
+            allocation_penalty=self.ride_hailing_operator.low_soc_penalty,
         )
         self._global_config.add_ridehailing_operator_config(rh_operator_config)
 
