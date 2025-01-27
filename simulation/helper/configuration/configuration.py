@@ -699,7 +699,7 @@ class RideHailingVehicleConfig:
         cost_per_km: float,
         daily_total_cost: float,
         EV_relative_energy_consumption: float,
-        emergency_buffer: float,
+        emergency_soc_buffer: float,
     ):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge
@@ -711,7 +711,7 @@ class RideHailingVehicleConfig:
         self.cost_per_km = cost_per_km
         self.daily_total_cost = daily_total_cost
         self.EV_relative_energy_consumption = EV_relative_energy_consumption
-        self.emergency_buffer = emergency_buffer
+        self.emergency_soc_buffer = emergency_soc_buffer
 
 
 class ModeChoiceConfig:

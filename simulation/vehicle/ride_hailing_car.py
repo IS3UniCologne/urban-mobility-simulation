@@ -73,9 +73,11 @@ class RideHailingCar(RideHailingVehicle):
         self._offline_event = self._env.event()
         RideHailingCar.ride_hailing_car_id += 1
 
-        self._emergency_buffer_percent = self._config.get_ridehailing_vehicle_config(
-            "RideHailingCar"
-        ).emergency_buffer
+        self._emergency_soc_buffer_percent = (
+            self._config.get_ridehailing_vehicle_config(
+                "RideHailingCar"
+            ).emergency_soc_buffer
+        )
 
         self._env.process(self.run_shift_check_process())
 

@@ -53,9 +53,9 @@ class ConfigSection:
         return value
 
     def _str_to_bool(self, value: str):
-        if value.lower() in ("true"):
+        if value.lower() == "true":
             return True
-        elif value.lower() in ("false"):
+        elif value.lower() == "false":
             return False
         else:
             raise ValueError
@@ -347,7 +347,7 @@ class ConfigReader:
             cost_per_km=section.cost_per_km,
             daily_total_cost=section.daily_total_cost,
             EV_relative_energy_consumption=section.ev_relative_energy_consumption,
-            emergency_buffer=section.emergency_buffer,
+            emergency_soc_buffer=section.emergency_soc_buffer,
         )
         self._global_config.add_ridehailing_vehicle_config(
             vehicle_type_name=vehicle_type,
