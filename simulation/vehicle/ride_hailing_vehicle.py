@@ -136,7 +136,7 @@ class RideHailingVehicle(Vehicle):
             "RideHailingCar"
         ].charging_cost_per_kWh
 
-        self._emergency_buffer_percent: float
+        self._emergency_soc_buffer_percent: float
 
         RideHailingVehicle.ride_hailing_vehicle_id += 1
 
@@ -323,14 +323,14 @@ class RideHailingVehicle(Vehicle):
         """
         Check if vehicle has enough SoC left for trip
         :param distance: in meter
-        :param consider_buffer: if True (default), self._emergency_buffer_percent is taken into account
+        :param consider_buffer: if True (default), self._emergency_soc_buffer_percent is taken into account
         :return:
         """
         if (
             self.energy_consumption * distance / 1000
             >= self._current_state_of_charge
             - (
-                self._emergency_buffer_percent * self._max_state_of_charge
+                self._emergency_soc_buffer_percent * self._max_state_of_charge
                 if consider_buffer
                 else 0
             )

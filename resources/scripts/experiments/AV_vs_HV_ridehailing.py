@@ -128,7 +128,7 @@ for idx, vehicle_type in enumerate(
     EV_relative_energy_consumption = parser.getfloat(
         vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
     )
-    emergency_soc_buffer = parser.getfloat(vehicle_type, "EMERGENCY_BUFFER")
+    emergency_soc_buffer = parser.getfloat(vehicle_type, "emergency_soc_buffer")
 
     rvc = RideHailingVehicleConfig(
         price_per_min,
@@ -141,7 +141,7 @@ for idx, vehicle_type in enumerate(
         cost_per_km,
         daily_total_cost,
         EV_relative_energy_consumption,
-        emergency_buffer=emergency_soc_buffer,
+        emergency_soc_buffer=emergency_soc_buffer,
     )
     global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
 

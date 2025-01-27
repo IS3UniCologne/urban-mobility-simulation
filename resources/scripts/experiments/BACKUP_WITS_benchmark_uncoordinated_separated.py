@@ -210,7 +210,7 @@ rvc = RideHailingVehicleConfig(
     cost_per_km,
     daily_total_cost,
     EV_relative_energy_consumption,
-    emergency_buffer=emergency_soc_buffer,
+    emergency_soc_buffer=emergency_soc_buffer,
 )
 global_config.add_ridehailing_vehicle_config("AutonomousCar", rvc)
 global_config.add_ridehailing_vehicle_config("RideHailingCar", rvc)

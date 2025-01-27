@@ -21,6 +21,7 @@ import utils
 # Imports world related modules
 from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.helper.configuration.config_reader import ConfigReader
 
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import (
@@ -68,7 +69,7 @@ from simulation.world.world import World
 from tracking.tracking import Tracking
 
 # Custom module imports
-from utils import load_environment
+from utils import load_geodesic_environment
 
 # Change working directory to path of this file
 working_dir = Path(__file__).parent
@@ -139,7 +140,11 @@ daily_res = parser.getint("WORLD", "daily_resolution")
 city = parser.get("WORLD", "city")
 
 # Create Global Config File
-global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
+global_config = Configuration.instance()
+
+# Initialize ConfigReader with the configuration file and the Configuration object
+config_reader = ConfigReader(sys.argv[1])
+config_reader.load_config()
 
 ### Input Files
 # Input Files (Demand)
@@ -192,7 +197,7 @@ else:
 # # # # # # # # # # # # # # # # # # # # # #
 
 # Initialize config for different vehicle types
-vehicle_type = "AUTONOMOUS_CAR"
+vehicle_type = "RIDE_HAILING_VEHICLE:AutonomousCar"
 
 price_per_min = parser.getfloat(vehicle_type, "PRICE_PER_MIN")
 max_state_of_charge = parser.getfloat(vehicle_type, "MAX_STATE_OF_CHARGE")
@@ -219,7 +224,7 @@ rvc = RideHailingVehicleConfig(
     cost_per_km,
     daily_total_cost,
     EV_relative_energy_consumption,
-    emergency_buffer=emergency_soc_buffer,
+    emergency_soc_buffer=emergency_soc_buffer,
 )
 global_config.add_ridehailing_vehicle_config("AutonomousCar", rvc)
 global_config.add_ridehailing_vehicle_config("RideHailingCar", rvc)
@@ -332,7 +337,7 @@ tracking = Tracking.init(env)
 population_factory = PopulationFactory(pop_prob_ridehailing, seed)
 
 # Load Spatial Environment and the environment files
-load_environment(city)
+load_geodesic_environment()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #

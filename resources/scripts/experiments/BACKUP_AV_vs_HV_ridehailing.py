@@ -127,7 +127,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
         cost_per_km,
         daily_total_cost,
         EV_relative_energy_consumption,
-        emergency_buffer=emergency_soc_buffer,
+        emergency_soc_buffer=emergency_soc_buffer,
     )
     global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
 
