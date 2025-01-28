@@ -761,6 +761,10 @@ class RideHailingOperatorConfig:
         n_ridehailing_cars: int,
         allocation,
         allocation_penalty=None,
+        bid_default: Optional[float] = None,
+        bid_decay: Optional[float] = None,
+        random_overbidding: Optional[bool] = None,
+        overbid_prob: Optional[float] = None,
     ):
         self.recharge_threshold = recharge_threshold
         self.operations_start = operations_start
@@ -774,6 +778,10 @@ class RideHailingOperatorConfig:
         self.n_ridehailing_cars = n_ridehailing_cars
         self.allocation = allocation
         self.allocation_penalty = allocation_penalty
+        self.bid_default = bid_default
+        self.bid_decay = bid_decay
+        self.random_overbidding = random_overbidding
+        self.overbid_prob = overbid_prob
 
 
 class SharedVehicleOperatorConfig:
