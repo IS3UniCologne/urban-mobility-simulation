@@ -172,7 +172,7 @@ def run_simulation(
         # Make it beautiful
         # logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
         logging.basicConfig(
-            filename=f'{"data/output/simulation_logs/" + current_sim_id}/tran_c_{n_cars}_s_{n_scooters}_ks_{n_kick_scooters}_b_{n_bikes}.log',
+            filename=f"{'data/output/simulation_logs/' + current_sim_id}/tran_c_{n_cars}_s_{n_scooters}_ks_{n_kick_scooters}_b_{n_bikes}.log",
             format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
             datefmt="%m/%d/%Y %I:%M:%S %p",
         )

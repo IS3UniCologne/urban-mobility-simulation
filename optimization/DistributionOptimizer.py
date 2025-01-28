@@ -231,9 +231,9 @@ class DistributionOptimizer:
 
             if old_gen != 0:
                 hod_path = str(recover_path).replace(
-                    f"gen_{old_gen}/transactions", f"gen_{old_gen-1}/checkpoint"
+                    f"gen_{old_gen}/transactions", f"gen_{old_gen - 1}/checkpoint"
                 )
-                hof = self.load_hof(f"{hod_path}/gen_{old_gen-1}_hof.pkl")
+                hof = self.load_hof(f"{hod_path}/gen_{old_gen - 1}_hof.pkl")
             else:
                 hof = tools.HallOfFame(1)
 
