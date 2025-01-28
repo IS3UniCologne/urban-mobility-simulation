@@ -206,12 +206,6 @@ def run_simulation(
         # Get the supply probability from supply file
         supply_prob = pd.read_csv(supply_file_path)
 
-        # Environment files
-        bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
-        env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7")
-        env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8")
-        env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
-
         # User and Mode Choice Configuration
         # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/49
         # Check the configuration file before running this, this mode needs only one probability which is the probability of a user being price sensitive or not. Other modes might require multiple inputs.
@@ -496,6 +490,10 @@ def run_simulation(
             "SharedKickScooter": n_kick_scooters,
             "SharedScooter": n_scooters,
         }
+
+        logging.info(
+            f"Number of vehicles: {num_vehicles}", extra={"clazz": "main", "oid": ""}
+        )
 
         general_metrics = metrics_factory.general_metrics
         society_metrics = metrics_factory.society_metrics
