@@ -8,6 +8,7 @@ import numpy as np
 import simpy
 
 import simulation.world.world as world
+from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.vehicle.walking import Walking
 from tracking.tracking_interface import TrackingInterface
@@ -27,7 +28,6 @@ from ..operator.data_transfer_object.transportation_alternative_ridehailing impo
     TransportationAlternativeRideHailing,
 )
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
-from ..operator.interface.payment_interface import PaymentInterface
 from ..operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
@@ -666,6 +666,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         self._id = TransitUser.transit_user_id  # User ID
         TransitUser.transit_user_id += 1  # Increment User Id
 
+        self._waiting_time = 0  # TODO: this is just to avoid null pointer exception
+
         # if the user is "passive", no vehicle allocation happens, rather the user opportunistically
         # boards transit that happens to move through the same hexagon. Another word for passive could be dumb.
         self._passive = passive
@@ -695,7 +697,6 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         Life Cycle of TransitUser
         :return:
         """
-
         while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
             try:
                 if not self._passive:
@@ -750,6 +751,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                         self, self._transport_task, selected_transportation_alternative
                     )
                 else:
+                    # The passive user only works with the dynamic bus agent
                     # TODO: even this opportunistic user should just walk in certain scenarios and withdraw its demand
 
                     # wait for some transit to spawn
@@ -1114,8 +1116,26 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         return f"TransitUser with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"
 
 
-class RideHailingUser(Agent, DriverInterface):
+class RideHailingUser(Agent, DriverInterface, TrackingInterface):
     user_id = 0
+
+    __slots__ = (
+        "_id",
+        "_position",
+        "_transport_task",
+        "_fleet",
+        "_transportation_search_service",
+        "_vehicle_assignment_service",
+        "_payment_service",
+        "_population_type",
+        "_env",
+        "_vehicle_choice_behavior",
+        "_mode_choice_coefficients",
+        "_AV_truster",
+        "_state",
+    )
+
+    exposes = ["_position", "_state", "_transport_task"]
 
     def __init__(
         self,
@@ -1246,6 +1266,7 @@ class RideHailingUser(Agent, DriverInterface):
                 self._vehicle_allocated = self._env.event()
 
                 continue  # retry again until vehicle supply is depleted
+            # Vehicle is allocated
             # We do not yield the following process again
             self._env.process(self.wait_for_vehicle(vehicle_allocation))
             yield self._env.process(
@@ -1372,7 +1393,7 @@ class RideHailingUser(Agent, DriverInterface):
             [
                 1,
                 alternative.price,
-                alternative.waiting_time,
+                alternative.pick_up_time,
                 alternative.electric_vehicle,
                 alternative.duration,
                 alternative.autonomous_vehicle,
@@ -1512,6 +1533,8 @@ class RideHailingUser(Agent, DriverInterface):
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
+            # notify vehicle of its current task
+            vehicle_allocation.vehicle.set_current_task(self._transport_task)
             # Return vehicle allocation
             return vehicle_allocation
         else:
@@ -1664,6 +1687,12 @@ class RideHailingUser(Agent, DriverInterface):
 
     def identify_driver(self):
         return f"User {self._id}"
+
+    def dump(self, exposed_only: bool = True) -> dict:
+        if exposed_only:
+            return {x: self.get(x) for x in self.exposes}
+        else:
+            return {x: self.get(x) for x in self.__slots__}
 
     """
         Auxiliary Functions

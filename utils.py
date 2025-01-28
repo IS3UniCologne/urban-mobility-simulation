@@ -16,14 +16,14 @@ os.chdir(working_dir)
 parser = ConfigParser()
 parser.read(sys.argv[1])
 
-# Environment files
-bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
-env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7")
-env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8")
-env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
-
 
 def load_environment(city):
+    # Environment files
+    bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
+    env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7")
+    env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8")
+    env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
+
     # Read Environment Files
     filename = bounding_box_path.format(city=city)
     with open(filename, encoding="utf-8") as file:
@@ -59,4 +59,8 @@ def parse_multiline_list(
     multiline = (
         parser.get(section, key).replace("\n", "").replace(" ", "").split(delimiter)
     )
-    return [cast(x) for x in multiline] if cast is not None else multiline
+    multiline = multiline[0] if len(multiline) == 1 else multiline
+    if isinstance(multiline, list):
+        return [cast(x) for x in multiline] if cast is not None else multiline
+    else:
+        return cast(multiline) if cast is not None else multiline

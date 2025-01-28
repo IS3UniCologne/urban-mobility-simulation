@@ -1,6 +1,7 @@
 import logging
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, Union
 
+from beartype.door import is_bearable  # like "isinstance(...)"
 from simpy import Environment
 
 from tracking.tracking_interface import TrackingInterface
@@ -41,7 +42,7 @@ class Tracking:
         self.__env = env
         self.tracked = {}
 
-    def register(self, to_track: TrackingInterface) -> str:
+    def register(self, to_track: TrackingInterface, id: Optional[int] = None) -> str:
         """
 
         :param to_track: Agent (user, vehicle, ...) or resource in the simulation to register with the tracking. Must
@@ -50,27 +51,24 @@ class Tracking:
         """
 
         classname = to_track.__class__.__name__
-        try:
-            uid = f"{classname}_{to_track._id}"
-        except AttributeError:
-            # no id associated, is it a single class instance? (like operator)
-            uid = classname
+        if id is None:
+            try:
+                id = to_track.id
+            except AttributeError:
+                # no id associated, is it a single class instance? (like operator)
+                id = "singleton"
+        uid = f"{classname}_{id}"
 
         if not isinstance(to_track, TrackingInterface):
             raise NotImplementedError(
                 f"Something tried to register {classname}, but it"
                 f"does not implement the necessary TrackingInterface!"
             )
-        else:
-            self.tracked[uid] = {
-                "class": classname,
-                "id": to_track._id,
-                "reference": to_track,
-            }
-            logging.debug(
-                f"Registered {classname} with ID {to_track._id}",
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
+        self.tracked[uid] = {"class": classname, "id": id, "reference": to_track}
+        logging.debug(
+            f"Registered {classname} with ID {id}",
+            extra={"clazz": self.__class__.__name__, "oid": ""},
+        )
 
         return uid
 
@@ -122,14 +120,17 @@ class Tracking:
             )
             return None
 
-    def list_tracked(self, classname) -> list:
+    def list_tracked(self, cls: Union[type, str]) -> list:
         """
         List tracked uid's of the specific class requested
 
-        :param classname: class type to list
+        :param cls: class type to list, fallback is classname as str
         :return: list of uid
         """
-        return [x for x, y in self.tracked.items() if y["class"] == classname]
+
+        if isinstance(cls, str):
+            return [x for x, y in self.tracked.items() if y["class"] == cls]
+        return [x for x, y in self.tracked.items() if is_bearable(y["reference"], cls)]
 
     def _get_object(self, uid) -> Optional[TrackingInterface]:
         """
@@ -159,7 +160,7 @@ class Tracking:
             uid = f"{classname}_{object._id}"
         except AttributeError:
             # no id associated, is it a single class instance? (like operator)
-            uid = classname
+            uid = f"{classname}_singleton"
 
         if uid not in self.tracked:
             logging.warning(

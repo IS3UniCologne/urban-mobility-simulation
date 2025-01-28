@@ -9,12 +9,12 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 * Because this simulation requires a lot of dependencies, using a conda environment created by `conda env create -f ./resources/environment/environment.yml` is highly recommended.
 * Because we want to support as many platforms as possible, we need to stick to certain Python versions as defined in `environment.yml`.
 Other Python versions are untested!
-> If you are on newer Macs (Apple Silicon) please use `environment_mac.yml` with special tensorflow dependencies!
 
 ## Running an experiment
-> We provide a template at `experiment_template.py` for most common use cases, please refer to this!
+> We provide templates (`*_template.py`) for most common use cases, please refer to this!
+> At the moment, `template_all_modes.py` is not working, we first need to fix several issues for true multi-modal users.
 
-Provide configuration files as the first argument after the experiment file name such as `python experiment_template.py ./resources/configurations/app-remote.ini`
+Provide configuration files as the first argument after the experiment file name such as `python experiment_template.py ./resources/configurations/template.ini`
 
 ## Simulation Components
 > The simulation consists of three different types of mobility services: 
@@ -22,7 +22,7 @@ Provide configuration files as the first argument after the experiment file name
 - *ride-hailing fleet (autonomous vehicles and ride-hailing cars)*
 - *shared mobility fleet (Cars, scooters, kickscooters and bikes)*
 
-The configurations of these fleets and their operator modules together with other components such as the charging infrastructure, spatial/temporal resolution and world are initialized with the information set in the `app-remote.ini`
+The configurations of these fleets and their operator modules together with other components such as the charging infrastructure, spatial/temporal resolution and world are initialized with the information set in the `template.ini`
 
 This file is used to set various parameters in the following blocks that are required in every simulation:
 
@@ -69,7 +69,10 @@ This file is used to set various parameters in the following blocks that are req
 
 
 
-## Pull Requests
+## Development
+We mostly try to adhere to [trunk-based development](https://trunkbaseddevelopment.com/) with `develop` being our "trunk".
+What this means is that we do issues that translate to feature branches that should be short-lived, but if they stick around for longer, you need to make sure to be up-to-date with `develop` by merging it to this branch from time to time.
+All active feature branches should have an active pull request associated to track progress.
 
 All pull requests must conform in formatting and linting to the interpretation of *ruff* on *blacks* code style and to the PEP definitions and their interpretation. In case a pull request's check of the *ruff* style fails, you have to run ruff locally. Simply use the following command:
 ```

@@ -43,8 +43,8 @@ from simulation.operator.fleet_factory import (
     generate_mixed_ride_hailing_fleet,
     generate_ridehailing_fleet_config,
 )
-from simulation.operator.operations_management.ridehailing_charging_operations import (
-    RideHailingChargingOperations,
+from simulation.operator.operations_management.ridehailing_base_charging_operations import (
+    RideHailingBaseChargingOperations,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
@@ -129,7 +129,11 @@ global_config = Configuration.init(spatial_res, temporal_res, daily_res, city)
 ### Input Files
 # Input Files (Demand)
 demand_file_path = parser.get("DEMAND", "path_trip_demand").format(city=city)
-demand_modifier_paths = parser.get("DEMAND", "path_demand_modifiers").split(",")
+demand_modifier_paths = parser.get(
+    "DEMAND", "path_demand_modifiers", fallback=""
+).split(",")
+if demand_modifier_paths == [""]:
+    demand_modifier_paths = []
 
 # Input Files (Supply)
 supply_file_path = parser.get("SUPPLY", "path_vehicle_supply").format(city=city)
@@ -188,6 +192,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
     EV_relative_energy_consumption = parser.getfloat(
         vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
     )
+    emergency_soc_buffer = parser.getfloat(vehicle_type, "EMERGENCY_SOC_BUFFER")
 
     rvc = RideHailingVehicleConfig(
         price_per_min,
@@ -200,6 +205,7 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
         cost_per_km,
         daily_total_cost,
         EV_relative_energy_consumption,
+        emergency_buffer=emergency_soc_buffer,
     )
     global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
 
@@ -233,7 +239,7 @@ recharge_threshold = [float(x) / 100 for x in recharge_threshold]
 
 operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
-vehicle_relocation_velocity = parser.getint(
+vehicle_relocation_velocity = parser.getfloat(
     "RIDE_HAILING_OPERATOR", "VEHICLE_RELOCATION_VELOCITY"
 )
 
@@ -305,6 +311,14 @@ load_environment(city)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
+# Init. Tracking                          #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+tracking = Tracking.init(env)
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
 # Charging Infrastructure                 #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
@@ -313,34 +327,24 @@ number_of_charging_locations = parser.getint(
     "CHARGING_INFRASTRUCTURE", "NUMBER_OF_CHARGING_STATIONS"
 )
 # Locations are defined as hexagons (regions) in the city
-charging_station_locations = utils.parse_multiline_list(
+charging_location_list = utils.parse_multiline_list(
     "CHARGING_INFRASTRUCTURE", "LOCATIONS", delimiter=","
-)
-charging_station_locations = charging_station_locations[:number_of_charging_locations]
+)[:number_of_charging_locations]
 
 charging_station_power = utils.parse_multiline_list(
     "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_POWER", delimiter=",", cast=float
 )
-if len(charging_station_power) == 1:
-    charging_station_power = list(
-        np.full(number_of_charging_locations, charging_station_power[0])
-    )
 
 # Capacity is the number of charging stations in the charging hub (or plugs at a station)
 charging_station_capacity = utils.parse_multiline_list(
     "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_CAPACITY", delimiter=",", cast=int
 )
-if len(charging_station_capacity) == 1:
-    charging_station_capacity = list(
-        np.full(number_of_charging_locations, charging_station_capacity[0])
-    )
 
-number_of_charging_stations = parser.getint(
-    "CHARGING_INFRASTRUCTURE", "NUMBER_OF_CHARGING_STATIONS"
+# Queue size is the maximum allowed vehicles queuing at a time for a charging station that is fully utilized
+charging_station_queue_size = utils.parse_multiline_list(
+    "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_QUEUE_SIZE", delimiter=",", cast=int
 )
-charging_location_list = utils.parse_multiline_list(
-    "CHARGING_INFRASTRUCTURE", "LOCATIONS", delimiter=","
-)[:number_of_charging_locations]
+
 if isinstance(charging_station_power, list):
     charging_station_power_list = charging_station_power
 else:
@@ -353,8 +357,18 @@ else:
     charging_station_capacity_list = list(
         np.full(len(charging_location_list), charging_station_capacity)
     )
+if isinstance(charging_station_queue_size, list):
+    charging_station_queue_size_list = charging_station_queue_size
+else:
+    charging_station_queue_size_list = list(
+        np.full(len(charging_location_list), charging_station_queue_size)
+    )
+
 sic = ChargingInfrastructureConfig(
-    charging_location_list, charging_station_power_list, charging_station_capacity_list
+    charging_location_list,
+    charging_station_power_list,
+    charging_station_capacity_list,
+    charging_station_queue_size_list,
 )
 global_config.add_charging_infrastructure_config(sic)
 charging_infrastructure = ChargingInfrastructure(
@@ -362,6 +376,7 @@ charging_infrastructure = ChargingInfrastructure(
     charging_location_list,
     charging_station_power_list,
     charging_station_capacity_list,
+    charging_station_queue_size_list,
     reset=True,
 )
 
@@ -384,13 +399,6 @@ global_config.set_output_path(output_folder)
 global_config.set_transaction_file(transaction_file)
 global_config.set_fleet_state_file(fleet_state_file)
 
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Init. Tracking                          #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-tracking = Tracking.init(env)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -482,7 +490,11 @@ search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
 # Initialize fleet operations
 
-ridehailing_operations_0 = RideHailingChargingOperations(
+# if queue sizes at charging stations are all zero, we should account for that in the operations
+# there can be more clever and nuanced approaches, but as a rule of thumb, we should not allow operations to send vehicles to charging stations that are full if we don't allow queueing
+allow_queue = sum(charging_station_queue_size_list) > 0
+
+ridehailing_operations_0 = RideHailingBaseChargingOperations(
     env=env,
     distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
@@ -490,9 +502,10 @@ ridehailing_operations_0 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+    allow_queue=allow_queue,
 )
 
-ridehailing_operations_1 = RideHailingChargingOperations(
+ridehailing_operations_1 = RideHailingBaseChargingOperations(
     env=env,
     distance_matrix=distance_matrix,
     time_between_operations=global_config.ridehailing_operator_config.operations_start,
@@ -500,6 +513,7 @@ ridehailing_operations_1 = RideHailingChargingOperations(
     available_modes=available_vehicle_modes_ridehailing,
     available_modes_supply=available_vehicle_modes_supply_ride_hailing,
     state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
+    allow_queue=allow_queue,
 )
 
 # Initialize operators
@@ -551,9 +565,9 @@ world = World.init(
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, [], seed, mode="ride_hailing"
+    env, demand_profile, di, world, demand_modifier_paths, seed, mode="ride_hailing"
 )
-env.process(demand_factory.generate_demand())
+# env.process(demand_factory.generate_demand())
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -561,8 +575,39 @@ env.process(demand_factory.generate_demand())
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-env.run(until=end_time)
+# env.run(until=50)
 
-logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+# logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
+
+
+# For multiple simulation runs
+def run_simulation(end_time, seed=4711, env=env):
+    # Before a new simulation run, reset everything
+    User.user_id = 0
+    DemandFactory.counter = 0
+
+    # Inject Simulation Environment to Logger (such that we can log the env time)
+    cf = SimulationContextFilter(filter_name="add_env", extra=env)
+    edf = ExtraDefaultFilter(filter_name="add_default_value")
+    logger.addFilter(cf)
+    logger.addFilter(edf)
+
+    # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
+    demand_factory.reset()
+
+    env.process(demand_factory.generate_demand())
+
+    logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
+
+    env.run(until=end_time)
+
+    logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
+
+
+sum_iterations = 3
+for i in range(sum_iterations):
+    env = simpy.Environment(start_time)
+
+    run_simulation(end_time=end_time)

@@ -30,10 +30,10 @@ class RideHailingCar(RideHailingVehicle):
         self,
         env: Environment,
         position: GeodesicPosition,
+        velocity,
         max_available_seats=4,
         max_state_of_charge=16.7,
         energy_consumption=0.152,
-        velocity=833.33,
         price_per_min=0.26,
         is_electric=True,
     ):
@@ -50,10 +50,10 @@ class RideHailingCar(RideHailingVehicle):
         super(RideHailingCar, self).__init__(
             env,
             position,
+            velocity,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
-            velocity,
             price_per_min,
             is_electric=is_electric,
         )
@@ -72,6 +72,10 @@ class RideHailingCar(RideHailingVehicle):
         self._online_event = self._env.event()
         self._offline_event = self._env.event()
         RideHailingCar.ride_hailing_car_id += 1
+
+        self._emergency_buffer_percent = self._config.get_ridehailing_vehicle_config(
+            "RideHailingCar"
+        ).emergency_buffer
 
         self._env.process(self.run_shift_check_process())
 

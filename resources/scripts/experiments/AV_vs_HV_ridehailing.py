@@ -35,8 +35,8 @@ from simulation.operator.fleet_factory import (
     generate_mixed_ride_hailing_fleet,
     generate_ridehailing_fleet_config,
 )
-from simulation.operator.operations_management.ridehailing_charging_operations import (
-    RideHailingChargingOperations,
+from simulation.operator.operations_management.ridehailing_base_charging_operations import (
+    RideHailingBaseChargingOperations,
 )
 from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
@@ -114,18 +114,20 @@ for idx, vehicle_type in enumerate(["AUTONOMOUS_CAR", "RIDEHAILING_CAR"]):
     EV_relative_energy_consumption = parser.getfloat(
         vehicle_type, "EV_RELATIVE_ENERGY_CONSUMPTION"
     )
+    emergency_soc_buffer = parser.getfloat(vehicle_type, "EMERGENCY_SOC_BUFFER")
 
     rvc = RideHailingVehicleConfig(
-        price_per_min=price_per_min,
-        max_state_of_charge=max_state_of_charge,
-        energy_consumption=energy_consumption,
-        velocity=velocity,
-        max_available_seats=max_available_seats,
-        initial_SoC=initial_SoC,
-        charging_cost_per_kWh=charging_cost_per_kWh,
-        cost_per_km=cost_per_km,
-        daily_total_cost=daily_total_cost,
-        EV_relative_energy_consumption=EV_relative_energy_consumption,
+        price_per_min,
+        max_state_of_charge,
+        energy_consumption,
+        velocity,
+        max_available_seats,
+        initial_SoC,
+        charging_cost_per_kWh,
+        cost_per_km,
+        daily_total_cost,
+        EV_relative_energy_consumption,
+        emergency_buffer=emergency_soc_buffer,
     )
     global_config.add_ridehailing_vehicle_config(vehicle_type_classes[idx], rvc)
 
@@ -154,34 +156,66 @@ recharge_threshold = parser.get("RIDE_HAILING_OPERATOR", "RECHARGE_THRESHOLD").s
 )
 recharge_threshold = [float(x) / 100 for x in recharge_threshold]
 
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Charging Infrastructure                 #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
 number_of_charging_locations = parser.getint(
     "CHARGING_INFRASTRUCTURE", "NUMBER_OF_CHARGING_STATIONS"
 )
 # Locations are defined as hexagons (regions) in the city
-charging_station_locations = utils.parse_multiline_list(
+charging_location_list = utils.parse_multiline_list(
     "CHARGING_INFRASTRUCTURE", "LOCATIONS", delimiter=","
-)
-charging_station_locations = charging_station_locations[:number_of_charging_locations]
+)[:number_of_charging_locations]
 
 charging_station_power = utils.parse_multiline_list(
     "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_POWER", delimiter=",", cast=float
 )
-if len(charging_station_power) == 1:
-    charging_station_power = list(
-        np.full(number_of_charging_locations, charging_station_power[0])
-    )
 
 # Capacity is the number of charging stations in the charging hub (or plugs at a station)
 charging_station_capacity = utils.parse_multiline_list(
     "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_CAPACITY", delimiter=",", cast=int
 )
-if len(charging_station_capacity) == 1:
-    charging_station_capacity = list(
-        np.full(number_of_charging_locations, charging_station_capacity[0])
+
+# Queue size is the maximum allowed vehicles queuing at a time for a charging station that is fully utilized
+charging_station_queue_size = utils.parse_multiline_list(
+    "CHARGING_INFRASTRUCTURE", "CHARGING_STATION_QUEUE_SIZE", delimiter=",", cast=int
+)
+
+if isinstance(charging_station_power, list):
+    charging_station_power_list = charging_station_power
+else:
+    charging_station_power_list = list(
+        np.full(len(charging_location_list), charging_station_power)
     )
+if isinstance(charging_station_capacity, list):
+    charging_station_capacity_list = charging_station_capacity
+else:
+    charging_station_capacity_list = list(
+        np.full(len(charging_location_list), charging_station_capacity)
+    )
+if isinstance(charging_station_queue_size, list):
+    charging_station_queue_size_list = charging_station_queue_size
+else:
+    charging_station_queue_size_list = list(
+        np.full(len(charging_location_list), charging_station_queue_size)
+    )
+
+sic = ChargingInfrastructureConfig(
+    charging_location_list,
+    charging_station_power_list,
+    charging_station_capacity_list,
+    charging_station_queue_size_list,
+)
+
+global_config.add_charging_infrastructure_config(sic)
+
+
 operations_start = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_START")
 operations_duration = parser.getint("RIDE_HAILING_OPERATOR", "OPERATIONS_DURATION")
-vehicle_relocation_velocity = parser.getint(
+vehicle_relocation_velocity = parser.getfloat(
     "RIDE_HAILING_OPERATOR", "VEHICLE_RELOCATION_VELOCITY"
 )
 
@@ -492,32 +526,12 @@ def run_single_simulation(
     # Population Type
     population_factory = PopulationFactory(pop_prob, seed)
 
-    # Charging Infrastructure
-    number_of_charging_locations = parser.getint(
-        "CHARGING_INFRASTRUCTURE", "NUMBER_OF_CHARGING_STATIONS"
-    )
-    charging_location_list = utils.parse_multiline_list(
-        "CHARGING_INFRASTRUCTURE", "LOCATIONS", delimiter=","
-    )[:number_of_charging_locations]
-    if isinstance(charging_power, list):
-        charging_power_list = charging_power
-    else:
-        charging_power_list = list(np.full(len(charging_location_list), charging_power))
-    if isinstance(charging_capacity, list):
-        charging_capacity_list = charging_capacity
-    else:
-        charging_capacity_list = list(
-            np.full(len(charging_location_list), charging_capacity)
-        )
-    sic = ChargingInfrastructureConfig(
-        charging_location_list, charging_power_list, charging_capacity_list
-    )
-    global_config.add_charging_infrastructure_config(sic)
     charging_infrastructure = ChargingInfrastructure(
         env,
         charging_location_list,
-        charging_power_list,
-        charging_capacity_list,
+        charging_station_power_list,
+        charging_station_capacity_list,
+        charging_station_queue_size_list,
         reset=True,
     )
 
@@ -565,7 +579,7 @@ def run_single_simulation(
 
     # Initialize Rule Based Relocation Scheduler
     # For RideHailing Fleets
-    ridehailing_operations_0 = RideHailingChargingOperations(
+    ridehailing_operations_0 = RideHailingBaseChargingOperations(
         env=env,
         distance_matrix=distance_matrix,
         time_between_operations=global_config.ridehailing_operator_config.operations_start,
@@ -575,7 +589,7 @@ def run_single_simulation(
         state_of_charge_threshold=global_config.ridehailing_operator_config.recharge_threshold,
     )
 
-    ridehailing_operations_1 = RideHailingChargingOperations(
+    ridehailing_operations_1 = RideHailingBaseChargingOperations(
         env=env,
         distance_matrix=distance_matrix,
         time_between_operations=global_config.ridehailing_operator_config.operations_start,
@@ -676,10 +690,10 @@ def run_single_simulation(
 
     # Daily Total Cost (CAPEX+OPEX) (cost derived from RevCalc excel in iCloud folder)
     no_vehicles_to_be_charged = {
-        "ride_hailing_0": ride_hailing_fleet_0.get_all_vehicles_below_soc_level(
+        "ride_hailing_0": ride_hailing_fleet_0.count_vehicles_below_soc_level(
             global_config.ridehailing_operator_config.recharge_threshold
         ),
-        "ride_hailing_1": ride_hailing_fleet_1.get_all_vehicles_below_soc_level(
+        "ride_hailing_1": ride_hailing_fleet_1.count_vehicles_below_soc_level(
             global_config.ridehailing_operator_config.recharge_threshold
         ),
     }

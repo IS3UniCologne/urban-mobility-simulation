@@ -12,10 +12,10 @@ class RideHailingAV(RideHailingVehicle):
         self,
         env: Environment,
         position,
+        velocity,
         max_available_seats=4,
         max_state_of_charge=16.7,
         energy_consumption=0.152,
-        velocity=833.33,
         price_per_min=0.26,
     ):
         """
@@ -31,10 +31,10 @@ class RideHailingAV(RideHailingVehicle):
         super(RideHailingAV, self).__init__(
             env,
             position,
+            velocity,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
-            velocity,
             price_per_min,
             is_electric=True,
         )
@@ -42,4 +42,7 @@ class RideHailingAV(RideHailingVehicle):
         # Increment Shared Car ID
         self.car_id = RideHailingAV.ride_hailing_av_id
         self._price_per_minute = price_per_min
+        self._emergency_buffer_percent = self._config.get_ridehailing_vehicle_config(
+            "AutonomousCar"
+        ).emergency_buffer
         RideHailingAV.ride_hailing_av_id += 1

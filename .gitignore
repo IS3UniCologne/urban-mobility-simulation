@@ -168,4 +168,5 @@ dmypy.json
 # Data
 *.pdf
 
-./analysis/*
+# profiling
+*.austin

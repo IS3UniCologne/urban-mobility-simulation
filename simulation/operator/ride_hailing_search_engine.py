@@ -1,5 +1,3 @@
-from line_profiler_pycharm import profile
-
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
@@ -33,7 +31,6 @@ class RideHailingSearchEngine(SearchEngineInterface):
             3
         ]
 
-    @profile
     def search_for_transportation_alternatives(
         self, vehicle_search_task: TransportationSearchTask
     ) -> TransportationAlternativeBrowser:
@@ -69,7 +66,11 @@ class RideHailingSearchEngine(SearchEngineInterface):
         # if vehicle_search_task.transport_task.viable_vehicle_modes['RideHailingCar'] == 1:
         for car in CVs_in_area:
             # Calc waiting time
-            route_to_pick_up = Route(car.position, origin)
+            if car.state == VehicleState.PARKING:
+                route_to_pick_up = Route(car.position, origin)
+            else:
+                route_to_pick_up = Route(car.current_task.destination, origin)
+
             distance_to_pick_up = route_to_pick_up.distance
 
             # Calc Duration
@@ -98,7 +99,11 @@ class RideHailingSearchEngine(SearchEngineInterface):
         # if vehicle_search_task.transport_task.viable_vehicle_modes['AutonomousCar'] == 1:
         for car in AVs_in_area:
             # Calc waiting time
-            route_to_pick_up = Route(car.position, origin)
+            if car.state == VehicleState.PARKING:
+                route_to_pick_up = Route(car.position, origin)
+            else:
+                route_to_pick_up = Route(car.current_task.destination, origin)
+
             distance_to_pick_up = route_to_pick_up.distance
 
             # Calc Duration

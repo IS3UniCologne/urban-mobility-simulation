@@ -25,10 +25,10 @@ class SharedVehicle(Vehicle, ABC):
         self,
         env: Environment,
         position,
+        velocity,
         max_available_seats=1,
         max_state_of_charge=1,
         energy_consumption=0.01,
-        velocity=166.7,
         price_per_min=1,
         unlock_fee=1,
         driver: DriverInterface = None,
@@ -167,7 +167,7 @@ class SharedVehicle(Vehicle, ABC):
 
     def stop_driving(self):
         self.state = SharedVehicleState.PARKING
-
+        self.set_current_task(None)
         logging.debug(
             "Driving stopped.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
@@ -217,7 +217,7 @@ class SharedVehicle(Vehicle, ABC):
             self._current_state_of_charge = 0.0
 
         logging.debug(
-            f"Current state of charge {round(self.current_state_of_charge, 2)}/{self.max_state_of_charge} ({round(self.current_state_of_charge/self.max_state_of_charge*100, 2)}%).",
+            f"Current state of charge {round(self.current_state_of_charge, 2)}/{self.max_state_of_charge} ({round(self.current_state_of_charge / self.max_state_of_charge * 100, 2)}%).",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
