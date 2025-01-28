@@ -304,6 +304,10 @@ class ConfigReader:
             n_ridehailing_cars=self.ride_hailing.n_ridehailing_cars,
             allocation=self.ride_hailing.allocation,
             allocation_penalty=self.ride_hailing_operator.low_soc_penalty,
+            bid_default=self.ride_hailing_operator.bid_default,
+            bid_decay=self.ride_hailing_operator.bid_decay,
+            random_overbidding=self.ride_hailing_operator.random_overbidding,
+            overbid_prob=self.ride_hailing_operator.overbid_prob,
         )
         self._global_config.add_ridehailing_operator_config(rh_operator_config)
 
