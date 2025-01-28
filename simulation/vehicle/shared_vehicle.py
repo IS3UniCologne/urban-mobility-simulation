@@ -241,7 +241,7 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     def mount_driver(self, driver: DriverInterface):
-        #if self._driver is not None:
+        # if self._driver is not None:
         #    raise Exception(
         #        f"Vehicle {self._id} has already a driver {self._driver.identify_driver()}. Unable to mount driver."
         #    )
@@ -262,7 +262,7 @@ class SharedVehicle(Vehicle, ABC):
             self._driver_unmounted.succeed()
             self._driver_unmounted = self._env.event()
             self._state == VehicleState.PARKING
-            #raise Exception("Vehicle has no driver to unmount.")
+            # raise Exception("Vehicle has no driver to unmount.")
 
         else:
             tmp_driver_id = self._driver.identify_driver()

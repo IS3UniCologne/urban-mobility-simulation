@@ -518,7 +518,7 @@ class SharedVehicleConfig:
         cost_per_km,
         charging_cost_per_kWh,
         co2_per_km,
-        unlock_fee
+        unlock_fee,
     ):
         self.price_per_min = price_per_min
         self.max_state_of_charge = max_state_of_charge

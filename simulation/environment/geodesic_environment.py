@@ -9,6 +9,7 @@ from simulation.environment.environment import Environment
 from simulation.vehicle.vehicle import Vehicle
 import sys
 
+
 class GeodesicEnvironment(Environment):
     # There is only one instance of this class.
     __instance = None

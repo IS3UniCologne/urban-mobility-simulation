@@ -409,12 +409,10 @@ class User(Agent, DriverInterface, TrackingInterface):
             available_transportation_alternatives.transportation_alternatives[0]
         )
 
-        # TODO: Write Bug ticket
+        # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/85
         if selected_transportation_alternative.vehicle._driver is not None:
-            print('DRIVER NOT NONE')
-            veh = selected_transportation_alternative.vehicle
-            print('#'*200)
-
+            print("DRIVER NOT NONE")
+            print("#" * 200)
             return
 
         # Trigger next event

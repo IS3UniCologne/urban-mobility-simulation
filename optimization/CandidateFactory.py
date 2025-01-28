@@ -55,16 +55,22 @@ class CandidateFactory:
         if difference != 0:
             # Find indices with non-zero ratios
             non_zero_indices = [i for i, ratio in enumerate(ratios) if ratio > 0]
-            fractional_parts = [(raw_numbers[i] - integers[i]) for i in non_zero_indices]
+            fractional_parts = [
+                (raw_numbers[i] - integers[i]) for i in non_zero_indices
+            ]
 
             if difference > 0:
                 for _ in range(difference):
-                    max_index = non_zero_indices[fractional_parts.index(max(fractional_parts))]
+                    max_index = non_zero_indices[
+                        fractional_parts.index(max(fractional_parts))
+                    ]
                     integers[max_index] += 1
                     fractional_parts[non_zero_indices.index(max_index)] = 0
             elif difference < 0:
                 for _ in range(-difference):
-                    min_index = non_zero_indices[fractional_parts.index(min(fractional_parts))]
+                    min_index = non_zero_indices[
+                        fractional_parts.index(min(fractional_parts))
+                    ]
                     integers[min_index] -= 1
                     fractional_parts[non_zero_indices.index(min_index)] = 0
 
@@ -75,5 +81,12 @@ class CandidateFactory:
         parts = random.sample(range(fleet_size + 1), 3)
         parts.sort()
 
-        print(f'Create individual: {[parts[0], parts[1] - parts[0], parts[2] - parts[1], fleet_size - parts[2]]}')
-        return [parts[0], parts[1] - parts[0], parts[2] - parts[1], fleet_size - parts[2]]
+        print(
+            f"Create individual: {[parts[0], parts[1] - parts[0], parts[2] - parts[1], fleet_size - parts[2]]}"
+        )
+        return [
+            parts[0],
+            parts[1] - parts[0],
+            parts[2] - parts[1],
+            fleet_size - parts[2],
+        ]

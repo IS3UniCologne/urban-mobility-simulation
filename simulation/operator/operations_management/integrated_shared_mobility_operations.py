@@ -192,7 +192,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             self._charging_plan_updated = self._env.event()
 
             # While Shift is not over, recalculate relocation plans and execute them.
-            while (self._env.now % 1440) < (self._duration_of_operations + self._time_between_operations):
+            while (self._env.now % 1440) < (
+                self._duration_of_operations + self._time_between_operations
+            ):
                 logging.debug(
                     "Planning next relocation schedule.",
                     extra={"clazz": self.__class__.__name__, "oid": ""},
@@ -314,7 +316,6 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             logging.debug("Shift is over")
             yield self._env.timeout(self._time_between_operations)
             logging.debug("Day is over")
-
 
     def generate_relocation_plan(self, transactions):
         """
@@ -601,9 +602,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             )
         ]
 
-        print('low_fraction_per_mode')
+        print("low_fraction_per_mode")
         print(low_fraction_per_mode)
-        print(' ')
+        print(" ")
 
         # Temporary Denom
         denominator = sum(low_fraction_per_mode)
@@ -1246,4 +1247,3 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     @property
     def planned_relocation_task(self):
         return self._planned_relocation_task
-
