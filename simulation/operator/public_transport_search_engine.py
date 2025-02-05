@@ -1,5 +1,6 @@
 import logging
 
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.time import SimulationTimeConverter
@@ -173,11 +174,12 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         :param destination: GeodesicPosition
         :return: dict
         """
-
+        geo_env = GeodesicEnvironment.getInstance()
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon as origin and destination
-            origin_hex, origin_poly = origin.get_hexagon()
-            destination_hex, destination_poly = destination.get_hexagon()
+            origin_poly = geo_env.get_hexagon(origin.get_hexagon_id())
+
+            destination_poly = geo_env.get_hexagon(destination.get_hexagon_id())
             in_vicinity = [
                 {
                     "origin": x.is_in_geometry(origin_poly),
