@@ -158,7 +158,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         x = np.zeros(self._state_size_flattened, dtype=np.float32)
 
         # build position vector v[hex] =1 if bus is at hex, else 0
-        pos, _ = self._corridor_sorted.index(
+        pos = self._corridor_sorted.index(
             self.bus.position.get_hexagon_id(self._action_res)
         )
         x[pos] = 1
@@ -166,7 +166,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # build pick-up demand vector v[hex] = pick-up count for all currently known demands
         for d in demands:
             try:
-                start, _ = self._corridor_sorted.index(
+                start = self._corridor_sorted.index(
                     d.origin.get_hexagon_id(self._action_res)
                 )
                 x[self._corridor_dim + start] += 1
