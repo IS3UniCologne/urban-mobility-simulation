@@ -122,32 +122,13 @@ if (
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
-#### End Basic Configuration #####
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# RideHailing Fleet Configuration         #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-
-# TODO: n_ridehailing cars needs to be set to 0 in the toml file
-
-# Bidding Streategy Parameters
-bid_default = config.ride_hailing_global.BID_DEFAULT
-bid_decay = config.ride_hailing_global.BID_DECAY
-bidding_parameters = {"bid_default": bid_default, "bid_decay": bid_decay}
-
-###### End RideHailing Fleet Configuration ######
-
-
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
 # Init. Simulation Environment            #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-env = simpy.Environment(initial_time=0)
+env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
 
 # Inject Simulation Environment to Logger (such that we can log the env time)
 cf = SimulationContextFilter(filter_name="add_env", extra=env)
@@ -155,6 +136,15 @@ edf = ExtraDefaultFilter(filter_name="add_default_value")
 
 logger.addFilter(cf)
 logger.addFilter(edf)
+
+# Population Type
+# TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
+population_factory = PopulationFactory(
+    config.population.RIDE_HAILING_POPULATION_PROBABILITIES,
+    config.experiment_management.SEED,
+)
+# Load Spatial Environment and the environment files
+load_geodesic_environment()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -164,16 +154,6 @@ logger.addFilter(edf)
 
 tracking = Tracking.init(env)
 
-
-# Population Type
-# TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
-population_factory = PopulationFactory(
-    config.population.RIDE_HAILING_POPULATION_PROBABILITIES,
-    config.experiment_management.SEED,
-)
-
-# Load Spatial Environment and the environment files
-load_geodesic_environment()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #

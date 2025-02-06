@@ -82,9 +82,6 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
             yield self._env.process(self._bid_for_capacity())
 
-    def get_task_transactions(self):
-        return self._charging_operations.task_transactions
-
     def _bid_for_capacity(self):
         yield self._auction.open_for_bidding
         # timeslots are denoted by their start time and have length `self._config.shared_charging_auction.TIMESLOT_DURATION`
@@ -151,3 +148,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
         yield self._env.timeout(1)
         self._env.process(self._charging_operations.execute())
+
+    @property
+    def task_transactions(self):
+        return self._charging_operations.task_transactions
