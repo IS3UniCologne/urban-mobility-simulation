@@ -67,17 +67,17 @@ class RideHailingCar(RideHailingVehicle):
         self._offline_duration = 0
         self._shift_start_time = None
         self._shift_end_time = 0
-        self._driver_payment_share = Configuration.instance().get_driver_payment_share()
+        self._driver_payment_share = (
+            Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
+        )
         self._state = VehicleState.OFFLINE
         self._online_event = self._env.event()
         self._offline_event = self._env.event()
         RideHailingCar.ride_hailing_car_id += 1
 
-        self._emergency_soc_buffer_percent = (
-            self._config.get_ridehailing_vehicle_config(
-                "RideHailingCar"
-            ).emergency_soc_buffer
-        )
+        self._emergency_soc_buffer_percent = self._config.ride_hailing_vehicles[
+            "RideHailingCar"
+        ].EMERGENCY_SOC_BUFFER
 
         self._env.process(self.run_shift_check_process())
 

@@ -17,7 +17,9 @@ class GeodesicPosition(Position):
         self._lng = longitude
 
         self._default_hexagon = {}
-        self._global_resolution = Configuration.instance().spatial_resolution_value
+        self._global_resolution = Configuration().world.SPATIAL_RESOLUTION.value
+
+        Configuration().mode_choice_model.MODE_CHOICE_STRATEGY
 
         if default_hexagon is not None:
             self._default_hexagon[self._global_resolution] = default_hexagon

@@ -44,7 +44,7 @@ class SharedMobilityOperator(Operator):
 
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
         # Get available vehicle types
-        vehicle_types = Configuration.instance().get_available_shared_vehicle_types()
+        vehicle_types = Configuration().shared_vehicle_global.AVAILABLE_VEHICLE_MODES
 
         # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
         # We count the lost revenue for the "cheapest" mode
@@ -54,15 +54,9 @@ class SharedMobilityOperator(Operator):
                 and transportation_task.viable_vehicle_modes[vehicle_type] == 1
             ):
                 distance = transportation_task.origin >> transportation_task.destination
-                velocity = (
-                    Configuration.instance()
-                    .get_shared_vehicle_config(vehicle_type)
-                    .velocity
-                )
+                velocity = Configuration().shared_vehicles.get(vehicle_type).VELOCITY
                 price_per_min = (
-                    Configuration.instance()
-                    .get_shared_vehicle_config(vehicle_type)
-                    .price_per_min
+                    Configuration().shared_vehicles.get(vehicle_type).PRICE_PER_MIN
                 )
                 missed_trip_cost = distance / velocity * price_per_min
 

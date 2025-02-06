@@ -48,8 +48,8 @@ class SharedChargingAuction(Auction, TrackingInterface):
         self._bids = {}
         self._location_results = {}
         self._next_timeslot = (
-            self._config.auction_config.auction_start
-            + self._config.shared_charging_config.auction_lookahead
+            self._config.auction.AUCTION_START
+            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD
         )
 
         # init auction view on charging infrastructure
@@ -57,16 +57,16 @@ class SharedChargingAuction(Auction, TrackingInterface):
         self._charging_infrastructure = VirtualChargingInfrastructure(
             env=self._env,
             charging_infrastructure=charging_infrastructure,
-            lookahead=self._config.auction_config.auction_start
-            + self._config.shared_charging_config.auction_lookahead,
+            lookahead=self._config.auction.AUCTION_START
+            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD,
             use_virtual_cs=False,
         )
         for timeslot in range(
-            self._config.auction_config.auction_start
-            + self._config.shared_charging_config.auction_lookahead,
-            self._config.auction_config.auction_end
-            + self._config.shared_charging_config.auction_interval,
-            self._config.shared_charging_config.auction_interval,
+            self._config.auction.AUCTION_START
+            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD,
+            self._config.auction.AUCTION_END
+            + self._config.shared_charging_auction.AUCTION_INTERVAL,
+            self._config.shared_charging_auction.AUCTION_INTERVAL,
         ):
             self._charging_infrastructure.update(
                 availability={
@@ -80,8 +80,8 @@ class SharedChargingAuction(Auction, TrackingInterface):
         while True:
             if (
                 self._next_timeslot
-                > self._config.auction_config.auction_end
-                - self._config.shared_charging_config.timeslot_duration
+                > self._config.auction.AUCTION_END
+                - self._config.shared_charging_auction.TIMESLOT_DURATION
             ):
                 logging.info(
                     "Auction stops, last timeslot reached.",
@@ -91,7 +91,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
             open_at = (
                 self._next_timeslot
-                - self._config.shared_charging_config.auction_lookahead
+                - self._config.shared_charging_auction.AUCTION_LOOKAHEAD
             )
 
             if self._env.now <= open_at:
@@ -130,7 +130,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
             self._next_timeslot = (
                 self._next_timeslot
-                + self._config.shared_charging_config.auction_interval
+                + self._config.shared_charging_auction.AUCTION_INTERVAL
             )
             logging.debug(
                 "Results announced. Closing auction until %s",
@@ -281,8 +281,9 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
         for timeslot in range(
             self._next_timeslot,
-            self._next_timeslot + self._config.shared_charging_config.timeslot_duration,
-            self._config.shared_charging_config.auction_interval,
+            self._next_timeslot
+            + self._config.shared_charging_auction.TIMESLOT_DURATION,
+            self._config.shared_charging_auction.AUCTION_INTERVAL,
         ):
             remaining_capacity = {
                 k: v - auctioned_capacity[k]

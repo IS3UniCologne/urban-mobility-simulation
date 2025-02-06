@@ -42,7 +42,7 @@ class VirtualChargingInfrastructure:
         use_virtual_cs=True,
     ):
         self._env = env
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         # if virtual charging infra is used to create a completely artificial plan of infrastructure, including future timeslots, use lookahead
         # otherwise, (if lookahead is None) be a mirror of the real underlying infrastructure, that can be updated from outside as needed
@@ -141,7 +141,7 @@ class VirtualChargingInfrastructure:
                 valid_timeframe=(
                     self._lookahead,
                     self._lookahead
-                    + self._config.shared_charging_config.timeslot_duration,
+                    + self._config.shared_charging_auction.TIMESLOT_DURATION,
                 )
                 if self._lookahead is not None
                 else None,
@@ -161,8 +161,11 @@ class VirtualChargingInfrastructure:
         if self._lookahead is not None:
             # update the default lookahead to be the next auctioned slot
             self._lookahead = self._env.now + (
-                self._config.shared_charging_config.auction_lookahead
-                - (self._env.now % self._config.shared_charging_config.auction_interval)
+                self._config.shared_charging_auction.AUCTION_LOOKAHEAD
+                - (
+                    self._env.now
+                    % self._config.shared_charging_auction.AUCTION_INTERVAL
+                )
             )
 
         if self._virtual_charging_stations is not None:

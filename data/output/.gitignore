@@ -6,6 +6,7 @@
 
 # and relevant subdirs
 !benchmarks
+!configs
 !figures
 !logs
 !returns

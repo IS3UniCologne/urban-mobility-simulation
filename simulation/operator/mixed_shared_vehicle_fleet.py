@@ -50,7 +50,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
         bikes_in_area = []
 
         geo_env = GeodesicEnvironment.getInstance()
-        Configuration.instance()
+        Configuration()
         geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:

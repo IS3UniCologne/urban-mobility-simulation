@@ -26,15 +26,19 @@ class MixedRideHailingFleet(VehicleFleet):
     def __init__(self, env: Environment):
         super(MixedRideHailingFleet, self).__init__(env)
         self._env = env
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         self._ridehailing_cars = []
         self._autonomous_cars = []
-        self._distance_threshold_to_user = self._config.get_distance_threshold_to_user()
-        self._driver_availability_vector = self._config.get_driver_availability_vector()
-        self._recharging_threshold = (
-            self._config.ridehailing_operator_config.recharge_threshold
+        self._distance_threshold_to_user = (
+            self._config.ride_hailing_global.MAX_PICKUP_DISTANCE
         )
+        self._driver_availability_vector = (
+            self._config.ride_hailing_global.DRIVER_AVAILABILITY_VECTOR
+        )
+        self._recharging_threshold = self._config.ride_hailing_operators[
+            0
+        ].RECHARGE_THRESHOLD
         self._env.process(self.fleet_size_monitor())
 
     def add_vehicle(self, vehicle: RideHailingVehicle):
@@ -63,7 +67,7 @@ class MixedRideHailingFleet(VehicleFleet):
         cars_in_area = []
 
         geo_env = GeodesicEnvironment.getInstance()
-        Configuration.instance()
+        Configuration()
         _, geometry = geo_env.get_hexagon(region)
 
         for car in self._vehicles:

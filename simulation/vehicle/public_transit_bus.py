@@ -50,8 +50,10 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         self._has_reached_terminal = self._env.event()
 
         # Config
-        self._config = Configuration.instance()
-        self._problem_config = self._config.dynamic_checkpoint_routing_config
+        self._config = Configuration()
+        self._problem_config = (
+            None  # TODO: add back once dynamic problem configuration is re-implemented
+        )
 
         # Environment / World state
         self._geodesic_env = GeodesicEnvironment.getInstance()

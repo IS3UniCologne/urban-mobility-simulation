@@ -104,7 +104,7 @@ class World:
         self._charging_infrastructure = charging_infrastructure
 
         # Config
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         # Add Population Factory
         self._population_factory = population_factory
@@ -143,10 +143,10 @@ class World:
             geo_env = GeodesicEnvironment.getInstance()
 
             origin_lat, origin_lng = geo_env.get_random_position(
-                origin, f"hex_{self._config.spatial_resolution_value}"
+                origin, f"hex_{self._config.world.spatial_resolution_value}"
             )
             destination_lat, destination_lng = geo_env.get_random_position(
-                destination, f"hex_{self._config.spatial_resolution_value}"
+                destination, f"hex_{self._config.world.spatial_resolution_value}"
             )
 
             origin_position = GeodesicPosition(
@@ -165,7 +165,7 @@ class World:
             if mode == "public_transport":
                 # User Preferences
                 max_wait_time = normal(
-                    self._config.user_config.max_wait
+                    self._config.user.TRANSIT_MAX_WAIT
                 )  # sample from normal dist centered on config
 
                 # Generate Transportation Task

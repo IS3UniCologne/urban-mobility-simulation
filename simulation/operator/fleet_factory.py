@@ -71,7 +71,7 @@ def generate_fleet_config(
     bikes_cnt.index = distribution.index
     distribution["bikes"] = bikes_cnt["bikes_count"]
 
-    hex_column = Configuration.instance().spatial_resolution_column
+    hex_column = Configuration().world.spatial_resolution_column
 
     # Slice fleet config
     fleet_config = distribution[
@@ -100,9 +100,9 @@ def generate_ridehailing_fleet_config(
     # Random Number Generator
     random = np.random.RandomState(seed)
 
-    config = Configuration.instance()
-    EV_peneteration = config.get_EV_penetration()
-    AV_peneteration = config.get_AV_penetration()
+    config = Configuration()
+    EV_peneteration = config.ride_hailing_global.EV_PENETRATION
+    AV_peneteration = config.ride_hailing_global.AV_PENETRATION
     n_AVs = int(AV_peneteration * n_cars)
     n_non_AVs = int((1 - AV_peneteration) * n_cars)
     n_EVs = int(EV_peneteration * n_non_AVs)
@@ -135,7 +135,7 @@ def generate_ridehailing_fleet_config(
     distribution["AVs"] = car_cnt["car_count"]
 
     # Sample Supply Distribution for Cars
-    hex_column = Configuration.instance().spatial_resolution_column
+    hex_column = Configuration().world.spatial_resolution_column
 
     # Slice fleet config
     fleet_config = distribution[[hex_column, "cars", "EVs", "AVs"]]
@@ -146,8 +146,8 @@ def generate_ridehailing_fleet_config(
 def generate_AV_fleet(env, distribution, n=500, seed=4711):
     # Random Number Generator
     random = np.random.RandomState(seed)
-    config = Configuration.instance()
-    av_config = config.get_ridehailing_vehicle_config("AutonomousCar")
+    config = Configuration()
+    av_config = config.ride_hailing_vehicles["AutonomousCar"]
 
     # Sample Supply Distribution for Cars
     prob_arr = distribution["cars_prob"].to_numpy()
@@ -157,7 +157,7 @@ def generate_AV_fleet(env, distribution, n=500, seed=4711):
     car_cnt.index = distribution.index
     distribution["AVs"] = car_cnt["car_count"]
 
-    hex_column = Configuration.instance().spatial_resolution_column
+    hex_column = Configuration().world.spatial_resolution_column
 
     # Slice fleet config
     fleet_config = distribution[[hex_column, "AVs"]]
@@ -180,11 +180,11 @@ def generate_AV_fleet(env, distribution, n=500, seed=4711):
             autonomous_car = RideHailingAV(
                 env=env,
                 position=pos,
-                velocity=av_config.velocity,
-                max_available_seats=av_config.max_available_seats,
-                max_state_of_charge=av_config.max_state_of_charge,
-                energy_consumption=av_config.energy_consumption,
-                price_per_min=av_config.price_per_min,
+                velocity=av_config.VELOCITY,
+                max_available_seats=av_config.MAX_AVAILABLE_SEATS,
+                max_state_of_charge=av_config.MAX_STATE_OF_CHARGE,
+                energy_consumption=av_config.ENERGY_CONSUMPTION,
+                price_per_min=av_config.PRICE_PER_MIN,
             )
             fleet.add_vehicle(autonomous_car)
             autonomous_car.fleet = fleet
@@ -206,14 +206,14 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
     geo_env = GeodesicEnvironment.getInstance()
 
     # Get Column Identifier for current resolution (e.g., hex_id_7)
-    hex_column = Configuration.instance().spatial_resolution_column
+    hex_column = Configuration().world.spatial_resolution_column
 
     # Global Config File (values from config ini files)
-    config = Configuration.instance()
+    config = Configuration()
 
     # Load Vehicle Configurations
-    rh_config = config.get_ridehailing_vehicle_config("RideHailingCar")
-    a_config = config.get_ridehailing_vehicle_config("AutonomousCar")
+    rh_config = config.ride_hailing_vehicles["RideHailingCar"]
+    av_config = config.ride_hailing_vehicles["AutonomousCar"]
 
     for index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
@@ -231,12 +231,11 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             car = RideHailingCar(
                 env=env,
                 position=pos,
-                velocity=rh_config.velocity,
-                max_available_seats=rh_config.max_available_seats,
-                max_state_of_charge=rh_config.max_state_of_charge,
-                energy_consumption=rh_config.energy_consumption,
-                price_per_min=rh_config.price_per_min,
-                is_electric=True,
+                velocity=rh_config.VELOCITY,
+                max_available_seats=rh_config.MAX_AVAILABLE_SEATS,
+                max_state_of_charge=rh_config.MAX_STATE_OF_CHARGE,
+                energy_consumption=rh_config.ENERGY_CONSUMPTION,
+                price_per_min=rh_config.PRICE_PER_MIN,
             )
             fleet.add_vehicle(car)
             car.fleet = fleet
@@ -248,11 +247,11 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             car = RideHailingCar(
                 env=env,
                 position=pos,
-                velocity=rh_config.velocity,
-                max_available_seats=rh_config.max_available_seats,
-                max_state_of_charge=rh_config.max_state_of_charge,
-                energy_consumption=rh_config.energy_consumption,
-                price_per_min=rh_config.price_per_min,
+                velocity=rh_config.VELOCITY,
+                max_available_seats=rh_config.MAX_AVAILABLE_SEATS,
+                max_state_of_charge=rh_config.MAX_STATE_OF_CHARGE,
+                energy_consumption=rh_config.ENERGY_CONSUMPTION,
+                price_per_min=rh_config.PRICE_PER_MIN,
                 is_electric=False,
             )
             fleet.add_vehicle(car)
@@ -265,11 +264,11 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
             autonomous_car = RideHailingAV(
                 env=env,
                 position=pos,
-                velocity=a_config.velocity,
-                max_available_seats=a_config.max_available_seats,
-                max_state_of_charge=a_config.max_state_of_charge,
-                energy_consumption=a_config.energy_consumption,
-                price_per_min=a_config.price_per_min,
+                velocity=av_config.VELOCITY,
+                max_available_seats=av_config.MAX_AVAILABLE_SEATS,
+                max_state_of_charge=av_config.MAX_STATE_OF_CHARGE,
+                energy_consumption=av_config.ENERGY_CONSUMPTION,
+                price_per_min=av_config.PRICE_PER_MIN,
             )
             fleet.add_vehicle(autonomous_car)
             autonomous_car.fleet = fleet
@@ -291,16 +290,16 @@ def generate_mixed_fleet(env, fleet_config):
     geo_env = GeodesicEnvironment.getInstance()
 
     # Get Column Identifier for current resolution (e.g., hex_id_7)
-    hex_column = Configuration.instance().spatial_resolution_column
+    hex_column = Configuration().world.spatial_resolution_column
 
     # Global Config File (values from config ini files)
-    config = Configuration.instance()
+    config = Configuration()
 
     # Load Vehicle Configurations
-    c_config = config.get_shared_vehicle_config("SharedCar")
-    s_config = config.get_shared_vehicle_config("SharedScooter")
-    ks_config = config.get_shared_vehicle_config("SharedKickScooter")
-    b_config = config.get_shared_vehicle_config("SharedBike")
+    car_config = config.shared_vehicles["SharedCar"]
+    scooter_config = config.shared_vehicles["SharedScooter"]
+    kick_scooter_config = config.shared_vehicles["SharedKickScooter"]
+    bike_config = config.shared_vehicles["SharedBike"]
 
     for index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
@@ -319,11 +318,11 @@ def generate_mixed_fleet(env, fleet_config):
             car = SharedCar(
                 env=env,
                 position=pos,
-                velocity=c_config.velocity,
-                max_available_seats=c_config.max_available_seats,
-                max_state_of_charge=c_config.max_state_of_charge,
-                energy_consumption=c_config.energy_consumption,
-                price_per_min=c_config.price_per_min,
+                velocity=car_config.VELOCITY,
+                max_available_seats=car_config.MAX_AVAILABLE_SEATS,
+                max_state_of_charge=car_config.MAX_STATE_OF_CHARGE,
+                energy_consumption=car_config.ENERGY_CONSUMPTION,
+                price_per_min=car_config.PRICE_PER_MIN,
             )
             fleet.add_shared_vehicle(car)
 
@@ -334,11 +333,11 @@ def generate_mixed_fleet(env, fleet_config):
             scooter = SharedScooter(
                 env=env,
                 position=pos,
-                velocity=s_config.velocity,
-                max_available_seats=s_config.max_available_seats,
-                max_state_of_charge=s_config.max_state_of_charge,
-                energy_consumption=s_config.energy_consumption,
-                price_per_min=s_config.price_per_min,
+                velocity=scooter_config.VELOCITY,
+                max_available_seats=scooter_config.MAX_AVAILABLE_SEATS,
+                max_state_of_charge=scooter_config.MAX_STATE_OF_CHARGE,
+                energy_consumption=scooter_config.ENERGY_CONSUMPTION,
+                price_per_min=scooter_config.PRICE_PER_MIN,
             )
             fleet.add_shared_vehicle(scooter)
 
@@ -349,11 +348,11 @@ def generate_mixed_fleet(env, fleet_config):
             kick_scooter = SharedKickScooter(
                 env=env,
                 position=pos,
-                velocity=ks_config.velocity,
-                max_available_seats=ks_config.max_available_seats,
-                max_state_of_charge=ks_config.max_state_of_charge,
-                energy_consumption=ks_config.energy_consumption,
-                price_per_min=ks_config.price_per_min,
+                velocity=kick_scooter_config.VELOCITY,
+                max_available_seats=kick_scooter_config.MAX_AVAILABLE_SEATS,
+                max_state_of_charge=kick_scooter_config.MAX_STATE_OF_CHARGE,
+                energy_consumption=kick_scooter_config.ENERGY_CONSUMPTION,
+                price_per_min=kick_scooter_config.PRICE_PER_MIN,
             )
             fleet.add_shared_vehicle(kick_scooter)
 
@@ -364,10 +363,10 @@ def generate_mixed_fleet(env, fleet_config):
             bike = SharedBike(
                 env=env,
                 position=pos,
-                velocity=b_config.velocity,
-                max_available_seats=b_config.max_available_seats,
-                max_state_of_charge=b_config.max_state_of_charge,
-                price_per_min=b_config.price_per_min,
+                velocity=bike_config.VELOCITY,
+                max_available_seats=bike_config.MAX_AVAILABLE_SEATS,
+                max_state_of_charge=bike_config.MAX_STATE_OF_CHARGE,
+                price_per_min=bike_config.PRICE_PER_MIN,
             )
             fleet.add_shared_vehicle(bike)
 
