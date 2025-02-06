@@ -1,468 +1,218 @@
+import ast
 import random
-from enum import Enum
-from typing import Deque, List, Optional, Union
+from dataclasses import dataclass, fields
+from functools import wraps
+from typing import Dict, List, Optional
 
 import numpy as np
-from beartype import beartype
 
-# from keras.callbacks import TensorBoard
-from learning.spaces.action_space import DiscreteActionSpace
+from simulation.helper.configuration.enums import (
+    DailyResolution,
+    ModeChoiceStrategy,
+    PopulationType,
+    SpatialResolution,
+    TemporalBucket,
+)
 from simulation.helper.time import SimulationVelocityConverter
 
-
-class TemporalBucket(Enum):
-    HOURLY_BUCKETS = 1
-    TWO_HOURLY_BUCKETS = 2
-    FOUR_HOURLY_BUCKETS = 4
-    SIX_HOURLY_BUCKETS = 6
-    EIGHT_HOURLY_BUCKETS = 8
-    TWELVE_HOURLY_BUCKETS = 12
-
-
-class DailyResolution(Enum):
-    DAILY = 0
-    WEEKDAY_WEEKEND = 1
-    NONE = 2
-
-
-class SpatialResolution(Enum):
-    HEX_7 = 7
-    HEX_8 = 8
-    HEX_9 = 9
-
-
-class ModeChoiceStrategy(Enum):
-    RANDOM = 0
-    SUBSTITUTION_AWARE = 1
-    NO_SUBSTITUTION = 2
-
-
-class Configuration:
-    # There is only one instance of this class.
-    __instance = None
-
-    @staticmethod
-    def instance() -> "Configuration":
-        """Static access method."""
-        if Configuration.__instance is None:
-            Configuration()
-        return Configuration.__instance
-
-    @beartype
-    def __init__(self):
-        """Virtually private constructor."""
-        if Configuration.__instance is not None:
-            raise Exception("This class is a singleton!")
-        else:
-            Configuration.__instance = self
-            super(Configuration, self).__init__()
-
-        self._spatial_resolution = None
-        self._temporal_resolution = None
-        self._daily_resolution = None
-        self._city = None
-
-        self._store_results: bool = None
-        self._output_path: str = ""
-        self._transaction_file: str = ""
-        self._fleet_state_file: str = ""
-        self._track_agent: bool = None
-
-        self._bounding_box_file = ""
-        self._env_layer_hex_7_file = ""
-        self._env_layer_hex_8_file = ""
-        self._env_layer_hex_9_file = ""
-
-        self._shared_vehicle_configs = {}
-
-        self._mode_choice_config = []
-
-        self._user_config = None
-
-        self._ridehailing_vehicle_configs = {}
-
-        self._auction_config = None
-
-        self._shared_charging_config = None
-
-        # [cst, price, waiting_time, EV, trip_duration, cst_AV, cst_HV, trust_AV, trust_HV]
-        MoD_coefficients = np.array(
-            [
-                [
-                    -0.273671504,
-                    -0.353911557,
-                    -0.103573505,
-                    -1.128132785,
-                    0.150429623,
-                    -0.576113819,
-                    7.297866296,
-                    0.631438368,
-                    -1.011643365,
-                ],
-                [
-                    -0.318885388,
-                    -1.281672341,
-                    -0.454985255,
-                    0.123860882,
-                    1.060810562,
-                    5.74223911,
-                    12.76153448,
-                    0.579730247,
-                    -0.746119133,
-                ],
-                [
-                    -0.529871517,
-                    -0.176603082,
-                    -0.624049182,
-                    -0.094335042,
-                    -0.07608058,
-                    6.357501057,
-                    3.73756425,
-                    1.017193094,
-                    1.048363966,
-                ],
-                [
-                    0.00,
-                    -0.228709544,
-                    -0.161649449,
-                    -0.069096605,
-                    0.133775179,
-                    -0.802892154,
-                    7.325820705,
-                    0.729678667,
-                    -0.735175789,
-                ],
-            ]
-        )  # TODO: read it from a dataet
-        self._MoD_coefficients_ci_lower = np.array(
-            [
-                [-0.670, -0.463, -0.198, -1.721, 0.083, -1.960, 5.347, 0.409, -1.415],
-                [-0.695, -1.702, -0.601, -0.588, 0.278, -0.573, 6.894, -0.175, -1.747],
-                [-0.941, -0.320, -0.805, -0.917, -0.205, 3.597, 0.648, 0.498, 0.447],
-                [0.000, -0.307, -0.237, -0.425, 0.068, -2.626, 5.734, 0.330, -1.036],
-            ]
-        )
-        self._MoD_coefficients_ci_upper = np.array(
-            [
-                [0.122, -0.245, -0.009, -0.535, 0.218, 0.808, 9.248, 0.853, -0.608],
-                [0.057, -0.862, -0.309, 0.835, 1.844, 12.057, 18.629, 1.335, 0.254],
-                [-0.119, -0.033, -0.443, 0.729, 0.053, 9.118, 6.827, 1.537, 1.650],
-                [0.000, -0.150, -0.086, 0.286, 0.199, 1.019, 8.917, 1.129, -0.434],
-            ]
-        )
-        self._MoD_p_values = np.array(
-            [
-                [0.00, 0.03, 0.00, 0.00, 0.42, 0.00, 0.00, 0.00, 0.18],
-                [0.00, 0.00, 0.73, 0.01, 0.08, 0.00, 0.13, 0.14, 0.10],
-                [0.02, 0.00, 0.82, 0.25, 0.00, 0.02, 0.00, 0.00, 0.01],
-                [0.00, 0.00, 0.70, 0.00, 0.39, 0.00, 0.00, 0.00, 0.00],
-            ]
-        )
-        MoD_significant = self._MoD_p_values.copy()
-
-        MoD_significant[MoD_significant <= 0.2] = 1
-        MoD_significant[MoD_significant != 1] = 1
-
-        self._MoD_coefficients = MoD_coefficients * MoD_significant
-
-        self._MoD_coefficient_interval_adjuster = None
-
-        self._AV_trust = None
-
-        self._shared_vehicle_operator_config: SharedVehicleOperatorConfig = None
-
-        self._ridehailing_operator_config: RideHailingOperatorConfig = None
-
-        self._population_config: PopulationConfig = None
-
-        self._charging_infrastructure_config: ChargingInfrastructureConfig = None
-
-        self._infrastructure_config: InfrastructureConfig = None
-
-        self._recharging_threshold = None
-
-        self._add_driver_availability_vector = None
-
-        self._transit_operator_config = None
-
-        self._transit_agent_config = None
-
-        self._bus_config = None
-
-        self.dynamic_routing_config = None
-
-        self.dynamic_checkpoint_routing_config = None
-
-        self._DQN_config = None
-
-        self._distance_threshold_to_user: int = None
-
-        self._driver_payment_share: float = None
-
-        self._AV_price_reduction: float = None
-
-        self._price_params: List[float] = None
-
-        self._start_time: int = None
-        self._end_time: int = None
-        self._seed: int = None
-
-        self._trip_demand_file: str = None
-        self._demand_modifier_files: List[str] = []
-
-        self._log_level: str = None
-        self._file_log_level: str = None
-
-        self._vehicle_supply_file: str = None
-
-        self._transit_population_probabilities: List[float] = None
-
-        self._ride_hailing_population_probabilities: List[float] = None
-        self._shared_vehicle_population_probabilities: List[float] = None
-
-    @property
-    def ride_hailing_population_probabilities(self):
-        return self._ride_hailing_population_probabilities
-
-    @ride_hailing_population_probabilities.setter
-    def ride_hailing_population_probabilities(
-        self, ride_hailing_population_probabilities
-    ):
-        self._ride_hailing_population_probabilities = (
-            ride_hailing_population_probabilities
-        )
-
-    @property
-    def shared_vehicle_population_probabilities(self):
-        return self._shared_vehicle_population_probabilities
-
-    @shared_vehicle_population_probabilities.setter
-    def shared_vehicle_population_probabilities(
-        self, shared_vehicle_population_probabilities
-    ):
-        self._shared_vehicle_population_probabilities = (
-            shared_vehicle_population_probabilities
-        )
-
-    @property
-    def transit_population_probabilities(self):
-        return self._transit_population_probabilities
-
-    @transit_population_probabilities.setter
-    def transit_population_probabilities(self, transit_population_probabilities):
-        self._transit_population_probabilities = transit_population_probabilities
-
-    @property
-    def vehicle_supply_file(self):
-        return self._vehicle_supply_file
-
-    @vehicle_supply_file.setter
-    def vehicle_supply_file(self, vehicle_supply_file):
-        self._vehicle_supply_file = vehicle_supply_file
-
-    @property
-    def track_agent(self):
-        return self._track_agent
-
-    @track_agent.setter
-    def track_agent(self, track_agent):
-        self._track_agent = track_agent
-
-    @property
-    def log_level(self):
-        return self._log_level
-
-    @log_level.setter
-    def log_level(self, log_level):
-        self._log_level = log_level
-
-    @property
-    def file_log_level(self):
-        return self._file_log_level
-
-    @file_log_level.setter
-    def file_log_level(self, file_log_level):
-        self._file_log_level = file_log_level
-
-    @property
-    def trip_demand_file(self):
-        return self._trip_demand_file
-
-    @trip_demand_file.setter
-    def trip_demand_file(self, trip_demand_file):
-        self._trip_demand_file = trip_demand_file
-
-    @property
-    def demand_modifier_files(self):
-        return self._demand_modifier_files
-
-    @demand_modifier_files.setter
-    def demand_modifier_files(self, demand_modifier_files):
-        self._demand_modifier_files = demand_modifier_files
-
-    @property
-    def seed(self) -> int:
-        return self._seed
-
-    @seed.setter
-    def seed(self, value: int):
-        self._seed = value
-
-    @property
-    def start_time(self) -> int:
-        return self._start_time
-
-    @start_time.setter
-    def start_time(self, value: int):
-        self._start_time = value
-
-    @property
-    def end_time(self) -> int:
-        return self._end_time
-
-    @end_time.setter
-    def end_time(self, value: int):
-        self._end_time = value
-
-    @property
-    def spatial_resolution(self):
-        return self._spatial_resolution
-
-    @spatial_resolution.setter
-    def spatial_resolution(self, spatial_resolution: int):
-        self._spatial_resolution = SpatialResolution(spatial_resolution)
-
-    @property
-    def city(self):
-        return self._city
-
-    @city.setter
-    def city(self, city: str):
-        self._city = city
+try:
+    import tomllib  # future proofing for python 3.11+
+except ModuleNotFoundError:
+    import pip._vendor.tomli as tomllib
+
+from beartype import BeartypeConf, beartype
+from beartype.door import die_if_unbearable
+
+# remove color from beartype exceptions to avoid unreadable debug output,
+# might want to move this to the templates to apply it to all beartype exceptions
+BeartypeConf.is_color = False
+
+
+"""
+The configuration class holds all the configuration parameters for the simulation and is loaded from the config toml file.
+The class is a singleton, meaning that there is only one instance of the class that is shared across the entire simulation.
+The config classes are lazy loaded, meaning that the configuration objects are only created when they are accessed for the first time.
+The input from the config file is validated using beartype.
+
+To add a new configuration parameter to an existing configuration class, follow these steps:
+1. Add the parameter to the config.toml file in the correct table.
+2. Add the parameter to the Configuration class. Make sure to include a type hint.
+3. If the parameter is optional, add the Optional type hint and set the default value to None. (e.g.  OPTIONAL_LIST: Optional[List[str]] = None)
+    All optional parameters should follow the mandatory parameters.
+4. Types that are not supported by toml (e.g. Enums,Tuples) should be converted to their respective types in the __post_init__ method. Make sure to use
+    the @beartype_after_post_init decorator if you do this.
+
+To add a new configuration class, follow these steps:
+1. Create a new table int the config file, e.g. [NEW_TABLE]. 
+2. Create a new dataclass in this file, e.g. class NewTableConfig. Please keep the order of dataclasses the same as in the config file.
+3. Add the dataclass to the Configuration class as a property.
+Example: 
+@property
+    def new_table(self) -> NewTableConfig:
+        return self._get_lazy_object("new_table", NewTableConfig)
+        
+For an exmaple of how to implement Lists, look at the Operator configs.
+For an example of how to implement nested dictionaries, look at the Vehicle configs.
+"""
+
+
+class Singleton(type):
+    """
+    A metaclass that for creating singletons.
+    """
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+def beartype_after_post_init(cls):
+    """Decorator to that delays the beartype check until after the __post_init__ method is called."""
+    original_post_init = getattr(cls, "__post_init__", None)
+
+    @wraps(original_post_init)
+    def new_post_init(self):
+        if original_post_init:
+            original_post_init(self)
+        for field in fields(self):
+            value = getattr(self, field.name)
+            die_if_unbearable(
+                obj=value,
+                hint=field.type,
+                exception_prefix=f"Field '{field.name}' in {self.__class__.__name__} is not of type {field.type}: ",
+            )
+
+    setattr(cls, "__post_init__", new_post_init)
+    return cls
+
+
+@beartype
+@dataclass
+class SettingsConfig:
+    LOG_LEVEL: str
+    FILE_LOG_LEVEL: str
+
+    PERSIST_RESULTS: bool
+    TRACK_AGENT: bool
+
+
+@beartype_after_post_init
+@dataclass
+class WorldConfig:
+    SPATIAL_RESOLUTION: SpatialResolution
+    TEMPORAL_RESOLUTION: TemporalBucket
+    DAILY_RESOLUTION: DailyResolution
+    CITY: str
+
+    def __post_init__(self):
+        # convert ints to enums
+        self.SPATIAL_RESOLUTION = SpatialResolution(self.SPATIAL_RESOLUTION)
+        self.TEMPORAL_RESOLUTION = TemporalBucket(self.TEMPORAL_RESOLUTION)
+        self.DAILY_RESOLUTION = DailyResolution(self.DAILY_RESOLUTION)
 
     @property
     def spatial_resolution_value(self):
-        return self._spatial_resolution.value
-
-    @property
-    def temporal_resolution(self):
-        return self._temporal_resolution
-
-    @temporal_resolution.setter
-    def temporal_resolution(self, temporal_resolution: int):
-        self._temporal_resolution = TemporalBucket(temporal_resolution)
+        return self.SPATIAL_RESOLUTION.value
 
     @property
     def spatial_resolution_column(self):
+        # column name for spatial resolution
         return f"hex_id_{self.spatial_resolution_value}"
 
-    @property
-    def daily_resolution(self):
-        return self._daily_resolution
 
-    @daily_resolution.setter
-    def daily_resolution(self, daily_resolution: int):
-        self._daily_resolution = DailyResolution(daily_resolution)
+@beartype
+@dataclass
+class PathConfig:
+    PATH_ENV_BOUNDING_BOX: str
+    PATH_ENV_HEX_LAYER_RES_7: str
+    PATH_ENV_HEX_LAYER_RES_8: str
+    PATH_ENV_HEX_LAYER_RES_9: str
 
-    @property
-    def store_results(self):
-        return self._store_results
+    PATH_TRANSIT_TIMETABLE: str
+    PATH_TRANSIT_SHAPES: str
 
-    @property
-    def output_path(self):
-        return self._output_path
+    PATH_VEHICLE_SUPPLY: str
 
-    @property
-    def transaction_file(self):
-        return self._transaction_file
+    PATH_TO_MODE_CHOICE_MODEL: str
 
-    @property
-    def fleet_state_file(self):
-        return self._fleet_state_file
+    OUTPUT_FOLDER: str
+    TRANSACTION_FILE: str
+    FLEET_STATE_FILE: str
 
-    @property
-    def bounding_box_file(self) -> str:
-        return self._bounding_box_file
+    PATH_TRIP_DEMAND: str
+    PATH_DEMAND_MODIFIERS: Optional[List[str]] = None
 
-    @property
-    def env_layer_hex_7_file(self) -> str:
-        return self._env_layer_hex_7_file
+    def __post_init__(self):
+        # check if any paths contain f string replacements and replace them with the city name
+        for key, value in self.__dict__.items():
+            if isinstance(value, str):
+                if "{city}" in value:
+                    self.__dict__[key] = value.format(city=Configuration().world.CITY)
+        # Do the same for demand modifiers
+        if self.PATH_DEMAND_MODIFIERS:
+            self.PATH_DEMAND_MODIFIERS = [
+                value.format(city=Configuration().world.CITY)
+                for value in self.PATH_DEMAND_MODIFIERS
+            ]
 
-    @property
-    def env_layer_hex_8_file(self) -> str:
-        return self._env_layer_hex_8_file
 
-    @property
-    def env_layer_hex_9_file(self) -> str:
-        return self._env_layer_hex_9_file
+@beartype
+@dataclass
+class PopulationConfig:
+    POPULATION_PROBABILITIES: List[float]
+    RIDE_HAILING_POPULATION_PROBABILITIES: List[float]
+    SHARED_VEHICLE_POPULATION_PROBABILITIES: List[float]
+    TRANSIT_POPULATION_PROBABILITIES: List[float]
+    TYPE_PATHS: Optional[List[str]] = None
 
-    def add_ride_hailing_info(
-        self, driver_payment_share, AV_price_reduction, price_params
-    ):
-        self._driver_payment_share = driver_payment_share
-        self._AV_price_reduction = AV_price_reduction
-        self._price_params = price_params
 
-    def get_driver_payment_share(self):
-        return self._driver_payment_share
+@beartype_after_post_init
+@dataclass
+class UserConfig:
+    TRANSIT_MAX_WAIT: int
+    SPATIAL_STRATEGY: str
+    WALKING_SPEED: float
+    PRICE_SENSITIVE: float
 
-    def add_distance_threshold_to_user(self, distance):
-        self._distance_threshold_to_user = distance
+    def __post_init__(self):
+        # convert km/h to m/s
+        self.WALKING_SPEED = SimulationVelocityConverter.convert_kmh(self.WALKING_SPEED)
 
-    def get_distance_threshold_to_user(self):
-        return self._distance_threshold_to_user
 
-    def get_AV_price_reduction(self):
-        return self._AV_price_reduction
+@beartype_after_post_init
+@dataclass
+class ModeChoiceModelConfig:
+    SUBSTITUTION_BOUNDARY: float
+    AV_TRUST: List[float]
+    MODE_CHOICE_STRATEGY: ModeChoiceStrategy
 
-    def get_price_parameters_ride_hailing(self):
-        return self._price_params
+    # MoD
+    MOD_COEFFICIENTS: List[List[float]]
+    MOD_COEFFICIENTS_CI_LOWER: List[List[float]]
+    MOD_COEFFICIENTS_CI_UPPER: List[List[float]]
+    MOD_P_VALUES: List[List[float]]
+    MOD_COEFFICIENT_INTERVAL_ADJUSTER: float
 
-    def add_tech_penetration(self, EV_penetration, AV_penetration):
-        self._EV_penetration = EV_penetration
-        self._AV_penetration = AV_penetration
+    def __post_init__(self):
+        # convert from str to enum
+        self.MODE_CHOICE_STRATEGY = ModeChoiceStrategy[self.MODE_CHOICE_STRATEGY]
 
-    def get_EV_penetration(self):
-        return self._EV_penetration
+    def generate_mode_choice_coefficients(self, population_type: PopulationType):
+        mode_choice_coefficients_ci_lower = self.MOD_COEFFICIENTS_CI_LOWER[
+            population_type.value
+        ]
+        mode_choice_coefficients_ci_upper = self.MOD_COEFFICIENTS_CI_UPPER[
+            population_type.value
+        ]
+        # turn into np arrays for computation
+        mode_choice_coefficients_ci_lower = np.array(mode_choice_coefficients_ci_lower)
+        mode_choice_coefficients_ci_upper = np.array(mode_choice_coefficients_ci_upper)
 
-    def get_AV_penetration(self):
-        return self._AV_penetration
+        interval_adjuster = self.MOD_COEFFICIENT_INTERVAL_ADJUSTER
 
-    def get_driver_availability_vector(self):
-        return self._add_driver_availability_vector
-
-    def add_driver_availability_vector(self, availability_vector):
-        self._add_driver_availability_vector = availability_vector
-
-    def add_shared_vehicle_config(self, vehicle_type_name, shared_vehicle_config):
-        self._shared_vehicle_configs[vehicle_type_name] = shared_vehicle_config
-
-    def get_shared_vehicle_config(self, vehicle_type_name):
-        return self._shared_vehicle_configs[vehicle_type_name]
-
-    def add_ridehailing_vehicle_config(
-        self, vehicle_type_name, ridehailing_vehicle_config
-    ):
-        self._ridehailing_vehicle_configs[vehicle_type_name] = (
-            ridehailing_vehicle_config
-        )
-
-    def get_ridehailing_vehicle_config(self, vehicle_type_name):
-        return self._ridehailing_vehicle_configs[vehicle_type_name]
-
-    def add_mode_choice_config(self, mode_choice_config):
-        self._mode_choice_config = mode_choice_config
-
-    def get_mode_choice_config(self):
-        return self._mode_choice_config
-
-    def add_user_config(self, user_config):
-        self._user_config = user_config
-
-    def generate_mode_choice_coefficient(self, pop_value):
-        mode_choice_coefficients_ci_lower = self.ci_lower_MoD_coefficients[pop_value]
-        mode_choice_coefficients_ci_upper = self.ci_upper_MoD_coefficients[pop_value]
-        interval_adjuster = self.MoD_coefficient_interval_adjuster
         adjuster = (
             (mode_choice_coefficients_ci_upper - mode_choice_coefficients_ci_lower)
             / 2
@@ -475,507 +225,427 @@ class Configuration:
         )
         return mode_choice_coefficients
 
-    def generate_AV_trust(self, pop_value):
-        trust_value_lower = self.AV_trust[pop_value] - 0.5
-        trust_value_upper = self.AV_trust[pop_value] + 0.5
+    def generate_AV_trust(self, population_type: PopulationType):
+        trust_value_lower = self.AV_TRUST[population_type.value] - 0.5
+        trust_value_upper = self.AV_TRUST[population_type.value] + 0.5
         trust_value = random.uniform(trust_value_lower, trust_value_upper)
         return trust_value
 
-    @property
-    def user_config(self):
-        return self._user_config
 
-    @property
-    def MoD_coefficients(self):
-        return self._MoD_coefficients
+@beartype
+@dataclass
+class ChargingInfrastructureConfig:
+    NUMBER_OF_CHARGING_STATIONS: int
+    LOCATIONS: List[str]
+    CHARGING_STATION_POWER: List[float]
+    CHARGING_STATION_CAPACITY: List[int]
+    CHARGING_STATION_QUEUE_SIZE: List[int]
 
-    @property
-    def ci_lower_MoD_coefficients(self):
-        return self._MoD_coefficients_ci_lower
+    def __post_init__(self):
+        # clamplocations to number of charging stations
+        self.LOCATIONS = self.LOCATIONS[: self.NUMBER_OF_CHARGING_STATIONS]
 
-    @property
-    def ci_upper_MoD_coefficients(self):
-        return self._MoD_coefficients_ci_upper
-
-    @property
-    def MoD_coefficient_interval_adjuster(self):
-        return self._MoD_coefficient_interval_adjuster
-
-    @property
-    def AV_trust(self):
-        return self._AV_trust
-
-    def add_AV_trust(self, AV_trust):
-        self._AV_trust = np.array(AV_trust)
-
-    def add_MoD_coefficient_interval_adjuster(self, MoD_coefficient_interval_adjuster):
-        self._MoD_coefficient_interval_adjuster = MoD_coefficient_interval_adjuster
-
-    def add_shared_vehicle_operator_config(
-        self, shared_mobility_ops_config: "SharedVehicleOperatorConfig"
-    ):
-        self._shared_vehicle_operator_config = shared_mobility_ops_config
-
-    def add_ridehailing_operator_config(
-        self, ridehailing_ops_config: "RideHailingOperatorConfig"
-    ):
-        self._ridehailing_operator_config = ridehailing_ops_config
-
-    def add_charging_infrastructure_config(self, charging_infrastructure_ops_config):
-        self._charging_infrastructure_config = charging_infrastructure_ops_config
-
-    def get_charging_infrastructure_config(self):
-        return self._charging_infrastructure_config
-
-    def add_infrastructure_config(self, infrastructure_config):
-        self._infrastructure_config = infrastructure_config
-
-    def get_infrastructure_config(self):
-        return self._infrastructure_config
-
-    def add_population_config(self, population_config):
-        self._population_config = population_config
-
-    @property
-    def shared_vehicle_operator_config(self):
-        return self._shared_vehicle_operator_config
-
-    @property
-    def ridehailing_operator_config(self):
-        return self._ridehailing_operator_config
-
-    @property
-    def auction_config(self):
-        return self._auction_config
-
-    @auction_config.setter
-    def auction_config(self, auction_config: "AuctionConfig"):
-        assert isinstance(auction_config, AuctionConfig)
-        self._auction_config = auction_config
-
-    @property
-    def shared_charging_config(self):
-        return self._shared_charging_config
-
-    @shared_charging_config.setter
-    def shared_charging_config(self, shared_charging_config: "SharedChargingConfig"):
-        self._shared_charging_config = shared_charging_config
-
-    def add_transit_operator_config(
-        self, transit_operator_config: "TransitOperatorConfig"
-    ):
-        self._transit_operator_config = transit_operator_config
-
-    @property
-    def transit_operator_config(self):
-        return self._transit_operator_config
-
-    def add_bus_config(self, bus_config):
-        self._bus_config = bus_config
-
-    @property
-    def bus_config(self):
-        return self._bus_config
-
-    def add_dynamic_routing_config(self, dynamic_routing_config):
-        self.dynamic_routing_config = dynamic_routing_config
-
-    # @property
-    # def dynamic_routing_config(self):
-    #     return self._dynamic_routing_config
-
-    def add_dynamic_checkpoint_routing_config(self, dynamic_checkpoint_routing_config):
-        self.dynamic_checkpoint_routing_config = dynamic_checkpoint_routing_config
-
-    # TODO: somehow setting attributes this way didn't work but it works for DQN?
-    # @property
-    # def dynamic_checkpoint_routing_config(self):
-    #     return self._dynamic_checkpoint_routing_config
-    #
-    def add_DQN_config(self, DQN_config):
-        self._DQN_config = DQN_config
-
-    @property
-    def DQN_config(self):
-        return self._DQN_config
-
-    def set_store_results(self, store_results):
-        self._store_results = store_results
-
-    def set_output_path(self, path):
-        self._output_path = path
-
-    def set_transaction_file(self, file):
-        self._transaction_file = file
-
-    def set_fleet_state_file(self, file):
-        self._fleet_state_file = file
-
-    def set_bounding_box_file(self, file):
-        self._bounding_box_file = file
-
-    def set_env_layer_hex_7_file(self, file):
-        self._env_layer_hex_7_file = file
-
-    def set_env_layer_hex_8_file(self, file):
-        self._env_layer_hex_8_file = file
-
-    def set_env_layer_hex_9_file(self, file):
-        self._env_layer_hex_9_file = file
-
-    def get_available_shared_vehicle_types(self):
-        return list(self._shared_vehicle_configs.keys())
-
-    def get_available_ridehailing_vehicle_types(self):
-        return list(self._ridehailing_vehicle_configs.keys())
-
-    @property
-    def MoD_coefficients_ci_lower(self):
-        return self._MoD_coefficients_ci_lower
-
-    @property
-    def MoD_coefficients_ci_upper(self):
-        return self._MoD_coefficients_ci_upper
-
-    def get_cost_per_vehicle_km(self):
-        res = {}
-
-        for key, value in self._shared_vehicle_configs.items():
-            res[key] = value.cost_per_km
-
-        return res
-
-    def get_co2_per_vehicle_km(self):
-        res = {}
-
-        for key, value in self._shared_vehicle_configs.items():
-            res[key] = value.co2_per_km
-
-        return res
-
-
-class SharedVehicleConfig:
-    def __init__(
-        self,
-        price_per_min,
-        max_state_of_charge,
-        energy_consumption,
-        velocity,
-        max_available_seats,
-        max_walking_distance,
-        daily_total_cost,
-        initial_SoC,
-        EV_relative_energy_consumption,
-        cost_per_km,
-        charging_cost_per_kWh,
-        co2_per_km,
-    ):
-        self.price_per_min = price_per_min
-        self.max_state_of_charge = max_state_of_charge
-        self.energy_consumption = energy_consumption
-        self.velocity = SimulationVelocityConverter.convert_kmh(velocity)
-        self.max_available_seats = max_available_seats
-        # TODO: move max_walking_distance to UserConfig?
-        self.max_walking_distance = max_walking_distance
-        self.daily_total_cost = daily_total_cost
-        self.initial_SoC = initial_SoC
-        self.EV_relative_energy_consumption = EV_relative_energy_consumption
-        self.cost_per_km = cost_per_km
-        self.charging_cost_per_kWh = charging_cost_per_kWh
-        self.co2_per_km = co2_per_km
-
-
-class RideHailingVehicleConfig:
-    @beartype
-    def __init__(
-        self,
-        price_per_min: float,
-        max_state_of_charge: float,
-        energy_consumption: float,
-        velocity: float,
-        max_available_seats: int,
-        initial_SoC: float,
-        charging_cost_per_kWh: float,
-        cost_per_km: float,
-        daily_total_cost: float,
-        EV_relative_energy_consumption: float,
-        emergency_soc_buffer: float,
-    ):
-        self.price_per_min = price_per_min
-        self.max_state_of_charge = max_state_of_charge
-        self.energy_consumption = energy_consumption
-        self.velocity = SimulationVelocityConverter.convert_kmh(velocity)
-        self.max_available_seats = max_available_seats
-        self.initial_SoC = initial_SoC
-        self.charging_cost_per_kWh = charging_cost_per_kWh
-        self.cost_per_km = cost_per_km
-        self.daily_total_cost = daily_total_cost
-        self.EV_relative_energy_consumption = EV_relative_energy_consumption
-        self.emergency_soc_buffer = emergency_soc_buffer
-
-
-class ModeChoiceConfig:
-    @beartype
-    def __init__(self, mode_choice_strategy, substitution_boundary, path_to_model):
-        if mode_choice_strategy == "random":
-            self.mode_choice_strategy = ModeChoiceStrategy.RANDOM
-        elif mode_choice_strategy == "substitution":
-            self.mode_choice_strategy = ModeChoiceStrategy.SUBSTITUTION_AWARE
-        elif mode_choice_strategy == "no_sub":
-            self.mode_choice_strategy = ModeChoiceStrategy.NO_SUBSTITUTION
-        else:
-            raise NotImplementedError(
-                f"Mode Choice Model '{mode_choice_strategy}' not implemented"
+        # If power, capacity, and queue size are single values, repeat them for all locations
+        if len(self.CHARGING_STATION_POWER) == 1:
+            self.CHARGING_STATION_POWER = self.CHARGING_STATION_POWER * len(
+                self.LOCATIONS
+            )
+        if len(self.CHARGING_STATION_CAPACITY) == 1:
+            self.CHARGING_STATION_CAPACITY = self.CHARGING_STATION_CAPACITY * len(
+                self.LOCATIONS
+            )
+        if len(self.CHARGING_STATION_QUEUE_SIZE) == 1:
+            self.CHARGING_STATION_QUEUE_SIZE = self.CHARGING_STATION_QUEUE_SIZE * len(
+                self.LOCATIONS
             )
 
-        self.substitution_boundary: float = substitution_boundary
-        self.path_to_model: str = path_to_model
+        # make sure all lists have the same length
+        if len(self.CHARGING_STATION_POWER) != len(self.LOCATIONS):
+            raise ValueError(
+                "Charging station power and locations must have the same length or be a single value"
+            )
+        if len(self.CHARGING_STATION_CAPACITY) != len(self.LOCATIONS):
+            raise ValueError(
+                "Charging station capacity and locations must have the same length or be a single value"
+            )
+        if len(self.CHARGING_STATION_QUEUE_SIZE) != len(self.LOCATIONS):
+            raise ValueError(
+                "Charging station queue size and locations must have the same length or be a single value"
+            )
 
 
-class PopulationConfig:
-    @beartype
-    def __init__(self, population_probabilities, type_paths):
-        self.population_probabilities: List[float] = population_probabilities
-        self.type_paths: List = type_paths
-
-
-class UserConfig:
-    @beartype
-    def __init__(self, spatial_strategy: str, max_wait: int, walking_speed: float):
-        self.spatial_strategy = spatial_strategy
-        self.max_wait = int(max_wait)
-        self.walking_speed = SimulationVelocityConverter.convert_kmh(walking_speed)
-
-
-class RideHailingOperatorConfig:
-    @beartype
-    def __init__(
-        self,
-        recharge_threshold: List[float],
-        operations_start: int,
-        operations_duration: int,
-        vehicle_relocation_velocity: float,
-        available_modes: List[str],
-        available_modes_supply: List[int],
-        n_autonomous_cars: int,
-        n_ridehailing_cars: int,
-        allocation,
-        allocation_penalty=None,
-    ):
-        self.recharge_threshold = recharge_threshold
-        self.operations_start = operations_start
-        self.operations_duration = operations_duration
-        self.vehicle_relocation_velocity = SimulationVelocityConverter.convert_kmh(
-            vehicle_relocation_velocity
-        )
-        self.available_modes = available_modes
-        self.available_modes_supply = available_modes_supply
-        self.n_autonomous_cars = n_autonomous_cars
-        self.n_ridehailing_cars = n_ridehailing_cars
-        self.allocation = allocation
-        self.allocation_penalty = allocation_penalty
-
-
+@beartype_after_post_init
+@dataclass
 class SharedVehicleOperatorConfig:
-    @beartype
-    def __init__(
-        self,
-        recharge_threshold,
-        charging_station_power,
-        number_of_service_worker,
-        base_regions,
-        base_capacity,
-        operations_start,
-        operations_duration,
-        vehicle_relocation_velocity,
-        available_modes,
-        available_modes_supply,
-        n_cars,
-        n_scooters,
-        n_kickscooters,
-        n_bikes,
-    ):
-        self.recharge_threshold = recharge_threshold
-        self.charging_station_power = charging_station_power
-        self.number_of_service_workers = number_of_service_worker
-        self.base_regions = base_regions
-        self.base_capacity = base_capacity
-        self.operations_start = operations_start
-        self.operations_duration = operations_duration
-        self.vehicle_relocation_velocity = SimulationVelocityConverter.convert_kmh(
-            vehicle_relocation_velocity
+    RECHARGE_THRESHOLD: float
+    CHARGING_STATION_POWER: float
+    NUMBER_OF_BASE_REGIONS: int
+    NUMBER_OF_SERVICE_WORKERS: int
+    BASE_CAPACITY: int
+    OPERATIONS_START: int
+    OPERATIONS_DURATION: int
+    VEHICLE_RELOCATION_VELOCITY: float
+    BASE_REGIONS: List[str]
+
+    def __post_init__(self):
+        # clamp to number of base regions
+        self.BASE_REGIONS = self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]
+
+        # convert km/h to m/s
+        self.VEHICLE_RELOCATION_VELOCITY = SimulationVelocityConverter.convert_kmh(
+            self.VEHICLE_RELOCATION_VELOCITY
         )
-        self.available_modes = available_modes
-        self.available_modes_supply = available_modes_supply
-        self.n_cars = n_cars
-        self.n_scooters = n_scooters
-        self.n_kickscooters = n_kickscooters
-        self.n_bikes = n_bikes
 
 
-class ChargingInfrastructureConfig:
-    @beartype
-    def __init__(
-        self,
-        locations: List[str],
-        power: List[float],
-        capacity: List[Union[int, np.int64]],
-        queue_size: List[Union[int, np.int64]],
-    ):
-        self.locations = locations
-        self.power = power
-        self.capacity = capacity
-        self.queue_size = queue_size
+@beartype_after_post_init
+@dataclass
+class RideHailingOperatorConfig:
+    RECHARGE_THRESHOLD: List[float]
+    NUMBER_OF_BASE_REGIONS: int
+    NUMBER_OF_SERVICE_WORKERS: int
+    BASE_CAPACITY: int
+    OPERATIONS_START: int
+    OPERATIONS_DURATION: int
+    VEHICLE_RELOCATION_VELOCITY: float
+
+    def __post_init__(self):
+        # convert velocity km/h to m/s
+        self.VEHICLE_RELOCATION_VELOCITY = SimulationVelocityConverter.convert_kmh(
+            self.VEHICLE_RELOCATION_VELOCITY
+        )
 
 
-class AuctionConfig:
-    @beartype
-    def __init__(self, auction_start: int, auction_end: int):
-        self.auction_start = auction_start
-        self.auction_end = auction_end
-
-
-class SharedChargingConfig:
-    @beartype
-    def __init__(
-        self, auction_interval: int, timeslot_duration: int, auction_lookahead: int
-    ):
-        self.auction_interval = auction_interval
-        self.timeslot_duration = timeslot_duration
-        self.auction_lookahead = auction_lookahead
-
-
+@beartype
+@dataclass
 class TransitOperatorConfig:
-    @beartype
-    def __init__(self, planning_lookahead: int, max_busses: int):
-        self.planning_lookahead = planning_lookahead
-        self.max_busses = max_busses
+    PLANNING_LOOKAHEAD: int
+    MAX_BUSSES: int
+    ACTION_SPACE_RESOLUTION: int
 
 
+@beartype_after_post_init
+@dataclass
 class BusConfig:
-    @beartype
-    def __init__(self, velocity: float, max_available_seats: int):
-        self.velocity = SimulationVelocityConverter.convert_kmh(velocity)
-        self.max_available_seats = max_available_seats
+    VELOCITY: float
+    MAX_AVAILABLE_SEATS: int
+
+    def __post_init__(self):
+        # convert velocity km/h to m/s
+        self.VELOCITY = SimulationVelocityConverter.convert_kmh(self.VELOCITY)
 
 
+@beartype_after_post_init
+@dataclass
+class RideHailingGlobalConfig:
+    DRIVER_PAYMENT_SHARE: float
+    AV_PRICE_REDUCTION: float
+    MAX_PICKUP_DISTANCE: int
+
+    PRICE_ENTERING: float
+    PRICE_PER_MINUTE: float
+    PRICE_PER_KM: float
+    MINIMUM_PRICE: float
+
+    ALLOCATION: float
+
+    DISCOUNT_RATE: float
+    N_RIDEHAILING_CARS: int
+    N_AUTONOMOUS_CARS: int
+    AVAILABLE_VEHICLE_MODES_RIDEHAILING: List[str]
+
+    # Supply
+    EV_PENETRATION: float
+    AV_PENETRATION: float
+    RH_AVAILABILITY: List[float]
+
+    BID_DEFAULT: float
+    BID_DECAY: float
+    RANDOM_OVERBIDDING: bool
+    OVERBID_PROB: float
+
+    LOW_SOC_PENALTY: int
+
+    def __post_init__(self):
+        # apply the discount rate to all prices
+        self.PRICE_ENTERING = self.PRICE_ENTERING * (1 - self.DISCOUNT_RATE)
+        self.PRICE_PER_MINUTE = self.PRICE_PER_MINUTE * (1 - self.DISCOUNT_RATE)
+        self.PRICE_PER_KM = self.PRICE_PER_KM * (1 - self.DISCOUNT_RATE)
+        self.MINIMUM_PRICE = self.MINIMUM_PRICE * (1 - self.DISCOUNT_RATE)
+
+    @property
+    def DRIVER_AVAILABILITY_VECTOR(self) -> List[int]:
+        if not hasattr(self, "_driver_availability_vector"):
+            self._driver_availability_vector = [
+                round(float(x) * self.N_RIDEHAILING_CARS * (1 - self.AV_PENETRATION))
+                for x in self.RH_AVAILABILITY
+            ]
+        return self._driver_availability_vector
+
+    @property
+    def AVAILABLE_MODES_SUPPLY(self) -> List[int]:
+        # TODO: This has to be inferred instead of doing it this way. This is very error prone
+        return [self.N_AUTONOMOUS_CARS, self.N_RIDEHAILING_CARS]
+
+
+@beartype
+@dataclass
+class SharedVehicleGlobalConfig:
+    AVAILABLE_VEHICLE_MODES: List[str]
+
+    N_CARS: int
+    N_SCOOTERS: int
+    N_KICKSCOOTERS: int
+    N_BIKES: int
+
+    # TODO: Vehicle modes and counts should probably be a dictionary instead of doing this?
+    @property
+    def AVAILABLE_MODES_SUPPLY(self) -> List[int]:
+        return [self.N_CARS, self.N_SCOOTERS, self.N_KICKSCOOTERS, self.N_BIKES]
+
+
+@beartype_after_post_init
+@dataclass
+class VehicleConfig:
+    PRICE_PER_MIN: float
+    MAX_STATE_OF_CHARGE: float
+    ENERGY_CONSUMPTION: float
+    VELOCITY: float
+    MAX_AVAILABLE_SEATS: int
+    DAILY_TOTAL_COST: float
+    COST_PER_KM: float
+
+    EV_RELATIVE_ENERGY_CONSUMPTION: Optional[float] = None
+    PRICE_PER_KM: Optional[float] = None
+    INITIAL_SOC: Optional[float] = None
+    CHARGING_COST_PER_KWH: Optional[float] = None
+    WALKING_DISTANCE: Optional[int] = None
+    KG_CO2_PER_KM: Optional[float] = None
+    EMERGENCY_SOC_BUFFER: Optional[float] = None
+
+    def __post_init__(self):
+        # convert velocity km/h to m/s
+        self.VELOCITY = SimulationVelocityConverter.convert_kmh(self.VELOCITY)
+
+
+@beartype
+@dataclass
+class AuctionConfig:
+    AUCTION_START: int
+    AUCTION_END: int
+
+
+@beartype
+@dataclass
+class SharedChargingAuctionConfig:
+    AUCTION_INTERVAL: int
+    TIMESLOT_DURATION: int
+    AUCTION_LOOKAHEAD: int
+
+
+@beartype
+@dataclass
+class ExperimentManagementConfig:
+    START_TIME: int
+    END_TIME: int
+    SEED: int
+
+
+@beartype
+@dataclass
 class DynamicRoutingConfig:
-    @beartype
-    def __init__(
-        self,
-        action_space: DiscreteActionSpace,
-        action_resolution: int,
-        corridor,
-        learning_agent,
-        penalty: Union[int, float],
-        reward: Union[int, float],
-        timelimit_multiplier: float,
-        use_learning_agent: bool,
-    ):
-        self.action_resolution = action_resolution
-        self.action_space = action_space
-        # a bus that doesn't use a learning agent moves as planned without rerouting
-        self.use_learning_agent = use_learning_agent
-        self.learning_agent = learning_agent
-        self.corridor = corridor
-        self.penalty = penalty
-        self.problem = None  # defer initialization
-        self.reward = reward
-        self.timelimit_multiplier = timelimit_multiplier
+    ACTION_SPACE: List[str]
+    ACTION_SPACE_RESOLUTION: int
+    CORRIDOR_PATH: str
+    PENALTY: float
+    REWARD: float
+    TIMELIMIT: float
 
 
-class InfrastructureConfig:
-    @beartype
-    def __init__(self, path_transit_timetable: str, path_transit_shapes: str):
-        self.path_transit_timetable = path_transit_timetable
-        self.path_transit_shapes = path_transit_shapes
-
-
+@beartype
+@dataclass
 class DynamicCheckpointRoutingConfig:
-    @beartype
-    def __init__(
-        self,
-        action_space: DiscreteActionSpace,
-        action_resolution: int,
-        checkpoints,
-        corridor,
-        penalty_checkpoints: Union[int, float],
-        penalty_goingback: Union[int, float],
-        penalty_unreachable: Union[int, float],
-        periodic_testing: Optional[int],
-        reward: Union[int, float],
-        timelimit_multiplier: float,
-        use_learning_agent: bool,
-    ):
-        self.action_resolution = action_resolution
-        self.action_space = action_space
-        # a bus that doesn't use a learning agent moves as planned without rerouting
-        self.use_learning_agent = use_learning_agent
-        self.learning_agent = None  # defer initialization
-        self.checkpoints = checkpoints
-        self.corridor = corridor
-        self.area = None  # poly area of the corridor, defer initialization
-        self.alignment_cache = None  # defer initialization
-        self.alignment_cell_cache = None  # defer initialization
-        self.direction = None  # defer initialization
-        self.penalty_checkpoints = penalty_checkpoints
-        self.penalty_goingback = penalty_goingback
-        self.penalty_unreachable = penalty_unreachable
-        self.periodic_testing = periodic_testing
-        self.problem = None  # defer initialization
-        self.reward = reward
-        self.timelimit_multiplier = timelimit_multiplier
+    ACTION_SPACE: List[str]
+    ACTION_SPACE_RESOLUTION: int
+    CHECKPOINTS: List[int]
+    CORRIDOR_PATH: str
+    PENALTY_CHECKPOINTS: float
+    PENALTY_UNREACHABLE: float
+    PENALTY_GOINGBACK: float
+    REWARD: float
+    TIMELIMIT: float
+    PERIODIC_TESTING: int
 
 
+@beartype_after_post_init
+@dataclass
 class DQNConfig:
-    # TODO: sort alphabetically or by some grouping logic
-    @beartype
-    def __init__(
-        self,
-        episode: int,
-        episodes: int,
-        alpha: float,
-        eps: float,
-        eps_decay_strategy: str,
-        eps_decay: str,
-        eps_max: float,
-        eps_min: float,
-        buffersize: int,
-        replaybuffer: Optional[Union[list, Deque]],
-        min_experience: int,
-        target_update_threshold: int,
-        tau: Optional[float],
-        gamma: float,
-        weights,
-        q_net_layer,
-        tensorboard,
-        train_frequency: int,
-        batchsize: int,
-        lr_decay,
-        lr_decay_steps,
-        double_q,
-    ):
-        self.alpha = alpha
-        self.batchsize = batchsize
-        self.episode = episode
-        self.episodes = episodes
-        self.eps = eps
-        self.eps_decay_strategy = eps_decay_strategy
-        self.eps_decay = eps_decay
-        self.eps_max = eps_max
-        self.eps_min = eps_min
-        self.replaybuffer_size = buffersize
-        self.replaybuffer = replaybuffer
-        self.min_experience = min_experience
-        self.train_frequency = train_frequency
-        self.double_q = double_q
-        self.target_update_threshold = target_update_threshold
-        self.tau = tau
-        self.gamma = gamma
-        self.tensorboard = tensorboard
-        self.q_net_layer = q_net_layer
-        self.optimizer = None
-        self.lr_decay = lr_decay
-        self.lr_decay_steps = lr_decay_steps
-        self.evaluation = False  # on an evaluation run, no training happens and eps = 0
-        self.weights = weights
+    LR_DECAY: bool
+    LR_DECAY_STEPS: int
+    DQN_LAYERS: tuple[int, int]
+    EPISODES: int
+    ALPHA: float
+    EPS: float
+    EPS_DECAY_STRATEGY: str
+    EPS_DECAY: float
+    EPS_MAX: float
+    EPS_MIN: float
+    BUFFERSIZE: int
+    REPLAYBUFFER: str
+    MIN_EXPERIENCE: int
+    TRAIN_FREQUENCY: int
+    USE_DOUBLE_Q: bool
+    TARGET_UPDATE_THRESHOLD: int
+    BATCHSIZE: int
+    GAMMA: float
+
+    def __post_init__(self):
+        # evaluate DQN_LAYERS string to tuple
+        self.DQN_LAYERS = ast.literal_eval(self.DQN_LAYERS)
+
+
+class Configuration(metaclass=Singleton):
+    # There is only one instance of this class.
+    def __init__(self, config_file: str):
+        with open(config_file, "rb") as f:
+            self._config_data = tomllib.load(f)
+        self._lazy_objects = {}  # lazy loaded objects are stored here
+
+    @staticmethod
+    def _convert_types(params: dict, type: type):
+        for field in fields(type):
+            # cast int to float where applicable
+            if field.type == float and field.name in params:
+                if isinstance(params[field.name], int):
+                    params[field.name] = float(params[field.name])
+        return params
+
+    def _get_lazy_config(self, name: str, type: type, is_dict: bool = False):
+        """
+        This method will lazily instantiate and return the config object from the config file.
+        If the object has already been instantiated, it will return the cached object.
+        Args:
+            name (str): Config name, should be lower case equivalent to the toml table name (e.g. "world").
+            type (type): Type of the Config object.
+            is_dict (bool, optional): Set to true for nested dictionaries (e.g. vehicles). Defaults to False.
+
+        Returns:
+            _type_: Cached Config Object.
+        """
+        if name not in self._lazy_objects:
+            params = self._config_data.get(name.upper(), None)
+            if params is None:
+                self._lazy_objects[name] = None
+            elif is_dict:
+                self._lazy_objects[name] = {
+                    k: type(**self._convert_types(v, type)) for k, v in params.items()
+                }
+            elif isinstance(params, list):
+                self._lazy_objects[name] = [
+                    type(**self._convert_types(param, type)) for param in params
+                ]
+            else:
+                self._lazy_objects[name] = type(**self._convert_types(params, type))
+        return self._lazy_objects[name]
+
+    @property
+    def settings(self) -> SettingsConfig:
+        return self._get_lazy_config("settings", SettingsConfig)
+
+    @property
+    def world(self) -> WorldConfig:
+        return self._get_lazy_config("world", WorldConfig)
+
+    @property
+    def path(self) -> PathConfig:
+        return self._get_lazy_config("path", PathConfig)
+
+    @property
+    def population(self) -> PopulationConfig:
+        return self._get_lazy_config("population", PopulationConfig)
+
+    @property
+    def user(self) -> UserConfig:
+        return self._get_lazy_config("user", UserConfig)
+
+    @property
+    def mode_choice_model(self) -> ModeChoiceModelConfig:
+        return self._get_lazy_config("mode_choice_model", ModeChoiceModelConfig)
+
+    @property
+    def charging_infrastructure(self) -> ChargingInfrastructureConfig:
+        return self._get_lazy_config(
+            "charging_infrastructure", ChargingInfrastructureConfig
+        )
+
+    @property
+    def shared_vehicle_operators(self) -> List[SharedVehicleOperatorConfig]:
+        return self._get_lazy_config(
+            "shared_vehicle_operator", SharedVehicleOperatorConfig
+        )
+
+    @property
+    def ride_hailing_operators(self) -> List[RideHailingOperatorConfig]:
+        return self._get_lazy_config("ride_hailing_operator", RideHailingOperatorConfig)
+
+    @property
+    def transit_operators(self) -> List[TransitOperatorConfig]:
+        return self._get_lazy_config("transit_operator", TransitOperatorConfig)
+
+    @property
+    def bus(self) -> BusConfig:
+        return self._get_lazy_config("bus", BusConfig)
+
+    @property
+    def ride_hailing_global(self) -> RideHailingGlobalConfig:
+        return self._get_lazy_config("ride_hailing_global", RideHailingGlobalConfig)
+
+    @property
+    def shared_vehicle_global(self) -> SharedVehicleGlobalConfig:
+        return self._get_lazy_config("shared_vehicle_global", SharedVehicleGlobalConfig)
+
+    @property
+    def ride_hailing_vehicles(self) -> Optional[Dict[str, VehicleConfig]]:
+        return self._get_lazy_config(
+            "ride_hailing_vehicles", VehicleConfig, is_dict=True
+        )
+
+    @property
+    def shared_vehicles(self) -> Optional[Dict[str, VehicleConfig]]:
+        """Dictionary containing VehicleConfig objects for shared vehicles.
+
+        Returns:
+            Optional[Dict[str, VehicleConfig]]: _description_
+        """
+        return self._get_lazy_config("shared_vehicles", VehicleConfig, is_dict=True)
+
+    @property
+    def auction(self) -> AuctionConfig:
+        return self._get_lazy_config("auction", AuctionConfig)
+
+    @property
+    def shared_charging_auction(self) -> SharedChargingAuctionConfig:
+        return self._get_lazy_config(
+            "shared_charging_auction", SharedChargingAuctionConfig
+        )
+
+    @property
+    def experiment_management(self) -> ExperimentManagementConfig:
+        return self._get_lazy_config(
+            "experiment_management", ExperimentManagementConfig
+        )
+
+    ##### Experiment Specific Configurations #####
+
+    @property
+    def dynamic_routing(self) -> DynamicRoutingConfig:
+        return self._get_lazy_config("dynamic_routing", DynamicRoutingConfig)
+
+    @property
+    def dynamic_checkpoint_routing(self) -> DynamicCheckpointRoutingConfig:
+        return self._get_lazy_config(
+            "dynamic_checkpoint_routing", DynamicCheckpointRoutingConfig
+        )
+
+    @property
+    def dqn(self) -> DQNConfig:
+        return self._get_lazy_config("dqn", DQNConfig)

@@ -17,7 +17,6 @@ import simpy
 # Imports world related modules
 from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.configuration.config_reader import ConfigReader
 
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import (
@@ -67,12 +66,9 @@ from utils import load_geodesic_environment
 working_dir = Path(__file__).parent
 os.chdir(working_dir)
 
-# Initialize an empty Configuration object
-config = Configuration.instance()
-
-# Initialize ConfigReader with the configuration file and the Configuration object
-config_reader = ConfigReader(sys.argv[1])
-config_reader.load_config()
+# Initialize Configuration
+config_file = sys.argv[1]
+config = Configuration(config_file)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -90,13 +86,18 @@ output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
 # Record the start time
 real_start_time = time.time()
 
+# Create the output directory
+if not os.path.exists("data/output/logs"):
+    os.makedirs("data/output/logs")
+
+
 # Make it beautiful
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",
     filename=f"data/output/logs/{output_timestamp}.log",
     encoding="utf-8",
-    level=config.file_log_level,  # set it to lowest so the handlers can decide
+    level=config.settings.FILE_LOG_LEVEL,  # set it to lowest so the handlers can decide
 )
 
 # Add Custom Init Filters (which work without the ENV obj)
@@ -104,7 +105,7 @@ cf = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf)
 
 consolehandler = logging.StreamHandler()
-consolehandler.setLevel(config.log_level)
+consolehandler.setLevel(config.settings.LOG_LEVEL)
 consolehandler.addFilter(cf)
 logger.addHandler(consolehandler)
 
@@ -117,10 +118,10 @@ logger.addHandler(consolehandler)
 # make a copy of the used config file that references this run
 if not os.path.exists("data/output/configs"):
     os.makedirs("data/output/configs")
-shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.ini")
+shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
 
 if (
-    config.get_mode_choice_config().mode_choice_strategy
+    config.mode_choice_model.MODE_CHOICE_STRATEGY
     == ModeChoiceStrategy.SUBSTITUTION_AWARE
 ):
     vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
@@ -130,9 +131,6 @@ if (
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
-#### Not sure if this part is necessary #####
-MoD_interval_reduction = 0  # By choice
-config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -140,7 +138,7 @@ config.add_MoD_coefficient_interval_adjuster(MoD_interval_reduction)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-env = simpy.Environment(initial_time=config.start_time)
+env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
 
 # Inject Simulation Environment to Logger (such that we can log the env time)
 cf = SimulationContextFilter(filter_name="add_env", extra=env)
@@ -152,7 +150,8 @@ logger.addFilter(edf)
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
 population_factory = PopulationFactory(
-    config.ride_hailing_population_probabilities, config.seed
+    config.population.RIDE_HAILING_POPULATION_PROBABILITIES,
+    config.experiment_management.SEED,
 )
 
 # Load Spatial Environment and the environment files
@@ -174,24 +173,24 @@ tracking = Tracking.init(env)
 
 # for this scenario, we assume same locations, but split up capacity
 separate_charging_capacity_list = [
-    c / 2 for c in config.get_charging_infrastructure_config().capacity
+    c / 2 for c in config.charging_infrastructure.CHARGING_STATION_CAPACITY
 ]
 
 charging_infrastructure_0 = ChargingInfrastructure(
     env=env,
-    location_list=config.get_charging_infrastructure_config().locations,
-    power_list=config.get_charging_infrastructure_config().power,
+    location_list=config.charging_infrastructure.LOCATIONS,
+    power_list=config.charging_infrastructure.CHARGING_STATION_POWER,
     capacity_list=separate_charging_capacity_list,
-    queue_size=config.get_charging_infrastructure_config().queue_size,
+    queue_size=config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE,
     reset=True,
 )
 
 charging_infrastructure_1 = ChargingInfrastructure(
     env=env,
-    location_list=config.get_charging_infrastructure_config().locations,
-    power_list=config.get_charging_infrastructure_config().power,
+    location_list=config.charging_infrastructure.LOCATIONS,
+    power_list=config.charging_infrastructure.CHARGING_STATION_POWER,
     capacity_list=separate_charging_capacity_list,
-    queue_size=config.get_charging_infrastructure_config().queue_size,
+    queue_size=config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE,
     reset=True,
 )
 
@@ -230,12 +229,12 @@ env.process(
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-p = Path(config.trip_demand_file)
+p = Path(config.path.PATH_TRIP_DEMAND)
 di = DemandImporter(
-    spatial_resolution=config.spatial_resolution,
-    temporal_resolution=config.temporal_resolution,
-    daily_resolution=config.daily_resolution,
-    city=config.city,
+    spatial_resolution=config.world.SPATIAL_RESOLUTION,
+    temporal_resolution=config.world.TEMPORAL_RESOLUTION,
+    daily_resolution=config.world.DAILY_RESOLUTION,
+    city=config.world.CITY,
 )
 
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
@@ -248,10 +247,13 @@ demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 geodesic_environment = GeodesicEnvironment.getInstance()
 hexagons = geodesic_environment.getLayer(
-    f"hex_{config.spatial_resolution.value}"
+    f"hex_{config.world.spatial_resolution_value}"
 ).index.tolist()
 dmi = DistanceMatrixImporter(
-    hexagons, config.spatial_resolution.value, "./data/infrastructure", config.city
+    hexagons,
+    config.world.spatial_resolution_value,
+    "./data/infrastructure",
+    config.world.CITY,
 )
 distance_matrix = dmi.load_distance_matrix()
 
@@ -288,18 +290,18 @@ vehicle_assignment_engine = {
 
 available_vehicle_modes_ridehailing = ["AutonomousCar"]
 available_vehicle_modes_supply_ride_hailing = [
-    config.ridehailing_operator_config.n_autonomous_cars
+    config.ride_hailing_global.N_AUTONOMOUS_CARS
 ]
 
 # Get the supply probability from supply file
-supply_prob = pd.read_csv(config.vehicle_supply_file)
+supply_prob = pd.read_csv(config.path.PATH_VEHICLE_SUPPLY)
 
 ride_hailing_fleet_0 = generate_AV_fleet(
-    env, supply_prob, config.ridehailing_operator_config.n_autonomous_cars, seed=4711
+    env, supply_prob, config.ride_hailing_global.N_AUTONOMOUS_CARS, seed=4711
 )
 
 ride_hailing_fleet_1 = generate_AV_fleet(
-    env, supply_prob, config.ridehailing_operator_config.n_autonomous_cars, seed=4711
+    env, supply_prob, config.ride_hailing_global.N_AUTONOMOUS_CARS, seed=4711
 )
 
 # track vehicles in fleets
@@ -355,11 +357,11 @@ time_minimizing_charging_allocation = DowntimeMinWithoutLookahead()
 ridehailing_operations_0 = RideHailingMPChargingOperations(
     env=env,
     #    distance_matrix=distance_matrix,
-    time_between_operations=config.ridehailing_operator_config.operations_start,
-    #    operation_duration=global_config.ridehailing_operator_config.operations_duration,
+    time_between_operations=config.ride_hailing_operators[0].OPERATIONS_START,
+    #    operation_duration=config.ride_hailing_operators[0].OPERATIONS_DURATION,
     #    available_modes=available_vehicle_modes_ridehailing,
     #    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
-    state_of_charge_threshold=config.ridehailing_operator_config.recharge_threshold,
+    state_of_charge_threshold=config.ride_hailing_operators[0].RECHARGE_THRESHOLD,
     #    allow_queue=False,
     algo=time_minimizing_charging_allocation,
 )
@@ -367,11 +369,11 @@ ridehailing_operations_0 = RideHailingMPChargingOperations(
 ridehailing_operations_1 = RideHailingMPChargingOperations(
     env=env,
     #    distance_matrix=distance_matrix,
-    time_between_operations=config.ridehailing_operator_config.operations_start,
-    #    operation_duration=global_config.ridehailing_operator_config.operations_duration,
+    time_between_operations=config.ride_hailing_operators[0].OPERATIONS_START,
+    #    operation_duration=config.ride_hailing_operators[0].OPERATIONS_DURATION,
     #    available_modes=available_vehicle_modes_ridehailing,
     #    available_modes_supply=available_vehicle_modes_supply_ride_hailing,
-    state_of_charge_threshold=config.ridehailing_operator_config.recharge_threshold,
+    state_of_charge_threshold=config.ride_hailing_operators[0].RECHARGE_THRESHOLD,
     #    allow_queue=False,
     algo=time_minimizing_charging_allocation,
 )
@@ -429,8 +431,8 @@ demand_factory = DemandFactory(
     demand_profile,
     di,
     world,
-    config.demand_modifier_files,
-    config.seed,
+    config.path.PATH_DEMAND_MODIFIERS,
+    config.experiment_management.SEED,
     mode="ride_hailing",
 )
 env.process(demand_factory.generate_demand())
@@ -443,9 +445,9 @@ env.process(demand_factory.generate_demand())
 
 logging.warning("Starting Simulation.", extra={"clazz": "main", "oid": ""})
 
-env.run(until=config.end_time - 1e-8)
+env.run(until=config.experiment_management.END_TIME - 1e-8)
 world.simulation_finished.succeed()
-env.run(until=config.end_time)
+env.run(until=config.experiment_management.END_TIME)
 
 logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
@@ -529,17 +531,17 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
         [
             output_timestamp,
             os.path.basename(__file__),
-            config.end_time,
+            config.experiment_management.END_TIME,
             time.time() - real_start_time,
-            config.ridehailing_operator_config.n_autonomous_cars,
-            config.get_charging_infrastructure_config().number_of_charging_stations,
+            config.ride_hailing_global.N_AUTONOMOUS_CARS,
+            config.charging_infrastructure.NUMBER_OF_CHARGING_STATIONS,
             separate_charging_capacity_list[0],
-            config.get_charging_infrastructure_config().charging_station_power_list[0],
-            config.seed,
+            config.charging_infrastructure.CHARGING_STATION_POWER[0],
+            config.experiment_management.SEED,
             service_rate_fleet_0,
             service_rate_fleet_1,
             avg_infra_util_0,
             avg_infra_util_1,
-            f"{'random_SOC_init' if config.get_ridehailing_vehicle_config('autonomouscar').initial_SoC == 0 else ''}, queue_size: {config.get_charging_infrastructure_config().charging_station_queue_size_list[0]}, allocation_penalty: {config.ridehailing_operator_config.allocation_penalty}",
+            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').initial_SoC == 0 else ''}, queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, allocation_penalty: {config.ride_hailing_global.LOW_SOC_PENALTY}",
         ]
     )

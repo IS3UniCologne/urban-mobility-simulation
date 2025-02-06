@@ -17,7 +17,6 @@ import simpy
 # Imports world related modules
 from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.configuration.config_reader import ConfigReader
 
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import (
@@ -73,18 +72,15 @@ pd.set_option("display.max_columns", None)
 working_dir = Path(__file__).parent
 os.chdir(working_dir)
 
-# Initialize an empty Configuration object
-config = Configuration.instance()
-
-# Initialize ConfigReader with the configuration file and the Configuration object
-config_reader = ConfigReader(sys.argv[1])
-config_reader.load_config()
+# Initialize Configuration
+config_file = sys.argv[1]
+config = Configuration(config_file)
 
 # make a copy of the used config file that references this run
 output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
 if not os.path.exists("data/output/configs"):
     os.makedirs("data/output/configs")
-shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.ini")
+shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -101,7 +97,7 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger()
-logger.setLevel(config.log_level)
+logger.setLevel(config.settings.LOG_LEVEL)
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
@@ -110,7 +106,7 @@ formatter = logging.Formatter(
 )
 file_handler = logging.FileHandler("report.log")
 file_handler.setFormatter(formatter)
-file_handler.setLevel(config.file_log_level)
+file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
 logger.addHandler(file_handler)
 
 # Add Custom Init Filters (which work without the ENV obj)
@@ -128,13 +124,13 @@ logger.addFilter(cf)
 
 # Vehicle Choice Model
 if (
-    config.get_mode_choice_config().mode_choice_strategy
+    config.mode_choice_model.MODE_CHOICE_STRATEGY
     == ModeChoiceStrategy.SUBSTITUTION_AWARE
 ):
     vehicle_choice_model = DistanceBasedSharedVehicleVehicleChoiceBehavior(
-        config.get_mode_choice_config().path_to_model,
-        config.get_mode_choice_config().substitution_boundary,
-        config.shared_vehicle_operator_config.available_modes,
+        config.path.PATH_TO_MODE_CHOICE_MODEL,
+        config.mode_choice_model.SUBSTITUTION_BOUNDARY,
+        config.shared_vehicle_global.AVAILABLE_VEHICLE_MODES,
     )
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
@@ -145,7 +141,7 @@ else:
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-env = simpy.Environment(initial_time=config.start_time)
+env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
 
 # Inject Simulation Environment to Logger (such that we can log the env time)
 cf = SimulationContextFilter(filter_name="add_env", extra=env)
@@ -155,7 +151,8 @@ logger.addFilter(edf)
 
 # Population Type
 population_factory = PopulationFactory(
-    config.shared_vehicle_population_probabilities, config.seed
+    config.population.SHARED_VEHICLE_POPULATION_PROBABILITIES,
+    config.experiment_management.SEED,
 )
 
 # Load Spatial Environment and the environment files
@@ -167,12 +164,12 @@ load_geodesic_environment()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-p = Path(config.trip_demand_file)
+p = Path(config.path.PATH_TRIP_DEMAND)
 di = DemandImporter(
-    spatial_resolution=config.spatial_resolution,
-    temporal_resolution=config.temporal_resolution,
-    daily_resolution=config.daily_resolution,
-    city=config.city,
+    spatial_resolution=config.world.SPATIAL_RESOLUTION,
+    temporal_resolution=config.world.TEMPORAL_RESOLUTION,
+    daily_resolution=config.world.DAILY_RESOLUTION,
+    city=config.world.CITY,
 )
 
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
@@ -185,10 +182,13 @@ demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 geodesic_environment = GeodesicEnvironment.getInstance()
 hexagons = geodesic_environment.getLayer(
-    f"hex_{config.spatial_resolution.value}"
+    f"hex_{config.world.spatial_resolution_value}"
 ).index.tolist()
 dmi = DistanceMatrixImporter(
-    hexagons, config.spatial_resolution.value, "./data/infrastructure", config.city
+    hexagons,
+    config.world.spatial_resolution_value,
+    "./data/infrastructure",
+    config.world.CITY,
 )
 distance_matrix = dmi.load_distance_matrix()
 
@@ -232,15 +232,15 @@ search_engine = SharedVehicleSearchEngine(env)
 vehicle_assignment_engine = SharedVehicleAllocationEngine(env)
 
 # Get the supply probability from supply file
-supply_prob = pd.read_csv(config.vehicle_supply_file)
+supply_prob = pd.read_csv(config.path.PATH_VEHICLE_SUPPLY)
 
 # Configure and generate / spawn shared fleet vehicles
 shared_vehicle_fleet_config = generate_fleet_config(
     supply_prob,
-    n_cars=config.shared_vehicle_operator_config.n_cars,
-    n_scooter=config._shared_vehicle_operator_config.n_scooters,
-    n_kick_scooter=config.shared_vehicle_operator_config.n_kickscooters,
-    n_bikes=config.shared_vehicle_operator_config.n_bikes,
+    n_cars=config.shared_vehicle_global.N_CARS,
+    n_scooter=config.shared_vehicle_global.N_SCOOTERS,
+    n_kick_scooter=config.shared_vehicle_global.N_KICKSCOOTERS,
+    n_bikes=config.shared_vehicle_global.N_BIKES,
 )
 mixed_fleet = generate_mixed_fleet(env, shared_vehicle_fleet_config)
 
@@ -250,14 +250,14 @@ search_engine.register_fleet(mixed_fleet)
 
 operations = IntegratedSharedMobilityOperations(
     env=env,
-    time_between_operations=config.shared_vehicle_operator_config.operations_start,
-    operation_duration=config.shared_vehicle_operator_config.operations_duration,
+    time_between_operations=config.shared_vehicle_operators[0].OPERATIONS_START,
+    operation_duration=config.shared_vehicle_operators[0].OPERATIONS_DURATION,
     distance_matrix=distance_matrix,
-    ordered_available_vehicle_modes=config.shared_vehicle_operator_config.available_modes,
-    ordered_max_vehicle_supply=config.shared_vehicle_operator_config.available_modes_supply,
-    state_of_charge_threshold=config.shared_vehicle_operator_config.recharge_threshold,
-    base_regions=config.shared_vehicle_operator_config.base_regions,
-    base_capacity=config.shared_vehicle_operator_config.base_capacity,
+    ordered_available_vehicle_modes=config.shared_vehicle_global.AVAILABLE_VEHICLE_MODES,
+    ordered_max_vehicle_supply=config.shared_vehicle_global.AVAILABLE_MODES_SUPPLY,
+    state_of_charge_threshold=config.shared_vehicle_operators[0].RECHARGE_THRESHOLD,
+    base_regions=config.shared_vehicle_operators[0].BASE_REGIONS,
+    base_capacity=config.shared_vehicle_operators[0].BASE_CAPACITY,
 )
 
 # Init operator
@@ -268,7 +268,7 @@ operator = SharedMobilityOperator(
     operations=operations,
     search_engine=search_engine,
     allocation_engine=vehicle_assignment_engine,
-    number_service_workers=config.shared_vehicle_operator_config.number_of_service_workers,
+    number_service_workers=config.shared_vehicle_operators[0].NUMBER_OF_SERVICE_WORKERS,
 )
 
 # Initialize World
@@ -295,10 +295,28 @@ demand_factory = DemandFactory(
     demand_profile,
     di,
     world,
-    config.demand_modifier_files,
-    config.seed,
+    config.path.PATH_DEMAND_MODIFIERS,
+    config.experiment_management.SEED,
     mode="shared_vehicle",
 )
+
+
+def get_cost_per_vehicle_km():
+    res = {}
+
+    for key, value in config.shared_vehicles.items():
+        res[key] = value.COST_PER_KM
+
+    return res
+
+
+def get_co2_per_vehicle_km():
+    res = {}
+
+    for key, value in config.shared_vehicles.items():
+        res[key] = value.KG_CO2_PER_KM
+
+    return res
 
 
 # For multiple simulation runs
@@ -338,17 +356,15 @@ def run_simulation(end_time, seed=4711, env=env):
         metrics_factory = MetricsFactory(transactions)
 
         num_vehicles = {
-            "SharedBike": config.shared_vehicle_operator_config.n_bikes,
-            "SharedCar": config.shared_vehicle_operator_config.n_cars,
-            "SharedKickScooter": config.shared_vehicle_operator_config.n_kickscooters,
-            "SharedScooter": config.shared_vehicle_operator_config.n_scooters,
+            "SharedBike": config.shared_vehicle_global.N_BIKES,
+            "SharedCar": config.shared_vehicle_global.N_CARS,
+            "SharedKickScooter": config.shared_vehicle_global.N_KICKSCOOTERS,
+            "SharedScooter": config.shared_vehicle_global.N_SCOOTERS,
         }
 
         metrics_factory.print_simulation_summary(
-            num_vehicles,
-            config.get_cost_per_vehicle_km(),
-            config.get_co2_per_vehicle_km(),
+            num_vehicles, get_cost_per_vehicle_km(), get_co2_per_vehicle_km()
         )
 
 
-run_simulation(end_time=config.end_time)
+run_simulation(end_time=config.experiment_management.END_TIME)

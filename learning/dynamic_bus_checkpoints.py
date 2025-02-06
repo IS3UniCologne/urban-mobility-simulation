@@ -36,7 +36,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
     def __init__(self, env: Environment):
         super(DynamicBusCheckpointProblem, self).__init__(env)
 
-        self._config = Configuration.instance()
+        self._config = Configuration()
         self._problem_config = self._config.dynamic_checkpoint_routing_config
 
         # Environment / World state

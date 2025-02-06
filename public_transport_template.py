@@ -15,7 +15,6 @@ from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 # Import configurations and extra logging filters
-from simulation.helper.configuration.config_reader import ConfigReader
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
@@ -69,18 +68,15 @@ from utils import load_geodesic_environment
 working_dir = Path(__file__).parent
 os.chdir(working_dir)
 
-# Initialize an empty Configuration object
-config = Configuration.instance()
-
-# Initialize ConfigReader with the configuration file and the Configuration object
-config_reader = ConfigReader(sys.argv[1])
-config_reader.load_config()
+# Initialize Configuration
+config_file = sys.argv[1]
+config = Configuration(config_file)
 
 # make a copy of the used config file that references this run
 output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
 if not os.path.exists("data/output/configs"):
     os.makedirs("data/output/configs")
-shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.ini")
+shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -97,7 +93,7 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger()
-logger.setLevel(config.log_level)
+logger.setLevel(config.settings.LOG_LEVEL)
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
@@ -106,7 +102,7 @@ formatter = logging.Formatter(
 )
 file_handler = logging.FileHandler("report.log")
 file_handler.setFormatter(formatter)
-file_handler.setLevel(config.file_log_level)
+file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
 logger.addHandler(file_handler)
 
 # Add Custom Init Filters (which work without the ENV obj)
@@ -127,7 +123,7 @@ logger.addFilter(cf_init)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-env = simpy.Environment(initial_time=config.start_time)
+env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
 
 # Inject Simulation Environment to Logger (such that we can log the env time)
 cf = SimulationContextFilter(filter_name="add_env", extra=env)
@@ -153,12 +149,12 @@ tracking = Tracking.init(env)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-p = Path(config.trip_demand_file)
+p = Path(config.path.PATH_TRIP_DEMAND)
 di = DemandImporter(
-    spatial_resolution=config.spatial_resolution,
-    temporal_resolution=config.temporal_resolution,
-    daily_resolution=config.daily_resolution,
-    city=config.city,
+    spatial_resolution=config.world.SPATIAL_RESOLUTION,
+    temporal_resolution=config.world.TEMPORAL_RESOLUTION,
+    daily_resolution=config.world.DAILY_RESOLUTION,
+    city=config.world.CITY,
 )
 
 demand_profile = di.extract_spatio_temporal_demand_estimates(p)
@@ -172,10 +168,13 @@ demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 geodesic_environment = GeodesicEnvironment.getInstance()
 hexagons = geodesic_environment.getLayer(
-    f"hex_{config.spatial_resolution.value}"
+    f"hex_{config.world.spatial_resolution_value}"
 ).index.tolist()
 dmi = DistanceMatrixImporter(
-    hexagons, config.spatial_resolution.value, "./data/infrastructure", config.city
+    hexagons,
+    config.world.spatial_resolution_value,
+    "./data/infrastructure",
+    config.world.CITY,
 )
 distance_matrix = dmi.load_distance_matrix()
 
@@ -186,7 +185,7 @@ distance_matrix = dmi.load_distance_matrix()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-timetable = Timetable(config.get_infrastructure_config().path_transit_timetable)
+timetable = Timetable(config.path.PATH_TRANSIT_TIMETABLE)
 timetable.import_timetable()
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -201,7 +200,9 @@ PublicTransitVehicle.public_transit_vehicle_id = 0
 Bus.bus_id = 0
 User.user_id = 0
 DemandFactory.counter = 0
-GeodesicEnvironment.getInstance().reset_random_generator(config.seed)
+GeodesicEnvironment.getInstance().reset_random_generator(
+    config.experiment_management.SEED
+)
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -237,7 +238,8 @@ vehicle_choice_model = PublicTransitVehicleChoiceBehavior(["Bus"])
 
 # Population Type
 population_factory = PopulationFactory(
-    config.transit_population_probabilities, config.seed
+    config.population.TRANSIT_POPULATION_PROBABILITIES,
+    config.experiment_management.SEED,
 )
 
 # World --> Charging Infrastructure is irrelevant for the public operator so this is set to None
@@ -263,8 +265,8 @@ demand_factory = DemandFactory(
     demand_profile,
     di,
     world,
-    config.demand_modifier_files,
-    config.seed,
+    config.path.PATH_DEMAND_MODIFIERS,
+    config.experiment_management.SEED,
     mode="public_transport",
 )
 
@@ -321,4 +323,7 @@ sum_iterations = 1  # throws Exception if value > 1: ValueError until (1440) mus
 for i in range(sum_iterations):
     env = simpy.Environment(initial_time=600)
 
-    run_simulation(end_time=config.end_time, seed=config.seed)
+    run_simulation(
+        end_time=config.experiment_management.END_TIME,
+        seed=config.experiment_management.SEED,
+    )

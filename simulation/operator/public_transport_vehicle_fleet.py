@@ -15,12 +15,12 @@ class PublicTransportVehicleFleet(VehicleFleet):
     def __init__(self, env: Environment):
         super(PublicTransportVehicleFleet, self).__init__(env)
         self._env = env
-        self._config = Configuration.instance()
+        self._config = Configuration()
         self._busses = []
         self._world = (
             None  # defer loading to run process, otherwise circular dependency
         )
-        self._bus_velocity = self._config.bus_config.velocity
+        self._bus_velocity = self._config.bus.VELOCITY
 
         self._tracking = (
             None  # defer loading to run process, otherwise circular dependency

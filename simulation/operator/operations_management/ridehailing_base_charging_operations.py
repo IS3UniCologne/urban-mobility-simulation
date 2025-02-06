@@ -35,12 +35,12 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         super(RideHailingBaseChargingOperations, self).__init__(env=env)
 
         self._world = None  # defer
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
         self._base_buffer = h3.edge_length(
-            self._config.spatial_resolution_value - 1, unit="m"
+            self._config.world.spatial_resolution_value - 1, unit="m"
         )  # use a buffer when calculating distances to charging stations of next coarser grid level edge length (radius)
 
         # To access vehicle transactions
@@ -188,7 +188,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         vehicles_to_charge = self._operator_reference.fleet.mark_vehicles_to_be_charged(
             self._state_of_charge_threshold
         )
-        # if config.store_results:
+        # if config.settings.PERSIST_RESULTS:
         #     state.to_csv(Path(config.output_path, config.fleet_state_file), index = False)
 
         charging_plans = self.calculate_charging_plan(vehicles_to_charge)

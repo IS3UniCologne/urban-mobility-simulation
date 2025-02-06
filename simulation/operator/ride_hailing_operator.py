@@ -38,7 +38,9 @@ class RideHailingOperator(Operator):
             allocation_engine,
         )
 
-        self._driver_payment_share = Configuration.instance().get_driver_payment_share()
+        self._driver_payment_share = (
+            Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
+        )
 
     def pay_for_fulfilled_transportation_task(
         self,

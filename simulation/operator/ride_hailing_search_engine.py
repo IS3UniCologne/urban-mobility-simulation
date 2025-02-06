@@ -16,20 +16,14 @@ class RideHailingSearchEngine(SearchEngineInterface):
         self._env = env
         self._fleet = None
 
-        self._AV_price_reduction = Configuration.instance().get_AV_price_reduction()
+        config = Configuration()
 
-        self._price_entering = (
-            Configuration.instance().get_price_parameters_ride_hailing()[0]
-        )
-        self._price_per_minute = (
-            Configuration.instance().get_price_parameters_ride_hailing()[1]
-        )
-        self._price_per_km = (
-            Configuration.instance().get_price_parameters_ride_hailing()[2]
-        )
-        self._min_price = Configuration.instance().get_price_parameters_ride_hailing()[
-            3
-        ]
+        self._AV_price_reduction = config.ride_hailing_global.AV_PRICE_REDUCTION
+
+        self._price_entering = config.ride_hailing_global.PRICE_ENTERING
+        self._price_per_minute = config.ride_hailing_global.PRICE_PER_MINUTE
+        self._price_per_km = config.ride_hailing_global.PRICE_PER_KM
+        self._min_price = config.ride_hailing_global.MINIMUM_PRICE
 
     def search_for_transportation_alternatives(
         self, vehicle_search_task: TransportationSearchTask

@@ -18,7 +18,7 @@ class DQNN(nn.Module):
     def __init__(self, input_layer, action_layer):
         super(DQNN, self).__init__()
 
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         self.layers = nn.Sequential(
             nn.Linear(input_layer, self._config.DQN_config.q_net_layer[0]),

@@ -26,7 +26,7 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
         self._charging_operations = None
 
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         self._distance_matrix = distance_matrix
         self._time_between_operations = time_between_operations
