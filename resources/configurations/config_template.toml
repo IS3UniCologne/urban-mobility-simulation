@@ -402,6 +402,7 @@ OPERATIONS_DURATION = 50
 # Velocity of Relocation Vehicle (i.e., car/van velocity) in km/h
 VEHICLE_RELOCATION_VELOCITY = 9.54
 
+
 [[TRANSIT_OPERATOR]]
 # how many minutes the PublicTransitOperator plans ahead ==
 PLANNING_LOOKAHEAD = 10
@@ -411,10 +412,7 @@ ACTION_SPACE_RESOLUTION = 8 #TODO: Is this used ?
 # POPULATION_PROBABILITIES = 0
 
 
-[BUS]# TODO: Turn this into public transit vehicles.bus
-MAX_AVAILABLE_SEATS = 100
-# average velocity in european cities is no more than 30 km/h
-VELOCITY = 30.0
+
 
 [RIDE_HAILING_GLOBAL]
 # Driver payment share for ride-hailing
@@ -431,7 +429,7 @@ ALLOCATION = 0
 
 DISCOUNT_RATE = 0
 N_RIDE_HAILING_CARS = 500 #TODO: Change name of these? Techincally all cars are ride hailing (Rename)
-N_AUTONOMOUS_CARS = 500 #TODO: Shouldn't these be per operator ? See comment below
+N_AUTONOMOUS_CARS = 500 #TODO: This is completely ignored/overwritten by the AV_PENETRATION variable
 AVAILABLE_VEHICLE_MODES = [
     "AutonomousCar",
     "RideHailingCar",
@@ -493,6 +491,7 @@ N_BIKES = 200
 
 # Vehicle Configurations
 #TODO: Create a default vehicle with all possible entries as a comment
+
 
 [RIDE_HAILING_VEHICLES.AutonomousCar] #TODO: These could be dicts of lists if we want to support multiple vehicle configurations per type
 PRICE_PER_MIN = 0.35                 #TODO: Sort these somehow
@@ -576,6 +575,12 @@ INITIAL_SOC = 1.0
 COST_PER_KM = 0.1
 WALKING_DISTANCE = 200
 KG_CO2_PER_KM = 0.046
+
+
+[TRANSIT_VEHICLES.Bus]# TODO: Turn this into public transit vehicles.bus
+MAX_AVAILABLE_SEATS = 100
+# average velocity in european cities is no more than 30 km/h
+VELOCITY = 30.0
 
 [AUCTION]
 AUCTION_START = 0

@@ -329,17 +329,6 @@ class TransitOperatorConfig:
 
 @beartype_after_post_init
 @dataclass
-class BusConfig:
-    VELOCITY: float
-    MAX_AVAILABLE_SEATS: int
-
-    def __post_init__(self):
-        # convert velocity km/h to m/s
-        self.VELOCITY = SimulationVelocityConverter.convert_kmh(self.VELOCITY)
-
-
-@beartype_after_post_init
-@dataclass
 class RideHailingGlobalConfig:
     DRIVER_PAYMENT_SHARE: float
     AV_PRICE_REDUCTION: float
@@ -410,14 +399,14 @@ class SharedVehicleGlobalConfig:
 @beartype_after_post_init
 @dataclass
 class VehicleConfig:
-    PRICE_PER_MIN: float
-    MAX_STATE_OF_CHARGE: float
-    ENERGY_CONSUMPTION: float
     VELOCITY: float
     MAX_AVAILABLE_SEATS: int
-    DAILY_TOTAL_COST: float
-    COST_PER_KM: float
 
+    PRICE_PER_MIN: Optional[float] = None
+    MAX_STATE_OF_CHARGE: Optional[float] = None
+    ENERGY_CONSUMPTION: Optional[float] = None
+    DAILY_TOTAL_COST: Optional[float] = None
+    COST_PER_KM: Optional[float] = None
     EV_RELATIVE_ENERGY_CONSUMPTION: Optional[float] = None
     PRICE_PER_KM: Optional[float] = None
     INITIAL_SOC: Optional[float] = None
@@ -596,10 +585,6 @@ class Configuration(metaclass=Singleton):
         return self._get_lazy_config("transit_operator", TransitOperatorConfig)
 
     @property
-    def bus(self) -> BusConfig:
-        return self._get_lazy_config("bus", BusConfig)
-
-    @property
     def ride_hailing_global(self) -> RideHailingGlobalConfig:
         return self._get_lazy_config("ride_hailing_global", RideHailingGlobalConfig)
 
@@ -621,6 +606,15 @@ class Configuration(metaclass=Singleton):
             Optional[Dict[str, VehicleConfig]]: _description_
         """
         return self._get_lazy_config("shared_vehicles", VehicleConfig, is_dict=True)
+
+    @property
+    def transit_vehicles(self) -> Optional[Dict[str, VehicleConfig]]:
+        """Dictionary containing VehicleConfig objects for shared vehicles.
+
+        Returns:
+            Optional[Dict[str, VehicleConfig]]: _description_
+        """
+        return self._get_lazy_config("transit_vehicles", VehicleConfig, is_dict=True)
 
     @property
     def auction(self) -> AuctionConfig:

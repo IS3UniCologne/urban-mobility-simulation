@@ -20,7 +20,7 @@ class PublicTransportVehicleFleet(VehicleFleet):
         self._world = (
             None  # defer loading to run process, otherwise circular dependency
         )
-        self._bus_velocity = self._config.bus.VELOCITY
+        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY
 
         self._tracking = (
             None  # defer loading to run process, otherwise circular dependency

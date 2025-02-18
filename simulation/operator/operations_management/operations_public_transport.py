@@ -40,7 +40,7 @@ class OperationsPublicTransport(OperationsInterface):
             None  # defer loading to run process, otherwise circular dependency
         )
         self._walking_speed = self._config.user.WALKING_SPEED
-        self._bus_velocity = self._config.bus.VELOCITY
+        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY
 
     def execute(self):
         """
