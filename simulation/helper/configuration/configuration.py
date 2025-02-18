@@ -114,13 +114,17 @@ class WorldConfig:
         self.DAILY_RESOLUTION = DailyResolution(self.DAILY_RESOLUTION)
 
     @property
-    def spatial_resolution_value(self):
+    def SPATIAL_RESOLUTION_VALUE(self):
         return self.SPATIAL_RESOLUTION.value
 
     @property
-    def spatial_resolution_column(self):
-        # column name for spatial resolution
-        return f"hex_id_{self.spatial_resolution_value}"
+    def SPATIAL_RESOLUTION_COLUMN(self) -> str:
+        """Returns the column name for the spatial resolution. E.g. 'hex_id_7'
+
+        Returns:
+            str: Column name, e.g. 'hex_id_7'
+        """
+        return f"hex_id_{self.SPATIAL_RESOLUTION_VALUE}"
 
 
 @beartype
@@ -349,9 +353,9 @@ class RideHailingGlobalConfig:
     ALLOCATION: float
 
     DISCOUNT_RATE: float
-    N_RIDEHAILING_CARS: int
+    N_RIDE_HAILING_CARS: int
     N_AUTONOMOUS_CARS: int
-    AVAILABLE_VEHICLE_MODES_RIDEHAILING: List[str]
+    AVAILABLE_VEHICLE_MODES: List[str]
 
     # Supply
     EV_PENETRATION: float
@@ -376,7 +380,7 @@ class RideHailingGlobalConfig:
     def DRIVER_AVAILABILITY_VECTOR(self) -> List[int]:
         if not hasattr(self, "_driver_availability_vector"):
             self._driver_availability_vector = [
-                round(float(x) * self.N_RIDEHAILING_CARS * (1 - self.AV_PENETRATION))
+                round(float(x) * self.N_RIDE_HAILING_CARS * (1 - self.AV_PENETRATION))
                 for x in self.RH_AVAILABILITY
             ]
         return self._driver_availability_vector
@@ -384,7 +388,7 @@ class RideHailingGlobalConfig:
     @property
     def AVAILABLE_MODES_SUPPLY(self) -> List[int]:
         # TODO: This has to be inferred instead of doing it this way. This is very error prone
-        return [self.N_AUTONOMOUS_CARS, self.N_RIDEHAILING_CARS]
+        return [self.N_AUTONOMOUS_CARS, self.N_RIDE_HAILING_CARS]
 
 
 @beartype

@@ -143,10 +143,10 @@ class World:
             geo_env = GeodesicEnvironment.getInstance()
 
             origin_lat, origin_lng = geo_env.get_random_position(
-                origin, f"hex_{self._config.world.spatial_resolution_value}"
+                origin, f"hex_{self._config.world.SPATIAL_RESOLUTION_VALUE}"
             )
             destination_lat, destination_lng = geo_env.get_random_position(
-                destination, f"hex_{self._config.world.spatial_resolution_value}"
+                destination, f"hex_{self._config.world.SPATIAL_RESOLUTION_VALUE}"
             )
 
             origin_position = GeodesicPosition(

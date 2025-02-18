@@ -40,7 +40,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
         self._base_buffer = h3.edge_length(
-            self._config.world.spatial_resolution_value - 1, unit="m"
+            self._config.world.SPATIAL_RESOLUTION_VALUE - 1, unit="m"
         )  # use a buffer when calculating distances to charging stations of next coarser grid level edge length (radius)
 
         # To access vehicle transactions

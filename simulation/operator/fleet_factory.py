@@ -71,7 +71,7 @@ def generate_fleet_config(
     bikes_cnt.index = distribution.index
     distribution["bikes"] = bikes_cnt["bikes_count"]
 
-    hex_column = Configuration().world.spatial_resolution_column
+    hex_column = Configuration().world.SPATIAL_RESOLUTION_COLUMN
 
     # Slice fleet config
     fleet_config = distribution[
@@ -135,7 +135,7 @@ def generate_ridehailing_fleet_config(
     distribution["AVs"] = car_cnt["car_count"]
 
     # Sample Supply Distribution for Cars
-    hex_column = Configuration().world.spatial_resolution_column
+    hex_column = Configuration().world.SPATIAL_RESOLUTION_COLUMN
 
     # Slice fleet config
     fleet_config = distribution[[hex_column, "cars", "EVs", "AVs"]]
@@ -157,7 +157,7 @@ def generate_AV_fleet(env, distribution, n=500, seed=4711):
     car_cnt.index = distribution.index
     distribution["AVs"] = car_cnt["car_count"]
 
-    hex_column = Configuration().world.spatial_resolution_column
+    hex_column = Configuration().world.SPATIAL_RESOLUTION_COLUMN
 
     # Slice fleet config
     fleet_config = distribution[[hex_column, "AVs"]]
@@ -206,7 +206,7 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
     geo_env = GeodesicEnvironment.getInstance()
 
     # Get Column Identifier for current resolution (e.g., hex_id_7)
-    hex_column = Configuration().world.spatial_resolution_column
+    hex_column = Configuration().world.SPATIAL_RESOLUTION_COLUMN
 
     # Global Config File (values from config ini files)
     config = Configuration()
@@ -290,7 +290,7 @@ def generate_mixed_fleet(env, fleet_config):
     geo_env = GeodesicEnvironment.getInstance()
 
     # Get Column Identifier for current resolution (e.g., hex_id_7)
-    hex_column = Configuration().world.spatial_resolution_column
+    hex_column = Configuration().world.SPATIAL_RESOLUTION_COLUMN
 
     # Global Config File (values from config ini files)
     config = Configuration()

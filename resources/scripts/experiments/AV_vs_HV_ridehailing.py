@@ -152,11 +152,11 @@ demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 geodesic_environment = GeodesicEnvironment.getInstance()
 hexagons = geodesic_environment.getLayer(
-    f"hex_{config.world.spatial_resolution_value}"
+    f"hex_{config.world.SPATIAL_RESOLUTION_VALUE}"
 ).index.tolist()
 dmi = DistanceMatrixImporter(
     hexagons,
-    config.world.spatial_resolution_value,
+    config.world.SPATIAL_RESOLUTION_VALUE,
     "./data/infrastructure",
     config.world.CITY,
 )

@@ -199,11 +199,11 @@ demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 geodesic_environment = GeodesicEnvironment.getInstance()
 hexagons = geodesic_environment.getLayer(
-    f"hex_{config.world.spatial_resolution_value}"
+    f"hex_{config.world.SPATIAL_RESOLUTION_VALUE}"
 ).index.tolist()
 dmi = DistanceMatrixImporter(
     hexagons,
-    config.world.spatial_resolution_value,
+    config.world.SPATIAL_RESOLUTION_VALUE,
     "./data/infrastructure",
     config.world.CITY,
 )
@@ -242,7 +242,7 @@ vehicle_assignment_engine = {
 
 available_vehicle_modes_ridehailing = ["RideHailingCar", "AutonomousCar"]
 available_vehicle_modes_supply_ride_hailing = [
-    config.ride_hailing_global.N_RIDEHAILING_CARS,
+    config.ride_hailing_global.N_RIDE_HAILING_CARS,
     config.ride_hailing_global.N_AUTONOMOUS_CARS,
 ]
 
@@ -251,7 +251,7 @@ supply_prob = pd.read_csv(config.path.PATH_VEHICLE_SUPPLY)
 
 ride_hailing_fleet_config_0 = generate_ridehailing_fleet_config(
     distribution=supply_prob,
-    n_cars=config.ride_hailing_global.N_RIDEHAILING_CARS,
+    n_cars=config.ride_hailing_global.N_RIDE_HAILING_CARS,
     n_AVs=config.ride_hailing_global.N_AUTONOMOUS_CARS,
     allocation_method="historical",
     allocation=config.ride_hailing_global.ALLOCATION,
@@ -263,7 +263,7 @@ ride_hailing_fleet_0 = generate_mixed_ride_hailing_fleet(
 
 ride_hailing_fleet_config_1 = generate_ridehailing_fleet_config(
     distribution=supply_prob,
-    n_cars=config.ride_hailing_global.N_RIDEHAILING_CARS,
+    n_cars=config.ride_hailing_global.N_RIDE_HAILING_CARS,
     n_AVs=config.ride_hailing_global.N_AUTONOMOUS_CARS,
     allocation_method="historical",
     allocation=config.ride_hailing_global.ALLOCATION,
