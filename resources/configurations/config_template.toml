@@ -430,9 +430,9 @@ MINIMUM_PRICE = 5
 ALLOCATION = 0
 
 DISCOUNT_RATE = 0
-N_RIDEHAILING_CARS = 500 #TODO: RIDE_HAILING (Rename)
+N_RIDE_HAILING_CARS = 500 #TODO: Change name of these? Techincally all cars are ride hailing (Rename)
 N_AUTONOMOUS_CARS = 500 #TODO: Shouldn't these be per operator ? See comment below
-AVAILABLE_VEHICLE_MODES_RIDEHAILING = [
+AVAILABLE_VEHICLE_MODES = [
     "AutonomousCar",
     "RideHailingCar",
 ] #Todo: Does this belong here? Should this be an enum instead ? Can't it be inferred from the operator configurations  (n_vehicles)?

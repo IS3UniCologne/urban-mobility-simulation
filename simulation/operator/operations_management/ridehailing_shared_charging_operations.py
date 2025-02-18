@@ -55,7 +55,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
             distance_matrix=self._distance_matrix,
             time_between_operations=self._config.shared_charging_auction.AUCTION_INTERVAL,
             operation_duration=None,  # does not matter
-            available_modes=self._config.ride_hailing_global.AVAILABLE_VEHICLE_MODES_RIDEHAILING,
+            available_modes=self._config.ride_hailing_global.AVAILABLE_VEHICLE_MODES,
             available_modes_supply=self._config.ride_hailing_global.AVAILABLE_MODES_SUPPLY,
             state_of_charge_threshold=self._state_of_charge_threshold,
             allow_queue=False,  # no queue, only reserved slots

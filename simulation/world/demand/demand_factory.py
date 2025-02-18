@@ -60,7 +60,7 @@ class DemandFactory:
         multiplier = geomodifier["properties"]["demandMultiplier"]
         hex_ids = h3.polyfill(
             geomodifier["geometry"],
-            res=self._config.world.spatial_resolution_value,
+            res=self._config.world.SPATIAL_RESOLUTION_VALUE,
             geo_json_conformant=True,
         )
 
