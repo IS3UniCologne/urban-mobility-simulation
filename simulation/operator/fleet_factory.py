@@ -84,7 +84,7 @@ def generate_fleet_config(
 def generate_ridehailing_fleet_config(
     distribution,
     n_cars=1000,
-    n_AVs=500,
+    n_AVs=500,  # TODO: This is completely ignored/overwritten. Either remov or change calculation below
     seed=42,
     allocation_method="historical",
     allocation=np.random.randint(low=20, high=50, size=213),
