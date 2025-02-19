@@ -20,12 +20,13 @@ from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 
 
 class PublicTransportSearchEngine(SearchEngineInterface):
-    def __init__(self, env, fleet: PublicTransportVehicleFleet):
+    def __init__(self, env, fleet: PublicTransportVehicleFleet, geo_env):
         self._env = env
         self._fleet = fleet
         self._config = Configuration.instance()
         self._operator_config = self._config.transit_operator_config
         self._user_config = self._config.user_config
+        self._geo_env = geo_env
 
     def find_viable_transit(
         self,
@@ -59,6 +60,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
                 spatial_strategy,
                 transportation_search_task.transport_task.origin,
                 transportation_search_task.transport_task.destination,
+                self._geo_env,
             )
             if viable_stops:
                 # check for temporal alignment
@@ -164,6 +166,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         strategy,
         origin: GeodesicPosition,
         destination: GeodesicPosition,
+        geo_env: GeodesicEnvironment,
     ):
         """
         Check for viable transit stops nearby origin - destination travel demand for a given vehicle
@@ -174,7 +177,6 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         :param destination: GeodesicPosition
         :return: dict
         """
-        geo_env = GeodesicEnvironment.getInstance()
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon as origin and destination
             origin_poly = geo_env.get_hexagon(origin.get_hexagon_id())

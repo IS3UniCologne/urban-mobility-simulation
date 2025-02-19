@@ -74,7 +74,7 @@ class DynamicBusProblem(LearningInterface):
         # parse or create corridor
         if self._config.dynamic_routing_config.corridor is None:
             self._corridor = self._geodesic_env.corridor(
-                self.bus.route.origin.get_hexagons_id(resolution=self._action_res),
+                self.bus.route.origin.get_hexagon_id(resolution=self._action_res),
                 self.bus.route.destination.get_hexagon_id(resolution=self._action_res),
                 k=2,
             )

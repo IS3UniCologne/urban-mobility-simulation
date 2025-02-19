@@ -230,7 +230,7 @@ distance_matrix = dmi.load_distance_matrix()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-timetable = Timetable(transit_timetable_path)
+timetable = Timetable(transit_timetable_path, geodesic_environment)
 timetable.import_timetable()
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -277,7 +277,7 @@ tracking = Tracking.init(env)
 fleet = PublicTransportVehicleFleet(env)
 
 # Operator Modules
-search_engine = PublicTransportSearchEngine(env, fleet)
+search_engine = PublicTransportSearchEngine(env, fleet, geodesic_environment)
 
 # Operations Module
 operations = OperationsPublicTransport(env, timetable, fleet)
