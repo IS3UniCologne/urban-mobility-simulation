@@ -20,13 +20,13 @@ from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 
 
 class PublicTransportSearchEngine(SearchEngineInterface):
-    def __init__(self, env, fleet: PublicTransportVehicleFleet, geo_env):
+    def __init__(self, env, fleet: PublicTransportVehicleFleet):
         self._env = env
         self._fleet = fleet
         self._config = Configuration.instance()
         self._operator_config = self._config.transit_operator_config
         self._user_config = self._config.user_config
-        self._geo_env = geo_env
+        self._geo_env = GeodesicEnvironment.getInstance()
 
     def find_viable_transit(
         self,
@@ -60,7 +60,6 @@ class PublicTransportSearchEngine(SearchEngineInterface):
                 spatial_strategy,
                 transportation_search_task.transport_task.origin,
                 transportation_search_task.transport_task.destination,
-                self._geo_env,
             )
             if viable_stops:
                 # check for temporal alignment
@@ -160,13 +159,12 @@ class PublicTransportSearchEngine(SearchEngineInterface):
 
         return browser
 
-    @staticmethod
     def _check_viable_stops(
+        self,
         vehicle: PublicTransitVehicle,
         strategy,
         origin: GeodesicPosition,
         destination: GeodesicPosition,
-        geo_env: GeodesicEnvironment,
     ):
         """
         Check for viable transit stops nearby origin - destination travel demand for a given vehicle
@@ -179,9 +177,9 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         """
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon as origin and destination
-            origin_poly = geo_env.get_hexagon(origin.get_hexagon_id())
+            origin_poly = self._geo_env.get_hexagon(origin.get_hexagon_id())
 
-            destination_poly = geo_env.get_hexagon(destination.get_hexagon_id())
+            destination_poly = self._geo_env.get_hexagon(destination.get_hexagon_id())
             in_vicinity = [
                 {
                     "origin": x.is_in_geometry(origin_poly),
