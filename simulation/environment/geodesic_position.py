@@ -1,8 +1,6 @@
-from typing import Tuple
-
 import h3 as h3
 from haversine import Unit, haversine
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 
@@ -60,20 +58,16 @@ class GeodesicPosition(Position):
         """
         return haversine((self._lat, self._lng), (other._lat, other._lng), Unit.METERS)
 
-    def get_hexagon(self, resolution=0, return_geom=True) -> Tuple[str, Polygon]:
+    def get_hexagon_id(self, resolution=0):
         """
         Return h3 hexagon object based on current position (lng, lat)
         :param resolution: H3 Resolution (res = 0 <=> default => use global setting)
         :param return_geom: Boolean indicating if geometry should be returned, ATTENTION: slows down a lot
         :return: hex_id:   String
-                 geometry: Hexagon geometry
         """
-
         # If resolution is set to default, use global settings
         if resolution == 0:
             resolution = self._global_resolution
-
-        layer = self._geo_env.getLayer(f"hex_{resolution}")
 
         try:
             hex = self._default_hexagon[resolution]
@@ -82,11 +76,7 @@ class GeodesicPosition(Position):
             hex = h3.geo_to_h3(self._lat, self._lng, resolution)
             self._default_hexagon[resolution] = hex
 
-        if return_geom:
-            geometry = layer.loc[hex].geometry
-        else:
-            geometry = None
-        return hex, geometry
+        return hex
 
     def is_in_geometry(self, geometry):
         if self._geometry.intersects(geometry):

@@ -32,7 +32,7 @@ def get_bid(
 
     relevant_distance_matrix = distance_matrix.loc[auctioned_capacity.keys()]
     for vehicle in vehicles_to_charge:
-        hex = vehicle.position.get_hexagon(return_geom=False)[0]
+        hex = vehicle.position.get_hexagon_id()
         id = vehicle.id
 
         # Get nearest charging station (.loc -> destination, [[]] -> Origin)

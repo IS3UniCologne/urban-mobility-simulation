@@ -33,6 +33,8 @@ class GeodesicEnvironment(Environment):
                 42
             )  # TODO: use fnc reset_rnd_gen to change seed?
 
+            self._hex_geom_cache = {}
+
     def getLayer(self, layer_name):
         """
             Return layer
@@ -93,19 +95,18 @@ class GeodesicEnvironment(Environment):
 
     def get_hexagon(self, hex_id, layer_name="hex_7"):
         """
-        Get geometry of hexagon
+        Get geometry of hexagon with optimized lookup.
         :param hex_id: Hexagon ID
-        :param layer_name: Layername (i.e., resolution, hex_7, hex_8, hex_9)
-        :return: Polygon (lat,lng) representing hexagon
+        :param layer_name: Layer name (e.g., "hex_7", "hex_8").
+        :return: Polygon representing the hexagon
         """
 
-        # Select Layer
-        gdf = self.layer[layer_name]
+        if layer_name not in self._hex_geom_cache:
+            self._hex_geom_cache[layer_name] = self.layer[layer_name][
+                "geometry"
+            ].to_dict()
 
-        # Get geometry of hexagon
-        geometry = gdf.loc[hex_id].geometry
-
-        return geometry  # Hexagon Geometry
+        return self._hex_geom_cache[layer_name].get(hex_id, None)
 
     def reset_random_generator(self, seed=42):
         self._random = numpy.random.RandomState(seed)
