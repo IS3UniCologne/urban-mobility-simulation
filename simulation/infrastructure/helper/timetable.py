@@ -14,10 +14,10 @@ class AmbiguousTripException(Exception):
 
 
 class Timetable:
-    def __init__(self, data_path, geo_env: GeodesicEnvironment):
+    def __init__(self, data_path):
         self._data_path = data_path
         self._trips = None
-        self._geo_env = geo_env
+        self._geo_env = GeodesicEnvironment.getInstance()
 
     @property
     def trips(self):
@@ -117,7 +117,6 @@ class Timetable:
             viable_trips,
             spatial_strategy,
             transportation_search_task.transport_task.origin,
-            self._geo_env,
         )
 
         # calc walk distance and duration
@@ -149,16 +148,12 @@ class Timetable:
 
         return viable_trips
 
-    @staticmethod
     def _find_viable_stops(
-        trips: gpd.GeoDataFrame,
-        strategy,
-        position: GeodesicPosition,
-        geo_env: GeodesicEnvironment,
+        self, trips: gpd.GeoDataFrame, strategy, position: GeodesicPosition
     ):
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon
-            poly = geo_env.get_hexagon(position.get_hexagon_id())
+            poly = self._geo_env.get_hexagon(position.get_hexagon_id())
 
             return trips[trips.within(poly)]
         else:
