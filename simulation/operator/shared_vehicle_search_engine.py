@@ -24,7 +24,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
         """
         browser = TransportationAlternativeBrowser()
 
-        hexagon_origin, _ = vehicle_search_task.agent_position.get_hexagon()
+        hexagon_origin = vehicle_search_task.agent_position.get_hexagon_id()
 
         (cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area) = (
             self._fleet.get_available_vehicles(hexagon_origin)

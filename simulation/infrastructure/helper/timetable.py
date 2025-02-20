@@ -4,6 +4,7 @@ import logging
 import geopandas as gpd
 import pandas as pd
 
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 
@@ -16,6 +17,7 @@ class Timetable:
     def __init__(self, data_path):
         self._data_path = data_path
         self._trips = None
+        self._geo_env = GeodesicEnvironment.getInstance()
 
     @property
     def trips(self):
@@ -146,13 +148,13 @@ class Timetable:
 
         return viable_trips
 
-    @staticmethod
     def _find_viable_stops(
-        trips: gpd.GeoDataFrame, strategy, position: GeodesicPosition
+        self, trips: gpd.GeoDataFrame, strategy, position: GeodesicPosition
     ):
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon
-            hex, poly = position.get_hexagon()
+            poly = self._geo_env.get_hexagon(position.get_hexagon_id())
+
             return trips[trips.within(poly)]
         else:
             raise NotImplementedError(

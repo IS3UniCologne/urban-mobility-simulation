@@ -227,7 +227,7 @@ class SharedVehicle(Vehicle, ABC):
         for passenger in self._seats:
             passenger.position = new_position
 
-        region_id, _ = self._position.get_hexagon()
+        region_id = self._position.get_hexagon_id()
 
         logging.debug(
             f"Current position {self._position} in region {region_id}.",
@@ -244,7 +244,7 @@ class SharedVehicle(Vehicle, ABC):
         self._driver_mounted.succeed()
         self._driver_mounted = self._env.event()
 
-        self._state == VehicleState.DRIVING
+        self._state = VehicleState.DRIVING
 
         logging.debug(
             f"Driver: {driver.identify_driver()} mounted vehicle.",
@@ -260,7 +260,7 @@ class SharedVehicle(Vehicle, ABC):
         self._driver_unmounted.succeed()
         self._driver_unmounted = self._env.event()
 
-        self._state == VehicleState.PARKING
+        self._state = VehicleState.PARKING
 
         logging.debug(
             f"Driver: {tmp_driver_id} unmounted vehicle.",
@@ -286,7 +286,7 @@ class SharedVehicle(Vehicle, ABC):
             raise Exception("Vehicle is full.")
 
     def prepare_for_service_task(self, caller, task):
-        self._state == VehicleState.PRE_SERVICE
+        self._state = VehicleState.PRE_SERVICE
         logging.debug(
             f"Marked for Service Task [{task}] by {caller}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
