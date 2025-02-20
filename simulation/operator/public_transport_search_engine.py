@@ -1,5 +1,6 @@
 import logging
 
+from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.time import SimulationTimeConverter
@@ -25,8 +26,9 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         self._config = Configuration()
         self._operator_config = self._config.transit_operators[
             0
-        ]  # TODO: This should not be hardcoded
+        ]  # TODO: multiple operators
         self._user_config = self._config.user
+        self._geo_env = GeodesicEnvironment.getInstance()
 
     def find_viable_transit(
         self,
@@ -159,8 +161,8 @@ class PublicTransportSearchEngine(SearchEngineInterface):
 
         return browser
 
-    @staticmethod
     def _check_viable_stops(
+        self,
         vehicle: PublicTransitVehicle,
         strategy,
         origin: GeodesicPosition,
@@ -175,11 +177,11 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         :param destination: GeodesicPosition
         :return: dict
         """
-
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon as origin and destination
-            origin_hex, origin_poly = origin.get_hexagon()
-            destination_hex, destination_poly = destination.get_hexagon()
+            origin_poly = self._geo_env.get_hexagon(origin.get_hexagon_id())
+
+            destination_poly = self._geo_env.get_hexagon(destination.get_hexagon_id())
             in_vicinity = [
                 {
                     "origin": x.is_in_geometry(origin_poly),
