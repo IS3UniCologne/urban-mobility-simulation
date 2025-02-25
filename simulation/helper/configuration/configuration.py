@@ -12,6 +12,7 @@ from simulation.helper.configuration.enums import (
     PopulationType,
     SpatialResolution,
     TemporalBucket,
+    VehicleMode,
 )
 from simulation.helper.time import SimulationVelocityConverter
 
@@ -38,7 +39,7 @@ To add a new configuration parameter to an existing configuration class, follow 
 1. Add the parameter to the config.toml file in the correct table.
 2. Add the parameter to the Configuration class. Make sure to include a type hint.
 3. If the parameter is optional, add the Optional type hint and set the default value to None. (e.g.  OPTIONAL_LIST: Optional[List[str]] = None)
-    All optional parameters should follow the mandatory parameters.
+    All optional parameters have to be at the end of the dataclass. This is a limitation of dataclasses.
 4. Types that are not supported by toml (e.g. Enums,Tuples) should be converted to their respective types in the __post_init__ method. Make sure to use
     the @beartype_after_post_init decorator if you do this.
 
@@ -97,6 +98,14 @@ class SettingsConfig:
 
     PERSIST_RESULTS: bool
     TRACK_AGENT: bool
+
+
+@beartype
+@dataclass
+class ExperimentManagementConfig:
+    START_TIME: int
+    END_TIME: int
+    SEED: int
 
 
 @beartype_after_post_init
@@ -170,7 +179,6 @@ class PopulationConfig:
     RIDE_HAILING_POPULATION_PROBABILITIES: List[float]
     SHARED_VEHICLE_POPULATION_PROBABILITIES: List[float]
     TRANSIT_POPULATION_PROBABILITIES: List[float]
-    TYPE_PATHS: Optional[List[str]] = None
 
 
 @beartype_after_post_init
@@ -179,11 +187,36 @@ class UserConfig:
     TRANSIT_MAX_WAIT: int
     SPATIAL_STRATEGY: str
     WALKING_SPEED: float
-    PRICE_SENSITIVE: float
 
     def __post_init__(self):
         # convert km/h to m/s
         self.WALKING_SPEED = SimulationVelocityConverter.convert_kmh(self.WALKING_SPEED)
+
+
+@beartype_after_post_init
+@dataclass
+class VehicleConfig:
+    VELOCITY: float
+    MAX_AVAILABLE_SEATS: int
+
+    WALKING_DISTANCE: Optional[int] = None
+
+    MAX_STATE_OF_CHARGE: Optional[float] = None
+    ENERGY_CONSUMPTION: Optional[float] = None
+    EV_RELATIVE_ENERGY_CONSUMPTION: Optional[float] = None
+    INITIAL_SOC: Optional[float] = None
+    EMERGENCY_SOC_BUFFER: Optional[float] = None
+
+    PRICE_PER_MIN: Optional[float] = None
+    DAILY_TOTAL_COST: Optional[float] = None
+    COST_PER_KM: Optional[float] = None
+    PRICE_PER_KM: Optional[float] = None
+    CHARGING_COST_PER_KWH: Optional[float] = None
+    KG_CO2_PER_KM: Optional[float] = None
+
+    def __post_init__(self):
+        # convert velocity km/h to m/s
+        self.VELOCITY = SimulationVelocityConverter.convert_kmh(self.VELOCITY)
 
 
 @beartype_after_post_init
@@ -291,6 +324,8 @@ class SharedVehicleOperatorConfig:
     VEHICLE_RELOCATION_VELOCITY: float
     BASE_REGIONS: List[str]
 
+    N_VEHICLES: Dict[VehicleMode, int]
+
     def __post_init__(self):
         # clamp to number of base regions
         self.BASE_REGIONS = self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]
@@ -299,6 +334,20 @@ class SharedVehicleOperatorConfig:
         self.VEHICLE_RELOCATION_VELOCITY = SimulationVelocityConverter.convert_kmh(
             self.VEHICLE_RELOCATION_VELOCITY
         )
+
+        # Convert strings in VEHICLES to enum
+        self.N_VEHICLES = {
+            VehicleMode[mode]: count for mode, count in self.N_VEHICLES.items()
+        }
+
+    @property
+    def AVAILABLE_VEHICLE_MODES(self) -> List[str]:
+        # return list of vehicle modes as strings, probably change this later once we have enums everywhere
+        return [mode.name for mode in self.N_VEHICLES.keys()]
+
+    @property
+    def AVAILABLE_MODES_SUPPLY(self) -> List[int]:
+        return list(self.N_VEHICLES.values())
 
 
 @beartype_after_post_init
@@ -324,7 +373,6 @@ class RideHailingOperatorConfig:
 class TransitOperatorConfig:
     PLANNING_LOOKAHEAD: int
     MAX_BUSSES: int
-    ACTION_SPACE_RESOLUTION: int
 
 
 @beartype_after_post_init
@@ -380,44 +428,42 @@ class RideHailingGlobalConfig:
         return [self.N_AUTONOMOUS_CARS, self.N_RIDE_HAILING_CARS]
 
 
-@beartype
-@dataclass
-class SharedVehicleGlobalConfig:
-    AVAILABLE_VEHICLE_MODES: List[str]
-
-    N_CARS: int
-    N_SCOOTERS: int
-    N_KICKSCOOTERS: int
-    N_BIKES: int
-
-    # TODO: Vehicle modes and counts should probably be a dictionary instead of doing this?
-    @property
-    def AVAILABLE_MODES_SUPPLY(self) -> List[int]:
-        return [self.N_CARS, self.N_SCOOTERS, self.N_KICKSCOOTERS, self.N_BIKES]
-
-
 @beartype_after_post_init
 @dataclass
-class VehicleConfig:
-    VELOCITY: float
-    MAX_AVAILABLE_SEATS: int
-
-    PRICE_PER_MIN: Optional[float] = None
-    MAX_STATE_OF_CHARGE: Optional[float] = None
-    ENERGY_CONSUMPTION: Optional[float] = None
-    DAILY_TOTAL_COST: Optional[float] = None
-    COST_PER_KM: Optional[float] = None
-    EV_RELATIVE_ENERGY_CONSUMPTION: Optional[float] = None
-    PRICE_PER_KM: Optional[float] = None
-    INITIAL_SOC: Optional[float] = None
-    CHARGING_COST_PER_KWH: Optional[float] = None
-    WALKING_DISTANCE: Optional[int] = None
-    KG_CO2_PER_KM: Optional[float] = None
-    EMERGENCY_SOC_BUFFER: Optional[float] = None
+class SharedVehicleGlobalConfig:
+    VEHICLES: Optional[Dict[VehicleMode, int]] = None
 
     def __post_init__(self):
-        # convert velocity km/h to m/s
-        self.VELOCITY = SimulationVelocityConverter.convert_kmh(self.VELOCITY)
+        # Calculate vehicles as totals from all operators
+        self.VEHICLES = {
+            mode: sum(
+                [
+                    operator.N_VEHICLES[mode]
+                    for operator in Configuration().shared_vehicle_operators
+                ]
+            )
+            for mode in VehicleMode
+        }
+
+    @property
+    def AVAILABLE_VEHICLE_MODES(self) -> List[VehicleMode]:
+        return list(self.VEHICLES.keys())
+
+
+@beartype
+@dataclass
+class TransitGlobalConfig:
+    @property
+    def AVAILABLE_VEHICLE_MODES(self) -> List[str]:
+        # TODO: Use enum for this
+        available_modes = []
+        if self.N_BUSES_TOTAL > 0:
+            available_modes.append("Bus")
+        return available_modes
+
+    @property
+    def AVAILABLE_MODES_SUPPLY(self) -> List[int]:
+        return [self.N_BUSES_TOTAL]
 
 
 @beartype
@@ -433,14 +479,6 @@ class SharedChargingAuctionConfig:
     AUCTION_INTERVAL: int
     TIMESLOT_DURATION: int
     AUCTION_LOOKAHEAD: int
-
-
-@beartype
-@dataclass
-class ExperimentManagementConfig:
-    START_TIME: int
-    END_TIME: int
-    SEED: int
 
 
 @beartype
@@ -545,6 +583,12 @@ class Configuration(metaclass=Singleton):
         return self._get_lazy_config("settings", SettingsConfig)
 
     @property
+    def experiment_management(self) -> ExperimentManagementConfig:
+        return self._get_lazy_config(
+            "experiment_management", ExperimentManagementConfig
+        )
+
+    @property
     def world(self) -> WorldConfig:
         return self._get_lazy_config("world", WorldConfig)
 
@@ -599,13 +643,18 @@ class Configuration(metaclass=Singleton):
         )
 
     @property
-    def shared_vehicles(self) -> Optional[Dict[str, VehicleConfig]]:
+    def shared_vehicles(self) -> Optional[Dict[VehicleMode, VehicleConfig]]:
         """Dictionary containing VehicleConfig objects for shared vehicles.
 
         Returns:
             Optional[Dict[str, VehicleConfig]]: _description_
         """
-        return self._get_lazy_config("shared_vehicles", VehicleConfig, is_dict=True)
+        config = self._get_lazy_config("shared_vehicles", VehicleConfig, is_dict=True)
+        return (
+            {VehicleMode[key]: value for key, value in config.items()}
+            if config is not None
+            else None
+        )
 
     @property
     def transit_vehicles(self) -> Optional[Dict[str, VehicleConfig]]:
@@ -624,12 +673,6 @@ class Configuration(metaclass=Singleton):
     def shared_charging_auction(self) -> SharedChargingAuctionConfig:
         return self._get_lazy_config(
             "shared_charging_auction", SharedChargingAuctionConfig
-        )
-
-    @property
-    def experiment_management(self) -> ExperimentManagementConfig:
-        return self._get_lazy_config(
-            "experiment_management", ExperimentManagementConfig
         )
 
     ##### Experiment Specific Configurations #####
