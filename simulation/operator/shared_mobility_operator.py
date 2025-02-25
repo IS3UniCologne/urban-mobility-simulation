@@ -3,6 +3,7 @@ import logging
 from simpy import Environment
 
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -43,8 +44,10 @@ class SharedMobilityOperator(Operator):
         )
 
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
-        # Get available vehicle types
-        vehicle_types = Configuration().shared_vehicle_global.AVAILABLE_VEHICLE_MODES
+        vehicle_types = [
+            mode.name
+            for mode in Configuration().shared_vehicle_global.AVAILABLE_VEHICLE_MODES
+        ]
 
         # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
         # We count the lost revenue for the "cheapest" mode
@@ -54,9 +57,15 @@ class SharedMobilityOperator(Operator):
                 and transportation_task.viable_vehicle_modes[vehicle_type] == 1
             ):
                 distance = transportation_task.origin >> transportation_task.destination
-                velocity = Configuration().shared_vehicles.get(vehicle_type).VELOCITY
+                velocity = (
+                    Configuration()
+                    .shared_vehicles.get(VehicleMode[vehicle_type])
+                    .VELOCITY
+                )
                 price_per_min = (
-                    Configuration().shared_vehicles.get(vehicle_type).PRICE_PER_MIN
+                    Configuration()
+                    .shared_vehicles.get(VehicleMode[vehicle_type])
+                    .PRICE_PER_MIN
                 )
                 missed_trip_cost = distance / velocity * price_per_min
 

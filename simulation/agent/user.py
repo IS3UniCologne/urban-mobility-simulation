@@ -7,7 +7,7 @@ import numpy as np
 import simpy
 
 import simulation.world.world as world
-from simulation.helper.configuration.enums import PopulationType, UserState
+from simulation.helper.configuration.enums import PopulationType, UserState, VehicleMode
 from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.vehicle.walking import Walking
@@ -264,7 +264,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                     isinstance(alternative.vehicle, SharedCar)
                     and distance_to_vehicle
                     < config.shared_vehicles.get(
-                        alternative.vehicle.__class__.__name__
+                        VehicleMode[alternative.vehicle.__class__.__name__]
                     ).WALKING_DISTANCE
                 ):  # See own paper
                     filtered_list.append(
@@ -279,7 +279,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                     isinstance(alternative.vehicle, SharedKickScooter)
                     and distance_to_vehicle
                     < config.shared_vehicles.get(
-                        alternative.vehicle.__class__.__name__
+                        VehicleMode[alternative.vehicle.__class__.__name__]
                     ).WALKING_DISTANCE
                 ):  # See Reck
                     filtered_list.append(
@@ -294,7 +294,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                     isinstance(alternative.vehicle, SharedScooter)
                     and distance_to_vehicle
                     < config.shared_vehicles.get(
-                        alternative.vehicle.__class__.__name__
+                        VehicleMode[alternative.vehicle.__class__.__name__]
                     ).WALKING_DISTANCE
                 ):  # See Nothing..
                     filtered_list.append(
@@ -309,7 +309,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                     isinstance(alternative.vehicle, SharedBike)
                     and distance_to_vehicle
                     < config.shared_vehicles.get(
-                        alternative.vehicle.__class__.__name__
+                        VehicleMode[alternative.vehicle.__class__.__name__]
                     ).WALKING_DISTANCE
                 ):  # See Nothing..
                     filtered_list.append(

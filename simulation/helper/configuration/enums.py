@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, IntEnum
 
 
 class TemporalBucket(Enum):
@@ -35,6 +35,13 @@ class PopulationType(Enum):
     CLUSTER_3 = 3
     PRICE_SENSITIVE = 4
     CONVENIENCE_SEEKER = 5
+
+
+class VehicleMode(IntEnum):
+    SharedCar = 0
+    SharedScooter = 1
+    SharedKickScooter = 2
+    SharedBike = 3
 
 
 class UserState(Enum):

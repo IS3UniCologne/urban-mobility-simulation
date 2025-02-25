@@ -4,6 +4,7 @@ import pandas as pd
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.vehicle.ride_hailing_AV import RideHailingAV
@@ -296,10 +297,10 @@ def generate_mixed_fleet(env, fleet_config):
     config = Configuration()
 
     # Load Vehicle Configurations
-    car_config = config.shared_vehicles["SharedCar"]
-    scooter_config = config.shared_vehicles["SharedScooter"]
-    kick_scooter_config = config.shared_vehicles["SharedKickScooter"]
-    bike_config = config.shared_vehicles["SharedBike"]
+    car_config = config.shared_vehicles[VehicleMode.SharedCar]
+    scooter_config = config.shared_vehicles[VehicleMode.SharedScooter]
+    kick_scooter_config = config.shared_vehicles[VehicleMode.SharedKickScooter]
+    bike_config = config.shared_vehicles[VehicleMode.SharedBike]
 
     for index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon

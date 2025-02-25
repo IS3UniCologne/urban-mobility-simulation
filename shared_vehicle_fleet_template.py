@@ -23,6 +23,7 @@ from simulation.helper.configuration.configuration import (
     Configuration,
     ModeChoiceStrategy,
 )
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
 from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
 
@@ -237,10 +238,12 @@ supply_prob = pd.read_csv(config.path.PATH_VEHICLE_SUPPLY)
 # Configure and generate / spawn shared fleet vehicles
 shared_vehicle_fleet_config = generate_fleet_config(
     supply_prob,
-    n_cars=config.shared_vehicle_global.N_CARS,
-    n_scooter=config.shared_vehicle_global.N_SCOOTERS,
-    n_kick_scooter=config.shared_vehicle_global.N_KICKSCOOTERS,
-    n_bikes=config.shared_vehicle_global.N_BIKES,
+    n_cars=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.SharedCar],
+    n_scooter=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.SharedScooter],
+    n_kick_scooter=config.shared_vehicle_operators[0].N_VEHICLES[
+        VehicleMode.SharedKickScooter
+    ],
+    n_bikes=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.SharedBike],
 )
 mixed_fleet = generate_mixed_fleet(env, shared_vehicle_fleet_config)
 
@@ -253,8 +256,12 @@ operations = IntegratedSharedMobilityOperations(
     time_between_operations=config.shared_vehicle_operators[0].OPERATIONS_START,
     operation_duration=config.shared_vehicle_operators[0].OPERATIONS_DURATION,
     distance_matrix=distance_matrix,
-    ordered_available_vehicle_modes=config.shared_vehicle_global.AVAILABLE_VEHICLE_MODES,
-    ordered_max_vehicle_supply=config.shared_vehicle_global.AVAILABLE_MODES_SUPPLY,
+    ordered_available_vehicle_modes=config.shared_vehicle_operators[
+        0
+    ].AVAILABLE_VEHICLE_MODES,
+    ordered_max_vehicle_supply=config.shared_vehicle_operators[
+        0
+    ].AVAILABLE_MODES_SUPPLY,
     state_of_charge_threshold=config.shared_vehicle_operators[0].RECHARGE_THRESHOLD,
     base_regions=config.shared_vehicle_operators[0].BASE_REGIONS,
     base_capacity=config.shared_vehicle_operators[0].BASE_CAPACITY,
@@ -305,7 +312,7 @@ def get_cost_per_vehicle_km():
     res = {}
 
     for key, value in config.shared_vehicles.items():
-        res[key] = value.COST_PER_KM
+        res[key.name] = value.COST_PER_KM
 
     return res
 
@@ -314,7 +321,7 @@ def get_co2_per_vehicle_km():
     res = {}
 
     for key, value in config.shared_vehicles.items():
-        res[key] = value.KG_CO2_PER_KM
+        res[key.name] = value.KG_CO2_PER_KM
 
     return res
 
@@ -356,10 +363,14 @@ def run_simulation(end_time, seed=4711, env=env):
         metrics_factory = MetricsFactory(transactions)
 
         num_vehicles = {
-            "SharedBike": config.shared_vehicle_global.N_BIKES,
-            "SharedCar": config.shared_vehicle_global.N_CARS,
-            "SharedKickScooter": config.shared_vehicle_global.N_KICKSCOOTERS,
-            "SharedScooter": config.shared_vehicle_global.N_SCOOTERS,
+            "SharedBike": config.shared_vehicle_global.VEHICLES[VehicleMode.SharedBike],
+            "SharedCar": config.shared_vehicle_global.VEHICLES[VehicleMode.SharedCar],
+            "SharedKickScooter": config.shared_vehicle_global.VEHICLES[
+                VehicleMode.SharedKickScooter
+            ],
+            "SharedScooter": config.shared_vehicle_global.VEHICLES[
+                VehicleMode.SharedScooter
+            ],
         }
 
         metrics_factory.print_simulation_summary(
