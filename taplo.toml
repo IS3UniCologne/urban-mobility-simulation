@@ -1,3 +1,5 @@
+include = ["resources/configurations/*.toml"]
+
 [formatting]
 array_auto_collapse = true
 array_auto_expand   = false
