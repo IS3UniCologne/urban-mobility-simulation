@@ -354,9 +354,6 @@ class SharedVehicleOperatorConfig:
 @dataclass
 class RideHailingOperatorConfig:
     RECHARGE_THRESHOLD: List[float]
-    NUMBER_OF_BASE_REGIONS: int
-    NUMBER_OF_SERVICE_WORKERS: int
-    BASE_CAPACITY: int
     OPERATIONS_START: int
     OPERATIONS_DURATION: int
     VEHICLE_RELOCATION_VELOCITY: float
