@@ -16,7 +16,7 @@ class DemandImporter:
         temporal_resolution: TemporalBucket = TemporalBucket.FOUR_HOURLY_BUCKETS,
         spatial_resolution: SpatialResolution = SpatialResolution.HEX_7,
         daily_resolution: DailyResolution = DailyResolution.WEEKDAY_WEEKEND,
-        city="chicago",
+        city: str = "chicago",
     ):
         """
         Initizalize Demand Importer. Reads Trip Data and transform it to spatio-temporal cells
@@ -271,7 +271,8 @@ class DemandImporter:
         """
 
         cache_path = Path(
-            "data/demand/", f"weekday_{temporal_column}_{hex_start_column}.parquet"
+            "data/demand/",
+            f"{city}_weekday_{temporal_column}_{hex_start_column}.parquet",
         )
 
         # Cache results

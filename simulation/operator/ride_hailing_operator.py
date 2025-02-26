@@ -38,7 +38,9 @@ class RideHailingOperator(Operator):
             allocation_engine,
         )
 
-        self._driver_payment_share = Configuration.instance().get_driver_payment_share()
+        self._driver_payment_share = (
+            Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
+        )
 
     def pay_for_fulfilled_transportation_task(
         self,
@@ -60,12 +62,8 @@ class RideHailingOperator(Operator):
         self._transactions.append(
             {
                 "vehicle_id": selected_transportation_alternative.vehicle.id,
-                "origin": selected_transportation_alternative.route.origin.get_hexagon()[
-                    0
-                ],
-                "destination": selected_transportation_alternative.route.destination.get_hexagon()[
-                    0
-                ],
+                "origin": selected_transportation_alternative.route.origin.get_hexagon_id(),
+                "destination": selected_transportation_alternative.route.destination.get_hexagon_id(),
                 "time_start": transportation_task.time,
                 "time_end": self._env.now,
                 "price": selected_transportation_alternative.price,
@@ -86,7 +84,7 @@ class RideHailingOperator(Operator):
 
         logging.info(
             f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
+            extra={"clazz": self.__class__.__name__, "oid": self._fleet.id},
         )
 
     def withdraw_transportation_task(
@@ -100,10 +98,8 @@ class RideHailingOperator(Operator):
         # Add Transaction to Log
         self._transactions.append(
             {
-                "origin": transportation_task.origin.get_hexagon(return_geom=False)[0],
-                "destination": transportation_task.destination.get_hexagon(
-                    return_geom=False
-                )[0],
+                "origin": transportation_task.origin.get_hexagon_id(),
+                "destination": transportation_task.destination.get_hexagon_id(),
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,
@@ -122,5 +118,5 @@ class RideHailingOperator(Operator):
 
         logging.info(
             f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
+            extra={"clazz": self.__class__.__name__, "oid": self._fleet.id},
         )

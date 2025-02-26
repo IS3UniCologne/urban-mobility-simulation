@@ -3,6 +3,7 @@ import logging
 from simpy import Environment
 
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -43,8 +44,10 @@ class SharedMobilityOperator(Operator):
         )
 
     def withdraw_transportation_task(self, user, transportation_task: TransportTask):
-        # Get available vehicle types
-        vehicle_types = Configuration.instance().get_available_shared_vehicle_types()
+        vehicle_types = [
+            mode.name
+            for mode in Configuration().shared_vehicle_global.AVAILABLE_VEHICLE_MODES
+        ]
 
         # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
         # We count the lost revenue for the "cheapest" mode
@@ -55,14 +58,14 @@ class SharedMobilityOperator(Operator):
             ):
                 distance = transportation_task.origin >> transportation_task.destination
                 velocity = (
-                    Configuration.instance()
-                    .get_shared_vehicle_config(vehicle_type)
-                    .velocity
+                    Configuration()
+                    .shared_vehicles.get(VehicleMode[vehicle_type])
+                    .VELOCITY
                 )
                 price_per_min = (
-                    Configuration.instance()
-                    .get_shared_vehicle_config(vehicle_type)
-                    .price_per_min
+                    Configuration()
+                    .shared_vehicles.get(VehicleMode[vehicle_type])
+                    .PRICE_PER_MIN
                 )
                 missed_trip_cost = distance / velocity * price_per_min
 
@@ -75,10 +78,8 @@ class SharedMobilityOperator(Operator):
         self._transactions.append(
             {
                 "vehicle_id": None,
-                "origin": transportation_task.origin.get_hexagon(return_geom=False)[0],
-                "destination": transportation_task.destination.get_hexagon(
-                    return_geom=False
-                )[0],
+                "origin": transportation_task.origin.get_hexagon_id(),
+                "destination": transportation_task.destination.get_hexagon_id(),
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,

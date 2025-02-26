@@ -50,7 +50,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
         bikes_in_area = []
 
         geo_env = GeodesicEnvironment.getInstance()
-        Configuration.instance()
+        Configuration()
         geometry = geo_env.get_hexagon(region)
 
         for car in self._cars:
@@ -91,28 +91,28 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
         for car in self._cars:
             if (
-                car.position.get_hexagon(return_geom=False)[0] == region
+                car.position.get_hexagon_id() == region
                 and car.state == VehicleState.PARKING
             ):
                 cars_in_area.append(car)
 
         for scooter in self._scooters:
             if (
-                scooter.position.get_hexagon(return_geom=False)[0] == region
+                scooter.position.get_hexagon_id() == region
                 and scooter.state == VehicleState.PARKING
             ):
                 scooters_in_area.append(scooter)
 
         for kick_scooter in self._kick_scooters:
             if (
-                kick_scooter.position.get_hexagon(return_geom=False)[0] == region
+                kick_scooter.position.get_hexagon_id() == region
                 and kick_scooter.state == VehicleState.PARKING
             ):
                 kick_scooters_in_area.append(kick_scooter)
 
         for bike in self._bikes:
             if (
-                bike.position.get_hexagon(return_geom=False)[0] == region
+                bike.position.get_hexagon_id() == region
                 and bike.state == VehicleState.PARKING
             ):
                 bikes_in_area.append(bike)
@@ -225,7 +225,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id, _ = vehicle.position.get_hexagon()
+                hex_id = vehicle.position.get_hexagon_id()
 
                 if hex_id not in supply:
                     supply[hex_id] = dict(zip(available_vehicles, values))
@@ -268,7 +268,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id, _ = vehicle.position.get_hexagon()
+                hex_id = vehicle.position.get_hexagon_id()
 
                 if hex_id not in low_soc_supply:
                     low_soc_supply[hex_id] = dict(zip(available_vehicles, values))

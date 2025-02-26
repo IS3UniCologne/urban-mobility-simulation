@@ -26,15 +26,19 @@ class MixedRideHailingFleet(VehicleFleet):
     def __init__(self, env: Environment):
         super(MixedRideHailingFleet, self).__init__(env)
         self._env = env
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         self._ridehailing_cars = []
         self._autonomous_cars = []
-        self._distance_threshold_to_user = self._config.get_distance_threshold_to_user()
-        self._driver_availability_vector = self._config.get_driver_availability_vector()
-        self._recharging_threshold = (
-            self._config.ridehailing_operator_config.recharge_threshold
+        self._distance_threshold_to_user = (
+            self._config.ride_hailing_global.MAX_PICKUP_DISTANCE
         )
+        self._driver_availability_vector = (
+            self._config.ride_hailing_global.DRIVER_AVAILABILITY_VECTOR
+        )
+        self._recharging_threshold = self._config.ride_hailing_operators[
+            0
+        ].RECHARGE_THRESHOLD
         self._env.process(self.fleet_size_monitor())
 
     def add_vehicle(self, vehicle: RideHailingVehicle):
@@ -63,8 +67,8 @@ class MixedRideHailingFleet(VehicleFleet):
         cars_in_area = []
 
         geo_env = GeodesicEnvironment.getInstance()
-        Configuration.instance()
-        _, geometry = geo_env.get_hexagon(region)
+        Configuration()
+        geometry = geo_env.get_hexagon(region)
 
         for car in self._vehicles:
             if car.position.is_in_geometry(geometry):
@@ -88,7 +92,7 @@ class MixedRideHailingFleet(VehicleFleet):
             car for car in self._vehicles if car.state == VehicleState.PARKING
         ]
         for car in parking_cars:
-            if car.position.get_hexagon(return_geom=False)[0] == region:
+            if car.position.get_hexagon_id() == region:
                 cars_in_area.append(car)
 
         return cars_in_area
@@ -230,7 +234,7 @@ class MixedRideHailingFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id, _ = vehicle.position.get_hexagon()
+                hex_id = vehicle.position.get_hexagon_id()
 
                 if hex_id not in supply:
                     supply[hex_id] = dict(zip(available_vehicles, values))
@@ -263,7 +267,7 @@ class MixedRideHailingFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id, _ = vehicle.position.get_hexagon()
+                hex_id = vehicle.position.get_hexagon_id()
 
                 if hex_id not in low_soc_supply:
                     low_soc_supply[hex_id] = dict(zip(available_vehicles, values))

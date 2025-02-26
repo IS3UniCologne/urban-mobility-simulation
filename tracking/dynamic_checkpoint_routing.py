@@ -5,7 +5,7 @@ from tracking.tracking import Tracking
 class DynamicCheckpointRoutingTracker:
     def __init__(self):
         self._tracking = Tracking.instance()
-        self._config = Configuration.instance()
+        self._config = Configuration()
         self._agent = self._config.dynamic_checkpoint_routing_config.learning_agent
         self._problem = self._config.dynamic_checkpoint_routing_config.problem
 

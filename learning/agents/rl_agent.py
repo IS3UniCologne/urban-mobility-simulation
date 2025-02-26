@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 
-
 from simulation.helper.configuration.configuration import Configuration
 
 
 class RLAgent(ABC):
     def __init__(self):
         # Configuration
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         # Rewards
         self._reward = 0

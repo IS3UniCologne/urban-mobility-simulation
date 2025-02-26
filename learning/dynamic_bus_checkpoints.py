@@ -36,7 +36,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
     def __init__(self, env: Environment):
         super(DynamicBusCheckpointProblem, self).__init__(env)
 
-        self._config = Configuration.instance()
+        self._config = Configuration()
         self._problem_config = self._config.dynamic_checkpoint_routing_config
 
         # Environment / World state
@@ -80,8 +80,8 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # parse or create corridor
         if self._problem_config.corridor is None:
             self._corridor = self._geodesic_env.corridor(
-                self.bus.route.origin.get_hexagon(resolution=self._action_res)[0],
-                self.bus.route.destination.get_hexagon(resolution=self._action_res)[0],
+                self.bus.route.origin.get_hexagon_id(resolution=self._action_res),
+                self.bus.route.destination.get_hexagon_id(resolution=self._action_res),
                 k=2,
             )
         elif isinstance(self._problem_config.corridor, set):
@@ -158,16 +158,16 @@ class DynamicBusCheckpointProblem(LearningInterface):
         x = np.zeros(self._state_size_flattened, dtype=np.float32)
 
         # build position vector v[hex] =1 if bus is at hex, else 0
-        pos, _ = self._corridor_sorted.index(
-            self.bus.position.get_hexagon(self._action_res)
+        pos = self._corridor_sorted.index(
+            self.bus.position.get_hexagon_id(self._action_res)
         )
         x[pos] = 1
 
         # build pick-up demand vector v[hex] = pick-up count for all currently known demands
         for d in demands:
             try:
-                start, _ = self._corridor_sorted.index(
-                    d.origin.get_hexagon(self._action_res)
+                start = self._corridor_sorted.index(
+                    d.origin.get_hexagon_id(self._action_res)
                 )
                 x[self._corridor_dim + start] += 1
             except ValueError as e:
@@ -226,8 +226,8 @@ class DynamicBusCheckpointProblem(LearningInterface):
             (
                 len(
                     h3.h3_line(
-                        self.bus.position.get_hexagon(return_geom=False)[0],
-                        self.bus.route.destination.get_hexagon(return_geom=False)[0],
+                        self.bus.position.get_hexagon_id(),
+                        self.bus.route.destination.get_hexagon_id(),
                     )
                 )
                 - 1
@@ -335,7 +335,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
         # region_id, _ = new_position.get_hexagon(self._action_res)
 
-        if new_hex == self.bus.route.destination.get_hexagon(self._action_res)[0]:
+        if new_hex == self.bus.route.destination.get_hexagon_id(self._action_res):
             self.bus._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
             logging.info(
                 f"Bus has arrived at its terminal destination at time {self.bus._time.now_as_str()}",
@@ -344,12 +344,9 @@ class DynamicBusCheckpointProblem(LearningInterface):
             self.bus._has_reached_terminal.succeed()
             return
 
-        if (
-            new_hex
-            == self.bus.route.route_stop_by_id(self._next_checkpoint).get_hexagon(
-                self._action_res
-            )[0]
-        ):
+        if new_hex == self.bus.route.route_stop_by_id(
+            self._next_checkpoint
+        ).get_hexagon_id(self._action_res):
             self.bus._state = PublicTransitVehicleState.AT_STOP
             logging.info(
                 f"Bus has arrived at the next checkpoint at time {self.bus._time.now_as_str()}",

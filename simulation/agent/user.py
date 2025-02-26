@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import logging
-from enum import Enum
 from typing import TYPE_CHECKING
 
 import numpy as np
 import simpy
 
 import simulation.world.world as world
+from simulation.helper.configuration.enums import PopulationType, UserState, VehicleMode
 from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.vehicle.walking import Walking
@@ -48,30 +48,10 @@ from ..vehicle.vehicle import Vehicle, VehicleState
 from ..vehicle_choice_model.vehicle_choice_behavior_interface import (
     VehicleChoiceBehaviorInterface,
 )
-from ..world.population.PopulationFactory import PopulationType
 from .agent import Agent
 
 if TYPE_CHECKING:
     from ..vehicle.public_transit_bus import Bus
-
-
-class UserState(Enum):
-    INITIALIZED = 0
-    SEARCHING_TRANSPORT_ALTERNATIVES = 1
-    SELECTING_TRANSPORT_ALTERNATIVES = 2
-    ALLOCATING_VEHICLE = 3
-    MOVING_TO_PICK_UP_POS = 4
-    WAITING_FOR_VEHICLE = 5
-    DRIVING = 6
-    PAYING = 7
-    FULFILLED = 8
-    CANCELLED = 9
-    MISSED = 10
-    # ride hailing specifics
-    REFUSED = 11
-    # transit user specifics
-    IN_TRANSPORT = 101
-    MOVING_TO_DESTINATION = 102  # walk after last transit stop
 
 
 class User(Agent, DriverInterface, TrackingInterface):
@@ -259,7 +239,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         # viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
         # Load Config File
-        config = Configuration.instance()
+        config = Configuration()
 
         # Filter Transportation Alternatives based on Mode Choice and Walking Distances
         filtered_list = []
@@ -283,9 +263,9 @@ class User(Agent, DriverInterface, TrackingInterface):
                 if (
                     isinstance(alternative.vehicle, SharedCar)
                     and distance_to_vehicle
-                    < config.get_shared_vehicle_config(
-                        alternative.vehicle.__class__.__name__
-                    ).max_walking_distance
+                    < config.shared_vehicles.get(
+                        VehicleMode[alternative.vehicle.__class__.__name__]
+                    ).WALKING_DISTANCE
                 ):  # See own paper
                     filtered_list.append(
                         (
@@ -298,9 +278,9 @@ class User(Agent, DriverInterface, TrackingInterface):
                 elif (
                     isinstance(alternative.vehicle, SharedKickScooter)
                     and distance_to_vehicle
-                    < config.get_shared_vehicle_config(
-                        alternative.vehicle.__class__.__name__
-                    ).max_walking_distance
+                    < config.shared_vehicles.get(
+                        VehicleMode[alternative.vehicle.__class__.__name__]
+                    ).WALKING_DISTANCE
                 ):  # See Reck
                     filtered_list.append(
                         (
@@ -313,9 +293,9 @@ class User(Agent, DriverInterface, TrackingInterface):
                 elif (
                     isinstance(alternative.vehicle, SharedScooter)
                     and distance_to_vehicle
-                    < config.get_shared_vehicle_config(
-                        alternative.vehicle.__class__.__name__
-                    ).max_walking_distance
+                    < config.shared_vehicles.get(
+                        VehicleMode[alternative.vehicle.__class__.__name__]
+                    ).WALKING_DISTANCE
                 ):  # See Nothing..
                     filtered_list.append(
                         (
@@ -328,9 +308,9 @@ class User(Agent, DriverInterface, TrackingInterface):
                 elif (
                     isinstance(alternative.vehicle, SharedBike)
                     and distance_to_vehicle
-                    < config.get_shared_vehicle_config(
-                        alternative.vehicle.__class__.__name__
-                    ).max_walking_distance
+                    < config.shared_vehicles.get(
+                        VehicleMode[alternative.vehicle.__class__.__name__]
+                    ).WALKING_DISTANCE
                 ):  # See Nothing..
                     filtered_list.append(
                         (
@@ -647,14 +627,16 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         self._id = TransitUser.transit_user_id  # User ID
         TransitUser.transit_user_id += 1  # Increment User Id
 
+        self._waiting_time = 0  # TODO: this is just to avoid null pointer exception
+
         # if the user is "passive", no vehicle allocation happens, rather the user opportunistically
         # boards transit that happens to move through the same hexagon. Another word for passive could be dumb.
         self._passive = passive
 
         # Config
-        self._config = Configuration.instance()
+        self._config = Configuration()
         # TODO: somehow this must be decoupled - by making the user unaware of problems
-        self._problem_config = self._config.dynamic_checkpoint_routing_config
+        # self._problem_config = self._config.dynamic_checkpoint_routing_config
         # Comment out for now to run a bus without RL Agent
         # self._bus_res = self._problem_config.action_resolution
         self._bus_res = 8
@@ -676,7 +658,6 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         Life Cycle of TransitUser
         :return:
         """
-
         while self._state != UserState.FULFILLED and self._state != UserState.MISSED:
             try:
                 if not self._passive:
@@ -731,6 +712,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                         self, self._transport_task, selected_transportation_alternative
                     )
                 else:
+                    # The passive user only works with the dynamic bus agent
                     # TODO: even this opportunistic user should just walk in certain scenarios and withdraw its demand
 
                     # wait for some transit to spawn
@@ -929,8 +911,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def _demand_aligns(self, vehicle: Bus):
         if (
-            self.transport_task.origin.get_hexagon(return_geom=False)
-            == self.transport_task.destination.get_hexagon(return_geom=False)[0]
+            self.transport_task.origin.get_hexagon_id()
+            == self.transport_task.destination.get_hexagon_id()
         ):
             # we don't want to service demands that board and unboard at the same station, they can walk
             return False
@@ -972,10 +954,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             self.mount_vehicle(vehicle)
 
         # drive in vehicle until destination hexagon is reached, this might not happen at all
-        while (
-            self.transport_task.destination.get_hexagon(self._bus_res)[0]
-            != vehicle.position.get_hexagon(self._bus_res)[0]
-        ):
+        while self.transport_task.destination.get_hexagon_id(
+            self._bus_res
+        ) != vehicle.position.get_hexagon_id(self._bus_res):
             yield vehicle._position_changed
 
         self.unmount_vehicle(vehicle)
@@ -1008,10 +989,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             # drive in vehicle while
             # a) destination not reached
             # b) checkpoint not reached that is "beyond" the destination
-            at_dest = (
-                self.transport_task.destination.get_hexagon(self._bus_res)[0]
-                == vehicle.position.get_hexagon(self._bus_res)[0]
-            )
+            at_dest = self.transport_task.destination.get_hexagon_id(
+                self._bus_res
+            ) == vehicle.position.get_hexagon_id(self._bus_res)
             at_checkpoint = vehicle.state is PublicTransitVehicleState.AT_STOP
             unreachable_dest = False
 
@@ -1057,10 +1037,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def wait_for_transit(self, vehicle: Vehicle):
         # wait indefinitely for transit pick up
-        while (
-            self.position.get_hexagon(self._bus_res)[0]
-            != vehicle.position.get_hexagon(self._bus_res)[0]
-        ):
+        while self.position.get_hexagon_id(
+            self._bus_res
+        ) != vehicle.position.get_hexagon_id(self._bus_res):
             yield vehicle._position_changed
 
         self._assigned_vehicle_arrived.succeed()
@@ -1095,8 +1074,26 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         return f"TransitUser with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"
 
 
-class RideHailingUser(Agent, DriverInterface):
+class RideHailingUser(Agent, DriverInterface, TrackingInterface):
     user_id = 0
+
+    __slots__ = (
+        "_id",
+        "_position",
+        "_transport_task",
+        "_fleet",
+        "_transportation_search_service",
+        "_vehicle_assignment_service",
+        "_payment_service",
+        "_population_type",
+        "_env",
+        "_vehicle_choice_behavior",
+        "_mode_choice_coefficients",
+        "_AV_truster",
+        "_state",
+    )
+
+    exposes = ["_position", "_state", "_transport_task"]
 
     def __init__(
         self,
@@ -1135,18 +1132,18 @@ class RideHailingUser(Agent, DriverInterface):
         # Vehicle Choice Model
         self._vehicle_choice_behavior = vehicle_choice_behavior
         # # use it if you want to consider deterministic coefficients
-        # self._mode_choice_coefficients = Configuration.instance().MoD_coefficients[population_type.value]
+        # self._mode_choice_coefficients = Configuration().MoD_coefficients[population_type.value]
 
         # # use it if you want to consider a random coefficient between the lower and the upper bounds
         self._mode_choice_coefficients = (
-            Configuration.instance().generate_mode_choice_coefficient(
-                population_type.value
+            Configuration().mode_choice_model.generate_mode_choice_coefficients(
+                population_type
             )
         )
         # # use it if you want to consider deterministic trust values
-        # self._AV_truster = Configuration.instance().AV_trust[population_type.value]
-        self._AV_truster = Configuration.instance().generate_AV_trust(
-            population_type.value
+        # self._AV_truster = Configuration().AV_trust[population_type.value]
+        self._AV_truster = Configuration().mode_choice_model.generate_AV_trust(
+            population_type
         )
 
         # Events
@@ -1648,6 +1645,12 @@ class RideHailingUser(Agent, DriverInterface):
 
     def identify_driver(self):
         return f"User {self._id}"
+
+    def dump(self, exposed_only: bool = True) -> dict:
+        if exposed_only:
+            return {x: self.get(x) for x in self.exposes}
+        else:
+            return {x: self.get(x) for x in self.__slots__}
 
     """
         Auxiliary Functions

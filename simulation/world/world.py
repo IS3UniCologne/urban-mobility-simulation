@@ -104,7 +104,7 @@ class World:
         self._charging_infrastructure = charging_infrastructure
 
         # Config
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         # Add Population Factory
         self._population_factory = population_factory
@@ -143,10 +143,10 @@ class World:
             geo_env = GeodesicEnvironment.getInstance()
 
             origin_lat, origin_lng = geo_env.get_random_position(
-                origin, f"hex_{self._config.spatial_resolution_value}"
+                origin, f"hex_{self._config.world.SPATIAL_RESOLUTION_VALUE}"
             )
             destination_lat, destination_lng = geo_env.get_random_position(
-                destination, f"hex_{self._config.spatial_resolution_value}"
+                destination, f"hex_{self._config.world.SPATIAL_RESOLUTION_VALUE}"
             )
 
             origin_position = GeodesicPosition(
@@ -165,7 +165,7 @@ class World:
             if mode == "public_transport":
                 # User Preferences
                 max_wait_time = normal(
-                    self._config.user_config.max_wait
+                    self._config.user.TRANSIT_MAX_WAIT
                 )  # sample from normal dist centered on config
 
                 # Generate Transportation Task
@@ -191,7 +191,6 @@ class World:
                     self._vehicle_choice_behavior,
                     population_type,
                     self._env,
-                    passive=True,
                 )
             elif mode == "shared_vehicle":
                 # Generate Transportation Task
@@ -277,8 +276,7 @@ class World:
             # Add user to user list
             self._users.append(new_user)
             # register user with tracking
-            # TODO: Leave these lines commented out until the issue is resolved --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/48
-            # new_user_uid = self._tracking.register(new_user)
+            new_user_uid = self._tracking.register(new_user)
 
             # Start Process for each new user
             self._user_processes.append(
@@ -286,7 +284,7 @@ class World:
             )
 
             # Spawn cleanup process for that user
-            # self._env.process(self._cleanup_user(new_user, new_user_uid))
+            self._env.process(self._cleanup_user(new_user, new_user_uid))
 
             if len(self._users) == self._user_limit:
                 logging.info(
