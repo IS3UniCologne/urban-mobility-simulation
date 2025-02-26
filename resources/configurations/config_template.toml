@@ -139,11 +139,6 @@ SharedBike        = 200
 [[RIDE_HAILING_OPERATOR]]
 # When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
 RECHARGE_THRESHOLD     = [0.40, 0.45, 0.50, 0.55, 0.52, 0.50, 0.48, 0.45, 0.45, 0.42, 0.40, 0.40, 0.40, 0.40, 0.40, 0.38, 0.35, 0.32, 0.30, 0.30, 0.27, 0.30, 0.32, 0.35]
-NUMBER_OF_BASE_REGIONS = 10
-# Number of Service Worker
-NUMBER_OF_SERVICE_WORKERS = 100000
-# Base vehicle capacity (i.e.g, how many vehicle can we provide services)
-BASE_CAPACITY = 100000
 # Operations Start Time (e.g., 1440 => 00:00am) !!! 20.000 --> quasi no operations !!!
 OPERATIONS_START = 15
 # Operations Duration (e.g., 8 working hours => 8*60 => 480)
