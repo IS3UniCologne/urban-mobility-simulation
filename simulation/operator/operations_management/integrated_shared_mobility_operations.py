@@ -332,9 +332,12 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             self._operator_reference.fleet, transactions
         )
 
-        config = Configuration.instance()
-        if config.store_results:
-            state.to_csv(Path(config.output_path, config.fleet_state_file), index=False)
+        config = Configuration()
+        if config.settings.PERSIST_RESULTS:
+            state.to_csv(
+                Path(config.path.OUTPUT_FOLDER, config.path.FLEET_STATE_FILE),
+                index=False,
+            )
 
         charging_plans, used_capacity = self.calculate_charging_plan(state)
 

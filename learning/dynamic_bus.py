@@ -25,7 +25,7 @@ class DynamicBusProblem(LearningInterface):
         super(DynamicBusProblem, self).__init__(env)
 
         # Config
-        self._config = Configuration.instance()
+        self._config = Configuration()
         self._problem_config = self._config.dynamic_routing_config
 
         # Environment / World state

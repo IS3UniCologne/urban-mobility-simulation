@@ -91,7 +91,9 @@ class ChargingTask(ServiceTask):
             # In the real world, these processes would be in parallel rather than in a linear fashion
             # However, the total duration of both approaches (parallel, linearized) coincides.
             # Thus, we ensure that the service workers spends the same amount of time as in the parallel case.
-            vehicle_relocation_velocity = Configuration.instance().shared_vehicle_operator_config.vehicle_relocation_velocity
+            vehicle_relocation_velocity = (
+                Configuration().shared_vehicle_operators[0].VEHICLE_RELOCATION_VELOCITY
+            )
             relocation_duration_per_vehicle = (
                 distance / vehicle_relocation_velocity
             ) / len(selected_vehicles_to_charge)
@@ -109,7 +111,9 @@ class ChargingTask(ServiceTask):
             vehicle.plug_to_charging_station()
 
             # Charge Vehicle
-            vehicle_charging_power = Configuration.instance().shared_vehicle_operator_config.charging_station_power
+            vehicle_charging_power = (
+                Configuration().shared_vehicle_operators[0].CHARGING_STATION_POWER
+            )
             # Note: See text regarding linearization
             # *60 as state of charge is in kWh => kWmin
             charging_duration_per_vehicles = (

@@ -37,7 +37,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._state_of_charge_threshold = state_of_charge_threshold
         self._distance_matrix = distance_matrix
 
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         self._charging_operations = None
 
@@ -46,17 +46,17 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             env=self._env,
             charging_infrastructure=self._operator_reference.charging_infrastructure,
-            lookahead=self._config.auction_config.auction_start
-            + self._config.shared_charging_config.auction_lookahead,
+            lookahead=self._config.auction.AUCTION_START
+            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD,
         )
 
         self._charging_operations = RideHailingBaseChargingOperations(
             env=self._env,
             distance_matrix=self._distance_matrix,
-            time_between_operations=self._config.shared_charging_config.auction_interval,
+            time_between_operations=self._config.shared_charging_auction.AUCTION_INTERVAL,
             operation_duration=None,  # does not matter
-            available_modes=self._config.ridehailing_operator_config.available_modes,
-            available_modes_supply=self._config.ridehailing_operator_config.available_modes_supply,
+            available_modes=self._config.ride_hailing_global.AVAILABLE_VEHICLE_MODES,
+            available_modes_supply=self._config.ride_hailing_global.AVAILABLE_MODES_SUPPLY,
             state_of_charge_threshold=self._state_of_charge_threshold,
             allow_queue=False,  # no queue, only reserved slots
         )
@@ -82,12 +82,9 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
             yield self._env.process(self._bid_for_capacity())
 
-    def get_task_transactions(self):
-        return self._charging_operations.task_transactions
-
     def _bid_for_capacity(self):
         yield self._auction.open_for_bidding
-        # timeslots are denoted by their start time and have length `self._config.shared_charging_config.timeslot_duration`
+        # timeslots are denoted by their start time and have length `self._config.shared_charging_auction.TIMESLOT_DURATION`
         auctioned_timeslot = self._auction.next_timeslot
         auctioned_capacity = self._auction.get_auctioned_capacity()
         logging.debug(
@@ -151,3 +148,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
         yield self._env.timeout(1)
         self._env.process(self._charging_operations.execute())
+
+    @property
+    def task_transactions(self):
+        return self._charging_operations.task_transactions

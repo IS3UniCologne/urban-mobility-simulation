@@ -23,9 +23,11 @@ class PublicTransportSearchEngine(SearchEngineInterface):
     def __init__(self, env, fleet: PublicTransportVehicleFleet):
         self._env = env
         self._fleet = fleet
-        self._config = Configuration.instance()
-        self._operator_config = self._config.transit_operator_config
-        self._user_config = self._config.user_config
+        self._config = Configuration()
+        self._operator_config = self._config.transit_operators[
+            0
+        ]  # TODO: multiple operators
+        self._user_config = self._config.user
         self._geo_env = GeodesicEnvironment.getInstance()
 
     def find_viable_transit(
@@ -49,7 +51,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         if not busses:
             # No busses are en-route, report no viable alternative
             # TODO: fallback to timetable if temporal_lookahead > transit operator planning window?
-            if temporal_lookahead > self._operator_config.planning_lookahead:
+            if temporal_lookahead > self._operator_config.PLANNING_LOOKAHEAD:
                 raise NotImplementedError(
                     "temporal lookahead of user > planning lookahead of operator currently not supported"
                 )
@@ -130,8 +132,8 @@ class PublicTransportSearchEngine(SearchEngineInterface):
 
         for viable_transit in self.find_viable_transit(
             transportation_search_task,
-            self._user_config.spatial_strategy,
-            self._user_config.max_wait,
+            self._user_config.SPATIAL_STRATEGY,
+            self._user_config.TRANSIT_MAX_WAIT,
         ):
             vehicle = viable_transit["vehicle"]
             subroute = viable_transit["subroute"]
@@ -149,7 +151,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
             duration = SimulationTimeConverter.duration_between(
                 SimulationTimeConverter.as_str(search_time),
                 vehicle.prognose_arrival(subroute.destination),
-            ) + (walking_dist_to_destination / self._user_config.walking_speed)
+            ) + (walking_dist_to_destination / self._user_config.WALKING_SPEED)
 
             # TODO: convenience=0 is only a placeholder
             transportation_alternative = TransportationAlternative(
@@ -227,7 +229,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         # reachable within the specified temporal_lookahead and depart after arrival by foot
         reachable = (
             SimulationTimeConverter.as_str(
-                current_time + (walking_dist / self._user_config.walking_speed)
+                current_time + (walking_dist / self._user_config.WALKING_SPEED)
             )
             <= vehicle.prognose_arrival(stop)
             <= latest_departure

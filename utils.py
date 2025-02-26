@@ -1,45 +1,28 @@
-import os
-import sys
-from configparser import ConfigParser
-from pathlib import Path
-from typing import Optional
-
 import geopandas as gpd
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
-
-# Change working directory to path of main.py
-working_dir = Path(__file__).parent
-os.chdir(working_dir)
-
-# Read args
-parser = ConfigParser()
-parser.read(sys.argv[1])
+from simulation.helper.configuration.configuration import Configuration
 
 
-def load_environment(city):
-    # Environment files
-    bounding_box_path = parser.get("ENVIRONMENT", "path_env_bounding_box")
-    env_layer_hex_7 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_7")
-    env_layer_hex_8 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_8")
-    env_layer_hex_9 = parser.get("ENVIRONMENT", "path_env_hex_layer_res_9")
-
+# TODO: Why is this not part of the GeodesicEnvironment class?
+def load_geodesic_environment() -> GeodesicEnvironment:
+    config = Configuration()
     # Read Environment Files
-    filename = bounding_box_path.format(city=city)
+    filename = config.path.PATH_ENV_BOUNDING_BOX
     with open(filename, encoding="utf-8") as file:
         env_df = gpd.read_file(file)
 
-    filename = env_layer_hex_9.format(city=city)
+    filename = config.path.PATH_ENV_HEX_LAYER_RES_9
     with open(filename, encoding="utf-8") as file:
         env_df_hex_9 = gpd.read_file(file, driver="GeoJSON")
         env_df_hex_9.set_index("hex_id_9", inplace=True)
 
-    filename = env_layer_hex_8.format(city=city)
+    filename = config.path.PATH_ENV_HEX_LAYER_RES_8
     with open(filename, encoding="utf-8") as file:
         env_df_hex_8 = gpd.read_file(file)
         env_df_hex_8.set_index("hex_id_8", inplace=True)
 
-    filename = env_layer_hex_7.format(city=city)
+    filename = config.path.PATH_ENV_HEX_LAYER_RES_7
     with open(filename, encoding="utf-8") as file:
         env_df_hex_7 = gpd.read_file(file)
         env_df_hex_7.set_index("hex_id_7", inplace=True)
@@ -51,16 +34,3 @@ def load_environment(city):
     geodesic_environment.addLayer("hex_7", env_df_hex_7)
 
     return geodesic_environment
-
-
-def parse_multiline_list(
-    section: str, key: str, delimiter: str, cast: Optional[type] = None
-):
-    multiline = (
-        parser.get(section, key).replace("\n", "").replace(" ", "").split(delimiter)
-    )
-    multiline = multiline[0] if len(multiline) == 1 else multiline
-    if isinstance(multiline, list):
-        return [cast(x) for x in multiline] if cast is not None else multiline
-    else:
-        return cast(multiline) if cast is not None else multiline

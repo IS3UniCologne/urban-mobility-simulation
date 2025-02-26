@@ -17,8 +17,8 @@ from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 class DowntimeMinWithoutLookahead:
     def __init__(self) -> None:
-        self._config = Configuration.instance()
-        self._av_config = self._config.get_ridehailing_vehicle_config("AutonomousCar")
+        self._config = Configuration()
+        self._av_config = self._config.ride_hailing_vehicles["AutonomousCar"]
 
     def generate_charging_allocation(
         self, vehicles, CSs
@@ -72,11 +72,11 @@ class DowntimeMinWithoutLookahead:
                 # if isinstance(S[i.id], list):
                 #     S[i.id] = float(S[i.id][0])
             alpha = (
-                self._av_config.energy_consumption
+                self._av_config.ENERGY_CONSUMPTION
             )  # charging consumption per distance in kWh/km
-            beta = self._av_config.max_state_of_charge  # max state of charge in kWh
+            beta = self._av_config.MAX_STATE_OF_CHARGE  # max state of charge in kWh
             rho = (
-                self._config.ridehailing_operator_config.allocation_penalty
+                self._config.ride_hailing_global.LOW_SOC_PENALTY
             )  # penalty for not allocating vehicles to CSs, scaled by 1 - SOC
 
             # x : main allocation variable; x_ij: if CS i is assigned to vehicle j
@@ -154,7 +154,7 @@ class DowntimeMinWithoutLookahead:
             for j in vehicles:
                 for i in CSs:
                     T_d[i.id, j.id] = (
-                        d[i.id, j.id] / self._av_config.velocity * x[i.id, j.id]
+                        d[i.id, j.id] / self._av_config.VELOCITY * x[i.id, j.id]
                     )
 
                     # the queueing time will vary based on how many vehicles are send there, we need to take this into account
