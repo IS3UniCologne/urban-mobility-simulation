@@ -13,7 +13,7 @@ class RLAgent(ABC):
         self._env = env
 
         # Configuration
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         # Action space
         self._action_space = ActionSpace.instance()

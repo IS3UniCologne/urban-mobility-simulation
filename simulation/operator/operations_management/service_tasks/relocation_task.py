@@ -78,7 +78,9 @@ class RelocationTask(ServiceTask):
             # Calculate Relocation Cost based on distance, relocation velocity and number of vehicles to relocate.
             # As in the charging task, we linearize the relocation task if multiple vehicles need to be relocated.
             # Thus, we ensure that the total relocation cost corresponds to the parallel case.
-            vehicle_relocation_velocity = Configuration.instance().shared_vehicle_operator_config.vehicle_relocation_velocity
+            vehicle_relocation_velocity = (
+                Configuration().shared_vehicle_operators[0].VEHICLE_RELOCATION_VELOCITY
+            )
             relocation_duration_per_vehicle = (
                 relocation_route.distance / vehicle_relocation_velocity
             ) / len(selected_vehicles_to_relocate)

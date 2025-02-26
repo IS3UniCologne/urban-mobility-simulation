@@ -34,7 +34,7 @@ class Auction(ABC):
 
     def __init__(self, env: Environment, start_condition, end_condition) -> None:
         self._env = env
-        self._config = Configuration.instance()
+        self._config = Configuration()
         self._start_condition = start_condition
         self._end_condition = end_condition
         self._is_open = False

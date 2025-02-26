@@ -1,15 +1,6 @@
-from enum import Enum
-
 import numpy
 
-
-class PopulationType(Enum):
-    CLUSTER_0 = 0
-    CLUSTER_1 = 1
-    CLUSTER_2 = 2
-    CLUSTER_3 = 3
-    PRICE_SENSITIVE = 4
-    CONVENIENCE_SEEKER = 5
+from simulation.helper.configuration.enums import PopulationType
 
 
 class PopulationFactory:

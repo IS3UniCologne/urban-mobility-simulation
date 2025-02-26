@@ -26,8 +26,10 @@ class OperationsPublicTransport(OperationsInterface):
         self._fleet = fleet
 
         # Config
-        self._config = Configuration.instance()
-        self._operator_config = self._config.transit_operator_config
+        self._config = Configuration()
+        self._operator_config = self._config.transit_operators[
+            0
+        ]  # TODO: This should not be hardcoded, pass an operator object instead
         # Environment
         self._geodesic_env = GeodesicEnvironment.getInstance()
         self._world = (
@@ -37,8 +39,8 @@ class OperationsPublicTransport(OperationsInterface):
         self._tracking = (
             None  # defer loading to run process, otherwise circular dependency
         )
-        self._walking_speed = self._config.user_config.walking_speed
-        self._bus_velocity = self._config.bus_config.velocity
+        self._walking_speed = self._config.user.WALKING_SPEED
+        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY
 
     def execute(self):
         """
@@ -54,9 +56,9 @@ class OperationsPublicTransport(OperationsInterface):
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
 
-                if len(self._fleet._busses) < self._operator_config.max_busses:
+                if len(self._fleet._busses) < self._operator_config.MAX_BUSSES:
                     trips = self._timetable.next_trips(
-                        self._time, self._operator_config.planning_lookahead
+                        self._time, self._operator_config.PLANNING_LOOKAHEAD
                     )
 
                     if trips:  # non-empty list is True
@@ -76,7 +78,7 @@ class OperationsPublicTransport(OperationsInterface):
 
                             if (
                                 len(self._fleet.get_busses())
-                                >= self._operator_config.max_busses
+                                >= self._operator_config.MAX_BUSSES
                             ):
                                 break
 

@@ -69,13 +69,13 @@ class RideHailingVehicle(Vehicle):
         self.travel_costs = 0
         self.charging_costs = 0
 
-        self._config = Configuration.instance()
+        self._config = Configuration()
 
         # State Of Charge
         self._max_state_of_charge = max_state_of_charge  # in kWh
-        initial_state_of_charge_percentage = self._config._ridehailing_vehicle_configs[
+        initial_state_of_charge_percentage = self._config.ride_hailing_vehicles[
             "RideHailingCar"
-        ].initial_SoC
+        ].INITIAL_SOC
         if initial_state_of_charge_percentage == 0:
             initial_state_of_charge_percentage = random.uniform(0.2, 0.8)
 
@@ -86,9 +86,9 @@ class RideHailingVehicle(Vehicle):
         if not self._is_electric:
             self._energy_consumption = (
                 energy_consumption
-                * self._config._ridehailing_vehicle_configs[
+                * self._config.ride_hailing_vehicles[
                     "RideHailingCar"
-                ].EV_relative_energy_consumption
+                ].EV_RELATIVE_ENERGY_CONSUMPTION
             )
 
         #### Vehicle Events
@@ -129,14 +129,12 @@ class RideHailingVehicle(Vehicle):
         self._destination = None
 
         # costs
-        self._cost_km = self._config._ridehailing_vehicle_configs[
+        self._cost_km = self._config.ride_hailing_vehicles["RideHailingCar"].COST_PER_KM
+        self._charging_cost_per_kWh = self._config.ride_hailing_vehicles[
             "RideHailingCar"
-        ].cost_per_km
-        self._charging_cost_per_kWh = self._config._ridehailing_vehicle_configs[
-            "RideHailingCar"
-        ].charging_cost_per_kWh
+        ].CHARGING_COST_PER_KWH
 
-        self._emergency_buffer_percent: float
+        self._emergency_soc_buffer_percent: float
 
         RideHailingVehicle.ride_hailing_vehicle_id += 1
 
@@ -323,14 +321,14 @@ class RideHailingVehicle(Vehicle):
         """
         Check if vehicle has enough SoC left for trip
         :param distance: in meter
-        :param consider_buffer: if True (default), self._emergency_buffer_percent is taken into account
+        :param consider_buffer: if True (default), self._emergency_soc_buffer_percent is taken into account
         :return:
         """
         if (
             self.energy_consumption * distance / 1000
             >= self._current_state_of_charge
             - (
-                self._emergency_buffer_percent * self._max_state_of_charge
+                self._emergency_soc_buffer_percent * self._max_state_of_charge
                 if consider_buffer
                 else 0
             )
