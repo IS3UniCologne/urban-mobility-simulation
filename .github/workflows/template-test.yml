@@ -1,12 +1,7 @@
 name: Template Test
 on:
   push:
-    branches:
-      - trunk
   pull_request:
-    branches:
-      - trunk
-  workflow_dispatch:
 
 permissions: # added using https://github.com/step-security/secure-workflows
   contents: read
