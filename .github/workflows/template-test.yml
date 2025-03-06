@@ -21,5 +21,9 @@ jobs:
         run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/data
       - name: Set up Environment
         run: uv sync
-      - name: Install and run test
-        run: uv run ridehailing_template.py resources/configurations/config_template.toml
+      - name: Run ridehailing template
+        run: uv run ridehailing_template.py resources/configurations/testing_config.toml
+      - name: Run shared vehicle template
+        run: uv run shared_vehicle_template.py resources/configurations/testing_config.toml
+      - name: Run public transit template
+        run: uv run public_transit_template.py resources/configurations/testing_config.toml
