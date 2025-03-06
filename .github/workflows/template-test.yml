@@ -18,13 +18,12 @@ jobs:
 
       - name: Initialize JSON object
         run: |
-          # Initialize an empty JSON structure in a variable
-          JSON_OUTPUT="{\"workflow_run\": {"
-          JSON_OUTPUT+="\"commit_id\": \"$(git rev-parse HEAD)\","
-          JSON_OUTPUT+="\"branch\": \"$(git rev-parse --abbrev-ref HEAD)\","
-          JSON_OUTPUT+="\"timestamp\": \"$(date +'%Y-%m-%dT%H:%M:%S')\","
-          JSON_OUTPUT+="\"steps\": ["
-          echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_ENV
+          # Initialize the JSON structure and write it to a temporary file
+          echo "{\"workflow_run\": {" > $GITHUB_WORKSPACE/$OUTPUT_FILE
+          echo "  \"commit_id\": \"$(git rev-parse HEAD)\"," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
+          echo "  \"branch\": \"$(git rev-parse --abbrev-ref HEAD)\"," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
+          echo "  \"timestamp\": \"$(date +'%Y-%m-%dT%H:%M:%S')\"," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
+          echo "  \"steps\": [" >> $GITHUB_WORKSPACE/$OUTPUT_FILE
 
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
@@ -47,8 +46,7 @@ jobs:
           end_time=$(date +%s)
           duration=$((end_time - start_time))
           step="{\"name\": \"Run ridehailing_template.py\", \"duration_seconds\": $duration}"
-          # Append the step data to the JSON_OUTPUT variable
-          echo "JSON_OUTPUT+=\"$step,\n\"" >> $GITHUB_ENV
+          echo "    $step," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
 
       - name: Run shared_vehicle_fleet_template.py
         run: |
@@ -57,7 +55,7 @@ jobs:
           end_time=$(date +%s)
           duration=$((end_time - start_time))
           step="{\"name\": \"Run shared_vehicle_fleet_template.py\", \"duration_seconds\": $duration}"
-          echo "JSON_OUTPUT+=\"$step,\n\"" >> $GITHUB_ENV
+          echo "    $step," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
 
       - name: Run public_transport_template.py
         run: |
@@ -66,9 +64,12 @@ jobs:
           end_time=$(date +%s)
           duration=$((end_time - start_time))
           step="{\"name\": \"Run public_transport_template.py\", \"duration_seconds\": $duration}"
-          echo "JSON_OUTPUT+=\"$step\"" >> $GITHUB_ENV
+          echo "    $step" >> $GITHUB_WORKSPACE/$OUTPUT_FILE
 
       - name: Complete and write JSON
         run: |
           # Complete the JSON structure and write it to the output file
-          echo "${JSON_OUTPUT}\"steps\": []}" >> /home/ci/test_runner_data/$OUTPUT_FILE
+          echo "  ]" >> $GITHUB_WORKSPACE/$OUTPUT_FILE
+          echo "} }" >> $GITHUB_WORKSPACE/$OUTPUT_FILE
+          # Move the final output file to the correct location
+          mv $GITHUB_WORKSPACE/$OUTPUT_FILE /home/ci/test_runner_data/$OUTPUT_FILE
