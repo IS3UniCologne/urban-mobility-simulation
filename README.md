@@ -8,7 +8,7 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 
 > We use [uv](https://github.com/astral-sh/uv) for dependency management.
 
-- To create a virtual environment and install all dependencies simply run `uv sync`.
+- To create a virtual environment and install all dependencies simply run `uv sync`
 - Optional notebook specific dependencies can be installed using `uv sync --extra notebooks`
 
 > Some optimization algorithms might require working CPLEX binaries. These have to be installed separately.
