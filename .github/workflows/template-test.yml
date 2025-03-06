@@ -27,10 +27,14 @@ jobs:
           uv run ridehailing_template.py resources/configurations/testing_config.toml
           end_time=$(date +%s)
           duration=$((end_time - start_time))
-          echo "Run ridehailing template took $duration seconds"
-          echo "Run ridehailing template: $duration" >> /home/ci/test_runner_data/step_durations.txt
-          echo "current_duration_ridehailing_template=$duration" >> $GITHUB_ENV
+          branch_name=$(git rev-parse --abbrev-ref HEAD)
+          commit_id=$(git rev-parse HEAD)
+          filename="test_results_$(date +'%Y-%m-%d_%H-%M-%S').txt"
 
+          echo "Run ridehailing template took $duration seconds"
+          echo "Branch: $branch_name" >> /home/ci/test_runner_data/$filename
+          echo "Commit ID: $commit_id" >> /home/ci/test_runner_data/$filename
+          echo "Ridehailing template: $duration s" >> /home/ci/test_runner_data/$filename
       - name: Run shared vehicle template
         run: |
           start_time=$(date +%s)
@@ -38,8 +42,7 @@ jobs:
           end_time=$(date +%s)
           duration=$((end_time - start_time))
           echo "Run shared vehicle template took $duration seconds"
-          echo "Run shared vehicle template: $duration" >> /home/ci/test_runner_data/step_durations.txt
-          echo "current_duration_shared_vehicle_template=$duration" >> $GITHUB_ENV
+          echo "Shared vehicle template: $duration s" >> /home/ci/test_runner_data/$filename
 
       - name: Run public transit template
         run: |
@@ -48,5 +51,4 @@ jobs:
           end_time=$(date +%s)
           duration=$((end_time - start_time))
           echo "Run public transit template took $duration seconds"
-          echo "Run public transit template: $duration" >> /home/ci/test_runner_data/step_durations.txt
-          echo "current_duration_public_transit_template=$duration" >> $GITHUB_ENV
+          echo "Public transit template: $duration s" >> /home/ci/test_runner_data/$filename
