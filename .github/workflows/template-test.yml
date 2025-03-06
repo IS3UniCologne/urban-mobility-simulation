@@ -85,3 +85,9 @@ jobs:
         run: |
           echo "  ]" >> /home/ci/test_runner_data/$OUTPUT_FILE
           echo "} }" >> /home/ci/test_runner_data/$OUTPUT_FILE
+      - name: Fail the workflow if any step fails
+        run: |
+          if grep -q '"status": "failure"' /home/ci/test_runner_data/$OUTPUT_FILE; then
+            echo "At least one step failed. Exiting with status code 1."
+            exit 1
+          fi
