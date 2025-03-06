@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Copy local files to workspace
-        run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/
+        run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/data
       - name: Set up Environment
         run: uv sync
       - name: Install and run test
