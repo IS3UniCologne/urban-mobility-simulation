@@ -22,8 +22,31 @@ jobs:
       - name: Set up Environment
         run: uv sync
       - name: Run ridehailing template
-        run: uv run ridehailing_template.py resources/configurations/testing_config.toml
+        run: |
+          start_time=$(date +%s)
+          uv run ridehailing_template.py resources/configurations/testing_config.toml
+          end_time=$(date +%s)
+          duration=$((end_time - start_time))
+          echo "Run ridehailing template took $duration seconds"
+          echo "Run ridehailing template: $duration" >> /home/ci/test_runner_data/step_durations.txt
+          echo "current_duration_ridehailing_template=$duration" >> $GITHUB_ENV
+
       - name: Run shared vehicle template
-        run: uv run shared_vehicle_fleet_template.py resources/configurations/testing_config.toml
+        run: |
+          start_time=$(date +%s)
+          uv run shared_vehicle_fleet_template.py resources/configurations/testing_config.toml
+          end_time=$(date +%s)
+          duration=$((end_time - start_time))
+          echo "Run shared vehicle template took $duration seconds"
+          echo "Run shared vehicle template: $duration" >> /home/ci/test_runner_data/step_durations.txt
+          echo "current_duration_shared_vehicle_template=$duration" >> $GITHUB_ENV
+
       - name: Run public transit template
-        run: uv run public_transport_template.py resources/configurations/testing_config.toml
+        run: |
+          start_time=$(date +%s)
+          uv run public_transport_template.py resources/configurations/testing_config.toml
+          end_time=$(date +%s)
+          duration=$((end_time - start_time))
+          echo "Run public transit template took $duration seconds"
+          echo "Run public transit template: $duration" >> /home/ci/test_runner_data/step_durations.txt
+          echo "current_duration_public_transit_template=$duration" >> $GITHUB_ENV
