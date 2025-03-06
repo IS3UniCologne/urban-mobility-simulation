@@ -16,15 +16,6 @@ jobs:
           export OUTPUT_FILE="step_durations_$(date +'%Y-%m-%d_%H-%M-%S').json"
           echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
 
-      - name: Initialize JSON object
-        run: |
-          # Initialize the JSON structure and write it to a temporary file
-          echo "{\"workflow_run\": {" > $GITHUB_WORKSPACE/$OUTPUT_FILE
-          echo "  \"commit_id\": \"$(git rev-parse HEAD)\"," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
-          echo "  \"branch\": \"$(git rev-parse --abbrev-ref HEAD)\"," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
-          echo "  \"timestamp\": \"$(date +'%Y-%m-%dT%H:%M:%S')\"," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
-          echo "  \"steps\": [" >> $GITHUB_WORKSPACE/$OUTPUT_FILE
-
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -38,6 +29,15 @@ jobs:
 
       - name: Set up Environment
         run: uv sync
+
+      - name: Initialize JSON object
+        run: |
+          # Initialize the JSON structure and write it to a temporary file
+          echo "{\"workflow_run\": {" > $GITHUB_WORKSPACE/$OUTPUT_FILE
+          echo "  \"commit_id\": \"$(git rev-parse HEAD)\"," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
+          echo "  \"branch\": \"$(git rev-parse --abbrev-ref HEAD)\"," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
+          echo "  \"timestamp\": \"$(date +'%Y-%m-%dT%H:%M:%S')\"," >> $GITHUB_WORKSPACE/$OUTPUT_FILE
+          echo "  \"steps\": [" >> $GITHUB_WORKSPACE/$OUTPUT_FILE
 
       - name: Run ridehailing_template.py
         run: |
