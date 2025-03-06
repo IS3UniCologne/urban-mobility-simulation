@@ -10,9 +10,12 @@ jobs:
   test-templates:
     runs-on: self-hosted
     name: Test Templates
-    env:
-      OUTPUT_FILE: test_results_$(date +'%Y-%m-%d_%H-%M-%S').json
     steps:
+      - name: Set dynamic filename
+        id: set_filename
+        run: |
+          export OUTPUT_FILE="step_durations_$(date +'%Y-%m-%d_%H-%M-%S').json"
+          echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
       - name: Initialize JSON object
         run: |
           echo "{\"workflow_run\": {" > /home/ci/test_runner_data/$OUTPUT_FILE
@@ -37,22 +40,22 @@ jobs:
           end_time=$(date +%s)
           duration=$((end_time - start_time))
 
-          echo "    {\"name\": \"Run ridehailing_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$FILENAME
+          echo "    {\"name\": \"Run ridehailing_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
       - name: Run shared_vehicle_fleet_template.py
         run: |
           start_time=$(date +%s)
           uv run shared_vehicle_fleet_template.py resources/configurations/testing_config.toml
           end_time=$(date +%s)
           duration=$((end_time - start_time))
-          echo "    {\"name\": \"Run shared_vehicle_fleet_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$FILENAME
+          echo "    {\"name\": \"Run shared_vehicle_fleet_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
       - name: Run public_transport_template.py
         run: |
           start_time=$(date +%s)
           uv run public_transport_template.py resources/configurations/testing_config.toml
           end_time=$(date +%s)
           duration=$((end_time - start_time))
-          echo "    {\"name\": \"Run public_transport_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$FILENAME
+          echo "    {\"name\": \"Run public_transport_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
       - name: Complete JSON
         run: |
-          echo "  ]" >> /home/ci/test_runner_data/$FILENAME
-          echo "} }" >> /home/ci/test_runner_data/$FILENAME
+          echo "  ]" >> /home/ci/test_runner_data/$OUTPUT_FILE
+          echo "} }" >> /home/ci/test_runner_data/$OUTPUT_FILE
