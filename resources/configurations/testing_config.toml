@@ -6,8 +6,8 @@
 
 [SETTINGS]
 # Logging
-LOG_LEVEL      = "DEBUG"
-FILE_LOG_LEVEL = "DEBUG"
+LOG_LEVEL      = "WARNING"
+FILE_LOG_LEVEL = "WARNING"
 
 # Output
 PERSIST_RESULTS = true
