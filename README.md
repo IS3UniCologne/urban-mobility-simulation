@@ -20,7 +20,7 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 > We provide templates (`*_template.py`) for most common use cases, please refer to this!
 > At the moment, `template_all_modes.py` is not working, we first need to fix several issues for true multi-modal users.
 
-Provide configuration files as the first argument after the experiment file name such as `python experiment_template.py ./resources/configurations/template.ini`
+Provide configuration files as the first argument after the experiment file name such as `python experiment_template.py ./resources/configurations/config_template.toml`
 
 ## Simulation Components
 
@@ -30,7 +30,7 @@ Provide configuration files as the first argument after the experiment file name
 - _ride-hailing fleet (autonomous vehicles and ride-hailing cars)_
 - _shared mobility fleet (Cars, scooters, kickscooters and bikes)_
 
-The configurations of these fleets and their operator modules together with other components such as the charging infrastructure, spatial/temporal resolution and world are initialized with the information set in the `template.ini`
+The configurations of these fleets and their operator modules together with other components such as the charging infrastructure, spatial/temporal resolution and world are initialized with the information set in the `config_template.toml`
 
 This file is used to set various parameters in the following blocks that are required in every simulation:
 
