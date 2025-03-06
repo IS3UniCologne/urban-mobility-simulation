@@ -341,9 +341,7 @@ def run_simulation(end_time, seed=4711, env=env):
     edf = ExtraDefaultFilter(filter_name="add_default_value")
     logger.addFilter(cf)
     logger.addFilter(edf)
-    
-    big evil bug
-    
+
     env.process(operations.execute())
 
     # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
