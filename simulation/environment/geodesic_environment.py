@@ -2,7 +2,6 @@ import math
 
 import h3
 import numpy
-import pyproj
 from shapely.geometry import Point, Polygon
 
 from simulation.environment.environment import Environment
@@ -28,7 +27,6 @@ class GeodesicEnvironment(Environment):
             GeodesicEnvironment.__instance = self
             super(GeodesicEnvironment, self).__init__()
 
-            self._geodesic = pyproj.Geod(ellps="WGS84")
             self._random = numpy.random.RandomState(
                 42
             )  # TODO: use fnc reset_rnd_gen to change seed?
@@ -272,9 +270,3 @@ class GeodesicEnvironment(Environment):
         brng = numpy.degrees(brng)
 
         return brng
-
-    def _get_fwd_azi(self, lat1, long1, lat2, long2):
-        # great circle forward azimuth using the specified projection in the geodesic environment
-        # https://pyproj4.github.io/pyproj/stable/api/geod.html#pyproj.Geod.inv
-        azi, _, _ = self._geodesic.inv(long1, lat1, long2, lat2)
-        return azi
