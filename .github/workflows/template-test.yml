@@ -8,7 +8,7 @@ permissions: # added using https://github.com/step-security/secure-workflows
 
 jobs:
   test-templates:
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
     name: Test Templates
     steps:
       - name: Install the latest version of uv
