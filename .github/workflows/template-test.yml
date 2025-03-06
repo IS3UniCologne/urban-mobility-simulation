@@ -24,6 +24,6 @@ jobs:
       - name: Run ridehailing template
         run: uv run ridehailing_template.py resources/configurations/testing_config.toml
       - name: Run shared vehicle template
-        run: uv run shared_vehicle_template.py resources/configurations/testing_config.toml
+        run: uv run shared_vehicle_fleet_template.py resources/configurations/testing_config.toml
       - name: Run public transit template
-        run: uv run public_transit_template.py resources/configurations/testing_config.toml
+        run: uv run public_transport_template.py resources/configurations/testing_config.toml
