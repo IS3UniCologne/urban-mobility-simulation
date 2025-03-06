@@ -33,7 +33,6 @@ ML = [
     "docplex>=2.29.241",
 ]
 
-
 [tool.ruff]
 fix            = true
 output-format  = "grouped"
@@ -43,9 +42,10 @@ skip-magic-trailing-comma = true
 [tool.ruff.lint.mccabe]
 max-complexity = 18
 
+[tool.uv]
+python-preference = "only-managed"
 [tool.uv.sources]
 mlrose-hiive = { git = "https://github.com/hiive/mlrose.git" }
-pyproj = { git = "https://github.com/pyproj4/pyproj.git" }
 
 [dependency-groups]
 dev = [
