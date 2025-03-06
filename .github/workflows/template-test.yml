@@ -40,21 +40,41 @@ jobs:
           end_time=$(date +%s)
           duration=$((end_time - start_time))
 
-          echo "    {\"name\": \"Run ridehailing_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
+          # Determine the status based on the exit code
+          if [ $exit_code -eq 0 ]; then
+            status="success"
+          else
+            status="failure"
+          fi
+
+          echo "    {\"name\": \"Run ridehailing_template.py\", \"duration_seconds\": $duration, \"status\": \"$status\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
       - name: Run shared_vehicle_fleet_template.py
         run: |
           start_time=$(date +%s)
           uv run shared_vehicle_fleet_template.py resources/configurations/testing_config.toml
           end_time=$(date +%s)
           duration=$((end_time - start_time))
-          echo "    {\"name\": \"Run shared_vehicle_fleet_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
+          # Determine the status based on the exit code
+          if [ $exit_code -eq 0 ]; then
+            status="success"
+          else
+            status="failure"
+          fi
+          echo "    {\"name\": \"Run shared_vehicle_fleet_template.py\", \"duration_seconds\": $duration, \"status\": \"$status\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
       - name: Run public_transport_template.py
         run: |
           start_time=$(date +%s)
           uv run public_transport_template.py resources/configurations/testing_config.toml
           end_time=$(date +%s)
           duration=$((end_time - start_time))
-          echo "    {\"name\": \"Run public_transport_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
+
+          # Determine the status based on the exit code
+          if [ $exit_code -eq 0 ]; then
+            status="success"
+          else
+            status="failure"
+          fi
+          echo "    {\"name\": \"Run public_transport_template.py\", \"duration_seconds\": $duration, \"status\": \"$status\"}" >> /home/ci/test_runner_data/$OUTPUT_FILE
       - name: Complete JSON
         run: |
           echo "  ]" >> /home/ci/test_runner_data/$OUTPUT_FILE
