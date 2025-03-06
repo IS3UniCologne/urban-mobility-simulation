@@ -11,8 +11,15 @@ jobs:
     runs-on: self-hosted
     name: Test Templates
     env:
-      OUTPUT_FILE: test_results_$(date +'%Y-%m-%d_%H-%M-%S').txt
+      OUTPUT_FILE: test_results_$(date +'%Y-%m-%d_%H-%M-%S').json
     steps:
+      - name: Initialize JSON object
+        run: |
+          echo "{\"workflow_run\": {" > /home/ci/test_runner_data/$OUTPUT_FILE
+          echo "  \"commit_id\": \"$(git rev-parse HEAD)\"," >> /home/ci/test_runner_data/$OUTPUT_FILE
+          echo "  \"branch\": \"$(git rev-parse --abbrev-ref HEAD)\"," >> /home/ci/test_runner_data/$OUTPUT_FILE
+          echo "  \"timestamp\": \"$(date +'%Y-%m-%dT%H:%M:%S')\"," >> /home/ci/test_runner_data/$OUTPUT_FILE
+          echo "  \"steps\": [" >> /home/ci/test_runner_data/$OUTPUT_FILE
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -23,33 +30,29 @@ jobs:
         run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/data
       - name: Set up Environment
         run: uv sync
-      - name: Run ridehailing template
+      - name: Run ridehailing_template.py
         run: |
           start_time=$(date +%s)
           uv run ridehailing_template.py resources/configurations/testing_config.toml
           end_time=$(date +%s)
           duration=$((end_time - start_time))
-          branch_name=$(git rev-parse --abbrev-ref HEAD)
-          commit_id=$(git rev-parse HEAD)
 
-          echo "Run ridehailing template took $duration seconds"
-          echo "Branch: $branch_name" >> /home/ci/test_runner_data/$OUTPUT_FILE
-          echo "Commit ID: $commit_id" >> /home/ci/test_runner_data/$OUTPUT_FILE
-          echo "Ridehailing template: $duration s" >> /home/ci/test_runner_data/$OUTPUT_FILE
-      - name: Run shared vehicle template
+          echo "    {\"name\": \"Run ridehailing_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$FILENAME
+      - name: Run shared_vehicle_fleet_template.py
         run: |
           start_time=$(date +%s)
           uv run shared_vehicle_fleet_template.py resources/configurations/testing_config.toml
           end_time=$(date +%s)
           duration=$((end_time - start_time))
-          echo "Run shared vehicle template took $duration seconds"
-          echo "Shared vehicle template: $duration s" >> /home/ci/test_runner_data/$OUTPUT_FILE
-
-      - name: Run public transit template
+          echo "    {\"name\": \"Run shared_vehicle_fleet_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$FILENAME
+      - name: Run public_transport_template.py
         run: |
           start_time=$(date +%s)
           uv run public_transport_template.py resources/configurations/testing_config.toml
           end_time=$(date +%s)
           duration=$((end_time - start_time))
-          echo "Run public transit template took $duration seconds"
-          echo "Public transit template: $duration s" >> /home/ci/test_runner_data/$OUTPUT_FILE
+          echo "    {\"name\": \"Run public_transport_template.py\", \"duration_seconds\": $duration, \"status\": \"success\"}," >> /home/ci/test_runner_data/$FILENAME
+      - name: Complete JSON
+        run: |
+          echo "  ]" >> /home/ci/test_runner_data/$FILENAME
+          echo "} }" >> /home/ci/test_runner_data/$FILENAME
