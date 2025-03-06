@@ -2760,7 +2760,6 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "beartype" },
-    { name = "docplex" },
     { name = "geopandas" },
     { name = "h3" },
     { name = "haversine" },
@@ -2772,11 +2771,14 @@ dependencies = [
     { name = "shapely" },
     { name = "simpy" },
     { name = "statsmodels" },
-    { name = "torch" },
     { name = "tqdm" },
 ]
 
 [package.optional-dependencies]
+ml = [
+    { name = "docplex" },
+    { name = "torch" },
+]
 notebooks = [
     { name = "contextily" },
     { name = "ipython" },
@@ -2795,7 +2797,7 @@ dev = [
 requires-dist = [
     { name = "beartype", specifier = ">=0.20.0" },
     { name = "contextily", marker = "extra == 'notebooks'", specifier = ">=1.6.2" },
-    { name = "docplex", specifier = ">=2.29.241" },
+    { name = "docplex", marker = "extra == 'ml'", specifier = ">=2.29.241" },
     { name = "geopandas", specifier = ">=1.0.1" },
     { name = "h3", specifier = ">=3.7.1,<4" },
     { name = "haversine", specifier = ">=2.9.0" },
@@ -2811,10 +2813,10 @@ requires-dist = [
     { name = "sidetable", marker = "extra == 'notebooks'", specifier = ">=0.9.1" },
     { name = "simpy", specifier = ">=4.1.1" },
     { name = "statsmodels", specifier = ">=0.14.4" },
-    { name = "torch", specifier = ">=2.6.0" },
+    { name = "torch", marker = "extra == 'ml'", specifier = ">=2.6.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
-provides-extras = ["notebooks"]
+provides-extras = ["notebooks", "ml"]
 
 [package.metadata.requires-dev]
 dev = [
