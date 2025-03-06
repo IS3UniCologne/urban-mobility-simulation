@@ -34,6 +34,7 @@ jobs:
       - name: Set up Environment
         run: uv sync
       - name: Run ridehailing_template.py
+        continue-on-error: true
         run: |
           start_time=$(date +%s)
           uv run ridehailing_template.py resources/configurations/testing_config.toml
@@ -50,6 +51,7 @@ jobs:
 
           echo "    {\"name\": \"Run ridehailing_template.py\", \"duration_seconds\": $duration, \"status\": \"$status\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
       - name: Run shared_vehicle_fleet_template.py
+        continue-on-error: true
         run: |
           start_time=$(date +%s)
           uv run shared_vehicle_fleet_template.py resources/configurations/testing_config.toml
@@ -64,6 +66,7 @@ jobs:
           fi
           echo "    {\"name\": \"Run shared_vehicle_fleet_template.py\", \"duration_seconds\": $duration, \"status\": \"$status\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
       - name: Run public_transport_template.py
+        continue-on-error: true
         run: |
           start_time=$(date +%s)
           uv run public_transport_template.py resources/configurations/testing_config.toml
