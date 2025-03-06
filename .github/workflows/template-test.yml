@@ -37,6 +37,7 @@ jobs:
         run: |
           start_time=$(date +%s)
           uv run ridehailing_template.py resources/configurations/testing_config.toml
+          exit_code=$?
           end_time=$(date +%s)
           duration=$((end_time - start_time))
 
@@ -52,6 +53,7 @@ jobs:
         run: |
           start_time=$(date +%s)
           uv run shared_vehicle_fleet_template.py resources/configurations/testing_config.toml
+          exit_code=$?
           end_time=$(date +%s)
           duration=$((end_time - start_time))
           # Determine the status based on the exit code
@@ -65,6 +67,7 @@ jobs:
         run: |
           start_time=$(date +%s)
           uv run public_transport_template.py resources/configurations/testing_config.toml
+          exit_code=$?
           end_time=$(date +%s)
           duration=$((end_time - start_time))
 
