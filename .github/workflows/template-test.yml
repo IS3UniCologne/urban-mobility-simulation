@@ -17,7 +17,9 @@ jobs:
           version: "latest"
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Copy local files to workspace
+        run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/
       - name: Set up Environment
         run: uv sync
       - name: Install and run test
-        run: uv run ridehailing_template.py
+        run: uv run ridehailing_template.py resources/configurations/config_template.toml
