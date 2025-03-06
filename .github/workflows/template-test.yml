@@ -1,0 +1,28 @@
+name: Template Test
+on:
+  push:
+    branches:
+      - trunk
+  pull_request:
+    branches:
+      - trunk
+  workflow_dispatch:
+
+permissions: # added using https://github.com/step-security/secure-workflows
+  contents: read
+
+jobs:
+  test-templates:
+    runs-on: ubuntu-24.04
+    name: Test Templates
+    steps:
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Environment
+        run: uv sync
+      - name: Install and run test
+        run: uv run ridehailing_template.py
