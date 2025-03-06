@@ -12,82 +12,63 @@ jobs:
     name: Test Templates
     steps:
       - name: Set dynamic filename
-        id: set_filename
         run: |
           export OUTPUT_FILE="step_durations_$(date +'%Y-%m-%d_%H-%M-%S').json"
           echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
+
       - name: Initialize JSON object
         run: |
-          echo "{\"workflow_run\": {" > /home/ci/test_runner_data/$OUTPUT_FILE
-          echo "  \"commit_id\": \"$(git rev-parse HEAD)\"," >> /home/ci/test_runner_data/$OUTPUT_FILE
-          echo "  \"branch\": \"$(git rev-parse --abbrev-ref HEAD)\"," >> /home/ci/test_runner_data/$OUTPUT_FILE
-          echo "  \"timestamp\": \"$(date +'%Y-%m-%dT%H:%M:%S')\"," >> /home/ci/test_runner_data/$OUTPUT_FILE
-          echo "  \"steps\": [" >> /home/ci/test_runner_data/$OUTPUT_FILE
+          # Initialize an empty JSON structure in a variable
+          JSON_OUTPUT="{\"workflow_run\": {"
+          JSON_OUTPUT+="\"commit_id\": \"$(git rev-parse HEAD)\","
+          JSON_OUTPUT+="\"branch\": \"$(git rev-parse --abbrev-ref HEAD)\","
+          JSON_OUTPUT+="\"timestamp\": \"$(date +'%Y-%m-%dT%H:%M:%S')\","
+          JSON_OUTPUT+="\"steps\": ["
+          echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_ENV
+
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
           version: "latest"
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Copy local files to workspace
         run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/data
+
       - name: Set up Environment
         run: uv sync
+
       - name: Run ridehailing_template.py
-        continue-on-error: true
         run: |
           start_time=$(date +%s)
           uv run ridehailing_template.py resources/configurations/testing_config.toml
-          exit_code=$?
           end_time=$(date +%s)
           duration=$((end_time - start_time))
+          step="{\"name\": \"Run ridehailing_template.py\", \"duration_seconds\": $duration}"
+          # Append the step data to the JSON_OUTPUT variable
+          echo "JSON_OUTPUT+=\"$step,\n\"" >> $GITHUB_ENV
 
-          # Determine the status based on the exit code
-          if [ $exit_code -eq 0 ]; then
-            status="success"
-          else
-            status="failure"
-          fi
-
-          echo "    {\"name\": \"Run ridehailing_template.py\", \"duration_seconds\": $duration, \"status\": \"$status\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
       - name: Run shared_vehicle_fleet_template.py
-        continue-on-error: true
         run: |
           start_time=$(date +%s)
           uv run shared_vehicle_fleet_template.py resources/configurations/testing_config.toml
-          exit_code=$?
           end_time=$(date +%s)
           duration=$((end_time - start_time))
-          # Determine the status based on the exit code
-          if [ $exit_code -eq 0 ]; then
-            status="success"
-          else
-            status="failure"
-          fi
-          echo "    {\"name\": \"Run shared_vehicle_fleet_template.py\", \"duration_seconds\": $duration, \"status\": \"$status\"}," >> /home/ci/test_runner_data/$OUTPUT_FILE
+          step="{\"name\": \"Run shared_vehicle_fleet_template.py\", \"duration_seconds\": $duration}"
+          echo "JSON_OUTPUT+=\"$step,\n\"" >> $GITHUB_ENV
+
       - name: Run public_transport_template.py
-        continue-on-error: true
         run: |
           start_time=$(date +%s)
           uv run public_transport_template.py resources/configurations/testing_config.toml
-          exit_code=$?
           end_time=$(date +%s)
           duration=$((end_time - start_time))
+          step="{\"name\": \"Run public_transport_template.py\", \"duration_seconds\": $duration}"
+          echo "JSON_OUTPUT+=\"$step\"" >> $GITHUB_ENV
 
-          # Determine the status based on the exit code
-          if [ $exit_code -eq 0 ]; then
-            status="success"
-          else
-            status="failure"
-          fi
-          echo "    {\"name\": \"Run public_transport_template.py\", \"duration_seconds\": $duration, \"status\": \"$status\"}" >> /home/ci/test_runner_data/$OUTPUT_FILE
-      - name: Complete JSON
+      - name: Complete and write JSON
         run: |
-          echo "  ]" >> /home/ci/test_runner_data/$OUTPUT_FILE
-          echo "} }" >> /home/ci/test_runner_data/$OUTPUT_FILE
-      - name: Fail the workflow if any step fails
-        run: |
-          if grep -q '"status": "failure"' /home/ci/test_runner_data/$OUTPUT_FILE; then
-            echo "At least one step failed. Exiting with status code 1."
-            exit 1
-          fi
+          # Complete the JSON structure and write it to the output file
+          echo "${JSON_OUTPUT}\"steps\": []}" >> /home/ci/test_runner_data/$OUTPUT_FILE
