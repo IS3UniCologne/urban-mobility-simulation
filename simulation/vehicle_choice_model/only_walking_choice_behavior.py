@@ -1,9 +1,10 @@
+from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
     VehicleChoiceBehaviorInterface,
 )
-from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 
 
+# TODO: Do we want to keep this ?
 class OnlyWalkingChoiceBehavior(VehicleChoiceBehaviorInterface):
     """
     The only choice in this behavior is to walk

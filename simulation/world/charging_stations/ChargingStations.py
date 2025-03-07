@@ -1,6 +1,7 @@
 from simulation.vehicle.vehicle import VehicleState
 
 
+# TODO: Do we still need this?
 class ChargingStationHandler:
     # There is only one instance of this class.
     __instance = None

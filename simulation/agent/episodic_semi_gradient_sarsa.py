@@ -70,6 +70,7 @@ class ValueFunctionApproximator:
         self._weights = w
 
 
+# TODO: Do we use/plan to use this?
 class EpisodicSemiGradientSarsa(RLAgent):
     def __init__(self, env: simpy.Environment, q_hat: ValueFunctionApproximator):
         super(EpisodicSemiGradientSarsa, self).__init__(env)

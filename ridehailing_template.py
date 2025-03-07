@@ -40,7 +40,6 @@ from simulation.operator.fleet_factory import (
 from simulation.operator.operations_management.ridehailing_base_charging_operations import (
     RideHailingBaseChargingOperations,
 )
-from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
 )
@@ -329,8 +328,6 @@ payment_engine = {
     "ride_hailing_1": ridehailing_operator_1,
 }
 
-# Initialize task queues
-task_queue_ridehailing = TaskQueue(env)
 
 # Initialize World
 world = World.init(
