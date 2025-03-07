@@ -1,9 +1,17 @@
+### This workflow is used to test the templates as an integration test
+### The results are stored in a JSON file on the self-hosted runner and can be accessed via SSH
+
 name: Template Test
 on:
+  # run when pushing to main or develop
   push:
+    branches: [main, develop]
+  # run when opening, synchronizing, or reopening a pull request
   pull_request:
+    types: [opened, synchronize, reopened]
 
-permissions: # added using https://github.com/step-security/secure-workflows
+permissions:
+  # added using https://github.com/step-security/secure-workflows
   contents: read
 
 jobs:
