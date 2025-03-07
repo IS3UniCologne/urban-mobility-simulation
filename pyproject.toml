@@ -50,6 +50,7 @@ mlrose-hiive = { git = "https://github.com/hiive/mlrose.git" }
 [dependency-groups]
 dev = [
     "austin>=2016.0.1",
+    "pytest>=8.3.5",
     "ruff>=0.9.7",
 ]
 [tool.ruff.lint]
