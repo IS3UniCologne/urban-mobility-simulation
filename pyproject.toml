@@ -1,11 +1,57 @@
+[project]
+name            = "urban-mobility-simulation"
+version         = "0.1.0"
+description     = "Urban Mobility Simulation"
+readme          = "README.md"
+requires-python = ">=3.9.2, <3.13.0"
+dependencies    = [
+    "beartype>=0.20.0",
+    "geopandas>=1.0.1",
+    "h3>=3.7.1, <4",
+    "haversine>=2.9.0",
+    "matplotlib>=3.9.4",
+    "mlrose-hiive>=2.2.4",
+    "pip>=25.0.1",
+    "pqdm>=0.2.0",
+    "pyarrow>=19.0.1",
+    "shapely>=2.0.7",
+    "simpy>=4.1.1",
+    "statsmodels>=0.14.4",
+    "tqdm>=4.67.1",
+]
+
+[project.optional-dependencies]
+notebooks = [
+    "contextily>=1.6.2",
+    "ipython>=8.18.1",
+    "notebook>=7.3.2",
+    "seaborn>=0.13.2",
+    "sidetable>=0.9.1",
+]
+ML = [
+    "torch>=2.6.0",
+    "docplex>=2.29.241",
+]
+
 [tool.ruff]
-fix = true
-output-format = "grouped"
+fix            = true
+output-format  = "grouped"
 extend-exclude = ["*.ipynb"]
 [tool.ruff.format]
 skip-magic-trailing-comma = true
 [tool.ruff.lint.mccabe]
 max-complexity = 18
+
+[tool.uv]
+python-preference = "only-managed"
+[tool.uv.sources]
+mlrose-hiive = { git = "https://github.com/hiive/mlrose.git" }
+
+[dependency-groups]
+dev = [
+    "austin>=2016.0.1",
+    "ruff>=0.9.7",
+]
 [tool.ruff.lint]
 # Skip unused variable rules (`F841`).
 ignore = ["E721"]
