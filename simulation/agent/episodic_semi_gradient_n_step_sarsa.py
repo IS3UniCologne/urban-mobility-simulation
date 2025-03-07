@@ -13,6 +13,7 @@ from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.vehicle.public_transit_bus import PublicTransitVehicleState
 
 
+# TODO: Do we use/plan to use this?
 class EpisodicSemiGradientNStepSarsa(RLAgent):
     def __init__(self, env: simpy.Environment, q_hat: ValueFunctionApproximator):
         super(EpisodicSemiGradientNStepSarsa, self).__init__(env)

@@ -12,6 +12,7 @@ from simulation.tasks.transportation_search_task import TransportationSearchTask
 from simulation.vehicle.walking import Walking
 
 
+# TODO: Do we want to keep this ?
 class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
     def __init__(self, env):
         PaymentInterface.__init__(self)
