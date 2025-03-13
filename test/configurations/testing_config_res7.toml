@@ -7,7 +7,7 @@
 [SETTINGS]
 # Logging
 LOG_LEVEL      = "WARNING"
-FILE_LOG_LEVEL = "WARNING"
+FILE_LOG_LEVEL = "DEBUG"
 
 # Output
 PERSIST_RESULTS = true
@@ -16,7 +16,7 @@ TRACK_AGENT     = true
 
 [EXPERIMENT_MANAGEMENT]
 START_TIME = 0
-END_TIME   = 100
+END_TIME   = 144
 SEED       = 43
 
 
@@ -171,9 +171,9 @@ DISCOUNT_RATE = 0
 
 #TODO rework this analogous to shared vehicles when we decide how to do #108
 #TODO: Change name of these? Techincally all cars are ride hailing (Rename)
-N_RIDE_HAILING_CARS = 500
+N_RIDE_HAILING_CARS = 50
 #TODO: This is completely ignored/overwritten by the AV_PENETRATION variable
-N_AUTONOMOUS_CARS = 500
+N_AUTONOMOUS_CARS = 50
 #Todo: Does this belong here? Should this be an enum instead ? Can't it be inferred from the operator configurations  (n_vehicles)?
 AVAILABLE_VEHICLE_MODES = ["AutonomousCar", "RideHailingCar"]
 
