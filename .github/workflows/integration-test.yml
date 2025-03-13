@@ -33,7 +33,11 @@ jobs:
       - name: Set up Environment
         run: uv sync
 
+      - name: Set dynamic filename
+        run: |
+          export OUTPUT_FILE="step_durations_$(date +'%Y-%m-%d_%H-%M-%S').json"
+          echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
+
       - name: Run Integration Test
         run: |
-          filename="integration_test_$(date +'%Y-%m-%d_%H-%M-%S').log"
-          pytest test/integration_test.py --durations=0 >/home/ci/test_runner_data/$filename 2>&1
+          pytest test/integration_test.py --durations=0 >/home/ci/test_runner_data/$OUTPUT_FILE 2>&1
