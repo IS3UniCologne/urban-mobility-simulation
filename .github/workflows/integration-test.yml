@@ -36,4 +36,4 @@ jobs:
       - name: Run Integration Test
         run: |
           filename="integration_test_$(date +'%Y-%m-%d_%H-%M-%S').log"
-          pytest test/integration_test.py --durations=0 >/home/ci/test_runner_data/$filename 2>&
+          pytest test/integration_test.py --durations=0 >/home/ci/test_runner_data/$filename 2>&1
