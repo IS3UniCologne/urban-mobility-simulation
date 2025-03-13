@@ -35,9 +35,9 @@ jobs:
 
       - name: Set dynamic filename
         run: |
-          export OUTPUT_FILE="step_durations_$(date +'%Y-%m-%d_%H-%M-%S').json"
+          export OUTPUT_FILE="integration_test_$(date +'%Y-%m-%d_%H-%M-%S').log"
           echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
 
       - name: Run Integration Test
         run: |
-          pytest test/integration_test.py --durations=0 >/home/ci/test_runner_data/$OUTPUT_FILE 2>&1
+          uv run pytest test/integration_test.py --durations=0 >/home/ci/test_runner_data/$OUTPUT_FILE 2>&1
