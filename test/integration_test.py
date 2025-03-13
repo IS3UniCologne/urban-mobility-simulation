@@ -1,6 +1,7 @@
 import glob
 import itertools
 import os
+import shutil
 import subprocess
 import sys
 
@@ -30,15 +31,30 @@ def test_template_execution(script, config):
     assert os.path.exists(script), f"{script} does not exist."
     assert os.path.exists(config), f"{config} does not exist."
 
+    output_dir = "data/test_output"
+
+    # Make sure the output log directory is empty
+    if os.path.exists(f"{output_dir}/logs"):
+        for file in os.listdir(f"{output_dir}/logs"):
+            os.remove(os.path.join(f"{output_dir}/logs", file))
+
     result = run_template_script(script, config)
     assert result.returncode == 0, (
         f"Script {script} using configuration {config} failed with error:\n{result.stderr}"
     )
 
-    # check log file
-    assert os.path.exists("report.log"), "Log file not generated."
-    with open("report.log", "r") as f:
+    log_files = os.listdir(f"{output_dir}/logs")
+    assert len(log_files) > 0, "No log files generated."
+    assert len(log_files) == 1, "Multiple log files generated."
+
+    # get the log file
+    log_file = os.path.join(f"{output_dir}/logs", log_files[0])
+
+    with open(log_file, "r") as f:
         log = f.read()
         assert "Ending Simulation" in log, (
             f"Simulation did not end properly. Log:\n{log}"
         )
+
+    # clean up output
+    shutil.rmtree(output_dir)

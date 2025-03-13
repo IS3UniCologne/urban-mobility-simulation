@@ -105,11 +105,12 @@ console_handler.setLevel(config.settings.LOG_LEVEL)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-# clean up existing log file
-if os.path.exists("report.log"):
-    os.remove("report.log")
-
-file_handler = logging.FileHandler("report.log")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+# Create directory for logs if not exists
+if not os.path.exists(f"{config.path.OUTPUT_FOLDER}/logs"):
+    os.makedirs(f"{config.path.OUTPUT_FOLDER}/logs")
+log_file = f"{config.path.OUTPUT_FOLDER}/logs/{output_timestamp}.log"
+file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(formatter)
 file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
 logger.addHandler(file_handler)
