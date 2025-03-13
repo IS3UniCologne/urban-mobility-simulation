@@ -45,9 +45,10 @@ PATH_VEHICLE_SUPPLY = "./data/supply/{city}_vehicle_supply_distribution_hex_7.cs
 PATH_TO_MODE_CHOICE_MODEL = "./data/choice_model/distance_based_shared_vehicles.pickle"
 
 # Output paths
-OUTPUT_FOLDER    = "./data/output"
+OUTPUT_FOLDER    = "./data/test_output"
 TRANSACTION_FILE = "transactions.csv"
 FLEET_STATE_FILE = "fleet_state.csv"
+
 
 # Demand Paths
 PATH_TRIP_DEMAND      = "./data/demand/{city}_shared_vehicle_trips.csv"
