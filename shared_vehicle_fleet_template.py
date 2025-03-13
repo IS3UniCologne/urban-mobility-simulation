@@ -105,6 +105,9 @@ console_handler.setLevel(config.settings.LOG_LEVEL)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
+# clean up existing log file
+if os.path.exists("report.log"):
+    os.remove("report.log")
 
 file_handler = logging.FileHandler("report.log")
 file_handler.setFormatter(formatter)
