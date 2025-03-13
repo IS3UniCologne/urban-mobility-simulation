@@ -10,6 +10,7 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 
 - To create a virtual environment and install all dependencies simply run `uv sync`
 - Optional notebook specific dependencies can be installed using `uv sync --extra notebooks`
+- Development dependencies can be installed using `uv sync --dev`
 
 > Some optimization algorithms might require working CPLEX binaries. These have to be installed separately.
 
