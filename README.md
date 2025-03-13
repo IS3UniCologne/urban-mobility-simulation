@@ -12,6 +12,7 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 - Optional notebook specific dependencies can be installed using `uv sync --extra notebooks`
 - Optional machine learning dependencies can be installed using `uv sync --extra ml`
 - Use `uv sync --all-extras` to install all optional dependencies simultaneously
+- Development dependencies can be installed using `uv sync --dev`
 
 > Some optimization algorithms might require working CPLEX binaries. These have to be installed separately.
 
