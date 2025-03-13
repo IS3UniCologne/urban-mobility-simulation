@@ -84,30 +84,31 @@ shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-
-# Make it beautiful
-# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-)
-
 logger = logging.getLogger()
-logger.setLevel(config.settings.LOG_LEVEL)
+
+logger.setLevel(min(config.settings.LOG_LEVEL, config.settings.FILE_LOG_LEVEL))
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
+
 formatter = logging.Formatter(
     "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
 )
+# Create a console handler with its own level (LOG_LEVEL)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(config.settings.LOG_LEVEL)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+
 file_handler = logging.FileHandler("report.log")
 file_handler.setFormatter(formatter)
 file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
 logger.addHandler(file_handler)
 
 # Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf_init)
+cf = SimulationContextFilter(filter_name="add_env", extra=[])
+logger.addFilter(cf)
 
 
 # # # # # # # # # # # # # # # # # # # # # #
