@@ -97,7 +97,6 @@ console_handler.setLevel(config.settings.LOG_LEVEL)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-test
 
 output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
 # Create directory for logs if not exists
