@@ -20,13 +20,17 @@ templates = [
     "public_transport_template.py",
 ]
 
-# Grab all *.toml files in the configurations directory
-config_pattern = os.path.join("test", "configurations", "*.toml")
-configs = sorted(glob.glob(config_pattern))
+# Grab all *.toml files in the test/configurations directory
+config_files_pattern = os.path.join("test", "configurations", "*.toml")
+configs = sorted(glob.glob(config_files_pattern))
 
 
 @pytest.mark.parametrize("script,config", itertools.product(templates, configs))
-def test_template_execution(script, config):
+def test_templates(script, config):
+    """We test each template in combination with each configuration file in the test directory.
+    We check that the script runs without error and that a log file is generated properly.
+    TODO: Check metrics once we have implemented them universally. Add more test configurations. (resolutions, etc.)
+    """
     # Confirm that the file exists
     assert os.path.exists(script), f"{script} does not exist."
     assert os.path.exists(config), f"{config} does not exist."
@@ -56,5 +60,5 @@ def test_template_execution(script, config):
             f"Simulation did not end properly. Log:\n{log}"
         )
 
-    # clean up output
+    # clean up output directory
     shutil.rmtree(output_dir)
