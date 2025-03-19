@@ -51,7 +51,8 @@ mlrose-hiive = { git = "https://github.com/hiive/mlrose.git" }
 dev = [
     "austin>=2016.0.1",
     "pytest>=8.3.5",
-    "ruff>=0.9.7",
+    "pytest-coverage>=0.0",
+    "ruff>=0.11.0",
 ]
 [tool.ruff.lint]
 # Skip unused variable rules (`F841`).

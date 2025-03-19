@@ -31,7 +31,7 @@ jobs:
         run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/data
 
       - name: Set up Environment
-        run: uv sync
+        run: uv sync --no-dev
 
       - name: Set dynamic filename
         run: |
