@@ -40,4 +40,4 @@ jobs:
 
       - name: Run Integration Test
         run: |
-          uv run pytest test/integration_test.py --durations=0 >/home/ci/test_runner_data/$OUTPUT_FILE 2>&1
+          uv run pytest test/integration_test.py --durations=0 2>&1 | tee /home/ci/test_runner_data/$OUTPUT_FILE
