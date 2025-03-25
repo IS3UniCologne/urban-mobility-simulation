@@ -1,6 +1,7 @@
 # urban-mobility-simulation
 
 [![develop - ruff-fix.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml/badge.svg?branch=develop)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml)
+[![integration-test.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/integration-test.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/integration-test.yml)
 
 We provide a simulation platform considering shared mobility (ride sharing, vehicle sharing) services along with infrastructure services (e.g., charging)
 
@@ -10,7 +11,8 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 
 - To create a virtual environment and install all dependencies simply run `uv sync`
 - Optional notebook specific dependencies can be installed using `uv sync --extra notebooks`
-- Development dependencies can be installed using `uv sync --dev`
+- Optional machine learning dependencies can be installed using `uv sync --extra ml`
+- Use `uv sync --all-extras` to install all optional dependencies simultaneously
 
 > Some optimization algorithms might require working CPLEX binaries. These have to be installed separately.
 
@@ -20,6 +22,7 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 > At the moment, `template_all_modes.py` is not working, we first need to fix several issues for true multi-modal users.
 
 Provide configuration files as the first argument after the experiment file name such as `uv run experiment_template.py ./resources/configurations/template.toml`
+
 > You can also activate the virtual environment that `uv sync` creates in `.venv` manually and use `python experiment_template.py ./resources/configurations/template.toml`.
 
 ## Simulation Components
