@@ -1,0 +1,43 @@
+### This workflow is used to test the templates as an integration test
+### The results are stored in a JSON file on the self-hosted runner and can be accessed via SSH
+
+name: Integration Test
+on:
+  # run when pushing to main or develop
+  push:
+    branches: [main, develop]
+  # run when opening, synchronizing, or reopening a pull request
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  # added using https://github.com/step-security/secure-workflows
+  contents: read
+
+jobs:
+  test-templates:
+    runs-on: self-hosted
+    name: Test Templates
+    steps:
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy local files to workspace
+        run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/data
+
+      - name: Set up Environment
+        run: uv sync --no-dev
+
+      - name: Set dynamic filename
+        run: |
+          export OUTPUT_FILE="integration_test_$(date +'%Y-%m-%d_%H-%M-%S').log"
+          echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
+
+      - name: Run Integration Test
+        run: |
+          uv run pytest test/integration_test.py --durations=0 2>&1 | tee /home/ci/test_runner_data/$OUTPUT_FILE
