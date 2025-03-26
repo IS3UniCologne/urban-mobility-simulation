@@ -274,10 +274,7 @@ demand_factory = DemandFactory(
     demand_profile,
     di,
     world,
-    [os.path.normpath
-    for path in config.path.PATH_DEMAND_MODIFIERS
-],
-    # config.path.PATH_DEMAND_MODIFIERS,
+    [os.path.normpath(path) for path in config.path.PATH_DEMAND_MODIFIERS],
     config.experiment_management.SEED,
     mode="public_transport",
 )
