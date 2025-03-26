@@ -1,3 +1,4 @@
+name: Ruff Checks
 on:
   pull_request:
   push:
