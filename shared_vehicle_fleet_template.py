@@ -366,7 +366,9 @@ def run_simulation(end_time, seed=4711, env=env):
     transactions = operator.get_transactions()
     if transactions.size > 0:
         transactions_dir = os.path.normpath(os.path.join("data", "output"))
-        transactions.to_csv(os.path.join(transactions_dir, "transactions.csv"), index=False)
+        transactions.to_csv(
+            os.path.join(transactions_dir, "transactions.csv"), index=False
+        )
 
         metrics_factory = MetricsFactory(transactions)
 
