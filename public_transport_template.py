@@ -274,7 +274,10 @@ demand_factory = DemandFactory(
     demand_profile,
     di,
     world,
-    [os.path.normpath(path) for path in config.path.PATH_DEMAND_MODIFIERS],
+    [os.path.normpath
+    for path in config.path.PATH_DEMAND_MODIFIERS
+],
+    # config.path.PATH_DEMAND_MODIFIERS,
     config.experiment_management.SEED,
     mode="public_transport",
 )
@@ -334,7 +337,7 @@ for i in range(sum_iterations):
     env = simpy.Environment(initial_time=600)
 
     run_simulation(
-        700,
+        end_time=config.experiment_management.END_TIME,
         seed=config.experiment_management.SEED,
     )
 
