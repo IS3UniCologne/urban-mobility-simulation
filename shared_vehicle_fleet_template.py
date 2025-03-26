@@ -136,7 +136,7 @@ if (
     == ModeChoiceStrategy.SUBSTITUTION_AWARE
 ):
     vehicle_choice_model = DistanceBasedSharedVehicleVehicleChoiceBehavior(
-        config.path.PATH_TO_MODE_CHOICE_MODEL,
+        os.path.normpath(config.path.PATH_TO_MODE_CHOICE_MODEL),
         config.mode_choice_model.SUBSTITUTION_BOUNDARY,
         config.shared_vehicle_global.AVAILABLE_VEHICLE_MODES,
     )
