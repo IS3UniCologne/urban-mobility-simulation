@@ -4,7 +4,6 @@ from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
 )
 
 
-# TODO: Do we want to keep this ?
 class OnlyWalkingChoiceBehavior(VehicleChoiceBehaviorInterface):
     """
     The only choice in this behavior is to walk
