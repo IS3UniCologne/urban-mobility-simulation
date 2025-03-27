@@ -368,7 +368,7 @@ def run_simulation(end_time, seed=4711, env=env):
 
     transactions = operator.get_transactions()
     if transactions.size > 0:
-        transactions.to_csv("data/output/transactions.csv", index=False)
+        # transactions.to_csv("data/output/transactions.csv", index=False)
 
         metrics_factory = MetricsFactory(transactions)
 

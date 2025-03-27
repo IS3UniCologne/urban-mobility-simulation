@@ -54,11 +54,26 @@ def test_templates(script, config):
     # get the log file
     log_file = os.path.join(f"{output_dir}/logs", log_files[0])
 
+    # TODO: These tests are "special" temporary tests. They should be replaced with proper metrics tests once we solve #20 and have unified metrics.
     with open(log_file, "r") as f:
         log = f.read()
-        assert "Ending Simulation" in log, (
-            f"Simulation did not end properly. Log:\n{log}"
-        )
+        assert "Ending Simulation" in log, "Simulation did not end properly."
+        # if this is the ridehailing template, check the last entry with Total Revenue in the log
+        if script == "ridehailing_template.py":
+            assert (
+                "Missed trip of User 554. Current Total Revenue: 824.9877006243544 - Total Trips: 75 - Missed Trips 178."
+                in log
+            ), "Total revenue not as expected."
 
+        if script == "shared_vehicle_fleet_template.py":
+            assert (
+                "Missed trip of User 555. Current Total Revenue: 575.7043348440625 - Total Trips: 68 - Missed Trips 473."
+                in log
+            ), "Total revenue not as expected."
+        if script == "public_transport_template.py":
+            assert (
+                "Missed trip of User 561. Current Total Revenue: 0 - Total Trips: 0 - Missed Trips 1124."
+                in log
+            ), "Total revenue not as expected."
     # clean up output directory
     shutil.rmtree(output_dir)
