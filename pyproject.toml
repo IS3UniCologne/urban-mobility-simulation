@@ -28,7 +28,7 @@ notebooks = [
     "seaborn>=0.13.2",
     "sidetable>=0.9.1",
 ]
-ML = [
+ml = [
     "torch>=2.6.0",
     "docplex>=2.29.241",
 ]
@@ -50,7 +50,9 @@ mlrose-hiive = { git = "https://github.com/hiive/mlrose.git" }
 [dependency-groups]
 dev = [
     "austin>=2016.0.1",
-    "ruff>=0.9.7",
+    "pytest>=8.3.5",
+    "pytest-coverage>=0.0",
+    "ruff>=0.11.0",
 ]
 [tool.ruff.lint]
 # Skip unused variable rules (`F841`).
