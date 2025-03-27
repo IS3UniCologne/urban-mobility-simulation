@@ -2,7 +2,6 @@ import json
 import logging
 
 import h3
-import numpy as np
 import simpy
 
 from simulation.helper.configuration.configuration import Configuration

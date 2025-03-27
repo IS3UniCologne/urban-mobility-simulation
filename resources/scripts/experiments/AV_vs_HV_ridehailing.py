@@ -1,6 +1,5 @@
 # from pqdm.processes import pqdm
 import logging
-import sys
 from pathlib import Path
 
 import pandas as pd

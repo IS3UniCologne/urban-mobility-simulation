@@ -1,6 +1,5 @@
 from typing import List
 
-import numpy
 
 from simulation.helper.configuration.enums import PopulationType
 from simulation.helper.random.random_manager import RandomManager
