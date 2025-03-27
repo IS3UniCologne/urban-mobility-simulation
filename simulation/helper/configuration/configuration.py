@@ -1,8 +1,8 @@
 import ast
-import random
+import sys
 from dataclasses import dataclass, fields
 from functools import wraps
-from typing import Dict, List, Optional
+from typing import Any, Optional, TypeVar
 
 import numpy as np
 
@@ -14,6 +14,7 @@ from simulation.helper.configuration.enums import (
     TemporalBucket,
     VehicleMode,
 )
+from simulation.helper.singleton import Singleton
 from simulation.helper.time import SimulationVelocityConverter
 
 try:
@@ -38,7 +39,7 @@ The input from the config file is validated using beartype.
 To add a new configuration parameter to an existing configuration class, follow these steps:
 1. Add the parameter to the config.toml file in the correct table.
 2. Add the parameter to the Configuration class. Make sure to include a type hint.
-3. If the parameter is optional, add the Optional type hint and set the default value to None. (e.g.  OPTIONAL_LIST: Optional[List[str]] = None)
+3. If the parameter is optional, add the Optional type hint and set the default value to None. (e.g.  OPTIONAL_LIST: Optional[list[str]] = None)
     All optional parameters have to be at the end of the dataclass. This is a limitation of dataclasses.
 4. Types that are not supported by toml (e.g. Enums,Tuples) should be converted to their respective types in the __post_init__ method. Make sure to use
     the @beartype_after_post_init decorator if you do this.
@@ -56,26 +57,16 @@ For an exmaple of how to implement Lists, look at the Operator configs.
 For an example of how to implement nested dictionaries, look at the Vehicle configs.
 """
 
-
-class Singleton(type):
-    """
-    A metaclass that for creating singletons.
-    """
-
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
+# Generic type variable for type hinting
+T = TypeVar("T", bound=type)
 
 
-def beartype_after_post_init(cls):
+def beartype_after_post_init(cls: T) -> T:
     """Decorator to that delays the beartype check until after the __post_init__ method is called."""
     original_post_init = getattr(cls, "__post_init__", None)
 
     @wraps(original_post_init)
-    def new_post_init(self):
+    def new_post_init(self: Any) -> None:  # noqa: ANN401
         if original_post_init:
             original_post_init(self)
         for field in fields(self):
@@ -105,7 +96,13 @@ class SettingsConfig:
 class ExperimentManagementConfig:
     START_TIME: int
     END_TIME: int
+
+
+@beartype
+@dataclass
+class RandomManagerConfig:
     SEED: int
+    COMPONENT_SEEDS: dict[str, int]
 
 
 @beartype_after_post_init
@@ -116,14 +113,14 @@ class WorldConfig:
     DAILY_RESOLUTION: DailyResolution
     CITY: str
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # convert ints to enums
         self.SPATIAL_RESOLUTION = SpatialResolution(self.SPATIAL_RESOLUTION)
         self.TEMPORAL_RESOLUTION = TemporalBucket(self.TEMPORAL_RESOLUTION)
         self.DAILY_RESOLUTION = DailyResolution(self.DAILY_RESOLUTION)
 
     @property
-    def SPATIAL_RESOLUTION_VALUE(self):
+    def SPATIAL_RESOLUTION_VALUE(self) -> int:
         return self.SPATIAL_RESOLUTION.value
 
     @property
@@ -156,9 +153,9 @@ class PathConfig:
     FLEET_STATE_FILE: str
 
     PATH_TRIP_DEMAND: str
-    PATH_DEMAND_MODIFIERS: Optional[List[str]] = None
+    PATH_DEMAND_MODIFIERS: Optional[list[str]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # check if any paths contain f string replacements and replace them with the city name
         for key, value in self.__dict__.items():
             if isinstance(value, str):
@@ -175,10 +172,10 @@ class PathConfig:
 @beartype
 @dataclass
 class PopulationConfig:
-    POPULATION_PROBABILITIES: List[float]
-    RIDE_HAILING_POPULATION_PROBABILITIES: List[float]
-    SHARED_VEHICLE_POPULATION_PROBABILITIES: List[float]
-    TRANSIT_POPULATION_PROBABILITIES: List[float]
+    POPULATION_PROBABILITIES: list[float]
+    RIDE_HAILING_POPULATION_PROBABILITIES: list[float]
+    SHARED_VEHICLE_POPULATION_PROBABILITIES: list[float]
+    TRANSIT_POPULATION_PROBABILITIES: list[float]
 
 
 @beartype_after_post_init
@@ -188,7 +185,7 @@ class UserConfig:
     SPATIAL_STRATEGY: str
     WALKING_SPEED: float
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # convert km/h to m/s
         self.WALKING_SPEED = SimulationVelocityConverter.convert_kmh(self.WALKING_SPEED)
 
@@ -214,7 +211,7 @@ class VehicleConfig:
     CHARGING_COST_PER_KWH: Optional[float] = None
     KG_CO2_PER_KM: Optional[float] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # convert velocity km/h to m/s
         self.VELOCITY = SimulationVelocityConverter.convert_kmh(self.VELOCITY)
 
@@ -223,21 +220,25 @@ class VehicleConfig:
 @dataclass
 class ModeChoiceModelConfig:
     SUBSTITUTION_BOUNDARY: float
-    AV_TRUST: List[float]
+    AV_TRUST: list[float]
     MODE_CHOICE_STRATEGY: ModeChoiceStrategy
 
     # MoD
-    MOD_COEFFICIENTS: List[List[float]]
-    MOD_COEFFICIENTS_CI_LOWER: List[List[float]]
-    MOD_COEFFICIENTS_CI_UPPER: List[List[float]]
-    MOD_P_VALUES: List[List[float]]
+    MOD_COEFFICIENTS: list[list[float]]
+    MOD_COEFFICIENTS_CI_LOWER: list[list[float]]
+    MOD_COEFFICIENTS_CI_UPPER: list[list[float]]
+    MOD_P_VALUES: list[list[float]]
     MOD_COEFFICIENT_INTERVAL_ADJUSTER: float
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # convert from str to enum
         self.MODE_CHOICE_STRATEGY = ModeChoiceStrategy[self.MODE_CHOICE_STRATEGY]
 
-    def generate_mode_choice_coefficients(self, population_type: PopulationType):
+    def generate_mode_choice_coefficients(
+        self, population_type: PopulationType
+    ) -> np.ndarray:
+        # TODO: This shouldn't be in here, can't use random manager because of circular import, fix once it's moved
+        rng = np.random.default_rng(seed=Configuration().random_manager.SEED)
         mode_choice_coefficients_ci_lower = self.MOD_COEFFICIENTS_CI_LOWER[
             population_type.value
         ]
@@ -257,15 +258,17 @@ class ModeChoiceModelConfig:
         )
         mode_choice_coefficients_ci_lower = mode_choice_coefficients_ci_lower + adjuster
         mode_choice_coefficients_ci_upper = mode_choice_coefficients_ci_upper - adjuster
-        mode_choice_coefficients = random.uniform(
+        mode_choice_coefficients = rng.uniform(
             mode_choice_coefficients_ci_lower, mode_choice_coefficients_ci_upper
         )
         return mode_choice_coefficients
 
-    def generate_AV_trust(self, population_type: PopulationType):
+    def generate_AV_trust(self, population_type: PopulationType) -> float:
+        # TODO: This shouldn't be in here, can't use random manager because of circular import, fix once it's moved
+        rng = np.random.default_rng(seed=Configuration().random_manager.SEED)
         trust_value_lower = self.AV_TRUST[population_type.value] - 0.5
         trust_value_upper = self.AV_TRUST[population_type.value] + 0.5
-        trust_value = random.uniform(trust_value_lower, trust_value_upper)
+        trust_value = rng.uniform(trust_value_lower, trust_value_upper)
         return trust_value
 
 
@@ -273,12 +276,12 @@ class ModeChoiceModelConfig:
 @dataclass
 class ChargingInfrastructureConfig:
     NUMBER_OF_CHARGING_STATIONS: int
-    LOCATIONS: List[str]
-    CHARGING_STATION_POWER: List[float]
-    CHARGING_STATION_CAPACITY: List[int]
-    CHARGING_STATION_QUEUE_SIZE: List[int]
+    LOCATIONS: list[str]
+    CHARGING_STATION_POWER: list[float]
+    CHARGING_STATION_CAPACITY: list[int]
+    CHARGING_STATION_QUEUE_SIZE: list[int]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # clamplocations to number of charging stations
         self.LOCATIONS = self.LOCATIONS[: self.NUMBER_OF_CHARGING_STATIONS]
 
@@ -322,11 +325,11 @@ class SharedVehicleOperatorConfig:
     OPERATIONS_START: int
     OPERATIONS_DURATION: int
     VEHICLE_RELOCATION_VELOCITY: float
-    BASE_REGIONS: List[str]
+    BASE_REGIONS: list[str]
 
-    N_VEHICLES: Dict[VehicleMode, int]
+    N_VEHICLES: dict[VehicleMode, int]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # clamp to number of base regions
         self.BASE_REGIONS = self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]
 
@@ -341,24 +344,24 @@ class SharedVehicleOperatorConfig:
         }
 
     @property
-    def AVAILABLE_VEHICLE_MODES(self) -> List[str]:
+    def AVAILABLE_VEHICLE_MODES(self) -> list[str]:
         # return list of vehicle modes as strings, probably change this later once we have enums everywhere
         return [mode.name for mode in self.N_VEHICLES.keys()]
 
     @property
-    def AVAILABLE_MODES_SUPPLY(self) -> List[int]:
+    def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
         return list(self.N_VEHICLES.values())
 
 
 @beartype_after_post_init
 @dataclass
 class RideHailingOperatorConfig:
-    RECHARGE_THRESHOLD: List[float]
+    RECHARGE_THRESHOLD: list[float]
     OPERATIONS_START: int
     OPERATIONS_DURATION: int
     VEHICLE_RELOCATION_VELOCITY: float
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # convert velocity km/h to m/s
         self.VEHICLE_RELOCATION_VELOCITY = SimulationVelocityConverter.convert_kmh(
             self.VEHICLE_RELOCATION_VELOCITY
@@ -389,12 +392,12 @@ class RideHailingGlobalConfig:
     DISCOUNT_RATE: float
     N_RIDE_HAILING_CARS: int
     N_AUTONOMOUS_CARS: int
-    AVAILABLE_VEHICLE_MODES: List[str]
+    AVAILABLE_VEHICLE_MODES: list[str]
 
     # Supply
     EV_PENETRATION: float
     AV_PENETRATION: float
-    RH_AVAILABILITY: List[float]
+    RH_AVAILABILITY: list[float]
 
     BID_DEFAULT: float
     BID_DECAY: float
@@ -403,7 +406,7 @@ class RideHailingGlobalConfig:
 
     LOW_SOC_PENALTY: int
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # apply the discount rate to all prices
         self.PRICE_ENTERING = self.PRICE_ENTERING * (1 - self.DISCOUNT_RATE)
         self.PRICE_PER_MINUTE = self.PRICE_PER_MINUTE * (1 - self.DISCOUNT_RATE)
@@ -411,7 +414,7 @@ class RideHailingGlobalConfig:
         self.MINIMUM_PRICE = self.MINIMUM_PRICE * (1 - self.DISCOUNT_RATE)
 
     @property
-    def DRIVER_AVAILABILITY_VECTOR(self) -> List[int]:
+    def DRIVER_AVAILABILITY_VECTOR(self) -> list[int]:
         if not hasattr(self, "_driver_availability_vector"):
             self._driver_availability_vector = [
                 round(float(x) * self.N_RIDE_HAILING_CARS * (1 - self.AV_PENETRATION))
@@ -420,7 +423,7 @@ class RideHailingGlobalConfig:
         return self._driver_availability_vector
 
     @property
-    def AVAILABLE_MODES_SUPPLY(self) -> List[int]:
+    def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
         # TODO: This has to be inferred instead of doing it this way. This is very error prone
         return [self.N_AUTONOMOUS_CARS, self.N_RIDE_HAILING_CARS]
 
@@ -428,9 +431,9 @@ class RideHailingGlobalConfig:
 @beartype_after_post_init
 @dataclass
 class SharedVehicleGlobalConfig:
-    VEHICLES: Optional[Dict[VehicleMode, int]] = None
+    VEHICLES: Optional[dict[VehicleMode, int]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Calculate vehicles as totals from all operators
         self.VEHICLES = {
             mode: sum(
@@ -443,7 +446,7 @@ class SharedVehicleGlobalConfig:
         }
 
     @property
-    def AVAILABLE_VEHICLE_MODES(self) -> List[VehicleMode]:
+    def AVAILABLE_VEHICLE_MODES(self) -> list[VehicleMode]:
         return list(self.VEHICLES.keys())
 
 
@@ -451,7 +454,7 @@ class SharedVehicleGlobalConfig:
 @dataclass
 class TransitGlobalConfig:
     @property
-    def AVAILABLE_VEHICLE_MODES(self) -> List[str]:
+    def AVAILABLE_VEHICLE_MODES(self) -> list[str]:
         # TODO: Use enum for this
         available_modes = []
         if self.N_BUSES_TOTAL > 0:
@@ -459,7 +462,7 @@ class TransitGlobalConfig:
         return available_modes
 
     @property
-    def AVAILABLE_MODES_SUPPLY(self) -> List[int]:
+    def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
         return [self.N_BUSES_TOTAL]
 
 
@@ -481,7 +484,7 @@ class SharedChargingAuctionConfig:
 @beartype
 @dataclass
 class DynamicRoutingConfig:
-    ACTION_SPACE: List[str]
+    ACTION_SPACE: list[str]
     ACTION_SPACE_RESOLUTION: int
     CORRIDOR_PATH: str
     PENALTY: float
@@ -492,9 +495,9 @@ class DynamicRoutingConfig:
 @beartype
 @dataclass
 class DynamicCheckpointRoutingConfig:
-    ACTION_SPACE: List[str]
+    ACTION_SPACE: list[str]
     ACTION_SPACE_RESOLUTION: int
-    CHECKPOINTS: List[int]
+    CHECKPOINTS: list[int]
     CORRIDOR_PATH: str
     PENALTY_CHECKPOINTS: float
     PENALTY_UNREACHABLE: float
@@ -526,20 +529,22 @@ class DQNConfig:
     BATCHSIZE: int
     GAMMA: float
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # evaluate DQN_LAYERS string to tuple
         self.DQN_LAYERS = ast.literal_eval(self.DQN_LAYERS)
 
 
 class Configuration(metaclass=Singleton):
     # There is only one instance of this class.
-    def __init__(self, config_file: str):
+    def __init__(self) -> None:
+        config_file = sys.argv[1]
         with open(config_file, "rb") as f:
             self._config_data = tomllib.load(f)
         self._lazy_objects = {}  # lazy loaded objects are stored here
 
     @staticmethod
-    def _convert_types(params: dict, type: type):
+    def _convert_types(params: dict, type: type) -> dict:
+        """Converts the types of the parameters in the dictionary to the types specified in the dataclass."""
         for field in fields(type):
             # cast int to float where applicable
             if field.type == float and field.name in params:
@@ -547,7 +552,7 @@ class Configuration(metaclass=Singleton):
                     params[field.name] = float(params[field.name])
         return params
 
-    def _get_lazy_config(self, name: str, type: type, is_dict: bool = False):
+    def _get_lazy_config(self, name: str, type: type, is_dict: bool = False) -> Any:  # noqa: ANN401
         """
         This method will lazily instantiate and return the config object from the config file.
         If the object has already been instantiated, it will return the cached object.
@@ -586,6 +591,10 @@ class Configuration(metaclass=Singleton):
         )
 
     @property
+    def random_manager(self) -> RandomManagerConfig:
+        return self._get_lazy_config("random_manager", RandomManagerConfig)
+
+    @property
     def world(self) -> WorldConfig:
         return self._get_lazy_config("world", WorldConfig)
 
@@ -612,17 +621,17 @@ class Configuration(metaclass=Singleton):
         )
 
     @property
-    def shared_vehicle_operators(self) -> List[SharedVehicleOperatorConfig]:
+    def shared_vehicle_operators(self) -> list[SharedVehicleOperatorConfig]:
         return self._get_lazy_config(
             "shared_vehicle_operator", SharedVehicleOperatorConfig
         )
 
     @property
-    def ride_hailing_operators(self) -> List[RideHailingOperatorConfig]:
+    def ride_hailing_operators(self) -> list[RideHailingOperatorConfig]:
         return self._get_lazy_config("ride_hailing_operator", RideHailingOperatorConfig)
 
     @property
-    def transit_operators(self) -> List[TransitOperatorConfig]:
+    def transit_operators(self) -> list[TransitOperatorConfig]:
         return self._get_lazy_config("transit_operator", TransitOperatorConfig)
 
     @property
@@ -634,17 +643,17 @@ class Configuration(metaclass=Singleton):
         return self._get_lazy_config("shared_vehicle_global", SharedVehicleGlobalConfig)
 
     @property
-    def ride_hailing_vehicles(self) -> Optional[Dict[str, VehicleConfig]]:
+    def ride_hailing_vehicles(self) -> Optional[dict[str, VehicleConfig]]:
         return self._get_lazy_config(
             "ride_hailing_vehicles", VehicleConfig, is_dict=True
         )
 
     @property
-    def shared_vehicles(self) -> Optional[Dict[VehicleMode, VehicleConfig]]:
+    def shared_vehicles(self) -> Optional[dict[VehicleMode, VehicleConfig]]:
         """Dictionary containing VehicleConfig objects for shared vehicles.
 
         Returns:
-            Optional[Dict[str, VehicleConfig]]: _description_
+            Optional[dict[str, VehicleConfig]]: _description_
         """
         config = self._get_lazy_config("shared_vehicles", VehicleConfig, is_dict=True)
         return (
@@ -654,11 +663,11 @@ class Configuration(metaclass=Singleton):
         )
 
     @property
-    def transit_vehicles(self) -> Optional[Dict[str, VehicleConfig]]:
+    def transit_vehicles(self) -> Optional[dict[str, VehicleConfig]]:
         """Dictionary containing VehicleConfig objects for shared vehicles.
 
         Returns:
-            Optional[Dict[str, VehicleConfig]]: _description_
+            Optional[dict[str, VehicleConfig]]: _description_
         """
         return self._get_lazy_config("transit_vehicles", VehicleConfig, is_dict=True)
 

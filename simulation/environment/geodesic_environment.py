@@ -1,3 +1,4 @@
+import logging
 import math
 
 import h3
@@ -5,6 +6,7 @@ import numpy
 from shapely.geometry import Point, Polygon
 
 from simulation.environment.environment import Environment
+from simulation.helper.random.random_manager import RandomManager
 from simulation.vehicle.vehicle import Vehicle
 
 
@@ -27,13 +29,11 @@ class GeodesicEnvironment(Environment):
             GeodesicEnvironment.__instance = self
             super(GeodesicEnvironment, self).__init__()
 
-            self._random = numpy.random.RandomState(
-                42
-            )  # TODO: use fnc reset_rnd_gen to change seed?
+            self._rng = RandomManager().get_rng(component_name="GEOENV")
 
             self._hex_geom_cache = {}
 
-    def getLayer(self, layer_name):
+    def getLayer(self, layer_name: str):
         """
             Return layer
         :param layer_name: GeoDataFrame containing all spatial elements of that layer
@@ -50,7 +50,9 @@ class GeodesicEnvironment(Environment):
         """
         self.layer[layer_name] = layer
 
-    def get_random_position(self, hex_id, layer_name="hex_7"):
+    def get_random_position(
+        self, hex_id: str, layer_name: str = "hex_7"
+    ) -> tuple[float, float]:
         """
         Returns a random position within given hexagon
         :param hex_id: Hexagon ID
@@ -67,9 +69,7 @@ class GeodesicEnvironment(Environment):
         minx, miny, maxx, maxy = geometry.bounds
         points = []
         while len(points) < 1:
-            pnt = Point(
-                self._random.uniform(minx, maxx), self._random.uniform(miny, maxy)
-            )
+            pnt = Point(self._rng.uniform(minx, maxx), self._rng.uniform(miny, maxy))
             if geometry.contains(pnt):
                 return pnt.y, pnt.x  # Latitude, Longitude
 
@@ -105,9 +105,6 @@ class GeodesicEnvironment(Environment):
             ].to_dict()
 
         return self._hex_geom_cache[layer_name].get(hex_id, None)
-
-    def reset_random_generator(self, seed=42):
-        self._random = numpy.random.RandomState(seed)
 
     @staticmethod
     def move_in_layer(hex_id, movement):
