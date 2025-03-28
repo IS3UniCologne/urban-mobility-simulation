@@ -78,7 +78,7 @@ config_file = sys.argv[1]
 config = Configuration(config_file)
 
 # make a copy of the used config file that references this run
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
 output_config_dir = os.path.normpath(os.path.join("data", "output", "configs"))
 if not os.path.exists(output_config_dir):
     os.makedirs(output_config_dir)
@@ -106,7 +106,7 @@ console_handler.setLevel(config.settings.LOG_LEVEL)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
 logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
 # Create directory for logs if not exists
 if not os.path.exists(logs_dir):
