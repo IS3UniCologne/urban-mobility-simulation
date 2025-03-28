@@ -83,7 +83,7 @@ logging.getLogger("fiona").setLevel(logging.WARNING)
 
 logger = logging.getLogger()
 
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
 # Record the start time
 real_start_time = time.time()
 

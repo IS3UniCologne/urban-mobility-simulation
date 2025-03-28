@@ -69,10 +69,11 @@ config_file = sys.argv[1]
 config = Configuration(config_file)
 
 # make a copy of the used config file that references this run
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
-if not os.path.exists("data/output/configs"):
-    os.makedirs("data/output/configs")
-shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+output_config_dir = os.path.normpath(os.path.join("data", "output", "configs"))
+if not os.path.exists(output_config_dir):
+    os.makedirs(output_config_dir)
+shutil.copy(sys.argv[1], os.path.join(output_config_dir, f"{output_timestamp}.toml"))
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -98,11 +99,12 @@ console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
 
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
 # Create directory for logs if not exists
-if not os.path.exists(f"{config.path.OUTPUT_FOLDER}/logs"):
-    os.makedirs(f"{config.path.OUTPUT_FOLDER}/logs")
-log_file = f"{config.path.OUTPUT_FOLDER}/logs/{output_timestamp}.log"
+if not os.path.exists(logs_dir):
+    os.makedirs(logs_dir)
+log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
 file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(formatter)
 file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
@@ -187,7 +189,7 @@ charging_infrastructure = ChargingInfrastructure(
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-p = Path(config.path.PATH_TRIP_DEMAND)
+p = os.path.normpath(config.path.PATH_TRIP_DEMAND)
 di = DemandImporter(
     spatial_resolution=config.world.SPATIAL_RESOLUTION,
     temporal_resolution=config.world.TEMPORAL_RESOLUTION,
@@ -210,7 +212,7 @@ hexagons = geodesic_environment.getLayer(
 dmi = DistanceMatrixImporter(
     hexagons,
     config.world.SPATIAL_RESOLUTION_VALUE,
-    "./data/infrastructure",
+    os.path.normpath(os.path.join(".", "data", "infrastructure")),
     config.world.CITY,
 )
 distance_matrix = dmi.load_distance_matrix()
@@ -253,7 +255,7 @@ available_vehicle_modes_supply_ride_hailing = [
 ]
 
 # Get the supply probability from supply file
-supply_prob = pd.read_csv(config.path.PATH_VEHICLE_SUPPLY)
+supply_prob = pd.read_csv(os.path.normpath(config.path.PATH_VEHICLE_SUPPLY))
 
 ride_hailing_fleet_config_0 = generate_ridehailing_fleet_config(
     distribution=supply_prob,
@@ -363,7 +365,7 @@ demand_factory = DemandFactory(
     demand_profile,
     di,
     world,
-    config.path.PATH_DEMAND_MODIFIERS,
+    [os.path.normpath(path) for path in config.path.PATH_DEMAND_MODIFIERS],
     config.experiment_management.SEED,
     mode="ride_hailing",
 )
