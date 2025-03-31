@@ -1,7 +1,6 @@
 import glob
 import itertools
 import os
-import shutil
 import subprocess
 import sys
 
@@ -39,8 +38,10 @@ def test_templates(script, config):
 
     # Make sure the output log directory is empty
     if os.path.exists(f"{output_dir}/logs"):
-        for file in os.listdir(f"{output_dir}/logs"):
-            os.remove(os.path.join(f"{output_dir}/logs", file))
+        existing_logs = os.listdir(f"{output_dir}/logs")
+    else:
+        os.makedirs(f"{output_dir}/logs")
+        existing_logs = []
 
     result = run_template_script(script, config)
     assert result.returncode == 0, (
@@ -48,14 +49,16 @@ def test_templates(script, config):
     )
 
     log_files = os.listdir(f"{output_dir}/logs")
-    assert len(log_files) > 0, "No log files generated."
-    assert len(log_files) == 1, "Multiple log files generated."
 
-    # get the log file
-    log_file = os.path.join(f"{output_dir}/logs", log_files[0])
+    # get log file that is not in existing_logs
+    new_log_files = [file for file in log_files if file not in existing_logs]
+    assert len(new_log_files) == 1, (
+        f"Expected exactly one new log file, found {len(new_log_files)}"
+    )
+    log_file = new_log_files[0]
 
     # TODO: These tests are "special" temporary tests. They should be replaced with proper metrics tests once we solve #20 and have unified metrics.
-    with open(log_file, "r") as f:
+    with open(f"{output_dir}/logs/{log_file}", "r") as f:
         log = f.read()
         assert "Ending Simulation" in log, "Simulation did not end properly."
         # if this is the ridehailing template, check the last entry with Total Revenue in the log
@@ -75,5 +78,3 @@ def test_templates(script, config):
                 "Missed trip of User 561. Current Total Revenue: 0 - Total Trips: 0 - Missed Trips 1124."
                 in log
             ), "Total revenue not as expected."
-    # clean up output directory
-    shutil.rmtree(output_dir)
