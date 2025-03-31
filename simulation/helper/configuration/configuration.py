@@ -39,7 +39,7 @@ The input from the config file is validated using beartype.
 To add a new configuration parameter to an existing configuration class, follow these steps:
 1. Add the parameter to the config.toml file in the correct table.
 2. Add the parameter to the Configuration class. Make sure to include a type hint.
-3. If the parameter is optional, add the Optional type hint and set the default value to None. (e.g.  OPTIONAL_LIST: Optional[list[str]] = None)
+3. If the parameter is optional, add the None type hint and set the default value to None. (e.g.  OPTIONAL_LIST: None | list[str] = None)
     All optional parameters have to be at the end of the dataclass. This is a limitation of dataclasses.
 4. Types that are not supported by toml (e.g. Enums,Tuples) should be converted to their respective types in the __post_init__ method. Make sure to use
     the @beartype_after_post_init decorator if you do this.

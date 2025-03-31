@@ -22,8 +22,7 @@ class RandomManager(metaclass=Singleton):
 
     Example:
     ```
-    random_manager = RandomManager()
-    rng = random_manager.get_rng("SIMULATIONCOMPONENT")
+    rng = RandomManager().get_rng("SIMULATIONCOMPONENT")
     random_number = rng.uniform(0, 1)
     ```
 
@@ -33,8 +32,7 @@ class RandomManager(metaclass=Singleton):
 
     Example:
     ```
-    random_manager = RandomManager()
-    random_number = random_manager.uniform(0, 1, component="OTHERSIMULATIONCOMPONENT")
+    random_number = RandomManager().uniform(0, 1, component="OTHERSIMULATIONCOMPONENT")
     ```
     """
 
@@ -136,6 +134,8 @@ class RandomManager(metaclass=Singleton):
 
     # Random sampling methods, these are just thin wrappers around NumPy's Generator methods
     # They can be called directly on the RandomManager instance without needing to get the RNG first
+    # Example:
+    # random_number = RandomManager().uniform(0, 1, component="MYCOMPONENT")
 
     def uniform(
         self,
