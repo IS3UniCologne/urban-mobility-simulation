@@ -75,38 +75,49 @@ config = Configuration()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-logging.getLogger("docplex.util.environment.logger").setLevel(logging.WARNING)
+# Disable the default handler of the root logger
+logging.getLogger().handlers.clear()
 
 logger = logging.getLogger()
+# Set to logging.DEBUG to see all logs
+logger.setLevel(logging.DEBUG)
 
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+# Block Logger of third party software
+logging.getLogger("fiona").setLevel(logging.WARNING)
+logging.getLogger("docplex").setLevel(logging.WARNING)
+
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+)
+
+# Create a console handler with its own level (LOG_LEVEL)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(config.settings.LOG_LEVEL)
+console_handler.setFormatter(formatter)
+
 # Record the start time
 real_start_time = time.time()
 
-# Create the output directory
-if not os.path.exists("data/output/logs"):
-    os.makedirs("data/output/logs")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
+# Create directory for logs if not exists
+if not os.path.exists(logs_dir):
+    os.makedirs(logs_dir)
+log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(formatter)
+file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
 
 
-# Make it beautiful
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-    filename=f"data/output/logs/{output_timestamp}.log",
-    encoding="utf-8",
-    level=config.settings.FILE_LOG_LEVEL,  # set it to lowest so the handlers can decide
-)
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+edf = ExtraDefaultFilter(filter_name="add_default_value")
+logger.addFilter(edf)
 
 # Add Custom Init Filters (which work without the ENV obj)
 cf = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf)
-
-consolehandler = logging.StreamHandler()
-consolehandler.setLevel(config.settings.LOG_LEVEL)
-consolehandler.addFilter(cf)
-logger.addHandler(consolehandler)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -538,6 +549,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util_0,
             avg_infra_util_1,
-            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').initial_SoC == 0 else ''}, queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, allocation_penalty: {config.ride_hailing_global.LOW_SOC_PENALTY}",
+            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''}, queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, allocation_penalty: {config.ride_hailing_global.LOW_SOC_PENALTY}",
         ]
     )
