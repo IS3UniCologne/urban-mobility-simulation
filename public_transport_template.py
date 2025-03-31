@@ -68,14 +68,16 @@ from utils import load_geodesic_environment
 working_dir = Path(__file__).parent
 os.chdir(working_dir)
 
+
 # Initialize Configuration
 config = Configuration()
 
 # make a copy of the used config file that references this run
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
-if not os.path.exists("data/output/configs"):
-    os.makedirs("data/output/configs")
-shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+output_config_dir = os.path.normpath(os.path.join("data", "output", "configs"))
+if not os.path.exists(output_config_dir):
+    os.makedirs(output_config_dir)
+shutil.copy(sys.argv[1], os.path.join(output_config_dir, f"{output_timestamp}.toml"))
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -103,11 +105,12 @@ console_handler.setLevel(config.settings.LOG_LEVEL)
 console_handler.setFormatter(formatter)
 
 
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
 # Create directory for logs if not exists
-if not os.path.exists(f"{config.path.OUTPUT_FOLDER}/logs"):
-    os.makedirs(f"{config.path.OUTPUT_FOLDER}/logs")
-log_file = f"{config.path.OUTPUT_FOLDER}/logs/{output_timestamp}.log"
+if not os.path.exists(logs_dir):
+    os.makedirs(logs_dir)
+log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
 file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(formatter)
 file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
@@ -154,7 +157,7 @@ tracking = Tracking.init(env)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-p = Path(config.path.PATH_TRIP_DEMAND)
+p = os.path.normpath(config.path.PATH_TRIP_DEMAND)
 di = DemandImporter(
     spatial_resolution=config.world.SPATIAL_RESOLUTION,
     temporal_resolution=config.world.TEMPORAL_RESOLUTION,
@@ -178,7 +181,7 @@ hexagons = geodesic_environment.getLayer(
 dmi = DistanceMatrixImporter(
     hexagons,
     config.world.SPATIAL_RESOLUTION_VALUE,
-    "./data/infrastructure",
+    os.path.normpath(os.path.join(".", "data", "infrastructure")),
     config.world.CITY,
 )
 distance_matrix = dmi.load_distance_matrix()
@@ -190,7 +193,7 @@ distance_matrix = dmi.load_distance_matrix()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-timetable = Timetable(config.path.PATH_TRANSIT_TIMETABLE)
+timetable = Timetable(os.path.normpath(config.path.PATH_TRANSIT_TIMETABLE))
 timetable.import_timetable()
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -266,7 +269,8 @@ demand_factory = DemandFactory(
     demand_profile,
     di,
     world,
-    config.path.PATH_DEMAND_MODIFIERS,
+    [os.path.normpath(path) for path in config.path.PATH_DEMAND_MODIFIERS],
+    config.experiment_management.SEED,
     mode="public_transport",
 )
 
@@ -315,7 +319,8 @@ def run_simulation(end_time, env=env):
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
     transactions = operator.get_transactions()
-    transactions.to_csv("data/output/transactions.csv", index=False)
+    transactions_dir = os.path.normpath(os.path.join("data", "output"))
+    transactions.to_csv(os.path.join(transactions_dir, "transactions.csv"), index=False)
 
 
 sum_iterations = 1  # throws Exception if value > 1: ValueError until (1440) must be greater than the current simulation time
