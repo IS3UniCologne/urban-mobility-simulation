@@ -367,8 +367,7 @@ demand_factory = DemandFactory(
     demand_profile,
     di,
     world,
-    [os.path.normpath(path) for path in config.path.PATH_DEMAND_MODIFIERS],
-    config.experiment_management.SEED,
+    modifiers=[os.path.normpath(path) for path in config.path.PATH_DEMAND_MODIFIERS],
     mode="ride_hailing",
 )
 # env.process(demand_factory.generate_demand())

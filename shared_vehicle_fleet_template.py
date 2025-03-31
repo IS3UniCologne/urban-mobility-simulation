@@ -315,8 +315,7 @@ demand_factory = DemandFactory(
     demand_profile,
     di,
     world,
-    [os.path.normpath(path) for path in config.path.PATH_DEMAND_MODIFIERS],
-    config.experiment_management.SEED,
+    modifiers=[os.path.normpath(path) for path in config.path.PATH_DEMAND_MODIFIERS],
     mode="shared_vehicle",
 )
 
