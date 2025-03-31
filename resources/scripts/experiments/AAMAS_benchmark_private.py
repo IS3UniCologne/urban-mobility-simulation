@@ -62,9 +62,25 @@ from tracking.tracking import Tracking
 # Custom module imports
 from utils import load_geodesic_environment
 
-# Change working directory to path of this file
-working_dir = Path(__file__).parent
-os.chdir(working_dir)
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Load Configuration from TOML file.      #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# make a copy of the used config file that references this run
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+output_config_dir = os.path.normpath(os.path.join("data", "output", "configs"))
+if not os.path.exists(output_config_dir):
+    os.makedirs(output_config_dir)
+shutil.copy(sys.argv[1], os.path.join(output_config_dir, f"{output_timestamp}.toml"))
+
+# Change working directory to path of this script
+# TODO: why would we want to do that?
+# tests: bad idea
+# scripts? -> have to copy it out of here anyways
+# working_dir = Path(__file__).parent
+# os.chdir(working_dir)
 
 # Initialize Configuration
 config = Configuration()
@@ -119,16 +135,7 @@ logger.addFilter(edf)
 cf = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf)
 
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Basic Configuration                     #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-# make a copy of the used config file that references this run
-if not os.path.exists("data/output/configs"):
-    os.makedirs("data/output/configs")
-shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
+# some hacking around bad coding
 
 if (
     config.mode_choice_model.MODE_CHOICE_STRATEGY
