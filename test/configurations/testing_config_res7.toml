@@ -17,7 +17,20 @@ TRACK_AGENT     = true
 [EXPERIMENT_MANAGEMENT]
 START_TIME = 0
 END_TIME   = 144
-SEED       = 43
+
+
+[RANDOM_MANAGER]
+# Main seed, set to 0 to generate a new seed on every run
+SEED = 43
+# Component seeds. If commented out, they will be generated from the main seed. (default for reproducibility)
+# Set to 0 to generate a new seed for the component on every run, independent of the main seed.
+# Set to any other value to use that value as the seed for the component.
+[RANDOM_MANAGER.COMPONENT_SEEDS]
+# POPULATIONFACTORY = 0
+# FLEETFACTORY =0 
+# DEMANDFACTORY     = 0
+# INITIALSOC        = 0
+# GEOENV            = 0
 
 
 [WORLD]

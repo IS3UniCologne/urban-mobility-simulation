@@ -1,5 +1,6 @@
-import geopandas as gpd
 import os
+
+import geopandas as gpd
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
@@ -15,7 +16,7 @@ def load_geodesic_environment() -> GeodesicEnvironment:
 
     filename = os.path.normpath(config.path.PATH_ENV_HEX_LAYER_RES_9)
     with open(filename, encoding="utf-8") as file:
-        env_df_hex_9 = gpd.read_file(file, driver="GeoJSON")
+        env_df_hex_9 = gpd.read_file(file)
         env_df_hex_9.set_index("hex_id_9", inplace=True)
 
     filename = os.path.normpath(config.path.PATH_ENV_HEX_LAYER_RES_8)

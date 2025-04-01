@@ -1,6 +1,5 @@
 # from pqdm.processes import pqdm
 import logging
-import sys
 from pathlib import Path
 
 import pandas as pd
@@ -58,8 +57,7 @@ pd.set_option("display.max_columns", None)
 # os.chdir(working_dir)
 
 # Initialize Configuration
-config_file = sys.argv[1]
-config = Configuration(config_file)
+config = Configuration()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -215,8 +213,6 @@ def run_single_simulation(
     User.user_id = 0
     DemandFactory.counter = 0
 
-    GeodesicEnvironment.getInstance().reset_random_generator(seed)
-
     # Inject Simulation Environment to Logger (such that we can log the env time)
     cf = SimulationContextFilter(filter_name="add_env", extra=env)
     edf = ExtraDefaultFilter(filter_name="add_default_value")
@@ -239,7 +235,7 @@ def run_single_simulation(
         raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
     # Population Type
-    population_factory = PopulationFactory(pop_prob, seed)
+    population_factory = PopulationFactory(pop_prob)
 
     Tracking.init(env)
 
@@ -260,22 +256,14 @@ def run_single_simulation(
     supply_prob = pd.read_csv(config.path.PATH_VEHICLE_SUPPLY)
 
     ride_hailing_fleet_config_0 = generate_ridehailing_fleet_config(
-        distribution=supply_prob,
-        n_cars=n_cars,
-        n_AVs=n_cars,
-        allocation_method="historical",
-        allocation=allocation,
+        distribution=supply_prob, n_cars=n_cars, n_AVs=n_cars
     )
     ride_hailing_fleet_0 = generate_mixed_ride_hailing_fleet(
         env, ride_hailing_fleet_config_0
     )
 
     ride_hailing_fleet_config_1 = generate_ridehailing_fleet_config(
-        distribution=supply_prob,
-        n_cars=n_cars,
-        n_AVs=n_cars,
-        allocation_method="historical",
-        allocation=allocation,
+        distribution=supply_prob, n_cars=n_cars, n_AVs=n_cars
     )
     ride_hailing_fleet_1 = generate_mixed_ride_hailing_fleet(
         env, ride_hailing_fleet_config_1
@@ -376,7 +364,6 @@ def run_single_simulation(
         di,
         world,
         config.path.PATH_DEMAND_MODIFIERS,
-        seed,
         mode="ride_hailing",
     )
 
