@@ -40,14 +40,12 @@ jobs:
 
       - name: Run Integration Test
         id: integration_test
-        continue-on-error: true
         run: |
           set -o pipefail
           uv run pytest test/integration_test.py --durations=0 2>&1 | tee /home/ci/test_runner_data/runner_logs/$OUTPUT_FILE
-          echo "TEST_STATUS=$?" >> $GITHUB_ENV
 
       - name: Copy simulation logs on failure
-        if: env.TEST_STATUS != '0'
+        if: failure()
         run: |
           echo "Integration test failed. Copying simulation logs for debugging..."
           mkdir -p /home/ci/test_runner_data/failed_logs_${{ github.run_id }}
@@ -61,7 +59,3 @@ jobs:
             tail -n 20 "$logfile"
             echo ""
           done
-
-      - name: Exit with proper status code
-        if: steps.integration_test.outputs.test_status != '0'
-        run: exit 1
