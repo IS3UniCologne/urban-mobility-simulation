@@ -21,7 +21,7 @@ END_TIME   = 144
 
 [RANDOM_MANAGER]
 # Main seed, set to 0 to generate a new seed on every run
-SEED = 1337
+SEED = 43
 # Component seeds. If commented out, they will be generated from the main seed. (default for reproducibility)
 # Set to 0 to generate a new seed for the component on every run, independent of the main seed.
 # Set to any other value to use that value as the seed for the component.
