@@ -41,8 +41,8 @@ jobs:
       - name: Run Integration Test
         id: integration_test
         run: |
-          set -o pipefail
           uv run pytest test/integration_test.py --durations=0 2>&1 | tee /home/ci/test_runner_data/runner_logs/$OUTPUT_FILE
+          exit ${PIPESTATUS[0]}
 
       - name: Copy simulation logs on failure
         if: failure()
