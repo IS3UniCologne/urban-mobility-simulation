@@ -43,11 +43,11 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          uv run pytest test/integration_test.py --durations=0 2>&1 | tee /home/ci/test_runner_data/$OUTPUT_FILE
-          echo "test_status=$?" >> $GITHUB_OUTPUT
+          uv run pytest test/integration_test.py --durations=0 2>&1 | tee /home/ci/test_runner_data/runner_logs/$OUTPUT_FILE
+          echo "TEST_STATUS=$?" >> $GITHUB_ENV
 
       - name: Copy simulation logs on failure
-        if: steps.integration_test.outputs.test_status != '0'
+        if: env.TEST_STATUS != '0'
         run: |
           echo "Integration test failed. Copying simulation logs for debugging..."
           mkdir -p /home/ci/test_runner_data/failed_logs_${{ github.run_id }}
