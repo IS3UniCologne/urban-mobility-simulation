@@ -7,6 +7,7 @@ import pandas as pd
 from pandas import DataFrame
 
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.random.random_manager import RandomManager
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operations_management.service_tasks.charging_task import (
     ChargingTask,
@@ -897,8 +898,11 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     )
 
                     # Solve problem using the genetic algorithm (keep random state constant)
+                    seed = RandomManager().integers(
+                        0, 1000000, component="SHAREDMOBILITYOPERATIONS"
+                    )
                     best_state, best_fitness, _ = mlrose.genetic_alg(
-                        problem_fit, random_state=1337, curve=False
+                        problem_fit, random_state=seed, curve=False
                     )
 
                     # Convert Numpy Array to List

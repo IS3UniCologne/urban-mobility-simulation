@@ -1,9 +1,9 @@
 import logging
-import random
 
 from simpy import Environment
 
 from simulation.environment.position import Position
+from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
@@ -77,7 +77,9 @@ class RideHailingVehicle(Vehicle):
             "RideHailingCar"
         ].INITIAL_SOC
         if initial_state_of_charge_percentage == 0:
-            initial_state_of_charge_percentage = random.uniform(0.2, 0.8)
+            initial_state_of_charge_percentage = RandomManager().uniform(
+                low=0.2, high=0.8, component="INITIALSOC"
+            )
 
         self._current_state_of_charge = (
             max_state_of_charge * initial_state_of_charge_percentage
