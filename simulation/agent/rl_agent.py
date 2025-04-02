@@ -8,6 +8,8 @@ from simulation.helper.configuration.configuration import Configuration
 
 
 class RLAgent(ABC):
+
+    __slots___ = ("_env", "_config", "_action_space", "_reward", "_reward_sum")
     def __init__(self, env: simpy.Environment):
         # Simulation Environment
         self._env = env

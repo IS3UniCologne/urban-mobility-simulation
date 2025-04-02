@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class Environment(ABC):
+    __slots__ = ("_layer",)
     def __init__(self):
         self._layer = {}  # name: layer frame
 
