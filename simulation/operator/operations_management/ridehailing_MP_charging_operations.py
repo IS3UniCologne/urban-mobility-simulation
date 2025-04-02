@@ -18,6 +18,8 @@ class RideHailingMPChargingOperations(OperationsInterface):
     """
     Ridehailing Operations for Charging with Mathematical Programming / Optimization
     """
+    __slots__ = ("_env", "_time_between_operations", "_state_of_charge_threshold", "_algo", "_task_queue", "_task_transactions", "_virtual_charging_infrastructure")
+
 
     def __init__(
         self,
