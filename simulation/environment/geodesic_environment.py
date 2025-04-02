@@ -12,6 +12,10 @@ class GeodesicEnvironment(Environment):
     # There is only one instance of this class.
     __instance = None
 
+    __slots__ = (
+        "_random",
+        "_hex_geom_cache",)
+
     @staticmethod
     def getInstance():
         """Static access method."""

@@ -9,6 +9,7 @@ from .position import Position
 
 
 class GeodesicPosition(Position):
+    __slots__ = ("_lat", "_lng", "_default_hexagon", "_global_resolution", "_geometry", "_geo_env")
     def __init__(self, latitude, longitude, default_hexagon=None) -> object:
         super(GeodesicPosition, self).__init__()
         self._lat = latitude
