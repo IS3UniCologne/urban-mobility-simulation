@@ -21,6 +21,10 @@ from simulation.tasks.transport_task import TransportTask
 class Operator:
     operator_id = 0
 
+    __slots__ = (
+        "_env", "_fleet", "_charging_infrastructure", "_operations", "_search_engine", "_allocation_engine", 
+        "id", "_total_revenue", "_total_fulfilled_trips", "_total_missed_trips", "_total_missed_revenue", "_transactions")
+
     def __init__(
         self,
         env: Environment,
