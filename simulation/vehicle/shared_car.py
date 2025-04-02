@@ -8,6 +8,15 @@ class SharedCar(SharedVehicle):
     shared_car_id = 0
     vehicle_type = "shared_car"
 
+    __slots__ = (
+        "_velocity",
+        "_max_available_seats",
+        "_max_state_of_charge",
+        "_energy_consumption",
+        "_price_per_minute",
+        "car_id",
+    )
+
     def __init__(
         self,
         env: Environment,

@@ -8,6 +8,8 @@ class RideHailingAV(RideHailingVehicle):
     ride_hailing_av_id = 0
     vehicle_type = "ridehailing_AV"
 
+    __slots__ = ("car_id", "_price_per_min", "_emergency_soc_buffer_percent")
+
     def __init__(
         self,
         env: Environment,
@@ -41,7 +43,7 @@ class RideHailingAV(RideHailingVehicle):
 
         # Increment Shared Car ID
         self.car_id = RideHailingAV.ride_hailing_av_id
-        self._price_per_minute = price_per_min
+        self._price_per_min = price_per_min
         self._emergency_soc_buffer_percent = self._config.ride_hailing_vehicles[
             "AutonomousCar"
         ].EMERGENCY_SOC_BUFFER
