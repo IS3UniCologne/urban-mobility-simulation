@@ -14,6 +14,9 @@ from simulation.vehicle.public_transit_bus import PublicTransitVehicleState
 
 
 class EpisodicSemiGradientNStepSarsa(RLAgent):
+
+    __slots__ = ("_alpha", "_gamma", "_eps", "_n", "_q_hat", "_states", "_actions", "_rewards", "_G")
+
     def __init__(self, env: simpy.Environment, q_hat: ValueFunctionApproximator):
         super(EpisodicSemiGradientNStepSarsa, self).__init__(env)
 

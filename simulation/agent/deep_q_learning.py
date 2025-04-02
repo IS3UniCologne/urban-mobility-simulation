@@ -24,6 +24,8 @@ from simulation.vehicle.public_transit_bus import Bus, PublicTransitVehicleState
 
 
 class ModifiedTensorBoard(TensorBoard):
+
+    __slots__ = ("_step", "_writer", "_log_write_dir")
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.step = 1
