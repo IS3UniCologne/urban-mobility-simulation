@@ -2,6 +2,8 @@ from simulation.environment.position import Position
 
 
 class Vertex:
+    __slots__ = ("_position")
+
     def __init__(self, position: Position):
         self._position = position
 
