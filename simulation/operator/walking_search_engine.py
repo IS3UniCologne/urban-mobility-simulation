@@ -13,6 +13,9 @@ from simulation.vehicle.walking import Walking
 
 
 class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
+
+
+    __slots__ = ("_env", "_walking")
     def __init__(self, env):
         PaymentInterface.__init__(self)
         self._env = env
