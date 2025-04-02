@@ -10,6 +10,8 @@ from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 
 class SharedVehicleSearchEngine(SearchEngineInterface):
+    __slots__ = ("_env", "_fleet")
+
     def __init__(self, env):
         self._env = env
         self._fleet = None
