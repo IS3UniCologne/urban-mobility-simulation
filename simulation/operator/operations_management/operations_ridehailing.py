@@ -7,6 +7,23 @@ from simulation.operator.operations_management.service_tasks.charging_task_rideh
 
 # TODO: refactor to adhere to base class "Operator"
 class OperationsRidehailing:
+    __slots__ = (
+        "_env",
+        "_vehicle_fleet",
+        "_time_between_operations",
+        "_operation_duration"
+        "_relocation_scheduler",
+        "_payment_engine",
+        "_available_modes",
+        "_available_modes_supply",
+        "_state_of_charge_threshold",
+        "_task_queue",
+        "_charging_stations",
+        "_scheduled_tasks",
+        "_charging_plan_updated",
+        "_operations_started",
+        "_counter",
+        "_duration_of_operations")
     def __init__(
         self,
         env,

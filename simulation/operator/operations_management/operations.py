@@ -4,6 +4,8 @@ from simpy import Environment
 
 
 class OperationsInterface(ABC):
+
+    __slots__ = ("_env", "_operator_reference")
     def __init__(self, env: Environment) -> None:
         self._env = env
         self._operator_reference = None
