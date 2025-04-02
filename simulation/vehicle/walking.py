@@ -9,6 +9,8 @@ from simulation.vehicle.vehicle import Vehicle
 class Walking(Vehicle):
     walking_id = 0
 
+    __slots__ = ("_id", "_velocity")
+    
     def __init__(self, env: Environment, velocity=83.33):
         # Position of Walking actually just takes user position, so it does not matter
         super(Walking, self).__init__(env, GeodesicPosition(0, 0, None))
