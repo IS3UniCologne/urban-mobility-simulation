@@ -21,6 +21,31 @@ class SharedVehicleState(VehicleState, Enum):
 class SharedVehicle(Vehicle, ABC):
     shared_vehicle_id = 0
 
+    __slots__ = (
+    "_velocity",
+    "_max_available_seats",
+    "_max_state_of_charge",
+    "_energy_consumption",
+    "_price_per_minute",
+    "_driver",
+    "_available_seats",
+    "_seats",
+    "_current_state_of_charge",
+    "_vehicle_parked",
+    "_user_mounted",
+    "_driving_started",
+    "_driving_finished",
+    "_user_unmounted",
+    "_driver_mounted",
+    "_driver_unmounted",
+    "_vehicle_relocation_started",
+    "_vehicle_relocation_finished",
+    "_charging_station_plugged_in",
+    "_charging_station_charging_started",
+    "_charging_station_charging_finished",
+    "_charging_station_plugged_out",
+    "_reserved_for_user",
+)
     def __init__(
         self,
         env: Environment,
