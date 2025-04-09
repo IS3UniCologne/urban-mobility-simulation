@@ -1,6 +1,7 @@
 class ServiceProviderMetrics:
+    __slots__ = ("_transactions")
     def __init__(self, transactions):
-        __slots__ = ("_transactions")
+    
         self._transactions = transactions
 
     def get_revenue(self):
