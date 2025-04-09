@@ -14,9 +14,8 @@ class AmbiguousTripException(Exception):
 
 
 class Timetable:
-    __slots__ = (
-        "_data_path", "_trips", "_geo_env")
-    
+    __slots__ = ("_data_path", "_trips", "_geo_env")
+
     def __init__(self, data_path):
         self._data_path = data_path
         self._trips = None

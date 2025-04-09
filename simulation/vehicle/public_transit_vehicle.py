@@ -39,8 +39,17 @@ class PublicTransitVehicleFull(PublicTransitVehicleException):
 class PublicTransitVehicle(Vehicle, ABC):
     public_transit_vehicle_id = 0
 
-    __slots__ = ( "_route", "_velocity", "_max_available_seats", "_available_seats", "_seats", 
-                 "_current_stop", "_delay", "_user_mounted", "_user_unmounted")
+    __slots__ = (
+        "_route",
+        "_velocity",
+        "_max_available_seats",
+        "_available_seats",
+        "_seats",
+        "_current_stop",
+        "_delay",
+        "_user_mounted",
+        "_user_unmounted",
+    )
 
     def __init__(
         self,

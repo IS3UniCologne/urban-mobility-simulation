@@ -11,9 +11,20 @@ from simulation.operator.operations_management.ridehailing_base_charging_operati
 
 
 class RideHailingUncoordinatedChargingOperations(OperationsInterface):
-    
-    __slots__ = ("_env", "_distance_matrix", "_time_between_operations", "_operation_duration", "_available_modes", "_available_modes_supply", 
-                 "_state_of_charge_threshold", "_allow_queue", "_virtual_charging_infrastructure", "_charging_operations", "_config")
+    __slots__ = (
+        "_env",
+        "_distance_matrix",
+        "_time_between_operations",
+        "_operation_duration",
+        "_available_modes",
+        "_available_modes_supply",
+        "_state_of_charge_threshold",
+        "_allow_queue",
+        "_virtual_charging_infrastructure",
+        "_charging_operations",
+        "_config",
+    )
+
     def __init__(
         self,
         env,

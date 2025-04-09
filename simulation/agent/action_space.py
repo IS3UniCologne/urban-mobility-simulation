@@ -6,7 +6,7 @@ class ActionSpace:
     # There is only one instance of this class.
     __instance = None
 
-    __slots__ = ("_actions")
+    __slots__ = "_actions"
 
     @staticmethod
     def instance() -> "ActionSpace":

@@ -2,13 +2,8 @@ from simulation.environment.geodesic_position import GeodesicPosition
 
 
 class Stop(GeodesicPosition):
+    __slots__ = ("_stop_id", "_gtfs_id", "_departure", "_departure_next_day")
 
-    __slots__ = (
-        "_stop_id",
-        "_gtfs_id",
-        "_departure",
-        "_departure_next_day"
-    )
     def __init__(
         self, stop_id, gtfs_id, latitude, longitude, departure, departure_next_day: bool
     ):

@@ -4,7 +4,7 @@ from simulation.operator.data_transfer_object.transportation_alternative import 
 
 
 class TransportationAlternativeBrowser:
-    __slots__ = ("_transportation_alternatives")
+    __slots__ = "_transportation_alternatives"
 
     def __init__(self):
         self._transportation_alternatives = []

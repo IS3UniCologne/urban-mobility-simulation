@@ -12,10 +12,14 @@ from tracking.tracking import Tracking
 
 
 class PublicTransportVehicleFleet(VehicleFleet):
+    __slots__ = (
+        "_config",
+        "_busses",
+        "_world",
+        "_bus_velocity",
+        "_unserved_passengers",
+    )
 
-    __slots__ = ("_config", "_busses", "_world", "_bus_velocity", "_unserved_passengers")
-
-    
     def __init__(self, env: Environment):
         super(PublicTransportVehicleFleet, self).__init__(env)
         self._env = env

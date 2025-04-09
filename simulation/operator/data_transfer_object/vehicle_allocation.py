@@ -8,12 +8,13 @@ from simulation.vehicle.vehicle import Vehicle
 
 class VehicleAllocation:
     __slots__ = (
-        "_user", 
-        "_vehicle", 
+        "_user",
+        "_vehicle",
         "_associated_alternative",
         "_pick_up_position",
-        "_pick_up_time")
-    
+        "_pick_up_time",
+    )
+
     def __init__(
         self,
         user,

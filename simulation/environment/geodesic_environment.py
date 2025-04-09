@@ -13,10 +13,7 @@ class GeodesicEnvironment(Environment):
     # There is only one instance of this class.
     __instance = None
 
-    __slots__ = (
-        "_hex_geom_cache",
-        "_rng")
-    
+    __slots__ = ("_hex_geom_cache", "_rng")
 
     @staticmethod
     def getInstance():

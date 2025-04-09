@@ -3,7 +3,6 @@ from tracking.tracking import Tracking
 
 
 class DynamicCheckpointRoutingTracker:
-
     __slots__ = (
         "_tracking",
         "_config",

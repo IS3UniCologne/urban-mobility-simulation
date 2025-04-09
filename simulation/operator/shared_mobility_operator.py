@@ -19,8 +19,8 @@ from simulation.tasks.transport_task import TransportTask
 
 
 class SharedMobilityOperator(Operator):
-
     __slots__ = ("_number_service_workers", "_workforce")
+
     def __init__(
         self,
         env: Environment,

@@ -22,9 +22,24 @@ from simulation.operator.operations_management.service_tasks.relocation_task imp
 
 class IntegratedSharedMobilityOperations(OperationsInterface):
     # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
-    __slots__= ("_env", "_time_between_operations", "operation_duration", "_distance_matrix", "_ordered_available_vehicle_modes",
-                 "_ordered_max_vehicle_supply", "_state_of_charge_threshold", "_base_regions", "_base_capacity", "_available_vehicle_modes", 
-                 "_max_vehicle_supply", "_scheduled_tasks", "_charging_plan_updated", "_operations_started", "_duration_of_operations")
+    __slots__ = (
+        "_env",
+        "_time_between_operations",
+        "operation_duration",
+        "_distance_matrix",
+        "_ordered_available_vehicle_modes",
+        "_ordered_max_vehicle_supply",
+        "_state_of_charge_threshold",
+        "_base_regions",
+        "_base_capacity",
+        "_available_vehicle_modes",
+        "_max_vehicle_supply",
+        "_scheduled_tasks",
+        "_charging_plan_updated",
+        "_operations_started",
+        "_duration_of_operations",
+    )
+
     def __init__(
         self,
         env,

@@ -15,7 +15,9 @@ class ChargingStationHandler:
         "recharge_threshold",
         "mixed_fleet",
         "charging_stations_hex_ids",
-        "kpi_tracker",)
+        "kpi_tracker",
+    )
+
     @staticmethod
     def instance() -> "ChargingStationHandler":
         """Static access method."""
