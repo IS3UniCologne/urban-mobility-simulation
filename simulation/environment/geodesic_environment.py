@@ -14,8 +14,9 @@ class GeodesicEnvironment(Environment):
     __instance = None
 
     __slots__ = (
-        "_random",
-        "_hex_geom_cache",)
+        "_hex_geom_cache",
+        "_rng")
+    
 
     @staticmethod
     def getInstance():

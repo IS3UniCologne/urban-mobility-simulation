@@ -6,7 +6,7 @@ from simulation.helper.random.random_manager import RandomManager
 
 
 class PopulationFactory:
-    __slots__ = ("_random", "_prob")
+    __slots__ = ("_prob", "_rng")
     def __init__(self, prob: List[float]) -> None:
         # Random Number Generator
         self._rng = RandomManager().get_rng(component_name="POPULATIONFACTORY")
