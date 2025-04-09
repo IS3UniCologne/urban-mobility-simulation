@@ -13,10 +13,24 @@ from simulation.operator.operations_management.service_tasks.relocation_task imp
 
 # TODO: refactor to adhere to base class "Operator"
 class Operations:
+    __slots__ = (
+        "_env",
+        "_vehicle_fleet",
+        "_no_service_workers",
+        "_time_between_operations",
+        "_operation_duration",
+        "_relocation_scheduler",
+        "_payment_engine",
+        "_available_modes",
+        "available_modes_supply",
+        "state_of_charge_threshold",
+        "task_queue",
+        "_scheduled_tasks",
+        "_charging_plan_updated",
+        "_operations_started",
+        "_duration_of_operations",
+    )
 
-    __slots__ = ("_env", "_vehicle_fleet", "_no_service_workers", "_time_between_operations", "_operation_duration", "_relocation_scheduler", 
-                 "_payment_engine", "_available_modes", "available_modes_supply", "state_of_charge_threshold", "task_queue", "_scheduled_tasks",
-                   "_charging_plan_updated", "_operations_started", "_duration_of_operations") 
     def __init__(
         self,
         env,

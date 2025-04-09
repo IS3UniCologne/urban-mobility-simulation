@@ -11,8 +11,7 @@ class OperationsRidehailing:
         "_env",
         "_vehicle_fleet",
         "_time_between_operations",
-        "_operation_duration"
-        "_relocation_scheduler",
+        "_operation_duration_relocation_scheduler",
         "_payment_engine",
         "_available_modes",
         "_available_modes_supply",
@@ -23,7 +22,9 @@ class OperationsRidehailing:
         "_charging_plan_updated",
         "_operations_started",
         "_counter",
-        "_duration_of_operations")
+        "_duration_of_operations",
+    )
+
     def __init__(
         self,
         env,

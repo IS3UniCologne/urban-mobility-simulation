@@ -12,8 +12,16 @@ from simulation.vehicle.vehicle import VehicleState
 
 
 class ChargingTask(ServiceTask):
+    __slots__ = (
+        "_origin",
+        "_destination",
+        "_number_of_vehicles_to_charge",
+        "_vehicle_mode",
+        "_distance_to_fleet_base",
+        "_vehicle_fleet",
+        "_state_of_charge_threshold",
+    )
 
-    __slots__ = ("_origin", "_destination", "_number_of_vehicles_to_charge", "_vehicle_mode", "_distance_to_fleet_base", "_vehicle_fleet", "_state_of_charge_threshold")
     def __init__(
         self,
         env: Environment,

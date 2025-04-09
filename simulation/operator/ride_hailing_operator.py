@@ -20,9 +20,8 @@ from simulation.tasks.transport_task import TransportTask
 
 
 class RideHailingOperator(Operator):
+    __slots__ = "_driver_payment_share"
 
-    __slots__ = ("_driver_payment_share")
-    
     def __init__(
         self,
         env: Environment,

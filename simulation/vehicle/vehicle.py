@@ -27,7 +27,15 @@ class Vehicle(TrackingInterface, ABC):
     vehicle_id = 0
     vehicle_type: str
 
-    __slots__ = ("_id", "_state", "_env", "_position", "_position_changed", "_vdt", "_current_task")
+    __slots__ = (
+        "_id",
+        "_state",
+        "_env",
+        "_position",
+        "_position_changed",
+        "_vdt",
+        "_current_task",
+    )
 
     exposes = ["_id", "_state", "position", "_vdt"]
 

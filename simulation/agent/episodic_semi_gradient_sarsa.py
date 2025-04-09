@@ -12,7 +12,6 @@ from simulation.vehicle.public_transit_bus import PublicTransitVehicleState
 
 
 class ValueFunctionApproximator:
-
     __slots__ = ("_weights",)
     # this function only looks at (d_terminal_x, d_terminal_y)
     function = (

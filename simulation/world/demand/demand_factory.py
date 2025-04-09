@@ -12,7 +12,6 @@ from simulation.world.world import World
 
 
 class DemandFactory:
-
     __slots__ = (
         "_env",
         "_time",

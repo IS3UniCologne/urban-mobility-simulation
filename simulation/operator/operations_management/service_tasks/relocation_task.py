@@ -12,8 +12,15 @@ from simulation.vehicle.vehicle import VehicleState
 
 
 class RelocationTask(ServiceTask):
+    __slots__ = (
+        "_origin",
+        "_destination",
+        "_number_of_vehicles_to_relocate",
+        "_vehicle_mode",
+        "_distance",
+        "_vehicle_fleet",
+    )
 
-    __slots__= ("_origin", "_destination", "_number_of_vehicles_to_relocate", "_vehicle_mode", "_distance", "_vehicle_fleet")
     def __init__(
         self,
         env: Environment,

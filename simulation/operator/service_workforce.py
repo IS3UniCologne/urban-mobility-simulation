@@ -5,9 +5,8 @@ from simulation.operator.service_worker import ServiceWorker
 
 
 class ServiceWorkforce:
-
     __slots__ = ("_service_workers", "_task_queue", "_number_service_workers")
-    
+
     def __init__(self, env: Environment, number_service_workers: int):
         self._service_workers = []
         self._task_queue = TaskQueue(env=env)

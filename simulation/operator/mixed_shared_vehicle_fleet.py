@@ -12,12 +12,8 @@ from simulation.vehicle.vehicle import VehicleState
 
 
 class MixedSharedVehicleFleet(VehicleFleet):
+    __slots__ = ("_scooters", "_kick_scooters", "_cars", "_bikes")
 
-    __slots__ = (
-        "_scooters",
-        "_kick_scooters", "_cars",
-        "_bikes",)
-    
     def __init__(self, env: Environment):
         super(MixedSharedVehicleFleet, self).__init__(env)
 

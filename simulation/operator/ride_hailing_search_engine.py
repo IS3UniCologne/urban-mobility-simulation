@@ -12,9 +12,16 @@ from simulation.vehicle.vehicle import VehicleState
 
 
 class RideHailingSearchEngine(SearchEngineInterface):
+    __slots__ = (
+        "_env",
+        "_fleet",
+        "_AV_price_reduction",
+        "_price_entering",
+        "_price_per_minute",
+        "_price_per_km",
+        "_min_price",
+    )
 
-    __slots__ = ("_env", "_fleet", "_AV_price_reduction", "_price_entering", "_price_per_minute", "_price_per_km", "_min_price")
-    
     def __init__(self, env):
         self._env = env
         self._fleet = None

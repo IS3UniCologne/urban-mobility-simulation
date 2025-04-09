@@ -20,7 +20,9 @@ class TransportationAlternativeRideHailing:
         "_route_to_pickup",
         "_distance_to_pickup",
         "_pick_up_time",
-        "_utility")
+        "_utility",
+    )
+
     def __init__(
         self,
         vehicle: Vehicle,

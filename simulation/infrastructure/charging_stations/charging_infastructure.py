@@ -7,7 +7,15 @@ from tracking.tracking import Tracking
 class ChargingInfrastructure:
     __instance = None
 
-    __slots__ = ( "_env", "_location_list", "_power_list", "_capacity_list", "_queue_size", "_charging_stations", "_tracking" )
+    __slots__ = (
+        "_env",
+        "_location_list",
+        "_power_list",
+        "_capacity_list",
+        "_queue_size",
+        "_charging_stations",
+        "_tracking",
+    )
 
     @staticmethod
     def instance() -> "ChargingInfrastructure":

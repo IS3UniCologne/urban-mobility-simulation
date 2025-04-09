@@ -2,13 +2,7 @@ from simulation.infrastructure.transit_network.stop import Stop
 
 
 class RouteSegment:
-
-    __slots__ = (
-        "_segment_id",
-        "_start",
-        "_end",
-        "_distance"
-    )
+    __slots__ = ("_segment_id", "_start", "_end", "_distance")
 
     def __init__(self, segment_id, start: Stop, end: Stop, distance):
         self._segment_id = segment_id
