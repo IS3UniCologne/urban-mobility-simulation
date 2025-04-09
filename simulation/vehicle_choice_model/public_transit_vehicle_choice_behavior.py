@@ -8,7 +8,7 @@ class PublicTransitVehicleChoiceBehavior(VehicleChoiceBehaviorInterface):
     """
     Currently, this is only a dummy class that emulates Vehicle Choice Behavior in the absence of choice
     """
-
+    __slots__ = ("_available_modes")
     def __init__(self, available_modes):
         self._available_modes = available_modes
 

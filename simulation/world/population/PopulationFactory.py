@@ -4,6 +4,8 @@ from simulation.helper.configuration.enums import PopulationType
 
 
 class PopulationFactory:
+
+    __slots__ = ("_random", "_prob")
     def __init__(self, prob, seed):
         # Random Number Generator
         self._random = numpy.random.RandomState(seed)

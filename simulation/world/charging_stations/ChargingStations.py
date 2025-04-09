@@ -4,7 +4,18 @@ from simulation.vehicle.vehicle import VehicleState
 class ChargingStationHandler:
     # There is only one instance of this class.
     __instance = None
-
+    __slots__ = (
+        "_env",
+        "charging_stations_cars",
+        "charging_stations_scooters",
+        "charging_stations_kickscooters",
+        "car_capacity",
+        "scooter_capacity",
+        "kickscooter_capacity",
+        "recharge_threshold",
+        "mixed_fleet",
+        "charging_stations_hex_ids",
+        "kpi_tracker",)
     @staticmethod
     def instance() -> "ChargingStationHandler":
         """Static access method."""
