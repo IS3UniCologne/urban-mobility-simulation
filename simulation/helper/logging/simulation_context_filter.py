@@ -2,6 +2,7 @@ import logging
 
 
 class SimulationContextFilter(logging.Filter):
+    __slots__ = ("_env")
     def __init__(self, filter_name, extra):
         super(SimulationContextFilter, self).__init__(filter_name)
         self._env = extra

@@ -8,6 +8,10 @@ from tracking.tracking_interface import TrackingInterface
 
 
 class Tracking:
+    slots__ = (
+        "__env",
+        "tracked",
+    )
     """
     Singleton Class that controls all tracking and communication of tracking-exposed values in the simulation to
     external logic.
