@@ -18,6 +18,7 @@ class SimulationTime:
     Implements easy access to simpy's environment time.
     While simpy's time is unitless, we assume it to be minutes.
     """
+    __slots__ = ("_env")
 
     def __init__(self, env: Environment):
         self._env = env
