@@ -68,15 +68,16 @@ from utils import load_geodesic_environment
 working_dir = Path(__file__).parent
 os.chdir(working_dir)
 
+
 # Initialize Configuration
-config_file = sys.argv[1]
-config = Configuration(config_file)
+config = Configuration()
 
 # make a copy of the used config file that references this run
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
-if not os.path.exists("data/output/configs"):
-    os.makedirs("data/output/configs")
-shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+output_config_dir = os.path.normpath(os.path.join("data", "output", "configs"))
+if not os.path.exists(output_config_dir):
+    os.makedirs(output_config_dir)
+shutil.copy(sys.argv[1], os.path.join(output_config_dir, f"{output_timestamp}.toml"))
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -84,9 +85,12 @@ shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-logger = logging.getLogger()
+# Disable the default handler of the root logger
+logging.getLogger().handlers.clear()
 
-logger.setLevel(min(config.settings.LOG_LEVEL, config.settings.FILE_LOG_LEVEL))
+logger = logging.getLogger()
+# Set to logging.DEBUG to see all logs
+logger.setLevel(logging.DEBUG)
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
@@ -94,33 +98,33 @@ logging.getLogger("fiona").setLevel(logging.WARNING)
 formatter = logging.Formatter(
     "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
 )
+
 # Create a console handler with its own level (LOG_LEVEL)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(config.settings.LOG_LEVEL)
 console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
 
 
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
 # Create directory for logs if not exists
-if not os.path.exists(f"{config.path.OUTPUT_FOLDER}/logs"):
-    os.makedirs(f"{config.path.OUTPUT_FOLDER}/logs")
-log_file = f"{config.path.OUTPUT_FOLDER}/logs/{output_timestamp}.log"
+if not os.path.exists(logs_dir):
+    os.makedirs(logs_dir)
+log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
 file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(formatter)
 file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
+
+
+logger.addHandler(console_handler)
 logger.addHandler(file_handler)
+
+edf = ExtraDefaultFilter(filter_name="add_default_value")
+logger.addFilter(edf)
 
 # Add Custom Init Filters (which work without the ENV obj)
 cf = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf)
-
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Basic Configuration                     #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -133,9 +137,7 @@ env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
 
 # Inject Simulation Environment to Logger (such that we can log the env time)
 cf = SimulationContextFilter(filter_name="add_env", extra=env)
-edf = ExtraDefaultFilter(filter_name="add_default_value")
 logger.addFilter(cf)
-logger.addFilter(edf)
 
 # Load Spatial Environment
 load_geodesic_environment()
@@ -155,7 +157,7 @@ tracking = Tracking.init(env)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-p = Path(config.path.PATH_TRIP_DEMAND)
+p = os.path.normpath(config.path.PATH_TRIP_DEMAND)
 di = DemandImporter(
     spatial_resolution=config.world.SPATIAL_RESOLUTION,
     temporal_resolution=config.world.TEMPORAL_RESOLUTION,
@@ -179,7 +181,7 @@ hexagons = geodesic_environment.getLayer(
 dmi = DistanceMatrixImporter(
     hexagons,
     config.world.SPATIAL_RESOLUTION_VALUE,
-    "./data/infrastructure",
+    os.path.normpath(os.path.join(".", "data", "infrastructure")),
     config.world.CITY,
 )
 distance_matrix = dmi.load_distance_matrix()
@@ -191,7 +193,7 @@ distance_matrix = dmi.load_distance_matrix()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-timetable = Timetable(config.path.PATH_TRANSIT_TIMETABLE)
+timetable = Timetable(os.path.normpath(config.path.PATH_TRANSIT_TIMETABLE))
 timetable.import_timetable()
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -206,9 +208,6 @@ PublicTransitVehicle.public_transit_vehicle_id = 0
 Bus.bus_id = 0
 User.user_id = 0
 DemandFactory.counter = 0
-GeodesicEnvironment.getInstance().reset_random_generator(
-    config.experiment_management.SEED
-)
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -244,8 +243,7 @@ vehicle_choice_model = PublicTransitVehicleChoiceBehavior(["Bus"])
 
 # Population Type
 population_factory = PopulationFactory(
-    config.population.TRANSIT_POPULATION_PROBABILITIES,
-    config.experiment_management.SEED,
+    config.population.TRANSIT_POPULATION_PROBABILITIES
 )
 
 # World --> Charging Infrastructure is irrelevant for the public operator so this is set to None
@@ -271,8 +269,7 @@ demand_factory = DemandFactory(
     demand_profile,
     di,
     world,
-    config.path.PATH_DEMAND_MODIFIERS,
-    config.experiment_management.SEED,
+    modifiers=[os.path.normpath(path) for path in config.path.PATH_DEMAND_MODIFIERS],
     mode="public_transport",
 )
 
@@ -293,14 +290,13 @@ demand_factory = DemandFactory(
 # logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
 
-def run_simulation(end_time, seed=4711, env=env):
+def run_simulation(end_time, env=env):
     # Before a new simulation run, reset everything
     User.user_id = 0
     DemandFactory.counter = 0
     Vehicle.vehicle_id = 0
     PublicTransitVehicle.public_transit_vehicle_id = 0
     Bus.bus_id = 0
-    GeodesicEnvironment.getInstance().reset_random_generator(seed)
 
     # Inject Simulation Environment to Logger (such that we can log the env time)
     cf = SimulationContextFilter(filter_name="add_env", extra=env)
@@ -322,14 +318,12 @@ def run_simulation(end_time, seed=4711, env=env):
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
     transactions = operator.get_transactions()
-    transactions.to_csv("data/output/transactions.csv", index=False)
+    transactions_dir = os.path.normpath(os.path.join("data", "output"))
+    transactions.to_csv(os.path.join(transactions_dir, "transactions.csv"), index=False)
 
 
 sum_iterations = 1  # throws Exception if value > 1: ValueError until (1440) must be greater than the current simulation time
 for i in range(sum_iterations):
     env = simpy.Environment(initial_time=600)
 
-    run_simulation(
-        end_time=config.experiment_management.END_TIME,
-        seed=config.experiment_management.SEED,
-    )
+    run_simulation(end_time=config.experiment_management.END_TIME)

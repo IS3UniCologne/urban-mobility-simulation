@@ -1,10 +1,11 @@
-import numpy as np
 import pandas as pd
+import simpy
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.configuration.enums import VehicleMode
+from simulation.helper.random.random_manager import RandomManager
 from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.vehicle.ride_hailing_AV import RideHailingAV
@@ -14,17 +15,16 @@ from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
 
+rng = RandomManager().get_rng(component_name="FLEETFACTORY")
+
 
 def generate_fleet_config(
-    distribution,
-    n_cars=1000,
-    n_scooter=500,
-    n_kick_scooter=500,
-    n_bikes=500,
-    seed=42,
-    allocation_method="historical",
-    allocation=np.random.randint(low=20, high=50, size=213),
-):
+    distribution: pd.DataFrame,
+    n_cars: int = 1000,
+    n_scooter: int = 500,
+    n_kick_scooter: int = 500,
+    n_bikes: int = 500,
+) -> pd.DataFrame:
     """
     Calculate vehicle distribution based on activity distribution per mode.
 
@@ -33,13 +33,10 @@ def generate_fleet_config(
     :return: Fleet Configuration (i.e., where are how many vehciles distributed)
     """
 
-    # Random Number Generator
-    random = np.random.RandomState(seed)
-
     # Sample Supply Distribution for Cars
     cars_prob_arr = distribution["cars_prob"].to_numpy()
     car_cnt = pd.DataFrame(
-        random.multinomial(n_cars, cars_prob_arr, size=1).transpose(),
+        rng.multinomial(n_cars, cars_prob_arr, size=1).transpose(),
         columns=["car_count"],
     )
     car_cnt.index = distribution.index
@@ -48,7 +45,7 @@ def generate_fleet_config(
     # Sample Supply Distribution for Cars
     scooters_prob_arr = distribution["scooters_prob"].to_numpy()
     scooters_cnt = pd.DataFrame(
-        random.multinomial(n_scooter, scooters_prob_arr, size=1).transpose(),
+        rng.multinomial(n_scooter, scooters_prob_arr, size=1).transpose(),
         columns=["scooters_count"],
     )
     scooters_cnt.index = distribution.index
@@ -57,7 +54,7 @@ def generate_fleet_config(
     # Sample Supply Distribution for Cars
     kick_scooters_prob_arr = distribution["kick_scooters_prob"].to_numpy()
     kick_scooters_cnt = pd.DataFrame(
-        random.multinomial(n_kick_scooter, kick_scooters_prob_arr, size=1).transpose(),
+        rng.multinomial(n_kick_scooter, kick_scooters_prob_arr, size=1).transpose(),
         columns=["kick_scooters_count"],
     )
     kick_scooters_cnt.index = distribution.index
@@ -66,7 +63,7 @@ def generate_fleet_config(
     # Sample Supply Distribution for Cars
     bikes_prob_arr = distribution["bikes_prob"].to_numpy()
     bikes_cnt = pd.DataFrame(
-        random.multinomial(n_bikes, bikes_prob_arr, size=1).transpose(),
+        rng.multinomial(n_bikes, bikes_prob_arr, size=1).transpose(),
         columns=["bikes_count"],
     )
     bikes_cnt.index = distribution.index
@@ -83,13 +80,10 @@ def generate_fleet_config(
 
 
 def generate_ridehailing_fleet_config(
-    distribution,
-    n_cars=1000,
-    n_AVs=500,  # TODO: This is completely ignored/overwritten. Either remov or change calculation below
-    seed=42,
-    allocation_method="historical",
-    allocation=np.random.randint(low=20, high=50, size=213),
-):
+    distribution: pd.DataFrame,
+    n_cars: int = 1000,
+    n_AVs: int = 500,  # TODO: This is completely ignored/overwritten. Either remov or change calculation below
+) -> pd.DataFrame:
     """
     Calculate vehicle distribution based on activity distribution per mode.
 
@@ -97,9 +91,6 @@ def generate_ridehailing_fleet_config(
     :param distribution: DataFrame consisting of five columns ["hex_id", "cars_prob", "scooters_prob", "kick_scooters_prob", "bikes_prob"]
     :return: Fleet Configuration (i.e., where are how many vehciles distributed)
     """
-
-    # Random Number Generator
-    random = np.random.RandomState(seed)
 
     config = Configuration()
     EV_peneteration = config.ride_hailing_global.EV_PENETRATION
@@ -112,7 +103,7 @@ def generate_ridehailing_fleet_config(
     # Sample Supply Distribution for Cars
     cars_prob_arr = distribution["cars_prob"].to_numpy()
     car_cnt = pd.DataFrame(
-        random.multinomial(n_cars, cars_prob_arr, size=1).transpose(),
+        rng.multinomial(n_cars, cars_prob_arr, size=1).transpose(),
         columns=["car_count"],
     )
     car_cnt.index = distribution.index
@@ -121,16 +112,14 @@ def generate_ridehailing_fleet_config(
     # Sample Supply Distribution for Cars
     cars_prob_arr = distribution["cars_prob"].to_numpy()
     car_cnt = pd.DataFrame(
-        random.multinomial(n_EVs, cars_prob_arr, size=1).transpose(),
-        columns=["car_count"],
+        rng.multinomial(n_EVs, cars_prob_arr, size=1).transpose(), columns=["car_count"]
     )
     car_cnt.index = distribution.index
     distribution["EVs"] = car_cnt["car_count"]
 
     cars_prob_arr = distribution["cars_prob"].to_numpy()
     car_cnt = pd.DataFrame(
-        random.multinomial(n_AVs, cars_prob_arr, size=1).transpose(),
-        columns=["car_count"],
+        rng.multinomial(n_AVs, cars_prob_arr, size=1).transpose(), columns=["car_count"]
     )
     car_cnt.index = distribution.index
     distribution["AVs"] = car_cnt["car_count"]
@@ -144,16 +133,16 @@ def generate_ridehailing_fleet_config(
     return fleet_config
 
 
-def generate_AV_fleet(env, distribution, n=500, seed=4711):
-    # Random Number Generator
-    random = np.random.RandomState(seed)
+def generate_AV_fleet(
+    env: simpy.Environment, distribution: pd.DataFrame, n: int = 500
+) -> MixedRideHailingFleet:
     config = Configuration()
     av_config = config.ride_hailing_vehicles["AutonomousCar"]
 
     # Sample Supply Distribution for Cars
     prob_arr = distribution["cars_prob"].to_numpy()
     car_cnt = pd.DataFrame(
-        random.multinomial(n, prob_arr, size=1).transpose(), columns=["car_count"]
+        rng.multinomial(n, prob_arr, size=1).transpose(), columns=["car_count"]
     )
     car_cnt.index = distribution.index
     distribution["AVs"] = car_cnt["car_count"]
@@ -193,7 +182,9 @@ def generate_AV_fleet(env, distribution, n=500, seed=4711):
     return fleet
 
 
-def generate_mixed_ride_hailing_fleet(env, fleet_config):
+def generate_mixed_ride_hailing_fleet(
+    env: simpy.Environment, fleet_config: pd.DataFrame
+) -> MixedRideHailingFleet:
     """
     Generate a mixed shared vehicle fleet based on given fleet config.
     :param env: SimPy Environment (passed to vehicles)
@@ -277,7 +268,9 @@ def generate_mixed_ride_hailing_fleet(env, fleet_config):
     return fleet
 
 
-def generate_mixed_fleet(env, fleet_config):
+def generate_mixed_fleet(
+    env: simpy.Environment, fleet_config: pd.DataFrame
+) -> MixedSharedVehicleFleet:
     """
     Generate a mixed shared vehicle fleet based on given fleet config.
     :param env: SimPy Environment (passed to vehicles)

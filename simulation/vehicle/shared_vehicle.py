@@ -1,11 +1,11 @@
 import logging
 from abc import ABC
 from enum import Enum
-from random import random
 
 from simpy import Environment
 
 from simulation.environment.position import Position
+from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
@@ -69,7 +69,10 @@ class SharedVehicle(Vehicle, ABC):
 
         # State Of Charge
         self._max_state_of_charge = max_state_of_charge  # in kWh
-        self._current_state_of_charge = random() * max_state_of_charge  # in kWh
+        self._current_state_of_charge = RandomManager().uniform(
+            low=0, high=max_state_of_charge, component="INITIALSOC"
+        )  # in kWh
+
         self._energy_consumption = energy_consumption  # in kWh/km
 
         #### Vehicle Events
