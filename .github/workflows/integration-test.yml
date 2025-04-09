@@ -39,5 +39,22 @@ jobs:
           echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
 
       - name: Run Integration Test
+        id: integration_test
         run: |
-          uv run pytest test/integration_test.py --durations=0 2>&1 | tee /home/ci/test_runner_data/$OUTPUT_FILE
+          uv run pytest test/integration_test.py --durations=0 --log-file=/home/ci/test_runner_data/runner_logs/$OUTPUT_FILE
+
+      - name: Copy simulation logs on failure
+        if: failure()
+        run: |
+          echo "Integration test failed. Copying simulation logs for debugging..."
+          mkdir -p /home/ci/test_runner_data/failed_logs_${{ github.run_id }}
+          cp -r data/test_output/logs/* /home/ci/test_runner_data/failed_logs_${{ github.run_id }}/
+          echo "Logs copied to /home/ci/test_runner_data/failed_logs_${{ github.run_id }}/"
+
+          # Output last few lines of each log file for quick inspection
+          echo "=== Log file content samples ==="
+          for logfile in data/test_output/logs/*; do
+            echo "=== $logfile ==="
+            tail -n 20 "$logfile"
+            echo ""
+          done

@@ -17,7 +17,20 @@ TRACK_AGENT     = true
 [EXPERIMENT_MANAGEMENT]
 START_TIME = 0
 END_TIME   = 1440
-SEED       = 43
+
+
+[RANDOM_MANAGER]
+# Main seed, set to 0 to generate a new seed on every run
+SEED = 42
+# Component seeds. If commented out, they will be generated from the main seed. (default for reproducibility)
+# Set to 0 to generate a new seed for the component on every run, independent of the main seed.
+# Set to any other value to use that value as the seed for the component.
+[RANDOM_MANAGER.COMPONENT_SEEDS]
+# POPULATIONFACTORY = 0
+# FLEETFACTORY =0 
+# DEMANDFACTORY     = 0
+# INITIALSOC        = 0
+# GEOENV            = 0
 
 
 [WORLD]
@@ -138,7 +151,7 @@ SharedBike        = 200
 
 [[RIDE_HAILING_OPERATOR]]
 # When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
-RECHARGE_THRESHOLD     = [0.40, 0.45, 0.50, 0.55, 0.52, 0.50, 0.48, 0.45, 0.45, 0.42, 0.40, 0.40, 0.40, 0.40, 0.40, 0.38, 0.35, 0.32, 0.30, 0.30, 0.27, 0.30, 0.32, 0.35]
+RECHARGE_THRESHOLD = [0.40, 0.45, 0.50, 0.55, 0.52, 0.50, 0.48, 0.45, 0.45, 0.42, 0.40, 0.40, 0.40, 0.40, 0.40, 0.38, 0.35, 0.32, 0.30, 0.30, 0.27, 0.30, 0.32, 0.35]
 # Operations Start Time (e.g., 1440 => 00:00am) !!! 20.000 --> quasi no operations !!!
 OPERATIONS_START = 15
 # Operations Duration (e.g., 8 working hours => 8*60 => 480)

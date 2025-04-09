@@ -62,13 +62,28 @@ from tracking.tracking import Tracking
 # Custom module imports
 from utils import load_geodesic_environment
 
-# Change working directory to path of this file
-working_dir = Path(__file__).parent
-os.chdir(working_dir)
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Load Configuration from TOML file.      #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# make a copy of the used config file that references this run
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+output_config_dir = os.path.normpath(os.path.join("data", "output", "configs"))
+if not os.path.exists(output_config_dir):
+    os.makedirs(output_config_dir)
+shutil.copy(sys.argv[1], os.path.join(output_config_dir, f"{output_timestamp}.toml"))
+
+# Change working directory to path of this script
+# TODO: why would we want to do that?
+# tests: bad idea
+# scripts? -> have to copy it out of here anyways
+# working_dir = Path(__file__).parent
+# os.chdir(working_dir)
 
 # Initialize Configuration
-config_file = sys.argv[1]
-config = Configuration(config_file)
+config = Configuration()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -76,49 +91,51 @@ config = Configuration(config_file)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-logging.getLogger("docplex.util.environment.logger").setLevel(logging.WARNING)
+# Disable the default handler of the root logger
+logging.getLogger().handlers.clear()
 
 logger = logging.getLogger()
+# Set to logging.DEBUG to see all logs
+logger.setLevel(logging.DEBUG)
 
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+# Block Logger of third party software
+logging.getLogger("fiona").setLevel(logging.WARNING)
+logging.getLogger("docplex").setLevel(logging.WARNING)
+
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+)
+
+# Create a console handler with its own level (LOG_LEVEL)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(config.settings.LOG_LEVEL)
+console_handler.setFormatter(formatter)
+
 # Record the start time
 real_start_time = time.time()
 
-# Create the output directory
-if not os.path.exists("data/output/logs"):
-    os.makedirs("data/output/logs")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
+# Create directory for logs if not exists
+if not os.path.exists(logs_dir):
+    os.makedirs(logs_dir)
+log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(formatter)
+file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
 
 
-# Make it beautiful
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-    filename=f"data/output/logs/{output_timestamp}.log",
-    encoding="utf-8",
-    level=config.settings.FILE_LOG_LEVEL,  # set it to lowest so the handlers can decide
-)
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+edf = ExtraDefaultFilter(filter_name="add_default_value")
+logger.addFilter(edf)
 
 # Add Custom Init Filters (which work without the ENV obj)
 cf = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf)
 
-consolehandler = logging.StreamHandler()
-consolehandler.setLevel(config.settings.LOG_LEVEL)
-consolehandler.addFilter(cf)
-logger.addHandler(consolehandler)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Basic Configuration                     #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-# make a copy of the used config file that references this run
-if not os.path.exists("data/output/configs"):
-    os.makedirs("data/output/configs")
-shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
+# some hacking around bad coding
 
 if (
     config.mode_choice_model.MODE_CHOICE_STRATEGY
@@ -150,8 +167,7 @@ logger.addFilter(edf)
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
 population_factory = PopulationFactory(
-    config.population.RIDE_HAILING_POPULATION_PROBABILITIES,
-    config.experiment_management.SEED,
+    config.population.RIDE_HAILING_POPULATION_PROBABILITIES
 )
 
 # Load Spatial Environment and the environment files
@@ -257,7 +273,6 @@ dmi = DistanceMatrixImporter(
 )
 distance_matrix = dmi.load_distance_matrix()
 
-GeodesicEnvironment.getInstance().reset_random_generator(4711)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -297,11 +312,11 @@ available_vehicle_modes_supply_ride_hailing = [
 supply_prob = pd.read_csv(config.path.PATH_VEHICLE_SUPPLY)
 
 ride_hailing_fleet_0 = generate_AV_fleet(
-    env, supply_prob, config.ride_hailing_global.N_AUTONOMOUS_CARS, seed=4711
+    env, supply_prob, config.ride_hailing_global.N_AUTONOMOUS_CARS
 )
 
 ride_hailing_fleet_1 = generate_AV_fleet(
-    env, supply_prob, config.ride_hailing_global.N_AUTONOMOUS_CARS, seed=4711
+    env, supply_prob, config.ride_hailing_global.N_AUTONOMOUS_CARS
 )
 
 # track vehicles in fleets
@@ -432,7 +447,6 @@ demand_factory = DemandFactory(
     di,
     world,
     config.path.PATH_DEMAND_MODIFIERS,
-    config.experiment_management.SEED,
     mode="ride_hailing",
 )
 env.process(demand_factory.generate_demand())
@@ -537,11 +551,11 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             config.charging_infrastructure.NUMBER_OF_CHARGING_STATIONS,
             separate_charging_capacity_list[0],
             config.charging_infrastructure.CHARGING_STATION_POWER[0],
-            config.experiment_management.SEED,
+            config.random_manager.SEED,
             service_rate_fleet_0,
             service_rate_fleet_1,
             avg_infra_util_0,
             avg_infra_util_1,
-            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').initial_SoC == 0 else ''}, queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, allocation_penalty: {config.ride_hailing_global.LOW_SOC_PENALTY}",
+            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''}, queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, allocation_penalty: {config.ride_hailing_global.LOW_SOC_PENALTY}",
         ]
     )

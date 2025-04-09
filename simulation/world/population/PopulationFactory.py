@@ -1,28 +1,29 @@
-import numpy
+from typing import List
+
 
 from simulation.helper.configuration.enums import PopulationType
+from simulation.helper.random.random_manager import RandomManager
 
 
 class PopulationFactory:
-
     __slots__ = ("_random", "_prob")
-    def __init__(self, prob, seed):
+    def __init__(self, prob: List[float]) -> None:
         # Random Number Generator
-        self._random = numpy.random.RandomState(seed)
+        self._rng = RandomManager().get_rng(component_name="POPULATIONFACTORY")
 
         # Probability (for price sensitive user)
         self._prob = prob
 
-    def generatePopulationType(self):
-        pop_type = self._random.binomial(1, self._prob, 1)
+    def generatePopulationType(self) -> PopulationType:
+        pop_type = self._rng.binomial(1, self._prob, 1)
 
         if pop_type == 0:
             return PopulationType.PRICE_SENSITIVE
         else:
             return PopulationType.CONVENIENCE_SEEKER
 
-    def generatePopulationTypeRideHailing(self):
-        pop_type = self._random.multinomial(1, self._prob)
+    def generatePopulationTypeRideHailing(self) -> PopulationType:
+        pop_type = self._rng.multinomial(1, self._prob)
         if pop_type.argmax() == 0:
             return PopulationType.CLUSTER_0
         elif pop_type.argmax() == 1:

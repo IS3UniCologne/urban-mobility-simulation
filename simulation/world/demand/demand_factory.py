@@ -2,10 +2,10 @@ import json
 import logging
 
 import h3
-import numpy as np
 import simpy
 
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.random.random_manager import RandomManager
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.world import World
@@ -40,7 +40,6 @@ class DemandFactory:
         demand_importer: DemandImporter,
         world: World,
         modifiers,
-        seed,
         mode,
         maximal_demand=3_000_000,
     ):
@@ -68,7 +67,7 @@ class DemandFactory:
         self._spatial_units = list(self._demand_profile[origin].unique())
 
         # Random Number Generators
-        self._random = np.random.RandomState(seed)
+        self._rng = RandomManager().get_rng("DEMANDFACTORY")
 
         # Config
         self._config = Configuration()
@@ -164,7 +163,7 @@ class DemandFactory:
                     poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
 
                 # TODO: to define the target fleet
-                random_number = np.random.random(1)
+                random_number = self._rng.random(1)
                 if random_number < 0.5:
                     fleet = 0
                 else:
@@ -195,7 +194,7 @@ class DemandFactory:
                         # TODO: is this a viable way of modifying exponential sampling using the scale factor?
                         # TODO: if we wait for longer than the timebucket is long, we should probably consider no demand (otherwise we spawn this in the next timebucket and skew the real demand distribution)
                         inter_arrival_time = (
-                            self._random.exponential(
+                            self._rng.exponential(
                                 1.0 / poisson_lambda / self._modifiers[spatial_unit]
                             )
                             * self._demand_importer._get_temporal_duration_in_hours()
@@ -204,7 +203,7 @@ class DemandFactory:
                     except KeyError:
                         # no modifier is registered for that spatial unit
                         inter_arrival_time = (
-                            self._random.exponential(1.0 / poisson_lambda)
+                            self._rng.exponential(1.0 / poisson_lambda)
                             * self._demand_importer._get_temporal_duration_in_hours()
                             * 60
                         )
@@ -216,7 +215,7 @@ class DemandFactory:
                     prob_array = demand_slice["od_multinom_p_est"].to_numpy()
 
                     # TODO: rename - this has nothing to do with low SOC
-                    low_soc_vehicle_sample = self._random.multinomial(
+                    low_soc_vehicle_sample = self._rng.multinomial(
                         1, prob_array
                     )  # No of vehicles to be charged
 

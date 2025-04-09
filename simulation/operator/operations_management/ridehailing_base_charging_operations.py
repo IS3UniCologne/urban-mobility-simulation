@@ -192,7 +192,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
             self._state_of_charge_threshold
         )
         # if config.settings.PERSIST_RESULTS:
-        #     state.to_csv(Path(config.output_path, config.fleet_state_file), index = False)
+        #     state.to_csv(os.path.join(config.output_path, config.fleet_state_file), index = False)
 
         charging_plans = self.calculate_charging_plan(vehicles_to_charge)
 

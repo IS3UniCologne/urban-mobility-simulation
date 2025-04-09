@@ -3,7 +3,6 @@
 import csv
 import logging
 import os
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -64,8 +63,7 @@ from utils import load_geodesic_environment
 
 
 # Initialize Configuration Object
-config_file = sys.argv[1]
-config = Configuration(config_file)
+config = Configuration()
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -84,7 +82,7 @@ logging.getLogger("docplex.util.environment.logger").setLevel(logging.WARNING)
 
 logger = logging.getLogger()
 
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d_%H:%M:%S")
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
 # Record the start time
 real_start_time = time.time()
 
@@ -169,8 +167,7 @@ tracking = Tracking.init(env)
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
 population_factory = PopulationFactory(
-    config.population.RIDE_HAILING_POPULATION_PROBABILITIES,
-    config.experiment_management.SEED,
+    config.population.RIDE_HAILING_POPULATION_PROBABILITIES
 )
 
 # Load Spatial Environment and the environment files
@@ -274,9 +271,6 @@ dmi = DistanceMatrixImporter(
 )
 distance_matrix = dmi.load_distance_matrix()
 
-GeodesicEnvironment.getInstance().reset_random_generator(
-    config.experiment_management.SEED
-)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -317,17 +311,11 @@ available_vehicle_modes_supply_ride_hailing = [
 supply_prob = pd.read_csv(config.path.PATH_VEHICLE_SUPPLY)
 
 ride_hailing_fleet_0 = generate_AV_fleet(
-    env=env,
-    distribution=supply_prob,
-    n=config.ride_hailing_global.N_AUTONOMOUS_CARS,
-    seed=config.experiment_management.SEED,
+    env=env, distribution=supply_prob, n=config.ride_hailing_global.N_AUTONOMOUS_CARS
 )
 
 ride_hailing_fleet_1 = generate_AV_fleet(
-    env=env,
-    distribution=supply_prob,
-    n=config.ride_hailing_global.N_AUTONOMOUS_CARS,
-    seed=config.experiment_management.SEED,
+    env=env, distribution=supply_prob, n=config.ride_hailing_global.N_AUTONOMOUS_CARS
 )
 
 
@@ -459,7 +447,6 @@ demand_factory = DemandFactory(
     di,
     world,
     config.path.PATH_DEMAND_MODIFIERS,
-    config.experiment_management.SEED,
     mode="ride_hailing",
 )
 env.process(demand_factory.generate_demand())
@@ -564,7 +551,7 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             config.charging_infrastructure.NUMBER_OF_CHARGING_STATIONS,
             separate_charging_capacity_list[0],
             config.charging_infrastructure.CHARGING_STATION_POWER[0],
-            config.experiment_management.SEED,
+            config.random_manager.SEED,
             service_rate_fleet_0,
             service_rate_fleet_1,
             avg_infra_util_0,
