@@ -2,12 +2,11 @@ import logging
 from pathlib import Path
 
 import h3
-import mlrose_hiive as mlrose
 import pandas as pd
 from pandas import DataFrame
 
 from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.random.random_manager import RandomManager
+from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operations_management.service_tasks.charging_task import (
     ChargingTask,
@@ -881,32 +880,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         # From here
                         hexagons[origin] = tuple_idx + 1
 
-                    dist_list = []
-                    for i, value_i in hexagons.items():
-                        for j, value_j in hexagons.items():
-                            if i != j:
-                                dist_list.append(
-                                    (value_i, value_j, self._distance_matrix.loc[j][i])
-                                )
-
-                    # Initialize fitness function object using dist_list
-                    fitness_dists = mlrose.TravellingSales(distances=dist_list)
-
-                    # Define optimization problem object
-                    problem_fit = mlrose.TSPOpt(
-                        length=len(hexagons), fitness_fn=fitness_dists, maximize=False
+                    best_state, best_fitness, dist_list = solve_tsp(
+                        hexagons, self._distance_matrix
                     )
-
-                    # Solve problem using the genetic algorithm (keep random state constant)
-                    seed = RandomManager().integers(
-                        0, 1000000, component="SHAREDMOBILITYOPERATIONS"
-                    )
-                    best_state, best_fitness, _ = mlrose.genetic_alg(
-                        problem_fit, random_state=seed, curve=False
-                    )
-
-                    # Convert Numpy Array to List
-                    best_state = best_state.tolist()
 
                     # Shift list
                     index_of_destination = best_state.index(0)
