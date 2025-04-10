@@ -11,17 +11,14 @@ def solve_tsp(
     :param distance_matrix: Distance matrix between hexagons
     :return: Optimized route, best fitness, and distance list
     """
-    # Build distance list for our solver
-    dist_list = []
-    for i, value_i in hexagons.items():
-        for j, value_j in hexagons.items():
-            if i != j:
-                dist_list.append((value_i, value_j, distance_matrix.loc[j][i]))
 
     # Create a distance lookup dictionary for faster access
     dist_lookup = {}
-    for origin, dest, dist in dist_list:
-        dist_lookup[(origin, dest)] = dist
+    for i, value_i in hexagons.items():
+        for j, value_j in hexagons.items():
+            if i != j:
+                dist_lookup[(value_i, value_j)] = distance_matrix.loc[j][i]
+                dist_lookup[(value_j, value_i)] = distance_matrix.loc[j][i]
 
     n = len(hexagons)
 
@@ -64,7 +61,7 @@ def solve_tsp(
     # Calculate final tour  (length)
     best_fitness = calculate_tour_length(tour, dist_lookup)
 
-    return tour, best_fitness, dist_list
+    return tour, best_fitness, dist_lookup
 
 
 def calculate_tour_length(

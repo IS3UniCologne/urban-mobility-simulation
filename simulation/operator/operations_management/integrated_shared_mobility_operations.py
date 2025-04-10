@@ -880,7 +880,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         # From here
                         hexagons[origin] = tuple_idx + 1
 
-                    best_state, best_fitness, dist_list = solve_tsp(
+                    best_state, best_fitness, dist_lookup = solve_tsp(
                         hexagons, self._distance_matrix
                     )
 
@@ -899,16 +899,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     origin_of_trip = best_state[0]
                     dest_of_trip = best_state[-1]
 
-                    excess_distance = 0
-                    for distance_weights in dist_list:
-                        # distance_weights[0] => origin, distance_weights[1] => destination
-                        # In our case dest_of_trip refers to the "origin" and origin_of_trip to "destination"
-                        # <=> remove last edge from the route
-                        if (
-                            distance_weights[0] == dest_of_trip
-                            and distance_weights[1] == origin_of_trip
-                        ):
-                            excess_distance += distance_weights[2]
+                    excess_distance = dist_lookup.get((dest_of_trip, origin_of_trip), 0)
 
                     # Remove the distance from the "destination" to the "origin" of the relocation trip
                     total_distance = best_fitness - excess_distance
