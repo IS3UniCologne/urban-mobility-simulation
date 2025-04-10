@@ -50,7 +50,9 @@ class TestSolveTSP(unittest.TestCase):
         }
 
         # Call the method under test
-        best_state, best_fitness, dist_list = solve_tsp(hexagons, self.distance_matrix)
+        best_state, best_fitness, dist_lookup = solve_tsp(
+            hexagons, self.distance_matrix
+        )
 
         # Verify the result
         self.assertEqual(len(best_state), 4, "TSP solution should visit all 4 hexagons")
@@ -66,30 +68,26 @@ class TestSolveTSP(unittest.TestCase):
 
         # Check that dist_list contains correct entries
         self.assertEqual(
-            len(dist_list), 12, "Should have n*(n-1) distances for n hexagons"
+            len(dist_lookup), 12, "Should have n*(n-1) distances for n hexagons"
         )
 
         # Verify that all pairs are included
         pairs = [(i, j) for i in range(4) for j in range(4) if i != j]
-        for entry in dist_list:
+        for key in dist_lookup.keys():
             self.assertIn(
-                (entry[0], entry[1]),
+                key,
                 pairs,
-                f"Distance entry {entry[0]}->{entry[1]} should be in expected pairs",
+                f"Distance entry {key[0]}->{key[1]} should be in expected pairs",
             )
-
         # Verify path continuity (each node connects to another)
         for i in range(len(best_state) - 1):
             current = best_state[i]
             next_node = best_state[i + 1]
-            # Find the corresponding distance in dist_list
-            matching_entries = [
-                entry
-                for entry in dist_list
-                if entry[0] == current and entry[1] == next_node
-            ]
-            self.assertTrue(
-                matching_entries, f"Missing connection from {current} to {next_node}"
+            # Check that the edge exists in the distance lookup
+            self.assertIn(
+                (current, next_node),
+                dist_lookup,
+                f"Missing connection from {current} to {next_node}",
             )
 
     @patch("simulation.helper.random.random_manager.RandomManager")
@@ -101,12 +99,14 @@ class TestSolveTSP(unittest.TestCase):
 
         hexagons = {"871f1d488ffffff": 0, "871f1d489ffffff": 1}
 
-        best_state, best_fitness, dist_list = solve_tsp(hexagons, self.distance_matrix)
+        best_state, best_fitness, dist_lookup = solve_tsp(
+            hexagons, self.distance_matrix
+        )
 
         self.assertEqual(len(best_state), 2, "Should have exactly 2 nodes in path")
         self.assertIn(0, best_state, "Node 0 should be in the path")
         self.assertIn(1, best_state, "Node 1 should be in the path")
-        self.assertEqual(len(dist_list), 2, "Should have exactly 2 distance entries")
+        self.assertEqual(len(dist_lookup), 2, "Should have exactly 2 distance entries")
 
         # The distance should match our distance matrix - round trip distance for a TSP
         # For a 2-node problem, the fitness is the round trip: A→B + B→A = 500 + 500 = 1000
@@ -150,7 +150,7 @@ class TestSolveTSP(unittest.TestCase):
         }
 
         # Call the method under test
-        best_state, best_fitness, dist_list = solve_tsp(
+        best_state, best_fitness, dist_lookup = solve_tsp(
             hexagons, larger_distance_matrix
         )
 
@@ -169,11 +169,11 @@ class TestSolveTSP(unittest.TestCase):
 
         # Verify that the distance list contains all necessary edges
         self.assertEqual(
-            len(dist_list), 30, "Should have n*(n-1) distances for 6 nodes"
+            len(dist_lookup), 30, "Should have n*(n-1) distances for 6 nodes"
         )
 
         # Verify that the solution is better than a naive tour
-        naive_tour = [0, 1, 2, 3, 4, 5]
+        # naive_tour = [0, 1, 2, 3, 4, 5]
         naive_distance = 500 + 700 + 600 + 500 + 300 + 900  # Complete cycle
         self.assertLessEqual(
             best_fitness,
@@ -188,14 +188,14 @@ class TestSolveTSP(unittest.TestCase):
             # There should be a valid distance between consecutive nodes
             self.assertIn(
                 (current, next_node),
-                [(e[0], e[1]) for e in dist_list],
+                dist_lookup,
                 f"Invalid edge in solution path: {current}->{next_node}",
             )
 
         # Check the last-to-first connection to complete the cycle
         self.assertIn(
             (best_state[-1], best_state[0]),
-            [(e[0], e[1]) for e in dist_list],
+            dist_lookup,
             "The tour should form a complete cycle",
         )
 
