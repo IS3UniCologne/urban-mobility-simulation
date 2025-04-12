@@ -25,38 +25,41 @@ def solve_tsp(
     # Initialize with a simple sequential tour
     tour = list(range(n))
 
-    # Calculate initial tour length
-    tour_length = calculate_tour_length(tour, dist_lookup)
-    # Apply 2-opt improvement
-    improved = True
-    # Limit iterations, should realistically never reach this in our use case
-    max_iterations = 100
-    iterations = 0
+    # If there are 3 or fewer nodes, no need for optimization
+    if n > 3:
+        # Calculate initial tour length
+        tour_length = calculate_tour_length(tour, dist_lookup)
 
-    while improved and iterations < max_iterations:
-        improved = False
-        iterations += 1
+        # Apply 2-opt improvement
+        improved = True
+        # Limit iterations, should realistically never reach this in our use case
+        max_iterations = 100
+        iterations = 0
 
-        for i in range(n - 2):
-            for j in range(i + 2, n):
-                # Consider swapping edges (i,i+1) and (j,j+1)
-                # Where j+1 wraps around to 0 if j is the last index
-                current_cost = dist_lookup.get(
-                    (tour[i], tour[i + 1]), 0
-                ) + dist_lookup.get((tour[j], tour[(j + 1) % n]), 0)
-                new_cost = dist_lookup.get((tour[i], tour[j]), 0) + dist_lookup.get(
-                    (tour[i + 1], tour[(j + 1) % n]), 0
-                )
+        while improved and iterations < max_iterations:
+            improved = False
+            iterations += 1
 
-                if new_cost < current_cost:
-                    # Reverse the segment between i+1 and j
-                    tour[i + 1 : j + 1] = reversed(tour[i + 1 : j + 1])
-                    tour_length = tour_length - current_cost + new_cost
-                    improved = True
+            for i in range(n - 2):
+                for j in range(i + 2, n):
+                    # Consider swapping edges (i,i+1) and (j,j+1)
+                    # Where j+1 wraps around to 0 if j is the last index
+                    current_cost = dist_lookup.get(
+                        (tour[i], tour[i + 1]), 0
+                    ) + dist_lookup.get((tour[j], tour[(j + 1) % n]), 0)
+                    new_cost = dist_lookup.get((tour[i], tour[j]), 0) + dist_lookup.get(
+                        (tour[i + 1], tour[(j + 1) % n]), 0
+                    )
+
+                    if new_cost < current_cost:
+                        # Reverse the segment between i+1 and j
+                        tour[i + 1 : j + 1] = reversed(tour[i + 1 : j + 1])
+                        tour_length = tour_length - current_cost + new_cost
+                        improved = True
+                        break
+
+                if improved:
                     break
-
-            if improved:
-                break
 
     # Calculate final tour  (length)
     best_fitness = calculate_tour_length(tour, dist_lookup)
