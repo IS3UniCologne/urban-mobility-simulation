@@ -880,29 +880,43 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         # From here
                         hexagons[origin] = tuple_idx + 1
 
-                    best_state, best_fitness, dist_lookup = solve_tsp(
+                    tour_sequence, tour_length, dist_lookup = solve_tsp(
                         hexagons, self._distance_matrix
                     )
 
-                    # Shift list
-                    index_of_destination = best_state.index(0)
+                    # Find the predecessor and successor of destination in the tour
+                    index_of_destination = tour_sequence.index(0)
+                    predecessor_idx = (index_of_destination - 1) % len(tour_sequence)
+                    successor_idx = (index_of_destination + 1) % len(tour_sequence)
 
-                    # Position "Destination" of relocations to the end
-                    if len(best_state) - 1 != index_of_destination:
-                        best_state = (
-                            best_state[index_of_destination + 1 :]
-                            + best_state[: index_of_destination + 1]
+                    # Compare costs of the two possible edges to remove
+                    cost_entering_dest = dist_lookup.get(
+                        tour_sequence[predecessor_idx],
+                        tour_sequence[index_of_destination],
+                    )
+
+                    cost_exiting_dest = dist_lookup.get(
+                        tour_sequence[index_of_destination],
+                        tour_sequence[successor_idx],
+                    )
+
+                    if cost_entering_dest > cost_exiting_dest:
+                        # Remove edge entering destination by placing destination at the start
+                        tour_sequence = (
+                            tour_sequence[index_of_destination:]
+                            + tour_sequence[:index_of_destination]
                         )
-
-                    # We start at the origin and end at the destination. Distance between "destination" and "origin"
-                    # must be substracted from the best fit.
-                    origin_of_trip = best_state[0]
-                    dest_of_trip = best_state[-1]
-
-                    excess_distance = dist_lookup.get((dest_of_trip, origin_of_trip), 0)
+                        excess_distance = cost_entering_dest
+                    else:
+                        # Remove edge exiting destination by placing destination at the end
+                        tour_sequence = (
+                            tour_sequence[(index_of_destination + 1) :]
+                            + tour_sequence[: (index_of_destination + 1)]
+                        )
+                        excess_distance = cost_exiting_dest
 
                     # Remove the distance from the "destination" to the "origin" of the relocation trip
-                    total_distance = best_fitness - excess_distance
+                    total_distance = tour_length - excess_distance
 
                     average_distance_per_relocation_step = total_distance / len(
                         relocation
