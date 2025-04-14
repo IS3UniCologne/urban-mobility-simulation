@@ -3,13 +3,14 @@ import pandas as pd
 
 def solve_tsp(
     hexagons: dict, distance_matrix: pd.DataFrame
-) -> tuple[list[int], float, list[tuple[int, int, float]]]:
+) -> tuple[list[int], float, dict[tuple[int, int], float]]:
     """
     Solve the Traveling Salesman Problem for a given set of hexagons using the 2-opt algorithm.
+    TODO: Implement Lin-Kernighan heuristic or 3-opt and make configurable.
 
     :param hexagons: Dictionary mapping hexagon IDs to indices
     :param distance_matrix: Distance matrix between hexagons
-    :return: Optimized route, best fitness, and distance list
+    :return: Optimized tour sequence, tour cost, and distance lookup dictionary
     """
 
     # Create a distance lookup dictionary for faster access
@@ -23,12 +24,12 @@ def solve_tsp(
     n = len(hexagons)
 
     # Initialize with a simple sequential tour
-    tour = list(range(n))
+    tour_sequence = list(range(n))
 
     # If there are 3 or fewer nodes, no need for optimization
     if n > 3:
         # Calculate initial tour length
-        tour_length = calculate_tour_length(tour, dist_lookup)
+        tour_length = calculate_tour_length(tour_sequence, dist_lookup)
 
         # Apply 2-opt improvement
         improved = True
@@ -45,15 +46,21 @@ def solve_tsp(
                     # Consider swapping edges (i,i+1) and (j,j+1)
                     # Where j+1 wraps around to 0 if j is the last index
                     current_cost = dist_lookup.get(
-                        (tour[i], tour[i + 1]), 0
-                    ) + dist_lookup.get((tour[j], tour[(j + 1) % n]), 0)
-                    new_cost = dist_lookup.get((tour[i], tour[j]), 0) + dist_lookup.get(
-                        (tour[i + 1], tour[(j + 1) % n]), 0
+                        (tour_sequence[i], tour_sequence[i + 1]), 0
+                    ) + dist_lookup.get(
+                        (tour_sequence[j], tour_sequence[(j + 1) % n]), 0
+                    )
+                    new_cost = dist_lookup.get(
+                        (tour_sequence[i], tour_sequence[j]), 0
+                    ) + dist_lookup.get(
+                        (tour_sequence[i + 1], tour_sequence[(j + 1) % n]), 0
                     )
 
                     if new_cost < current_cost:
                         # Reverse the segment between i+1 and j
-                        tour[i + 1 : j + 1] = reversed(tour[i + 1 : j + 1])
+                        tour_sequence[i + 1 : j + 1] = reversed(
+                            tour_sequence[i + 1 : j + 1]
+                        )
                         tour_length = tour_length - current_cost + new_cost
                         improved = True
                         break
@@ -62,9 +69,9 @@ def solve_tsp(
                     break
 
     # Calculate final tour  (length)
-    best_fitness = calculate_tour_length(tour, dist_lookup)
+    tour_length = calculate_tour_length(tour_sequence, dist_lookup)
 
-    return tour, best_fitness, dist_lookup
+    return tour_sequence, tour_length, dist_lookup
 
 
 def calculate_tour_length(
