@@ -880,8 +880,11 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         # From here
                         hexagons[origin] = tuple_idx + 1
 
-                    tour_sequence, tour_length, dist_lookup = solve_tsp(
-                        hexagons, self._distance_matrix
+                    tsp_result = solve_tsp(hexagons, self._distance_matrix)
+                    tour_sequence, tour_length, dist_lookup = (
+                        tsp_result.tour_sequence,
+                        tsp_result.tour_length,
+                        tsp_result.distance_lookup,
                     )
 
                     # Find the predecessor and successor of destination in the tour
