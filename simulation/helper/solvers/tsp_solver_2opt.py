@@ -1,9 +1,15 @@
+from typing import NamedTuple
+
 import pandas as pd
 
 
-def solve_tsp(
-    hexagons: dict, distance_matrix: pd.DataFrame
-) -> tuple[list[int], float, dict[tuple[int, int], float]]:
+class TspResult(NamedTuple):
+    tour_sequence: list[int]
+    tour_length: float
+    distance_lookup: dict[tuple[int, int], float]
+
+
+def solve_tsp(hexagons: dict, distance_matrix: pd.DataFrame) -> TspResult:
     """
     Solve the Traveling Salesman Problem for a given set of hexagons using the 2-opt algorithm.
     TODO: Implement Lin-Kernighan heuristic or 3-opt and make configurable.
@@ -71,7 +77,11 @@ def solve_tsp(
     # Calculate final tour  (length)
     tour_length = calculate_tour_length(tour_sequence, dist_lookup)
 
-    return tour_sequence, tour_length, dist_lookup
+    return TspResult(
+        tour_sequence=tour_sequence,
+        tour_length=tour_length,
+        distance_lookup=dist_lookup,
+    )
 
 
 def calculate_tour_length(
