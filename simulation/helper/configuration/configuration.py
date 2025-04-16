@@ -409,8 +409,7 @@ class RideHailingGlobalConfig:
 
     LOW_SOC_PENALTY: int
 
-    # Add this field to store the driver availability vector
-    _driver_availability_vector: Optional[list[int]] = None
+    DRIVER_AVAILABILITY_VECTOR: list[int] = None  # type: ignore
 
     def __post_init__(self) -> None:
         # apply the discount rate to all prices
@@ -418,18 +417,10 @@ class RideHailingGlobalConfig:
         self.PRICE_PER_MINUTE = self.PRICE_PER_MINUTE * (1 - self.DISCOUNT_RATE)
         self.PRICE_PER_KM = self.PRICE_PER_KM * (1 - self.DISCOUNT_RATE)
         self.MINIMUM_PRICE = self.MINIMUM_PRICE * (1 - self.DISCOUNT_RATE)
-
-    @property
-    def DRIVER_AVAILABILITY_VECTOR(self) -> list[int]:
-        object.__setattr__(
-            self,
-            "_driver_availability_vector",
-            [
-                round(float(x) * self.N_RIDE_HAILING_CARS * (1 - self.AV_PENETRATION))
-                for x in self.RH_AVAILABILITY
-            ],
-        )
-        return self._driver_availability_vector
+        self.DRIVER_AVAILABILITY_VECTOR = [
+            round(float(x) * self.N_RIDE_HAILING_CARS * (1 - self.AV_PENETRATION))
+            for x in self.RH_AVAILABILITY
+        ]
 
     @property
     def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
