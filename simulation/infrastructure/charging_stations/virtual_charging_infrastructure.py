@@ -1,10 +1,11 @@
 import logging
 from types import SimpleNamespace
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Union, Any
+from beartype import beartype
 
 from beartype.door import die_if_unbearable
 from beartype.roar import BeartypeDoorHintViolation
-from simpy import AnyOf
+from simpy import AnyOf, Environment
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.charging_infastructure import (
@@ -34,13 +35,14 @@ class VirtualChargingInfrastructure:
         "_listeners",
     )
 
+    @beartype
     def __init__(
         self,
-        env,
+        env: Environment,
         charging_infrastructure: ChargingInfrastructure,
         lookahead: Optional[int] = None,
-        use_virtual_cs=True,
-    ):
+        use_virtual_cs: bool = True,
+    ) -> None:
         self._env = env
         self._config = Configuration()
 
@@ -77,10 +79,10 @@ class VirtualChargingInfrastructure:
             self._listeners = None
 
     @property
-    def charging_stations(self):
+    def charging_stations(self) -> List[VirtualChargingStation]:
         return self._charging_stations()
 
-    def _charging_stations(self):
+    def _charging_stations(self) -> List[VirtualChargingStation]:
         if self._virtual_charging_stations is None:
             raise NotImplementedError(
                 "This virtual charging infrastructure was initialized without virtual charging stations!"
@@ -88,7 +90,8 @@ class VirtualChargingInfrastructure:
         else:
             return self._virtual_charging_stations
 
-    def get_available_locations(self, at_timeslot: Optional[int]):
+    @beartype
+    def get_available_locations(self, at_timeslot: Optional[int]) -> List[str]:
         if at_timeslot is None:
             return [
                 location
@@ -105,7 +108,8 @@ class VirtualChargingInfrastructure:
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_available_capacity(self, at_timeslot: Optional[int] = None):
+    @beartype
+    def get_available_capacity(self, at_timeslot: Optional[int] = None) -> Union[Dict[str, int], Dict[int, Dict[str, int]]]:
         if self._lookahead is None:
             return self._availability
         try:
@@ -113,14 +117,14 @@ class VirtualChargingInfrastructure:
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_locations(self):
+    def get_locations(self) -> List[str]:
         """
         Defaults to `get_available_locations() at self._default_lookahead`
         which is the next timeslot that was already auctioned, or None
         """
         return self.get_available_locations(self._lookahead)
 
-    def _update_virtual_cs(self, init=False):
+    def _update_virtual_cs(self, init: bool = False) -> None:
         for cs in self._virtual_charging_stations:
             # availability might be negative if we account for some vehicle on the way and in the meantime another vehicle arrives at the already full station
             bounded_capa = (
@@ -147,7 +151,8 @@ class VirtualChargingInfrastructure:
                 else None,
             )
 
-    def update(self, availability: Dict[str, int], timeslot: Optional[int] = None):
+    @beartype
+    def update(self, availability: Dict[str, int], timeslot: Optional[int] = None) -> None:
         try:
             die_if_unbearable(availability, Dict[str, int])
             if self._lookahead is None:
@@ -171,16 +176,22 @@ class VirtualChargingInfrastructure:
         if self._virtual_charging_stations is not None:
             self._update_virtual_cs()
 
-    def _sync_with_real(self, charging_station: VirtualChargingStation):
+    def _sync_with_real(self, charging_station: VirtualChargingStation) -> Any:
         cs = charging_station._physical_charging_station
-        # Listener = namedtuple(
+# Listener = namedtuple(
+        #     "Listener", ["processed_plug_in_event", "processed_plug_out_event"]
+        # )
+# Listener = namedtuple(
+        #     "Listener", ["processed_plug_in_event", "processed_plug_out_event"]
+        # )
+# Listener = namedtuple(
         #     "Listener", ["processed_plug_in_event", "processed_plug_out_event"]
         # )
         self._listeners[cs.id] = SimpleNamespace(
             processed_plug_in_event=self._env.event(),
             processed_plug_out_event=self._env.event(),
         )
-        # self._listeners[cs.id] = {
+# self._listeners[cs.id] = {
         #     "processed_plug_in_event": self._env.event(),
         #     "processed_plug_out_event": self._env.event(),
         # }
