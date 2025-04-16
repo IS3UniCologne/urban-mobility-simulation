@@ -625,16 +625,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
     transit_user_id = 0
 
     __slots__ = (
-        "_position",
-        "_transport_task",
-        "_transportation_search_service",
-        "_payment_service",
-        "_vehicle_assignment_service",
-        "_vehicle_choice_behavior",
-        "_population_type",
-        "_env",
         "_passive",
-        "_id",
         "_waiting_time",
         "_config",
         "_bus_res",
