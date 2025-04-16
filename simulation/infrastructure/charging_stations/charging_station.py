@@ -1,8 +1,10 @@
 import logging
+from typing import List, Dict, Any, Optional
+from beartype import beartype
 
 import h3
 import simpy
-from shapely.geometry import shape
+from shapely.geometry import shape, Polygon
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from tracking.tracking_interface import TrackingInterface
@@ -25,6 +27,7 @@ class ChargingStation(TrackingInterface):
 
     exposes = ["_location", "_plugs", "_current_queue_time"]
 
+    @beartype
     def __init__(
         self,
         id: int,
@@ -33,7 +36,7 @@ class ChargingStation(TrackingInterface):
         power: float,
         capacity: int,
         queue_size: int,
-    ):
+    ) -> None:
         self._env = env
         self._capacity = int(capacity)
         self._polygon = shape(
@@ -68,53 +71,54 @@ class ChargingStation(TrackingInterface):
         self._env.process(self.calc_current_queue_time())
 
     @property
-    def capacity(self):
+    def capacity(self) -> int:
         return self._capacity
 
     @property
-    def plugs(self):
+    def plugs(self) -> simpy.PriorityResource:
         return self._plugs
 
     @property
-    def power(self):
+    def power(self) -> float:
         return self._power
 
     @property
-    def centre(self):
+    def centre(self) -> GeodesicPosition:
         return self._centre
 
     @property
-    def id(self):
+    def id(self) -> int:
         return self._id
 
     @property
-    def location(self):
+    def location(self) -> str:
         return self._location
 
     @property
-    def polygon(self):
+    def polygon(self) -> Polygon:
         return self._polygon
 
     @property
-    def queue_size(self):
+    def queue_size(self) -> int:
         return self._queue_size
 
     @property
-    def current_queue_time(self):
+    def current_queue_time(self) -> float:
         return self._current_queue_time
 
     @property
-    def vehicle_plugged_in(self):
+    def vehicle_plugged_in(self) -> simpy.Event:
         return self._vehicle_plugged_in
 
     @property
-    def vehicle_unplugged(self):
+    def vehicle_unplugged(self) -> simpy.Event:
         return self._vehicle_unplugged
 
-    def register_event_subscriber(self, subscriber):
+    @beartype
+    def register_event_subscriber(self, subscriber: Any) -> None:
         self._event_subscribers.append(subscriber)
 
-    def plug_in_notify(self):
+    def plug_in_notify(self) -> simpy.events.Generator:
         with self._plug_in_lock.request() as req:
             yield req
             self._vehicle_plugged_in.succeed()
@@ -131,7 +135,7 @@ class ChargingStation(TrackingInterface):
                     x.processed_plug_in_event = self._env.event()
             self._vehicle_plugged_in = self._env.event()
 
-    def plug_out_notify(self):
+    def plug_out_notify(self) -> simpy.events.Generator:
         with self._plug_out_lock.request() as req:
             yield req
             self._vehicle_unplugged.succeed()
@@ -149,7 +153,7 @@ class ChargingStation(TrackingInterface):
 
             self._vehicle_unplugged = self._env.event()
 
-    def calc_current_queue_time(self):
+    def calc_current_queue_time(self) -> simpy.events.Generator:
         # a charging station could expose the current expected queue time (if a vehicle would request charging right now) from the remaining charging times of vehicles in it and requests in the queue
         while True:
             yield self._env.timeout(1)
@@ -197,11 +201,12 @@ class ChargingStation(TrackingInterface):
             # the current queue time for a new vehicle is then the difference between the earliest possible finish time and the current time
             self._current_queue_time = min(finish_times) - self._env.now
 
-    def dump(self, exposed_only: bool = True) -> dict:
+    @beartype
+    def dump(self, exposed_only: bool = True) -> Dict[str, Any]:
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}
         else:
             return {x: self.get(x) for x in self.__slots__}
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"ID: {self._id}, Location: {self._location}, Current Users: {len(self._plugs.users)}, Current Queue Size: {len(self._queue)}"

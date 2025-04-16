@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Any
+from beartype import beartype
 
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from tracking.tracking import Tracking
@@ -16,14 +17,15 @@ class ChargingInfrastructure:
             return ChargingInfrastructure.__instance
 
     @staticmethod
+    @beartype
     def init(
-        env,
+        env: Any,
         location_list: List[str],
         power_list: List[float],
         capacity_list: List[int],
         queue_size: List[int],
-        reset=False,
-    ):
+        reset: bool = False,
+    ) -> "ChargingInfrastructure":
         """Static access method."""
         if ChargingInfrastructure.__instance is None or reset is True:
             ChargingInfrastructure(
@@ -31,15 +33,16 @@ class ChargingInfrastructure:
             )
         return ChargingInfrastructure.__instance
 
+    @beartype
     def __init__(
         self,
-        env,
+        env: Any,
         location_list: List[str],
         power_list: List[float],
         capacity_list: List[int],
         queue_size: List[int],
         reset: bool = False,
-    ):
+    ) -> None:
         """Virtually private constructor."""
         if ChargingInfrastructure.__instance is not None and not reset:
             raise Exception("This class is a singleton!")
@@ -55,7 +58,7 @@ class ChargingInfrastructure:
         self._charging_stations = []  # a list of charger objects
         self._initialise_charging_stations()
 
-    def _initialise_charging_stations(self):
+    def _initialise_charging_stations(self) -> None:
         for i, location in enumerate(self._location_list):
             charging_station = ChargingStation(
                 id=i,
@@ -69,8 +72,9 @@ class ChargingInfrastructure:
             self._tracking.register(charging_station)
 
     @property
-    def charging_stations(self):
+    def charging_stations(self) -> List[ChargingStation]:
         return self._charging_stations
 
-    def get_locations(self):
+    @beartype
+    def get_locations(self) -> List[str]:
         return self._location_list

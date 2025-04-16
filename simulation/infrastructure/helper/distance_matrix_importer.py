@@ -1,4 +1,6 @@
 from pathlib import Path
+from typing import List, Union
+from beartype import beartype
 
 import h3
 import pandas as pd
@@ -12,13 +14,20 @@ class DistanceMatrixImporter:
     Distance between hexagon elements are computed using haversine distances
     """
 
-    def __init__(self, hexagons, resolution, data_path, city):
+    @beartype
+    def __init__(
+        self, 
+        hexagons: List[str], 
+        resolution: int, 
+        data_path: Union[str, Path], 
+        city: str
+    ) -> None:
         self._hexagons = hexagons
         self._resolution = resolution
         self._data_path = data_path
         self._city = city
 
-    def load_distance_matrix(self):
+    def load_distance_matrix(self) -> pd.DataFrame:
         """
         Load or calculate distance matrix between hexagon elements
         :return:
