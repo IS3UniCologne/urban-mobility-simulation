@@ -156,7 +156,6 @@ class PathConfig:
     PATH_DEMAND_MODIFIERS: Optional[list[str]] = None
 
     def __post_init__(self) -> None:
-    
         city = Configuration().world.CITY
         for field_obj in fields(self):
             field_name = field_obj.name
@@ -164,7 +163,7 @@ class PathConfig:
             if isinstance(value, str) and "{city}" in value:
                 # Use object.__setattr__ to bypass dataclass immutability with slots
                 object.__setattr__(self, field_name, value.format(city=city))
-        
+
         # Format demand modifiers if present
         if self.PATH_DEMAND_MODIFIERS:
             formatted_modifiers = [
@@ -410,7 +409,7 @@ class RideHailingGlobalConfig:
 
     LOW_SOC_PENALTY: int
 
-# Add this field to store the driver availability vector
+    # Add this field to store the driver availability vector
     _driver_availability_vector: Optional[list[int]] = None
 
     def __post_init__(self) -> None:
@@ -420,16 +419,18 @@ class RideHailingGlobalConfig:
         self.PRICE_PER_KM = self.PRICE_PER_KM * (1 - self.DISCOUNT_RATE)
         self.MINIMUM_PRICE = self.MINIMUM_PRICE * (1 - self.DISCOUNT_RATE)
 
-     
-
     @property
     def DRIVER_AVAILABILITY_VECTOR(self) -> list[int]:
-        object.__setattr__(self, "_driver_availability_vector", [
-            round(float(x) * self.N_RIDE_HAILING_CARS * (1 - self.AV_PENETRATION))
-            for x in self.RH_AVAILABILITY
-        ])
+        object.__setattr__(
+            self,
+            "_driver_availability_vector",
+            [
+                round(float(x) * self.N_RIDE_HAILING_CARS * (1 - self.AV_PENETRATION))
+                for x in self.RH_AVAILABILITY
+            ],
+        )
         return self._driver_availability_vector
-           
+
     @property
     def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
         # TODO: This has to be inferred instead of doing it this way. This is very error prone
