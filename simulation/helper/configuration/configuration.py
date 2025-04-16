@@ -82,7 +82,7 @@ def beartype_after_post_init(cls: T) -> T:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class SettingsConfig:
     LOG_LEVEL: str
     FILE_LOG_LEVEL: str
@@ -92,21 +92,21 @@ class SettingsConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class ExperimentManagementConfig:
     START_TIME: int
     END_TIME: int
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class RandomManagerConfig:
     SEED: int
     COMPONENT_SEEDS: dict[str, int]
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True)
 class WorldConfig:
     SPATIAL_RESOLUTION: SpatialResolution
     TEMPORAL_RESOLUTION: TemporalBucket
@@ -134,7 +134,7 @@ class WorldConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class PathConfig:
     PATH_ENV_BOUNDING_BOX: str
     PATH_ENV_HEX_LAYER_RES_7: str
@@ -156,21 +156,25 @@ class PathConfig:
     PATH_DEMAND_MODIFIERS: Optional[list[str]] = None
 
     def __post_init__(self) -> None:
-        # check if any paths contain f string replacements and replace them with the city name
-        for key, value in self.__dict__.items():
-            if isinstance(value, str):
-                if "{city}" in value:
-                    self.__dict__[key] = value.format(city=Configuration().world.CITY)
-        # Do the same for demand modifiers
+    
+        city = Configuration().world.CITY
+        for field_obj in fields(self):
+            field_name = field_obj.name
+            value = getattr(self, field_name)
+            if isinstance(value, str) and "{city}" in value:
+                # Use object.__setattr__ to bypass dataclass immutability with slots
+                object.__setattr__(self, field_name, value.format(city=city))
+        
+        # Format demand modifiers if present
         if self.PATH_DEMAND_MODIFIERS:
-            self.PATH_DEMAND_MODIFIERS = [
-                value.format(city=Configuration().world.CITY)
-                for value in self.PATH_DEMAND_MODIFIERS
+            formatted_modifiers = [
+                value.format(city=city) for value in self.PATH_DEMAND_MODIFIERS
             ]
+            object.__setattr__(self, "PATH_DEMAND_MODIFIERS", formatted_modifiers)
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class PopulationConfig:
     POPULATION_PROBABILITIES: list[float]
     RIDE_HAILING_POPULATION_PROBABILITIES: list[float]
@@ -179,7 +183,7 @@ class PopulationConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True)
 class UserConfig:
     TRANSIT_MAX_WAIT: int
     SPATIAL_STRATEGY: str
@@ -191,7 +195,7 @@ class UserConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True)
 class VehicleConfig:
     VELOCITY: float
     MAX_AVAILABLE_SEATS: int
@@ -217,7 +221,7 @@ class VehicleConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True)
 class ModeChoiceModelConfig:
     SUBSTITUTION_BOUNDARY: float
     AV_TRUST: list[float]
@@ -273,7 +277,7 @@ class ModeChoiceModelConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class ChargingInfrastructureConfig:
     NUMBER_OF_CHARGING_STATIONS: int
     LOCATIONS: list[str]
@@ -315,7 +319,7 @@ class ChargingInfrastructureConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True)
 class SharedVehicleOperatorConfig:
     RECHARGE_THRESHOLD: float
     CHARGING_STATION_POWER: float
@@ -354,7 +358,7 @@ class SharedVehicleOperatorConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True)
 class RideHailingOperatorConfig:
     RECHARGE_THRESHOLD: list[float]
     OPERATIONS_START: int
@@ -369,14 +373,14 @@ class RideHailingOperatorConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class TransitOperatorConfig:
     PLANNING_LOOKAHEAD: int
     MAX_BUSSES: int
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True)
 class RideHailingGlobalConfig:
     DRIVER_PAYMENT_SHARE: float
     AV_PRICE_REDUCTION: float
@@ -406,6 +410,9 @@ class RideHailingGlobalConfig:
 
     LOW_SOC_PENALTY: int
 
+# Add this field to store the driver availability vector
+    _driver_availability_vector: Optional[list[int]] = None
+
     def __post_init__(self) -> None:
         # apply the discount rate to all prices
         self.PRICE_ENTERING = self.PRICE_ENTERING * (1 - self.DISCOUNT_RATE)
@@ -413,15 +420,16 @@ class RideHailingGlobalConfig:
         self.PRICE_PER_KM = self.PRICE_PER_KM * (1 - self.DISCOUNT_RATE)
         self.MINIMUM_PRICE = self.MINIMUM_PRICE * (1 - self.DISCOUNT_RATE)
 
+     
+
     @property
     def DRIVER_AVAILABILITY_VECTOR(self) -> list[int]:
-        if not hasattr(self, "_driver_availability_vector"):
-            self._driver_availability_vector = [
-                round(float(x) * self.N_RIDE_HAILING_CARS * (1 - self.AV_PENETRATION))
-                for x in self.RH_AVAILABILITY
-            ]
+        object.__setattr__(self, "_driver_availability_vector", [
+            round(float(x) * self.N_RIDE_HAILING_CARS * (1 - self.AV_PENETRATION))
+            for x in self.RH_AVAILABILITY
+        ])
         return self._driver_availability_vector
-
+           
     @property
     def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
         # TODO: This has to be inferred instead of doing it this way. This is very error prone
@@ -429,7 +437,7 @@ class RideHailingGlobalConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True)
 class SharedVehicleGlobalConfig:
     VEHICLES: Optional[dict[VehicleMode, int]] = None
 
@@ -451,7 +459,7 @@ class SharedVehicleGlobalConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class TransitGlobalConfig:
     @property
     def AVAILABLE_VEHICLE_MODES(self) -> list[str]:
@@ -467,14 +475,14 @@ class TransitGlobalConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class AuctionConfig:
     AUCTION_START: int
     AUCTION_END: int
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class SharedChargingAuctionConfig:
     AUCTION_INTERVAL: int
     TIMESLOT_DURATION: int
@@ -482,7 +490,7 @@ class SharedChargingAuctionConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class DynamicRoutingConfig:
     ACTION_SPACE: list[str]
     ACTION_SPACE_RESOLUTION: int
@@ -493,7 +501,7 @@ class DynamicRoutingConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True)
 class DynamicCheckpointRoutingConfig:
     ACTION_SPACE: list[str]
     ACTION_SPACE_RESOLUTION: int
@@ -508,7 +516,7 @@ class DynamicCheckpointRoutingConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True)
 class DQNConfig:
     LR_DECAY: bool
     LR_DECAY_STEPS: int
