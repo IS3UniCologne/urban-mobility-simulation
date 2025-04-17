@@ -16,6 +16,10 @@ class VehicleFleet(ABC):
         VehicleFleet.fleet_id += 1
         self._env = env
         self._vehicles = []
+        # self._vehicles_by_type = defaultdict(set)
+        # # Not sure if we want this one. We could have it only update when vehicles stop moving to make it very efficient
+        # self._vehicles_by_region = defaultdict(set)
+        # self._vehicles_by_state = defaultdict(set)
         self._resource = simpy.Resource(env)  # Semaphore
 
         # tracking

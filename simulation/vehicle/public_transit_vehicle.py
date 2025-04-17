@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING
 
 from simpy import Environment
 
+from simulation.environment.position import Position
 from simulation.helper.time import SimulationTimeConverter
 from simulation.infrastructure.transit_network.stop import Stop
+from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.vehicle import Vehicle, VehicleState
 
 if TYPE_CHECKING:
-    from simulation.agent.user import TransitUser
     from simulation.infrastructure.route import PublicTransitRoute
 
 
@@ -55,11 +56,18 @@ class PublicTransitVehicle(Vehicle, ABC):
         self,
         env: Environment,
         route: PublicTransitRoute,
-        position,
+        position: Position,
+        fleet: VehicleFleet,
         velocity,
         max_available_seats=100,
     ):
-        super(PublicTransitVehicle, self).__init__(env, position)
+        super(PublicTransitVehicle, self).__init__(
+            env,
+            fleet=fleet,
+            position=position,
+            velocity=velocity,
+            max_available_seats=max_available_seats,
+        )
 
         self._id = PublicTransitVehicle.public_transit_vehicle_id
         self._route = route
@@ -98,43 +106,6 @@ class PublicTransitVehicle(Vehicle, ABC):
     @property
     def delay(self):
         return self._delay
-
-    @property
-    def available_seats(self):
-        return self._available_seats
-
-    def mount_passenger(self, passenger: TransitUser):
-        if self._available_seats > 0:
-            self._seats.append(passenger)
-            self._available_seats -= 1
-
-            self._user_mounted.succeed()
-            self._user_mounted = self._env.event()
-
-            logging.debug(
-                f"Passenger: {passenger.identify_passenger()} mounted vehicle.",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
-
-        elif passenger in self._seats:
-            raise Exception("Passenger is already in vehicle.")
-        else:
-            raise PublicTransitVehicleFull
-
-    def unmount_passenger(self, passenger: TransitUser):
-        if passenger in self._seats:
-            self._seats.remove(passenger)
-            self._available_seats += 1
-
-            self._user_unmounted.succeed()
-            self._user_unmounted = self._env.event()
-
-            logging.debug(
-                f"Passenger: {passenger.identify_passenger()} unmounted vehicle.",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
-        else:
-            raise Exception("Passenger is not in vehicle.")
 
     def prognose_arrival(self, stop: Stop):
         # TODO: this is pretty optimistic: What if the vehicle waits at intermediate stops

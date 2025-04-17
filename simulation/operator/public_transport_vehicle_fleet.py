@@ -52,6 +52,7 @@ class PublicTransportVehicleFleet(VehicleFleet):
             env=self._env,
             route=route,
             position=init_position,
+            fleet=self,
             use_learning_agent=False,
             velocity=self._bus_velocity,
         )

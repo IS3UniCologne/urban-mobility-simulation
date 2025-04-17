@@ -9,6 +9,7 @@ from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
+from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.public_transit_vehicle import (
     PublicTransitVehicle,
     PublicTransitVehicleState,
@@ -42,6 +43,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         env: Environment,
         route: PublicTransitRoute,
         position: GeodesicPosition,
+        fleet: VehicleFleet,
         use_learning_agent: bool,
         velocity,
         max_available_seats=100,
@@ -53,7 +55,9 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         :param max_available_seats: depends on type of bus
         :param velocity: e.g. 16.67 m/min * 30 (average in city)
         """
-        super(Bus, self).__init__(env, route, position, velocity, max_available_seats)
+        super(Bus, self).__init__(
+            env, route, position, fleet, velocity, max_available_seats
+        )
 
         self._id = Bus.bus_id
         self._time = SimulationTime(self._env)

@@ -13,6 +13,7 @@ class RideHailingAV(RideHailingVehicle):
     def __init__(
         self,
         env: Environment,
+        fleet,
         position,
         velocity,
         max_available_seats=4,
@@ -32,6 +33,7 @@ class RideHailingAV(RideHailingVehicle):
         """
         super(RideHailingAV, self).__init__(
             env,
+            fleet,
             position,
             velocity,
             max_available_seats,
