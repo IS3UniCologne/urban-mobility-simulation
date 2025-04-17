@@ -7,8 +7,8 @@ from simpy import Environment
 from simulation.environment.position import Position
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
+from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
-from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 
 from .vehicle import Vehicle, VehicleState
 
@@ -50,6 +50,7 @@ class SharedVehicle(Vehicle, ABC):
     def __init__(
         self,
         env: Environment,
+        fleet: VehicleFleet,
         position,
         velocity,
         max_available_seats=1,
@@ -58,7 +59,9 @@ class SharedVehicle(Vehicle, ABC):
         price_per_min=1,
         driver: DriverInterface = None,
     ):
-        super(SharedVehicle, self).__init__(env, position)
+        super(SharedVehicle, self).__init__(
+            env, fleet, position, velocity, max_available_seats
+        )
 
         self._id = SharedVehicle.shared_vehicle_id
         self._price_per_minute = price_per_min
@@ -296,45 +299,12 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def mount_passenger(self, passenger: PassengerInterface):
-        if len(self._seats) < self._available_seats:
-            self._seats.append(passenger)
-            self._available_seats -= 1
-
-            self._user_mounted.succeed()
-            self._user_mounted = self._env.event()
-
-            logging.debug(
-                f"Passenger: {passenger.identify_passenger()} mounted vehicle.",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
-
-        elif passenger in self._seats:
-            raise Exception("Passenger is already in vehicle.")
-        else:
-            raise Exception("Vehicle is full.")
-
     def prepare_for_service_task(self, caller, task):
         self._state = VehicleState.PRE_SERVICE
         logging.debug(
             f"Marked for Service Task [{task}] by {caller}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
-
-    def unmount_passenger(self, passenger: PassengerInterface):
-        if passenger in self._seats:
-            self._seats.remove(passenger)
-            self._available_seats += 1
-
-            self._user_unmounted.succeed()
-            self._user_unmounted = self._env.event()
-
-            logging.debug(
-                f"Passenger: {passenger.identify_passenger()} unmounted vehicle.",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
-        else:
-            raise Exception("Agent is not in vehicle.")
 
     def relocate(self, route_segment: Edge, time, relocator):
         """

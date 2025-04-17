@@ -1,5 +1,6 @@
 from simpy import Environment
 
+from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
 
@@ -20,6 +21,7 @@ class SharedKickScooter(SharedVehicle):
     def __init__(
         self,
         env: Environment,
+        fleet: VehicleFleet,
         position,
         velocity,
         max_available_seats=1,
@@ -39,6 +41,7 @@ class SharedKickScooter(SharedVehicle):
         """
         super(SharedKickScooter, self).__init__(
             env,
+            fleet,
             position,
             velocity,
             max_available_seats,

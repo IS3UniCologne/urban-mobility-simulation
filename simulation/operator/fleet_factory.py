@@ -170,6 +170,7 @@ def generate_AV_fleet(
             autonomous_car = RideHailingAV(
                 env=env,
                 position=pos,
+                fleet=fleet,
                 velocity=av_config.VELOCITY,
                 max_available_seats=av_config.MAX_AVAILABLE_SEATS,
                 max_state_of_charge=av_config.MAX_STATE_OF_CHARGE,
@@ -223,6 +224,7 @@ def generate_mixed_ride_hailing_fleet(
             car = RideHailingCar(
                 env=env,
                 position=pos,
+                fleet=fleet,
                 velocity=rh_config.VELOCITY,
                 max_available_seats=rh_config.MAX_AVAILABLE_SEATS,
                 max_state_of_charge=rh_config.MAX_STATE_OF_CHARGE,
@@ -238,6 +240,7 @@ def generate_mixed_ride_hailing_fleet(
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             car = RideHailingCar(
                 env=env,
+                fleet=fleet,
                 position=pos,
                 velocity=rh_config.VELOCITY,
                 max_available_seats=rh_config.MAX_AVAILABLE_SEATS,
@@ -255,6 +258,7 @@ def generate_mixed_ride_hailing_fleet(
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             autonomous_car = RideHailingAV(
                 env=env,
+                fleet=fleet,
                 position=pos,
                 velocity=av_config.VELOCITY,
                 max_available_seats=av_config.MAX_AVAILABLE_SEATS,
@@ -311,6 +315,7 @@ def generate_mixed_fleet(
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             car = SharedCar(
                 env=env,
+                fleet=fleet,
                 position=pos,
                 velocity=car_config.VELOCITY,
                 max_available_seats=car_config.MAX_AVAILABLE_SEATS,
@@ -326,6 +331,7 @@ def generate_mixed_fleet(
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             scooter = SharedScooter(
                 env=env,
+                fleet=fleet,
                 position=pos,
                 velocity=scooter_config.VELOCITY,
                 max_available_seats=scooter_config.MAX_AVAILABLE_SEATS,
@@ -341,6 +347,7 @@ def generate_mixed_fleet(
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
             kick_scooter = SharedKickScooter(
                 env=env,
+                fleet=fleet,
                 position=pos,
                 velocity=kick_scooter_config.VELOCITY,
                 max_available_seats=kick_scooter_config.MAX_AVAILABLE_SEATS,
@@ -356,6 +363,7 @@ def generate_mixed_fleet(
 
             bike = SharedBike(
                 env=env,
+                fleet=fleet,
                 position=pos,
                 velocity=bike_config.VELOCITY,
                 max_available_seats=bike_config.MAX_AVAILABLE_SEATS,

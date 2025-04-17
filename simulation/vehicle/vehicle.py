@@ -1,11 +1,16 @@
 import logging
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from simpy import Environment
 
 from simulation.environment.position import Position
 from simulation.infrastructure.network.edge import Edge
+from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from tracking.tracking_interface import TrackingInterface
+
+if TYPE_CHECKING:
+    from simulation.operator.vehicle_fleet import VehicleFleet
 
 
 class VehicleState:
@@ -33,23 +38,50 @@ class Vehicle(TrackingInterface, ABC):
         "_env",
         "_position",
         "_position_changed",
-        "_vdt",
+        "_distance_travelled",
         "_current_task",
     )
 
-    exposes = ["_id", "_state", "position", "_vdt"]
+    exposes = ["_id", "_state", "position", "_distance_travelled"]
 
-    def __init__(self, env: Environment, position):
+    # We need to override __eq__ and __hash__ to use Vehicles in sets and as dict keys
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Vehicle):
+            return self._id == other._id
+        return False
+
+    def __hash__(self):
+        return hash(self._id)
+
+    def __init__(
+        self,
+        env: Environment,
+        fleet: "VehicleFleet",
+        position: Position,
+        velocity: float,
+        max_available_seats: int,
+    ):
         self._id = Vehicle.vehicle_id
         Vehicle.vehicle_id += 1  # Increment Vehicle Id
         self._env = env
+        self._fleet = fleet
+
         self._position = position
+        self._velocity = velocity
 
-        # Vehicle Distance Traveled
-        self._vdt = 0
+        # Seating information
+        self._max_available_seats = max_available_seats
+        self._seats = []  # TODO: rename to _passengers, maybe should be a set ?
 
-        # Spatial Events
+        # Vehicle Distance Travelled
+        self._distance_travelled = 0
+
+        # Common Events
         self._position_changed = self._env.event()
+        self._user_mounted = self._env.event()
+        self._user_unmounted = self._env.event()
+        self._driving_started = self._env.event()
+        self._driving_finished = self._env.event()
 
         # Initial State
         self._state = VehicleState.INITIALIZED
@@ -57,10 +89,24 @@ class Vehicle(TrackingInterface, ABC):
         # Store current task (if any)
         self._current_task = None
 
-    # Properties
+        # For logging
+        self._logging_extra = {"clazz": self.__class__.__name__, "oid": self._id}
+
     @property
     def id(self):
         return self._id
+
+    @property
+    def velocity(self):
+        return self._velocity
+
+    @property
+    def available_seats(self):
+        return self._max_available_seats - len(self._seats)
+
+    @property
+    def max_available_seats(self):
+        return self._max_available_seats
 
     @property
     def state(self):
@@ -80,7 +126,7 @@ class Vehicle(TrackingInterface, ABC):
 
     @position.setter
     def position(self, position: Position):
-        self._vdt += self._position >> position
+        self._distance_travelled += self._position >> position
 
         self._position = position
 
@@ -88,9 +134,60 @@ class Vehicle(TrackingInterface, ABC):
         self._position_changed = self._env.event()
 
         logging.debug(
-            f"Position updated {self._position}. VDT increased to {self._vdt}.",
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
+            f"Position updated {self._position}. VDT increased to {self._distance_travelled}.",
+            extra=self._logging_extra,
         )
+
+    # Standard mount/unmount passenger logic
+    def mount_passenger(self, passenger: PassengerInterface):
+        if passenger in self._seats:
+            raise Exception(f"Passenger {passenger} is already in vehicle {self}.")
+        elif self._available_seats > 0:
+            self._seats.append(passenger)
+
+            self._user_mounted.succeed()
+            self._user_mounted = self._env.event()
+
+            logging.debug(
+                f"Passenger: {passenger.identify_passenger()} mounted vehicle.",
+                extra=self._logging_extra,
+            )
+        else:
+            raise Exception("Vehicle is full.")
+
+    def unmount_passenger(self, passenger: PassengerInterface):
+        if passenger in self._seats:
+            self._seats.remove(passenger)
+
+            self._user_unmounted.succeed()
+            self._user_unmounted = self._env.event()
+
+            logging.debug(
+                f"Passenger: {passenger.identify_passenger()} unmounted vehicle.",
+                extra=self._logging_extra,
+            )
+        else:
+            raise Exception("Agent is not in vehicle.")
+
+    def start_driving(self):
+        self.state = VehicleState.DRIVING
+        self._driving_started.succeed()
+        self._driving_started = self._env.event()
+
+        logging.debug("Driving started.", extra=self._logging_extra)
+
+    def stop_driving(self):
+        self.state = VehicleState.PARKING
+        self.set_current_task(None)
+        self._driving_finished.succeed()
+        self._driving_finished = self._env.event()
+
+        logging.debug("Driving stopped.", extra=self._logging_extra)
+
+    def park(self):
+        self.state = VehicleState.PARKING
+
+        logging.debug("Parked.", extra=self._logging_extra)
 
     def dump(self, exposed_only=True) -> dict:
         if exposed_only:
@@ -110,7 +207,7 @@ class Vehicle(TrackingInterface, ABC):
 
     @abstractmethod
     def __str__(self):
-        pass
+        return f"Vehicle {self._id} ({self.__class__.__name__})"
 
     def __repr__(self) -> str:
         return self.__str__()

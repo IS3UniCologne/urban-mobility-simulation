@@ -66,6 +66,7 @@ class RideHailingVehicle(Vehicle):
     def __init__(
         self,
         env: Environment,
+        fleet,
         position,
         velocity,
         max_available_seats=1,
@@ -75,7 +76,9 @@ class RideHailingVehicle(Vehicle):
         driver: DriverInterface = None,
         is_electric=True,
     ):
-        super(RideHailingVehicle, self).__init__(env, position)
+        super(RideHailingVehicle, self).__init__(
+            env, fleet, position, velocity, max_available_seats
+        )
 
         self._id = RideHailingVehicle.ride_hailing_vehicle_id
         self._price_per_minute = price_per_min
@@ -429,24 +432,6 @@ class RideHailingVehicle(Vehicle):
             f"Driver: {tmp_driver_id} unmounted vehicle.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
-
-    def mount_passenger(self, passenger: PassengerInterface):
-        if len(self._seats) < self._available_seats:
-            self._seats.append(passenger)
-            self._available_seats -= 1
-
-            self._user_mounted.succeed()
-            self._user_mounted = self._env.event()
-
-            logging.debug(
-                f"Passenger: {passenger.identify_passenger()} mounted vehicle.",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
-
-        elif passenger in self._seats:
-            raise Exception("Passenger is already in vehicle.")
-        else:
-            raise Exception("Vehicle is full.")
 
     def prepare_for_service_task(self, caller, task):
         self._state = VehicleState.PRE_SERVICE
