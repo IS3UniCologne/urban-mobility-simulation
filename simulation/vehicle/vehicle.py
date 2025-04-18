@@ -80,8 +80,6 @@ class Vehicle(TrackingInterface, ABC):
         self._position_changed = self._env.event()
         self._user_mounted = self._env.event()
         self._user_unmounted = self._env.event()
-        self._driving_started = self._env.event()
-        self._driving_finished = self._env.event()
 
         # Initial State
         self._state = VehicleState.INITIALIZED
@@ -91,6 +89,9 @@ class Vehicle(TrackingInterface, ABC):
 
         # For logging
         self._logging_extra = {"clazz": self.__class__.__name__, "oid": self._id}
+
+        # Add vehicle to fleet
+        self._fleet.add_vehicle(self)
 
     @property
     def id(self):
@@ -124,6 +125,10 @@ class Vehicle(TrackingInterface, ABC):
     def current_task(self):
         return self._current_task
 
+    @property
+    def fleet(self) -> "VehicleFleet":
+        return self._fleet
+
     @position.setter
     def position(self, position: Position):
         self._distance_travelled += self._position >> position
@@ -134,15 +139,15 @@ class Vehicle(TrackingInterface, ABC):
         self._position_changed = self._env.event()
 
         logging.debug(
-            f"Position updated {self._position}. VDT increased to {self._distance_travelled}.",
+            f"Position updated {self._position}. Total distance travelled: {self._distance_travelled}.",
             extra=self._logging_extra,
         )
 
     # Standard mount/unmount passenger logic
     def mount_passenger(self, passenger: PassengerInterface):
         if passenger in self._seats:
-            raise Exception(f"Passenger {passenger} is already in vehicle {self}.")
-        elif self._available_seats > 0:
+            raise Exception(f"Passenger {passenger} is already in vehicle.")
+        elif self.available_seats > 0:
             self._seats.append(passenger)
 
             self._user_mounted.succeed()
@@ -168,19 +173,6 @@ class Vehicle(TrackingInterface, ABC):
             )
         else:
             raise Exception("Agent is not in vehicle.")
-
-    def start_driving(self):
-        self.state = VehicleState.DRIVING
-        self._driving_started.succeed()
-        self._driving_started = self._env.event()
-
-        logging.debug("Driving started.", extra=self._logging_extra)
-
-    def stop_driving(self):
-        self.state = VehicleState.PARKING
-        self.set_current_task(None)
-        self._driving_finished.succeed()
-        self._driving_finished = self._env.event()
 
         logging.debug("Driving stopped.", extra=self._logging_extra)
 

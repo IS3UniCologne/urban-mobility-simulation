@@ -55,9 +55,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         :param max_available_seats: depends on type of bus
         :param velocity: e.g. 16.67 m/min * 30 (average in city)
         """
-        super(Bus, self).__init__(
-            env, route, position, fleet, velocity, max_available_seats
-        )
+        super().__init__(env, route, position, fleet, velocity, max_available_seats)
 
         self._id = Bus.bus_id
         self._time = SimulationTime(self._env)

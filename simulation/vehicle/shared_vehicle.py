@@ -59,17 +59,11 @@ class SharedVehicle(Vehicle, ABC):
         price_per_min=1,
         driver: DriverInterface = None,
     ):
-        super(SharedVehicle, self).__init__(
-            env, fleet, position, velocity, max_available_seats
-        )
+        super().__init__(env, fleet, position, velocity, max_available_seats)
 
         self._id = SharedVehicle.shared_vehicle_id
         self._price_per_minute = price_per_min
-        self._available_seats = max_available_seats
-        self._max_available_seats = max_available_seats
-        self._seats = []
         self._driver = None
-        self._velocity = velocity  # meter per minute (16.67m/min = 1kmh)
 
         # State Of Charge
         self._max_state_of_charge = max_state_of_charge  # in kWh
@@ -127,14 +121,6 @@ class SharedVehicle(Vehicle, ABC):
     @property
     def reserved_for_user(self):
         return self._reserved_for_user
-
-    @property
-    def available_seats(self):
-        return self._available_seats
-
-    @available_seats.setter
-    def available_seats(self, available_seats):
-        self._available_seats = available_seats
 
     @property
     def max_available_seats(self):

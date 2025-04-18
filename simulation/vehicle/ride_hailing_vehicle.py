@@ -6,7 +6,6 @@ from simulation.environment.position import Position
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
-from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 
 from ..helper.configuration.configuration import Configuration
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
@@ -76,19 +75,12 @@ class RideHailingVehicle(Vehicle):
         driver: DriverInterface = None,
         is_electric=True,
     ):
-        super(RideHailingVehicle, self).__init__(
-            env, fleet, position, velocity, max_available_seats
-        )
+        super().__init__(env, fleet, position, velocity, max_available_seats)
 
         self._id = RideHailingVehicle.ride_hailing_vehicle_id
         self._price_per_minute = price_per_min
-        self._available_seats = max_available_seats
-        self._max_available_seats = max_available_seats
-        self._seats = []
         self._driver = None
-        self._velocity = velocity  # meter per minute (16.67m/min = 1kmh)
         self._is_electric = is_electric
-        self._fleet = None
         self.travel_costs = 0
         self.charging_costs = 0
 
@@ -180,22 +172,6 @@ class RideHailingVehicle(Vehicle):
         return self._reserved_for_user
 
     @property
-    def available_seats(self):
-        return self._available_seats
-
-    @available_seats.setter
-    def available_seats(self, available_seats):
-        self._available_seats = available_seats
-
-    @property
-    def max_available_seats(self):
-        return self._max_available_seats
-
-    @max_available_seats.setter
-    def max_available_seats(self, max_available_seats):
-        self._max_available_seats = max_available_seats
-
-    @property
     def max_state_of_charge(self):
         return self._max_state_of_charge
 
@@ -210,18 +186,6 @@ class RideHailingVehicle(Vehicle):
     @property
     def energy_consumption(self):
         return self._energy_consumption
-
-    @property
-    def velocity(self):
-        return self._velocity
-
-    @property
-    def fleet(self):
-        return self._fleet
-
-    @fleet.setter
-    def fleet(self, fleet):
-        self._fleet = fleet
 
     @property
     def estimated_completion_time(self):
@@ -439,21 +403,6 @@ class RideHailingVehicle(Vehicle):
             f"Marked for Service Task [{task}] by {caller}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
-
-    def unmount_passenger(self, passenger: PassengerInterface):
-        if passenger in self._seats:
-            self._seats.remove(passenger)
-            self._available_seats += 1
-
-            self._user_unmounted.succeed()
-            self._user_unmounted = self._env.event()
-
-            logging.debug(
-                f"Passenger: {passenger.identify_passenger()} unmounted vehicle.",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
-        else:
-            raise Exception("Agent is not in vehicle.")
 
     def relocate(self, route_segment: Edge):
         """
