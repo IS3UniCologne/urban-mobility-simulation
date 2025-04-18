@@ -40,17 +40,7 @@ class PublicTransitVehicleFull(PublicTransitVehicleException):
 class PublicTransitVehicle(Vehicle, ABC):
     public_transit_vehicle_id = 0
 
-    __slots__ = (
-        "_route",
-        "_velocity",
-        "_max_available_seats",
-        "_available_seats",
-        "_seats",
-        "_current_stop",
-        "_delay",
-        "_user_mounted",
-        "_user_unmounted",
-    )
+    __slots__ = ("_route", "_current_stop", "_delay")
 
     def __init__(
         self,
@@ -59,10 +49,10 @@ class PublicTransitVehicle(Vehicle, ABC):
         position: Position,
         fleet: VehicleFleet,
         velocity,
-        max_available_seats=100,
+        max_available_seats,
     ):
         super(PublicTransitVehicle, self).__init__(
-            env,
+            env=env,
             fleet=fleet,
             position=position,
             velocity=velocity,
@@ -71,16 +61,8 @@ class PublicTransitVehicle(Vehicle, ABC):
 
         self._id = PublicTransitVehicle.public_transit_vehicle_id
         self._route = route
-        self._available_seats = max_available_seats
-        self._max_available_seats = max_available_seats
-        self._seats = []
-        self._velocity = velocity  # meter per minute (16.67m/min = 1kmh)
         self._current_stop = route.origin
         self._delay = 0  # in seconds from planned route timetable
-
-        # Events
-        self._user_mounted = self._env.event()
-        self._user_unmounted = self._env.event()
 
         # Initialize state
         self._state = PublicTransitVehicleState.AT_TERMINAL_ORIGIN

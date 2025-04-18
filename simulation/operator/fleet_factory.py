@@ -158,16 +158,16 @@ def generate_AV_fleet(
     # Access to underlying geodesic environment
     geo_env = GeodesicEnvironment.getInstance()
 
-    for index, row in fleet_config.iterrows():
+    for _index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
         hex_id = row[hex_column]
         count = row["AVs"]
 
         # Add AVs
-        for current_AV in range(count):
+        for _current_AV in range(count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            autonomous_car = RideHailingAV(
+            RideHailingAV(
                 env=env,
                 position=pos,
                 fleet=fleet,
@@ -177,8 +177,6 @@ def generate_AV_fleet(
                 energy_consumption=av_config.ENERGY_CONSUMPTION,
                 price_per_min=av_config.PRICE_PER_MIN,
             )
-            fleet.add_vehicle(autonomous_car)
-            autonomous_car.fleet = fleet
 
     return fleet
 
@@ -208,7 +206,7 @@ def generate_mixed_ride_hailing_fleet(
     rh_config = config.ride_hailing_vehicles["RideHailingCar"]
     av_config = config.ride_hailing_vehicles["AutonomousCar"]
 
-    for index, row in fleet_config.iterrows():
+    for _index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
         hex_id = row[hex_column]
 
@@ -218,10 +216,10 @@ def generate_mixed_ride_hailing_fleet(
         AVs_count = row["AVs"]
 
         # Add EV Ridehailing
-        for current_car in range(EV_count):
+        for _current_car in range(EV_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            car = RideHailingCar(
+            RideHailingCar(
                 env=env,
                 position=pos,
                 fleet=fleet,
@@ -231,14 +229,12 @@ def generate_mixed_ride_hailing_fleet(
                 energy_consumption=rh_config.ENERGY_CONSUMPTION,
                 price_per_min=rh_config.PRICE_PER_MIN,
             )
-            fleet.add_vehicle(car)
-            car.fleet = fleet
 
         # Add Regular Ridehailing
-        for current_car in range(car_count):
+        for _current_car in range(car_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            car = RideHailingCar(
+            RideHailingCar(
                 env=env,
                 fleet=fleet,
                 position=pos,
@@ -249,14 +245,12 @@ def generate_mixed_ride_hailing_fleet(
                 price_per_min=rh_config.PRICE_PER_MIN,
                 is_electric=False,
             )
-            fleet.add_vehicle(car)
-            car.fleet = fleet
 
         # Add AVs
-        for current_AV in range(AVs_count):
+        for _current_AV in range(AVs_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            autonomous_car = RideHailingAV(
+            RideHailingAV(
                 env=env,
                 fleet=fleet,
                 position=pos,
@@ -266,8 +260,6 @@ def generate_mixed_ride_hailing_fleet(
                 energy_consumption=av_config.ENERGY_CONSUMPTION,
                 price_per_min=av_config.PRICE_PER_MIN,
             )
-            fleet.add_vehicle(autonomous_car)
-            autonomous_car.fleet = fleet
 
     return fleet
 
@@ -299,7 +291,7 @@ def generate_mixed_fleet(
     kick_scooter_config = config.shared_vehicles[VehicleMode.SharedKickScooter]
     bike_config = config.shared_vehicles[VehicleMode.SharedBike]
 
-    for index, row in fleet_config.iterrows():
+    for _index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
         hex_id = row[hex_column]
 
@@ -310,10 +302,10 @@ def generate_mixed_fleet(
         bike_count = row["bikes"]
 
         # Add Cars
-        for current_car in range(car_count):
+        for _current_car in range(car_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            car = SharedCar(
+            SharedCar(
                 env=env,
                 fleet=fleet,
                 position=pos,
@@ -323,13 +315,12 @@ def generate_mixed_fleet(
                 energy_consumption=car_config.ENERGY_CONSUMPTION,
                 price_per_min=car_config.PRICE_PER_MIN,
             )
-            fleet.add_shared_vehicle(car)
 
         # Add Scooter
-        for current_scooter in range(scooter_count):
+        for _current_scooter in range(scooter_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            scooter = SharedScooter(
+            SharedScooter(
                 env=env,
                 fleet=fleet,
                 position=pos,
@@ -339,13 +330,12 @@ def generate_mixed_fleet(
                 energy_consumption=scooter_config.ENERGY_CONSUMPTION,
                 price_per_min=scooter_config.PRICE_PER_MIN,
             )
-            fleet.add_shared_vehicle(scooter)
 
         # Add Kick Scooter
-        for current_kick_scooter in range(kick_scooter_count):
+        for _current_kick_scooter in range(kick_scooter_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            kick_scooter = SharedKickScooter(
+            SharedKickScooter(
                 env=env,
                 fleet=fleet,
                 position=pos,
@@ -355,13 +345,12 @@ def generate_mixed_fleet(
                 energy_consumption=kick_scooter_config.ENERGY_CONSUMPTION,
                 price_per_min=kick_scooter_config.PRICE_PER_MIN,
             )
-            fleet.add_shared_vehicle(kick_scooter)
 
-        for current_bike in range(bike_count):
+        for _current_bike in range(bike_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
 
-            bike = SharedBike(
+            SharedBike(
                 env=env,
                 fleet=fleet,
                 position=pos,
@@ -370,6 +359,5 @@ def generate_mixed_fleet(
                 max_state_of_charge=bike_config.MAX_STATE_OF_CHARGE,
                 price_per_min=bike_config.PRICE_PER_MIN,
             )
-            fleet.add_shared_vehicle(bike)
 
     return fleet

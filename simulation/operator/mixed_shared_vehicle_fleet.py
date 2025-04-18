@@ -22,7 +22,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
         self._cars = []
         self._bikes = []
 
-    def add_shared_vehicle(self, vehicle: SharedVehicle):
+    def add_vehicle(self, vehicle: SharedVehicle):
         if isinstance(vehicle, SharedCar):
             self._cars.append(vehicle)
         elif isinstance(vehicle, SharedScooter):
