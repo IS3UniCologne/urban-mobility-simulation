@@ -10,7 +10,6 @@ dependencies    = [
     "h3>=3.7.1, <4",
     "haversine>=2.9.0",
     "matplotlib>=3.9.4",
-    "mlrose-hiive>=2.2.4",
     "pip>=25.0.1",
     "pqdm>=0.2.0",
     "pyarrow>=19.0.1",
@@ -44,8 +43,6 @@ max-complexity = 18
 
 [tool.uv]
 python-preference = "only-managed"
-[tool.uv.sources]
-mlrose-hiive = { git = "https://github.com/hiive/mlrose.git" }
 
 [dependency-groups]
 dev = [
