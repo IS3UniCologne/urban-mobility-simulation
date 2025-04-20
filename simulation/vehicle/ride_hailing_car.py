@@ -85,7 +85,7 @@ class RideHailingCar(RideHailingVehicle):
         self._driver_payment_share = (
             Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
         )
-        self._state = VehicleState.OFFLINE
+        self.state = VehicleState.OFFLINE
         self._online_event = self._env.event()
         self._offline_event = self._env.event()
         RideHailingCar.ride_hailing_car_id += 1
@@ -159,7 +159,7 @@ class RideHailingCar(RideHailingVehicle):
         )
 
     def get_online(self):
-        self._state = VehicleState.PARKING
+        self.state = VehicleState.PARKING
         self.update_shift_start_time()
         self._online_event.succeed()
         self._online_event = self._env.event()
@@ -169,7 +169,7 @@ class RideHailingCar(RideHailingVehicle):
         )
 
     def get_offline(self):
-        self._state = VehicleState.OFFLINE
+        self.state = VehicleState.OFFLINE
         self._shift_earn = 0
         self.update_shift_end_time()
         self._offline_event.succeed()

@@ -34,7 +34,7 @@ class Vehicle(TrackingInterface, ABC):
 
     __slots__ = (
         "_id",
-        "_state",
+        "__state",
         "_env",
         "_position",
         "_position_changed",
@@ -44,7 +44,7 @@ class Vehicle(TrackingInterface, ABC):
 
     exposes = ["_id", "_state", "position", "_distance_travelled"]
 
-    # We need to override __eq__ and __hash__ to use Vehicles in sets and as dict keys
+    # We need to override __eq__ and __hash__ to use Vehicles in sets
     def __eq__(self, other) -> bool:
         if isinstance(other, Vehicle):
             return self._id == other._id
@@ -82,7 +82,7 @@ class Vehicle(TrackingInterface, ABC):
         self._user_unmounted = self._env.event()
 
         # Initial State
-        self._state = VehicleState.INITIALIZED
+        self.__state = VehicleState.INITIALIZED
 
         # Store current task (if any)
         self._current_task = None
@@ -91,7 +91,7 @@ class Vehicle(TrackingInterface, ABC):
         self._logging_extra = {"clazz": self.__class__.__name__, "oid": self._id}
 
         # Add vehicle to fleet
-        self._fleet.add_vehicle(self)
+        self._fleet.register_vehicle(self)
 
     @property
     def id(self):
@@ -110,12 +110,19 @@ class Vehicle(TrackingInterface, ABC):
         return self._max_available_seats
 
     @property
-    def state(self):
-        return self._state
+    def state(self) -> VehicleState:
+        """Get current state of the vehicle."""
+        return self.__state
 
     @state.setter
-    def state(self, state):
-        self._state = state
+    def state(self, state) -> None:
+        """Set current state of the vehicle. Never change _state directly."""
+        if state == self.__state:
+            # No state change
+            return
+        # Notify fleet about state change
+        self._fleet.update_vehicle_state(self, state)
+        self.__state = state
 
     @property
     def position(self) -> Position:
