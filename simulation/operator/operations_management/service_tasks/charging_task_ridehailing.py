@@ -252,7 +252,7 @@ class ChargingTaskRidehailing(ServiceTask):
                     )
             else:
                 # TODO: this usage of "charge" for possibly ICE vehicles is confusing
-                self._vehicle._state = VehicleState.PRE_SERVICE
+                self._vehicle.state = VehicleState.PRE_SERVICE
                 self._vehicle.plug_to_charging_station()
                 yield self._env.process(self._vehicle.charge(charging_time=5))
             # Unplug Vehicle from Charging Station

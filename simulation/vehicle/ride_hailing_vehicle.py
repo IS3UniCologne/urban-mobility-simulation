@@ -131,7 +131,7 @@ class RideHailingVehicle(Vehicle):
         self._charging_station_plugged_out = self._env.event()
 
         # Initial State
-        self._state = VehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         # Vehicle Reservation
         self._reserved_for_user = None
@@ -235,7 +235,7 @@ class RideHailingVehicle(Vehicle):
         yield vehicle_assignment.user._vehicle_allocated
         self._vehicle_assignment = vehicle_assignment
         # Set current state
-        self._state = VehicleState.MOVING_TO_PICK_UP_POS
+        self.state = VehicleState.MOVING_TO_PICK_UP_POS
 
         ###
         vehicle_soc_before_driving = self.current_state_of_charge
@@ -374,7 +374,7 @@ class RideHailingVehicle(Vehicle):
         self._driver_mounted.succeed()
         self._driver_mounted = self._env.event()
 
-        self._state = VehicleState.DRIVING
+        self.state = VehicleState.DRIVING
 
         logging.debug(
             f"Driver: {driver.identify_driver()} mounted vehicle.",
@@ -390,7 +390,7 @@ class RideHailingVehicle(Vehicle):
         self._driver_unmounted.succeed()
         self._driver_unmounted = self._env.event()
 
-        self._state = VehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         logging.debug(
             f"Driver: {tmp_driver_id} unmounted vehicle.",
@@ -398,7 +398,7 @@ class RideHailingVehicle(Vehicle):
         )
 
     def prepare_for_service_task(self, caller, task):
-        self._state = VehicleState.PRE_SERVICE
+        self.state = VehicleState.PRE_SERVICE
         logging.debug(
             f"Marked for Service Task [{task}] by {caller}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
@@ -429,7 +429,7 @@ class RideHailingVehicle(Vehicle):
         # Invoke event to notify listeners that relocation started
         self._vehicle_relocation_started.succeed()
         self._vehicle_relocation_started = self._env.event()
-        self._state = VehicleState.RELOCATING
+        self.state = VehicleState.RELOCATING
 
         yield self._env.process(self.move(route_segment=route_segment, relocating=True))
 
@@ -440,7 +440,7 @@ class RideHailingVehicle(Vehicle):
         self.park()
 
     def waiting_for_charging(self):
-        self._state = VehicleState.PRE_SERVICE
+        self.state = VehicleState.PRE_SERVICE
 
         logging.debug(
             "Vehicle started waiting in the queue.",
@@ -448,7 +448,7 @@ class RideHailingVehicle(Vehicle):
         )
 
     def plug_to_charging_station(self):
-        self._state = VehicleState.CHARGING
+        self.state = VehicleState.CHARGING
 
         self._charging_station_plugged_in.succeed()
         self._charging_station_plugged_in = self._env.event()
@@ -459,7 +459,7 @@ class RideHailingVehicle(Vehicle):
         )
 
     def unplug_from_charging_station(self):
-        self._state = VehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         self._charging_station_plugged_out.succeed()
         self._charging_station_plugged_out = self._env.event()
@@ -471,7 +471,7 @@ class RideHailingVehicle(Vehicle):
 
     def charge(self, charging_time, amount=0):
         # Notify charging
-        self._state = VehicleState.CHARGING
+        self.state = VehicleState.CHARGING
         self._charging_station_charging_started.succeed()
         self._charging_station_charging_started = self._env.event()
 
@@ -495,4 +495,4 @@ class RideHailingVehicle(Vehicle):
         )
 
     def __str__(self):
-        return f"ID: {self._id}, Position: {self._position}, State: {self._state}"
+        return f"ID: {self._id}, Position: {self._position}, State: {self.state}"

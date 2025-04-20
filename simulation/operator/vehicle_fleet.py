@@ -1,13 +1,21 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 
 import simpy
 
-from simulation.vehicle.vehicle import Vehicle
+from simulation.vehicle.vehicle import Vehicle, VehicleState
 from tracking.tracking import Tracking
 
 
 class VehicleFleet(ABC):
-    __slots__ = ("_id", "_env", "_vehicles", "_resource", "_tracking")
+    __slots__ = (
+        "_id",
+        "_env",
+        "_vehicles",
+        "_resource",
+        "_tracking",
+        "_vehicles_by_state",
+    )
 
     fleet_id = 0
 
@@ -19,7 +27,7 @@ class VehicleFleet(ABC):
         # self._vehicles_by_type = defaultdict(set) #maybe this can be a list instead of a set
         # # Not sure if we want this one. We could have it only update when vehicles stop moving to make it very efficient
         # self._vehicles_by_region = defaultdict(set)
-        # self._vehicles_by_state = defaultdict(set)
+        self._vehicles_by_state = defaultdict(set)
         self._resource = simpy.Resource(env)  # Semaphore
 
         # tracking
@@ -53,14 +61,30 @@ class VehicleFleet(ABC):
     def vehicles_in_region(self, region: str):
         pass
 
-    def add_vehicle(self, vehicle: Vehicle):
-        if vehicle not in self._vehicles:
-            self._vehicles.append(vehicle)
-        else:
+    def register_vehicle(self, vehicle: Vehicle):
+        if vehicle in self._vehicles:
             raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
+        else:
+            self._add_vehicle(vehicle)
+            self._vehicles_by_state[vehicle.state].add(vehicle)
+
+    def _add_vehicle(self, vehicle: Vehicle):
+        """
+        Add a vehicle to the fleet. This is used internally and should not be called from outside.
+        """
+        self._vehicles.append(vehicle)
 
     def remove_vehicle(self, vehicle: Vehicle):
         if vehicle in self._vehicles:
             self._vehicles.remove(vehicle)
         else:
             raise Exception(f"Vehicle {vehicle} is not registered in Fleet yet")
+
+    def update_vehicle_state(self, vehicle: Vehicle, new_state: VehicleState):
+        """
+        Update the state of a vehicle in the fleet.
+        """
+        # If this throws an exception, the vehicle state is probably being
+        # incorrectly set through the private attribute
+        self._vehicles_by_state[vehicle.state].remove(vehicle)
+        self._vehicles_by_state[new_state].add(vehicle)

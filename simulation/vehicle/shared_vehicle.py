@@ -95,7 +95,7 @@ class SharedVehicle(Vehicle, ABC):
         self._charging_station_plugged_out = self._env.event()
 
         # Initial State
-        self._state = SharedVehicleState.PARKING
+        self.state = SharedVehicleState.PARKING
 
         # Vehicle Reservation
         self._reserved_for_user = None
@@ -262,7 +262,7 @@ class SharedVehicle(Vehicle, ABC):
         self._driver_mounted.succeed()
         self._driver_mounted = self._env.event()
 
-        self._state = VehicleState.DRIVING
+        self.state = VehicleState.DRIVING
 
         logging.debug(
             f"Driver: {driver.identify_driver()} mounted vehicle.",
@@ -278,7 +278,7 @@ class SharedVehicle(Vehicle, ABC):
         self._driver_unmounted.succeed()
         self._driver_unmounted = self._env.event()
 
-        self._state = VehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         logging.debug(
             f"Driver: {tmp_driver_id} unmounted vehicle.",
@@ -286,7 +286,7 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     def prepare_for_service_task(self, caller, task):
-        self._state = VehicleState.PRE_SERVICE
+        self.state = VehicleState.PRE_SERVICE
         logging.debug(
             f"Marked for Service Task [{task}] by {caller}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
@@ -320,7 +320,7 @@ class SharedVehicle(Vehicle, ABC):
         self._vehicle_relocation_started.succeed()
         self._vehicle_relocation_started = self._env.event()
 
-        self._state = VehicleState.RELOCATING
+        self.state = VehicleState.RELOCATING
 
         yield self._env.timeout(time)
 
@@ -334,7 +334,7 @@ class SharedVehicle(Vehicle, ABC):
         self._vehicle_relocation_finished.succeed()
         self._vehicle_relocation_finished = self._env.event()
 
-        self._state = VehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         logging.debug(
             f"Vehicle relocated by {relocator} from {old_position} to {self._position} in {time} minutes.",
@@ -342,7 +342,7 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     def plug_to_charging_station(self):
-        self._state = VehicleState.CHARGING
+        self.state = VehicleState.CHARGING
 
         self._charging_station_plugged_in.succeed()
         self._charging_station_plugged_in = self._env.event()
@@ -353,7 +353,7 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     def unplug_from_charging_station(self):
-        self._state = VehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         self._charging_station_plugged_out.succeed()
         self._charging_station_plugged_out = self._env.event()

@@ -41,7 +41,7 @@ class MixedRideHailingFleet(VehicleFleet):
         ].RECHARGE_THRESHOLD
         self._env.process(self.fleet_size_monitor())
 
-    def add_vehicle(self, vehicle: RideHailingVehicle):
+    def _add_vehicle(self, vehicle: RideHailingVehicle):
         if vehicle not in self._vehicles:
             if isinstance(vehicle, RideHailingCar):
                 self._vehicles.append(vehicle)
