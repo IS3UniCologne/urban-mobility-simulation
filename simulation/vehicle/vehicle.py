@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from simpy import Environment
 
-from simulation.environment.position import Position
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from tracking.tracking_interface import TrackingInterface
@@ -36,7 +36,7 @@ class Vehicle(TrackingInterface, ABC):
         "_id",
         "__state",
         "_env",
-        "_position",
+        "__position",
         "_position_changed",
         "_distance_travelled",
         "_current_task",
@@ -57,7 +57,7 @@ class Vehicle(TrackingInterface, ABC):
         self,
         env: Environment,
         fleet: "VehicleFleet",
-        position: Position,
+        position: GeodesicPosition,
         velocity: float,
         max_available_seats: int,
     ):
@@ -66,7 +66,8 @@ class Vehicle(TrackingInterface, ABC):
         self._env = env
         self._fleet = fleet
 
-        self._position = position
+        self.__position = position
+        self._current_hexagon = position.get_hexagon_id()
         self._velocity = velocity
 
         # Seating information
@@ -125,8 +126,8 @@ class Vehicle(TrackingInterface, ABC):
         self.__state = state
 
     @property
-    def position(self) -> Position:
-        return self._position
+    def position(self) -> GeodesicPosition:
+        return self.__position
 
     @property
     def current_task(self):
@@ -136,17 +137,28 @@ class Vehicle(TrackingInterface, ABC):
     def fleet(self) -> "VehicleFleet":
         return self._fleet
 
+    @property
+    def current_hexagon(self):
+        return self._current_hexagon
+
     @position.setter
-    def position(self, position: Position):
-        self._distance_travelled += self._position >> position
+    def position(self, position: GeodesicPosition):
+        self._distance_travelled += self.__position >> position
 
-        self._position = position
+        new_hexagon = position.get_hexagon_id()
 
-        self._position_changed.succeed(self._position)
+        # did we change hexagon?
+        if new_hexagon != self._current_hexagon:
+            self._fleet.update_vehicle_hexagon(self, new_hexagon)
+            self._current_hexagon = new_hexagon
+
+        self.__position = position
+
+        self._position_changed.succeed(self.__position)
         self._position_changed = self._env.event()
 
         logging.debug(
-            f"Position updated {self._position}. Total distance travelled: {self._distance_travelled}.",
+            f"Position updated {self.__position}. Total distance travelled: {self._distance_travelled}.",
             extra=self._logging_extra,
         )
 

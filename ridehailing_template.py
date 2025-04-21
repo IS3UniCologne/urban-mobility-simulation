@@ -129,6 +129,11 @@ logger.addFilter(cf)
 # # # # # # # # # # # # # # # # # # # # # #
 
 
+# Load Spatial Environment
+
+load_geodesic_environment()
+
+
 mode_choice_strategy = config.mode_choice_model.MODE_CHOICE_STRATEGY
 if mode_choice_strategy == ModeChoiceStrategy.SUBSTITUTION_AWARE:
     vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
@@ -158,9 +163,6 @@ population_factory = PopulationFactory(
     config.population.RIDE_HAILING_POPULATION_PROBABILITIES
 )
 
-# Load Spatial Environment
-
-load_geodesic_environment()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #

@@ -15,6 +15,7 @@ class VehicleFleet(ABC):
         "_resource",
         "_tracking",
         "_vehicles_by_state",
+        "_vehicles_by_hexagon",
     )
 
     fleet_id = 0
@@ -26,7 +27,7 @@ class VehicleFleet(ABC):
         self._vehicles = []
         # self._vehicles_by_type = defaultdict(set) #maybe this can be a list instead of a set
         # # Not sure if we want this one. We could have it only update when vehicles stop moving to make it very efficient
-        # self._vehicles_by_region = defaultdict(set)
+        self._vehicles_by_hexagon = defaultdict(set)
         self._vehicles_by_state = defaultdict(set)
         self._resource = simpy.Resource(env)  # Semaphore
 
@@ -67,6 +68,7 @@ class VehicleFleet(ABC):
         else:
             self._add_vehicle(vehicle)
             self._vehicles_by_state[vehicle.state].add(vehicle)
+            self._vehicles_by_hexagon[vehicle.current_hexagon].add(vehicle)
 
     def _add_vehicle(self, vehicle: Vehicle):
         """
@@ -88,3 +90,14 @@ class VehicleFleet(ABC):
         # incorrectly set through the private attribute
         self._vehicles_by_state[vehicle.state].remove(vehicle)
         self._vehicles_by_state[new_state].add(vehicle)
+
+    def update_vehicle_hexagon(self, vehicle: Vehicle, new_hexagon: str):
+        """
+        Update the position of a vehicle in the fleet.
+        """
+
+        # Remove vehicle from old hexagon
+        self._vehicles_by_hexagon[vehicle.current_hexagon].remove(vehicle)
+
+        # Add vehicle to new hexagon's set
+        self._vehicles_by_hexagon[new_hexagon].add(vehicle)
