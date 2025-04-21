@@ -2,7 +2,7 @@ import logging
 
 from simpy import Environment
 
-from simulation.environment.position import Position
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
@@ -344,7 +344,7 @@ class RideHailingVehicle(Vehicle):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def _update_positions(self, new_position: Position):
+    def _update_positions(self, new_position: GeodesicPosition):
         # Update Vehicle Position
         old_position = self.position
         self.position = new_position
@@ -357,10 +357,10 @@ class RideHailingVehicle(Vehicle):
         for passenger in self._seats:
             passenger.position = new_position
 
-        region_id = self._position.get_hexagon_id()
+        region_id = self.position.get_hexagon_id()
 
         logging.debug(
-            f"Old position {old_position} > Current position {self._position} in region {region_id}.",
+            f"Old position {old_position} > Current position {self.position} in region {region_id}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -495,4 +495,4 @@ class RideHailingVehicle(Vehicle):
         )
 
     def __str__(self):
-        return f"ID: {self._id}, Position: {self._position}, State: {self.state}"
+        return f"ID: {self._id}, Position: {self.position}, State: {self.state}"

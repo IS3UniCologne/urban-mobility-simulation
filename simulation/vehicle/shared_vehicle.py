@@ -245,10 +245,10 @@ class SharedVehicle(Vehicle, ABC):
         for passenger in self._seats:
             passenger.position = new_position
 
-        region_id = self._position.get_hexagon_id()
+        region_id = self.position.get_hexagon_id()
 
         logging.debug(
-            f"Current position {self._position} in region {region_id}.",
+            f"Current position {self.position} in region {region_id}.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -325,7 +325,7 @@ class SharedVehicle(Vehicle, ABC):
         yield self._env.timeout(time)
 
         # Save old position for logging purposes
-        old_position = self._position
+        old_position = self.position
 
         # Update new position of vehicle
         self._update_positions(route_segment.destination.position)
@@ -337,7 +337,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = VehicleState.PARKING
 
         logging.debug(
-            f"Vehicle relocated by {relocator} from {old_position} to {self._position} in {time} minutes.",
+            f"Vehicle relocated by {relocator} from {old_position} to {self.position} in {time} minutes.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
