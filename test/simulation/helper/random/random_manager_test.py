@@ -1,4 +1,5 @@
 import sys
+from unittest.mock import PropertyMock, patch
 
 import numpy as np
 import pytest
@@ -9,7 +10,10 @@ sys.argv = [
 ]  # Add a path to a test config file
 
 # we have to set sys argv before importing Configuration
-from simulation.helper.configuration.configuration import Configuration  # noqa: E402
+from simulation.helper.configuration.configuration import (  # noqa: E402
+    Configuration,
+    RandomManagerConfig,
+)
 from simulation.helper.random.random_manager import RandomManager  # noqa: E402
 
 
@@ -53,20 +57,59 @@ def test_get_rng_component():
 
 def test_rng_reproducibility():
     """Test that RNGs with the same seed produce the same sequence of numbers."""
-    # Set a specific seed
-    random_manager = RandomManager()
-    object.__setattr__(Configuration().random_manager, "SEED", 42)
-    random_manager.reset_rng()
+    # --- 1. Prepare the Test-Specific RNG Config ---
+    # Create a *new*, real RandomManagerConfig instance just for this test.
+    # Because we create it here, we can set the seed during initialization.
+    # This respects the frozen=True nature after creation.
+    test_rng_config = RandomManagerConfig(
+        SEED=42,
+        COMPONENT_SEEDS={
+            "POPULATIONFACTORY": 42,
+            "FLEETFACTORY": 42,
+            "DEMANDFACTORY": 42,
+            "INITIALSOC": 42,
+            "GEOENV": 42,
+        },
+    )
 
-    # Generate some random numbers
-    numbers1 = [random_manager.uniform() for _ in range(10)]
+    # --- 2. Patch the 'random_manager' Property on the Configuration Class ---
+    # We use patch.object to target the 'random_manager' attribute
+    # specifically on the Configuration *class*.
+    # 'new_callable=PropertyMock' tells patch to replace it with a PropertyMock.
+    # 'return_value=test_rng_config' configures this PropertyMock.
+    with patch.object(
+        Configuration,  # Target the Configuration class
+        "random_manager",  # The name of the property
+        new_callable=PropertyMock,  # Replace with a PropertyMock
+        return_value=test_rng_config,  # Make it return our test config
+    ) as mock_prop:
+        # --- 3. Execute Test Logic within the patched context ---
 
-    # Reset the seed and generate again
-    random_manager.reset_rng()
-    numbers2 = [random_manager.uniform() for _ in range(10)]
+        # Inside this 'with' block:
+        # - Accessing Configuration().random_manager will now execute our
+        #   PropertyMock and immediately return test_rng_config.
+        # - Accessing Configuration().random_manager.SEED will return 42.
 
-    # Should get exactly the same sequence
-    np.testing.assert_array_equal(numbers1, numbers2)
+        # Instantiate or get the RandomManager Singleton
+        # (Its actual instantiation doesn't matter as much now, as long
+        # as reset_rng uses the patched property access)
+        test_manager = RandomManager()
+
+        # Call the function under test.
+        # The line 'main_seed = Configuration().random_manager.SEED' inside
+        # reset_rng will now effectively become 'main_seed = test_rng_config.SEED',
+        # yielding 42.
+        test_manager.reset_rng()
+
+        # Generate some random numbers
+        numbers1 = [test_manager.uniform() for _ in range(10)]
+
+        # Reset the seed and generate again
+        test_manager.reset_rng()
+        numbers2 = [test_manager.uniform() for _ in range(10)]
+
+        # Should get exactly the same sequence
+        np.testing.assert_array_equal(numbers1, numbers2)
 
 
 def test_component_rng_reproducibility():
