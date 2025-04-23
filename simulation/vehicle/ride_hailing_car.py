@@ -1,11 +1,15 @@
 import logging
+from typing import TYPE_CHECKING, Generator
 
-from simpy import Environment
+from simpy import Environment, Event
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.vehicle import VehicleState
+
+if TYPE_CHECKING:
+    from simulation.environment.geodesic_position import GeodesicPosition
 
 # class RideHailingCarState(Enum):
 #     INITIALIZED = 0
@@ -23,19 +27,19 @@ from simulation.vehicle.vehicle import VehicleState
 
 class RideHailingCar(RideHailingVehicle):
     # Shared Care Counter
-    ride_hailing_car_id = 0
-    vehicle_type = "ridehailing_car"  # TODO: make explicit that it's a human-driven car
+    ride_hailing_car_id: int = 0
+    vehicle_type: str = "ridehailing_car"  # TODO: make explicit that it's a human-driven car
 
     def __init__(
         self,
         env: Environment,
-        position: GeodesicPosition,
-        velocity,
-        max_available_seats=4,
-        max_state_of_charge=16.7,
-        energy_consumption=0.152,
-        price_per_min=0.26,
-        is_electric=True,
+        position: "GeodesicPosition",
+        velocity: float,
+        max_available_seats: int=4,
+        max_state_of_charge: float=16.7,
+        energy_consumption: float=0.152,
+        price_per_min: float=0.26,
+        is_electric: bool=True,
     ):
         """
 
@@ -59,53 +63,53 @@ class RideHailingCar(RideHailingVehicle):
         )
 
         # Increment Shared Car ID
-        self.car_id = RideHailingCar.ride_hailing_car_id
-        self._price_per_minute = price_per_min
-        self._total_earn = 0
-        self._shift_earn = 0
-        self._shift_duration = 0
-        self._offline_duration = 0
-        self._shift_start_time = None
-        self._shift_end_time = 0
-        self._driver_payment_share = (
+        self.car_id: int = RideHailingCar.ride_hailing_car_id
+        self._price_per_minute:float = price_per_min
+        self._total_earn:float = 0
+        self._shift_earn:float = 0
+        self._shift_duration:float = 0
+        self._offline_duration:float  = 0
+        self._shift_start_time:float  = None
+        self._shift_end_time:float  = 0
+        self._driver_payment_share:float  = (
             Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
         )
-        self._state = VehicleState.OFFLINE
-        self._online_event = self._env.event()
-        self._offline_event = self._env.event()
+        self._state: VehicleState = VehicleState.OFFLINE
+        self._online_event: Event = self._env.event()
+        self._offline_event: Event = self._env.event()
         RideHailingCar.ride_hailing_car_id += 1
 
-        self._emergency_soc_buffer_percent = self._config.ride_hailing_vehicles[
+        self._emergency_soc_buffer_percent: float = self._config.ride_hailing_vehicles[
             "RideHailingCar"
         ].EMERGENCY_SOC_BUFFER
 
         self._env.process(self.run_shift_check_process())
 
     @property
-    def total_earn(self):
+    def total_earn(self) -> float:
         return self._total_earn
 
     @property
-    def shift_earn(self):
+    def shift_earn(self) -> float:
         return self._shift_earn
 
     @property
-    def shift_duration(self):
+    def shift_duration(self) -> float:
         return self._shift_duration
 
     @property
-    def offline_duration(self):
+    def offline_duration(self) -> float:
         return self._offline_duration
 
     @property
-    def shift_start_time(self):
+    def shift_start_time(self) -> float:
         return self._shift_start_time
 
     @property
-    def shift_end_time(self):
+    def shift_end_time(self) -> float:
         return self._shift_end_time
 
-    def update_shift_start_time(self):
+    def update_shift_start_time(self) -> None:
         time = self._env.now
         self._shift_start_time = time
 
@@ -114,7 +118,7 @@ class RideHailingCar(RideHailingVehicle):
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
-    def update_shift_end_time(self):
+    def update_shift_end_time(self) -> None:
         time = self._env.now
         self._shift_end_time = time
 
@@ -123,16 +127,16 @@ class RideHailingCar(RideHailingVehicle):
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
-    def update_shift_duration(self):
+    def update_shift_duration(self) -> None:
         self._shift_duration = self._env.now - self._shift_start_time
 
-    def update_offline_duration(self):
+    def update_offline_duration(self) -> None:
         self._offline_duration = self._env.now - self._shift_end_time
 
     def update_idle_time(self):  # TODO
         pass
 
-    def update_earned_money(self, payment):
+    def update_earned_money(self, payment: float) -> None:
         # Notify earned money for a human-driven car
         earn = payment * self._driver_payment_share
         self._total_earn += earn
@@ -143,7 +147,7 @@ class RideHailingCar(RideHailingVehicle):
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
-    def get_online(self):
+    def get_online(self) -> None:
         self._state = VehicleState.PARKING
         self.update_shift_start_time()
         self._online_event.succeed()
@@ -153,7 +157,7 @@ class RideHailingCar(RideHailingVehicle):
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
-    def get_offline(self):
+    def get_offline(self) -> None:
         self._state = VehicleState.OFFLINE
         self._shift_earn = 0
         self.update_shift_end_time()
@@ -164,7 +168,7 @@ class RideHailingCar(RideHailingVehicle):
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
-    def decide_to_get_online(self):
+    def decide_to_get_online(self) -> bool:
         go_online = False
         ### comment off when we have mode chioce variables
         # self.update_offline_duration()
@@ -184,7 +188,7 @@ class RideHailingCar(RideHailingVehicle):
             go_online = True
         return go_online
 
-    def decide_to_get_offline(self):
+    def decide_to_get_offline(self) -> bool:
         go_offline = False
         ### comment off when we have mode chioce variables
         # self.update_shift_duration()
@@ -205,7 +209,7 @@ class RideHailingCar(RideHailingVehicle):
 
         return go_offline
 
-    def run_shift_check_process(self):
+    def run_shift_check_process(self) -> Generator[Event, None, None]:
         """
         Run availability decision-making process of drivers
         :return:

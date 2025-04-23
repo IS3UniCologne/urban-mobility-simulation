@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
+from typing import Generator
 
-from simpy import Environment
+from simpy import Environment, Event
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
@@ -18,7 +19,7 @@ from tracking.tracking_interface import TrackingInterface
 
 
 class Bus(PublicTransitVehicle, TrackingInterface):
-    bus_id = 0
+    bus_id: int = 0
 
     # Tracking
     exposes = ["_position", "_state", "_available_seats"]
@@ -29,8 +30,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         route: PublicTransitRoute,
         position: GeodesicPosition,
         use_learning_agent: bool,
-        velocity,
-        max_available_seats=100,
+        velocity: float,
+        max_available_seats: int=100,
     ):
         """
 
@@ -47,33 +48,33 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         Bus.bus_id += 1
 
         # Events
-        self._has_reached_terminal = self._env.event()
+        self._has_reached_terminal: Event = self._env.event()
 
         # Config
-        self._config = Configuration()
+        self._config: Configuration = Configuration()
         self._problem_config = (
             None  # TODO: add back once dynamic problem configuration is re-implemented
         )
 
         # Environment / World state
-        self._geodesic_env = GeodesicEnvironment.getInstance()
-        self._world = World.instance()
+        self._geodesic_env: GeodesicEnvironment = GeodesicEnvironment.getInstance()
+        self._world: World = World.instance()
 
-        self._dropoffs = 0
-        self._pickups = 0
-        self._dist_traveled = 0
+        self._dropoffs: int = 0
+        self._pickups:int = 0
+        self._dist_traveled:int = 0
 
         # optionally, inject the run routine of a RL agent
-        self._use_learning_agent = use_learning_agent
+        self._use_learning_agent:bool = use_learning_agent
 
         if not self._use_learning_agent:
             # use planned route logic
-            self._process = self._env.process(self._run())
+            self._process: Event = self._env.process(self._run())
         else:
             # use learning agent
-            self._process = self._env.process(self._problem_config.learning_agent.run())
+            self._process: Event = self._env.process(self._problem_config.learning_agent.run())
 
-    def _run(self):
+    def _run(self) -> Generator[Event, None, None]:
         """
         Bus Lifecycle (with planned stops, not RL agent)
 
@@ -142,11 +143,11 @@ class Bus(PublicTransitVehicle, TrackingInterface):
 
         self._has_reached_terminal.succeed()
 
-    def _move_to_next_stop(self):
+    def _move_to_next_stop(self) -> Generator[Event, None, None]:
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
         yield self._env.process(self.move(route_segment))
 
-    def move(self, route_segment: RouteSegment):
+    def move(self, route_segment: RouteSegment) -> Generator[Event, None, None]:
         # TODO: use road network speed limits?
 
         distance = route_segment.distance  # in meter
@@ -178,7 +179,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
-    def _update_positions(self, new_position):
+    def _update_positions(self, new_position) -> None:
         # Update Vehicle Position
         self.position = new_position
 
@@ -277,7 +278,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #     self._agent_completed_step.succeed((before_state, action, self._rl_agent.reward, self._rl_agent.reward_sum))
     #     self._agent_completed_step = self._env.event()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"I have {len(self._seats)} passengers on boards"
 
     def dump(self, exposed_only: bool = True) -> dict:

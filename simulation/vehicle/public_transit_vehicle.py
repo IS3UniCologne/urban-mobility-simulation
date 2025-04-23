@@ -5,15 +5,18 @@ from abc import ABC
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from simpy import Environment
+from simpy import Environment, Event
 
+from simulation.environment.position import Position
 from simulation.helper.time import SimulationTimeConverter
+from simulation.infrastructure.route import Route
 from simulation.infrastructure.transit_network.stop import Stop
 from simulation.vehicle.vehicle import Vehicle, VehicleState
 
 if TYPE_CHECKING:
     from simulation.agent.user import TransitUser
     from simulation.infrastructure.route import PublicTransitRoute
+    from simulation.environment.geodesic_position import GeodesicPosition
 
 
 class PublicTransitVehicleState(VehicleState, Enum):
@@ -43,27 +46,27 @@ class PublicTransitVehicle(Vehicle, ABC):
         self,
         env: Environment,
         route: PublicTransitRoute,
-        position,
-        velocity,
-        max_available_seats=100,
+        position: "GeodesicPosition",
+        velocity:float,
+        max_available_seats:int=100,
     ):
         super(PublicTransitVehicle, self).__init__(env, position)
 
-        self._id = PublicTransitVehicle.public_transit_vehicle_id
-        self._route = route
-        self._available_seats = max_available_seats
-        self._max_available_seats = max_available_seats
-        self._seats = []
-        self._velocity = velocity  # meter per minute (16.67m/min = 1kmh)
-        self._current_stop = route.origin
-        self._delay = 0  # in seconds from planned route timetable
+        self._id:int = PublicTransitVehicle.public_transit_vehicle_id
+        self._route:Route = route
+        self._available_seats:int = max_available_seats
+        self._max_available_seats:int = max_available_seats
+        self._seats:list[int] = []
+        self._velocity:float = velocity  # meter per minute (16.67m/min = 1kmh)
+        self._current_stop: Position = route.origin
+        self._delay:int = 0  # in seconds from planned route timetable
 
         # Events
-        self._user_mounted = self._env.event()
-        self._user_unmounted = self._env.event()
+        self._user_mounted: Event = self._env.event()
+        self._user_unmounted: Event = self._env.event()
 
         # Initialize state
-        self._state = PublicTransitVehicleState.AT_TERMINAL_ORIGIN
+        self._state: VehicleState = PublicTransitVehicleState.AT_TERMINAL_ORIGIN
 
         PublicTransitVehicle.public_transit_vehicle_id += 1
 
@@ -72,26 +75,26 @@ class PublicTransitVehicle(Vehicle, ABC):
         )
 
     @property
-    def route(self):
+    def route(self) -> Route:
         return self._route
 
     @property
-    def current_stop(self):
+    def current_stop(self) -> Stop:
         return self._current_stop
 
     @current_stop.setter
-    def current_stop(self, stop: Stop):
+    def current_stop(self, stop: Stop) -> None:
         self._current_stop = stop
 
     @property
-    def delay(self):
+    def delay(self) -> int:
         return self._delay
 
     @property
-    def available_seats(self):
+    def available_seats(self) -> int:
         return self._available_seats
 
-    def mount_passenger(self, passenger: TransitUser):
+    def mount_passenger(self, passenger: TransitUser) -> None:
         if self._available_seats > 0:
             self._seats.append(passenger)
             self._available_seats -= 1
@@ -109,7 +112,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         else:
             raise PublicTransitVehicleFull
 
-    def unmount_passenger(self, passenger: TransitUser):
+    def unmount_passenger(self, passenger: TransitUser) -> None:
         if passenger in self._seats:
             self._seats.remove(passenger)
             self._available_seats += 1
@@ -124,7 +127,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         else:
             raise Exception("Passenger is not in vehicle.")
 
-    def prognose_arrival(self, stop: Stop):
+    def prognose_arrival(self, stop: Stop) -> str:
         # TODO: this is pretty optimistic: What if the vehicle waits at intermediate stops
 
         distance = self._route.subroute(self._current_stop, stop).total_distance()

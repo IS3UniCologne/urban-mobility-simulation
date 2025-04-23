@@ -1,22 +1,26 @@
+from typing import TYPE_CHECKING
 from simpy import Environment
 
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
 
+if TYPE_CHECKING:
+    from simulation.environment.geodesic_position import GeodesicPosition
+
 class SharedCar(SharedVehicle):
     # Shared Car Counter
-    shared_car_id = 0
-    vehicle_type = "shared_car"
+    shared_car_id: int = 0
+    vehicle_type: str = "shared_car"
 
     def __init__(
         self,
         env: Environment,
-        position,
-        velocity,
-        max_available_seats=4,
-        max_state_of_charge=16.7,
-        energy_consumption=0.152,
-        price_per_min=0.26,
+        position: "GeodesicPosition",
+        velocity: float,
+        max_available_seats: int=4,
+        max_state_of_charge: float=16.7,
+        energy_consumption: float=0.152,
+        price_per_min: float=0.26,
     ):
         """
 
@@ -39,6 +43,6 @@ class SharedCar(SharedVehicle):
         )
 
         # Increment Shared Car ID
-        self.car_id = SharedCar.shared_car_id
-        self._price_per_minute = price_per_min
+        self.car_id: int = SharedCar.shared_car_id
+        self._price_per_minute: int = price_per_min
         SharedCar.shared_car_id += 1

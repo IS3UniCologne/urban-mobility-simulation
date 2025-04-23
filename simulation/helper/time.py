@@ -1,10 +1,8 @@
 import datetime
-from typing import List, Optional
-from beartype import beartype
 
 from simpy import Environment
 
-WEEKDAYS: List[str] = [
+WEEKDAYS = [
     "monday",
     "tuesday",
     "wednesday",
@@ -21,107 +19,92 @@ class SimulationTime:
     While simpy's time is unitless, we assume it to be minutes.
     """
 
-    def __init__(self, env: Environment) -> None:
+    def __init__(self, env: Environment):
         self._env = env
 
-    def now(self) -> float:
+    def now(self):
         return self._env.now
 
-    @beartype
-    def seconds(self) -> int:
+    def seconds(self):
         return SimulationTimeConverter.seconds(self._env.now)
 
-    @beartype
-    def minutes(self) -> int:
+    def minutes(self):
         return SimulationTimeConverter.minutes(self._env.now)
 
-    @beartype
-    def hours(self) -> int:
+    def hours(self):
         return SimulationTimeConverter.hours(self._env.now)
 
-    @beartype
-    def dayofweek(self) -> int:
+    def dayofweek(self):
         return SimulationTimeConverter.dayofweek(self._env.now)
 
-    @beartype
     def dayofweek_as_str(self) -> str:
         return SimulationTimeConverter.dayofweek_as_str(self._env.now)
 
-    @beartype
     def next_dayofweek_as_str(self) -> str:
         return SimulationTimeConverter.next_dayofweek_as_str(self._env.now)
 
-    @beartype
     def last_dayofweek_as_str(self) -> str:
         return SimulationTimeConverter.last_dayofweek_as_str(self._env.now)
 
-    @beartype
-    def now_as_str(self, strf: str = "%H:%M:%S") -> str:
+    def now_as_str(self, strf: str = "%H:%M:%S"):
         return SimulationTimeConverter.as_str(self._env.now, strf)
 
-    @beartype
-    def now_as_time(self) -> datetime.time:
+    def now_as_time(self):
         return SimulationTimeConverter.as_time(self._env.now)
 
-    @beartype
-    def convert_to_day_of_week_bucket(self) -> bool:
-        return SimulationTimeConverter.convert_to_day_of_week_bucket(self._env.now)
+    def convert_to_day_of_week_bucket(self):
+        return
 
 
 class SimulationTimeConverter:
     @staticmethod
-    @beartype
-    def seconds(time: float) -> int:
+    def seconds(time: float):
+        # seconds are not well defined, but it may happen that a time step is < 1 (minutes)
         return int((time - int(time)) * 60)
 
     @staticmethod
-    @beartype
-    def minutes(time: float) -> int:
+    def minutes(time: float):
         return int(time % 60)
 
     @staticmethod
-    @beartype
-    def hours(time: float) -> int:
+    def hours(time: float):
         return int((time / 60) % 24)
 
     @staticmethod
-    @beartype
-    def days(time: float) -> int:
+    def days(time: float):
         return int(time / (24 * 60)) + 1
 
     @staticmethod
-    @beartype
-    def dayofweek(time: float) -> int:
+    def dayofweek(time: float):
         return int((time % (24 * 60 * 7)) / (24 * 60))
 
     @classmethod
-    @beartype
     def dayofweek_as_str(cls, time: float) -> str:
         return WEEKDAYS[cls.dayofweek(time)]
 
     @classmethod
-    @beartype
     def next_dayofweek_as_str(cls, time: float) -> str:
         return WEEKDAYS[(cls.dayofweek(time) + 1) % 7]
 
     @classmethod
-    @beartype
     def last_dayofweek_as_str(cls, time: float) -> str:
-        return WEEKDAYS[(cls.dayofweek(time) + 6) % 7]
+        return WEEKDAYS[
+            (cls.dayofweek(time) + 6) % 7
+        ]  # add 6 instead of subtracting 1 and let modulo do the work
 
     @classmethod
-    @beartype
-    def as_str(cls, time: float, strf: str = "%H:%M:%S") -> str:
+    def as_str(cls, time: float, strf: str = "%H:%M:%S"):
         return cls.as_time(time).strftime(strf)
 
     @classmethod
-    @beartype
-    def as_time(cls, time: float) -> datetime.time:
+    def as_time(cls, time: float):
         return datetime.time(cls.hours(time), cls.minutes(time), cls.seconds(time))
 
     @classmethod
-    @beartype
-    def as_datetime(cls, time: float) -> datetime.datetime:
+    def as_datetime(cls, time: float):
+        # ATTENTION:
+        # 1. we use some month where the first day is a monday, this does not align with seasons or anything
+        # 2. simulation times of more than one month are not well defined
         return datetime.datetime(
             2024,
             1,
@@ -132,12 +115,23 @@ class SimulationTimeConverter:
         )
 
     @staticmethod
-    @beartype
     def duration_between(
-        start: str, end: str, strf: str = "%H:%M:%S", end_next_day: Optional[bool] = None
-    ) -> float:
+        start: str, end: str, strf: str = "%H:%M:%S", end_next_day=None
+    ):
+        """
+        Gives the duration between two timestamps in minutes.
+        Must be start <= end for end_next_day = False
+
+        :param end_next_day: bool/None
+        :param start: strf-formatted timestamp
+        :param end: strf-formatted timestamp
+        :param strf: strf formatting
+        :return: float - minutes
+        """
+        # try to infer end_next_day if not explicitly given
         if end_next_day is None:
             end_next_day = end < start
+
         if not end_next_day:
             return (
                 datetime.datetime.strptime(end, strf)
@@ -151,18 +145,21 @@ class SimulationTimeConverter:
             ).total_seconds() / 60
 
     @classmethod
-    @beartype
-    def convert_to_day_of_week_bucket(cls, time: float) -> bool:
-        return cls.dayofweek(time) >= 5
+    def convert_to_day_of_week_bucket(cls, time: float):
+        if cls.dayofweek(time) < 5:
+            return False  # Non_Working_Day? No => weekday
+        else:
+            return True  # Non_Working_Day? Yes (i.e., holidays, weekends)
 
     @staticmethod
-    @beartype
-    def convert_to_temporal_bucket(time: float, temporal_resolution: float) -> int:
-        return (time % (24 * 60)) // (temporal_resolution * 60)
+    def convert_to_temporal_bucket(time: float, temporal_resolution):
+        return (time % (24 * 60)) // (
+            temporal_resolution * 60
+        )  # Reduce to one day, then get day of week
 
 
 class SimulationVelocityConverter:
+    # Convert the velocity of kilometer/hour to simulation velocity of meter/minute
     @staticmethod
-    @beartype
-    def convert_kmh(velocity: float) -> float:
+    def convert_kmh(velocity: float):
         return (velocity * 1000) / 60
