@@ -40,6 +40,7 @@ class Vehicle(TrackingInterface, ABC):
         "_position_changed",
         "_distance_travelled",
         "_current_task",
+        "_current_hexagon",
     )
 
     exposes = ["_id", "_state", "position", "_distance_travelled"]

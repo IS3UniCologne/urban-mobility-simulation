@@ -8,6 +8,7 @@ from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
     ServiceTask,
 )
+from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.vehicle import VehicleState
 
 
@@ -29,7 +30,7 @@ class RelocationTask(ServiceTask):
         number_of_vehicles_to_relocate,
         distance,
         vehicle_mode,
-        vehicle_fleet,
+        vehicle_fleet: VehicleFleet,
     ):
         super(RelocationTask, self).__init__(env)
 
@@ -51,8 +52,8 @@ class RelocationTask(ServiceTask):
             yield req
 
             # Identify vehicles to relocate
-            potential_vehicles_to_relocate = (
-                self._vehicle_fleet.get_all_available_vehicles(self._origin)
+            potential_vehicles_to_relocate = self._vehicle_fleet.get_vehicles_in_region(
+                self._origin
             )
             selected_vehicles_to_relocate = []
 
@@ -60,10 +61,9 @@ class RelocationTask(ServiceTask):
             for vehicle in potential_vehicles_to_relocate:
                 # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
                 if (
-                    vehicle.__class__.__name__ == self._vehicle_mode
+                    vehicle.__class__.__name__
+                    == self._vehicle_mode  # TODO: This should not be based on the class name
                     and vehicle.state == VehicleState.PARKING
-                    and len(selected_vehicles_to_relocate)
-                    < self._number_of_vehicles_to_relocate
                 ):
                     # Mark Vehicle => Change state su
                     # ch that other service workers don't touch it!!
@@ -72,7 +72,12 @@ class RelocationTask(ServiceTask):
                     )
                     # Add to charging list
                     selected_vehicles_to_relocate.append(vehicle)
-
+                    if (
+                        len(selected_vehicles_to_relocate)
+                        >= self._number_of_vehicles_to_relocate
+                    ):
+                        # leave the loop if we have enough vehicles
+                        break
         # Start Relocation Process
         for vehicle in selected_vehicles_to_relocate:
             # Random Destination at Dest Region

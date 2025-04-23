@@ -101,3 +101,12 @@ class VehicleFleet(ABC):
 
         # Add vehicle to new hexagon's set
         self._vehicles_by_hexagon[new_hexagon].add(vehicle)
+
+    def get_vehicles_in_region(self, region):
+        """
+        Return all vehicles (mixed) in a list from passed region
+        :param region: Spatial Region
+        :return: List of all vehicle
+        """
+
+        return list(self._vehicles_by_hexagon[region])
