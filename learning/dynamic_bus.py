@@ -229,7 +229,7 @@ class DynamicBusProblem(LearningInterface):
 
             self.bus._update_positions(new_position)
 
-            region_id = new_position.get_hexagon_id(self._action_res)
+            region_id = new_position.get_region_id(self._action_res)
 
             logging.debug(
                 f"Current position {new_position} in region {region_id}.",

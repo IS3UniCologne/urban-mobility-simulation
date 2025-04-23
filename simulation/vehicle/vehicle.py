@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from simpy import Environment
 
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.environment.position import Position
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from tracking.tracking_interface import TrackingInterface
@@ -40,7 +41,7 @@ class Vehicle(TrackingInterface, ABC):
         "_position_changed",
         "_distance_travelled",
         "_current_task",
-        "_current_hexagon",
+        "_current_region",
     )
 
     exposes = ["_id", "_state", "position", "_distance_travelled"]
@@ -58,7 +59,7 @@ class Vehicle(TrackingInterface, ABC):
         self,
         env: Environment,
         fleet: "VehicleFleet",
-        position: GeodesicPosition,
+        position: Position,
         velocity: float,
         max_available_seats: int,
     ):
@@ -68,7 +69,7 @@ class Vehicle(TrackingInterface, ABC):
         self._fleet = fleet
 
         self.__position = position
-        self._current_hexagon = position.get_hexagon_id()
+        self._current_region = position.get_region_id()
         self._velocity = velocity
 
         # Seating information
@@ -139,19 +140,19 @@ class Vehicle(TrackingInterface, ABC):
         return self._fleet
 
     @property
-    def current_hexagon(self):
-        return self._current_hexagon
+    def current_region(self):
+        return self._current_region
 
     @position.setter
     def position(self, position: GeodesicPosition):
         self._distance_travelled += self.__position >> position
 
-        new_hexagon = position.get_hexagon_id()
+        new_region = position.get_region_id()
 
-        # did we change hexagon?
-        if new_hexagon != self._current_hexagon:
-            self._fleet.update_vehicle_hexagon(self, new_hexagon)
-            self._current_hexagon = new_hexagon
+        # did we change region?
+        if new_region != self._current_region:
+            self._fleet.update_vehicle_region(self, new_region)
+            self._current_region = new_region
 
         self.__position = position
 

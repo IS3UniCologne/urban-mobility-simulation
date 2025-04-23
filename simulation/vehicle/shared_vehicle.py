@@ -245,7 +245,7 @@ class SharedVehicle(Vehicle, ABC):
         for passenger in self._seats:
             passenger.position = new_position
 
-        region_id = self.position.get_hexagon_id()
+        region_id = self.position.get_region_id()
 
         logging.debug(
             f"Current position {self.position} in region {region_id}.",

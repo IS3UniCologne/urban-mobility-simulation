@@ -37,9 +37,6 @@ class PublicTransportVehicleFleet(VehicleFleet):
 
         self._tracking = Tracking.instance()
 
-    def get_available_vehicles(self, region):
-        pass
-
     def vehicles_in_region(self, region: str):
         pass
 

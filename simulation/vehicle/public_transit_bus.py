@@ -231,8 +231,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #             m = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
     #             for d in demands:
     #                 try:
-    #                     start = self._corridor_sorted.index(d.origin.get_hexagon_id(self._action_res))
-    #                     end = self._corridor_sorted.index(d.destination.get_hexagon_id(self._action_res))
+    #                     start = self._corridor_sorted.index(d.origin.get_region_id(self._action_res))
+    #                     end = self._corridor_sorted.index(d.destination.get_region_id(self._action_res))
     #                     m[start][end] += 1
     #                 except ValueError as e:
     #                     logging.debug(f'Bus update state: Encountered demand at edge of hexagon: {e}',
@@ -244,8 +244,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #             # origin = current position, destination = drop-off
     #             for p in self._seats:
     #                 try:
-    #                     start = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
-    #                     end = self._corridor_sorted.index(p.transport_task.destination.get_hexagon_id(self._action_res))
+    #                     start = self._corridor_sorted.index(self._position.get_region_id(self._action_res))
+    #                     end = self._corridor_sorted.index(p.transport_task.destination.get_region_id(self._action_res))
     #                     m[start][end] += 1
     #                 except ValueError as e:
     #                     # TODO: think about below
@@ -259,7 +259,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #
     #             # build position vector v[hex] =1 if bus is at hex, else 0
     #             position = np.zeros(self._corridor_dim, dtype=int)
-    #             pos = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
+    #             pos = self._corridor_sorted.index(self._position.get_region_id(self._action_res))
     #             position[pos] = 1
     #
     #             self._env_state['position'] = position
@@ -270,7 +270,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #             region_id, _ = self._position.get_hexagon(self._action_res)
     #
     #             if region_id == \
-    #                     self._route.destination.get_hexagon_id(self._action_res):
+    #                     self._route.destination.get_region_id(self._action_res):
     #                 self._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
     #                 logging.info(f'Bus has arrived at its terminal destination at time {self._time.now_as_str()}',
     #                              extra={"clazz": self.__class__.__name__, "oid": self._id})

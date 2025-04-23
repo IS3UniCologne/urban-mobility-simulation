@@ -155,7 +155,7 @@ class Timetable:
     ):
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon
-            poly = self._geo_env.get_hexagon(position.get_hexagon_id())
+            poly = self._geo_env.get_hexagon(position.get_region_id())
 
             return trips[trips.within(poly)]
         else:

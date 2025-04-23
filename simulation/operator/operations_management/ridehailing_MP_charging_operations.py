@@ -94,7 +94,7 @@ class RideHailingMPChargingOperations(OperationsInterface):
 
                 charging_task = ChargingTaskRidehailing(
                     self._env,
-                    origin=v.position.get_hexagon_id(),
+                    origin=v.position.get_region_id(),
                     destination=c.location,
                     number_of_vehicles_to_charge=1,
                     distance_to_fleet_base=None,

@@ -6,6 +6,7 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
     TransportationAlternativeBrowser,
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 
@@ -14,7 +15,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
 
     def __init__(self, env):
         self._env = env
-        self._fleet = None
+        self._fleet: MixedSharedVehicleFleet = None
 
     def search_for_transportation_alternatives(
         self, vehicle_search_task: TransportationSearchTask
@@ -26,10 +27,10 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
         """
         browser = TransportationAlternativeBrowser()
 
-        hexagon_origin = vehicle_search_task.agent_position.get_hexagon_id()
+        hexagon_origin = vehicle_search_task.agent_position.get_region_id()
 
         (cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area) = (
-            self._fleet.get_available_vehicles(hexagon_origin)
+            self._fleet.get_available_vehicles_in_region(hexagon_origin)
         )
 
         origin = vehicle_search_task.transport_task.origin
