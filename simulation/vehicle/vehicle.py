@@ -2,10 +2,16 @@ import logging
 from abc import ABC, abstractmethod
 
 from simpy import Environment
+from simpy.events import Event
+from typing import TYPE_CHECKING, Any
 
 from simulation.environment.position import Position
 from simulation.infrastructure.network.edge import Edge
+from simulation.tasks.transport_task import TransportTask
 from tracking.tracking_interface import TrackingInterface
+
+if TYPE_CHECKING:
+    from simulation.environment.geodesic_position import GeodesicPosition
 
 
 class VehicleState:
@@ -24,54 +30,55 @@ class VehicleState:
 
 
 class Vehicle(TrackingInterface, ABC):
-    vehicle_id = 0
+    vehicle_id: int = 0
     vehicle_type: str
 
-    __slots__ = ("_id", "_state", "_env", "_position", "_position_changed", "_vdt")
+    __slots__ = ("_id", "_state", "_env", "_position", "_position_changed", "_vdt", "_current_task")
 
     exposes = ["_id", "_state", "position", "_vdt"]
 
-    def __init__(self, env: Environment, position):
-        self._id = Vehicle.vehicle_id
-        Vehicle.vehicle_id += 1  # Increment Vehicle Id
-        self._env = env
-        self._position = position
+    def __init__(self, env: Environment, position: "GeodesicPosition") -> None:
+        self._id: int = Vehicle.vehicle_id
+        Vehicle.vehicle_id: int = self._id + 1
+         # Increment Vehicle Id
+        self._env: Environment = env
+        self._position: "GeodesicPosition" = position
 
         # Vehicle Distance Traveled
-        self._vdt = 0
+        self._vdt: int = 0
 
         # Spatial Events
-        self._position_changed = self._env.event()
+        self._position_changed: Event = self._env.event()
 
         # Initial State
-        self._state = VehicleState.INITIALIZED
+        self._state: VehicleState = VehicleState.INITIALIZED
 
         # Store current task (if any)
-        self._current_task = None
+        self._current_task: TransportTask = None
 
     # Properties
     @property
-    def id(self):
+    def id(self) -> int:
         return self._id
 
     @property
-    def state(self):
+    def state(self) -> VehicleState:
         return self._state
 
     @state.setter
-    def state(self, state):
+    def state(self, state: VehicleState) -> None:
         self._state = state
 
     @property
-    def position(self) -> Position:
+    def position(self) -> "GeodesicPosition":
         return self._position
 
     @property
-    def current_task(self):
+    def current_task(self) -> TransportTask:
         return self._current_task
 
     @position.setter
-    def position(self, position: Position):
+    def position(self, position: "GeodesicPosition") -> None:
         self._vdt += self._position >> position
 
         self._position = position
@@ -84,7 +91,7 @@ class Vehicle(TrackingInterface, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def dump(self, exposed_only=True) -> dict:
+    def dump(self, exposed_only=True) -> dict[str, Any]:
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}
         else:
@@ -92,16 +99,16 @@ class Vehicle(TrackingInterface, ABC):
 
     # Methods
     @abstractmethod
-    def move(self, route_segment: Edge):
+    def move(self, route_segment: Edge) -> None:
         pass
 
     # As of now, this is only used with TransportTask
     # TODO: As part of the vehicle interface refactoring, this should be used to have transparency about a vehicles current task at all time
-    def set_current_task(self, task):
+    def set_current_task(self, task: TransportTask) -> None:
         self._current_task = task
 
     @abstractmethod
-    def __str__(self):
+    def __str__(self) -> None: 
         pass
 
     def __repr__(self) -> str:

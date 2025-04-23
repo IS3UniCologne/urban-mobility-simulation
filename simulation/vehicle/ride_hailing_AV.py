@@ -1,22 +1,25 @@
+from typing import TYPE_CHECKING
 from simpy import Environment
 
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
+if TYPE_CHECKING:
+    from simulation.environment.geodesic_position import GeodesicPosition
 
 class RideHailingAV(RideHailingVehicle):
     # Autonomous Ride Hailing Car Counter
-    ride_hailing_av_id = 0
-    vehicle_type = "ridehailing_AV"
+    ride_hailing_av_id:int = 0
+    vehicle_type:str = "ridehailing_AV"
 
     def __init__(
         self,
         env: Environment,
-        position,
-        velocity,
-        max_available_seats=4,
-        max_state_of_charge=16.7,
-        energy_consumption=0.152,
-        price_per_min=0.26,
+        position: "GeodesicPosition",
+        velocity:float,
+        max_available_seats: int=4,
+        max_state_of_charge: float=16.7,
+        energy_consumption: float=0.152,
+        price_per_min: float=0.26,
     ):
         """
 
@@ -40,9 +43,9 @@ class RideHailingAV(RideHailingVehicle):
         )
 
         # Increment Shared Car ID
-        self.car_id = RideHailingAV.ride_hailing_av_id
-        self._price_per_minute = price_per_min
-        self._emergency_soc_buffer_percent = self._config.ride_hailing_vehicles[
+        self.car_id:int = RideHailingAV.ride_hailing_av_id
+        self._price_per_minute:float = price_per_min
+        self._emergency_soc_buffer_percent:float = self._config.ride_hailing_vehicles[
             "AutonomousCar"
         ].EMERGENCY_SOC_BUFFER
         RideHailingAV.ride_hailing_av_id += 1

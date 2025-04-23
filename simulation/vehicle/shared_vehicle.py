@@ -2,7 +2,8 @@ import logging
 from abc import ABC
 from enum import Enum
 
-from simpy import Environment
+from typing import TYPE_CHECKING
+from simpy import Environment, Event
 
 from simulation.environment.position import Position
 from simulation.helper.random.random_manager import RandomManager
@@ -12,6 +13,11 @@ from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 
 from .vehicle import Vehicle, VehicleState
 
+if TYPE_CHECKING:
+    from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.agent.user import User
+
+
 
 class SharedVehicleState(VehicleState, Enum):
     SOME_STATE = 1002
@@ -19,63 +25,63 @@ class SharedVehicleState(VehicleState, Enum):
 
 
 class SharedVehicle(Vehicle, ABC):
-    shared_vehicle_id = 0
+    shared_vehicle_id: int = 0
 
     def __init__(
         self,
         env: Environment,
-        position,
-        velocity,
-        max_available_seats=1,
-        max_state_of_charge=1,
-        energy_consumption=0.01,
-        price_per_min=1,
+        position: "GeodesicPosition",
+        velocity: float,
+        max_available_seats:int =1,
+        max_state_of_charge:int =1,
+        energy_consumption:float =0.01,
+        price_per_min:int =1,
         driver: DriverInterface = None,
     ):
         super(SharedVehicle, self).__init__(env, position)
 
-        self._id = SharedVehicle.shared_vehicle_id
-        self._price_per_minute = price_per_min
-        self._available_seats = max_available_seats
-        self._max_available_seats = max_available_seats
-        self._seats = []
+        self._id:int = SharedVehicle.shared_vehicle_id
+        self._price_per_minute:int  = price_per_min
+        self._available_seats:int = max_available_seats
+        self._max_available_seats:int = max_available_seats
+        self._seats:list[int] = []
         self._driver = None
-        self._velocity = velocity  # meter per minute (16.67m/min = 1kmh)
+        self._velocity:float = velocity  # meter per minute (16.67m/min = 1kmh)
 
         # State Of Charge
-        self._max_state_of_charge = max_state_of_charge  # in kWh
-        self._current_state_of_charge = RandomManager().uniform(
+        self._max_state_of_charge:int = max_state_of_charge  # in kWh
+        self._current_state_of_charge:float = RandomManager().uniform(
             low=0, high=max_state_of_charge, component="INITIALSOC"
         )  # in kWh
 
-        self._energy_consumption = energy_consumption  # in kWh/km
+        self._energy_consumption:int = energy_consumption  # in kWh/km
 
         #### Vehicle Events
         # Driving Events
-        self._vehicle_parked = self._env.event()
-        self._user_mounted = self._env.event()
-        self._driving_started = self._env.event()
-        self._driving_finished = self._env.event()
-        self._user_unmounted = self._env.event()
+        self._vehicle_parked: Event = self._env.event()
+        self._user_mounted: Event = self._env.event()
+        self._driving_started: Event = self._env.event()
+        self._driving_finished: Event = self._env.event()
+        self._user_unmounted: Event = self._env.event()
 
-        self._driver_mounted = self._env.event()
-        self._driver_unmounted = self._env.event()
+        self._driver_mounted: Event = self._env.event()
+        self._driver_unmounted: Event = self._env.event()
 
         # Relocation Events
-        self._vehicle_relocation_started = self._env.event()
-        self._vehicle_relocation_finished = self._env.event()
+        self._vehicle_relocation_started: Event = self._env.event()
+        self._vehicle_relocation_finished: Event = self._env.event()
 
         # Charging Events
-        self._charging_station_plugged_in = self._env.event()
-        self._charging_station_charging_started = self._env.event()
-        self._charging_station_charging_finished = self._env.event()
-        self._charging_station_plugged_out = self._env.event()
+        self._charging_station_plugged_in: Event = self._env.event()
+        self._charging_station_charging_started: Event = self._env.event()
+        self._charging_station_charging_finished: Event = self._env.event()
+        self._charging_station_plugged_out: Event = self._env.event()
 
         # Initial State
-        self._state = SharedVehicleState.PARKING
+        self._state: VehicleState = SharedVehicleState.PARKING
 
         # Vehicle Reservation
-        self._reserved_for_user = None
+        self._reserved_for_user: "User" = None
 
         # Driver Interface
         if driver is not None:
@@ -84,47 +90,47 @@ class SharedVehicle(Vehicle, ABC):
         SharedVehicle.shared_vehicle_id += 1
 
     @property
-    def id(self):
+    def id(self) -> int:
         return self._id
 
     @property
-    def price_per_minute(self):
+    def price_per_minute(self) -> int:
         return self._price_per_minute
 
     @price_per_minute.setter
-    def price_per_minute(self, price_per_minute):
+    def price_per_minute(self, price_per_minute: int) -> None:
         self._price_per_minute = price_per_minute
 
     @property
-    def reserved_for_user(self):
+    def reserved_for_user(self) -> "User":
         return self._reserved_for_user
 
     @property
-    def available_seats(self):
+    def available_seats(self) -> int:
         return self._available_seats
 
     @available_seats.setter
-    def available_seats(self, available_seats):
+    def available_seats(self, available_seats: int) -> None:
         self._available_seats = available_seats
 
     @property
-    def max_available_seats(self):
+    def max_available_seats(self) -> int:
         return self._max_available_seats
 
     @max_available_seats.setter
-    def max_available_seats(self, max_available_seats):
+    def max_available_seats(self, max_available_seats: int) -> None:
         self._max_available_seats = max_available_seats
 
     @property
-    def max_state_of_charge(self):
+    def max_state_of_charge(self) -> int:
         return self._max_state_of_charge
 
     @property
-    def current_state_of_charge(self):
+    def current_state_of_charge(self) -> float:
         return self._current_state_of_charge
 
     @property
-    def current_relative_state_of_charge(self):
+    def current_relative_state_of_charge(self) -> int:
         return (
             self.current_state_of_charge / self.max_state_of_charge
             if self.max_state_of_charge != 0
@@ -132,14 +138,14 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     @property
-    def energy_consumption(self):
+    def energy_consumption(self) -> int:
         return self._energy_consumption
 
     @property
-    def velocity(self):
+    def velocity(self) -> float:
         return self._velocity
 
-    def move(self, route_segment: Edge):
+    def move(self, route_segment: Edge) -> None:
         distance = route_segment.distance
         velocity = self._velocity
         time = distance / velocity
@@ -154,7 +160,7 @@ class SharedVehicle(Vehicle, ABC):
         self._update_positions(route_segment.destination.position)
         self._update_state_of_charge(distance)
 
-    def start_driving(self):
+    def start_driving(self) -> None:
         self.state = SharedVehicleState.DRIVING
 
         logging.debug(
@@ -162,7 +168,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def stop_driving(self):
+    def stop_driving(self) -> None:
         self.state = SharedVehicleState.PARKING
         self.set_current_task(None)
         logging.debug(
@@ -170,7 +176,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def park(self):
+    def park(self) -> None:
         # Lift reservation
         self._reserved_for_user = None
 
@@ -181,7 +187,7 @@ class SharedVehicle(Vehicle, ABC):
             "Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
-    def reserve(self, user):
+    def reserve(self, user: "User") -> None:
         self.state = SharedVehicleState.RESERVED
 
         self._reserved_for_user = user
@@ -191,7 +197,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def has_enough_state_of_charge(self, distance):
+    def has_enough_state_of_charge(self, distance: float) -> bool:
         """
         Check if vehicle has enough SoC left for trip
         :param distance: in meter
@@ -201,7 +207,7 @@ class SharedVehicle(Vehicle, ABC):
             return False
         return True
 
-    def _update_state_of_charge(self, distance):
+    def _update_state_of_charge(self, distance: float) -> None:
         """
         Update state of charge of vehicles based on driven distance.
         SoC = SoC_old - EnergyConsumption (kWh/km) * km
@@ -218,7 +224,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def _update_positions(self, new_position: Position):
+    def _update_positions(self, new_position: Position) -> None:
         # Update Vehicle Position
         self.position = new_position
 
@@ -237,7 +243,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def mount_driver(self, driver: DriverInterface):
+    def mount_driver(self, driver: DriverInterface) -> None:
         if self._driver is not None:
             raise Exception(
                 f"Vehicle {self._id} has already a driver {self._driver.identify_driver()}. Unable to mount driver."
@@ -254,7 +260,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def unmount_driver(self):
+    def unmount_driver(self) -> None:
         if self._driver is None:
             raise Exception("Vehicle has no driver to unmount.")
 
@@ -270,7 +276,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def mount_passenger(self, passenger: PassengerInterface):
+    def mount_passenger(self, passenger: PassengerInterface) -> None:
         if len(self._seats) < self._available_seats:
             self._seats.append(passenger)
             self._available_seats -= 1
