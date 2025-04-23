@@ -170,3 +170,5 @@ dmypy.json
 
 # profiling
 *.austin
+profile.json
+profile.html
