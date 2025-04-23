@@ -260,12 +260,11 @@ class MixedRideHailingFleet(VehicleFleet):
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
 
-        vehicle_list = self._vehicles
+        parking_vehicles = self._vehicles_by_state[VehicleState.PARKING]
 
-        for vehicle in vehicle_list:
+        for vehicle in parking_vehicles:
             if (
                 vehicle.current_relative_state_of_charge < state_of_charge_threshold
-                and vehicle.state == VehicleState.PARKING
                 and not vehicle._suggested
             ):
                 low_soc_supply.append(vehicle)
