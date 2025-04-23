@@ -14,6 +14,7 @@ class VehicleFleet(ABC):
         "_vehicles",
         "_resource",
         "_tracking",
+        "_vehicles_by_type",
         "_vehicles_by_state",
         "_vehicles_by_region",
     )
@@ -25,8 +26,11 @@ class VehicleFleet(ABC):
         VehicleFleet.fleet_id += 1
         self._env = env
         self._vehicles = []
-        # self._vehicles_by_type = defaultdict(set) #maybe this can be a list instead of a set
-        # # Not sure if we want this one. We could have it only update when vehicles stop moving to make it very efficient
+
+        # Vehicle collections for faster access. We use sets for faster removals and intersections
+        self._vehicles_by_type = defaultdict(
+            set
+        )  # TODO: Implement once we have unified vehicle types/modes
         self._vehicles_by_region = defaultdict(set)
         self._vehicles_by_state = defaultdict(set)
         self._resource = simpy.Resource(env)  # Semaphore
