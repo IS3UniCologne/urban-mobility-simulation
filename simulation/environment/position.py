@@ -16,3 +16,11 @@ class Position(ABC):
     @abstractmethod
     def __str__(self):
         pass
+
+    @abstractmethod
+    def get_region_id(self) -> str:
+        """
+        Get the region ID of the position
+        :return: str
+        """
+        pass

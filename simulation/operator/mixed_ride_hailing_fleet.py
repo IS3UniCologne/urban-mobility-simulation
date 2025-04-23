@@ -76,27 +76,6 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return cars_in_area
 
-    def get_available_vehicles(self, region):
-        """
-        Return all vehicles which are located in a region
-
-        Example
-        cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
-
-        :param region: Hexagon ID
-        :return: Lists of vehicles in area
-        """
-        cars_in_area = []
-
-        parking_cars = [
-            car for car in self._vehicles if car.state == VehicleState.PARKING
-        ]
-        for car in parking_cars:
-            if car.position.get_hexagon_id() == region:
-                cars_in_area.append(car)
-
-        return cars_in_area
-
     def get_available_vehicles_to_user(self, origin):
         """
         Return all vehicles which are located in a region
@@ -221,7 +200,7 @@ class MixedRideHailingFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_hexagon_id()
+                hex_id = vehicle.position.get_region_id()
 
                 if hex_id not in supply:
                     supply[hex_id] = dict(zip(available_vehicles, values))
@@ -254,7 +233,7 @@ class MixedRideHailingFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_hexagon_id()
+                hex_id = vehicle.position.get_region_id()
 
                 if hex_id not in low_soc_supply:
                     low_soc_supply[hex_id] = dict(zip(available_vehicles, values))

@@ -357,7 +357,7 @@ class RideHailingVehicle(Vehicle):
         for passenger in self._seats:
             passenger.position = new_position
 
-        region_id = self.position.get_hexagon_id()
+        region_id = self.position.get_region_id()
 
         logging.debug(
             f"Old position {old_position} > Current position {self.position} in region {region_id}.",

@@ -69,7 +69,7 @@ class GeodesicPosition(Position):
         """
         return haversine((self._lat, self._lng), (other._lat, other._lng), Unit.METERS)
 
-    def get_hexagon_id(self, resolution=0):
+    def get_region_id(self, resolution=0) -> str:
         """
         Return h3 hexagon object based on current position (lng, lat)
         :param resolution: H3 Resolution (res = 0 <=> default => use global setting)

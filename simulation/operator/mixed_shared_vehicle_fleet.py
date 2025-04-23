@@ -74,7 +74,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
         return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
 
-    def get_available_vehicles(self, region):
+    def get_available_vehicles_in_region(self, region):
         """
         Return all vehicles which are located in a region
 
@@ -84,43 +84,29 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :param region: Hexagon ID
         :return: Lists of vehicles in area
         """
-        cars_in_area = []
-        scooters_in_area = []
-        kick_scooters_in_area = []
-        bikes_in_area = []
+        vehicles_in_region = self._vehicles_by_region[region]
+        parking_vehicles = self._vehicles_by_state[VehicleState.PARKING]
+        parking_vehicles_in_region = vehicles_in_region.intersection(parking_vehicles)
 
-        # geo_env = GeodesicEnvironment.getInstance()
-        # geometry = geo_env.get_hexagon(region)
+        parking_cars_in_region = list(
+            set(self._cars).intersection(parking_vehicles_in_region)
+        )
+        parking_scooters_in_region = list(
+            set(self._scooters).intersection(parking_vehicles_in_region)
+        )
+        parking_kick_scooters_in_region = list(
+            set(self._kick_scooters).intersection(parking_vehicles_in_region)
+        )
+        parking_bikes_in_region = list(
+            set(self._bikes).intersection(parking_vehicles_in_region)
+        )
 
-        for car in self._cars:
-            if (
-                car.position.get_hexagon_id() == region
-                and car.state == VehicleState.PARKING
-            ):
-                cars_in_area.append(car)
-
-        for scooter in self._scooters:
-            if (
-                scooter.position.get_hexagon_id() == region
-                and scooter.state == VehicleState.PARKING
-            ):
-                scooters_in_area.append(scooter)
-
-        for kick_scooter in self._kick_scooters:
-            if (
-                kick_scooter.position.get_hexagon_id() == region
-                and kick_scooter.state == VehicleState.PARKING
-            ):
-                kick_scooters_in_area.append(kick_scooter)
-
-        for bike in self._bikes:
-            if (
-                bike.position.get_hexagon_id() == region
-                and bike.state == VehicleState.PARKING
-            ):
-                bikes_in_area.append(bike)
-
-        return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
+        return (
+            parking_cars_in_region,
+            parking_scooters_in_region,
+            parking_kick_scooters_in_region,
+            parking_bikes_in_region,
+        )
 
     def get_all_vehicles_below_soc_level(self, state_of_charge_threshold):
         """
@@ -215,7 +201,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_hexagon_id()
+                hex_id = vehicle.position.get_region_id()
 
                 if hex_id not in supply:
                     supply[hex_id] = dict(zip(available_vehicles, values))
@@ -258,7 +244,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_hexagon_id()
+                hex_id = vehicle.position.get_region_id()
 
                 if hex_id not in low_soc_supply:
                     low_soc_supply[hex_id] = dict(zip(available_vehicles, values))

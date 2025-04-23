@@ -134,8 +134,8 @@ class Operator:
         self._transactions.append(
             {
                 "vehicle_id": selected_transportation_alternative.vehicle.id,
-                "origin": selected_transportation_alternative.route.origin.get_hexagon_id(),
-                "destination": selected_transportation_alternative.route.destination.get_hexagon_id(),
+                "origin": selected_transportation_alternative.route.origin.get_region_id(),
+                "destination": selected_transportation_alternative.route.destination.get_region_id(),
                 "time_start": transportation_task.time,
                 "time_end": self._env.now,
                 "price": selected_transportation_alternative.price,
@@ -161,8 +161,8 @@ class Operator:
         self._transactions.append(
             {
                 "vehicle_id": None,
-                "origin": transportation_task.origin.get_hexagon_id(),
-                "destination": transportation_task.destination.get_hexagon_id(),
+                "origin": transportation_task.origin.get_region_id(),
+                "destination": transportation_task.destination.get_region_id(),
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,
