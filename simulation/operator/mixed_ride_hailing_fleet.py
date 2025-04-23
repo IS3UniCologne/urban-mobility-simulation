@@ -152,19 +152,6 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return parking_cars_in_area.tolist() + serving_cars_in_area
 
-    def get_all_available_vehicles(self, region):
-        """
-        Return all vehicles (mixed) in a list from passed region
-        :param region: Spatial Region
-        :return: List of all vehicle
-        """
-
-        cars = self.get_available_vehicles(region)
-
-        all_vehicle_list = cars
-
-        return all_vehicle_list
-
     def count_vehicles_below_soc_level(self, state_of_charge_threshold):
         """
         Return all vehicles that need to be refueled/recharged

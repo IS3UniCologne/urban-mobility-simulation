@@ -236,7 +236,9 @@ class RideHailingCar(RideHailingVehicle):
                 self.update_offline_duration()
                 go_offline = self.decide_to_get_offline()
                 if go_offline:
-                    if self.state == VehicleState.PARKING:
+                    if (
+                        self.state == VehicleState.PARKING
+                    ):  # TODO: Why are we checking for parking twice in a row?
                         self.get_offline()
                     # if the driver has a task to do we yield until its completion
                     else:
