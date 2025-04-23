@@ -180,7 +180,7 @@ class MixedRideHailingFleet(VehicleFleet):
         return self.count_cars()
 
     def calc_supply_per_region(self):
-        """
+        """TODO: We can probably get rid of this ? If we need it in the future we should implement it with cached values
         Return a list of number of vehicles in each region
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}

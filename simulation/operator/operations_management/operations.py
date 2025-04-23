@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from simpy import Environment
+
+if TYPE_CHECKING:
+    from simulation.operator.operator import Operator
 
 
 class OperationsInterface(ABC):
@@ -10,7 +14,7 @@ class OperationsInterface(ABC):
         self._env = env
         self._operator_reference = None
 
-    def register_operator_reference(self, operator_reference: "Operator") -> None:  # noqa: F821
+    def register_operator_reference(self, operator_reference: "Operator") -> None:
         """
         Because we defer the registration of the operator back reference, we need to check, that it was not registered (which might happen if you unintentionally use the same strategy object for multiple operators. It is okay to use the same strategy for multiple operators, but then you need to initialize as many strategy objects.)
 
