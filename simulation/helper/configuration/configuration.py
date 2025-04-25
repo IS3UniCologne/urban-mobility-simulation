@@ -514,20 +514,20 @@ class SharedVehicleGlobalConfig:
             return list(self.VEHICLES.keys())
 
 
-@beartype
-@dataclass(slots=True, frozen=True)
-class TransitGlobalConfig:
-    @property
-    def AVAILABLE_VEHICLE_MODES(self) -> list[str]:
-        # TODO: Use enum for this
-        available_modes = []
-        if self.N_BUSES_TOTAL > 0:
-            available_modes.append("Bus")
-        return available_modes
+# @beartype
+# @dataclass(slots=True, frozen=True)
+# class TransitGlobalConfig:
+#     @property
+#     def AVAILABLE_VEHICLE_MODES(self) -> list[str]:
+#         # TODO: Use enum for this
+#         available_modes = []
+#         if self.N_BUSES_TOTAL > 0:
+#             available_modes.append("Bus")
+#         return available_modes
 
-    @property
-    def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
-        return [self.N_BUSES_TOTAL]
+#     @property
+#     def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
+#         return [self.N_BUSES_TOTAL]
 
 
 @beartype
@@ -608,16 +608,18 @@ class Configuration(metaclass=Singleton):
         self._lazy_objects = {}  # lazy loaded objects are stored here
 
     @staticmethod
-    def _convert_types(params: dict, type: type) -> dict:
+    def _convert_types(params: dict, config_type: type) -> dict:
         """Converts the types of the parameters in the dictionary to the types specified in the dataclass."""
-        for field in fields(type):
+        for field in fields(config_type):
             # cast int to float where applicable
             if field.type == float and field.name in params:
                 if isinstance(params[field.name], int):
                     params[field.name] = float(params[field.name])
         return params
 
-    def _get_lazy_config(self, name: str, type: type, is_dict: bool = False) -> Any:  # noqa: ANN401
+    def _get_lazy_config(
+        self, name: str, config_type: type, is_dict: bool = False
+    ) -> Any:  # noqa: ANN401
         """
         This method will lazily instantiate and return the config object from the config file.
         If the object has already been instantiated, it will return the cached object.
@@ -635,14 +637,18 @@ class Configuration(metaclass=Singleton):
                 self._lazy_objects[name] = None
             elif is_dict:
                 self._lazy_objects[name] = {
-                    k: type(**self._convert_types(v, type)) for k, v in params.items()
+                    k: config_type(**self._convert_types(v, config_type))
+                    for k, v in params.items()
                 }
             elif isinstance(params, list):
                 self._lazy_objects[name] = [
-                    type(**self._convert_types(param, type)) for param in params
+                    config_type(**self._convert_types(param, config_type))
+                    for param in params
                 ]
             else:
-                self._lazy_objects[name] = type(**self._convert_types(params, type))
+                self._lazy_objects[name] = config_type(
+                    **self._convert_types(params, config_type)
+                )
         return self._lazy_objects[name]
 
     @property
