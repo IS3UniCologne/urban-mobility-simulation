@@ -10,6 +10,11 @@ from pathlib import Path
 # Third-party library imports
 import simpy
 
+# Live Visualization
+import threading
+from matplotlib.animation import FuncAnimation
+import matplotlib.pyplot as plt
+
 # Imports world related modules
 from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -277,6 +282,34 @@ demand_factory = DemandFactory(
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
+# Live Visualization                      #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+x = []
+y = []
+
+# callback function to get data from world
+def get_n_users():
+    x.append(env.now)
+    y.append(len(world._users))
+
+    return x, y
+
+
+def animate(i, callback):
+    if callback is not None:
+        x, y = callback()
+
+        # clear old graph
+        plt.cla()
+
+        # plot new graph
+        plt.plot(x, y)
+        plt.tight_layout()
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
 # Run the Simulation                      #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
@@ -324,6 +357,20 @@ def run_simulation(end_time, env=env):
 
 sum_iterations = 1  # throws Exception if value > 1: ValueError until (1440) must be greater than the current simulation time
 for i in range(sum_iterations):
-    env = simpy.Environment(initial_time=600)
+    # env = simpy.Environment(initial_time=600)
+
+    urban_mobility_simulation = threading.Thread(target=run_simulation, args=(1440,))
+
+    urban_mobility_simulation.start()
+
+    ani = FuncAnimation(
+        plt.gcf(),
+        animate,
+        frames=100,
+        interval=1000,
+        cache_frame_data=False,
+        fargs=(get_n_users,)
+    )
+    plt.show()
 
     run_simulation(end_time=config.experiment_management.END_TIME)
