@@ -12,6 +12,11 @@ import pandas as pd
 # Third-party library imports
 import simpy
 
+# Live Visualization
+import threading
+from matplotlib.animation import FuncAnimation
+import matplotlib.pyplot as plt
+
 # Imports world related modules
 from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -371,6 +376,50 @@ demand_factory = DemandFactory(
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
+# Live Visualization                      #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+timestamp = []
+y1 = []
+y2 = []
+
+# callback function to get data from world
+def get_n_users():
+    timestamp.append(env.now)
+    y1.append(len(world._users))
+    y2.append(len(world._user_processes))
+
+    return timestamp, y1, y2
+
+
+def animate(i, callback):
+    if callback is not None:
+        timestamp, n_users, n_active_users = callback()
+
+        # clear whole figure
+        plt.clf()
+
+        # plot 1
+        plt.subplot(3, 1, 1)
+        plt.plot(timestamp,n_users, n_active_users)
+        plt.title("n users in world")
+        plt.legend(["n_users", "n_user_processes"], loc="upper right")
+
+        # plot 2
+        plt.subplot(3, 1, 2)
+        plt.plot(timestamp,n_users)
+        plt.title("n users in world")
+
+        # plot 3
+        plt.subplot(3, 1, 3)
+        plt.plot(timestamp,n_users)
+        plt.title("n users in world")
+
+        plt.tight_layout()
+
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
 # Run Simulation.                         #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
@@ -406,5 +455,21 @@ def run_simulation(end_time, env=env):
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
 
-env = simpy.Environment(config.experiment_management.START_TIME)
+# env = simpy.Environment(config.experiment_management.START_TIME)
+# run_simulation(end_time=config.experiment_management.END_TIME)
+
+urban_mobility_simulation = threading.Thread(target=run_simulation, args=(1440,))
+
+urban_mobility_simulation.start()
+
+ani = FuncAnimation(
+    plt.gcf(),
+    animate,
+    frames=100,
+    interval=1000,
+    cache_frame_data=False,
+    fargs=(get_n_users,)
+)
+plt.show()
+
 run_simulation(end_time=config.experiment_management.END_TIME)
