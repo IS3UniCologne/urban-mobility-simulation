@@ -30,6 +30,7 @@ notebooks = [
 ml = [
     "torch>=2.6.0",
     "docplex>=2.29.241",
+    "cplex>=22.1.2.0",
 ]
 
 [tool.ruff]
