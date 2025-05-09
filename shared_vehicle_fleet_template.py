@@ -51,7 +51,6 @@ from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearch
 from simulation.vehicle.shared_bike import SharedBike
 
 # Import vehicle types and vehicle choice options
-from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
 from simulation.vehicle.shared_vehicle import SharedVehicle
@@ -217,7 +216,6 @@ distance_matrix = dmi.load_distance_matrix()
 
 SharedBike.shared_bike_id = 0
 SharedVehicle.shared_vehicle_id = 0
-SharedCar.car_id = 0
 SharedKickScooter.shared_kick_scooter_id = 0
 SharedScooter.shared_scooter_id = 0
 SharedBike.shared_bike_id = 0
@@ -343,7 +341,6 @@ def run_simulation(end_time, env=env):
     # Before a new simulation run, reset everything
     User.user_id = 0
     DemandFactory.counter = 0
-    SharedCar.car_id = 0
     SharedKickScooter.shared_kick_scooter_id = 0
     SharedScooter.shared_scooter_id = 0
     DemandFactory.counter = 0
