@@ -3,6 +3,7 @@ import logging
 from simpy import Environment
 
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
@@ -66,6 +67,7 @@ class RideHailingVehicle(Vehicle):
         fleet,
         position,
         velocity,
+        vehicle_mode: VehicleMode,
         max_available_seats=1,
         max_state_of_charge=1,
         energy_consumption=0.01,
@@ -73,7 +75,9 @@ class RideHailingVehicle(Vehicle):
         driver: DriverInterface = None,
         is_electric=True,
     ):
-        super().__init__(env, fleet, position, velocity, max_available_seats)
+        super().__init__(
+            env, fleet, position, velocity, max_available_seats, vehicle_mode
+        )
 
         self._price_per_minute = price_per_min
         self._driver = None

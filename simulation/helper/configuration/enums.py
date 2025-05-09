@@ -1,4 +1,4 @@
-from enum import Enum, IntEnum
+from enum import Enum
 
 
 class TemporalBucket(Enum):
@@ -37,11 +37,12 @@ class PopulationType(Enum):
     CONVENIENCE_SEEKER = 5
 
 
-class VehicleMode(IntEnum):
+class VehicleMode(Enum):
     Car = 0
     Scooter = 1
     KickScooter = 2
     Bike = 3
+    Bus = 4
 
 
 class UserState(Enum):

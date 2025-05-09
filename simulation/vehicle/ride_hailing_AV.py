@@ -1,5 +1,6 @@
 from simpy import Environment
 
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 
@@ -36,6 +37,7 @@ class RideHailingAV(RideHailingVehicle):
             fleet,
             position,
             velocity,
+            VehicleMode.Car,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
