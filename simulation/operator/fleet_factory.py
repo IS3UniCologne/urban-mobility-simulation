@@ -11,9 +11,9 @@ from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFle
 from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 from simulation.vehicle.shared_bike import SharedBike
-from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
+from simulation.vehicle.shared_vehicle import SharedVehicle
 
 rng = RandomManager().get_rng(component_name="FLEETFACTORY")
 
@@ -305,11 +305,12 @@ def generate_mixed_fleet(
         for _current_car in range(car_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            SharedCar(
+            SharedVehicle(
                 env=env,
                 fleet=fleet,
                 position=pos,
                 velocity=car_config.VELOCITY,
+                vehicle_mode=VehicleMode.Car,
                 max_available_seats=car_config.MAX_AVAILABLE_SEATS,
                 max_state_of_charge=car_config.MAX_STATE_OF_CHARGE,
                 energy_consumption=car_config.ENERGY_CONSUMPTION,

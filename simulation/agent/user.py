@@ -41,7 +41,6 @@ from ..vehicle.public_transit_vehicle import (
     PublicTransitVehicleState,
 )
 from ..vehicle.shared_bike import SharedBike
-from ..vehicle.shared_car import SharedCar
 from ..vehicle.shared_kick_scooter import SharedKickScooter
 from ..vehicle.shared_scooter import SharedScooter
 from ..vehicle.vehicle import Vehicle, VehicleState
@@ -280,7 +279,7 @@ class User(Agent, DriverInterface, TrackingInterface):
             distance_to_vehicle = self.position >> alternative.vehicle.position
             if self._transport_task.viable_vehicle_modes[alternative.vehicle.mode.name]:
                 if (
-                    isinstance(alternative.vehicle, SharedCar)
+                    alternative.vehicle.mode == VehicleMode.Car
                     and distance_to_vehicle
                     < config.shared_vehicles.get(VehicleMode.Car).WALKING_DISTANCE
                 ):  # See own paper

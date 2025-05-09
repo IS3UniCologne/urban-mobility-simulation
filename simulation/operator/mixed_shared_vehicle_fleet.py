@@ -2,9 +2,9 @@ from simpy import Environment
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.shared_bike import SharedBike
-from simulation.vehicle.shared_car import SharedCar
 from simulation.vehicle.shared_kick_scooter import SharedKickScooter
 from simulation.vehicle.shared_scooter import SharedScooter
 from simulation.vehicle.shared_vehicle import SharedVehicle
@@ -24,7 +24,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
     def _add_vehicle(self, vehicle: SharedVehicle):
         self._vehicles.append(vehicle)
-        if isinstance(vehicle, SharedCar):
+        if vehicle.mode == VehicleMode.Car:
             self._cars.append(vehicle)
         elif isinstance(vehicle, SharedScooter):
             self._scooters.append(vehicle)
