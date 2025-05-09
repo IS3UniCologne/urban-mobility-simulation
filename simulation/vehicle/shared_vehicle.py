@@ -19,8 +19,6 @@ class SharedVehicleState(VehicleState, Enum):
 
 
 class SharedVehicle(Vehicle, ABC):
-    shared_vehicle_id = 0
-
     __slots__ = (
         "_velocity",
         "_max_available_seats",
@@ -61,7 +59,6 @@ class SharedVehicle(Vehicle, ABC):
     ):
         super().__init__(env, fleet, position, velocity, max_available_seats)
 
-        self._id = SharedVehicle.shared_vehicle_id
         self._price_per_minute = price_per_min
         self._driver = None
 
@@ -103,8 +100,6 @@ class SharedVehicle(Vehicle, ABC):
         # Driver Interface
         if driver is not None:
             self.mount_driver(driver)
-
-        SharedVehicle.shared_vehicle_id += 1
 
     @property
     def id(self):

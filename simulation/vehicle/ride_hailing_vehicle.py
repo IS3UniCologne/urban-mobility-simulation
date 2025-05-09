@@ -58,8 +58,6 @@ class RideHailingVehicle(Vehicle):
         "_reserved_for_user",
     )
 
-    ride_hailing_vehicle_id = 0
-
     exposes = Vehicle.exposes + ["_fleet", "_current_state_of_charge", "_suggested"]
 
     def __init__(
@@ -77,7 +75,6 @@ class RideHailingVehicle(Vehicle):
     ):
         super().__init__(env, fleet, position, velocity, max_available_seats)
 
-        self._id = RideHailingVehicle.ride_hailing_vehicle_id
         self._price_per_minute = price_per_min
         self._driver = None
         self._is_electric = is_electric
@@ -152,8 +149,6 @@ class RideHailingVehicle(Vehicle):
         ].CHARGING_COST_PER_KWH
 
         self._emergency_soc_buffer_percent: float
-
-        RideHailingVehicle.ride_hailing_vehicle_id += 1
 
     @property
     def id(self):
