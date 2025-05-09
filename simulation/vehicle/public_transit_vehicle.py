@@ -38,8 +38,6 @@ class PublicTransitVehicleFull(PublicTransitVehicleException):
 
 
 class PublicTransitVehicle(Vehicle, ABC):
-    public_transit_vehicle_id = 0
-
     __slots__ = ("_route", "_current_stop", "_delay")
 
     def __init__(
@@ -59,15 +57,12 @@ class PublicTransitVehicle(Vehicle, ABC):
             max_available_seats=max_available_seats,
         )
 
-        self._id = PublicTransitVehicle.public_transit_vehicle_id
         self._route = route
         self._current_stop = route.origin
         self._delay = 0  # in seconds from planned route timetable
 
         # Initialize state
         self._state = PublicTransitVehicleState.AT_TERMINAL_ORIGIN
-
-        PublicTransitVehicle.public_transit_vehicle_id += 1
 
         logging.debug(
             "Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}

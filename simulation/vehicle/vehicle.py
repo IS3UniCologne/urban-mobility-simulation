@@ -35,7 +35,6 @@ class Vehicle(TrackingInterface, ABC):
 
     __slots__ = (
         "_id",
-        "_uid",
         "__state",
         "_env",
         "__position",
@@ -50,11 +49,11 @@ class Vehicle(TrackingInterface, ABC):
     # We need to override __eq__ and __hash__ to use Vehicles in sets
     def __eq__(self, other) -> bool:
         if isinstance(other, Vehicle):
-            return self._uid == other._uid
+            return self._id == other._id
         return False
 
     def __hash__(self):
-        return hash(self._uid)
+        return hash(self._id)
 
     def __init__(
         self,
@@ -66,7 +65,6 @@ class Vehicle(TrackingInterface, ABC):
     ):
         self._id = Vehicle.vehicle_id
         Vehicle.vehicle_id += 1  # Increment Vehicle Id
-        self._uid = f"{self.__class__.__name__}_{self._id}"
 
         self._env = env
         self._fleet = fleet
