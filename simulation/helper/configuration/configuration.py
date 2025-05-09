@@ -498,11 +498,15 @@ class SharedVehicleGlobalConfig:
             {
                 mode: sum(
                     [
-                        operator.N_VEHICLES[mode]
+                        operator.N_VEHICLES.get(mode, 0)
                         for operator in Configuration().shared_vehicle_operators
                     ]
                 )
                 for mode in VehicleMode
+                if any(
+                    mode in operator.N_VEHICLES
+                    for operator in Configuration().shared_vehicle_operators
+                )
             },
         )
 
