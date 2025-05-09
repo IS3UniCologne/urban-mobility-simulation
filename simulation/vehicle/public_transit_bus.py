@@ -6,6 +6,7 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
@@ -55,7 +56,9 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         :param max_available_seats: depends on type of bus
         :param velocity: e.g. 16.67 m/min * 30 (average in city)
         """
-        super().__init__(env, route, position, fleet, velocity, max_available_seats)
+        super().__init__(
+            env, route, position, fleet, velocity, VehicleMode.Bus, max_available_seats
+        )
 
         self._id = Bus.bus_id
         self._time = SimulationTime(self._env)

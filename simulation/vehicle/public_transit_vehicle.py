@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from simpy import Environment
 
 from simulation.environment.position import Position
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.helper.time import SimulationTimeConverter
 from simulation.infrastructure.transit_network.stop import Stop
 from simulation.operator.vehicle_fleet import VehicleFleet
@@ -47,6 +48,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         position: Position,
         fleet: VehicleFleet,
         velocity,
+        vehicle_mode: VehicleMode,
         max_available_seats,
     ):
         super(PublicTransitVehicle, self).__init__(
@@ -54,6 +56,7 @@ class PublicTransitVehicle(Vehicle, ABC):
             fleet=fleet,
             position=position,
             velocity=velocity,
+            vehicle_mode=vehicle_mode,
             max_available_seats=max_available_seats,
         )
 
