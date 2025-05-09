@@ -14,7 +14,7 @@ class VehicleFleet(ABC):
         "_vehicles",
         "_resource",
         "_tracking",
-        "_vehicles_by_type",
+        "_vehicles_by_mode",
         "_vehicles_by_state",
         "_vehicles_by_region",
     )
@@ -28,9 +28,7 @@ class VehicleFleet(ABC):
         self._vehicles = []
 
         # Vehicle collections for faster access. We use sets for faster removals and intersections
-        self._vehicles_by_type = defaultdict(
-            set
-        )  # TODO: Implement once we have unified vehicle types/modes
+        self._vehicles_by_mode = defaultdict(set)
         self._vehicles_by_region = defaultdict(set)
         self._vehicles_by_state = defaultdict(set)
         self._resource = simpy.Resource(env)  # Semaphore
@@ -52,12 +50,9 @@ class VehicleFleet(ABC):
 
     @property
     def vehicles(self):
-        # TODO: most probably Unfug
-        return (
-            self._vehicles.copy()
-        )  # to avoid that the fleet can be changed from outside
+        return self._vehicles
 
-    def get_available_vehicles_in_region(self, region):
+    def get_parking_vehicles_in_region(self, region):
         """
         Return all parking vehicles which are located in a region
 
@@ -87,6 +82,7 @@ class VehicleFleet(ABC):
             self._add_vehicle(vehicle)
             self._vehicles_by_state[vehicle.state].add(vehicle)
             self._vehicles_by_region[vehicle.current_region].add(vehicle)
+            self._vehicles_by_mode[vehicle.mode].add(vehicle)
 
     def _add_vehicle(self, vehicle: Vehicle):
         """

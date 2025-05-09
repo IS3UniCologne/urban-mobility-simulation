@@ -1,40 +1,13 @@
 from simpy import Environment
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.configuration.enums import VehicleMode
 from simulation.operator.vehicle_fleet import VehicleFleet
-from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle.vehicle import VehicleState
 
 
 class MixedSharedVehicleFleet(VehicleFleet):
-    __slots__ = ("_scooters", "_kick_scooters", "_cars", "_bikes")
-
     def __init__(self, env: Environment):
         super(MixedSharedVehicleFleet, self).__init__(env)
-
-        self._scooters = []
-        self._kick_scooters = []
-        self._cars = []
-        self._bikes = []
-
-    def _add_vehicle(self, vehicle: SharedVehicle):
-        self._vehicles.append(vehicle)
-        # TODO: remove this, we don't need it (should be vehicles_by_mode in VehicleFleet)
-        match vehicle.mode:
-            case VehicleMode.Car:
-                self._cars.append(vehicle)
-            case VehicleMode.Scooter:
-                self._scooters.append(vehicle)
-            case VehicleMode.KickScooter:
-                self._kick_scooters.append(vehicle)
-            case VehicleMode.Bike:
-                self._bikes.append(vehicle)
-            case _:
-                raise Exception("Unknown Vehicle type", vehicle.mode)
-
-        self._vehicles.append(vehicle)
 
     def vehicles_in_region(self, region):
         """
@@ -46,36 +19,26 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :param region: Hexagon ID
         :return: Lists of vehicles in area
         """
-        cars_in_area = []
-        scooters_in_area = []
-        kick_scooters_in_area = []
-        bikes_in_area = []
+        vehicles_in_region = self._vehicles_by_region[region]
 
-        geo_env = GeodesicEnvironment.getInstance()
-        Configuration()
-        geometry = geo_env.get_hexagon(region)
-
-        for car in self._cars:
-            if car.position.is_in_geometry(geometry):
-                cars_in_area.append(car)
-
-        for scooter in self._scooters:
-            if scooter.position.is_in_geometry(geometry):
-                scooters_in_area.append(scooter)
-
-        for kick_scooter in self._kick_scooters:
-            if kick_scooter.position.is_in_geometry(geometry):
-                kick_scooters_in_area.append(kick_scooter)
-
-        for bike in self._bikes:
-            if bike.position.is_in_geometry(geometry):
-                bikes_in_area.append(bike)
+        cars_in_area = vehicles_in_region.intersection(
+            self._vehicles_by_mode[VehicleMode.Car]
+        )
+        scooters_in_area = vehicles_in_region.intersection(
+            self._vehicles_by_mode[VehicleMode.Scooter]
+        )
+        kick_scooters_in_area = vehicles_in_region.intersection(
+            self._vehicles_by_mode[VehicleMode.KickScooter]
+        )
+        bikes_in_area = vehicles_in_region.intersection(
+            self._vehicles_by_mode[VehicleMode.Bike]
+        )
 
         return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
 
-    def get_available_vehicles_in_region(self, region):
+    def get_parking_vehicles_in_region(self, region):
         """
-        Return all vehicles which are located in a region
+        Return all parking vehicles which are located in a region
 
         Example
         cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
@@ -88,16 +51,24 @@ class MixedSharedVehicleFleet(VehicleFleet):
         parking_vehicles_in_region = vehicles_in_region.intersection(parking_vehicles)
 
         parking_cars_in_region = list(
-            set(self._cars).intersection(parking_vehicles_in_region)
+            parking_vehicles_in_region.intersection(
+                self._vehicles_by_mode[VehicleMode.Car]
+            )
         )
         parking_scooters_in_region = list(
-            set(self._scooters).intersection(parking_vehicles_in_region)
+            parking_vehicles_in_region.intersection(
+                self._vehicles_by_mode[VehicleMode.Scooter]
+            )
         )
         parking_kick_scooters_in_region = list(
-            set(self._kick_scooters).intersection(parking_vehicles_in_region)
+            parking_vehicles_in_region.intersection(
+                self._vehicles_by_mode[VehicleMode.KickScooter]
+            )
         )
         parking_bikes_in_region = list(
-            set(self._bikes).intersection(parking_vehicles_in_region)
+            parking_vehicles_in_region.intersection(
+                self._vehicles_by_mode[VehicleMode.Bike]
+            )
         )
 
         return (
@@ -114,9 +85,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
         below_soc_level_vehicles = []
-        all_vehicle_list = (
-            self._cars + self._scooters + self._kick_scooters + self._bikes
-        )
+        all_vehicle_list = self.vehicles
 
         for vehicle in all_vehicle_list:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
@@ -148,60 +117,31 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
         return below_soc_level_vehicles
 
-    def count_scooters(self):
-        return len(self._scooters)
-
-    def count_kick_scooters(self):
-        return len(self._kick_scooters)
-
-    def count_cars(self):
-        return len(self._cars)
-
-    def count_bikes(self):
-        return len(self._bikes)
-
-    def count_total(self):
-        return (
-            self.count_cars()
-            + self.count_bikes()
-            + self.count_scooters()
-            + self.count_kick_scooters()
-        )
-
     def calc_supply_per_region(self):
         """# TODO: Implement when vehicle by type is in
         Return a list of number of vehicles in each region
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-        # TODO: Change this
-        available_vehicles = ["KickScooter", "Scooter", "Car", "Bike"]
-        values = [0] * len(available_vehicles)
-
-        # Set counter to 0 for all vehicle types
-        # vehicle_dict = dict(zip(available_vehicles, values))
-
         supply = {}
-        # TODO: Change this
-        for mode in available_vehicles:
-            if mode == "KickScooter":
-                vehicle_list = self._kick_scooters
-            elif mode == "Scooter":
-                vehicle_list = self._scooters
-            elif mode == "Car":
-                vehicle_list = self._cars
-            elif mode == "Bike":
-                vehicle_list = self._bikes
-            else:
-                raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
-            for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_region_id()
+        # For each region with vehicles
+        for region_id, vehicles_in_region in self._vehicles_by_region.items():
+            if not vehicles_in_region:  # Skip empty regions
+                continue
 
-                if hex_id not in supply:
-                    supply[hex_id] = dict(zip(available_vehicles, values))
+            # Initialize the region in our supply dictionary
+            supply[region_id] = {mode.name: 0 for mode in VehicleMode}
 
-                supply[hex_id][mode] += 1
+            # Count vehicles by mode in this region
+            for mode in VehicleMode:
+                count = len(
+                    vehicles_in_region.intersection(
+                        self._vehicles_by_mode.get(mode, set())
+                    )
+                )
+                if count > 0:
+                    supply[region_id][mode.name] = count
 
         return supply
 
@@ -213,34 +153,28 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :return: Dictionary, where key = hex_id and value is a dictionary counting the vehicles to be charged
                  e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-        # TODO: Change this
-        available_vehicles = ["KickScooter", "Scooter", "Car", "Bike"]
-        values = [0] * len(available_vehicles)
-
-        # Set counter to 0 for all vehicle types
-        # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = {}
-        # TODO: Change this
-        for mode in available_vehicles:
-            if mode == "KickScooter":
-                vehicle_list = self._kick_scooters
-            elif mode == "Scooter":
-                vehicle_list = self._scooters
-            elif mode == "Car":
-                vehicle_list = self._cars
-            elif mode == "Bike":
-                vehicle_list = self._bikes
-            else:
-                raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
-            for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_region_id()
+        # Get all vehicles below SOC threshold
+        vehicles_needing_charge = [
+            v
+            for v in self.vehicles
+            if v.current_relative_state_of_charge < state_of_charge_threshold
+        ]
 
-                if hex_id not in low_soc_supply:
-                    low_soc_supply[hex_id] = dict(zip(available_vehicles, values))
+        if not vehicles_needing_charge:
+            return low_soc_supply
 
-                if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
-                    low_soc_supply[hex_id][mode] += 1
+        # Group them by region
+        for vehicle in vehicles_needing_charge:
+            region_id = vehicle.position.get_region_id()
+
+            # Initialize region dictionary if needed
+            if region_id not in low_soc_supply:
+                low_soc_supply[region_id] = {mode.name: 0 for mode in VehicleMode}
+
+            # Increment the count for this vehicle's mode
+            low_soc_supply[region_id][vehicle.mode.name] += 1
 
         return low_soc_supply
