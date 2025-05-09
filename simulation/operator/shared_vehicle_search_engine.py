@@ -30,7 +30,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
         hexagon_origin = vehicle_search_task.agent_position.get_region_id()
 
         (cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area) = (
-            self._fleet.get_available_vehicles_in_region(hexagon_origin)
+            self._fleet.get_parking_vehicles_in_region(hexagon_origin)
         )
 
         origin = vehicle_search_task.transport_task.origin
