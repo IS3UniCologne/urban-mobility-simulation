@@ -492,23 +492,22 @@ class SharedVehicleGlobalConfig:
 
     def __post_init__(self) -> None:
         # Calculate vehicles as totals from all operators
-        object.__setattr__(
-            self,
-            "VEHICLES",
-            {
-                mode: sum(
-                    [
-                        operator.N_VEHICLES.get(mode, 0)
-                        for operator in Configuration().shared_vehicle_operators
-                    ]
+        operators = Configuration().shared_vehicle_operators
+
+        if not operators:
+            object.__setattr__(self, "VEHICLES", {})
+        else:
+            available_modes = set()
+            for operator in operators:
+                available_modes.update(operator.N_VEHICLES.keys())
+
+            vehicles_by_mode = {}
+            for mode in available_modes:
+                vehicles_by_mode[mode] = sum(
+                    operator.N_VEHICLES.get(mode, 0) for operator in operators
                 )
-                for mode in VehicleMode
-                if any(
-                    mode in operator.N_VEHICLES
-                    for operator in Configuration().shared_vehicle_operators
-                )
-            },
-        )
+
+            object.__setattr__(self, "VEHICLES", vehicles_by_mode)
 
     @property
     def AVAILABLE_VEHICLE_MODES(self) -> list[VehicleMode]:
