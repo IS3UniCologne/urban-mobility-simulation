@@ -1,5 +1,6 @@
 from simpy import Environment
 
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
@@ -40,6 +41,7 @@ class SharedBike(SharedVehicle):
             fleet,
             position,
             velocity,
+            VehicleMode.Bike,
             max_available_seats,
             max_state_of_charge,
             0.0,

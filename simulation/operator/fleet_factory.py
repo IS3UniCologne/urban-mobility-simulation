@@ -286,10 +286,10 @@ def generate_mixed_fleet(
     config = Configuration()
 
     # Load Vehicle Configurations
-    car_config = config.shared_vehicles[VehicleMode.SharedCar]
-    scooter_config = config.shared_vehicles[VehicleMode.SharedScooter]
-    kick_scooter_config = config.shared_vehicles[VehicleMode.SharedKickScooter]
-    bike_config = config.shared_vehicles[VehicleMode.SharedBike]
+    car_config = config.shared_vehicles[VehicleMode.Car]
+    scooter_config = config.shared_vehicles[VehicleMode.Scooter]
+    kick_scooter_config = config.shared_vehicles[VehicleMode.KickScooter]
+    bike_config = config.shared_vehicles[VehicleMode.Bike]
 
     for _index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon

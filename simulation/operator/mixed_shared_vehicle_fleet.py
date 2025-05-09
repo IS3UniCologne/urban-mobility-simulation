@@ -175,27 +175,23 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-        available_vehicles = [
-            "SharedKickScooter",
-            "SharedScooter",
-            "SharedCar",
-            "SharedBike",
-        ]
+        # TODO: Change this
+        available_vehicles = ["KickScooter", "Scooter", "Car", "Bike"]
         values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
         # vehicle_dict = dict(zip(available_vehicles, values))
 
         supply = {}
-
+        # TODO: Change this
         for mode in available_vehicles:
-            if mode == "SharedKickScooter":
+            if mode == "KickScooter":
                 vehicle_list = self._kick_scooters
-            elif mode == "SharedScooter":
+            elif mode == "Scooter":
                 vehicle_list = self._scooters
-            elif mode == "SharedCar":
+            elif mode == "Car":
                 vehicle_list = self._cars
-            elif mode == "SharedBike":
+            elif mode == "Bike":
                 vehicle_list = self._bikes
             else:
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
@@ -218,27 +214,23 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :return: Dictionary, where key = hex_id and value is a dictionary counting the vehicles to be charged
                  e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-        available_vehicles = [
-            "SharedKickScooter",
-            "SharedScooter",
-            "SharedCar",
-            "SharedBike",
-        ]
+        # TODO: Change this
+        available_vehicles = ["KickScooter", "Scooter", "Car", "Bike"]
         values = [0] * len(available_vehicles)
 
         # Set counter to 0 for all vehicle types
         # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = {}
-
+        # TODO: Change this
         for mode in available_vehicles:
-            if mode == "SharedKickScooter":
+            if mode == "KickScooter":
                 vehicle_list = self._kick_scooters
-            elif mode == "SharedScooter":
+            elif mode == "Scooter":
                 vehicle_list = self._scooters
-            elif mode == "SharedCar":
+            elif mode == "Car":
                 vehicle_list = self._cars
-            elif mode == "SharedBike":
+            elif mode == "Bike":
                 vehicle_list = self._bikes
             else:
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")

@@ -61,7 +61,7 @@ class RelocationTask(ServiceTask):
             for vehicle in potential_vehicles_to_relocate:
                 # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
                 if (
-                    vehicle.__class__.__name__
+                    vehicle.mode.name
                     == self._vehicle_mode  # TODO: This should not be based on the class name
                     and vehicle.state == VehicleState.PARKING
                 ):

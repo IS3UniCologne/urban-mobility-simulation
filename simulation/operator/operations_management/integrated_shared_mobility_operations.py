@@ -640,13 +640,13 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
     def get_max_capacity_per_unit(self, mode):
         # Mode Specific Collection Capacity per Service Worker (i.e., how many vehicles can one sw collect)
-        if mode == "SharedKickScooter":
+        if mode == "KickScooter":
             max_capacity_per_unit = 40
-        elif mode == "SharedBike":
+        elif mode == "Bike":
             max_capacity_per_unit = 8
-        elif mode == "SharedScooter":
+        elif mode == "Scooter":
             max_capacity_per_unit = 8
-        elif mode == "SharedCar":
+        elif mode == "Car":
             max_capacity_per_unit = 1
         else:
             raise NotImplementedError("Not Implemented")

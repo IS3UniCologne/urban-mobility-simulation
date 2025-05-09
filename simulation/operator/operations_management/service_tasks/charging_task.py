@@ -76,7 +76,7 @@ class ChargingTask(ServiceTask):
             for vehicle in potential_vehicles_to_charge:
                 # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
                 if (
-                    vehicle.__class__.__name__ == self._vehicle_mode
+                    vehicle.mode.name == self._vehicle_mode
                     and vehicle.state == VehicleState.PARKING
                     and len(selected_vehicles_to_charge)
                     < self._number_of_vehicles_to_charge

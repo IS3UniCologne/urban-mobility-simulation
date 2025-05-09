@@ -1,5 +1,6 @@
 from simpy import Environment
 
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
@@ -44,6 +45,7 @@ class SharedKickScooter(SharedVehicle):
             fleet,
             position,
             velocity,
+            VehicleMode.KickScooter,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,

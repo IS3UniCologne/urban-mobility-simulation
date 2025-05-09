@@ -5,6 +5,7 @@ from enum import Enum
 from simpy import Environment
 
 from simulation.environment.position import Position
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
 from simulation.operator.vehicle_fleet import VehicleFleet
@@ -51,13 +52,16 @@ class SharedVehicle(Vehicle, ABC):
         fleet: VehicleFleet,
         position,
         velocity,
+        vehicle_mode: VehicleMode,
         max_available_seats=1,
         max_state_of_charge=1,
         energy_consumption=0.01,
         price_per_min=1,
         driver: DriverInterface = None,
     ):
-        super().__init__(env, fleet, position, velocity, max_available_seats)
+        super().__init__(
+            env, fleet, position, velocity, max_available_seats, vehicle_mode
+        )
 
         self._price_per_minute = price_per_min
         self._driver = None
