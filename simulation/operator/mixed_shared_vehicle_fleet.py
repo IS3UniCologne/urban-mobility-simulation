@@ -21,7 +21,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
     def _add_vehicle(self, vehicle: SharedVehicle):
         self._vehicles.append(vehicle)
-        # TODO: remove this, we don't need it
+        # TODO: remove this, we don't need it (should be vehicles_by_mode in VehicleFleet)
         match vehicle.mode:
             case VehicleMode.Car:
                 self._cars.append(vehicle)

@@ -282,84 +282,42 @@ def generate_mixed_fleet(
     # Global Config File (values from config ini files)
     config = Configuration()
 
-    # Load Vehicle Configurations
-    car_config = config.shared_vehicles[VehicleMode.Car]
-    scooter_config = config.shared_vehicles[VehicleMode.Scooter]
-    kick_scooter_config = config.shared_vehicles[VehicleMode.KickScooter]
-    bike_config = config.shared_vehicles[VehicleMode.Bike]
+    # TODO: Once the fleetconfig uses VehicleMode enums, we can directly iterate over the modes
+    # Define vehicle types and their configuration
+    vehicle_types = {
+        "cars": VehicleMode.Car,
+        "scooters": VehicleMode.Scooter,
+        "kick_scooters": VehicleMode.KickScooter,
+        "bikes": VehicleMode.Bike,
+    }
 
+    # Process each hexagon in the fleet config
     for _index, row in fleet_config.iterrows():
-        # We need to spawn vehicles in this hexagon
+        # Get hexagon ID
         hex_id = row[hex_column]
 
-        # We need to spawn vehicles according to
-        car_count = row["cars"]
-        scooter_count = row["scooters"]
-        kick_scooter_count = row["kick_scooters"]
-        bike_count = row["bikes"]
+        # Create vehicles for each type
+        for count_column, vehicle_mode in vehicle_types.items():
+            vehicle_count = row[count_column]
+            vehicle_config = config.shared_vehicles[vehicle_mode]
 
-        # Add Cars
-        for _current_car in range(car_count):
-            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            SharedVehicle(
-                env=env,
-                fleet=fleet,
-                position=pos,
-                velocity=car_config.VELOCITY,
-                vehicle_mode=VehicleMode.Car,
-                max_available_seats=car_config.MAX_AVAILABLE_SEATS,
-                max_state_of_charge=car_config.MAX_STATE_OF_CHARGE,
-                energy_consumption=car_config.ENERGY_CONSUMPTION,
-                price_per_min=car_config.PRICE_PER_MIN,
-            )
+            # Create the specified number of vehicles
+            for _ in range(vehicle_count):
+                # Get random position within hexagon
+                rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
+                pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
 
-        # Add Scooter
-        for _current_scooter in range(scooter_count):
-            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            SharedVehicle(
-                env=env,
-                fleet=fleet,
-                position=pos,
-                velocity=scooter_config.VELOCITY,
-                vehicle_mode=VehicleMode.Scooter,
-                max_available_seats=scooter_config.MAX_AVAILABLE_SEATS,
-                max_state_of_charge=scooter_config.MAX_STATE_OF_CHARGE,
-                energy_consumption=scooter_config.ENERGY_CONSUMPTION,
-                price_per_min=scooter_config.PRICE_PER_MIN,
-            )
-
-        # Add Kick Scooter
-        for _current_kick_scooter in range(kick_scooter_count):
-            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            SharedVehicle(
-                env=env,
-                fleet=fleet,
-                position=pos,
-                velocity=kick_scooter_config.VELOCITY,
-                vehicle_mode=VehicleMode.KickScooter,
-                max_available_seats=kick_scooter_config.MAX_AVAILABLE_SEATS,
-                max_state_of_charge=kick_scooter_config.MAX_STATE_OF_CHARGE,
-                energy_consumption=kick_scooter_config.ENERGY_CONSUMPTION,
-                price_per_min=kick_scooter_config.PRICE_PER_MIN,
-            )
-
-        for _current_bike in range(bike_count):
-            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-
-            SharedVehicle(
-                env=env,
-                fleet=fleet,
-                position=pos,
-                velocity=bike_config.VELOCITY,
-                vehicle_mode=VehicleMode.Bike,
-                max_available_seats=bike_config.MAX_AVAILABLE_SEATS,
-                max_state_of_charge=bike_config.MAX_STATE_OF_CHARGE,
-                energy_consumption=bike_config.ENERGY_CONSUMPTION,
-                price_per_min=bike_config.PRICE_PER_MIN,
-            )
+                # Create vehicle
+                SharedVehicle(
+                    env=env,
+                    fleet=fleet,
+                    position=pos,
+                    velocity=vehicle_config.VELOCITY,
+                    vehicle_mode=vehicle_mode,
+                    max_available_seats=vehicle_config.MAX_AVAILABLE_SEATS,
+                    max_state_of_charge=vehicle_config.MAX_STATE_OF_CHARGE,
+                    energy_consumption=vehicle_config.ENERGY_CONSUMPTION,
+                    price_per_min=vehicle_config.PRICE_PER_MIN,
+                )
 
     return fleet
