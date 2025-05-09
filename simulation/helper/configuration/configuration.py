@@ -714,24 +714,21 @@ class Configuration(metaclass=Singleton):
         return self._get_lazy_config("shared_vehicle_global", SharedVehicleGlobalConfig)
 
     @property
-    def ride_hailing_vehicles(self) -> Optional[dict[str, VehicleConfig]]:
+    def ride_hailing_vehicles(self) -> dict[str, VehicleConfig]:
         return self._get_lazy_config(
             "ride_hailing_vehicles", VehicleConfig, is_dict=True
         )
 
     @property
-    def shared_vehicles(self) -> Optional[dict[VehicleMode, VehicleConfig]]:
+    def shared_vehicles(self) -> dict[VehicleMode, VehicleConfig]:
         """Dictionary containing VehicleConfig objects for shared vehicles.
 
         Returns:
             Optional[dict[str, VehicleConfig]]: _description_
         """
         config = self._get_lazy_config("shared_vehicles", VehicleConfig, is_dict=True)
-        return (
-            {VehicleMode[key]: value for key, value in config.items()}
-            if config is not None
-            else None
-        )
+
+        return {VehicleMode[key]: value for key, value in config.items()}
 
     @property
     def transit_vehicles(self) -> Optional[dict[str, VehicleConfig]]:

@@ -1,5 +1,6 @@
 from simpy import Environment
 
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
@@ -8,15 +9,6 @@ class SharedScooter(SharedVehicle):
     # Shared Scooter Counter
     shared_scooter_id = 0
     vehicle_type = "shared_scooter"
-
-    __slots__ = (
-        "_velocity",
-        "_max_available_seats",
-        "_max_state_of_charge",
-        "_energy_consumption",
-        "_scooter_id",
-        "_price_per_minute",
-    )
 
     def __init__(
         self,
@@ -43,14 +35,9 @@ class SharedScooter(SharedVehicle):
             fleet,
             position,
             velocity,
+            VehicleMode.Scooter,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
             price_per_min,
         )
-
-        # Increment Shared Car ID
-        self._scooter_id = SharedScooter.shared_scooter_id
-        self._price_per_minute = price_per_min
-
-        SharedScooter.shared_scooter_id += 1

@@ -71,7 +71,7 @@ class SharedMobilityOperator(Operator):
                 )
                 missed_trip_cost = distance / velocity * price_per_min
 
-                if vehicle_type == "SharedKickScooter":
+                if vehicle_type == "KickScooter":
                     missed_trip_cost += 1.0  # Unlock Fee
 
         self.increase_total_missed_trips(missed_trip_cost)

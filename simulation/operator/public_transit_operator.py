@@ -76,7 +76,7 @@ class PublicTransitOperator(Operator):
                 "price": selected_transportation_alternative.price,
                 "distance": selected_transportation_alternative.distance,
                 "duration": selected_transportation_alternative.duration,
-                "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__,
+                "selected_vehicle_mode": selected_transportation_alternative.vehicle.mode.name,
                 "state": "Fulfilled",
                 **transportation_task.viable_vehicle_modes,
             }

@@ -143,7 +143,7 @@ class Operator:
                 "duration": selected_transportation_alternative.duration,
                 "wait_time": transportation_task.actual_wait_time,
                 "energy_consumption": selected_transportation_alternative.energy_consumed,
-                "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__,
+                "selected_vehicle_mode": selected_transportation_alternative.vehicle.mode.name,
                 "state": "Fulfilled",
                 **transportation_task.viable_vehicle_modes,
             }

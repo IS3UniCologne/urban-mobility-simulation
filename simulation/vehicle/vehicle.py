@@ -6,6 +6,7 @@ from simpy import Environment
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.environment.position import Position
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from tracking.tracking_interface import TrackingInterface
@@ -62,6 +63,7 @@ class Vehicle(TrackingInterface, ABC):
         position: Position,
         velocity: float,
         max_available_seats: int,
+        vehicle_mode: VehicleMode,
     ):
         self._id = Vehicle.vehicle_id
         Vehicle.vehicle_id += 1  # Increment Vehicle Id
@@ -69,9 +71,11 @@ class Vehicle(TrackingInterface, ABC):
         self._env = env
         self._fleet = fleet
 
+        # Vehicle Position, name is intentionally mangled. Do not set directly.
         self.__position = position
         self._current_region = position.get_region_id()
         self._velocity = velocity
+        self._mode = vehicle_mode
 
         # Seating information
         self._max_available_seats = max_available_seats
@@ -85,7 +89,7 @@ class Vehicle(TrackingInterface, ABC):
         self._user_mounted = self._env.event()
         self._user_unmounted = self._env.event()
 
-        # Initial State
+        # Initial State, name is intentionally mangled. Do not set directly.
         self.__state = VehicleState.INITIALIZED
 
         # Store current task (if any)
@@ -96,6 +100,10 @@ class Vehicle(TrackingInterface, ABC):
 
         # Add vehicle to fleet
         self._fleet.register_vehicle(self)
+
+    @property
+    def mode(self):
+        return self._mode
 
     @property
     def id(self):

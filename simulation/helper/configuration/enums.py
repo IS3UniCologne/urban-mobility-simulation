@@ -38,10 +38,10 @@ class PopulationType(Enum):
 
 
 class VehicleMode(IntEnum):
-    SharedCar = 0
-    SharedScooter = 1
-    SharedKickScooter = 2
-    SharedBike = 3
+    Car = 0
+    Scooter = 1
+    KickScooter = 2
+    Bike = 3
 
 
 class UserState(Enum):
