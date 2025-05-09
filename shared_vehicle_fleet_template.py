@@ -48,11 +48,8 @@ from simulation.operator.shared_vehicle_allocation_engine import (
     SharedVehicleAllocationEngine,
 )
 from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
-from simulation.vehicle.shared_bike import SharedBike
 
 # Import vehicle types and vehicle choice options
-from simulation.vehicle.shared_kick_scooter import SharedKickScooter
-from simulation.vehicle.shared_scooter import SharedScooter
 from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import (
     DistanceBasedSharedVehicleVehicleChoiceBehavior,
@@ -214,11 +211,7 @@ distance_matrix = dmi.load_distance_matrix()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-SharedBike.shared_bike_id = 0
 SharedVehicle.shared_vehicle_id = 0
-SharedKickScooter.shared_kick_scooter_id = 0
-SharedScooter.shared_scooter_id = 0
-SharedBike.shared_bike_id = 0
 User.user_id = 0
 DemandFactory.counter = 0
 
@@ -341,8 +334,6 @@ def run_simulation(end_time, env=env):
     # Before a new simulation run, reset everything
     User.user_id = 0
     DemandFactory.counter = 0
-    SharedKickScooter.shared_kick_scooter_id = 0
-    SharedScooter.shared_scooter_id = 0
     DemandFactory.counter = 0
 
     # Inject Simulation Environment to Logger (such that we can log the env time)

@@ -40,9 +40,6 @@ from ..vehicle.public_transit_vehicle import (
     PublicTransitVehicleFull,
     PublicTransitVehicleState,
 )
-from ..vehicle.shared_bike import SharedBike
-from ..vehicle.shared_kick_scooter import SharedKickScooter
-from ..vehicle.shared_scooter import SharedScooter
 from ..vehicle.vehicle import Vehicle, VehicleState
 from ..vehicle_choice_model.vehicle_choice_behavior_interface import (
     VehicleChoiceBehaviorInterface,
@@ -292,7 +289,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    isinstance(alternative.vehicle, SharedKickScooter)
+                    alternative.vehicle.mode == VehicleMode.KickScooter
                     and distance_to_vehicle
                     < config.shared_vehicles.get(
                         VehicleMode.KickScooter
@@ -307,7 +304,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    isinstance(alternative.vehicle, SharedScooter)
+                    alternative.vehicle.mode == VehicleMode.Scooter
                     and distance_to_vehicle
                     < config.shared_vehicles.get(VehicleMode.Scooter).WALKING_DISTANCE
                 ):  # See Nothing..
@@ -320,7 +317,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    isinstance(alternative.vehicle, SharedBike)
+                    alternative.vehicle.mode == VehicleMode.Bike
                     and distance_to_vehicle
                     < config.shared_vehicles.get(VehicleMode.Bike).WALKING_DISTANCE
                 ):  # See Nothing..

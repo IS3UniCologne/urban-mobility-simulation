@@ -10,9 +10,6 @@ from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
-from simulation.vehicle.shared_bike import SharedBike
-from simulation.vehicle.shared_kick_scooter import SharedKickScooter
-from simulation.vehicle.shared_scooter import SharedScooter
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
 rng = RandomManager().get_rng(component_name="FLEETFACTORY")
@@ -321,11 +318,12 @@ def generate_mixed_fleet(
         for _current_scooter in range(scooter_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            SharedScooter(
+            SharedVehicle(
                 env=env,
                 fleet=fleet,
                 position=pos,
                 velocity=scooter_config.VELOCITY,
+                vehicle_mode=VehicleMode.Scooter,
                 max_available_seats=scooter_config.MAX_AVAILABLE_SEATS,
                 max_state_of_charge=scooter_config.MAX_STATE_OF_CHARGE,
                 energy_consumption=scooter_config.ENERGY_CONSUMPTION,
@@ -336,11 +334,12 @@ def generate_mixed_fleet(
         for _current_kick_scooter in range(kick_scooter_count):
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            SharedKickScooter(
+            SharedVehicle(
                 env=env,
                 fleet=fleet,
                 position=pos,
                 velocity=kick_scooter_config.VELOCITY,
+                vehicle_mode=VehicleMode.KickScooter,
                 max_available_seats=kick_scooter_config.MAX_AVAILABLE_SEATS,
                 max_state_of_charge=kick_scooter_config.MAX_STATE_OF_CHARGE,
                 energy_consumption=kick_scooter_config.ENERGY_CONSUMPTION,
@@ -351,13 +350,15 @@ def generate_mixed_fleet(
             rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
 
-            SharedBike(
+            SharedVehicle(
                 env=env,
                 fleet=fleet,
                 position=pos,
                 velocity=bike_config.VELOCITY,
+                vehicle_mode=VehicleMode.Bike,
                 max_available_seats=bike_config.MAX_AVAILABLE_SEATS,
                 max_state_of_charge=bike_config.MAX_STATE_OF_CHARGE,
+                energy_consumption=bike_config.ENERGY_CONSUMPTION,
                 price_per_min=bike_config.PRICE_PER_MIN,
             )
 

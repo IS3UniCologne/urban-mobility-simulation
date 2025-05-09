@@ -4,9 +4,6 @@ from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.configuration.enums import VehicleMode
 from simulation.operator.vehicle_fleet import VehicleFleet
-from simulation.vehicle.shared_bike import SharedBike
-from simulation.vehicle.shared_kick_scooter import SharedKickScooter
-from simulation.vehicle.shared_scooter import SharedScooter
 from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle.vehicle import VehicleState
 
@@ -24,16 +21,18 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
     def _add_vehicle(self, vehicle: SharedVehicle):
         self._vehicles.append(vehicle)
-        if vehicle.mode == VehicleMode.Car:
-            self._cars.append(vehicle)
-        elif isinstance(vehicle, SharedScooter):
-            self._scooters.append(vehicle)
-        elif isinstance(vehicle, SharedKickScooter):
-            self._kick_scooters.append(vehicle)
-        elif isinstance(vehicle, SharedBike):
-            self._bikes.append(vehicle)
-        else:
-            raise Exception("Unknown Vehicle type", type(vehicle))
+        # TODO: remove this, we don't need it
+        match vehicle.mode:
+            case VehicleMode.Car:
+                self._cars.append(vehicle)
+            case VehicleMode.Scooter:
+                self._scooters.append(vehicle)
+            case VehicleMode.KickScooter:
+                self._kick_scooters.append(vehicle)
+            case VehicleMode.Bike:
+                self._bikes.append(vehicle)
+            case _:
+                raise Exception("Unknown Vehicle type", vehicle.mode)
 
         self._vehicles.append(vehicle)
 
