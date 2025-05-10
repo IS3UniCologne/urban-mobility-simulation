@@ -1,19 +1,14 @@
 import random
 import statistics
-import sys
 import time
 import unittest
 
 import matplotlib.pyplot as plt
-
-sys.argv = [
-    sys.argv[0],
-    "resources/configurations/config_template.toml",
-]  # Add a path to a test config file
+import pytest
 
 from simulation.environment.geodesic_position import GeodesicPosition
 
-# pytestmark = pytest.mark.skip(reason="Performance tests, run manually")
+pytestmark = pytest.mark.skip(reason="Performance tests, run manually")
 
 
 class TestGeodesicPositionDistance(unittest.TestCase):
