@@ -76,7 +76,12 @@ class RideHailingVehicle(Vehicle):
         is_electric=True,
     ):
         super().__init__(
-            env, fleet, position, velocity, max_available_seats, vehicle_mode
+            env=env,
+            fleet=fleet,
+            position=position,
+            velocity=velocity,
+            max_available_seats=max_available_seats,
+            vehicle_mode=vehicle_mode,
         )
 
         self._price_per_minute = price_per_min

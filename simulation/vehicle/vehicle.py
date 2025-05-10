@@ -39,6 +39,11 @@ class Vehicle(TrackingInterface, ABC):
         "__state",
         "_env",
         "__position",
+        "_velocity",
+        "_mode",
+        "_max_available_seats",
+        "_convenience",
+        "_seats",
         "_position_changed",
         "_distance_travelled",
         "_current_task",
@@ -64,6 +69,7 @@ class Vehicle(TrackingInterface, ABC):
         velocity: float,
         max_available_seats: int,
         vehicle_mode: VehicleMode,
+        convenience: int = 1,
     ):
         self._id = Vehicle.vehicle_id
         Vehicle.vehicle_id += 1  # Increment Vehicle Id
@@ -79,6 +85,7 @@ class Vehicle(TrackingInterface, ABC):
 
         # Seating information
         self._max_available_seats = max_available_seats
+        self._convenience = convenience
         self._seats = []  # TODO: rename to _passengers, maybe should be a set ?
 
         # Vehicle Distance Travelled
@@ -116,6 +123,10 @@ class Vehicle(TrackingInterface, ABC):
     @property
     def available_seats(self):
         return self._max_available_seats - len(self._seats)
+
+    @property
+    def convenience(self):
+        return self._convenience
 
     @property
     def max_available_seats(self):
