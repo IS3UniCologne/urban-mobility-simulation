@@ -2,7 +2,6 @@ from simpy import Environment
 
 from simulation.helper.configuration.enums import VehicleMode
 from simulation.operator.vehicle_fleet import VehicleFleet
-from simulation.vehicle.vehicle import VehicleState
 
 
 class MixedSharedVehicleFleet(VehicleFleet):
@@ -35,48 +34,6 @@ class MixedSharedVehicleFleet(VehicleFleet):
         )
 
         return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
-
-    def parking_vehicles_in_region(self, region):
-        """
-        Return all parking vehicles which are located in a region
-
-        Example
-        cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
-
-        :param region: Hexagon ID
-        :return: Lists of vehicles in area
-        """
-        vehicles_in_region = self._vehicles_by_region[region]
-        parking_vehicles = self._vehicles_by_state[VehicleState.PARKING]
-        parking_vehicles_in_region = vehicles_in_region.intersection(parking_vehicles)
-
-        parking_cars_in_region = list(
-            parking_vehicles_in_region.intersection(
-                self._vehicles_by_mode[VehicleMode.Car]
-            )
-        )
-        parking_scooters_in_region = list(
-            parking_vehicles_in_region.intersection(
-                self._vehicles_by_mode[VehicleMode.Scooter]
-            )
-        )
-        parking_kick_scooters_in_region = list(
-            parking_vehicles_in_region.intersection(
-                self._vehicles_by_mode[VehicleMode.KickScooter]
-            )
-        )
-        parking_bikes_in_region = list(
-            parking_vehicles_in_region.intersection(
-                self._vehicles_by_mode[VehicleMode.Bike]
-            )
-        )
-
-        return (
-            parking_cars_in_region,
-            parking_scooters_in_region,
-            parking_kick_scooters_in_region,
-            parking_bikes_in_region,
-        )
 
     def vehicles_below_soc_threshold(self, state_of_charge_threshold):
         """

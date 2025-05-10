@@ -223,6 +223,7 @@ class VehicleConfig:
     MAX_AVAILABLE_SEATS: int
 
     WALKING_DISTANCE: Optional[int] = None
+    CONVENIENCE: Optional[int] = None
 
     MAX_STATE_OF_CHARGE: Optional[float] = None
     ENERGY_CONSUMPTION: Optional[float] = None
@@ -231,6 +232,7 @@ class VehicleConfig:
     EMERGENCY_SOC_BUFFER: Optional[float] = None
 
     PRICE_PER_MIN: Optional[float] = None
+    PRICE_PER_TRIP: Optional[float] = None
     DAILY_TOTAL_COST: Optional[float] = None
     COST_PER_KM: Optional[float] = None
     PRICE_PER_KM: Optional[float] = None

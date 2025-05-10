@@ -315,9 +315,11 @@ def generate_mixed_fleet(
                     velocity=vehicle_config.VELOCITY,
                     vehicle_mode=vehicle_mode,
                     max_available_seats=vehicle_config.MAX_AVAILABLE_SEATS,
+                    convenience=vehicle_config.CONVENIENCE,
                     max_state_of_charge=vehicle_config.MAX_STATE_OF_CHARGE,
                     energy_consumption=vehicle_config.ENERGY_CONSUMPTION,
                     price_per_min=vehicle_config.PRICE_PER_MIN,
+                    price_per_trip=vehicle_config.PRICE_PER_TRIP,
                 )
 
     return fleet

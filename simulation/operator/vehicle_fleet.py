@@ -28,9 +28,9 @@ class VehicleFleet(ABC):
         self._vehicles = []
 
         # Vehicle collections for faster access. We use sets for faster removals and intersections
-        self._vehicles_by_mode = defaultdict(set)
-        self._vehicles_by_region = defaultdict(set)
-        self._vehicles_by_state = defaultdict(set)
+        self._vehicles_by_mode = defaultdict(set[Vehicle])
+        self._vehicles_by_region = defaultdict(set[Vehicle])
+        self._vehicles_by_state = defaultdict(set[Vehicle])
         self._resource = simpy.Resource(env)  # Semaphore
 
         # tracking
@@ -52,7 +52,7 @@ class VehicleFleet(ABC):
     def vehicles(self):
         return self._vehicles
 
-    def parking_vehicles_in_region(self, region):
+    def parking_vehicles_in_region(self, region) -> set[Vehicle]:
         """
         Return all parking vehicles which are located in a region
 
@@ -68,7 +68,7 @@ class VehicleFleet(ABC):
             self._vehicles_by_state[VehicleState.PARKING]
         )
 
-        return list(parking_vehicles_in_region)
+        return parking_vehicles_in_region
 
     # TODO: implement sane return type (vehicle collection?)
     @abstractmethod
