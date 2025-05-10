@@ -346,7 +346,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         """
         # Get Current Fleet State
         state = self.calculate_residual_supply(
-            self._operator_reference.fleet, transactions
+            self._operator_reference.fleet, transactions=transactions
         )
 
         config = Configuration()
@@ -1062,7 +1062,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         supply_df.rename(columns={"index": "hex_id"}, inplace=True)
 
         # Get LoW Soc Vehicle Supply per Hexagon
-        low_soc_supply = vehicle_fleet.vehicles_to_be_charged_per_region(0.1)
+        low_soc_supply = vehicle_fleet.vehicles_to_be_charged_per_region(
+            self._state_of_charge_threshold
+        )
 
         df_low_soc = pd.DataFrame(low_soc_supply).T.reset_index()
         df_low_soc.rename(columns={"index": "hex_id"}, inplace=True)

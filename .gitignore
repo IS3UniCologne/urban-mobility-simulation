@@ -172,3 +172,6 @@ dmypy.json
 *.austin
 profile.json
 profile.html
+
+# pytest
+pytest.ini

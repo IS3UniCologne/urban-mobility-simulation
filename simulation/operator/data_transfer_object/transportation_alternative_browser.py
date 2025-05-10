@@ -1,6 +1,9 @@
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
+from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
+    TransportationAlternativeRideHailing,
+)
 
 
 class TransportationAlternativeBrowser:
@@ -10,7 +13,9 @@ class TransportationAlternativeBrowser:
         self._transportation_alternatives = []
 
     def add_transportation_alternative(
-        self, transportation_alternative: TransportationAlternative
+        self,
+        transportation_alternative: TransportationAlternative
+        | TransportationAlternativeRideHailing,  # TODO: this should be a common interface
     ):
         self._transportation_alternatives.append(transportation_alternative)
 
