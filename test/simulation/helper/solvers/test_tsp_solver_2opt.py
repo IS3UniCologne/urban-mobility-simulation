@@ -1,4 +1,3 @@
-import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -6,11 +5,6 @@ import numpy as np
 import pandas as pd
 
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
-
-sys.argv = [
-    sys.argv[0],
-    "resources/configurations/config_template.toml",
-]  # Add a path to a test config file
 
 
 class TestSolveTSP(unittest.TestCase):

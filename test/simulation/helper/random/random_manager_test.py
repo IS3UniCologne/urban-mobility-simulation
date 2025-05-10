@@ -1,16 +1,9 @@
-import sys
-
 import numpy as np
 import pytest
 
-sys.argv = [
-    sys.argv[0],
-    "resources/configurations/config_template.toml",
-]  # Add a path to a test config file
-
 # we have to set sys argv before importing Configuration
-from simulation.helper.configuration.configuration import Configuration  # noqa: E402
-from simulation.helper.random.random_manager import RandomManager  # noqa: E402
+from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.random.random_manager import RandomManager
 
 
 # Test component seed generation
