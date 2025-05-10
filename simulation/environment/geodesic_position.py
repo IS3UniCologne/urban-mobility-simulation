@@ -1,3 +1,5 @@
+import math
+
 import h3 as h3
 from haversine import Unit, haversine
 from shapely.geometry import Point
@@ -69,11 +71,34 @@ class GeodesicPosition(Position):
         """
         return haversine((self._lat, self._lng), (other._lat, other._lng), Unit.METERS)
 
+    # <<
+    def __lshift__(self, other):
+        """
+        Calculate euclidean distance between two positions. This is a fast approximation
+        of the haversine distance.
+        In testing it was about 2.5x faster than the haversine distance calculation.
+        Error is about 0.1% for distances of 10km, slowly increasing with distance.
+
+        Tests with metrics can be found in test/simulation/environment/geodesic_position_test.py
+
+        :param other: GeodesicPosition
+        :return: Euclidean distance in meter.
+        """
+
+        # Approximate conversion factor from lat/lng to meters
+        lat_to_meters = 111320  # meters per degree at equator
+        lng_to_meters = 111320 * math.cos(math.radians(self._lat))
+
+        distance = math.sqrt(
+            ((self._lat - other._lat) * lat_to_meters) ** 2
+            + ((self._lng - other._lng) * lng_to_meters) ** 2
+        )
+        return distance
+
     def get_region_id(self, resolution=0) -> str:
         """
-        Return h3 hexagon object based on current position (lng, lat)
+        Return h3 hexagon index based on current position (lng, lat)
         :param resolution: H3 Resolution (res = 0 <=> default => use global setting)
-        :param return_geom: Boolean indicating if geometry should be returned, ATTENTION: slows down a lot
         :return: hex_id:   String
         """
         # If resolution is set to default, use global settings

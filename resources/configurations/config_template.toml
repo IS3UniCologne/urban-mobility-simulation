@@ -125,7 +125,7 @@ CHARGING_STATION_QUEUE_SIZE = [99]
 
 [[SHARED_VEHICLE_OPERATOR]]
 # When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
-RECHARGE_THRESHOLD = 0.4
+RECHARGE_THRESHOLD = 0.1
 # Installed Charging Station Power
 # kW (slow charger), or 7 kW or 22 kW (fast charger)
 CHARGING_STATION_POWER = 50.0

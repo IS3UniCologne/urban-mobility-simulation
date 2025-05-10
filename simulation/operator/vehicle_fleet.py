@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import simpy
 
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.vehicle.vehicle import Vehicle, VehicleState
 from tracking.tracking import Tracking
 
@@ -28,9 +29,9 @@ class VehicleFleet(ABC):
         self._vehicles = []
 
         # Vehicle collections for faster access. We use sets for faster removals and intersections
-        self._vehicles_by_mode = defaultdict(set[Vehicle])
-        self._vehicles_by_region = defaultdict(set[Vehicle])
-        self._vehicles_by_state = defaultdict(set[Vehicle])
+        self._vehicles_by_mode: dict[VehicleMode, set[Vehicle]] = defaultdict(set)
+        self._vehicles_by_region: dict[str, set[Vehicle]] = defaultdict(set)
+        self._vehicles_by_state: dict[int, set[Vehicle]] = defaultdict(set)
         self._resource = simpy.Resource(env)  # Semaphore
 
         # tracking

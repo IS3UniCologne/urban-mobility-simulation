@@ -7,6 +7,7 @@ from simulation.operator.data_transfer_object.transportation_alternative_ridehai
     TransportationAlternativeRideHailing,
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.tasks.transportation_search_task import TransportationSearchTask
 from simulation.vehicle.vehicle import VehicleState
 
@@ -24,7 +25,7 @@ class RideHailingSearchEngine(SearchEngineInterface):
 
     def __init__(self, env):
         self._env = env
-        self._fleet = None
+        self._fleet: MixedRideHailingFleet = None
 
         config = Configuration()
 
