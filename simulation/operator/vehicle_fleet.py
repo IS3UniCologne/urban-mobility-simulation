@@ -52,7 +52,7 @@ class VehicleFleet(ABC):
     def vehicles(self):
         return self._vehicles
 
-    def get_parking_vehicles_in_region(self, region):
+    def parking_vehicles_in_region(self, region):
         """
         Return all parking vehicles which are located in a region
 

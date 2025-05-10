@@ -7,6 +7,7 @@ from pandas import DataFrame
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
+from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operations_management.service_tasks.charging_task import (
     ChargingTask,
@@ -188,7 +189,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             )
 
             logging.info(
-                f"There are {len(self._operator_reference.fleet.get_all_vehicles_below_soc_level(self._state_of_charge_threshold))} vehicles with low state of charge.",
+                f"There are {len(self._operator_reference.fleet.vehicles_below_soc_threshold(self._state_of_charge_threshold))} vehicles with low state of charge.",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -1044,7 +1045,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def calculate_residual_supply(self, vehicle_fleet, transactions):
+    def calculate_residual_supply(
+        self, vehicle_fleet: MixedSharedVehicleFleet, transactions
+    ):
         """
         Calculate Relocation Strategy based on (Expected) Demand, Supply and Vehicles to be Charged
         :param vehicle_fleet: (Mixed) Vehicle Fleet
@@ -1053,13 +1056,13 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         """
 
         # Get Vehicle Supply per Hexagon
-        supply = vehicle_fleet.calc_supply_per_region()
+        supply = vehicle_fleet.supply_per_region()
 
         supply_df = pd.DataFrame(supply).T.reset_index()
         supply_df.rename(columns={"index": "hex_id"}, inplace=True)
 
         # Get LoW Soc Vehicle Supply per Hexagon
-        low_soc_supply = vehicle_fleet.calc_vehicles_to_be_charged_per_region(0.1)
+        low_soc_supply = vehicle_fleet.vehicles_to_be_charged_per_region(0.1)
 
         df_low_soc = pd.DataFrame(low_soc_supply).T.reset_index()
         df_low_soc.rename(columns={"index": "hex_id"}, inplace=True)

@@ -66,7 +66,7 @@ class ChargingTask(ServiceTask):
 
             # Identify vehicles to relocate
             potential_vehicles_to_charge = (
-                self._vehicle_fleet.get_all_vehicles_below_soc_level_in_region(
+                self._vehicle_fleet.vehicles_below_soc_threshold_in_region(
                     self._state_of_charge_threshold, self._origin
                 )
             )
