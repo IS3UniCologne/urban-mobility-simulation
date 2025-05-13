@@ -3,14 +3,14 @@ import logging
 from simpy import Environment
 
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleMode
+from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 
 from ..helper.configuration.configuration import Configuration
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
-from .vehicle import Vehicle, VehicleState
+from .vehicle import Vehicle
 
 # class RideHailingVehicleState(Enum):
 #     INITIALIZED = 0

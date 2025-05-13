@@ -4,11 +4,12 @@ from simpy import Environment
 
 from simulation.environment.position import Position
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
-from simulation.vehicle.vehicle import Vehicle, VehicleState
+from simulation.vehicle.vehicle import Vehicle
 
 
 class MixedRideHailingFleet(VehicleFleet):

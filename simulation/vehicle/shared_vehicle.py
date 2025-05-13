@@ -1,22 +1,16 @@
 import logging
 from abc import ABC
-from enum import Enum
 
 from simpy import Environment
 
 from simulation.environment.position import Position
-from simulation.helper.configuration.enums import VehicleMode
+from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 
-from .vehicle import Vehicle, VehicleState
-
-
-class SharedVehicleState(VehicleState, Enum):
-    SOME_STATE = 1002
-    RESERVED = 1001
+from .vehicle import Vehicle
 
 
 class SharedVehicle(Vehicle, ABC):

@@ -62,3 +62,29 @@ class UserState(Enum):
     # transit user specifics
     IN_TRANSPORT = 101
     MOVING_TO_DESTINATION = 102  # walk after last transit stop
+
+
+class VehicleState(Enum):
+    ### Generic vehicle states ###
+    INITIALIZED = 0
+    PARKING = 1
+    DRIVING = 2
+    RELOCATING = 3
+    CHARGING = 4
+    PRE_SERVICE = 5
+    ONLINE = 6  # When the driver is online
+    OFFLINE = 7  # When the driver is offline
+    SOME_STATE = 1002
+    RESERVED = 1001
+    MOVING_TO_PICK_UP_POS = 1003
+
+    ### Public transport vehicle states ###
+    AT_TERMINAL_ORIGIN = 2001
+    AT_TERMINAL_DESTINATION = 2002
+    AT_STOP = 2003
+
+    # bus specific
+    EN_ROUTE_PLANNED = 2011
+    EN_ROUTE_DETOUR = 2012
+
+    UNKNOWN = 2999

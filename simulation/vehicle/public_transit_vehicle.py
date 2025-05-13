@@ -2,32 +2,19 @@ from __future__ import annotations
 
 import logging
 from abc import ABC
-from enum import Enum
 from typing import TYPE_CHECKING
 
 from simpy import Environment
 
 from simulation.environment.position import Position
-from simulation.helper.configuration.enums import VehicleMode
+from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.helper.time import SimulationTimeConverter
 from simulation.infrastructure.transit_network.stop import Stop
 from simulation.operator.vehicle_fleet import VehicleFleet
-from simulation.vehicle.vehicle import Vehicle, VehicleState
+from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
     from simulation.infrastructure.route import PublicTransitRoute
-
-
-class PublicTransitVehicleState(VehicleState, Enum):
-    AT_TERMINAL_ORIGIN = 2001
-    AT_TERMINAL_DESTINATION = 2002
-    AT_STOP = 2003
-
-    # bus specific
-    EN_ROUTE_PLANNED = 2011
-    EN_ROUTE_DETOUR = 2012
-
-    UNKNOWN = 2999
 
 
 class PublicTransitVehicleException(Exception):
@@ -65,7 +52,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         self._delay = 0  # in seconds from planned route timetable
 
         # Initialize state
-        self._state = PublicTransitVehicleState.AT_TERMINAL_ORIGIN
+        self._state = VehicleState.AT_TERMINAL_ORIGIN
 
         logging.debug(
             "Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}

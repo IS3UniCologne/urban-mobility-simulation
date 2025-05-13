@@ -9,8 +9,8 @@ from learning.interface.learning_interface import LearningInterface
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.time import SimulationTimeConverter
-from simulation.vehicle.public_transit_vehicle import PublicTransitVehicleState
 from simulation.world.world import World
 from tracking.tracking import Tracking
 
@@ -220,7 +220,7 @@ class DynamicBusProblem(LearningInterface):
             self.bus._dist_traveled += distance  # add to overall travel distance
             duration = distance / self.bus._velocity  # in minutes
 
-            self._state = PublicTransitVehicleState.EN_ROUTE_DETOUR
+            self._state = VehicleState.EN_ROUTE_DETOUR
 
             yield self.env.timeout(duration)
 
@@ -239,7 +239,7 @@ class DynamicBusProblem(LearningInterface):
             if region_id == self.bus._route.destination.get_hexagon_id(
                 self._action_res
             ):
-                self.bus._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
+                self.bus._state = VehicleState.AT_TERMINAL_DESTINATION
                 logging.info(
                     f"Bus has arrived at its terminal destination at time {self.bus._time.now_as_str()}",
                     extra={
@@ -300,9 +300,7 @@ class DynamicBusProblem(LearningInterface):
 
     def _check_terminal(self):
         self.reached_destination = (
-            True
-            if self.bus.state is PublicTransitVehicleState.AT_TERMINAL_DESTINATION
-            else False
+            True if self.bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
         )
         self._reached_timelimit = (
             True if self.env.now - self.bus._spawned > self._timelimit else False

@@ -6,28 +6,13 @@ from simpy import Environment, Event
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.environment.position import Position
-from simulation.helper.configuration.enums import VehicleMode
+from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from tracking.tracking_interface import TrackingInterface
 
 if TYPE_CHECKING:
     from simulation.operator.vehicle_fleet import VehicleFleet
-
-
-class VehicleState:
-    # because we can't mixin an enum into an enum, we use a object-based mixin
-    INITIALIZED = 0
-    PARKING = 1
-    DRIVING = 2
-    RELOCATING = 3
-    CHARGING = 4
-    PRE_SERVICE = 5
-    ONLINE = 6  # When the driver is online
-    OFFLINE = 7  # When the driver is offline
-    SOME_STATE = 1002
-    RESERVED = 1001
-    MOVING_TO_PICK_UP_POS = 1003
 
 
 class Vehicle(TrackingInterface, ABC):
