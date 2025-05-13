@@ -5,6 +5,14 @@ from .modules.society_metrics import SocietyMetrics
 
 
 class MetricsFactory:
+    __slots__ = (
+        "_general_metrics",
+        "_service_provider",
+        "_customer_metrics",
+        "_society_metrics",
+        "_transactions",
+    )
+
     def __init__(self, transactions):
         self._general_metrics = GeneralMetrics(transactions)
         self._service_provider = ServiceProviderMetrics(transactions)

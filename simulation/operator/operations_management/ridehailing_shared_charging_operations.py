@@ -19,6 +19,16 @@ from simulation.world.markets.interfaces.bidder_interface import BidderInterface
 
 
 class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
+    __slots__ = (
+        "_auction",
+        "_bidding_parameters",
+        "_state_of_charge_threshold",
+        "_distance_matrix",
+        "_config",
+        "_charging_operations",
+        "_virtual_charging_infrastructure",
+    )
+
     def __init__(
         self,
         env: Environment,

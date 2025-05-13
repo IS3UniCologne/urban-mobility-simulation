@@ -3,6 +3,15 @@ from tracking.tracking import Tracking
 
 
 class DynamicCheckpointRoutingTracker:
+    __slots__ = (
+        "_tracking",
+        "_config",
+        "_agent",
+        "_problem",
+        "_timestamped_bus_positions",
+        "_timestamped_viable_demands",
+    )
+
     def __init__(self):
         self._tracking = Tracking.instance()
         self._config = Configuration()

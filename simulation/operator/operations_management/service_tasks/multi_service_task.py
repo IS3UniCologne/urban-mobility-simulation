@@ -6,6 +6,8 @@ from simulation.operator.operations_management.service_tasks.service_task import
 
 
 class MultiServiceTask(ServiceTask):
+    __slots__ = ("_service_tasks",)
+
     def __init__(self, env: Environment):
         super().__init__(env)
 

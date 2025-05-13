@@ -24,6 +24,25 @@ from tracking.tracking import Tracking
 class World:
     # There is only one instance of this class.
     __instance = None
+    __slots__ = (
+        "_env",
+        "_search_engine",
+        "_payment_engine",
+        "_vehicle_assignment_engine",
+        "_vehicle_choice_behavior",
+        "_demand_processes",
+        "_users",
+        "_user_processes",
+        "_vehicles",
+        "_vehicle_processes",
+        "_tracking",
+        "_charging_infrastructure",
+        "_config",
+        "_population_factory",
+        "_changed",
+        "_simulation_finished",
+        "_user_limit",
+    )
 
     @staticmethod
     def instance() -> "World":

@@ -18,6 +18,8 @@ class ServiceWorkerState(Enum):
 class ServiceWorker:
     service_worker_id = 0
 
+    __slots__ = ("_id", "_env", "_state", "_task_queue", "_task_finished")
+
     def __init__(self, env: Environment, task_queue: TaskQueue):
         self._id = ServiceWorker.service_worker_id
 

@@ -3,6 +3,17 @@ from simulation.vehicle.vehicle import Vehicle
 
 
 class TransportationAlternative:
+    __slots__ = (
+        "_vehicle",
+        "_price",
+        "_duration",
+        "_distance",
+        "_route",
+        "_convenience",
+        "_energy_consumed",
+        "_waiting_time",
+    )
+
     def __init__(
         self, vehicle: Vehicle, route: Route, price, duration, distance, convenience
     ):

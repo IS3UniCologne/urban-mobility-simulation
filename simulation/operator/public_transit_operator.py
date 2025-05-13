@@ -22,6 +22,14 @@ from simulation.tasks.transport_task import TransportTask
 
 
 class PublicTransitOperator(Operator):
+    __slots__ = (
+        "_timetable",
+        "_time",
+        "_busses",
+        "_total_missed_car_trips",
+        "_tracked_demands",
+    )
+
     def __init__(
         self,
         env: Environment,

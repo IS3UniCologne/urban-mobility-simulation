@@ -9,6 +9,8 @@ class OnlyWalkingChoiceBehavior(VehicleChoiceBehaviorInterface):
     The only choice in this behavior is to walk
     """
 
+    __slots__ = ("_available_modes",)
+
     def __init__(self, available_modes):
         self._available_modes = available_modes
 

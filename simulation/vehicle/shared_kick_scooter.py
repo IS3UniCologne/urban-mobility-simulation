@@ -8,6 +8,15 @@ class SharedKickScooter(SharedVehicle):
     shared_kick_scooter_id = 0
     vehicle_type = "shared_kick_scooter"
 
+    __slots__ = (
+        "_velocity",
+        "_max_available_seats",
+        "_max_state_of_charge",
+        "_energy_consumption",
+        "_price_per_minute",
+        "_shared_kick_scooter_id",
+    )
+
     def __init__(
         self,
         env: Environment,

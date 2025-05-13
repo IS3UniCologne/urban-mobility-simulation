@@ -1,4 +1,6 @@
 class ServiceProviderMetrics:
+    __slots__ = ("_transactions",)
+
     def __init__(self, transactions):
         self._transactions = transactions
 
