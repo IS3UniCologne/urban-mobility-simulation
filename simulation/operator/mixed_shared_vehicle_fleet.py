@@ -8,33 +8,6 @@ class MixedSharedVehicleFleet(VehicleFleet):
     def __init__(self, env: Environment):
         super(MixedSharedVehicleFleet, self).__init__(env)
 
-    def vehicles_in_region(self, region):
-        """
-        Return all vehicles which are located in a region
-
-        Example
-        cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
-
-        :param region: Hexagon ID
-        :return: Lists of vehicles in area
-        """
-        vehicles_in_region = self._vehicles_by_region[region]
-
-        cars_in_area = vehicles_in_region.intersection(
-            self._vehicles_by_mode[VehicleMode.Car]
-        )
-        scooters_in_area = vehicles_in_region.intersection(
-            self._vehicles_by_mode[VehicleMode.Scooter]
-        )
-        kick_scooters_in_area = vehicles_in_region.intersection(
-            self._vehicles_by_mode[VehicleMode.KickScooter]
-        )
-        bikes_in_area = vehicles_in_region.intersection(
-            self._vehicles_by_mode[VehicleMode.Bike]
-        )
-
-        return cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area
-
     def vehicles_below_soc_threshold(self, state_of_charge_threshold):
         """
         Return all vehicles that need to be refueled/recharged
@@ -55,16 +28,9 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
         below_soc_level_vehicles = []
-        cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area = (
-            self.vehicles_in_region(region)
-        )
+        vehicles_in_region = self.get_vehicles_in_region(region)
 
-        for vehicle in [
-            *cars_in_area,
-            *scooters_in_area,
-            *kick_scooters_in_area,
-            *bikes_in_area,
-        ]:
+        for vehicle in vehicles_in_region:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
                 below_soc_level_vehicles.append(vehicle)
 

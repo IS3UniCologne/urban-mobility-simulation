@@ -2,7 +2,6 @@ import logging
 
 from simpy import Environment
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.position import Position
 from simulation.helper.configuration.configuration import Configuration
 from simulation.operator.vehicle_fleet import VehicleFleet
@@ -52,27 +51,6 @@ class MixedRideHailingFleet(VehicleFleet):
             self._tracking.register(vehicle)
         else:
             raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
-
-    def vehicles_in_region(self, region):
-        """
-        Return all vehicles which are located in a region
-
-        Example
-        cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
-
-        :param region: Hexagon ID
-        :return: Lists of vehicles in area
-        """
-        cars_in_area = []
-
-        geo_env = GeodesicEnvironment.getInstance()
-        Configuration()
-        geometry = geo_env.get_hexagon(region)
-
-        for car in self._vehicles:
-            if car.position.is_in_geometry(geometry):
-                cars_in_area.append(car)
-        return cars_in_area
 
     def get_available_vehicles_to_user(self, origin: Position):
         """

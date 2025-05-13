@@ -37,9 +37,6 @@ class PublicTransportVehicleFleet(VehicleFleet):
 
         self._tracking = Tracking.instance()
 
-    def vehicles_in_region(self, region: str):
-        pass
-
     # Add the bus
     def spawn_bus(self, route: PublicTransitRoute):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
