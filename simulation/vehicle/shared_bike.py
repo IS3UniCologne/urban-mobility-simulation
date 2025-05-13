@@ -7,6 +7,15 @@ class SharedBike(SharedVehicle):
     # Shared Bike Counter
     shared_bike_id = 0
 
+    __slots__ = (
+        "_velocity",
+        "_max_available_seats",
+        "_max_state_of_charge",
+        "_energy_consumption",
+        "_price_per_min",
+        "_shared_bike_id",
+    )
+
     def __init__(
         self,
         env: Environment,

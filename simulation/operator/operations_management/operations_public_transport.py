@@ -18,6 +18,19 @@ from tracking.tracking import Tracking
 
 
 class OperationsPublicTransport(OperationsInterface):
+    __slots__ = (
+        "_timetable",
+        "_time",
+        "_fleet",
+        "_config",
+        "_operator_config",
+        "_geodesic_env",
+        "_world",
+        "_tracking",
+        "_walking_speed",
+        "_bus_velocity",
+    )
+
     def __init__(self, env, timetable, fleet: PublicTransportVehicleFleet):
         super(OperationsPublicTransport, self).__init__(env=env)
         self._env = env

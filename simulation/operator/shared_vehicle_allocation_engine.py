@@ -12,6 +12,8 @@ from simulation.vehicle.vehicle import VehicleState
 
 
 class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
+    __slots__ = ("_env", "_vehicles_assigned_to_users", "_vehicle_assignment_requests")
+
     def __init__(self, env):
         self._env = env
         self._vehicles_assigned_to_users = self._env.event()

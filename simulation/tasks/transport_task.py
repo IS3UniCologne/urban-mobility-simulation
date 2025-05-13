@@ -2,6 +2,15 @@ from simulation.environment.position import Position
 
 
 class TransportTask:
+    __slots__ = (
+        "_time",
+        "_origin",
+        "_destination",
+        "_viable_vehicle_modes",
+        "_max_wait_time",
+        "_actual_wait_time",
+    )
+
     def __init__(
         self,
         time,

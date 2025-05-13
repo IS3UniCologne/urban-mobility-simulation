@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 
 
 class Position(ABC):
+    __slots__ = ("_x", "_y")
+
     @abstractmethod
     def __init__(self):
         self._x = "I have a x position"

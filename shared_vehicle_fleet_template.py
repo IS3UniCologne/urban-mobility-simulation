@@ -339,7 +339,7 @@ def get_co2_per_vehicle_km():
 
 
 # For multiple simulation runs
-def run_simulation(end_time, seed=4711, env=env):
+def run_simulation(end_time, env=env):
     # Before a new simulation run, reset everything
     User.user_id = 0
     DemandFactory.counter = 0

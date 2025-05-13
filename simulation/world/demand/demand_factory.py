@@ -12,6 +12,25 @@ from simulation.world.world import World
 
 
 class DemandFactory:
+    __slots__ = (
+        "_env",
+        "_time",
+        "_demand_profile",
+        "_demand_importer",
+        "_world",
+        "_origin_column",
+        "_destination_column",
+        "_temporal_column",
+        "_day_of_week_column",
+        "_maximal_demand",
+        "_modifier_paths",
+        "_modifiers",
+        "_spatial_units",
+        "_random",
+        "_config",
+        "_mode",
+        "_rng",
+    )
     counter = 0
 
     def __init__(

@@ -6,6 +6,8 @@ class ActionSpace:
     # There is only one instance of this class.
     __instance = None
 
+    __slots__ = ("_actions",)  # Changed to a tuple with a single item
+
     @staticmethod
     def instance() -> "ActionSpace":
         """Static access method."""

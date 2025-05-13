@@ -20,6 +20,20 @@ from tracking.tracking_interface import TrackingInterface
 class Bus(PublicTransitVehicle, TrackingInterface):
     bus_id = 0
 
+    __slots__ = (
+        "_time",
+        "_spawned",
+        "_has_reached_terminal",
+        "_config",
+        "_problem_config",
+        "_geodesic_env",
+        "_world",
+        "_dropoffs",
+        "_pickups",
+        "_dist_traveled",
+        "_use_learning_agent",
+        "_process",
+    )
     # Tracking
     exposes = ["_position", "_state", "_available_seats"]
 

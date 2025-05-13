@@ -20,6 +20,15 @@ from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 
 
 class PublicTransportSearchEngine(SearchEngineInterface):
+    __slots__ = (
+        "_env",
+        "_fleet",
+        "_config",
+        "_operator_config",
+        "_user_config",
+        "_geo_env",
+    )
+
     def __init__(self, env, fleet: PublicTransportVehicleFleet):
         self._env = env
         self._fleet = fleet

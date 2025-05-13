@@ -24,6 +24,8 @@ from simulation.vehicle.public_transit_bus import Bus, PublicTransitVehicleState
 
 
 class ModifiedTensorBoard(TensorBoard):
+    __slots__ = ("_step", "_writer", "_log_write_dir")
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.step = 1
@@ -58,6 +60,37 @@ class ModifiedTensorBoard(TensorBoard):
 
 
 class DQN(RLAgent):
+    __slots__ = (
+        "_total_episodes",
+        "_episode",
+        "_action_space",
+        "_alpha",
+        "_gamma",
+        "_eps",
+        "_eps_min",
+        "_eps_decay_strategy",
+        "_eps_decay",
+        "_penalty",
+        "_replay_buffer_size",
+        "_min_experience",
+        "_use_double_q",
+        "_minibatch_size",
+        "_target_net_update_threshold",
+        "_tau",
+        "_learning_rate",
+        "_learning_rate_decay_steps",
+        "_q_net_layer",
+        "_optimizer",
+        "_tensorboard",
+        "_random",
+        "_q_net",
+        "_target_q_net",
+        "_replay_buffer",
+        "_timelimit",
+        "_latest_reward",
+        "_state",
+    )
+
     def __init__(
         self,
         env: simpy.Environment,

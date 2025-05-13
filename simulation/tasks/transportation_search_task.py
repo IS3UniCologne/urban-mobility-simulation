@@ -3,6 +3,8 @@ from simulation.tasks.transport_task import TransportTask
 
 
 class TransportationSearchTask:
+    __slots = ("_agent_position", "_transport_task", "_fleet")
+
     def __init__(self, agent_position: Position, transport_task: TransportTask, fleet):
         self._agent_position = agent_position
         self._transport_task = transport_task

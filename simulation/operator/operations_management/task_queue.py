@@ -8,6 +8,8 @@ from simulation.operator.operations_management.service_tasks.service_task import
 
 
 class TaskQueue:
+    __slots__ = ("_env", "_queue", "_task_queue_updated")
+
     def __init__(self, env: Environment):
         self._env = env
 

@@ -58,6 +58,27 @@ class User(Agent, DriverInterface, TrackingInterface):
     user_id = 0
     exposes = ["_position"]
 
+    __slots__ = (
+        "_id",
+        "_fleet",
+        "_transport_task",
+        "_transportation_search_service",
+        "_payment_service",
+        "_vehicle_assignment_service",
+        "_vehicle_choice_behavior",
+        "_population_type",
+        "_env",
+        "_transportation_alternatives_received",
+        "_transportation_alternatives_selected",
+        "_transportation_alternatives_not_found",
+        "_vehicle_allocated",
+        "_arrived_at_pick_up_position",
+        "_assigned_vehicle_arrived",
+        "_arrived_at_destination",
+        "process_finished",
+        "_position_changed",
+    )
+
     def __init__(
         self,
         fleet,
@@ -601,6 +622,17 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
     exposes = ["transport_task"]
     transit_user_id = 0
 
+    __slots__ = (
+        "_passive",
+        "_waiting_time",
+        "_config",
+        "_bus_res",
+        "_available_time",
+        "_world",
+        "_geodesic_env",
+        "_arrived_at_last_stop",
+    )
+
     def __init__(
         self,
         position: GeodesicPosition,
@@ -1079,7 +1111,6 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
     __slots__ = (
         "_id",
-        "_position",
         "_transport_task",
         "_fleet",
         "_transportation_search_service",
@@ -1090,7 +1121,6 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         "_vehicle_choice_behavior",
         "_mode_choice_coefficients",
         "_AV_truster",
-        "_state",
     )
 
     exposes = ["_position", "_state", "_transport_task"]

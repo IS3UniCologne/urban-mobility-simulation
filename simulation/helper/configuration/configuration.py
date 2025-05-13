@@ -95,7 +95,7 @@ def beartype_after_post_init(cls: T) -> T:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
 class SettingsConfig:
     LOG_LEVEL: str
     FILE_LOG_LEVEL: str
@@ -105,21 +105,21 @@ class SettingsConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
 class ExperimentManagementConfig:
     START_TIME: int
     END_TIME: int
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
 class RandomManagerConfig:
     SEED: int
     COMPONENT_SEEDS: dict[str, int]
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True, frozen=True)
 class WorldConfig:
     SPATIAL_RESOLUTION: SpatialResolution
     TEMPORAL_RESOLUTION: TemporalBucket
@@ -128,9 +128,15 @@ class WorldConfig:
 
     def __post_init__(self) -> None:
         # convert ints to enums
-        self.SPATIAL_RESOLUTION = SpatialResolution(self.SPATIAL_RESOLUTION)
-        self.TEMPORAL_RESOLUTION = TemporalBucket(self.TEMPORAL_RESOLUTION)
-        self.DAILY_RESOLUTION = DailyResolution(self.DAILY_RESOLUTION)
+        object.__setattr__(
+            self, "SPATIAL_RESOLUTION", SpatialResolution(self.SPATIAL_RESOLUTION)
+        )
+        object.__setattr__(
+            self, "TEMPORAL_RESOLUTION", TemporalBucket(self.TEMPORAL_RESOLUTION)
+        )
+        object.__setattr__(
+            self, "DAILY_RESOLUTION", DailyResolution(self.DAILY_RESOLUTION)
+        )
 
     @property
     def SPATIAL_RESOLUTION_VALUE(self) -> int:
@@ -147,7 +153,7 @@ class WorldConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
 class PathConfig:
     PATH_ENV_BOUNDING_BOX: str
     PATH_ENV_HEX_LAYER_RES_7: str
@@ -169,21 +175,24 @@ class PathConfig:
     PATH_DEMAND_MODIFIERS: Optional[list[str]] = None
 
     def __post_init__(self) -> None:
-        # check if any paths contain f string replacements and replace them with the city name
-        for key, value in self.__dict__.items():
-            if isinstance(value, str):
-                if "{city}" in value:
-                    self.__dict__[key] = value.format(city=Configuration().world.CITY)
-        # Do the same for demand modifiers
+        city = Configuration().world.CITY
+        for field_obj in fields(self):
+            field_name = field_obj.name
+            value = getattr(self, field_name)
+            if isinstance(value, str) and "{city}" in value:
+                # Use object.__setattr__ to bypass dataclass immutability with frozen
+                object.__setattr__(self, field_name, value.format(city=city))
+
+        # Format demand modifiers if present
         if self.PATH_DEMAND_MODIFIERS:
-            self.PATH_DEMAND_MODIFIERS = [
-                value.format(city=Configuration().world.CITY)
-                for value in self.PATH_DEMAND_MODIFIERS
+            formatted_modifiers = [
+                value.format(city=city) for value in self.PATH_DEMAND_MODIFIERS
             ]
+            object.__setattr__(self, "PATH_DEMAND_MODIFIERS", formatted_modifiers)
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
 class PopulationConfig:
     POPULATION_PROBABILITIES: list[float]
     RIDE_HAILING_POPULATION_PROBABILITIES: list[float]
@@ -192,7 +201,7 @@ class PopulationConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True, frozen=True)
 class UserConfig:
     TRANSIT_MAX_WAIT: int
     SPATIAL_STRATEGY: str
@@ -200,11 +209,15 @@ class UserConfig:
 
     def __post_init__(self) -> None:
         # convert km/h to m/s
-        self.WALKING_SPEED = SimulationVelocityConverter.convert_kmh(self.WALKING_SPEED)
+        object.__setattr__(
+            self,
+            "WALKING_SPEED",
+            SimulationVelocityConverter.convert_kmh(self.WALKING_SPEED),
+        )
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True, frozen=True)
 class VehicleConfig:
     VELOCITY: float
     MAX_AVAILABLE_SEATS: int
@@ -226,11 +239,13 @@ class VehicleConfig:
 
     def __post_init__(self) -> None:
         # convert velocity km/h to m/s
-        self.VELOCITY = SimulationVelocityConverter.convert_kmh(self.VELOCITY)
+        object.__setattr__(
+            self, "VELOCITY", SimulationVelocityConverter.convert_kmh(self.VELOCITY)
+        )
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True, frozen=True)
 class ModeChoiceModelConfig:
     SUBSTITUTION_BOUNDARY: float
     AV_TRUST: list[float]
@@ -245,7 +260,11 @@ class ModeChoiceModelConfig:
 
     def __post_init__(self) -> None:
         # convert from str to enum
-        self.MODE_CHOICE_STRATEGY = ModeChoiceStrategy[str(self.MODE_CHOICE_STRATEGY)]
+        object.__setattr__(
+            self,
+            "MODE_CHOICE_STRATEGY",
+            ModeChoiceStrategy[str(self.MODE_CHOICE_STRATEGY)],
+        )
 
     def generate_mode_choice_coefficients(
         self, population_type: PopulationType
@@ -286,7 +305,7 @@ class ModeChoiceModelConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
 class ChargingInfrastructureConfig:
     NUMBER_OF_CHARGING_STATIONS: int
     LOCATIONS: list[str]
@@ -296,20 +315,28 @@ class ChargingInfrastructureConfig:
 
     def __post_init__(self) -> None:
         # clamplocations to number of charging stations
-        self.LOCATIONS = self.LOCATIONS[: self.NUMBER_OF_CHARGING_STATIONS]
+        object.__setattr__(
+            self, "LOCATIONS", self.LOCATIONS[: self.NUMBER_OF_CHARGING_STATIONS]
+        )
 
         # If power, capacity, and queue size are single values, repeat them for all locations
         if len(self.CHARGING_STATION_POWER) == 1:
-            self.CHARGING_STATION_POWER = self.CHARGING_STATION_POWER * len(
-                self.LOCATIONS
+            object.__setattr__(
+                self,
+                "CHARGING_STATION_POWER",
+                self.CHARGING_STATION_POWER * len(self.LOCATIONS),
             )
         if len(self.CHARGING_STATION_CAPACITY) == 1:
-            self.CHARGING_STATION_CAPACITY = self.CHARGING_STATION_CAPACITY * len(
-                self.LOCATIONS
+            object.__setattr__(
+                self,
+                "CHARGING_STATION_CAPACITY",
+                self.CHARGING_STATION_CAPACITY * len(self.LOCATIONS),
             )
         if len(self.CHARGING_STATION_QUEUE_SIZE) == 1:
-            self.CHARGING_STATION_QUEUE_SIZE = self.CHARGING_STATION_QUEUE_SIZE * len(
-                self.LOCATIONS
+            object.__setattr__(
+                self,
+                "CHARGING_STATION_QUEUE_SIZE",
+                self.CHARGING_STATION_QUEUE_SIZE * len(self.LOCATIONS),
             )
 
         # make sure all lists have the same length
@@ -328,7 +355,7 @@ class ChargingInfrastructureConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True, frozen=True)
 class SharedVehicleOperatorConfig:
     RECHARGE_THRESHOLD: float
     CHARGING_STATION_POWER: float
@@ -344,17 +371,23 @@ class SharedVehicleOperatorConfig:
 
     def __post_init__(self) -> None:
         # clamp to number of base regions
-        self.BASE_REGIONS = self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]
+        object.__setattr__(
+            self, "BASE_REGIONS", self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]
+        )
 
         # convert km/h to m/s
-        self.VEHICLE_RELOCATION_VELOCITY = SimulationVelocityConverter.convert_kmh(
-            self.VEHICLE_RELOCATION_VELOCITY
+        object.__setattr__(
+            self,
+            "VEHICLE_RELOCATION_VELOCITY",
+            SimulationVelocityConverter.convert_kmh(self.VEHICLE_RELOCATION_VELOCITY),
         )
 
         # Convert strings in VEHICLES to enum
-        self.N_VEHICLES = {
-            VehicleMode[str(mode)]: count for mode, count in self.N_VEHICLES.items()
-        }
+        object.__setattr__(
+            self,
+            "N_VEHICLES",
+            {VehicleMode[str(mode)]: count for mode, count in self.N_VEHICLES.items()},
+        )
 
     @property
     def AVAILABLE_VEHICLE_MODES(self) -> list[str]:
@@ -367,7 +400,7 @@ class SharedVehicleOperatorConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True, frozen=True)
 class RideHailingOperatorConfig:
     RECHARGE_THRESHOLD: list[float]
     OPERATIONS_START: int
@@ -376,20 +409,22 @@ class RideHailingOperatorConfig:
 
     def __post_init__(self) -> None:
         # convert velocity km/h to m/s
-        self.VEHICLE_RELOCATION_VELOCITY = SimulationVelocityConverter.convert_kmh(
-            self.VEHICLE_RELOCATION_VELOCITY
+        object.__setattr__(
+            self,
+            "VEHICLE_RELOCATION_VELOCITY",
+            SimulationVelocityConverter.convert_kmh(self.VEHICLE_RELOCATION_VELOCITY),
         )
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
 class TransitOperatorConfig:
     PLANNING_LOOKAHEAD: int
     MAX_BUSSES: int
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True, frozen=True)
 class RideHailingGlobalConfig:
     DRIVER_PAYMENT_SHARE: float
     AV_PRICE_REDUCTION: float
@@ -419,21 +454,30 @@ class RideHailingGlobalConfig:
 
     LOW_SOC_PENALTY: int
 
+    DRIVER_AVAILABILITY_VECTOR: list[int] = None  # type: ignore
+
     def __post_init__(self) -> None:
         # apply the discount rate to all prices
-        self.PRICE_ENTERING = self.PRICE_ENTERING * (1 - self.DISCOUNT_RATE)
-        self.PRICE_PER_MINUTE = self.PRICE_PER_MINUTE * (1 - self.DISCOUNT_RATE)
-        self.PRICE_PER_KM = self.PRICE_PER_KM * (1 - self.DISCOUNT_RATE)
-        self.MINIMUM_PRICE = self.MINIMUM_PRICE * (1 - self.DISCOUNT_RATE)
-
-    @property
-    def DRIVER_AVAILABILITY_VECTOR(self) -> list[int]:
-        if not hasattr(self, "_driver_availability_vector"):
-            self._driver_availability_vector = [
+        object.__setattr__(
+            self, "PRICE_ENTERING", self.PRICE_ENTERING * (1 - self.DISCOUNT_RATE)
+        )
+        object.__setattr__(
+            self, "PRICE_PER_MINUTE", self.PRICE_PER_MINUTE * (1 - self.DISCOUNT_RATE)
+        )
+        object.__setattr__(
+            self, "PRICE_PER_KM", self.PRICE_PER_KM * (1 - self.DISCOUNT_RATE)
+        )
+        object.__setattr__(
+            self, "MINIMUM_PRICE", self.MINIMUM_PRICE * (1 - self.DISCOUNT_RATE)
+        )
+        object.__setattr__(
+            self,
+            "DRIVER_AVAILABILITY_VECTOR",
+            [
                 round(float(x) * self.N_RIDE_HAILING_CARS * (1 - self.AV_PENETRATION))
                 for x in self.RH_AVAILABILITY
-            ]
-        return self._driver_availability_vector
+            ],
+        )
 
     @property
     def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
@@ -442,21 +486,25 @@ class RideHailingGlobalConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True, frozen=True)
 class SharedVehicleGlobalConfig:
     VEHICLES: Optional[dict[VehicleMode, int]] = None
 
     def __post_init__(self) -> None:
         # Calculate vehicles as totals from all operators
-        self.VEHICLES = {
-            mode: sum(
-                [
-                    operator.N_VEHICLES[mode]
-                    for operator in Configuration().shared_vehicle_operators
-                ]
-            )
-            for mode in VehicleMode
-        }
+        object.__setattr__(
+            self,
+            "VEHICLES",
+            {
+                mode: sum(
+                    [
+                        operator.N_VEHICLES[mode]
+                        for operator in Configuration().shared_vehicle_operators
+                    ]
+                )
+                for mode in VehicleMode
+            },
+        )
 
     @property
     def AVAILABLE_VEHICLE_MODES(self) -> list[VehicleMode]:
@@ -467,14 +515,30 @@ class SharedVehicleGlobalConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
+class TransitGlobalConfig:
+    @property
+    def AVAILABLE_VEHICLE_MODES(self) -> list[str]:
+        # TODO: Use enum for this
+        available_modes = []
+        if self.N_BUSES_TOTAL > 0:
+            available_modes.append("Bus")
+        return available_modes
+
+    @property
+    def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
+        return [self.N_BUSES_TOTAL]
+
+
+@beartype
+@dataclass(slots=True, frozen=True)
 class AuctionConfig:
     AUCTION_START: int
     AUCTION_END: int
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
 class SharedChargingAuctionConfig:
     AUCTION_INTERVAL: int
     TIMESLOT_DURATION: int
@@ -482,7 +546,7 @@ class SharedChargingAuctionConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
 class DynamicRoutingConfig:
     ACTION_SPACE: list[str]
     ACTION_SPACE_RESOLUTION: int
@@ -493,7 +557,7 @@ class DynamicRoutingConfig:
 
 
 @beartype
-@dataclass
+@dataclass(slots=True, frozen=True)
 class DynamicCheckpointRoutingConfig:
     ACTION_SPACE: list[str]
     ACTION_SPACE_RESOLUTION: int
@@ -508,7 +572,7 @@ class DynamicCheckpointRoutingConfig:
 
 
 @beartype_after_post_init
-@dataclass
+@dataclass(slots=True, frozen=True)
 class DQNConfig:
     LR_DECAY: bool
     LR_DECAY_STEPS: int
@@ -530,6 +594,7 @@ class DQNConfig:
     GAMMA: float
 
     def __post_init__(self) -> None:
+        # evaluate DQN_LAYERS string to tuple
         if isinstance(self.DQN_LAYERS, str):
             self.DQN_LAYERS = ast.literal_eval(self.DQN_LAYERS)
 
