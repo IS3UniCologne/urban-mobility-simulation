@@ -1,4 +1,5 @@
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
@@ -9,7 +10,6 @@ from simulation.operator.data_transfer_object.transportation_alternative_ridehai
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.tasks.transportation_search_task import TransportationSearchTask
-from simulation.vehicle.vehicle import VehicleState
 
 
 class RideHailingSearchEngine(SearchEngineInterface):

@@ -1,5 +1,6 @@
+from simulation.helper.configuration.enums import VehicleState
 from simulation.infrastructure.route import Route
-from simulation.vehicle.vehicle import Vehicle, VehicleState
+from simulation.vehicle.vehicle import Vehicle
 
 
 class TransportationAlternativeRideHailing:

@@ -4,9 +4,8 @@ from simpy import Environment
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.configuration.enums import VehicleMode
+from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
-from simulation.vehicle.vehicle import VehicleState
 
 # class RideHailingCarState(Enum):
 #     INITIALIZED = 0

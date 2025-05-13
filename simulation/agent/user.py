@@ -7,7 +7,12 @@ import numpy as np
 import simpy
 
 import simulation.world.world as world
-from simulation.helper.configuration.enums import PopulationType, UserState, VehicleMode
+from simulation.helper.configuration.enums import (
+    PopulationType,
+    UserState,
+    VehicleMode,
+    VehicleState,
+)
 from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.vehicle.walking import Walking
@@ -38,9 +43,8 @@ from ..vehicle.interfaces.passenger_interface import PassengerInterface
 from ..vehicle.public_transit_vehicle import (
     PublicTransitVehicle,
     PublicTransitVehicleFull,
-    PublicTransitVehicleState,
 )
-from ..vehicle.vehicle import Vehicle, VehicleState
+from ..vehicle.vehicle import Vehicle
 from ..vehicle_choice_model.vehicle_choice_behavior_interface import (
     VehicleChoiceBehaviorInterface,
 )
@@ -1012,7 +1016,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             at_dest = self.transport_task.destination.get_region_id(
                 self._bus_res
             ) == vehicle.position.get_region_id(self._bus_res)
-            at_checkpoint = vehicle.state is PublicTransitVehicleState.AT_STOP
+            at_checkpoint = vehicle.state is VehicleState.AT_STOP
             unreachable_dest = False
 
             # if at_checkpoint:

@@ -3,12 +3,12 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
     ServiceTask,
 )
-from simulation.vehicle.vehicle import VehicleState
 
 
 class ChargingTask(ServiceTask):

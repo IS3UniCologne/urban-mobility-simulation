@@ -3,8 +3,8 @@ from collections import defaultdict
 
 import simpy
 
-from simulation.helper.configuration.enums import VehicleMode
-from simulation.vehicle.vehicle import Vehicle, VehicleState
+from simulation.helper.configuration.enums import VehicleMode, VehicleState
+from simulation.vehicle.vehicle import Vehicle
 from tracking.tracking import Tracking
 
 
@@ -98,6 +98,14 @@ class VehicleFleet(ABC):
 
         """
         return self._vehicles_by_region[region]
+
+    def vehicles_in_region_with_state(
+        self, region: str, state: VehicleState
+    ) -> set[Vehicle]:
+        """Get vehicles in a specific region with a specific state."""
+        return self._vehicles_by_region[region].intersection(
+            self._vehicles_by_state[state]
+        )
 
     def register_vehicle(self, vehicle: Vehicle):
         if vehicle in self._vehicles:
