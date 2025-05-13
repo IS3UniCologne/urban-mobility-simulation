@@ -20,7 +20,6 @@ from simulation.world.markets.interfaces.bidder_interface import BidderInterface
 
 class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
     __slots__ = (
-        "_env",
         "_auction",
         "_bidding_parameters",
         "_state_of_charge_threshold",

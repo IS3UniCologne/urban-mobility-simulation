@@ -61,7 +61,6 @@ class User(Agent, DriverInterface, TrackingInterface):
     __slots__ = (
         "_id",
         "_fleet",
-        "_position",
         "_transport_task",
         "_transportation_search_service",
         "_payment_service",
@@ -78,7 +77,6 @@ class User(Agent, DriverInterface, TrackingInterface):
         "_arrived_at_destination",
         "process_finished",
         "_position_changed",
-        "_state",
     )
 
     def __init__(
@@ -1113,7 +1111,6 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
     __slots__ = (
         "_id",
-        "_position",
         "_transport_task",
         "_fleet",
         "_transportation_search_service",
@@ -1124,7 +1121,6 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         "_vehicle_choice_behavior",
         "_mode_choice_coefficients",
         "_AV_truster",
-        "_state",
     )
 
     exposes = ["_position", "_state", "_transport_task"]

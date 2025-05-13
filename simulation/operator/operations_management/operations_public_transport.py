@@ -19,7 +19,6 @@ from tracking.tracking import Tracking
 
 class OperationsPublicTransport(OperationsInterface):
     __slots__ = (
-        "_env",
         "_timetable",
         "_time",
         "_fleet",

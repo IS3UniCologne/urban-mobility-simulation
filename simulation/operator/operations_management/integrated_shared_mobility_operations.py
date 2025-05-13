@@ -22,7 +22,6 @@ from simulation.operator.operations_management.service_tasks.relocation_task imp
 class IntegratedSharedMobilityOperations(OperationsInterface):
     # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
     __slots__ = (
-        "_env",
         "_time_between_operations",
         "operation_duration",
         "_distance_matrix",
