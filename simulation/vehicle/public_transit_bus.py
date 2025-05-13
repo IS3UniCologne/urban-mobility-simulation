@@ -202,7 +202,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         self.position = new_position
 
         # Update Position of Passengers
-        for passenger in self._seats:
+        for passenger in self._passengers:
             passenger.position = new_position
 
     # TODO: remove if everything works
@@ -297,7 +297,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #     self._agent_completed_step = self._env.event()
 
     def __str__(self):
-        return f"I have {len(self._seats)} passengers on boards"
+        return f"I have {len(self._passengers)} passengers on boards"
 
     def dump(self, exposed_only: bool = True) -> dict:
         if exposed_only:
