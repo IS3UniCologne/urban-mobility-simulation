@@ -29,6 +29,16 @@ class OperationsInterface(ABC):
             ) from e
         self._operator_reference = operator_reference
 
+    @property
+    def operator(self) -> "Operator":
+        """Get the operator with guaranteed type safety."""
+        if self._operator_reference is None:
+            raise RuntimeError(
+                "Operator reference not set. Call register_operator_reference first."
+            )
+        # Use cast to tell the type checker this is definitely an Operator
+        return self._operator_reference
+
     @abstractmethod
     def execute(self) -> None:
         pass

@@ -91,7 +91,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             yield self._env.timeout(self._time_between_operations)
 
             # Clean old jobs (if there are some left)
-            self._operator_reference._workforce.task_queue.clear()
+            self.operator._workforce.task_queue.clear()
 
             # Retrieve Vehicle Transactions
             transactions = self._operator_reference.get_transactions()
