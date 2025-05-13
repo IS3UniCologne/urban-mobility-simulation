@@ -12,7 +12,6 @@ from simulation.operator.operations_management.ridehailing_base_charging_operati
 
 class RideHailingUncoordinatedChargingOperations(OperationsInterface):
     __slots__ = (
-        "_env",
         "_distance_matrix",
         "_time_between_operations",
         "_operation_duration",

@@ -22,7 +22,6 @@ from simulation.world.world import World
 
 class RideHailingBaseChargingOperations(OperationsInterface):
     __slots__ = (
-        "_env",
         "_distance_matrix",
         "_time_between_operations",
         "_operation_duration",
