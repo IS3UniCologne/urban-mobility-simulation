@@ -358,7 +358,7 @@ class RideHailingVehicle(Vehicle):
             self._driver.position = new_position
 
         # Update Position of Passengers
-        for passenger in self._seats:
+        for passenger in self._passengers:
             passenger.position = new_position
 
         region_id = self.position.get_region_id()
@@ -416,7 +416,7 @@ class RideHailingVehicle(Vehicle):
         :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
         :return:
         """
-        if self._driver is not None or len(self._seats) > 0:
+        if self._driver is not None or len(self._passengers) > 0:
             logging.debug(
                 f"Vehicle {self._id} has a driver {self._driver.identify_driver()}. Revoke relocation task.",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},

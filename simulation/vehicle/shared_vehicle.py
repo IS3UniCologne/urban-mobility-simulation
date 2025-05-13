@@ -106,7 +106,7 @@ class SharedVehicle(Vehicle, ABC):
         self._charging_station_plugged_out = self._env.event()
 
         # Initial State
-        self.state = SharedVehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         # Vehicle Reservation
         self._reserved_for_user = None
@@ -179,7 +179,7 @@ class SharedVehicle(Vehicle, ABC):
         self._update_state_of_charge(distance)
 
     def start_driving(self):
-        self.state = SharedVehicleState.DRIVING
+        self.state = VehicleState.DRIVING
 
         logging.debug(
             "Driving started.",
@@ -187,7 +187,7 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     def stop_driving(self):
-        self.state = SharedVehicleState.PARKING
+        self.state = VehicleState.PARKING
         self.set_current_task(None)
         logging.debug(
             "Driving stopped.",
@@ -199,14 +199,14 @@ class SharedVehicle(Vehicle, ABC):
         self._reserved_for_user = None
 
         # Make vehicle available for others again
-        self.state = SharedVehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         logging.debug(
             "Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
     def reserve(self, user):
-        self.state = SharedVehicleState.RESERVED
+        self.state = VehicleState.RESERVED
 
         self._reserved_for_user = user
 
@@ -252,7 +252,7 @@ class SharedVehicle(Vehicle, ABC):
             self._driver.position = new_position
 
         # Update Position of Passengers
-        for passenger in self._seats:
+        for passenger in self._passengers:
             passenger.position = new_position
 
         region_id = self.position.get_region_id()
@@ -312,8 +312,8 @@ class SharedVehicle(Vehicle, ABC):
         """
         if (
             self._driver is not None
-            or self.state == SharedVehicleState.RESERVED
-            or len(self._seats) > 0
+            or self.state == VehicleState.RESERVED
+            or len(self._passengers) > 0
         ):
             logging.debug(
                 f"Vehicle {self._id} has a driver. Revoke relocation task.",
