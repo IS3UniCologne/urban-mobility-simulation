@@ -36,11 +36,23 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
         return below_soc_level_vehicles
 
-    def supply_per_region(self):
-        """# TODO: Implement when vehicle by type is in
-        Return a list of number of vehicles in each region
-        :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
-                e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
+    def supply_per_region(self) -> dict[str, dict[str, int]]:
+        """Calculates the supply of vehicles by mode for each region.
+
+        This method iterates through the regions and counts the number of vehicles
+        available in each region, categorized by their mode (e.g., CAR, BIKE, etc.).
+
+        Returns
+        -------
+        dict
+            A dictionary with region IDs as keys. Each value is another dictionary
+            mapping vehicle mode names to the count of vehicles of that mode in the region.
+            Empty regions and modes with no vehicles are excluded.
+            Example:
+            {
+                '871f1d4f3ffffff': {'CAR': 5, 'BIKE': 3},
+                '871f1d4f4ffffff': {'SCOOTER': 2}
+            }
         """
         supply = {}
 

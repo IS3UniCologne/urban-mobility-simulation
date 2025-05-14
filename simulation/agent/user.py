@@ -280,9 +280,9 @@ class User(Agent, DriverInterface, TrackingInterface):
             distance_to_vehicle = self.position >> alternative.vehicle.position
             if self._transport_task.viable_vehicle_modes[alternative.vehicle.mode.name]:
                 if (
-                    alternative.vehicle.mode == VehicleMode.Car
+                    alternative.vehicle.mode == VehicleMode.CAR
                     and distance_to_vehicle
-                    < config.shared_vehicles.get(VehicleMode.Car).WALKING_DISTANCE
+                    < config.shared_vehicles.get(VehicleMode.CAR).WALKING_DISTANCE
                 ):  # See own paper
                     filtered_list.append(
                         (
@@ -293,10 +293,10 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    alternative.vehicle.mode == VehicleMode.KickScooter
+                    alternative.vehicle.mode == VehicleMode.KICKSCOOTER
                     and distance_to_vehicle
                     < config.shared_vehicles.get(
-                        VehicleMode.KickScooter
+                        VehicleMode.KICKSCOOTER
                     ).WALKING_DISTANCE
                 ):  # See Reck
                     filtered_list.append(
@@ -308,9 +308,9 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    alternative.vehicle.mode == VehicleMode.Scooter
+                    alternative.vehicle.mode == VehicleMode.SCOOTER
                     and distance_to_vehicle
-                    < config.shared_vehicles.get(VehicleMode.Scooter).WALKING_DISTANCE
+                    < config.shared_vehicles.get(VehicleMode.SCOOTER).WALKING_DISTANCE
                 ):  # See Nothing..
                     filtered_list.append(
                         (
@@ -321,9 +321,9 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    alternative.vehicle.mode == VehicleMode.Bike
+                    alternative.vehicle.mode == VehicleMode.BIKE
                     and distance_to_vehicle
-                    < config.shared_vehicles.get(VehicleMode.Bike).WALKING_DISTANCE
+                    < config.shared_vehicles.get(VehicleMode.BIKE).WALKING_DISTANCE
                 ):  # See Nothing..
                     filtered_list.append(
                         (

@@ -242,12 +242,12 @@ supply_prob = pd.read_csv(os.path.normpath(config.path.PATH_VEHICLE_SUPPLY))
 # Configure and generate / spawn shared fleet vehicles
 shared_vehicle_fleet_config = generate_fleet_config(
     supply_prob,
-    n_cars=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.Car],
-    n_scooter=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.Scooter],
+    n_cars=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.CAR],
+    n_scooter=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.SCOOTER],
     n_kick_scooter=config.shared_vehicle_operators[0].N_VEHICLES[
-        VehicleMode.KickScooter
+        VehicleMode.KICKSCOOTER
     ],
-    n_bikes=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.Bike],
+    n_bikes=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.BIKE],
 )
 mixed_fleet = generate_mixed_fleet(env, shared_vehicle_fleet_config)
 
@@ -366,12 +366,12 @@ def run_simulation(end_time, env=env):
         metrics_factory = MetricsFactory(transactions)
 
         num_vehicles = {
-            "SharedBike": config.shared_vehicle_global.VEHICLES[VehicleMode.Bike],
-            "SharedCar": config.shared_vehicle_global.VEHICLES[VehicleMode.Car],
+            "SharedBike": config.shared_vehicle_global.VEHICLES[VehicleMode.BIKE],
+            "SharedCar": config.shared_vehicle_global.VEHICLES[VehicleMode.CAR],
             "SharedKickScooter": config.shared_vehicle_global.VEHICLES[
-                VehicleMode.KickScooter
+                VehicleMode.KICKSCOOTER
             ],
-            "SharedScooter": config.shared_vehicle_global.VEHICLES[VehicleMode.Scooter],
+            "SharedScooter": config.shared_vehicle_global.VEHICLES[VehicleMode.SCOOTER],
         }
 
         metrics_factory.print_simulation_summary(
