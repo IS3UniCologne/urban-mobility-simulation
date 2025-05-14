@@ -8,7 +8,6 @@ updates:
       time: "06:00"
       timezone: "Etc/UTC"
       day: monday
-    reviewers: [IS3UniCologne/Admin]
     labels: [deps]
     groups:
       actions:
@@ -24,7 +23,6 @@ updates:
       time: "06:00"
       timezone: "Etc/UTC"
       day: monday
-    reviewers: [IS3UniCologne/Admin]
     labels: [deps]
     groups:
       development-dependencies:
