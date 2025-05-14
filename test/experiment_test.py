@@ -6,9 +6,9 @@ import sys
 
 import pytest
 
-pytestmark = pytest.mark.skip(
-    reason="This runs all experiments, which is slow and not needed for every test."
-)
+# pytestmark = pytest.mark.skip(
+#     reason="This runs all experiments, which is slow and not needed for every test."
+# )
 
 
 def run_template_script(script_path, config_file):
@@ -48,6 +48,6 @@ def test_experiments(script, config):
     assert os.path.exists(config), f"{config} does not exist."
 
     result = run_template_script(script, config)
-    assert result.returncode == 0, (
-        f"Script {script} using configuration {config} failed with error:\n{result.stderr}"
-    )
+    assert (
+        result.returncode == 0
+    ), f"Script {script} using configuration {config} failed with error:\n{result.stderr}"

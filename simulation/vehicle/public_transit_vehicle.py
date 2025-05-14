@@ -52,7 +52,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         self._delay = 0  # in seconds from planned route timetable
 
         # Initialize state
-        self._state = VehicleState.AT_TERMINAL_ORIGIN
+        self.state = VehicleState.AT_TERMINAL_ORIGIN
 
         logging.debug(
             "Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
