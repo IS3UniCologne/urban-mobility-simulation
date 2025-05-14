@@ -216,7 +216,7 @@ class SharedVehicle(Vehicle, ABC):
         :return:
         """
         # Bike does not need to check SoC
-        if self._mode == VehicleMode.BIKE:
+        if self._mode == VehicleMode.Bike:
             return True
 
         if self.energy_consumption * distance / 1000 >= self._current_state_of_charge:

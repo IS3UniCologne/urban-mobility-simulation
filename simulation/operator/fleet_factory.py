@@ -284,10 +284,10 @@ def generate_mixed_fleet(
 
     # Define vehicle types and their configuration
     vehicle_types = {
-        "cars": VehicleMode.CAR,
-        "scooters": VehicleMode.SCOOTER,
-        "kick_scooters": VehicleMode.KICKSCOOTER,
-        "bikes": VehicleMode.BIKE,
+        "cars": VehicleMode.Car,
+        "scooters": VehicleMode.Scooter,
+        "kick_scooters": VehicleMode.KickScooter,
+        "bikes": VehicleMode.Bike,
     }
 
     # Process each hexagon in the fleet config

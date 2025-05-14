@@ -38,11 +38,11 @@ class PopulationType(Enum):
 
 
 class VehicleMode(Enum):
-    CAR = 0
-    SCOOTER = 1
-    KICKSCOOTER = 2
-    BIKE = 3
-    BUS = 4
+    Car = 0
+    Scooter = 1
+    KickScooter = 2
+    Bike = 3
+    Bus = 4
 
 
 class UserState(Enum):

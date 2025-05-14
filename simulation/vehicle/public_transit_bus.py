@@ -54,7 +54,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         :param velocity: e.g. 16.67 m/min * 30 (average in city)
         """
         super().__init__(
-            env, route, position, fleet, velocity, VehicleMode.BUS, max_available_seats
+            env, route, position, fleet, velocity, VehicleMode.Bus, max_available_seats
         )
 
         self._id = Bus.bus_id

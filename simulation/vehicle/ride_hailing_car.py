@@ -66,7 +66,7 @@ class RideHailingCar(RideHailingVehicle):
             fleet,
             position,
             velocity,
-            VehicleMode.CAR,
+            VehicleMode.Car,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
