@@ -282,13 +282,12 @@ def generate_mixed_fleet(
     # Global Config File (values from config ini files)
     config = Configuration()
 
-    # TODO: Once the fleetconfig uses VehicleMode enums, we can directly iterate over the modes
     # Define vehicle types and their configuration
     vehicle_types = {
-        "cars": VehicleMode.Car,
-        "scooters": VehicleMode.Scooter,
-        "kick_scooters": VehicleMode.KickScooter,
-        "bikes": VehicleMode.Bike,
+        "cars": VehicleMode.CAR,
+        "scooters": VehicleMode.SCOOTER,
+        "kick_scooters": VehicleMode.KICKSCOOTER,
+        "bikes": VehicleMode.BIKE,
     }
 
     # Process each hexagon in the fleet config

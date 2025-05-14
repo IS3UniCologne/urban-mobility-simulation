@@ -215,7 +215,10 @@ class SharedVehicle(Vehicle, ABC):
         :param distance: in meter
         :return:
         """
-        # TODO: Exception for bikes or make this part of a component
+        # Bike does not need to check SoC
+        if self._mode == VehicleMode.BIKE:
+            return True
+
         if self.energy_consumption * distance / 1000 >= self._current_state_of_charge:
             return False
         return True
