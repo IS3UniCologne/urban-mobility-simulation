@@ -1,0 +1,39 @@
+version: 2
+enable-beta-ecosystems: true
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      time: "06:00"
+      timezone: "Etc/UTC"
+      day: monday
+    reviewers: [IS3UniCologne/Admin]
+    labels: [deps]
+    groups:
+      actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci: "
+  - package-ecosystem: uv
+    versioning-strategy: increase
+    directory: "/"
+    schedule:
+      interval: weekly
+      time: "06:00"
+      timezone: "Etc/UTC"
+      day: monday
+    reviewers: [IS3UniCologne/Admin]
+    labels: [deps]
+    groups:
+      development-dependencies:
+        dependency-type: development
+      runtime-dependencies:
+        dependency-type: production
+        update-types:
+        - "minor"
+        - "patch"
+    commit-message:
+      prefix: "chore(deps): "
+      prefix-development: "chore(deps-dev): "
