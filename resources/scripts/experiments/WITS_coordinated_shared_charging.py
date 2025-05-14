@@ -362,7 +362,7 @@ def track_fleets(fleet_id):
             {
                 "_fleet": fleet_id,
                 "_state": [
-                    tracking.get(x, "_state")[1]
+                    tracking.get(x, "state")[1]
                     for x in tracked_list
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
@@ -372,7 +372,7 @@ def track_fleets(fleet_id):
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_vdt": [
-                    tracking.get(x, "_vdt")[1]
+                    tracking.get(x, "_distance_travelled")[1]
                     for x in tracked_list
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],

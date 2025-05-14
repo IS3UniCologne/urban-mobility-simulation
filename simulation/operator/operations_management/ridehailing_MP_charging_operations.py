@@ -26,6 +26,7 @@ class RideHailingMPChargingOperations(OperationsInterface):
         "_task_queue",
         "_task_transactions",
         "_virtual_charging_infrastructure",
+        "_world",
     )
 
     def __init__(

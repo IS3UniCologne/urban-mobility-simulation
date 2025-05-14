@@ -44,7 +44,7 @@ class Vehicle(TrackingInterface, ABC):
         "_current_region",
     )
 
-    exposes = ["_id", "_state", "position", "_distance_travelled"]
+    exposes = ["_id", "state", "position", "_distance_travelled"]
 
     # We need to override __eq__ and __hash__ to use Vehicles in sets
     def __eq__(self, other) -> bool:

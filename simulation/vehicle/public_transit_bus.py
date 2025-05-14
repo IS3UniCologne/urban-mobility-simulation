@@ -34,7 +34,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         "_process",
     )
     # Tracking
-    exposes = ["_position", "_state", "_available_seats"]
+    exposes = ["_position", "state", "_available_seats"]
 
     def __init__(
         self,
@@ -98,7 +98,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         Time 00:03:00 - Departure 00:04:00 - next_day = False - wait
         Time 00:03:00 - Departure 00:04:00 - next_day = True - should not happen
         """
-        while self._state is not VehicleState.AT_TERMINAL_DESTINATION:
+        while self.state is not VehicleState.AT_TERMINAL_DESTINATION:
             strf = "%H:%M:%S"
             early_arrival = (
                 self._time.now_as_str() < self._current_stop.departure
@@ -109,7 +109,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
             )
 
             if (
-                self._state is VehicleState.AT_TERMINAL_ORIGIN
+                self.state is VehicleState.AT_TERMINAL_ORIGIN
                 and self._time.now_as_str() < self._current_stop.departure
             ):
                 # bus was pre-initialized by transit operator
@@ -168,7 +168,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         distance = route_segment.distance  # in meter
         duration = distance / self._velocity  # in minutes
 
-        self._state = VehicleState.EN_ROUTE_PLANNED
+        self.state = VehicleState.EN_ROUTE_PLANNED
 
         logging.debug(
             f"Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.",
@@ -181,14 +181,14 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         self._update_positions(route_segment.end)
 
         if self._current_stop == self._route.destination:
-            self._state = VehicleState.AT_TERMINAL_DESTINATION
+            self.state = VehicleState.AT_TERMINAL_DESTINATION
             logging.debug(
                 f"Bus has arrived at its terminal destination - stop {self._current_stop.stop_id} "
                 f"at time {self._time.now_as_str()}",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
         else:
-            self._state = VehicleState.AT_STOP
+            self.state = VehicleState.AT_STOP
             logging.debug(
                 f"Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
@@ -301,7 +301,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
             return {x: self.get(x) for x in self.exposes}
         else:
             dump_attr = [
-                "_state",
+                "state",
                 "_position",
                 "_available_seats",
                 "_spawned",
