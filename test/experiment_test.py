@@ -48,6 +48,6 @@ def test_experiments(script, config):
     assert os.path.exists(config), f"{config} does not exist."
 
     result = run_template_script(script, config)
-    assert (
-        result.returncode == 0
-    ), f"Script {script} using configuration {config} failed with error:\n{result.stderr}"
+    assert result.returncode == 0, (
+        f"Script {script} using configuration {config} failed with error:\n{result.stderr}"
+    )
