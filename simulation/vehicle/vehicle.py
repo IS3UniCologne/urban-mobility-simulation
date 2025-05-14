@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 
 from simpy import Environment, Event
 
-from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.environment.position import Position
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.infrastructure.network.edge import Edge
+from simulation.tasks.transport_task import TransportTask
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from tracking.tracking_interface import TrackingInterface
 
@@ -15,7 +15,16 @@ if TYPE_CHECKING:
     from simulation.operator.vehicle_fleet import VehicleFleet
 
 
+class VehicleError(Exception):
+    """Base class for all vehicle-related exceptions."""
+
+
 class Vehicle(TrackingInterface, ABC):
+    """Base class for all vehicles.
+
+    Contains common properties and methods used by all vehicles.
+    """
+
     vehicle_id = 0
     vehicle_type: str
 
@@ -85,46 +94,107 @@ class Vehicle(TrackingInterface, ABC):
         self.__state: VehicleState = VehicleState.INITIALIZED
 
         # Store current task (if any)
-        self._current_task = None
+        # TODO: Make this a generic task interface
+        self._current_task: None | TransportTask = None
 
         # For logging
-        self._logging_extra = {"clazz": self.__class__.__name__, "oid": self._id}
+        self._logging_extra: dict = {"clazz": self.__class__.__name__, "oid": self._id}
 
-        # Add vehicle to fleet
+        # Add self to fleet
         self._fleet.register_vehicle(self)
 
     @property
-    def mode(self):
+    def mode(self) -> VehicleMode:
+        """Get the mode of the vehicle.
+
+        Returns
+        -------
+        VehicleMode
+            The mode of the vehicle.
+        """
         return self._mode
 
     @property
-    def id(self):
+    def id(self) -> int:
+        """Get the unique identifier of the vehicle.
+
+        Returns
+        -------
+        int
+            The unique identifier of the vehicle.
+        """
         return self._id
 
     @property
-    def velocity(self):
+    def velocity(self) -> float:
+        """Get the velocity of the vehicle.
+
+        Returns
+        -------
+        float
+            The velocity of the vehicle.
+        """
         return self._velocity
 
     @property
-    def available_seats(self):
+    def available_seats(self) -> int:
+        """Get the number of available seats in the vehicle.
+
+        Returns
+        -------
+        int
+            The number of available seats in the vehicle.
+        """
         return self._max_available_seats - len(self._passengers)
 
     @property
-    def convenience(self):
+    def convenience(self) -> int:
+        """Get the convenience level of the vehicle.
+
+        This affects the utility of the vehicle for passengers in mode choice.
+        Lower values are better.
+
+        Returns
+        -------
+        int
+            The convenience level of the vehicle.
+        """
         return self._convenience
 
     @property
-    def max_available_seats(self):
+    def max_available_seats(self) -> int:
+        """Get the maximum number of available seats in the vehicle.
+
+        Returns
+        -------
+        int
+            The maximum number of available seats in the vehicle.
+        """
         return self._max_available_seats
 
     @property
     def state(self) -> VehicleState:
-        """Get current state of the vehicle."""
+        """Get current state of the vehicle.
+
+        Returns
+        -------
+        VehicleState
+            The current state of the vehicle.
+        """
         return self.__state
 
     @state.setter
-    def state(self, state) -> None:
-        """Set current state of the vehicle. Never change _state directly."""
+    def state(self, state: VehicleState) -> None:
+        """Set current state of the vehicle.
+
+        DO NOT CHANGE _state DIRECTLY.
+        This is to ensure that the fleet is notified of state changes.
+
+        Parameters
+        ----------
+        state : VehicleState
+            The new state of the vehicle.
+        """
         if state == self.__state:
             # No state change
             return
@@ -133,23 +203,51 @@ class Vehicle(TrackingInterface, ABC):
         self.__state = state
 
     @property
-    def position(self) -> GeodesicPosition:
+    def position(self) -> Position:
+        """Get the current position of the vehicle.
+
+        Returns
+        -------
+        Position
+            The current position of the vehicle.
+        """
         return self.__position
 
     @property
     def current_task(self):
+        """Get the current task of the vehicle.
+
+        Returns
+        -------
+        TransportTask
+            The current task of the vehicle.
+        """
         return self._current_task
 
     @property
     def fleet(self) -> "VehicleFleet":
+        """Get the fleet to which the vehicle belongs.
+
+        Returns
+        -------
+        VehicleFleet
+            The fleet to which the vehicle belongs.
+        """
         return self._fleet
 
     @property
-    def current_region(self):
+    def current_region(self) -> str:
+        """Get the current region of the vehicle.
+
+        Returns
+        -------
+        str
+            The identifier of the current region of the vehicle. (e.g., hexagon ID).
+        """
         return self._current_region
 
     @position.setter
-    def position(self, position: GeodesicPosition):
+    def position(self, position: Position) -> None:
         self._distance_travelled += self.__position >> position
 
         new_region = position.get_region_id()
@@ -165,14 +263,30 @@ class Vehicle(TrackingInterface, ABC):
         self._position_changed = self._env.event()
 
         logging.debug(
-            f"Position updated {self.__position}. Total distance travelled: {self._distance_travelled}.",
+            "Position updated %s. Total distance travelled: %s.",
+            self.__position,
+            self._distance_travelled,
             extra=self._logging_extra,
         )
 
     # Standard mount/unmount passenger logic
-    def mount_passenger(self, passenger: PassengerInterface):
+    def mount_passenger(self, passenger: PassengerInterface) -> None:
+        """Mount a passenger to the vehicle.
+
+        This method is used to add a passenger to the vehicle.
+
+        Parameters
+        ----------
+        passenger : PassengerInterface
+            The passenger to be added to the vehicle.
+
+        Raises
+        ------
+        VehicleError
+            If the passenger is already in the vehicle or if the vehicle is full.
+        """
         if passenger in self._passengers:
-            raise Exception(f"Passenger {passenger} is already in vehicle.")
+            raise VehicleError(f"Passenger {passenger} is already in vehicle.")
         elif self.available_seats > 0:
             self._passengers.append(passenger)
 
@@ -180,29 +294,53 @@ class Vehicle(TrackingInterface, ABC):
             self._user_mounted = self._env.event()
 
             logging.debug(
-                f"Passenger: {passenger.identify_passenger()} mounted vehicle.",
+                "Passenger: %s mounted vehicle.",
+                passenger.identify_passenger(),
                 extra=self._logging_extra,
             )
         else:
-            raise Exception("Vehicle is full.")
+            raise VehicleError(
+                f"Passenger {passenger} is trying to mount full vehicle {self}."
+            )
 
-    def unmount_passenger(self, passenger: PassengerInterface):
+    def unmount_passenger(self, passenger: PassengerInterface) -> None:
+        """Unmount a passenger from the vehicle.
+
+        This method is used to remove a passenger from the vehicle.
+
+        Parameters
+        ----------
+        passenger : PassengerInterface
+            The passenger to be removed from the vehicle.
+
+        Raises
+        ------
+        VehicleError
+            If the passenger is not in the vehicle.
+        """
         if passenger in self._passengers:
             self._passengers.remove(passenger)
 
             self._user_unmounted.succeed()
             self._user_unmounted = self._env.event()
-
             logging.debug(
-                f"Passenger: {passenger.identify_passenger()} unmounted vehicle.",
+                "Passenger: %s unmounted vehicle.",
+                passenger.identify_passenger(),
                 extra=self._logging_extra,
             )
+
         else:
-            raise Exception("Agent is not in vehicle.")
+            raise VehicleError(
+                f"Trying to unmount passenger {passenger} not in vehicle {self}."
+            )
 
         logging.debug("Driving stopped.", extra=self._logging_extra)
 
-    def park(self):
+    def park(self) -> None:
+        """Park the vehicle.
+
+        This method is used to set the vehicle to a parked state.
+        """
         self.state = VehicleState.PARKING
 
         logging.debug("Parked.", extra=self._logging_extra)
@@ -215,17 +353,31 @@ class Vehicle(TrackingInterface, ABC):
 
     # Methods
     @abstractmethod
-    def move(self, route_segment: Edge):
-        pass
+    def move(self, route_segment: Edge) -> None:
+        """Move the vehicle along a route segment.
+
+        Parameters
+        ----------
+        route_segment : Edge
+            The route segment along which the vehicle will move.
+        """
 
     # As of now, this is only used with TransportTask
     # TODO: As part of the vehicle interface refactoring, this should be used to have transparency about a vehicles current task at all time
-    def set_current_task(self, task):
+    def set_current_task(self, task) -> None:
+        """Set the current task of the vehicle.
+
+        Parameters
+        ----------
+        task : TransportTask
+            The task to be set as the current task of the vehicle.
+        """
         self._current_task = task
 
-    @abstractmethod
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return string representation of the vehicle."""
         return f"Vehicle {self._id} ({self.__class__.__name__})"
 
     def __repr__(self) -> str:
+        """Return string representation of the vehicle."""
         return self.__str__()

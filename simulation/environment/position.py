@@ -24,3 +24,8 @@ class Position(ABC):
         :return: str
         """
         pass
+
+    @abstractmethod
+    def __rshift__(self, other) -> float:
+        # Calculate distance between two positions
+        pass
