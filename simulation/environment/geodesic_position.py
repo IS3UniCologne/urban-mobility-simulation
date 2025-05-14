@@ -63,7 +63,7 @@ class GeodesicPosition(Position):
             return self._lat == other._lat and self._lng == other._lng
 
     # >>
-    def __rshift__(self, other):
+    def __rshift__(self, other) -> float:
         """
         Calculate haversine distance between two positions
         :param other: GeodesicPosition
@@ -84,7 +84,6 @@ class GeodesicPosition(Position):
         :param other: GeodesicPosition
         :return: Euclidean distance in meter.
         """
-
         # Approximate conversion factor from lat/lng to meters
         lat_to_meters = 111320  # meters per degree at equator
         lng_to_meters = 111320 * math.cos(math.radians(self._lat))
