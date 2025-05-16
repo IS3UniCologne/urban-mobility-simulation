@@ -480,7 +480,7 @@ def run_single_simulation(
     # print("Total Missed Revenue: " + str(payment_engine.total_missed_revenue))
 
     no_vehicles_to_be_charged = len(
-        mixed_fleet.get_all_vehicles_below_soc_level(
+        mixed_fleet.vehicles_below_soc_threshold(
             global_config.shared_vehicle_operator_config.recharge_threshold
         )
     )

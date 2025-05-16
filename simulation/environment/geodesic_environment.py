@@ -1,4 +1,5 @@
 import math
+from typing import TYPE_CHECKING
 
 import h3
 import numpy
@@ -6,7 +7,9 @@ from shapely.geometry import Point, Polygon
 
 from simulation.environment.environment import Environment
 from simulation.helper.random.random_manager import RandomManager
-from simulation.vehicle.vehicle import Vehicle
+
+if TYPE_CHECKING:
+    from simulation.vehicle.vehicle import Vehicle
 
 
 class GeodesicEnvironment(Environment):
@@ -207,7 +210,7 @@ class GeodesicEnvironment(Environment):
 
         return filtered
 
-    def filter_demands_by_direction(self, demands, vehicle: Vehicle):
+    def filter_demands_by_direction(self, demands, vehicle: "Vehicle"):
         route_direction = self.get_bearing(
             *vehicle.position.getExactLocation(),
             *vehicle.route.destination.getExactLocation(),

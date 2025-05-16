@@ -263,7 +263,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                 }
 
         for vehicle in vehicles_to_charge:
-            hex = vehicle.position.get_hexagon_id()
+            hex = vehicle.position.get_region_id()
 
             # Get nearest charging station (.loc -> destination, [[]] -> Origin)
             if not self._allow_queue:

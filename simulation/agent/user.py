@@ -7,7 +7,12 @@ import numpy as np
 import simpy
 
 import simulation.world.world as world
-from simulation.helper.configuration.enums import PopulationType, UserState, VehicleMode
+from simulation.helper.configuration.enums import (
+    PopulationType,
+    UserState,
+    VehicleMode,
+    VehicleState,
+)
 from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.vehicle.walking import Walking
@@ -38,13 +43,8 @@ from ..vehicle.interfaces.passenger_interface import PassengerInterface
 from ..vehicle.public_transit_vehicle import (
     PublicTransitVehicle,
     PublicTransitVehicleFull,
-    PublicTransitVehicleState,
 )
-from ..vehicle.shared_bike import SharedBike
-from ..vehicle.shared_car import SharedCar
-from ..vehicle.shared_kick_scooter import SharedKickScooter
-from ..vehicle.shared_scooter import SharedScooter
-from ..vehicle.vehicle import Vehicle, VehicleState
+from ..vehicle.vehicle import Vehicle
 from ..vehicle_choice_model.vehicle_choice_behavior_interface import (
     VehicleChoiceBehaviorInterface,
 )
@@ -146,7 +146,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         self._position_changed = self._env.event()
 
     @property
-    def transport_task(self):
+    def transport_task(self) -> TransportTask:
         return self._transport_task
 
     def run(self):
@@ -270,7 +270,7 @@ class User(Agent, DriverInterface, TrackingInterface):
             if (
                 isinstance(alternative.vehicle, Walking)
                 and self._transport_task.viable_vehicle_modes[
-                    alternative.vehicle.__class__.__name__
+                    alternative.vehicle.mode.name
                 ]
             ):
                 filtered_list.append(
@@ -278,15 +278,11 @@ class User(Agent, DriverInterface, TrackingInterface):
                 )
                 continue
             distance_to_vehicle = self.position >> alternative.vehicle.position
-            if self._transport_task.viable_vehicle_modes[
-                alternative.vehicle.__class__.__name__
-            ]:
+            if self._transport_task.viable_vehicle_modes[alternative.vehicle.mode.name]:
                 if (
-                    isinstance(alternative.vehicle, SharedCar)
+                    alternative.vehicle.mode == VehicleMode.Car
                     and distance_to_vehicle
-                    < config.shared_vehicles.get(
-                        VehicleMode[alternative.vehicle.__class__.__name__]
-                    ).WALKING_DISTANCE
+                    < config.shared_vehicles.get(VehicleMode.Car).WALKING_DISTANCE
                 ):  # See own paper
                     filtered_list.append(
                         (
@@ -297,10 +293,10 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    isinstance(alternative.vehicle, SharedKickScooter)
+                    alternative.vehicle.mode == VehicleMode.KickScooter
                     and distance_to_vehicle
                     < config.shared_vehicles.get(
-                        VehicleMode[alternative.vehicle.__class__.__name__]
+                        VehicleMode.KickScooter
                     ).WALKING_DISTANCE
                 ):  # See Reck
                     filtered_list.append(
@@ -312,11 +308,9 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    isinstance(alternative.vehicle, SharedScooter)
+                    alternative.vehicle.mode == VehicleMode.Scooter
                     and distance_to_vehicle
-                    < config.shared_vehicles.get(
-                        VehicleMode[alternative.vehicle.__class__.__name__]
-                    ).WALKING_DISTANCE
+                    < config.shared_vehicles.get(VehicleMode.Scooter).WALKING_DISTANCE
                 ):  # See Nothing..
                     filtered_list.append(
                         (
@@ -327,11 +321,9 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    isinstance(alternative.vehicle, SharedBike)
+                    alternative.vehicle.mode == VehicleMode.Bike
                     and distance_to_vehicle
-                    < config.shared_vehicles.get(
-                        VehicleMode[alternative.vehicle.__class__.__name__]
-                    ).WALKING_DISTANCE
+                    < config.shared_vehicles.get(VehicleMode.Bike).WALKING_DISTANCE
                 ):  # See Nothing..
                     filtered_list.append(
                         (
@@ -943,8 +935,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def _demand_aligns(self, vehicle: Bus):
         if (
-            self.transport_task.origin.get_hexagon_id()
-            == self.transport_task.destination.get_hexagon_id()
+            self.transport_task.origin.get_region_id()
+            == self.transport_task.destination.get_region_id()
         ):
             # we don't want to service demands that board and unboard at the same station, they can walk
             return False
@@ -986,9 +978,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             self.mount_vehicle(vehicle)
 
         # drive in vehicle until destination hexagon is reached, this might not happen at all
-        while self.transport_task.destination.get_hexagon_id(
+        while self.transport_task.destination.get_region_id(
             self._bus_res
-        ) != vehicle.position.get_hexagon_id(self._bus_res):
+        ) != vehicle.position.get_region_id(self._bus_res):
             yield vehicle._position_changed
 
         self.unmount_vehicle(vehicle)
@@ -1021,10 +1013,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             # drive in vehicle while
             # a) destination not reached
             # b) checkpoint not reached that is "beyond" the destination
-            at_dest = self.transport_task.destination.get_hexagon_id(
+            at_dest = self.transport_task.destination.get_region_id(
                 self._bus_res
-            ) == vehicle.position.get_hexagon_id(self._bus_res)
-            at_checkpoint = vehicle.state is PublicTransitVehicleState.AT_STOP
+            ) == vehicle.position.get_region_id(self._bus_res)
+            at_checkpoint = vehicle.state is VehicleState.AT_STOP
             unreachable_dest = False
 
             # if at_checkpoint:
@@ -1069,9 +1061,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def wait_for_transit(self, vehicle: Vehicle):
         # wait indefinitely for transit pick up
-        while self.position.get_hexagon_id(
+        while self.position.get_region_id(
             self._bus_res
-        ) != vehicle.position.get_hexagon_id(self._bus_res):
+        ) != vehicle.position.get_region_id(self._bus_res):
             yield vehicle._position_changed
 
         self._assigned_vehicle_arrived.succeed()

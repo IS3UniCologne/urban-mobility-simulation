@@ -3,12 +3,12 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
     ServiceTask,
 )
-from simulation.vehicle.vehicle import VehicleState
 
 
 class ChargingTask(ServiceTask):
@@ -66,7 +66,7 @@ class ChargingTask(ServiceTask):
 
             # Identify vehicles to relocate
             potential_vehicles_to_charge = (
-                self._vehicle_fleet.get_all_vehicles_below_soc_level_in_region(
+                self._vehicle_fleet.vehicles_below_soc_threshold_in_region(
                     self._state_of_charge_threshold, self._origin
                 )
             )
@@ -76,7 +76,7 @@ class ChargingTask(ServiceTask):
             for vehicle in potential_vehicles_to_charge:
                 # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
                 if (
-                    vehicle.__class__.__name__ == self._vehicle_mode
+                    vehicle.mode.name == self._vehicle_mode
                     and vehicle.state == VehicleState.PARKING
                     and len(selected_vehicles_to_charge)
                     < self._number_of_vehicles_to_charge
