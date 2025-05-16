@@ -1,16 +1,15 @@
 import logging
 
-import numpy as np
-from haversine import Unit, haversine_vector
 from simpy import Environment
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.environment.position import Position
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
-from simulation.vehicle.vehicle import VehicleState
+from simulation.vehicle.vehicle import Vehicle
 
 
 class MixedRideHailingFleet(VehicleFleet):
@@ -41,7 +40,7 @@ class MixedRideHailingFleet(VehicleFleet):
         ].RECHARGE_THRESHOLD
         self._env.process(self.fleet_size_monitor())
 
-    def add_vehicle(self, vehicle: RideHailingVehicle):
+    def _add_vehicle(self, vehicle: RideHailingVehicle):
         if vehicle not in self._vehicles:
             if isinstance(vehicle, RideHailingCar):
                 self._vehicles.append(vehicle)
@@ -54,89 +53,52 @@ class MixedRideHailingFleet(VehicleFleet):
         else:
             raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
 
-    def vehicles_in_region(self, region):
+    def get_available_vehicles_to_user(self, origin: Position):
         """
-        Return all vehicles which are located in a region
+        Find available vehicles that can serve a user at a given origin location.
 
-        Example
-        cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
+        This method identifies two types of available vehicles:
+        1. Parked vehicles within a distance threshold from the user's origin
+        2. Currently serving vehicles that will complete their service and be within the distance threshold
 
-        :param region: Hexagon ID
-        :return: Lists of vehicles in area
+        The availability considers the vehicle's state, whether it has been suggested to another user,
+        and for serving vehicles, the battery state of charge must exceed a threshold.
+
+        Parameters
+        ----------
+        origin : Position
+            The location where the user is requesting a vehicle
+
+        Returns
+        -------
+        list
+            A combined list of parked and serving vehicles that are available to the user
+            at the specified origin location
         """
-        cars_in_area = []
 
-        geo_env = GeodesicEnvironment.getInstance()
-        Configuration()
-        geometry = geo_env.get_hexagon(region)
-
-        for car in self._vehicles:
-            if car.position.is_in_geometry(geometry):
-                cars_in_area.append(car)
-
-        return cars_in_area
-
-    def get_available_vehicles(self, region):
-        """
-        Return all vehicles which are located in a region
-
-        Example
-        cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
-
-        :param region: Hexagon ID
-        :return: Lists of vehicles in area
-        """
-        cars_in_area = []
-
-        parking_cars = [
-            car for car in self._vehicles if car.state == VehicleState.PARKING
+        parking_cars: set[Vehicle] = self._vehicles_by_state[VehicleState.PARKING]
+        # TODO: we should not acceess _suggested directly
+        parking_cars_not_suggested: list[Vehicle] = [
+            car for car in parking_cars if not car._suggested
         ]
-        for car in parking_cars:
-            if car.position.get_hexagon_id() == region:
-                cars_in_area.append(car)
 
-        return cars_in_area
-
-    def get_available_vehicles_to_user(self, origin):
-        """
-        Return all vehicles which are located in a region
-
-        Example
-        cars, scooters, kick_scooters, bikes = fleet.get_all_vehicles('871f1d4acffffff')
-
-        :param region: Hexagon ID
-        :return: Lists of vehicles in area
-        """
-
-        # TODO: this can be made faster by using np.array and boolean indexing probably
-        parking_state = VehicleState.PARKING
-        parking_cars = [
-            car
-            for car in self._vehicles
-            if car.state == parking_state and not car._suggested
-        ]
-        parking_cars_in_area = (
-            np.array(parking_cars)[
-                haversine_vector(
-                    [(c.position._lat, c.position._lng) for c in parking_cars],
-                    [(origin._lat, origin._lng)],
-                    comb=True,
-                    unit=Unit.METERS,
-                )[0]
-                <= self._distance_threshold_to_user
+        if not parking_cars_not_suggested:
+            parking_cars_in_area = []
+        else:
+            parking_cars_in_area = [
+                car
+                for car in parking_cars_not_suggested
+                if (car.position << origin) <= self._distance_threshold_to_user
             ]
-            if parking_cars
-            else np.array([])
-        )
 
         serving_state = VehicleState.DRIVING
+        serving_vehicles = self._vehicles_by_state[serving_state]
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = self._recharging_threshold[hour]
         serving_cars = [
             car
-            for car in self._vehicles
-            if car.state == serving_state
-            and not car._suggested
+            for car in serving_vehicles
+            if car._suggested
             and car.current_relative_state_of_charge > state_of_charge_threshold + 5
         ]
 
@@ -146,24 +108,11 @@ class MixedRideHailingFleet(VehicleFleet):
                 car.estimated_completion_time - self._env.now
             ) * car.velocity
             if (
-                car.destination.position >> origin
+                car.destination.position << origin
             ) + distance_to_current_destination <= self._distance_threshold_to_user:
                 serving_cars_in_area.append(car)
 
-        return parking_cars_in_area.tolist() + serving_cars_in_area
-
-    def get_all_available_vehicles(self, region):
-        """
-        Return all vehicles (mixed) in a list from passed region
-        :param region: Spatial Region
-        :return: List of all vehicle
-        """
-
-        cars = self.get_available_vehicles(region)
-
-        all_vehicle_list = cars
-
-        return all_vehicle_list
+        return parking_cars_in_area + serving_cars_in_area
 
     def count_vehicles_below_soc_level(self, state_of_charge_threshold):
         """
@@ -214,7 +163,7 @@ class MixedRideHailingFleet(VehicleFleet):
         return self.count_cars()
 
     def calc_supply_per_region(self):
-        """
+        """TODO: We can probably get rid of this ? If we need it in the future we should implement it with cached values
         Return a list of number of vehicles in each region
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
@@ -234,7 +183,7 @@ class MixedRideHailingFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_hexagon_id()
+                hex_id = vehicle.position.get_region_id()
 
                 if hex_id not in supply:
                     supply[hex_id] = dict(zip(available_vehicles, values))
@@ -267,7 +216,7 @@ class MixedRideHailingFleet(VehicleFleet):
                 raise NotImplementedError(f"Fleet Not Ready to Work with {mode}")
 
             for vehicle in vehicle_list:
-                hex_id = vehicle.position.get_hexagon_id()
+                hex_id = vehicle.position.get_region_id()
 
                 if hex_id not in low_soc_supply:
                     low_soc_supply[hex_id] = dict(zip(available_vehicles, values))
@@ -294,12 +243,11 @@ class MixedRideHailingFleet(VehicleFleet):
         hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
 
-        vehicle_list = self._vehicles
+        parking_vehicles = self._vehicles_by_state[VehicleState.PARKING]
 
-        for vehicle in vehicle_list:
+        for vehicle in parking_vehicles:
             if (
                 vehicle.current_relative_state_of_charge < state_of_charge_threshold
-                and vehicle.state == VehicleState.PARKING
                 and not vehicle._suggested
             ):
                 low_soc_supply.append(vehicle)

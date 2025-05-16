@@ -6,6 +6,7 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
     TransportationAlternativeBrowser,
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 
@@ -14,7 +15,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
 
     def __init__(self, env):
         self._env = env
-        self._fleet = None
+        self._fleet: MixedSharedVehicleFleet = None
 
     def search_for_transportation_alternatives(
         self, vehicle_search_task: TransportationSearchTask
@@ -26,10 +27,10 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
         """
         browser = TransportationAlternativeBrowser()
 
-        hexagon_origin = vehicle_search_task.agent_position.get_hexagon_id()
+        hexagon_origin = vehicle_search_task.agent_position.get_region_id()
 
-        (cars_in_area, scooters_in_area, kick_scooters_in_area, bikes_in_area) = (
-            self._fleet.get_available_vehicles(hexagon_origin)
+        parking_vehicles_in_region = self._fleet.parking_vehicles_in_region(
+            hexagon_origin
         )
 
         origin = vehicle_search_task.transport_task.origin
@@ -43,66 +44,19 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
         distance = route.distance  # Euclidean Distance
 
         # Add all available cars to alternative browser
-        for car in cars_in_area:
+        for vehicle in parking_vehicles_in_region:
             # Calc Duration
-            duration = distance / car.velocity
+            duration = distance / vehicle.velocity
 
             # Calc Price
-            price = duration * car.price_per_minute
+            price = duration * vehicle.price_per_minute + vehicle.price_per_trip
 
             # Put together
             transportation_alternative = TransportationAlternative(
-                car, route, price, duration, distance, 3
+                vehicle, route, price, duration, distance, vehicle.convenience
             )
 
-            if car.has_enough_state_of_charge(distance):
+            if vehicle.has_enough_state_of_charge(distance):
                 browser.add_transportation_alternative(transportation_alternative)
-
-        # Add all available scooter to alternative browser
-        for scooter in scooters_in_area:
-            # Calc Duration
-            duration = distance / scooter.velocity
-
-            # Calc Price
-            price = duration * scooter.price_per_minute
-
-            # Put together
-            transportation_alternative = TransportationAlternative(
-                scooter, route, price, duration, distance, 2
-            )
-
-            if scooter.has_enough_state_of_charge(distance):
-                browser.add_transportation_alternative(transportation_alternative)
-
-        # Add all available kick scooter to alternative browser
-        for kick_scooter in kick_scooters_in_area:
-            # Calc Duration
-            duration = distance / kick_scooter.velocity
-
-            # Calc Price
-            price = duration * kick_scooter.price_per_minute + 1.0  # 1€ Unlock Fee
-
-            # Put together
-            transportation_alternative = TransportationAlternative(
-                kick_scooter, route, price, duration, distance, 1
-            )
-
-            if kick_scooter.has_enough_state_of_charge(distance):
-                browser.add_transportation_alternative(transportation_alternative)
-
-        # Add all available bikes to alternative browser
-        for bike in bikes_in_area:
-            # Calc Duration
-            duration = distance / bike.velocity
-
-            # Calc Price
-            price = duration * bike.price_per_minute
-
-            # Put together
-            transportation_alternative = TransportationAlternative(
-                bike, route, price, duration, distance, 1
-            )
-
-            browser.add_transportation_alternative(transportation_alternative)
 
         return browser

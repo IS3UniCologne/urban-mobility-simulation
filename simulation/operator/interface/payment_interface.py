@@ -61,6 +61,7 @@ class PaymentInterface(ABC):
         self._total_missed_revenue += missed_revenue
         self._total_missed_trips += 1
 
+    # TODO: I think this can go ?
     def get_transactions(self):
         """
         Return all transactions (fulfilled and missed) as a DataFrame

@@ -1,15 +1,9 @@
-import sys
-
 import numpy as np
 import pytest
 
-sys.argv = [
-    sys.argv[0],
-    "resources/configurations/config_template.toml",
-]  # Add a path to a test config file
-
-from simulation.helper.configuration.configuration import Configuration  # noqa: E402 we have to set sys argv before importing Configuration
-from simulation.helper.random.random_manager import RandomManager  # noqa: E402
+# we have to set sys argv before importing Configuration
+from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.random.random_manager import RandomManager
 
 
 # Test component seed generation
@@ -54,14 +48,14 @@ def test_rng_reproducibility():
     """Test that RNGs with the same seed produce the same sequence of numbers."""
     # Set a specific seed
     random_manager = RandomManager()
-    Configuration().random_manager.SEED = 42
-    random_manager.reset_rng()
+    object.__setattr__(Configuration().random_manager, "SEED", 42)
+    random_manager.reset_all_rng()
 
     # Generate some random numbers
     numbers1 = [random_manager.uniform() for _ in range(10)]
 
     # Reset the seed and generate again
-    random_manager.reset_rng()
+    random_manager.reset_all_rng()
     numbers2 = [random_manager.uniform() for _ in range(10)]
 
     # Should get exactly the same sequence
@@ -71,8 +65,8 @@ def test_rng_reproducibility():
 def test_component_rng_reproducibility():
     """Test that component RNGs with the same seed produce the same sequence."""
     random_manager = RandomManager()
-    Configuration().random_manager.SEED = 42
-    random_manager.reset_rng()
+    object.__setattr__(Configuration().random_manager, "SEED", 42)
+    random_manager.reset_all_rng()
 
     component = "test_component"
 
@@ -80,7 +74,7 @@ def test_component_rng_reproducibility():
     numbers1 = [random_manager.uniform(component=component) for _ in range(10)]
 
     # Reset and try again
-    random_manager.reset_rng()
+    random_manager.reset_all_rng()
     numbers2 = [random_manager.uniform(component=component) for _ in range(10)]
 
     # Should get exactly the same sequence
@@ -90,8 +84,8 @@ def test_component_rng_reproducibility():
 def test_different_components_different_sequences():
     """Test that different components get different random sequences."""
     random_manager = RandomManager()
-    Configuration().random_manager.SEED = 42
-    random_manager.reset_rng()
+    object.__setattr__(Configuration().random_manager, "SEED", 42)
+    random_manager.reset_all_rng()
 
     # Generate numbers from two different components
     component1 = "component_1"
@@ -108,8 +102,8 @@ def test_different_components_different_sequences():
 def test_component_independence():
     """Test that component RNGs are independent of each other."""
     random_manager = RandomManager()
-    Configuration().random_manager.SEED = 42
-    random_manager.reset_rng()
+    object.__setattr__(Configuration().random_manager, "SEED", 42)
+    random_manager.reset_all_rng()
 
     component1 = "component_1"
     component2 = "component_2"
@@ -124,7 +118,7 @@ def test_component_independence():
     numbers1_after = [random_manager.uniform(component=component1) for _ in range(5)]
 
     # Reset and generate just from component1
-    random_manager.reset_rng()
+    random_manager.reset_all_rng()
     expected_numbers = [random_manager.uniform(component=component1) for _ in range(10)]
 
     # The component1 sequence should be unaffected by component2 usage
@@ -134,25 +128,25 @@ def test_component_independence():
 def test_seed_zero():
     """Setting the seed to zero should lead to a random seed being generated."""
     random_manager = RandomManager()
-    Configuration().random_manager.SEED = 0
-    random_manager.reset_rng()
+    object.__setattr__(Configuration().random_manager, "SEED", 0)
+    random_manager.reset_all_rng()
 
     # Should not be zero
-    main_seeed1 = random_manager._main_seed
-    assert main_seeed1 != 0
+    main_seed1 = random_manager._main_seed
+    assert main_seed1 != 0
 
     # Resetting the seed should give a different random seed
-    random_manager.reset_rng()
-    main_seeed2 = random_manager._main_seed
-    assert main_seeed2 != 0
-    assert main_seeed1 != main_seeed2
+    random_manager.reset_all_rng()
+    main_seed2 = random_manager._main_seed
+    assert main_seed2 != 0
+    assert main_seed1 != main_seed2
 
 
 def test_uniform():
     """Test that the uniform method returns values between 0 and 1."""
     random_manager = RandomManager()
-    Configuration().random_manager.SEED = 42
-    random_manager.reset_rng()
+    object.__setattr__(Configuration().random_manager, "SEED", 42)
+    random_manager.reset_all_rng()
 
     # Generate some random numbers
     numbers = [random_manager.uniform() for _ in range(1000)]
@@ -161,15 +155,15 @@ def test_uniform():
     assert all(0 <= x <= 1 for x in numbers)
 
     # Check that the seed is used
-    random_manager.reset_rng()
+    random_manager.reset_all_rng()
     numbers2 = [random_manager.uniform() for _ in range(1000)]
     assert np.allclose(numbers, numbers2), (
         "The same seed should produce the same sequence of random numbers"
     )
 
     # What about different seeds?
-    Configuration().random_manager.SEED = 43
-    random_manager.reset_rng()
+    object.__setattr__(Configuration().random_manager, "SEED", 43)
+    random_manager.reset_all_rng()
     numbers3 = [random_manager.uniform() for _ in range(1000)]
     assert not np.allclose(numbers, numbers3), (
         "Different seeds should produce different sequences of random numbers"
@@ -179,8 +173,8 @@ def test_uniform():
 def test_component_seed_zero() -> None:
     """Setting the component seed to zero should lead to different results on each reset."""
     random_manager = RandomManager()
-    Configuration().random_manager.SEED = 0
-    random_manager.reset_rng()
+    object.__setattr__(Configuration().random_manager, "SEED", 0)
+    random_manager.reset_all_rng()
 
     component = "TESTCOMPONENT"
     Configuration().random_manager.COMPONENT_SEEDS[component] = 0

@@ -24,7 +24,10 @@ class TrackingInterface(ABC):
         else:
             logging.debug(
                 f"Tracking tried to request an unexposed or private attribute ({attribute}) from this object",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
+                extra={
+                    "clazz": self.__class__.__name__,
+                    "oid": getattr(self, "_id", "unknown"),
+                },
             )
             raise PermissionError
 

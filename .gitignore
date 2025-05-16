@@ -170,3 +170,8 @@ dmypy.json
 
 # profiling
 *.austin
+profile.json
+profile.html
+
+# pytest
+pytest.ini

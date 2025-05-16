@@ -12,8 +12,8 @@ from learning.spaces.action_space import BadAction, ForbiddenAction
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.time import SimulationTimeConverter
-from simulation.vehicle.public_transit_vehicle import PublicTransitVehicleState
 from simulation.world.world import World
 from tracking.tracking import Tracking
 
@@ -212,9 +212,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
     def _check_terminal(self):
         self.reached_destination = (
-            True
-            if self.bus.state is PublicTransitVehicleState.AT_TERMINAL_DESTINATION
-            else False
+            True if self.bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
         )
         self._reached_timelimit = (
             True if self.env.now - self.bus._spawned > self._timelimits[-1] else False
@@ -324,7 +322,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         self.bus._dist_traveled += distance  # add to overall travel distance
         duration = distance / self.bus._velocity  # in minutes
 
-        self._state = PublicTransitVehicleState.EN_ROUTE_DETOUR
+        self._state = VehicleState.EN_ROUTE_DETOUR
 
         yield self.env.timeout(duration)
 
@@ -336,7 +334,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # region_id, _ = new_position.get_hexagon(self._action_res)
 
         if new_hex == self.bus.route.destination.get_hexagon_id(self._action_res):
-            self.bus._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
+            self.bus._state = VehicleState.AT_TERMINAL_DESTINATION
             logging.info(
                 f"Bus has arrived at its terminal destination at time {self.bus._time.now_as_str()}",
                 extra={"clazz": self.__class__.__name__, "oid": f"Bus {self.bus._id}"},
@@ -347,7 +345,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         if new_hex == self.bus.route.route_stop_by_id(
             self._next_checkpoint
         ).get_hexagon_id(self._action_res):
-            self.bus._state = PublicTransitVehicleState.AT_STOP
+            self.bus._state = VehicleState.AT_STOP
             logging.info(
                 f"Bus has arrived at the next checkpoint at time {self.bus._time.now_as_str()}",
                 extra={"clazz": self.__class__.__name__, "oid": f"Bus {self.bus._id}"},

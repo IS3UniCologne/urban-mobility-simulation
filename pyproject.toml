@@ -47,10 +47,10 @@ python-preference = "only-managed"
 
 [dependency-groups]
 dev = [
-    "austin>=2016.0.1",
     "pytest>=8.3.5",
     "pytest-coverage>=0.0",
     "ruff>=0.11.0",
+    "scalene>=1.5.51",
 ]
 [tool.ruff.lint]
 # defaults: ["E4", "E7", "E9", "F"]
