@@ -1,4 +1,5 @@
 import ast
+import os
 import sys
 from dataclasses import dataclass, fields
 from functools import wraps
@@ -45,14 +46,14 @@ To add a new configuration parameter to an existing configuration class, follow 
     the @beartype_after_post_init decorator if you do this.
 
 To add a new configuration class, follow these steps:
-1. Create a new table int the config file, e.g. [NEW_TABLE]. 
+1. Create a new table int the config file, e.g. [NEW_TABLE].
 2. Create a new dataclass in this file, e.g. class NewTableConfig. Please keep the order of dataclasses the same as in the config file.
 3. Add the dataclass to the Configuration class as a property.
-Example: 
+Example:
 @property
     def new_table(self) -> NewTableConfig:
         return self._get_lazy_object("new_table", NewTableConfig)
-        
+
 For an exmaple of how to implement Lists, look at the Operator configs.
 For an example of how to implement nested dictionaries, look at the Vehicle configs.
 """
@@ -607,7 +608,14 @@ class DQNConfig:
 class Configuration(metaclass=Singleton):
     # There is only one instance of this class.
     def __init__(self) -> None:
-        config_file = sys.argv[1]
+        if (
+            len(sys.argv) >= 2
+            and sys.argv[1].endswith(".toml")
+            and os.path.isfile(sys.argv[1])
+        ):
+            config_file = sys.argv[1]
+        else:
+            config_file = "resources/configurations/config_template.toml"
         with open(config_file, "rb") as f:
             self._config_data = tomllib.load(f)  # type: ignore
         self._lazy_objects = {}  # lazy loaded objects are stored here
