@@ -5,7 +5,7 @@
 
 from libc.math cimport cos, sqrt
 
-def cy_euclidean_distance(double lat1, double lng1, double lat2, double lng2) -> double:
+cdef double cy_euclidean_distance(double lat1, double lng1, double lat2, double lng2):
     """
     Calculate the Euclidean distance between two lat/lng points.
 
