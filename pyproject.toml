@@ -36,7 +36,7 @@ ml = [
 ]
 
 [build-system]
-requires = ["setuptools>=61.0", "cython"]
+requires = ["setuptools", "cython"]
 build-backend = "setuptools.build_meta"
 
 
