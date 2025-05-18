@@ -3,7 +3,7 @@ from haversine import Unit, haversine
 from shapely.geometry import Point
 
 try:
-    from simulation.environment import cy_euclidean_distance
+    from simulation.environment.cython_ext.cy_geodesic import cy_euclidean_distance
 except ImportError:
     raise ImportError(
         "Required cython dependency not found.\n"
