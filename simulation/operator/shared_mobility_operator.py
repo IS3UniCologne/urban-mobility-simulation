@@ -2,6 +2,7 @@ import logging
 
 from simpy import Environment
 
+from simulation.agent.user import User
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.configuration.enums import VehicleMode
 from simulation.infrastructure.charging_stations.charging_infastructure import (
@@ -45,7 +46,9 @@ class SharedMobilityOperator(Operator):
             env=self._env, number_service_workers=number_service_workers
         )
 
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask):
+    def withdraw_transportation_task(
+        self, user: User, transportation_task: TransportTask
+    ):
         vehicle_types = [
             mode.name
             for mode in Configuration().shared_vehicle_global.AVAILABLE_VEHICLE_MODES
@@ -80,6 +83,7 @@ class SharedMobilityOperator(Operator):
             transportation_task=transportation_task,
             transportation_alternative=None,
             state="Missed",
+            trip_record=None,
         )
 
         logging.info(

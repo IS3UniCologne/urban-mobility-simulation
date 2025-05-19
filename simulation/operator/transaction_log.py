@@ -41,7 +41,7 @@ class Transaction(NamedTuple):
     wait_time : float | None, optional
         Waiting time before the trip started (if available).
     waiting_time : float | None, optional
-        Not sure why we have two of these? (if available).TODO: Figure out why we have two of these
+        Not sure why we have two of these? (if available).TODO: Straighten this out #50
     pick_up_time : float | None, optional
         Time spent picking up the passenger (if available).
     energy_consumption : float | None, optional

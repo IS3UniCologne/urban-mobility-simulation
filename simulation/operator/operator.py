@@ -11,6 +11,7 @@ from simulation.operator.data_transfer_object.transportation_alternative import 
 from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
     TransportationAlternativeRideHailing,
 )
+from simulation.operator.data_transfer_object.trip_record import TripRecord
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
@@ -132,7 +133,9 @@ class Operator:
         | TransportationAlternativeRideHailing
         | None,
         state: str | None,
+        trip_record: None | TripRecord = None,
     ) -> None:
+        # TODO:Check if wait times are correct once user refactoring is done
         if state is None:
             state = "Unknown"
         if transportation_alternative is None:
@@ -187,7 +190,9 @@ class Operator:
                 selected_vehicle_mode=transportation_alternative.vehicle.mode.name,
                 state=state,
                 wait_time=transportation_task.actual_wait_time,
-                energy_consumption=transportation_alternative.energy_consumed,
+                energy_consumption=trip_record.energy_consumed
+                if trip_record is not None
+                else 0.0,
                 viable_vehicle_modes=transportation_task.viable_vehicle_modes,
             )
         self._transaction_log.add_transaction(transaction)
@@ -202,7 +207,10 @@ class Operator:
         self.increase_total_revenue(payment)
 
         self.log_transaction(
-            transportation_task, selected_transportation_alternative, state="Fulfilled"
+            transportation_task=transportation_task,
+            transportation_alternative=selected_transportation_alternative,
+            state="Fulfilled",
+            trip_record=user.trip_record,
         )
 
         logging.info(
