@@ -80,6 +80,7 @@ class TransactionLog:
 
     def __init__(self) -> None:
         self._transactions: list[Transaction] = []
+        self._df_cache: pd.DataFrame | None = None
 
     def add_transaction(self, transaction: Transaction) -> None:
         """
@@ -91,6 +92,7 @@ class TransactionLog:
             A Transaction object containing transaction details.
         """
         self._transactions.append(transaction)
+        self._df_cache = None  # Invalidate cache
 
     def get_transactions(self) -> list[Transaction]:
         """
@@ -105,11 +107,22 @@ class TransactionLog:
 
     def to_dataframe(self) -> pd.DataFrame:
         """
-        Convert the transaction log to a pandas DataFrame.
+        Convert the transaction log to a pandas DataFrame, with caching.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame containing all transactions.
+            DataFrame containing all transactions, with viable_vehicle_modes expanded.
         """
-        return pd.DataFrame([t._asdict() for t in self._transactions])
+        if self._df_cache is not None:
+            return self._df_cache
+        df = pd.DataFrame([t._asdict() for t in self._transactions])
+        # Expand viable_vehicle_modes dict into columns
+        if not df.empty and "viable_vehicle_modes" in df.columns:
+            modes_df = pd.json_normalize(df["viable_vehicle_modes"])
+            df = pd.concat(
+                [df.drop(columns=["viable_vehicle_modes"]), modes_df], axis=1
+            )
+        self._df_cache = df
+        self._cache_size = len(self._transactions)
+        return df
