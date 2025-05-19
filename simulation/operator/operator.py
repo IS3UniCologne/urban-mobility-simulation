@@ -1,6 +1,5 @@
 import logging
 
-import pandas as pd
 from simpy import Environment
 
 from simulation.infrastructure.charging_stations.charging_infastructure import (
@@ -123,8 +122,8 @@ class Operator:
 
         :return: DataFrame
         """
-        # TODO: Implement this
-        return pd.DataFrame()
+
+        return self._transaction_log.to_dataframe()
 
     def log_transaction(
         self,

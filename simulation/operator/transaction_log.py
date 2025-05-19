@@ -7,6 +7,8 @@ within the simulation environment.
 
 from typing import NamedTuple
 
+import pandas as pd
+
 
 class Transaction(NamedTuple):
     """
@@ -100,3 +102,14 @@ class TransactionLog:
             List of all Transaction objects.
         """
         return self._transactions
+
+    def to_dataframe(self) -> pd.DataFrame:
+        """
+        Convert the transaction log to a pandas DataFrame.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing all transactions.
+        """
+        return pd.DataFrame([t._asdict() for t in self._transactions])
