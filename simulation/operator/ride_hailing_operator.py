@@ -61,27 +61,10 @@ class RideHailingOperator(Operator):
             self.increase_total_revenue(payment)
 
         # Add Transaction to Log
-        self._transactions.append(
-            {
-                "vehicle_id": selected_transportation_alternative.vehicle.id,
-                "origin": selected_transportation_alternative.route.origin.get_region_id(),
-                "destination": selected_transportation_alternative.route.destination.get_region_id(),
-                "time_start": transportation_task.time,
-                "time_end": self._env.now,
-                "price": selected_transportation_alternative.price,
-                "distance": selected_transportation_alternative.distance,
-                "duration": selected_transportation_alternative.duration,
-                "wait_time": transportation_task.actual_wait_time,
-                "energy_consumption": selected_transportation_alternative.energy_consumed,
-                "waiting_time": selected_transportation_alternative.waiting_time,
-                "pick_up_time": selected_transportation_alternative.pick_up_time,
-                "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__
-                + "_"
-                + str(selected_transportation_alternative.vehicle.is_electric),
-                "selected_vehicle_EV": selected_transportation_alternative.vehicle.is_electric,
-                "state": "Fulfilled",
-                **transportation_task.viable_vehicle_modes,
-            }
+        self.log_transaction(
+            transportation_task=transportation_task,
+            transportation_alternative=selected_transportation_alternative,
+            state="Fulfilled",
         )
 
         logging.info(
@@ -90,7 +73,7 @@ class RideHailingOperator(Operator):
         )
 
     def withdraw_transportation_task(
-        self, user, transportation_task: TransportTask, state=None
+        self, user, transportation_task: TransportTask, state: str | None = None
     ):
         # distance = transportation_task.origin >> transportation_task.destination
         # TODO: define price of the trip
@@ -98,24 +81,10 @@ class RideHailingOperator(Operator):
         self.increase_total_missed_trips(1)
 
         # Add Transaction to Log
-        self._transactions.append(
-            {
-                "origin": transportation_task.origin.get_region_id(),
-                "destination": transportation_task.destination.get_region_id(),
-                "time_start": self._env.now,
-                "time_end": self._env.now,
-                "price": 0.0,
-                "distance": transportation_task.origin
-                >> transportation_task.destination,
-                "duration": 0.0,
-                "energy_consumption": 0.0,
-                "waiting_time": user._waiting_time,
-                "pick_up_time": 0.0,
-                "selected_vehicle_mode": "None",
-                "selected_vehicle_EV": "None",
-                "state": state,
-                **transportation_task.viable_vehicle_modes,
-            }
+        self.log_transaction(
+            transportation_task=transportation_task,
+            transportation_alternative=None,
+            state=state,
         )
 
         logging.info(

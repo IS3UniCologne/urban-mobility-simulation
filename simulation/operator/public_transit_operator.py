@@ -67,51 +67,23 @@ class PublicTransitOperator(Operator):
 
         # Add Transaction to Log
         # Check that all variables do really exist for the bus
-        self._transactions.append(
-            {
-                "origin": selected_transportation_alternative.route.origin.get_region_id(),
-                "destination": selected_transportation_alternative.route.destination.get_region_id(),
-                "time_start": transportation_task.time,
-                "time_end": self._env.now,
-                "price": selected_transportation_alternative.price,
-                "distance": selected_transportation_alternative.distance,
-                "duration": selected_transportation_alternative.duration,
-                "selected_vehicle_mode": selected_transportation_alternative.vehicle.mode.name,
-                "state": "Fulfilled",
-                **transportation_task.viable_vehicle_modes,
-            }
+        self.log_transaction(
+            transportation_task, selected_transportation_alternative, "Fulfilled"
         )
+
         logging.info(
             f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
     def withdraw_transportation_task(
-        self, user, transportation_task: TransportTask, state=None
+        self, user, transportation_task: TransportTask, state="Widthdrawn"
     ):
         self.increase_total_missed_trips(0)
 
         self.increase_total_missed_trips(1)
 
-        self._transactions.append(
-            {
-                # Check if all variables are really needed for the bus
-                "origin": transportation_task.origin.get_region_id(),
-                "destination": transportation_task.destination.get_region_id(),
-                "time_start": self._env.now,
-                "time_end": self._env.now,
-                "price": 0.0,
-                "distance": transportation_task.origin
-                >> transportation_task.destination,
-                "duration": 0.0,
-                "waiting_time": user._waiting_time,
-                "pick_up_time": 0.0,
-                "selected_vehicle_mode": "None",
-                "selected_vehicle_EV": "None",
-                "state": state,
-                **transportation_task.viable_vehicle_modes,
-            }
-        )
+        self.log_transaction(transportation_task, None, state=state)
 
         logging.debug(
             f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
