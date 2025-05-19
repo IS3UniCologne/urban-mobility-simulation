@@ -9,11 +9,15 @@ from simulation.infrastructure.charging_stations.charging_infastructure import (
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
+from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
+    TransportationAlternativeRideHailing,
+)
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
 from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.transaction_log import Transaction, TransactionLog
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transport_task import TransportTask
 
@@ -33,7 +37,7 @@ class Operator:
         "_total_fulfilled_trips",
         "_total_missed_trips",
         "_total_missed_revenue",
-        "_transactions",
+        "_transaction_log",
     )
 
     def __init__(
@@ -61,7 +65,7 @@ class Operator:
         self._total_missed_trips = 0
         self._total_missed_revenue = 0
 
-        self._transactions = []
+        self._transaction_log: TransactionLog = TransactionLog()
 
         self._operations.register_operator_reference(self)
 
@@ -119,7 +123,75 @@ class Operator:
 
         :return: DataFrame
         """
-        return pd.DataFrame(self._transactions)
+        # TODO: Implement this
+        return pd.DataFrame()
+
+    def log_transaction(
+        self,
+        transportation_task: TransportTask,
+        transportation_alternative: TransportationAlternative
+        | TransportationAlternativeRideHailing
+        | None,
+        state: str | None,
+    ) -> None:
+        if state is None:
+            state = "Unknown"
+        if transportation_alternative is None:
+            transaction: Transaction = Transaction(
+                vehicle_id=None,
+                origin=transportation_task.origin.get_region_id(),
+                destination=transportation_task.destination.get_region_id(),
+                time_start=transportation_task.time,
+                time_end=self._env.now,
+                price=0.0,
+                distance=transportation_task.origin >> transportation_task.destination,
+                duration=0.0,
+                selected_vehicle_mode="None",
+                state=state,
+                wait_time=transportation_task.actual_wait_time,
+                energy_consumption=0.0,
+                viable_vehicle_modes=transportation_task.viable_vehicle_modes,
+            )
+        elif isinstance(
+            transportation_alternative, TransportationAlternativeRideHailing
+        ):
+            transaction: Transaction = Transaction(
+                vehicle_id=transportation_alternative.vehicle.id,
+                origin=transportation_alternative.route.origin.get_region_id(),
+                destination=transportation_alternative.route.destination.get_region_id(),
+                time_start=transportation_task.time,
+                time_end=self._env.now,
+                price=transportation_alternative.price,
+                distance=transportation_alternative.distance,
+                duration=transportation_alternative.duration,
+                selected_vehicle_mode=transportation_alternative.vehicle.__class__.__name__
+                + "_"
+                + str(transportation_alternative.vehicle.is_electric),
+                state=state,
+                wait_time=transportation_task.actual_wait_time,
+                viable_vehicle_modes=transportation_task.viable_vehicle_modes,
+                energy_consumption=transportation_alternative.energy_consumed,
+                waiting_time=transportation_alternative.waiting_time,
+                pick_up_time=transportation_alternative.pick_up_time,
+                selected_vehicle_EV=transportation_alternative.vehicle.is_electric,
+            )
+        else:
+            transaction: Transaction = Transaction(
+                vehicle_id=transportation_alternative.vehicle.id,
+                origin=transportation_alternative.route.origin.get_region_id(),
+                destination=transportation_alternative.route.destination.get_region_id(),
+                time_start=transportation_task.time,
+                time_end=self._env.now,
+                price=transportation_alternative.price,
+                distance=transportation_alternative.distance,
+                duration=transportation_alternative.duration,
+                selected_vehicle_mode=transportation_alternative.vehicle.mode.name,
+                state=state,
+                wait_time=transportation_task.actual_wait_time,
+                energy_consumption=transportation_alternative.energy_consumed,
+                viable_vehicle_modes=transportation_task.viable_vehicle_modes,
+            )
+        self._transaction_log.add_transaction(transaction)
 
     def pay_for_fulfilled_transportation_task(
         self,
@@ -130,23 +202,8 @@ class Operator:
         payment = selected_transportation_alternative.price
         self.increase_total_revenue(payment)
 
-        # Add Transaction to Log
-        self._transactions.append(
-            {
-                "vehicle_id": selected_transportation_alternative.vehicle.id,
-                "origin": selected_transportation_alternative.route.origin.get_region_id(),
-                "destination": selected_transportation_alternative.route.destination.get_region_id(),
-                "time_start": transportation_task.time,
-                "time_end": self._env.now,
-                "price": selected_transportation_alternative.price,
-                "distance": selected_transportation_alternative.distance,
-                "duration": selected_transportation_alternative.duration,
-                "wait_time": transportation_task.actual_wait_time,
-                "energy_consumption": selected_transportation_alternative.energy_consumed,
-                "selected_vehicle_mode": selected_transportation_alternative.vehicle.mode.name,
-                "state": "Fulfilled",
-                **transportation_task.viable_vehicle_modes,
-            }
+        self.log_transaction(
+            transportation_task, selected_transportation_alternative, state="Fulfilled"
         )
 
         logging.info(
@@ -158,23 +215,7 @@ class Operator:
         self.increase_total_missed_trips(0)
 
         # Add Transaction to Log
-        self._transactions.append(
-            {
-                "vehicle_id": None,
-                "origin": transportation_task.origin.get_region_id(),
-                "destination": transportation_task.destination.get_region_id(),
-                "time_start": self._env.now,
-                "time_end": self._env.now,
-                "price": 0.0,
-                "distance": transportation_task.origin
-                >> transportation_task.destination,
-                "duration": 0.0,
-                "energy_consumption": 0.0,
-                "selected_vehicle_mode": "None",
-                "state": "Missed",
-                **transportation_task.viable_vehicle_modes,
-            }
-        )
+        self.log_transaction(transportation_task, None, state="Missed")
 
         logging.debug(
             f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
