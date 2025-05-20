@@ -329,11 +329,11 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows (from PaymentEngine)
         :return: Dict of potential relocations {"SharedCar": [(origin, destination, no, distance)], ..}
         """
-        state = self.calculate_residual_supply(
+        fleet_state = self.calculate_residual_supply(
             self._operator_reference.fleet, self.operator.demand_tracker
         )
 
-        relocation_plans = self.identify_potential_relocations(state)
+        relocation_plans = self.identify_potential_relocations(fleet_state)
 
         return relocation_plans
 
@@ -1077,31 +1077,32 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         df_low_soc.rename(columns={"index": "hex_id"}, inplace=True)
 
         # Get Expected Demand (Delta) per Hexagon
-        expected_demand = self.estimate_delta_demand(demand_tracker)
+        expected_demand = self.aggregate_delta_demand(demand_tracker)
 
         # Merge Demand, Supply and Low SoC Vehicles
-        state = expected_demand.merge(supply_df, how="outer", on="hex_id")
-        state = state.merge(
+        fleet_state = expected_demand.merge(supply_df, how="outer", on="hex_id")
+        fleet_state = fleet_state.merge(
             df_low_soc, how="outer", on="hex_id", suffixes=("", "_Low_SoC")
         )
-        state.fillna(0, inplace=True)
+        fleet_state.fillna(0, inplace=True)
 
         # Calculate Residual Supply for each vehicle type
         for vehicle in self._available_vehicle_modes:
+            # TODO: Make this dependent on vehicle drive, not mode
             if vehicle == "SharedBike":
-                state[f"Residual_Supply_{vehicle}"] = (
-                    state[vehicle] + state[f"Delta_{vehicle}"]
+                fleet_state[f"Residual_Supply_{vehicle}"] = (
+                    fleet_state[vehicle] + fleet_state[f"Delta_{vehicle}"]
                 )
             else:
-                state[f"Residual_Supply_{vehicle}"] = (
-                    state[vehicle]
-                    - state[f"{vehicle}_Low_SoC"]
-                    + state[f"Delta_{vehicle}"]
+                fleet_state[f"Residual_Supply_{vehicle}"] = (
+                    fleet_state[vehicle]
+                    - fleet_state[f"{vehicle}_Low_SoC"]
+                    + fleet_state[f"Delta_{vehicle}"]
                 )
 
-        return state
+        return fleet_state
 
-    def estimate_delta_demand(self, demand_tracker: DemandTracker) -> pd.DataFrame:
+    def aggregate_delta_demand(self, demand_tracker: DemandTracker) -> pd.DataFrame:
         """
         Compute the expected demand in a hexagon using the demand tracker.
 
@@ -1118,7 +1119,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         demand_data = demand_tracker.get_demand_data()
         hexagons = demand_data["hexagons"]
         vehicle_data = demand_data["vehicle_data"]
-        ordered_available_vehicle = demand_tracker.ordered_available_vehicle
+        ordered_available_vehicle = demand_tracker.ordered_available_vehicles
 
         rows = []
         for hex_id in hexagons:

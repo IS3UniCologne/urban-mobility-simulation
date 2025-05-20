@@ -223,7 +223,7 @@ class DemandTracker(TransactionListener):
                 lambda: {"outflow_fulfilled": 0, "outflow_missed": 0, "inflow": 0}
             )
         )
-        self.ordered_available_vehicle = ordered_available_vehicles
+        self.ordered_available_vehicles = ordered_available_vehicles
 
     def on_transaction(self, transaction: Transaction) -> None:
         """
@@ -245,7 +245,7 @@ class DemandTracker(TransactionListener):
         preferred_vehicle: str | None = next(
             (
                 vehicle
-                for vehicle in self.ordered_available_vehicle
+                for vehicle in self.ordered_available_vehicles
                 if viable_vehicle_modes.get(vehicle, 0) == 1
             ),
             None,
