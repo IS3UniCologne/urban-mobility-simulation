@@ -105,7 +105,17 @@ class Operator:
         self._total_missed_revenue += missed_revenue
         self._total_missed_trips += 1
 
-    def get_transactions(self):
+    @property
+    def transaction_log(self):
+        """
+        Return the transaction log of the operator
+
+        :return: TransactionLog
+        """
+        return self._transaction_log
+
+    @property
+    def transaction_df(self):
         """
         Return all transactions (fulfilled and missed) as a DataFrame
 

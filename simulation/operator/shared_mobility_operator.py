@@ -12,27 +12,30 @@ from simulation.operator.interface.search_engine_interface import SearchEngineIn
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
-from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.operations_management.integrated_shared_mobility_operations import (
+    IntegratedSharedMobilityOperations,
+)
 from simulation.operator.operator import Operator
 from simulation.operator.service_workforce import ServiceWorkforce
+from simulation.operator.transaction_log import DemandTracker
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transport_task import TransportTask
 
 
 class SharedMobilityOperator(Operator):
-    __slots__ = ("_number_service_workers", "_workforce")
+    __slots__ = ("_number_service_workers", "_workforce", "_demand_tracker")
 
     def __init__(
         self,
         env: Environment,
         fleet: VehicleFleet,
         charging_infrastructure: ChargingInfrastructure,
-        operations: OperationsInterface,
+        operations: IntegratedSharedMobilityOperations,
         search_engine: SearchEngineInterface,
         allocation_engine: VehicleAllocationEngineInterface,
         number_service_workers: int,
     ):
-        super(SharedMobilityOperator, self).__init__(
+        super().__init__(
             env,
             fleet,
             charging_infrastructure,
@@ -40,11 +43,28 @@ class SharedMobilityOperator(Operator):
             search_engine,
             allocation_engine,
         )
+        # Register demand tracker to transaction log
+        self._demand_tracker: DemandTracker = DemandTracker(
+            operations._available_vehicle_modes
+        )
+        self._transaction_log.add_listener(self._demand_tracker)
 
         # Shared Mobility specific: Service Workforce
         self._workforce = ServiceWorkforce(
             env=self._env, number_service_workers=number_service_workers
         )
+
+    @property
+    def demand_tracker(self) -> DemandTracker:
+        """
+        Demand tracker for the operator.
+
+        Returns
+        -------
+        DemandTracker
+            The demand tracker instance.
+        """
+        return self._demand_tracker
 
     def withdraw_transportation_task(
         self, user: User, transportation_task: TransportTask

@@ -317,7 +317,7 @@ def run_simulation(end_time, env=env):
 
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
-    transactions = operator.get_transactions()
+    transactions = operator.transaction_df
     transactions_dir = os.path.normpath(os.path.join("data", "output"))
     transactions.to_csv(os.path.join(transactions_dir, "transactions.csv"), index=False)
 
