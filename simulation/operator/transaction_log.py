@@ -5,6 +5,7 @@ This module provides functionality to record and query transactions
 within the simulation environment.
 """
 
+from collections import defaultdict
 from typing import NamedTuple
 
 import pandas as pd
@@ -68,6 +69,29 @@ class Transaction(NamedTuple):
     selected_vehicle_EV: str | bool | None = None
 
 
+class TransactionListener:
+    """
+    Base class for transaction listeners.
+
+    Subclass this and override on_transaction to listen for new transactions.
+
+    Methods
+    -------
+    on_transaction(transaction: Transaction) -> None
+        Called when a new transaction is added.
+    """
+
+    def on_transaction(self, transaction: Transaction) -> None:
+        """
+        Listen for a new transaction.
+
+        Parameters
+        ----------
+        transaction : Transaction
+            The transaction that was added.
+        """
+
+
 class TransactionLog:
     """
     Manages transaction logs for the simulation.
@@ -78,9 +102,11 @@ class TransactionLog:
         A list of Transaction objects representing transactions.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, listeners: list[TransactionListener] | None = None) -> None:
         self._transactions: list[Transaction] = []
         self._df_cache: pd.DataFrame | None = None
+        self._listeners: list[TransactionListener] = listeners or []
+        self._has_successful_transaction: bool = False
 
     def add_transaction(self, transaction: Transaction) -> None:
         """
@@ -93,8 +119,22 @@ class TransactionLog:
         """
         self._transactions.append(transaction)
         self._df_cache = None  # Invalidate cache
+        for listener in self._listeners:
+            listener.on_transaction(transaction)
 
-    def get_transactions(self) -> list[Transaction]:
+    def add_listener(self, listener: TransactionListener) -> None:
+        """
+        Add a listener to be notified of new transactions.
+
+        Parameters
+        ----------
+        listener : TransactionListener
+            The listener to add.
+        """
+        self._listeners.append(listener)
+
+    @property
+    def transactions(self) -> list[Transaction]:
         """
         Retrieve all transactions from the log.
 
@@ -104,6 +144,35 @@ class TransactionLog:
             List of all Transaction objects.
         """
         return self._transactions
+
+    @property
+    def transaction_count(self) -> int:
+        """
+        Get the number of transactions in the log.
+
+        Returns
+        -------
+        int
+            Number of transactions.
+        """
+        return len(self._transactions)
+
+    @property
+    def has_successful_transaction(self) -> bool:
+        """
+        Indicates if at least one successful transaction has occurred.
+
+        Returns
+        -------
+        bool
+            True if at least one transaction with state 'Fulfilled' has been added, otherwise False.
+        """
+        if not self._has_successful_transaction:
+            for transaction in self._transactions:
+                if transaction.state == "Fulfilled":
+                    self._has_successful_transaction = True
+                    break
+        return self._has_successful_transaction
 
     def to_dataframe(self) -> pd.DataFrame:
         """
@@ -126,3 +195,80 @@ class TransactionLog:
         self._df_cache = df
         self._cache_size = len(self._transactions)
         return df
+
+
+class DemandTracker(TransactionListener):
+    """
+    Tracks demand statistics for each region and vehicle type.
+
+    Parameters
+    ----------
+    ordered_available_vehicles : list[str]
+        List of vehicle modes in order of preference.
+
+    Attributes
+    ----------
+    hexagons : set[str]
+        Set of all hexagon IDs seen so far.
+    vehicle_data : dict[str, dict[str, dict[str, int]]]
+        Nested dictionary: hex_id -> vehicle_type -> flow_type -> count.
+    ordered_available_vehicles : list[str]
+        Vehicle mode preference order.
+    """
+
+    def __init__(self, ordered_available_vehicles: list[str]) -> None:
+        self.hexagons: set[str] = set()
+        self.vehicle_data: dict[str, dict[str, dict[str, int]]] = defaultdict(
+            lambda: defaultdict(
+                lambda: {"outflow_fulfilled": 0, "outflow_missed": 0, "inflow": 0}
+            )
+        )
+        self.ordered_available_vehicle = ordered_available_vehicles
+
+    def on_transaction(self, transaction: Transaction) -> None:
+        """
+        Update demand statistics for a transaction.
+
+        Parameters
+        ----------
+        transaction : Transaction
+            The transaction that was added.
+        """
+        origin: str = transaction.origin
+        destination: str = transaction.destination
+        state: str = transaction.state
+        viable_vehicle_modes: dict[str, int] = transaction.viable_vehicle_modes
+
+        self.hexagons.add(origin)
+        self.hexagons.add(destination)
+
+        preferred_vehicle: str | None = next(
+            (
+                vehicle
+                for vehicle in self.ordered_available_vehicle
+                if viable_vehicle_modes.get(vehicle, 0) == 1
+            ),
+            None,
+        )
+        if preferred_vehicle is None:
+            return
+
+        origin_stats = self.vehicle_data[origin][preferred_vehicle]
+        destination_stats = self.vehicle_data[destination][preferred_vehicle]
+
+        if state == "Fulfilled":
+            origin_stats["outflow_fulfilled"] += 1
+            destination_stats["inflow"] += 1
+        elif state == "Missed":
+            origin_stats["outflow_missed"] += 1
+
+    def get_demand_data(self) -> dict:
+        """
+        Get the current demand data.
+
+        Returns
+        -------
+        dict
+            Nested dictionary with demand statistics.
+        """
+        return {"hexagons": self.hexagons, "vehicle_data": self.vehicle_data}
