@@ -5,6 +5,7 @@ Implements the TransactionLog class for recording and querying transactions.
 """
 
 import pandas as pd
+
 from .transaction import Transaction
 from .transaction_listener import TransactionListener
 
