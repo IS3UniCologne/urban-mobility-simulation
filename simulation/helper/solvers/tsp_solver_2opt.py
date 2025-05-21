@@ -94,11 +94,11 @@ def calculate_tour_length(
     :param dist_lookup: Dictionary mapping node pairs to distances
     :return: Total tour length
     """
-    length = 0
-    n = len(tour)
+    length: float = 0.0
+    n: int = len(tour)
 
     for i in range(n):
         j = (i + 1) % n  # Next node (wraps around)
-        length += dist_lookup.get((tour[i], tour[j]), 0)
+        length += dist_lookup.get((tour[i], tour[j]), 0.0)
 
     return length

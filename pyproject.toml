@@ -18,6 +18,29 @@ dependencies    = [
     "statsmodels>=0.14.4",
     "tqdm>=4.67.1",
 ]
+[dependency-groups]
+dev = [
+    "ruff>=0.11.0",
+    { include-group = "typing" },
+    { include-group = "performance" },
+    { include-group = "testing" },
+]
+
+performance =[
+    "py-spy>=0.3.11",
+    "pyperf>=2.9.0",
+    "scalene>=1.5.51",
+]
+
+testing= [
+    "pytest>=8.3.5",
+    "pytest-coverage>=0.0",
+]
+
+typing = [
+    "mypy>=1.15.0",
+    "pandas-stubs>=2.2.2.240807",
+]
 
 [project.optional-dependencies]
 notebooks = [
@@ -45,16 +68,123 @@ max-complexity = 18
 [tool.uv]
 python-preference = "only-managed"
 
-[dependency-groups]
-dev = [
-    "pyperf>=2.9.0",
-    "pytest>=8.3.5",
-    "pytest-coverage>=0.0",
-    "ruff>=0.11.0",
-    "scalene>=1.5.51",
-]
 [tool.ruff.lint]
 # defaults: ["E4", "E7", "E9", "F"]
 select = ["E4", "E7", "E9", "F", "PLC0205"]
 # Skip unused variable rules (`F841`).
 ignore = ["E721"]
+
+
+[tool.mypy]
+check_untyped_defs = true
+enable_error_code = [ "redundant-expr", "truthy-bool"]
+files = [
+  "simulation/",
+]
+exclude = [
+]
+warn_unreachable = true
+warn_unused_configs = true
+
+# Since we are incrementally adding type hints, we want to ignore errors in
+# untyped modules. Remove modules from this list as they are typed.
+[[tool.mypy.overrides]]
+ignore_errors = true
+module = [
+  "simulation.world",
+  "simulation.operator",
+  "simulation.agent.action_space",
+  "simulation.agent.agent",
+  "simulation.agent.deep_q_learning",
+  "simulation.agent.episodic_semi_gradient_n_step_sarsa",
+  "simulation.agent.episodic_semi_gradient_sarsa",
+  "simulation.agent.policy",
+  "simulation.agent.rl_agent",
+  "simulation.agent.user",
+  "simulation.environment.environment",
+  "simulation.environment.geodesic_environment",
+  "simulation.environment.geodesic_position",
+  "simulation.environment.position",
+  "simulation.helper.configuration.configuration",
+  "simulation.helper.logging.extra_default_filter",
+  "simulation.helper.logging.simulation_context_filter",
+  "simulation.helper.random.random_manager",
+  "simulation.helper.singleton",
+  "simulation.helper.time",
+  "simulation.infrastructure.charging_stations.charging_infastructure",
+  "simulation.infrastructure.charging_stations.charging_station",
+  "simulation.infrastructure.charging_stations.virtual_charging_infrastructure",
+  "simulation.infrastructure.charging_stations.virtual_charging_station",
+  "simulation.infrastructure.helper.distance_matrix_importer",
+  "simulation.infrastructure.helper.timetable",
+  "simulation.infrastructure.network.edge",
+  "simulation.infrastructure.route",
+  "simulation.infrastructure.transit_network.route_segment",
+  "simulation.infrastructure.transit_network.stop",
+  "simulation.metrics.metrics_factory",
+  "simulation.metrics.modules.customer_metrics",
+  "simulation.metrics.modules.general_metrics",
+  "simulation.metrics.modules.service_provider_metrics",
+  "simulation.metrics.modules.society_metrics",
+  "simulation.operator.data_transfer_object.transportation_alternative_browser",
+  "simulation.operator.data_transfer_object.transportation_alternative_ridehailing",
+  "simulation.operator.data_transfer_object.vehicle_allocation",
+  "simulation.operator.fleet_factory",
+  "simulation.operator.interface.payment_interface",
+  "simulation.operator.interface.search_engine_interface",
+  "simulation.operator.interface.vehicle_allocation_engine_interface",
+  "simulation.operator.mixed_ride_hailing_fleet",
+  "simulation.operator.mixed_shared_vehicle_fleet",
+  "simulation.operator.operations_management.algorithms.charging_station_allocation",
+  "simulation.operator.operations_management.algorithms.distance_based_bidding_strategy",
+  "simulation.operator.operations_management.integrated_shared_mobility_operations",
+  "simulation.operator.operations_management.operations_public_transport",
+  "simulation.operator.operations_management.operations",
+  "simulation.operator.operations_management.ridehailing_base_charging_operations",
+  "simulation.operator.operations_management.ridehailing_MP_charging_operations",
+  "simulation.operator.operations_management.ridehailing_shared_charging_operations",
+  "simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations",
+  "simulation.operator.operations_management.service_tasks.charging_task_ridehailing",
+  "simulation.operator.operations_management.service_tasks.charging_task",
+  "simulation.operator.operations_management.service_tasks.multi_service_task",
+  "simulation.operator.operations_management.service_tasks.relocation_task",
+  "simulation.operator.operations_management.service_tasks.service_task",
+  "simulation.operator.operations_management.task_queue",
+  "simulation.operator.operator",
+  "simulation.operator.public_transit_operator",
+  "simulation.operator.public_transport_allocation_engine",
+  "simulation.operator.public_transport_search_engine",
+  "simulation.operator.public_transport_vehicle_fleet",
+  "simulation.operator.ride_hailing_allocation_engine",
+  "simulation.operator.ride_hailing_operator",
+  "simulation.operator.ride_hailing_search_engine",
+  "simulation.operator.service_worker",
+  "simulation.operator.service_workforce",
+  "simulation.operator.shared_mobility_operator",
+  "simulation.operator.shared_vehicle_allocation_engine",
+  "simulation.operator.shared_vehicle_search_engine",
+  "simulation.operator.walking_search_engine",
+  "simulation.tasks.transport_task",
+  "simulation.tasks.transportation_search_task",
+  "tracking.tracking",
+  "simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior",
+  "simulation.vehicle_choice_model.only_car_vehicle_choice_behavior",
+  "simulation.vehicle_choice_model.only_walking_choice_behavior",
+  "simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior",
+  "simulation.vehicle_choice_model.trip_characteristics",
+  "simulation.vehicle.interfaces.driver_interface",
+  "simulation.vehicle.interfaces.passenger_interface",
+  "simulation.vehicle.public_transit_bus",
+  "simulation.vehicle.public_transit_vehicle",
+  "simulation.vehicle.ride_hailing_AV",
+  "simulation.vehicle.ride_hailing_car",
+  "simulation.vehicle.ride_hailing_vehicle",
+  "simulation.vehicle.shared_vehicle",
+  "simulation.vehicle.walking",
+  "simulation.world.demand.demand_factory",
+  "simulation.world.demand.demand_importer",
+  "simulation.world.markets.auction",
+  "simulation.world.markets.interfaces.bidder_interface",
+  "simulation.world.markets.shared_charging_auction",
+  "simulation.world.world"
+]
