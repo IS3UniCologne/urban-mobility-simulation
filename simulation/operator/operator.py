@@ -17,7 +17,7 @@ from simulation.operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
 from simulation.operator.operations_management.operations import OperationsInterface
-from simulation.operator.transaction_log import Transaction, TransactionLog
+from simulation.operator.transactions import Transaction, TransactionLog
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transport_task import TransportTask
 
@@ -145,6 +145,20 @@ class Operator:
         state: str | None,
         trip_record: None | TripRecord = None,
     ) -> None:
+        """
+        Log a transaction in the transaction log.
+
+        Parameters
+        ----------
+        transportation_task : TransportTask
+            The transportation task that was fulfilled or missed.
+        transportation_alternative : TransportationAlternative | TransportationAlternativeRideHailing | None
+            The transportation alternative that was selected for the task.
+        state : str | None
+            The state of the transaction (e.g., "Fulfilled", "Missed").
+        trip_record : None | TripRecord
+            The trip record associated with the transaction. (If available)
+        """
         # TODO:Check if wait times are correct once user refactoring is done
         if state is None:
             state = "Unknown"
