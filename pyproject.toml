@@ -76,15 +76,30 @@ ignore = ["E721"]
 
 
 [tool.mypy]
-check_untyped_defs = true
-enable_error_code = [ "redundant-expr", "truthy-bool"]
+# Enable type checking for all simulation modules
 files = [
   "simulation/",
 ]
-exclude = [
-]
+exclude = []
+
+# General type checking options
+check_untyped_defs = true
 warn_unreachable = true
 warn_unused_configs = true
+
+# Strictness and error reporting
+warn_redundant_casts = true
+warn_return_any = true
+no_implicit_optional = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_any_generics = true
+
+# Enable specific error codes
+enable_error_code = [
+    "redundant-expr",
+    "truthy-bool"
+]
 
 # Since we are incrementally adding type hints, we want to ignore errors in
 # untyped modules. Remove modules from this list as they are typed.
@@ -126,6 +141,7 @@ module = [
   "simulation.metrics.modules.general_metrics",
   "simulation.metrics.modules.service_provider_metrics",
   "simulation.metrics.modules.society_metrics",
+  "simulation.operator.data_transfer_object.transportation_alternative",
   "simulation.operator.data_transfer_object.transportation_alternative_browser",
   "simulation.operator.data_transfer_object.transportation_alternative_ridehailing",
   "simulation.operator.data_transfer_object.vehicle_allocation",
@@ -167,6 +183,7 @@ module = [
   "simulation.tasks.transport_task",
   "simulation.tasks.transportation_search_task",
   "tracking.tracking",
+  "tracking.tracking_interface",
   "simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior",
   "simulation.vehicle_choice_model.only_car_vehicle_choice_behavior",
   "simulation.vehicle_choice_model.only_walking_choice_behavior",
