@@ -213,6 +213,29 @@ class Vehicle(TrackingInterface, ABC):
         """
         return self.__position
 
+    @position.setter
+    def position(self, position: Position) -> None:
+        self._distance_travelled += self.__position >> position
+
+        new_region = position.get_region_id()
+
+        # did we change region?
+        if new_region != self._current_region:
+            self._fleet.update_vehicle_region(self, new_region)
+            self._current_region = new_region
+
+        self.__position = position
+
+        self._position_changed.succeed(self.__position)
+        self._position_changed = self._env.event()
+
+        logging.debug(
+            "Position updated %s. Total distance travelled: %s.",
+            self.__position,
+            self._distance_travelled,
+            extra=self._logging_extra,
+        )
+
     @property
     def current_task(self):
         """Get the current task of the vehicle.
@@ -245,29 +268,6 @@ class Vehicle(TrackingInterface, ABC):
             The identifier of the current region of the vehicle. (e.g., hexagon ID).
         """
         return self._current_region
-
-    @position.setter
-    def position(self, position: Position) -> None:
-        self._distance_travelled += self.__position >> position
-
-        new_region = position.get_region_id()
-
-        # did we change region?
-        if new_region != self._current_region:
-            self._fleet.update_vehicle_region(self, new_region)
-            self._current_region = new_region
-
-        self.__position = position
-
-        self._position_changed.succeed(self.__position)
-        self._position_changed = self._env.event()
-
-        logging.debug(
-            "Position updated %s. Total distance travelled: %s.",
-            self.__position,
-            self._distance_travelled,
-            extra=self._logging_extra,
-        )
 
     # Standard mount/unmount passenger logic
     def mount_passenger(self, passenger: PassengerInterface) -> None:

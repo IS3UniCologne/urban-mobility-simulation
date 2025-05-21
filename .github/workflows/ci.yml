@@ -55,3 +55,24 @@ jobs:
             tail -n 20 "$logfile"
             echo ""
           done
+
+  mypy:
+    runs-on: self-hosted
+    name: Mypy static type checking
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v4
+
+    - name: Install the latest version of uv
+      uses:  astral-sh/setup-uv@v6
+      with:
+        version: "latest"
+
+    - name: Install Nox
+      run: |
+        uv tool install nox
+
+    - name: Run mypy
+      run: |
+        nox -rs mypy
