@@ -17,7 +17,7 @@ from simulation.operator.operations_management.service_tasks.multi_service_task 
 from simulation.operator.operations_management.service_tasks.relocation_task import (
     RelocationTask,
 )
-from simulation.operator.transaction_log import DemandTracker
+from simulation.operator.transactions import DemandTracker
 
 
 class IntegratedSharedMobilityOperations(OperationsInterface):
@@ -1104,17 +1104,36 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
     def aggregate_delta_demand(self, demand_tracker: DemandTracker) -> pd.DataFrame:
         """
-        Compute the expected demand in a hexagon using the demand tracker.
+        Compute net vehicle flow (sometimes called excess demand) for each hexagon and vehicle type.
+
+        For each region (hexagon) and vehicle mode, this function calculates the net vehicle flow as the
+        difference between the number of vehicles arriving (inflow) and the number of vehicles departing
+        (outflow), where outflow is split into fulfilled and missed requests. The result is a DataFrame
+        with one row per hexagon and columns for inflow, fulfilled outflow, missed outflow, and net vehicle
+        flow for each vehicle type.
 
         Parameters
         ----------
         demand_tracker : DemandTracker
-            The demand tracker containing incremental demand statistics.
+            Demand tracker containing cumulative demand statistics for each hexagon and vehicle type.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with delta demand for each hexagon and vehicle type.
+            DataFrame with one row per hexagon and the following columns for each vehicle type:
+            - 'Inflow_<vehicle>': int
+                Number of vehicles arriving at the hexagon.
+            - 'OutFlow_Fulfilled_<vehicle>': int
+                Number of fulfilled departures from the hexagon.
+            - 'OutFlow_Missed_<vehicle>': int
+                Number of missed departures from the hexagon.
+            - 'Delta_<vehicle>': int
+                Net vehicle flow: inflow - outflow_fulfilled - outflow_missed.
+
+        Notes
+        -----
+        - A negative delta indicates excess demand (more departures or missed requests than arrivals).
+        - A positive delta indicates a vehicle surplus (more arrivals than departures).
         """
         demand_data = demand_tracker.get_demand_data()
         hexagons = demand_data["hexagons"]

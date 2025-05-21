@@ -17,7 +17,7 @@ from simulation.operator.operations_management.integrated_shared_mobility_operat
 )
 from simulation.operator.operator import Operator
 from simulation.operator.service_workforce import ServiceWorkforce
-from simulation.operator.transaction_log import DemandTracker
+from simulation.operator.transactions import DemandTracker
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transport_task import TransportTask
 
