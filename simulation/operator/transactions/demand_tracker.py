@@ -5,8 +5,9 @@ Implements the DemandTracker class for tracking demand statistics.
 """
 
 from collections import defaultdict
-from .transaction_listener import TransactionListener
+
 from .transaction import Transaction
+from .transaction_listener import TransactionListener
 
 
 class DemandTracker(TransactionListener):

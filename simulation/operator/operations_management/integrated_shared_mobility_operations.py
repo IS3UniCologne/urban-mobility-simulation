@@ -1104,13 +1104,13 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
     def aggregate_delta_demand(self, demand_tracker: DemandTracker) -> pd.DataFrame:
         """
-        Compute net vehicle flow (sometimes called excess demand) for each hexagon and vehicle type.
+        Compute net vehicle flow (vehicle surplus or excess demand) for each hexagon and vehicle type.
 
         For each region (hexagon) and vehicle mode, this function calculates the net vehicle flow as the
-        difference between the number of vehicles arriving (inflow) and the number of vehicles departing
-        (outflow), where outflow is split into fulfilled and missed requests. The result is a DataFrame
-        with one row per hexagon and columns for inflow, fulfilled outflow, missed outflow, and net vehicle
-        flow for each vehicle type.
+        difference between the number of vehicles arriving (inflow) and the total outflow, where outflow
+        is the sum of fulfilled departures and missed demand (unfulfilled requests). The result is a
+        DataFrame with one row per hexagon and columns for inflow, fulfilled outflow, missed outflow,
+        and net vehicle flow for each vehicle type.
 
         Parameters
         ----------
@@ -1126,12 +1126,13 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             - 'OutFlow_Fulfilled_<vehicle>': int
                 Number of fulfilled departures from the hexagon.
             - 'OutFlow_Missed_<vehicle>': int
-                Number of missed departures from the hexagon.
+                Number of missed departures (unfulfilled requests) from the hexagon.
             - 'Delta_<vehicle>': int
                 Net vehicle flow: inflow - outflow_fulfilled - outflow_missed.
 
         Notes
         -----
+        - Outflow is the sum of fulfilled departures and missed demand (unfulfilled requests).
         - A negative delta indicates excess demand (more departures or missed requests than arrivals).
         - A positive delta indicates a vehicle surplus (more arrivals than departures).
         """
