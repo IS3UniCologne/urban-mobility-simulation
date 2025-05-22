@@ -1,3 +1,5 @@
+"""Noxfile for managing tests and other tasks."""
+
 import nox
 
 nox.options.default_venv_backend = "uv"
