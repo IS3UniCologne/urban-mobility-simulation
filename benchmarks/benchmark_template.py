@@ -31,7 +31,7 @@ if project_root not in sys.path:
 
 def bench_example() -> None:
     """
-    Example benchmark function.
+    Benchmark an example operation.
 
     Replace this with your actual benchmark logic.
 
