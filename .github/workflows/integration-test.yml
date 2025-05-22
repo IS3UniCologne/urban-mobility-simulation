@@ -33,6 +33,14 @@ jobs:
       - name: Set up Environment
         run: uv sync --no-dev
 
+      - name: Clean build artifacts
+        run: |
+          python -m pip uninstall -y urban-mobility-simulation || true
+          rm -rf build/ dist/ *.egg-info simulation/environment/cython_ext/*.so
+
+      - name: Install dependencies and build extensions
+        run: uv pip install -e .
+
       - name: Run Integration Test
         id: integration_test
         run: |
