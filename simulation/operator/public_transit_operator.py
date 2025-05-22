@@ -69,14 +69,14 @@ class PublicTransitOperator(Operator):
         # Check that all variables do really exist for the bus
         self._transactions.append(
             {
-                "origin": selected_transportation_alternative.route.origin.get_hexagon_id(),
-                "destination": selected_transportation_alternative.route.destination.get_hexagon_id(),
+                "origin": selected_transportation_alternative.route.origin.get_region_id(),
+                "destination": selected_transportation_alternative.route.destination.get_region_id(),
                 "time_start": transportation_task.time,
                 "time_end": self._env.now,
                 "price": selected_transportation_alternative.price,
                 "distance": selected_transportation_alternative.distance,
                 "duration": selected_transportation_alternative.duration,
-                "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__,
+                "selected_vehicle_mode": selected_transportation_alternative.vehicle.mode.name,
                 "state": "Fulfilled",
                 **transportation_task.viable_vehicle_modes,
             }
@@ -96,8 +96,8 @@ class PublicTransitOperator(Operator):
         self._transactions.append(
             {
                 # Check if all variables are really needed for the bus
-                "origin": transportation_task.origin.get_hexagon_id(),
-                "destination": transportation_task.destination.get_hexagon_id(),
+                "origin": transportation_task.origin.get_region_id(),
+                "destination": transportation_task.destination.get_region_id(),
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,

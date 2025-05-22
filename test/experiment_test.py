@@ -6,6 +6,10 @@ import sys
 
 import pytest
 
+# pytestmark = pytest.mark.skip(
+#     reason="This runs all experiments, which is slow and not needed for every test."
+# )
+
 
 def run_template_script(script_path, config_file):
     # make sure they run in the base directory of the repo

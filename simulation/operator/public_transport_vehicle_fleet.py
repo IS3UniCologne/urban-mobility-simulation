@@ -37,12 +37,6 @@ class PublicTransportVehicleFleet(VehicleFleet):
 
         self._tracking = Tracking.instance()
 
-    def get_available_vehicles(self, region):
-        pass
-
-    def vehicles_in_region(self, region: str):
-        pass
-
     # Add the bus
     def spawn_bus(self, route: PublicTransitRoute):
         init_position = GeodesicPosition(*route.origin.getExactLocation())
@@ -52,6 +46,7 @@ class PublicTransportVehicleFleet(VehicleFleet):
             env=self._env,
             route=route,
             position=init_position,
+            fleet=self,
             use_learning_agent=False,
             velocity=self._bus_velocity,
         )
@@ -73,10 +68,10 @@ class PublicTransportVehicleFleet(VehicleFleet):
         # Check this again, what happens when the trip time is over but there are still passengers in the bus?
         # TODO: unmount all remaining passengers - is there a need for this?
         logging.debug(
-            f"There are still {str(len(bus._seats))} passengers onboard the bus",
+            f"There are still {str(len(bus._passengers))} passengers onboard the bus",
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
-        self._unserved_passengers = len(bus._seats)
+        self._unserved_passengers = len(bus._passengers)
 
     # Return current busses
     def get_busses(self):

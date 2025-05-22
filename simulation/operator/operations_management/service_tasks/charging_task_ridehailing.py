@@ -6,6 +6,7 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
@@ -16,7 +17,7 @@ from simulation.operator.operations_management.service_tasks.service_task import
     ServiceTask,
     TaskState,
 )
-from simulation.vehicle.vehicle import Vehicle, VehicleState
+from simulation.vehicle.vehicle import Vehicle
 
 
 # TODO: refactor to not be a copy of ChargingTask that was used for SharedVehicles
@@ -252,7 +253,7 @@ class ChargingTaskRidehailing(ServiceTask):
                     )
             else:
                 # TODO: this usage of "charge" for possibly ICE vehicles is confusing
-                self._vehicle._state = VehicleState.PRE_SERVICE
+                self._vehicle.state = VehicleState.PRE_SERVICE
                 self._vehicle.plug_to_charging_station()
                 yield self._env.process(self._vehicle.charge(charging_time=5))
             # Unplug Vehicle from Charging Station

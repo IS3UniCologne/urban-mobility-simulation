@@ -21,12 +21,7 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
         self._substitution_boundary = substitution_boundary
 
         # derived order through: sm.MNLogit(Y, X)._ynames_map
-        self._class_mapping = {
-            0: "SharedBike",
-            1: "SharedCar",
-            2: "SharedKickScooter",
-            3: "SharedScooter",
-        }
+        self._class_mapping = {0: "Bike", 1: "Car", 2: "KickScooter", 3: "Scooter"}
 
         self._available_vehicles = available_vehicles
 

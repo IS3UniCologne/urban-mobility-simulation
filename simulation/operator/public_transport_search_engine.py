@@ -188,9 +188,9 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         """
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon as origin and destination
-            origin_poly = self._geo_env.get_hexagon(origin.get_hexagon_id())
+            origin_poly = self._geo_env.get_hexagon(origin.get_region_id())
 
-            destination_poly = self._geo_env.get_hexagon(destination.get_hexagon_id())
+            destination_poly = self._geo_env.get_hexagon(destination.get_region_id())
             in_vicinity = [
                 {
                     "origin": x.is_in_geometry(origin_poly),
