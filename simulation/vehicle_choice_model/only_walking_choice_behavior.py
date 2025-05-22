@@ -1,7 +1,7 @@
+from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
     VehicleChoiceBehaviorInterface,
 )
-from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 
 
 class OnlyWalkingChoiceBehavior(VehicleChoiceBehaviorInterface):

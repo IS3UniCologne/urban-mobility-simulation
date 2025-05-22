@@ -27,7 +27,7 @@ from beartype.door import die_if_unbearable
 
 # remove color from beartype exceptions to avoid unreadable debug output,
 # might want to move this to the templates to apply it to all beartype exceptions
-BeartypeConf.is_color = False
+BeartypeConf.is_color = False  # type: ignore
 
 
 """
@@ -65,19 +65,32 @@ def beartype_after_post_init(cls: T) -> T:
     """Decorator to that delays the beartype check until after the __post_init__ method is called."""
     original_post_init = getattr(cls, "__post_init__", None)
 
-    @wraps(original_post_init)
-    def new_post_init(self: Any) -> None:  # noqa: ANN401
-        if original_post_init:
-            original_post_init(self)
-        for field in fields(self):
-            value = getattr(self, field.name)
-            die_if_unbearable(
-                obj=value,
-                hint=field.type,
-                exception_prefix=f"Field '{field.name}' in {self.__class__.__name__} is not of type {field.type}: ",
-            )
+    if original_post_init:
 
-    setattr(cls, "__post_init__", new_post_init)
+        @wraps(original_post_init)
+        def wrapped_post_init(self: Any) -> None:  # noqa: ANN401
+            original_post_init(self)
+            for field in fields(self):
+                value = getattr(self, field.name)
+                die_if_unbearable(
+                    obj=value,
+                    hint=field.type,
+                    exception_prefix=f"Field '{field.name}' in {self.__class__.__name__} is not of type {field.type}: ",
+                )
+
+        setattr(cls, "__post_init__", wrapped_post_init)
+    else:
+        # If no original post_init, create a function without @wraps
+        def default_post_init(self: Any) -> None:  # noqa: ANN401
+            for field in fields(self):
+                value = getattr(self, field.name)
+                die_if_unbearable(
+                    obj=value,
+                    hint=field.type,
+                    exception_prefix=f"Field '{field.name}' in {self.__class__.__name__} is not of type {field.type}: ",
+                )
+
+        setattr(cls, "__post_init__", default_post_init)
     return cls
 
 
@@ -232,7 +245,7 @@ class ModeChoiceModelConfig:
 
     def __post_init__(self) -> None:
         # convert from str to enum
-        self.MODE_CHOICE_STRATEGY = ModeChoiceStrategy[self.MODE_CHOICE_STRATEGY]
+        self.MODE_CHOICE_STRATEGY = ModeChoiceStrategy[str(self.MODE_CHOICE_STRATEGY)]
 
     def generate_mode_choice_coefficients(
         self, population_type: PopulationType
@@ -340,7 +353,7 @@ class SharedVehicleOperatorConfig:
 
         # Convert strings in VEHICLES to enum
         self.N_VEHICLES = {
-            VehicleMode[mode]: count for mode, count in self.N_VEHICLES.items()
+            VehicleMode[str(mode)]: count for mode, count in self.N_VEHICLES.items()
         }
 
     @property
@@ -447,23 +460,10 @@ class SharedVehicleGlobalConfig:
 
     @property
     def AVAILABLE_VEHICLE_MODES(self) -> list[VehicleMode]:
-        return list(self.VEHICLES.keys())
-
-
-@beartype
-@dataclass
-class TransitGlobalConfig:
-    @property
-    def AVAILABLE_VEHICLE_MODES(self) -> list[str]:
-        # TODO: Use enum for this
-        available_modes = []
-        if self.N_BUSES_TOTAL > 0:
-            available_modes.append("Bus")
-        return available_modes
-
-    @property
-    def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
-        return [self.N_BUSES_TOTAL]
+        if not self.VEHICLES:
+            return []
+        else:
+            return list(self.VEHICLES.keys())
 
 
 @beartype
@@ -530,8 +530,8 @@ class DQNConfig:
     GAMMA: float
 
     def __post_init__(self) -> None:
-        # evaluate DQN_LAYERS string to tuple
-        self.DQN_LAYERS = ast.literal_eval(self.DQN_LAYERS)
+        if isinstance(self.DQN_LAYERS, str):
+            self.DQN_LAYERS = ast.literal_eval(self.DQN_LAYERS)
 
 
 class Configuration(metaclass=Singleton):
@@ -539,7 +539,7 @@ class Configuration(metaclass=Singleton):
     def __init__(self) -> None:
         config_file = sys.argv[1]
         with open(config_file, "rb") as f:
-            self._config_data = tomllib.load(f)
+            self._config_data = tomllib.load(f)  # type: ignore
         self._lazy_objects = {}  # lazy loaded objects are stored here
 
     @staticmethod
