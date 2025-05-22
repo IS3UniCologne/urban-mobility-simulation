@@ -1,64 +1,72 @@
 [project]
-name            = "urban-mobility-simulation"
-version         = "0.1.0"
-description     = "Urban Mobility Simulation"
-readme          = "README.md"
+name = "urban-mobility-simulation"
+version = "0.1.0"
+description = "Urban Mobility Simulation"
+readme = "README.md"
 requires-python = ">=3.9.2, <3.13.0"
-dependencies    = [
-    "beartype>=0.20.0",
-    "geopandas>=1.0.1",
-    "h3>=3.7.1, <4",
-    "haversine>=2.9.0",
-    "matplotlib>=3.9.4",
-    "pip>=25.0.1",
-    "pqdm>=0.2.0",
-    "pyarrow>=19.0.1",
-    "shapely>=2.0.7",
-    "simpy>=4.1.1",
-    "statsmodels>=0.14.4",
-    "tqdm>=4.67.1",
+dependencies = [
+  "beartype>=0.20.0",
+  "cython>=3.1.0",
+  "geopandas>=1.0.1",
+  "h3>=3.7.1, <4",
+  "haversine>=2.9.0",
+  "matplotlib>=3.9.4",
+  "pip>=25.0.1",
+  "pqdm>=0.2.0",
+  "pyarrow>=19.0.1",
+  "shapely>=2.0.7",
+  "simpy>=4.1.1",
+  "statsmodels>=0.14.4",
+  "tqdm>=4.67.1",
 ]
 [dependency-groups]
 dev = [
-    "ruff>=0.11.0",
-    { include-group = "typing" },
-    { include-group = "performance" },
-    { include-group = "testing" },
+  "ruff>=0.11.0",
+  { include-group = "typing" },
+  { include-group = "performance" },
+  { include-group = "testing" },
 ]
 
-performance =[
-    "py-spy>=0.3.11",
-    "pyperf>=2.9.0",
-    "scalene>=1.5.51",
-]
+performance = ["py-spy>=0.3.11", "pyperf>=2.9.0", "scalene>=1.5.51"]
 
-testing= [
-    "pytest>=8.3.5",
-    "pytest-coverage>=0.0",
-]
+testing = ["pytest>=8.3.5", "pytest-coverage>=0.0"]
 
-typing = [
-    "mypy>=1.15.0",
-    "pandas-stubs>=2.2.2.240807",
-]
+typing = ["mypy>=1.15.0", "pandas-stubs>=2.2.2.240807"]
 
 [project.optional-dependencies]
 notebooks = [
-    "contextily>=1.6.2",
-    "ipython>=8.18.1",
-    "notebook>=7.3.2",
-    "seaborn>=0.13.2",
-    "sidetable>=0.9.1",
+  "contextily>=1.6.2",
+  "ipython>=8.18.1",
+  "notebook>=7.3.2",
+  "seaborn>=0.13.2",
+  "sidetable>=0.9.1",
 ]
-ml = [
-    "torch>=2.6.0",
-    "docplex>=2.29.241",
-    "cplex>=22.1.2.0",
+ml = ["torch>=2.6.0", "docplex>=2.29.241", "cplex>=22.1.2.0"]
+
+[build-system]
+requires = ["setuptools", "cython"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools]
+packages = [
+  "simulation",
+  "simulation.environment",
+  "simulation.environment.cython_ext",
 ]
 
+ext-modules = [
+  { name = "simulation.environment.cython_ext.cy_geodesic", sources = [
+    "simulation/environment/cython_ext/cy_geodesic.pyx",
+  ], extra-compile-args = [
+    "-O3",
+  ] },
+]
+
+
 [tool.ruff]
-fix            = true
-output-format  = "grouped"
+fix = true
+output-format = "grouped"
 extend-exclude = ["*.ipynb"]
 [tool.ruff.format]
 skip-magic-trailing-comma = true
@@ -70,16 +78,55 @@ python-preference = "only-managed"
 
 [tool.ruff.lint]
 # defaults: ["E4", "E7", "E9", "F"]
-select = ["E4", "E7", "E9", "F", "PLC0205"]
+select = ["E4", "E7", "E9", "F", "PLC0205", "D"]
 # Skip unused variable rules (`F841`).
 ignore = ["E721"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+# These directories do not follow the same style as the rest of the codebase.
+"test/*" = ["D"]
+"visualization/*" = ["D"]
+"resources/*" = ["D"]
+"planning/*" = ["D"]
+"learning/*" = ["D"]
+#TODO: These should be gradually removed once properly annotated.
+"simulation/agent/*" = ["D"]
+"simulation/environment/*" = ["D"]
+"simulation/helper/*" = ["D"]
+"simulation/infrastructure/*" = ["D"]
+"simulation/metrics/*" = ["D"]
+"simulation/operator/*" = ["D"]
+"simulation/tasks/*" = ["D"]
+"simulation/vehicle/*" = ["D"]
+"simulation/vehicle_choice_model/*" = ["D"]
+"simulation/world/*" = ["D"]
+"tracking/*" = ["D"]
+"simulation/__init__.py" = ["D"]
+"walking_template.py" = ["D"]
+"shared_vehicle_fleet_template.py" = ["D"]
+"ridehailing_template.py" = ["D"]
+"public_transport_template.py" = ["D"]
+"utils.py" = ["D"]
+
+[tool.taplo]
+include = ["resources/configurations/*.toml"]
+
+[tool.taplo.formatting]
+array_auto_collapse = true
+array_auto_expand = false
+allowed_blank_lines = 2
+column_width = 800
+align_entries = true
+align_comments = true
+inline_table_expand = false
 
 
 [tool.mypy]
 # Enable type checking for all simulation modules
-files = [
-  "simulation/",
-]
+files = ["simulation/"]
 exclude = []
 
 # General type checking options
@@ -96,10 +143,7 @@ disallow_incomplete_defs = true
 disallow_any_generics = true
 
 # Enable specific error codes
-enable_error_code = [
-    "redundant-expr",
-    "truthy-bool"
-]
+enable_error_code = ["redundant-expr", "truthy-bool"]
 
 # Since we are incrementally adding type hints, we want to ignore errors in
 # untyped modules. Remove modules from this list as they are typed.
@@ -203,5 +247,5 @@ module = [
   "simulation.world.markets.auction",
   "simulation.world.markets.interfaces.bidder_interface",
   "simulation.world.markets.shared_charging_auction",
-  "simulation.world.world"
+  "simulation.world.world",
 ]
