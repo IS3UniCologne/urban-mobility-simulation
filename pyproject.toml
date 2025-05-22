@@ -6,6 +6,7 @@ readme          = "README.md"
 requires-python = ">=3.9.2, <3.13.0"
 dependencies    = [
     "beartype>=0.20.0",
+    "cython>=3.1.0",
     "geopandas>=1.0.1",
     "h3>=3.7.1, <4",
     "haversine>=2.9.0",
@@ -18,6 +19,7 @@ dependencies    = [
     "statsmodels>=0.14.4",
     "tqdm>=4.67.1",
 ]
+
 
 [project.optional-dependencies]
 notebooks = [
@@ -32,6 +34,19 @@ ml = [
     "docplex>=2.29.241",
     "cplex>=22.1.2.0",
 ]
+
+[build-system]
+requires = ["setuptools", "cython"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools]
+packages = ["simulation", "simulation.environment", "simulation.environment.cython_ext"]
+
+ext-modules = [
+    {name = "simulation.environment.cython_ext.cy_geodesic",  sources = ["simulation/environment/cython_ext/cy_geodesic.pyx"], extra-compile-args = ["-O3"]}
+]
+
 
 [tool.ruff]
 fix            = true
@@ -55,6 +70,47 @@ dev = [
 ]
 [tool.ruff.lint]
 # defaults: ["E4", "E7", "E9", "F"]
-select = ["E4", "E7", "E9", "F", "PLC0205"]
+select = ["E4", "E7", "E9", "F", "PLC0205", "D"]
 # Skip unused variable rules (`F841`).
 ignore = ["E721"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+# These directories do not follow the same style as the rest of the codebase.
+"test/*" = ["D"]
+"visualization/*" = ["D"]
+"resources/*" = ["D"]
+"planning/*" = ["D"]
+"learning/*" = ["D"]
+#TODO: These should be gradually removed once properly annotated.
+"simulation/agent/*" = ["D"]
+"simulation/environment/*" = ["D"]
+"simulation/helper/*" = ["D"]
+"simulation/infrastructure/*" = ["D"]
+"simulation/metrics/*" = ["D"]
+"simulation/operator/*" = ["D"]
+"simulation/tasks/*" = ["D"]
+"simulation/vehicle/*" = ["D"]
+"simulation/vehicle_choice_model/*" = ["D"]
+"simulation/world/*" = ["D"]
+"tracking/*" = ["D"]
+"simulation/__init__.py" = ["D"]
+"walking_template.py" = ["D"]
+"shared_vehicle_fleet_template.py" = ["D"]
+"ridehailing_template.py" = ["D"]
+"public_transport_template.py" = ["D"]
+"utils.py" = ["D"]
+
+[tool.taplo]
+include = ["resources/configurations/*.toml"]
+
+[tool.taplo.formatting]
+array_auto_collapse = true
+array_auto_expand   = false
+allowed_blank_lines = 2
+column_width        = 800
+align_entries       = true
+align_comments      = true
+inline_table_expand = false

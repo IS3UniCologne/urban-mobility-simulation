@@ -33,6 +33,9 @@ jobs:
       - name: Set up Environment
         run: uv sync --no-dev
 
+      - name: Install dependencies and build extensions
+        run: uv pip install -e .
+
       - name: Run Integration Test
         id: integration_test
         run: |
