@@ -1,7 +1,7 @@
 """
 Benchmarks for geodesic and Euclidean distance calculations.
 
-This module benchmarks different methods for calculating distances between geodesic positions, including Haversine, Euclidean, and Cython-accelerated Euclidean methods.
+This module benchmarks different methods for calculating distances between geodesic positions.
 
 Examples
 --------
@@ -48,8 +48,9 @@ def bench_haversine() -> None:
     -------
     None
     """
+    total = 0.0
     for i in range(0, len(POSITIONS), 2):
-        _ = POSITIONS[i].__rshift__(POSITIONS[i + 1])
+        total += POSITIONS[i].__rshift__(POSITIONS[i + 1])
 
 
 def bench_euclidean() -> None:
@@ -60,8 +61,9 @@ def bench_euclidean() -> None:
     -------
     None
     """
+    total = 0.0
     for i in range(0, len(POSITIONS), 2):
-        _ = POSITIONS[i].__lshift__(POSITIONS[i + 1])
+        total += POSITIONS[i].__lshift__(POSITIONS[i + 1])
 
 
 BENCHMARKS: list[tuple[str, Callable[[], None]]] = [
@@ -78,7 +80,7 @@ def main() -> None:
     -------
     None
     """
-    runner = pyperf.Runner()
+    runner = pyperf.Runner(values=3, loops=20)
     for name, func in BENCHMARKS:
         runner.bench_func(name, func)
 
