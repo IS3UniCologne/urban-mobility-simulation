@@ -6,6 +6,7 @@ readme          = "README.md"
 requires-python = ">=3.9.2, <3.13.0"
 dependencies    = [
     "beartype>=0.20.0",
+    "cython>=3.1.0",
     "geopandas>=1.0.1",
     "h3>=3.7.1, <4",
     "haversine>=2.9.0",
@@ -18,6 +19,7 @@ dependencies    = [
     "statsmodels>=0.14.4",
     "tqdm>=4.67.1",
 ]
+
 
 [project.optional-dependencies]
 notebooks = [
@@ -32,6 +34,19 @@ ml = [
     "docplex>=2.29.241",
     "cplex>=22.1.2.0",
 ]
+
+[build-system]
+requires = ["setuptools", "cython"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools]
+packages = ["simulation", "simulation.environment", "simulation.environment.cython_ext"]
+
+ext-modules = [
+    {name = "simulation.environment.cython_ext.cy_geodesic",  sources = ["simulation/environment/cython_ext/cy_geodesic.pyx"], extra-compile-args = ["-O3"]}
+]
+
 
 [tool.ruff]
 fix            = true
@@ -87,3 +102,15 @@ convention = "numpy"
 "ridehailing_template.py" = ["D"]
 "public_transport_template.py" = ["D"]
 "utils.py" = ["D"]
+
+[tool.taplo]
+include = ["resources/configurations/*.toml"]
+
+[tool.taplo.formatting]
+array_auto_collapse = true
+array_auto_expand   = false
+allowed_blank_lines = 2
+column_width        = 800
+align_entries       = true
+align_comments      = true
+inline_table_expand = false
