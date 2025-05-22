@@ -33,23 +33,20 @@ jobs:
       - name: Set up Environment
         run: uv sync --no-dev
 
-      - name: Set dynamic filename
-        run: |
-          export OUTPUT_FILE="integration_test_$(date +'%Y-%m-%d_%H-%M-%S').log"
-          echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
-
       - name: Run Integration Test
         id: integration_test
         run: |
-          uv run pytest test/integration_test.py --durations=0 --log-file=/home/ci/test_runner_data/runner_logs/$OUTPUT_FILE
+          uv run pytest test/integration_test.py --durations=0
 
       - name: Copy simulation logs on failure
         if: failure()
         run: |
+          # Get short commit SHA (first 7 characters)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           echo "Integration test failed. Copying simulation logs for debugging..."
-          mkdir -p /home/ci/test_runner_data/failed_logs_${{ github.run_id }}
-          cp -r data/test_output/logs/* /home/ci/test_runner_data/failed_logs_${{ github.run_id }}/
-          echo "Logs copied to /home/ci/test_runner_data/failed_logs_${{ github.run_id }}/"
+          mkdir -p /home/ci/test_runner_data/failed_logs_${{github.run_number}}_${SHORT_SHA}
+          cp -r data/test_output/logs/* /home/ci/test_runner_data/failed_logs_${{github.run_number}}_${SHORT_SHA}/
+          echo "Logs copied to /home/ci/test_runner_data/failed_logs_${{github.run_number}}_${SHORT_SHA}/"
 
           # Output last few lines of each log file for quick inspection
           echo "=== Log file content samples ==="

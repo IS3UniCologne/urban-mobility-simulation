@@ -2,12 +2,11 @@ import logging
 from pathlib import Path
 
 import h3
-import mlrose_hiive as mlrose
 import pandas as pd
 from pandas import DataFrame
 
 from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.random.random_manager import RandomManager
+from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operations_management.service_tasks.charging_task import (
     ChargingTask,
@@ -881,61 +880,46 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         # From here
                         hexagons[origin] = tuple_idx + 1
 
-                    dist_list = []
-                    for i, value_i in hexagons.items():
-                        for j, value_j in hexagons.items():
-                            if i != j:
-                                dist_list.append(
-                                    (value_i, value_j, self._distance_matrix.loc[j][i])
-                                )
-
-                    # Initialize fitness function object using dist_list
-                    fitness_dists = mlrose.TravellingSales(distances=dist_list)
-
-                    # Define optimization problem object
-                    problem_fit = mlrose.TSPOpt(
-                        length=len(hexagons), fitness_fn=fitness_dists, maximize=False
+                    tsp_result = solve_tsp(hexagons, self._distance_matrix)
+                    tour_sequence, tour_length, dist_lookup = (
+                        tsp_result.tour_sequence,
+                        tsp_result.tour_length,
+                        tsp_result.distance_lookup,
                     )
 
-                    # Solve problem using the genetic algorithm (keep random state constant)
-                    seed = RandomManager().integers(
-                        0, 1000000, component="SHAREDMOBILITYOPERATIONS"
+                    # Find the predecessor and successor of destination in the tour
+                    index_of_destination = tour_sequence.index(0)
+                    predecessor_idx = (index_of_destination - 1) % len(tour_sequence)
+                    successor_idx = (index_of_destination + 1) % len(tour_sequence)
+
+                    # Compare costs of the two possible edges to remove
+                    cost_entering_dest = dist_lookup.get(
+                        tour_sequence[predecessor_idx],
+                        tour_sequence[index_of_destination],
                     )
-                    best_state, best_fitness, _ = mlrose.genetic_alg(
-                        problem_fit, random_state=seed, curve=False
+
+                    cost_exiting_dest = dist_lookup.get(
+                        tour_sequence[index_of_destination],
+                        tour_sequence[successor_idx],
                     )
 
-                    # Convert Numpy Array to List
-                    best_state = best_state.tolist()
-
-                    # Shift list
-                    index_of_destination = best_state.index(0)
-
-                    # Position "Destination" of relocations to the end
-                    if len(best_state) - 1 != index_of_destination:
-                        best_state = (
-                            best_state[index_of_destination + 1 :]
-                            + best_state[: index_of_destination + 1]
+                    if cost_entering_dest > cost_exiting_dest:
+                        # Remove edge entering destination by placing destination at the start
+                        tour_sequence = (
+                            tour_sequence[index_of_destination:]
+                            + tour_sequence[:index_of_destination]
                         )
-
-                    # We start at the origin and end at the destination. Distance between "destination" and "origin"
-                    # must be substracted from the best fit.
-                    origin_of_trip = best_state[0]
-                    dest_of_trip = best_state[-1]
-
-                    excess_distance = 0
-                    for distance_weights in dist_list:
-                        # distance_weights[0] => origin, distance_weights[1] => destination
-                        # In our case dest_of_trip refers to the "origin" and origin_of_trip to "destination"
-                        # <=> remove last edge from the route
-                        if (
-                            distance_weights[0] == dest_of_trip
-                            and distance_weights[1] == origin_of_trip
-                        ):
-                            excess_distance += distance_weights[2]
+                        excess_distance = cost_entering_dest
+                    else:
+                        # Remove edge exiting destination by placing destination at the end
+                        tour_sequence = (
+                            tour_sequence[(index_of_destination + 1) :]
+                            + tour_sequence[: (index_of_destination + 1)]
+                        )
+                        excess_distance = cost_exiting_dest
 
                     # Remove the distance from the "destination" to the "origin" of the relocation trip
-                    total_distance = best_fitness - excess_distance
+                    total_distance = tour_length - excess_distance
 
                     average_distance_per_relocation_step = total_distance / len(
                         relocation
