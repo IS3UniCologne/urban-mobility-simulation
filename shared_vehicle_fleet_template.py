@@ -48,12 +48,8 @@ from simulation.operator.shared_vehicle_allocation_engine import (
     SharedVehicleAllocationEngine,
 )
 from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
-from simulation.vehicle.shared_bike import SharedBike
 
 # Import vehicle types and vehicle choice options
-from simulation.vehicle.shared_car import SharedCar
-from simulation.vehicle.shared_kick_scooter import SharedKickScooter
-from simulation.vehicle.shared_scooter import SharedScooter
 from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import (
     DistanceBasedSharedVehicleVehicleChoiceBehavior,
@@ -215,12 +211,7 @@ distance_matrix = dmi.load_distance_matrix()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-SharedBike.shared_bike_id = 0
 SharedVehicle.shared_vehicle_id = 0
-SharedCar.car_id = 0
-SharedKickScooter.shared_kick_scooter_id = 0
-SharedScooter.shared_scooter_id = 0
-SharedBike.shared_bike_id = 0
 User.user_id = 0
 DemandFactory.counter = 0
 
@@ -251,12 +242,12 @@ supply_prob = pd.read_csv(os.path.normpath(config.path.PATH_VEHICLE_SUPPLY))
 # Configure and generate / spawn shared fleet vehicles
 shared_vehicle_fleet_config = generate_fleet_config(
     supply_prob,
-    n_cars=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.SharedCar],
-    n_scooter=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.SharedScooter],
+    n_cars=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.Car],
+    n_scooter=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.Scooter],
     n_kick_scooter=config.shared_vehicle_operators[0].N_VEHICLES[
-        VehicleMode.SharedKickScooter
+        VehicleMode.KickScooter
     ],
-    n_bikes=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.SharedBike],
+    n_bikes=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.Bike],
 )
 mixed_fleet = generate_mixed_fleet(env, shared_vehicle_fleet_config)
 
@@ -343,9 +334,6 @@ def run_simulation(end_time, env=env):
     # Before a new simulation run, reset everything
     User.user_id = 0
     DemandFactory.counter = 0
-    SharedCar.car_id = 0
-    SharedKickScooter.shared_kick_scooter_id = 0
-    SharedScooter.shared_scooter_id = 0
     DemandFactory.counter = 0
 
     # Inject Simulation Environment to Logger (such that we can log the env time)
@@ -378,14 +366,12 @@ def run_simulation(end_time, env=env):
         metrics_factory = MetricsFactory(transactions)
 
         num_vehicles = {
-            "SharedBike": config.shared_vehicle_global.VEHICLES[VehicleMode.SharedBike],
-            "SharedCar": config.shared_vehicle_global.VEHICLES[VehicleMode.SharedCar],
+            "SharedBike": config.shared_vehicle_global.VEHICLES[VehicleMode.Bike],
+            "SharedCar": config.shared_vehicle_global.VEHICLES[VehicleMode.Car],
             "SharedKickScooter": config.shared_vehicle_global.VEHICLES[
-                VehicleMode.SharedKickScooter
+                VehicleMode.KickScooter
             ],
-            "SharedScooter": config.shared_vehicle_global.VEHICLES[
-                VehicleMode.SharedScooter
-            ],
+            "SharedScooter": config.shared_vehicle_global.VEHICLES[VehicleMode.Scooter],
         }
 
         metrics_factory.print_simulation_summary(

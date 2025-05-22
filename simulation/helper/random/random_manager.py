@@ -41,7 +41,7 @@ class RandomManager(metaclass=Singleton):
         self._main_rng = None
         self._fixed_seed_components = None
         self._component_rngs = {}
-        self.reset_rng()
+        self.reset_all_rng()
 
     def reset_fixed_seed_components(self) -> None:
         """Reset the fixed seed components' generators to their initial state."""
@@ -60,7 +60,7 @@ class RandomManager(metaclass=Singleton):
                 component, self._fixed_seed_components[component]
             )
 
-    def reset_rng(self) -> None:
+    def reset_all_rng(self) -> None:
         """Resets all random number generators to their inital state (same as restarting the simulation)."""
         self._main_seed = None
         self._main_rng = None

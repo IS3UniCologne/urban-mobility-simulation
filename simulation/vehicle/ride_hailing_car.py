@@ -4,8 +4,8 @@ from simpy import Environment
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
-from simulation.vehicle.vehicle import VehicleState
 
 # class RideHailingCarState(Enum):
 #     INITIALIZED = 0
@@ -42,6 +42,7 @@ class RideHailingCar(RideHailingVehicle):
     def __init__(
         self,
         env: Environment,
+        fleet,
         position: GeodesicPosition,
         velocity,
         max_available_seats=4,
@@ -62,8 +63,10 @@ class RideHailingCar(RideHailingVehicle):
         """
         super(RideHailingCar, self).__init__(
             env,
+            fleet,
             position,
             velocity,
+            VehicleMode.Car,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
@@ -83,7 +86,7 @@ class RideHailingCar(RideHailingVehicle):
         self._driver_payment_share = (
             Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
         )
-        self._state = VehicleState.OFFLINE
+        self.state = VehicleState.OFFLINE
         self._online_event = self._env.event()
         self._offline_event = self._env.event()
         RideHailingCar.ride_hailing_car_id += 1
@@ -157,7 +160,7 @@ class RideHailingCar(RideHailingVehicle):
         )
 
     def get_online(self):
-        self._state = VehicleState.PARKING
+        self.state = VehicleState.PARKING
         self.update_shift_start_time()
         self._online_event.succeed()
         self._online_event = self._env.event()
@@ -167,7 +170,7 @@ class RideHailingCar(RideHailingVehicle):
         )
 
     def get_offline(self):
-        self._state = VehicleState.OFFLINE
+        self.state = VehicleState.OFFLINE
         self._shift_earn = 0
         self.update_shift_end_time()
         self._offline_event.succeed()
@@ -234,7 +237,9 @@ class RideHailingCar(RideHailingVehicle):
                 self.update_offline_duration()
                 go_offline = self.decide_to_get_offline()
                 if go_offline:
-                    if self.state == VehicleState.PARKING:
+                    if (
+                        self.state == VehicleState.PARKING
+                    ):  # TODO: Why are we checking for parking twice in a row?
                         self.get_offline()
                     # if the driver has a task to do we yield until its completion
                     else:

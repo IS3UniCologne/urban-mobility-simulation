@@ -6,13 +6,12 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
-from simulation.vehicle.public_transit_vehicle import (
-    PublicTransitVehicle,
-    PublicTransitVehicleState,
-)
+from simulation.operator.vehicle_fleet import VehicleFleet
+from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 from simulation.world.world import World
 from tracking.tracking_interface import TrackingInterface
 
@@ -35,13 +34,14 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         "_process",
     )
     # Tracking
-    exposes = ["_position", "_state", "_available_seats"]
+    exposes = ["_position", "state", "_available_seats"]
 
     def __init__(
         self,
         env: Environment,
         route: PublicTransitRoute,
         position: GeodesicPosition,
+        fleet: VehicleFleet,
         use_learning_agent: bool,
         velocity,
         max_available_seats=100,
@@ -53,7 +53,9 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         :param max_available_seats: depends on type of bus
         :param velocity: e.g. 16.67 m/min * 30 (average in city)
         """
-        super(Bus, self).__init__(env, route, position, velocity, max_available_seats)
+        super().__init__(
+            env, route, position, fleet, velocity, VehicleMode.Bus, max_available_seats
+        )
 
         self._id = Bus.bus_id
         self._time = SimulationTime(self._env)
@@ -96,7 +98,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         Time 00:03:00 - Departure 00:04:00 - next_day = False - wait
         Time 00:03:00 - Departure 00:04:00 - next_day = True - should not happen
         """
-        while self._state is not PublicTransitVehicleState.AT_TERMINAL_DESTINATION:
+        while self.state is not VehicleState.AT_TERMINAL_DESTINATION:
             strf = "%H:%M:%S"
             early_arrival = (
                 self._time.now_as_str() < self._current_stop.departure
@@ -107,7 +109,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
             )
 
             if (
-                self._state is PublicTransitVehicleState.AT_TERMINAL_ORIGIN
+                self.state is VehicleState.AT_TERMINAL_ORIGIN
                 and self._time.now_as_str() < self._current_stop.departure
             ):
                 # bus was pre-initialized by transit operator
@@ -166,7 +168,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         distance = route_segment.distance  # in meter
         duration = distance / self._velocity  # in minutes
 
-        self._state = PublicTransitVehicleState.EN_ROUTE_PLANNED
+        self.state = VehicleState.EN_ROUTE_PLANNED
 
         logging.debug(
             f"Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.",
@@ -179,14 +181,14 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         self._update_positions(route_segment.end)
 
         if self._current_stop == self._route.destination:
-            self._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
+            self.state = VehicleState.AT_TERMINAL_DESTINATION
             logging.debug(
                 f"Bus has arrived at its terminal destination - stop {self._current_stop.stop_id} "
                 f"at time {self._time.now_as_str()}",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
         else:
-            self._state = PublicTransitVehicleState.AT_STOP
+            self.state = VehicleState.AT_STOP
             logging.debug(
                 f"Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
@@ -197,7 +199,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         self.position = new_position
 
         # Update Position of Passengers
-        for passenger in self._seats:
+        for passenger in self._passengers:
             passenger.position = new_position
 
     # TODO: remove if everything works
@@ -229,8 +231,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #             m = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
     #             for d in demands:
     #                 try:
-    #                     start = self._corridor_sorted.index(d.origin.get_hexagon_id(self._action_res))
-    #                     end = self._corridor_sorted.index(d.destination.get_hexagon_id(self._action_res))
+    #                     start = self._corridor_sorted.index(d.origin.get_region_id(self._action_res))
+    #                     end = self._corridor_sorted.index(d.destination.get_region_id(self._action_res))
     #                     m[start][end] += 1
     #                 except ValueError as e:
     #                     logging.debug(f'Bus update state: Encountered demand at edge of hexagon: {e}',
@@ -242,8 +244,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #             # origin = current position, destination = drop-off
     #             for p in self._seats:
     #                 try:
-    #                     start = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
-    #                     end = self._corridor_sorted.index(p.transport_task.destination.get_hexagon_id(self._action_res))
+    #                     start = self._corridor_sorted.index(self._position.get_region_id(self._action_res))
+    #                     end = self._corridor_sorted.index(p.transport_task.destination.get_region_id(self._action_res))
     #                     m[start][end] += 1
     #                 except ValueError as e:
     #                     # TODO: think about below
@@ -257,7 +259,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #
     #             # build position vector v[hex] =1 if bus is at hex, else 0
     #             position = np.zeros(self._corridor_dim, dtype=int)
-    #             pos = self._corridor_sorted.index(self._position.get_hexagon_id(self._action_res))
+    #             pos = self._corridor_sorted.index(self._position.get_region_id(self._action_res))
     #             position[pos] = 1
     #
     #             self._env_state['position'] = position
@@ -268,8 +270,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #             region_id, _ = self._position.get_hexagon(self._action_res)
     #
     #             if region_id == \
-    #                     self._route.destination.get_hexagon_id(self._action_res):
-    #                 self._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
+    #                     self._route.destination.get_region_id(self._action_res):
+    #                 self._state = VehicleState.AT_TERMINAL_DESTINATION
     #                 logging.info(f'Bus has arrived at its terminal destination at time {self._time.now_as_str()}',
     #                              extra={"clazz": self.__class__.__name__, "oid": self._id})
     #         except simpy.Interrupt:
@@ -282,7 +284,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #     action = yield self._action_taken
     #
     #     self._rl_agent.reward = self._rl_agent.reward_state(self._env_state,
-    #                                                         self._state == PublicTransitVehicleState.AT_TERMINAL_DESTINATION)
+    #                                                         self._state == VehicleState.AT_TERMINAL_DESTINATION)
     #     self._rl_agent.reward_sum = self._rl_agent.reward_sum + self._rl_agent.reward
     #
     #     logging.debug(f'Current reward: {self._rl_agent.reward}, overall reward: {self._rl_agent.reward_sum}',
@@ -292,14 +294,14 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #     self._agent_completed_step = self._env.event()
 
     def __str__(self):
-        return f"I have {len(self._seats)} passengers on boards"
+        return f"I have {len(self._passengers)} passengers on boards"
 
     def dump(self, exposed_only: bool = True) -> dict:
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}
         else:
             dump_attr = [
-                "_state",
+                "state",
                 "_position",
                 "_available_seats",
                 "_spawned",

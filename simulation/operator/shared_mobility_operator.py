@@ -71,7 +71,7 @@ class SharedMobilityOperator(Operator):
                 )
                 missed_trip_cost = distance / velocity * price_per_min
 
-                if vehicle_type == "SharedKickScooter":
+                if vehicle_type == "KickScooter":
                     missed_trip_cost += 1.0  # Unlock Fee
 
         self.increase_total_missed_trips(missed_trip_cost)
@@ -80,8 +80,8 @@ class SharedMobilityOperator(Operator):
         self._transactions.append(
             {
                 "vehicle_id": None,
-                "origin": transportation_task.origin.get_hexagon_id(),
-                "destination": transportation_task.destination.get_hexagon_id(),
+                "origin": transportation_task.origin.get_region_id(),
+                "destination": transportation_task.destination.get_region_id(),
                 "time_start": self._env.now,
                 "time_end": self._env.now,
                 "price": 0.0,

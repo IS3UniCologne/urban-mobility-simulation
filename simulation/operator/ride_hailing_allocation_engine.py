@@ -1,6 +1,7 @@
 import logging
 
 from simulation.agent.user import RideHailingUser
+from simulation.helper.configuration.enums import VehicleState
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
@@ -10,7 +11,6 @@ from simulation.operator.data_transfer_object.vehicle_allocation import (
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
-from simulation.vehicle.vehicle import VehicleState
 
 
 class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
