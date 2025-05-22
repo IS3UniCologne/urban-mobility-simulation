@@ -55,6 +55,35 @@ dev = [
 ]
 [tool.ruff.lint]
 # defaults: ["E4", "E7", "E9", "F"]
-select = ["E4", "E7", "E9", "F", "PLC0205"]
+select = ["E4", "E7", "E9", "F", "PLC0205", "D"]
 # Skip unused variable rules (`F841`).
 ignore = ["E721"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+# These directories do not follow the same style as the rest of the codebase.
+"test/*" = ["D"]
+"visualization/*" = ["D"]
+"resources/*" = ["D"]
+"planning/*" = ["D"]
+"learning/*" = ["D"]
+#TODO: These should be gradually removed once properly annotated.
+"simulation/agent/*" = ["D"]
+"simulation/environment/*" = ["D"]
+"simulation/helper/*" = ["D"]
+"simulation/infrastructure/*" = ["D"]
+"simulation/metrics/*" = ["D"]
+"simulation/operator/*" = ["D"]
+"simulation/tasks/*" = ["D"]
+"simulation/vehicle/*" = ["D"]
+"simulation/vehicle_choice_model/*" = ["D"]
+"simulation/world/*" = ["D"]
+"tracking/*" = ["D"]
+"simulation/__init__.py" = ["D"]
+"walking_template.py" = ["D"]
+"shared_vehicle_fleet_template.py" = ["D"]
+"ridehailing_template.py" = ["D"]
+"public_transport_template.py" = ["D"]
+"utils.py" = ["D"]
