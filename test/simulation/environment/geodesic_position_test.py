@@ -4,11 +4,10 @@ import time
 import unittest
 
 import matplotlib.pyplot as plt
-import pytest
 
 from simulation.environment.geodesic_position import GeodesicPosition
 
-pytestmark = pytest.mark.skip(reason="Performance tests, run manually")
+# pytestmark = pytest.mark.skip(reason="Performance tests, run manually")
 
 
 class TestGeodesicPositionDistance(unittest.TestCase):
