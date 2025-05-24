@@ -1,5 +1,6 @@
 import logging
 
+import simpy
 from numpy.random import normal
 from simpy import Environment
 
@@ -107,12 +108,12 @@ class World:
         self._demand_processes = []
 
         # Store all current users
-        self._users = []
-        self._user_processes = []
+        self._users: set[user.User] = set()
+        self._user_processes: dict[int, simpy.Process] = {}
 
         # Store all current vehicles
-        self._vehicles = []
-        self._vehicle_processes = []
+        self._vehicles: set[Vehicle] = set()
+        self._vehicle_processes: dict[int, simpy.Process] = {}
 
         # TODO: keep track of fleets here as well
 
@@ -292,15 +293,13 @@ class World:
             else:
                 raise NotImplementedError('User mode "{mode}" not implemented.')
 
-            # Add user to user list
-            self._users.append(new_user)
+            # Add user to user set
+            self._users.add(new_user)
             # register user with tracking
             new_user_uid = self._tracking.register(new_user)
 
             # Start Process for each new user
-            self._user_processes.append(
-                {"id": new_user.id, "proc": self._env.process(new_user.run())}
-            )
+            self._user_processes[new_user.id] = self._env.process(new_user.run())
 
             # Spawn cleanup process for that user
             self._env.process(self._cleanup_user(new_user, new_user_uid))
@@ -311,18 +310,42 @@ class World:
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
 
-    def _cleanup_user(self, user, user_uid):
+    def _cleanup_user(self, user, user_uid: str):
+        """
+        Wait for the user process to finish, then remove the user from the simulation.
+
+        Parameters
+        ----------
+        user : User or subclass
+            The user agent to clean up.
+        user_uid : str
+            The unique identifier for tracking.
+        """
         yield user.process_finished
 
+        # Remove user from tracking
         self._tracking.unregister_by_uid(user_uid)
 
+        # Remove user from self._users
+        self._users.discard(user)
+
+        # Remove user process from self._user_processes
+        if user.id in self._user_processes:
+            del self._user_processes[user.id]
+
+        logging.debug(
+            "User %s removed from simulation after process finished.",
+            user.id,
+            extra={"clazz": self.__class__.__name__, "oid": " "},
+        )
+
     def add_vehicle(self, vehicle: Vehicle):
-        self._vehicles.append(vehicle)
+        self._vehicles.add(vehicle)
 
         # TODO: register vehicle with tracking
 
     def remove_vehicle(self, vehicle: Vehicle):
-        self._vehicles.remove(vehicle)
+        self._vehicles.discard(vehicle)
 
         # TODO: de-register vehicle with tracking
 
@@ -360,13 +383,12 @@ class World:
                 pass
 
         # clean up user demands
-        for u in self.user_processes:
+        for process in self.user_processes.values():
             try:
-                u["proc"].interrupt()
+                process.interrupt()
             except RuntimeError:
                 # already terminated
                 pass
 
     def user_process_by_id(self, user_id):
-        procs = [p for p in self._user_processes if p["id"] == user_id]
-        return procs[0]  # TODO: what about some error handling
+        return self._user_processes.get(user_id)  # returns the process or None
