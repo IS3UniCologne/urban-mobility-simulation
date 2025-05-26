@@ -5,9 +5,19 @@ Implements the DemandTracker class for tracking demand statistics.
 """
 
 from collections import defaultdict
+from typing import TypedDict
 
 from .transaction import Transaction
 from .transaction_listener import TransactionListener
+
+
+class VehicleFlow(TypedDict):
+    outflow_fulfilled: int
+    outflow_missed: int
+    inflow: int
+
+
+VehicleDemandByRegion = dict[str, dict[str, VehicleFlow]]
 
 
 class DemandTracker(TransactionListener):
@@ -23,15 +33,15 @@ class DemandTracker(TransactionListener):
     ----------
     hexagons : set[str]
         Set of all hexagon IDs seen so far.
-    vehicle_data : dict[str, dict[str, dict[str, int]]]
-        Nested dictionary: hex_id -> vehicle_type -> flow_type -> count.
+    vehicle_data : VehicleDemandByRegion
+        Dictionary mapping hexagon IDs to vehicle modes and their demand statistics.
     ordered_available_vehicles : list[str]
         Vehicle mode preference order.
     """
 
     def __init__(self, ordered_available_vehicles: list[str]) -> None:
         self.hexagons: set[str] = set()
-        self.vehicle_data: dict[str, dict[str, dict[str, int]]] = defaultdict(
+        self.vehicle_data: VehicleDemandByRegion = defaultdict(
             lambda: defaultdict(
                 lambda: {"outflow_fulfilled": 0, "outflow_missed": 0, "inflow": 0}
             )
@@ -79,15 +89,13 @@ class DemandTracker(TransactionListener):
         elif state == "Missed":
             origin_stats["outflow_missed"] += 1
 
-    def get_demand_data(self) -> dict:
+    def get_demand_data(self) -> VehicleDemandByRegion:
         """
         Get the current demand data.
 
         Returns
         -------
-        dict
-            Dictionary with keys:
-            - "hexagons": set[str], all hexagon IDs seen so far.
-            - "vehicle_data": dict[str, dict[str, dict[str, int]]], demand statistics.
+        RegionVehicleDemand
+            Dictionary mapping hexagon IDs to vehicle modes and their demand statistics.
         """
-        return {"hexagons": self.hexagons, "vehicle_data": self.vehicle_data}
+        return self.vehicle_data

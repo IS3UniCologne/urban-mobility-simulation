@@ -18,6 +18,7 @@ from simulation.operator.operations_management.service_tasks.relocation_task imp
     RelocationTask,
 )
 from simulation.operator.transactions import DemandTracker
+from simulation.operator.transactions.demand_tracker import VehicleDemandByRegion
 
 
 class IntegratedSharedMobilityOperations(OperationsInterface):
@@ -1136,23 +1137,23 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         - A negative delta indicates excess demand (more departures or missed requests than arrivals).
         - A positive delta indicates a vehicle surplus (more arrivals than departures).
         """
-        demand_data = demand_tracker.get_demand_data()
-        hexagons = demand_data["hexagons"]
-        vehicle_data = demand_data["vehicle_data"]
+        vehicle_demand: VehicleDemandByRegion = demand_tracker.get_demand_data()
         ordered_available_vehicle = demand_tracker.ordered_available_vehicles
 
         rows = []
-        for hex_id in hexagons:
-            row = {"hex_id": hex_id}
+        for hex_id in vehicle_demand.keys():
+            row: dict[str, int | str] = {"hex_id": hex_id}
             for vehicle in ordered_available_vehicle:
-                inflow = vehicle_data.get(hex_id, {}).get(vehicle, {}).get("inflow", 0)
+                inflow = (
+                    vehicle_demand.get(hex_id, {}).get(vehicle, {}).get("inflow", 0)
+                )
                 outflow_fulfilled = (
-                    vehicle_data.get(hex_id, {})
+                    vehicle_demand.get(hex_id, {})
                     .get(vehicle, {})
                     .get("outflow_fulfilled", 0)
                 )
                 outflow_missed = (
-                    vehicle_data.get(hex_id, {})
+                    vehicle_demand.get(hex_id, {})
                     .get(vehicle, {})
                     .get("outflow_missed", 0)
                 )
