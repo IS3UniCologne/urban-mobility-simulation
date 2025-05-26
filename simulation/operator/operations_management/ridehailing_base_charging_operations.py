@@ -22,24 +22,24 @@ from simulation.world.world import World
 
 class RideHailingBaseChargingOperations(OperationsInterface):
     __slots__ = (
-        "_distance_matrix",
-        "_time_between_operations",
-        "_operation_duration",
+        "_allow_queue",
         "_available_modes",
         "_available_modes_supply",
-        "_state_of_charge_threshold",
-        "_allow_queue",
-        "_world",
-        "_config",
         "_base_buffer",
-        "_task_queue",
-        "_scheduled_tasks",
-        "_task_transactions",
         "_charging_plan_updated",
-        "_operations_started",
-        "_task_executed",
-        "_time_between_operations",
+        "_config",
+        "_distance_matrix",
         "_duration_of_operations",
+        "_operation_duration",
+        "_operations_started",
+        "_scheduled_tasks",
+        "_state_of_charge_threshold",
+        "_task_executed",
+        "_task_queue",
+        "_task_transactions",
+        "_time_between_operations",
+        "_time_between_operations",
+        "_world",
     )
 
     def __init__(

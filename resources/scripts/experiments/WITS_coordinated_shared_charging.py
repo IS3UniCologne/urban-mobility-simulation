@@ -623,6 +623,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util,
             None,
-            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''},queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, overbidding: ({str(random_overbidding)}, {str(overbid_prob)}), auction_interval: {str(config.shared_charging_auction.AUCTION_INTERVAL)}, timeslot_duration: {str(config.shared_charging_auction.TIMESLOT_DURATION)}, auction_lookahead: {str(config.shared_charging_auction.AUCTION_LOOKAHEAD)}",
+            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''},queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, overbidding: ({random_overbidding!s}, {overbid_prob!s}), auction_interval: {config.shared_charging_auction.AUCTION_INTERVAL!s}, timeslot_duration: {config.shared_charging_auction.TIMESLOT_DURATION!s}, auction_lookahead: {config.shared_charging_auction.AUCTION_LOOKAHEAD!s}",
         ]
     )

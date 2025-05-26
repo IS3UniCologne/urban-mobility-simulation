@@ -8,12 +8,12 @@ class ChargingInfrastructure:
     __instance = None
 
     __slots__ = (
+        "_capacity_list",
+        "_charging_stations",
         "_env",
         "_location_list",
         "_power_list",
-        "_capacity_list",
         "_queue_size",
-        "_charging_stations",
         "_tracking",
     )
 

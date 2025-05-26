@@ -11,7 +11,7 @@ from simulation.infrastructure.transit_network.stop import Stop
 
 
 class Route:
-    __slots__ = ("_origin", "_destination", "_route_segments")
+    __slots__ = ("_destination", "_origin", "_route_segments")
 
     def __init__(self, origin: Position, destination: Position):
         self._origin = origin

@@ -8,10 +8,10 @@ from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
 
 class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInterface):
     __slots__ = (
-        "_choice_model",
-        "_substitution_boundary",
-        "_class_mapping",
         "_available_vehicles",
+        "_choice_model",
+        "_class_mapping",
+        "_substitution_boundary",
     )
 
     def __init__(self, path_to_choice_model, substitution_boundary, available_vehicles):
@@ -34,7 +34,7 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
             (1, trip_characteristics.distance)
         )
         choice_probabilities = choice_probabilities.reshape(
-            (-1)
+            -1
         )  # Transform 2D array to 1D array
         result = {}
 

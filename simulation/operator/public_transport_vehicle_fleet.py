@@ -13,11 +13,11 @@ from tracking.tracking import Tracking
 
 class PublicTransportVehicleFleet(VehicleFleet):
     __slots__ = (
-        "_config",
-        "_busses",
-        "_world",
         "_bus_velocity",
+        "_busses",
+        "_config",
         "_unserved_passengers",
+        "_world",
     )
 
     def __init__(self, env: Environment):
@@ -68,7 +68,7 @@ class PublicTransportVehicleFleet(VehicleFleet):
         # Check this again, what happens when the trip time is over but there are still passengers in the bus?
         # TODO: unmount all remaining passengers - is there a need for this?
         logging.debug(
-            f"There are still {str(len(bus._passengers))} passengers onboard the bus",
+            f"There are still {len(bus._passengers)!s} passengers onboard the bus",
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
         self._unserved_passengers = len(bus._passengers)

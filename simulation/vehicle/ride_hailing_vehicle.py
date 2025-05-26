@@ -26,37 +26,37 @@ from .vehicle import Vehicle
 
 class RideHailingVehicle(Vehicle):
     __slots__ = (
-        "_is_electric",
-        "_fleet",
-        "travel_costs",
-        "charging_costs",
-        "_suggested",
-        "_estimated_completion_time",
-        "_destination",
-        "_emergency_soc_buffer_percent",
-        "_price_per_minute",
         "_available_seats",
-        "_max_available_seats",
-        "_seats",
-        "_driver",
-        "_velocity",
+        "_charging_station_charging_finished",
+        "_charging_station_charging_started",
+        "_charging_station_plugged_in",
+        "_charging_station_plugged_out",
         "_current_state_of_charge",
-        "_max_state_of_charge",
-        "_energy_consumption",
-        "_vehicle_parked",
-        "_user_mounted",
-        "_driving_started",
-        "_driving_finished",
-        "_user_unmounted",
+        "_destination",
+        "_driver",
         "_driver_mounted",
         "_driver_unmounted",
-        "_vehicle_relocation_started",
-        "_vehicle_relocation_finished",
-        "_charging_station_plugged_in",
-        "_charging_station_charging_started",
-        "_charging_station_charging_finished",
-        "_charging_station_plugged_out",
+        "_driving_finished",
+        "_driving_started",
+        "_emergency_soc_buffer_percent",
+        "_energy_consumption",
+        "_estimated_completion_time",
+        "_fleet",
+        "_is_electric",
+        "_max_available_seats",
+        "_max_state_of_charge",
+        "_price_per_minute",
         "_reserved_for_user",
+        "_seats",
+        "_suggested",
+        "_user_mounted",
+        "_user_unmounted",
+        "_vehicle_parked",
+        "_vehicle_relocation_finished",
+        "_vehicle_relocation_started",
+        "_velocity",
+        "charging_costs",
+        "travel_costs",
     )
 
     exposes = Vehicle.exposes + ["_fleet", "_current_state_of_charge", "_suggested"]
@@ -222,7 +222,7 @@ class RideHailingVehicle(Vehicle):
             distance, consider_buffer=not relocating
         ):
             raise RuntimeError(
-                f"{str(self.__class__.__name__)} {self._id} has been tried to move but has not enough state of charge."
+                f"{self.__class__.__name__!s} {self._id} has been tried to move but has not enough state of charge."
             )
 
         yield self._env.timeout(time)

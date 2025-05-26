@@ -5,23 +5,23 @@ from simulation.vehicle.vehicle import Vehicle
 
 class TransportationAlternativeRideHailing:
     __slots__ = (
+        "_autonomous_vehicle",
+        "_convenience",
+        "_distance",
+        "_distance_to_pickup",
+        "_duration",
+        "_electric_vehicle",
+        "_energy_consumed",
+        "_environment",
+        "_pick_up_time",
+        "_price",
+        "_route",
+        "_route_to_pickup",
+        "_technology_skeptical",
+        "_utility",
         "_vehicle",
         "_vehicle_type",
-        "_price",
-        "_duration",
-        "_distance",
-        "_route",
-        "_convenience",
-        "_energy_consumed",
         "_waiting_time",
-        "_environment",
-        "_technology_skeptical",
-        "_electric_vehicle",
-        "_autonomous_vehicle",
-        "_route_to_pickup",
-        "_distance_to_pickup",
-        "_pick_up_time",
-        "_utility",
     )
 
     def __init__(

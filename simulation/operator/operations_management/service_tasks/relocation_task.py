@@ -14,12 +14,12 @@ from simulation.operator.vehicle_fleet import VehicleFleet
 
 class RelocationTask(ServiceTask):
     __slots__ = (
-        "_origin",
         "_destination",
-        "_number_of_vehicles_to_relocate",
-        "_vehicle_mode",
         "_distance",
+        "_number_of_vehicles_to_relocate",
+        "_origin",
         "_vehicle_fleet",
+        "_vehicle_mode",
     )
 
     def __init__(

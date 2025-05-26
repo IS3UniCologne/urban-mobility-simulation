@@ -16,7 +16,7 @@ from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 
 class DowntimeMinWithoutLookahead:
-    __slots__ = ("_config", "_av_config")
+    __slots__ = ("_av_config", "_config")
 
     def __init__(self) -> None:
         self._config = Configuration()

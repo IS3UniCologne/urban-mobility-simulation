@@ -6,9 +6,9 @@ from .modules.society_metrics import SocietyMetrics
 
 class MetricsFactory:
     __slots__ = (
+        "_customer_metrics",
         "_general_metrics",
         "_service_provider",
-        "_customer_metrics",
         "_society_metrics",
         "_transactions",
     )

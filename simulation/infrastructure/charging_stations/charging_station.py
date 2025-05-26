@@ -10,17 +10,17 @@ from tracking.tracking_interface import TrackingInterface
 
 class ChargingStation(TrackingInterface):
     __slots__ = (
-        "_env",
         "_capacity",
-        "_queue_size",
-        "_polygon",
         "_centre",
-        "_plugs",
+        "_current_queue_time",
+        "_env",
         "_id",
         "_location",
+        "_plugs",
+        "_polygon",
         "_power",
         "_queue",
-        "_current_queue_time",
+        "_queue_size",
     )
 
     exposes = ["_location", "_plugs", "_current_queue_time"]

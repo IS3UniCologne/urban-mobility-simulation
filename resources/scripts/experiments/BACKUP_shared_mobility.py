@@ -547,7 +547,7 @@ def run_single_simulation(
                 )
                 .reset_index(drop=True)
             )
-            rentals = rentals.add_prefix("{}_".format(mode))
+            rentals = rentals.add_prefix(f"{mode}_")
             overall_rentals = pd.concat([overall_rentals, rentals], axis=1)
 
             # Prepare KPI per Mode (Distance, Duration, Revenue)
@@ -555,7 +555,7 @@ def run_single_simulation(
             kpi_for_mode.rename(
                 columns={"price": "revenue"}, inplace=True
             )  # to avoid future confusion
-            kpi_for_mode = kpi_for_mode.add_prefix("{}_".format(mode))
+            kpi_for_mode = kpi_for_mode.add_prefix(f"{mode}_")
             overall_rentals = pd.concat([overall_rentals, kpi_for_mode], axis=1)
 
         return overall_rentals

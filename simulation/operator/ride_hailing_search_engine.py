@@ -14,13 +14,13 @@ from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 class RideHailingSearchEngine(SearchEngineInterface):
     __slots__ = (
+        "_AV_price_reduction",
         "_env",
         "_fleet",
-        "_AV_price_reduction",
-        "_price_entering",
-        "_price_per_minute",
-        "_price_per_km",
         "_min_price",
+        "_price_entering",
+        "_price_per_km",
+        "_price_per_minute",
     )
 
     def __init__(self, env):

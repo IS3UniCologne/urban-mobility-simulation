@@ -14,12 +14,12 @@ from simulation.vehicle.vehicle import Vehicle
 
 class MixedRideHailingFleet(VehicleFleet):
     __slots__ = (
-        "_config",
-        "_ridehailing_cars",
         "_autonomous_cars",
+        "_config",
         "_distance_threshold_to_user",
         "_driver_availability_vector",
         "_recharging_threshold",
+        "_ridehailing_cars",
     )
 
     def __init__(self, env: Environment):

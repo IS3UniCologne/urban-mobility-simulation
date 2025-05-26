@@ -140,7 +140,7 @@ def planning():
     )
     Costs = mdl.sum(y_1[i] * 29.86 + y_2[i] * 7.66 for i in space_range)
     mdl.maximize(Revenue - Costs)
-    print("Start_time: {}".format(start_time))
+    print(f"Start_time: {start_time}")
     mdl.print_information()
     assert mdl.solve()
     mdl.report()

@@ -25,7 +25,7 @@ from simulation.vehicle.public_transit_bus import Bus
 
 
 class ModifiedTensorBoard(TensorBoard):
-    __slots__ = ("_step", "_writer", "_log_write_dir")
+    __slots__ = ("_log_write_dir", "_step", "_writer")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -62,34 +62,34 @@ class ModifiedTensorBoard(TensorBoard):
 
 class DQN(RLAgent):
     __slots__ = (
-        "_total_episodes",
-        "_episode",
         "_action_space",
         "_alpha",
-        "_gamma",
+        "_episode",
         "_eps",
-        "_eps_min",
-        "_eps_decay_strategy",
         "_eps_decay",
-        "_penalty",
-        "_replay_buffer_size",
-        "_min_experience",
-        "_use_double_q",
-        "_minibatch_size",
-        "_target_net_update_threshold",
-        "_tau",
+        "_eps_decay_strategy",
+        "_eps_min",
+        "_gamma",
+        "_latest_reward",
         "_learning_rate",
         "_learning_rate_decay_steps",
-        "_q_net_layer",
+        "_min_experience",
+        "_minibatch_size",
         "_optimizer",
-        "_tensorboard",
-        "_random",
+        "_penalty",
         "_q_net",
-        "_target_q_net",
+        "_q_net_layer",
+        "_random",
         "_replay_buffer",
-        "_timelimit",
-        "_latest_reward",
+        "_replay_buffer_size",
         "_state",
+        "_target_net_update_threshold",
+        "_target_q_net",
+        "_tau",
+        "_tensorboard",
+        "_timelimit",
+        "_total_episodes",
+        "_use_double_q",
     )
 
     def __init__(
@@ -317,7 +317,7 @@ class DQN(RLAgent):
         # retain decayed epsilon
         self._config.transit_agent_config.eps = self._eps
         logging.debug(
-            f"Saving decayed epsilon into config: {str(self._eps)}",
+            f"Saving decayed epsilon into config: {self._eps!s}",
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -325,7 +325,7 @@ class DQN(RLAgent):
         self._config.transit_agent_config.optimizer = self._optimizer
         if self._config.transit_agent_config.lr_decay:
             logging.debug(
-                f"Saving decayed learning rate into config: {str(self._learning_rate(self._optimizer.iterations))}",
+                f"Saving decayed learning rate into config: {self._learning_rate(self._optimizer.iterations)!s}",
                 extra={
                     "clazz": self.__class__.__name__,
                     "oid": f"Episode {self._episode}",
@@ -333,7 +333,7 @@ class DQN(RLAgent):
             )
 
         logging.debug(
-            f"Current Replay Buffer size: {str(len(self._replay_buffer))}",
+            f"Current Replay Buffer size: {len(self._replay_buffer)!s}",
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -552,7 +552,7 @@ class DQN(RLAgent):
         self._latest_reward = bus._dropoffs * self._reward
         if self._latest_reward > 0:
             logging.debug(
-                f"Service Level was increased by {str(self._latest_reward)}",
+                f"Service Level was increased by {self._latest_reward!s}",
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 

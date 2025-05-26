@@ -20,18 +20,18 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     bus_id = 0
 
     __slots__ = (
-        "_time",
-        "_spawned",
-        "_has_reached_terminal",
         "_config",
-        "_problem_config",
-        "_geodesic_env",
-        "_world",
-        "_dropoffs",
-        "_pickups",
         "_dist_traveled",
-        "_use_learning_agent",
+        "_dropoffs",
+        "_geodesic_env",
+        "_has_reached_terminal",
+        "_pickups",
+        "_problem_config",
         "_process",
+        "_spawned",
+        "_time",
+        "_use_learning_agent",
+        "_world",
     )
     # Tracking
     exposes = ["_position", "state", "_available_seats"]

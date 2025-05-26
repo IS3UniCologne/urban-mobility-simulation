@@ -22,18 +22,18 @@ class Operator:
     operator_id = 0
 
     __slots__ = (
+        "_allocation_engine",
+        "_charging_infrastructure",
         "_env",
         "_fleet",
-        "_charging_infrastructure",
         "_operations",
         "_search_engine",
-        "_allocation_engine",
-        "id",
-        "_total_revenue",
         "_total_fulfilled_trips",
-        "_total_missed_trips",
         "_total_missed_revenue",
+        "_total_missed_trips",
+        "_total_revenue",
         "_transactions",
+        "id",
     )
 
     def __init__(

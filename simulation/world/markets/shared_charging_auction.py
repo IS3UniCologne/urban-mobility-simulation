@@ -21,10 +21,10 @@ from tracking.tracking_interface import TrackingInterface
 
 class SharedChargingAuction(Auction, TrackingInterface):
     __slots__ = (
-        "_participants",
         "_charging_locations",
-        "_next_timeslot",
         "_location_results",
+        "_next_timeslot",
+        "_participants",
     )
 
     exposes = ["_next_timeslot", "_bids", "_location_results"]

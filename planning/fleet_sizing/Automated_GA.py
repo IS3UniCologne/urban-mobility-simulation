@@ -17,11 +17,9 @@ def f(i):
     experience = experience.append(new_experience)
     # print(experience)
     objective = -float(
-        (
-            run_single_simulation(
-                end_time=1400, allocation=i, seed=42, substitution=0.1
-            )[-1]
-        )
+        run_single_simulation(end_time=1400, allocation=i, seed=42, substitution=0.1)[
+            -1
+        ]
     )
     print(objective)
     # experience.loc[

@@ -19,16 +19,16 @@ from tracking.tracking import Tracking
 
 class OperationsPublicTransport(OperationsInterface):
     __slots__ = (
-        "_timetable",
-        "_time",
-        "_fleet",
+        "_bus_velocity",
         "_config",
-        "_operator_config",
+        "_fleet",
         "_geodesic_env",
-        "_world",
+        "_operator_config",
+        "_time",
+        "_timetable",
         "_tracking",
         "_walking_speed",
-        "_bus_velocity",
+        "_world",
     )
 
     def __init__(self, env, timetable, fleet: PublicTransportVehicleFleet):

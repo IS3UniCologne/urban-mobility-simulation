@@ -529,14 +529,14 @@ def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):
             os.path.join(
                 output_folder,
                 "tracking",
-                f"{str(runs)}_benchmark_agent_movements_{strf}.csv",
+                f"{runs!s}_benchmark_agent_movements_{strf}.csv",
             )
         )
         demands.to_csv(
             os.path.join(
                 output_folder,
                 "tracking",
-                f"{str(runs)}_benchmark_demands_hex{demand_res}_{strf}.csv",
+                f"{runs!s}_benchmark_demands_hex{demand_res}_{strf}.csv",
             ),
             index=False,
         )
@@ -551,54 +551,51 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
         for k, v in kwargs.items():
             if k == "penalty":
                 logging.info(
-                    f"Agent Penalty set to {str(v)}",
-                    extra={"clazz": __name__, "oid": ""},
+                    f"Agent Penalty set to {v!s}", extra={"clazz": __name__, "oid": ""}
                 )
                 bus_agent_config.penalty = v
             if k == "q_net_layer":
                 logging.info(
-                    f"DQN layer configuration set to {str(v)}",
+                    f"DQN layer configuration set to {v!s}",
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.q_net_layer = v
             if k == "batchsize":
                 logging.info(
-                    f"Batchsize set to {str(v)}", extra={"clazz": __name__, "oid": ""}
+                    f"Batchsize set to {v!s}", extra={"clazz": __name__, "oid": ""}
                 )
                 bus_agent_config.batchsize = v
             if k == "buffersize":
                 logging.info(
-                    f"Experience replay buffer size set to {str(v)}",
+                    f"Experience replay buffer size set to {v!s}",
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.buffersize = v
             if k == "action_space":
                 logging.info(
-                    f"Action space set to {str(v)}",
-                    extra={"clazz": __name__, "oid": ""},
+                    f"Action space set to {v!s}", extra={"clazz": __name__, "oid": ""}
                 )
                 ActionSpace.init(v, reset=True)
             if k == "lr_decay":
                 logging.info(
-                    f"Learning rate decay set to {str(v)}",
+                    f"Learning rate decay set to {v!s}",
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.lr_decay = v
             if k == "reward":
                 logging.info(
-                    f"Reward set to {str(v)}", extra={"clazz": __name__, "oid": ""}
+                    f"Reward set to {v!s}", extra={"clazz": __name__, "oid": ""}
                 )
                 bus_agent_config.reward = v
             if k == "doubleQ":
                 logging.info(
-                    f"Usage of Double Q set to {str(v)}",
+                    f"Usage of Double Q set to {v!s}",
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.double_q = v
             if k == "eps_decay":
                 logging.info(
-                    f"Epsilon decay set to {str(v)}",
-                    extra={"clazz": __name__, "oid": ""},
+                    f"Epsilon decay set to {v!s}", extra={"clazz": __name__, "oid": ""}
                 )
                 bus_agent_config.eps_decay = v
             if k == "tau":
@@ -610,7 +607,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
                     bus_agent_config.tau = None
                 else:
                     logging.info(
-                        f"Using soft updates of target Q-network with tau of {str(v)}",
+                        f"Using soft updates of target Q-network with tau of {v!s}",
                         extra={"clazz": __name__, "oid": ""},
                     )
                     bus_agent_config.tau = v
@@ -620,7 +617,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
                     )
             if k == "eps_decay_strategy":
                 logging.info(
-                    f"Epsilon decay strategy set to {str(v)}",
+                    f"Epsilon decay strategy set to {v!s}",
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.eps_decay_strategy = v
@@ -644,9 +641,9 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
         time.sleep(random.random())
         strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
         if not kwargs:
-            track_path = f"{str(episodes)}_episodes_movements_{strf}.csv"
+            track_path = f"{episodes!s}_episodes_movements_{strf}.csv"
         else:
-            track_path = f"{str(episodes)}_episodes_{experiments}_movements_{strf}.csv"
+            track_path = f"{episodes!s}_episodes_{experiments}_movements_{strf}.csv"
 
         track_dir = os.path.join(
             output_folder, "tracking", track_path.replace(".csv", "/")
@@ -744,7 +741,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
                 )
 
             t.add_to(m)
-            m.save(os.path.join(track_dir, f"bus_movement_episode_{str(e)}.html"))
+            m.save(os.path.join(track_dir, f"bus_movement_episode_{e!s}.html"))
 
         e += 1
 
@@ -752,9 +749,9 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
     if not kwargs:
-        weights_path = f"{str(episodes)}_episodes_weights_{strf}.keras"
+        weights_path = f"{episodes!s}_episodes_weights_{strf}.keras"
     else:
-        weights_path = f"{str(episodes)}_episodes_{experiments}_weights_{strf}.keras"
+        weights_path = f"{episodes!s}_episodes_{experiments}_weights_{strf}.keras"
 
     return_path = weights_path.replace("weights", "returns").replace("keras", "csv")
 
@@ -824,7 +821,7 @@ if __name__ == "__main__":
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     results.to_csv(
         os.path.join(
-            output_folder, "benchmarks", f"{str(runs)}_episodes_benchmark_{strf}.csv"
+            output_folder, "benchmarks", f"{runs!s}_episodes_benchmark_{strf}.csv"
         ),
         index=False,
     )

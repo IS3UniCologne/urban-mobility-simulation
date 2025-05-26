@@ -59,24 +59,24 @@ class User(Agent, DriverInterface, TrackingInterface):
     exposes = ["_position"]
 
     __slots__ = (
-        "_id",
-        "_fleet",
-        "_transport_task",
-        "_transportation_search_service",
-        "_payment_service",
-        "_vehicle_assignment_service",
-        "_vehicle_choice_behavior",
-        "_population_type",
-        "_env",
-        "_transportation_alternatives_received",
-        "_transportation_alternatives_selected",
-        "_transportation_alternatives_not_found",
-        "_vehicle_allocated",
+        "_arrived_at_destination",
         "_arrived_at_pick_up_position",
         "_assigned_vehicle_arrived",
-        "_arrived_at_destination",
-        "process_finished",
+        "_env",
+        "_fleet",
+        "_id",
+        "_payment_service",
+        "_population_type",
         "_position_changed",
+        "_transport_task",
+        "_transportation_alternatives_not_found",
+        "_transportation_alternatives_received",
+        "_transportation_alternatives_selected",
+        "_transportation_search_service",
+        "_vehicle_allocated",
+        "_vehicle_assignment_service",
+        "_vehicle_choice_behavior",
+        "process_finished",
     )
 
     def __init__(
@@ -617,14 +617,14 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
     transit_user_id = 0
 
     __slots__ = (
+        "_arrived_at_last_stop",
+        "_available_time",
+        "_bus_res",
+        "_config",
+        "_geodesic_env",
         "_passive",
         "_waiting_time",
-        "_config",
-        "_bus_res",
-        "_available_time",
         "_world",
-        "_geodesic_env",
-        "_arrived_at_last_stop",
     )
 
     def __init__(
@@ -732,7 +732,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
                     yield self._env.process(self.start_transit(vehicle_allocation))
 
-                    yield self._env.process((self.move_to_destination()))
+                    yield self._env.process(self.move_to_destination())
 
                     self._payment_service.pay_for_fulfilled_transportation_task(
                         self, self._transport_task, selected_transportation_alternative
@@ -766,7 +766,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                         yield self._env.process(
                             self.start_passive_checkpoint_transit(vehicle)
                         )
-                        yield self._env.process((self.move_to_destination()))
+                        yield self._env.process(self.move_to_destination())
                         selected_alternative = TransportationAlternative(
                             vehicle,
                             PublicTransitRoute(
@@ -1106,17 +1106,17 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
     user_id = 0
 
     __slots__ = (
-        "_id",
-        "_transport_task",
+        "_AV_truster",
+        "_env",
         "_fleet",
-        "_transportation_search_service",
-        "_vehicle_assignment_service",
+        "_id",
+        "_mode_choice_coefficients",
         "_payment_service",
         "_population_type",
-        "_env",
+        "_transport_task",
+        "_transportation_search_service",
+        "_vehicle_assignment_service",
         "_vehicle_choice_behavior",
-        "_mode_choice_coefficients",
-        "_AV_truster",
     )
 
     exposes = ["_position", "_state", "_transport_task"]

@@ -20,11 +20,11 @@ class RideHailingMPChargingOperations(OperationsInterface):
     """
 
     __slots__ = (
-        "_time_between_operations",
-        "_state_of_charge_threshold",
         "_algo",
+        "_state_of_charge_threshold",
         "_task_queue",
         "_task_transactions",
+        "_time_between_operations",
         "_virtual_charging_infrastructure",
         "_world",
     )
