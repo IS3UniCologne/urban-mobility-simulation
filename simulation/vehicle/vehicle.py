@@ -47,12 +47,12 @@ class Vehicle(TrackingInterface, ABC):
     exposes = ["_id", "state", "position", "_distance_travelled"]
 
     # We need to override __eq__ and __hash__ to use Vehicles in sets
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Vehicle):
             return self._id == other._id
         return False
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self._id)
 
     def __init__(
@@ -98,7 +98,10 @@ class Vehicle(TrackingInterface, ABC):
         self._current_task: None | TransportTask = None
 
         # For logging
-        self._logging_extra: dict = {"clazz": self.__class__.__name__, "oid": self._id}
+        self._logging_extra: dict[str, str | int] = {
+            "clazz": self.__class__.__name__,
+            "oid": self._id,
+        }
 
         # Add self to fleet
         self._fleet.register_vehicle(self)
@@ -213,8 +216,31 @@ class Vehicle(TrackingInterface, ABC):
         """
         return self.__position
 
+    @position.setter
+    def position(self, position: Position) -> None:
+        self._distance_travelled += self.__position >> position
+
+        new_region = position.get_region_id()
+
+        # did we change region?
+        if new_region != self._current_region:
+            self._fleet.update_vehicle_region(self, new_region)
+            self._current_region = new_region
+
+        self.__position = position
+
+        self._position_changed.succeed(self.__position)
+        self._position_changed = self._env.event()
+
+        logging.debug(
+            "Position updated %s. Total distance travelled: %s.",
+            self.__position,
+            self._distance_travelled,
+            extra=self._logging_extra,
+        )
+
     @property
-    def current_task(self):
+    def current_task(self) -> TransportTask | None:
         """Get the current task of the vehicle.
 
         Returns
@@ -245,29 +271,6 @@ class Vehicle(TrackingInterface, ABC):
             The identifier of the current region of the vehicle. (e.g., hexagon ID).
         """
         return self._current_region
-
-    @position.setter
-    def position(self, position: Position) -> None:
-        self._distance_travelled += self.__position >> position
-
-        new_region = position.get_region_id()
-
-        # did we change region?
-        if new_region != self._current_region:
-            self._fleet.update_vehicle_region(self, new_region)
-            self._current_region = new_region
-
-        self.__position = position
-
-        self._position_changed.succeed(self.__position)
-        self._position_changed = self._env.event()
-
-        logging.debug(
-            "Position updated %s. Total distance travelled: %s.",
-            self.__position,
-            self._distance_travelled,
-            extra=self._logging_extra,
-        )
 
     # Standard mount/unmount passenger logic
     def mount_passenger(self, passenger: PassengerInterface) -> None:
@@ -345,7 +348,7 @@ class Vehicle(TrackingInterface, ABC):
 
         logging.debug("Parked.", extra=self._logging_extra)
 
-    def dump(self, exposed_only=True) -> dict:
+    def dump(self, exposed_only: bool = True) -> dict[str, object]:
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}
         else:
@@ -364,7 +367,7 @@ class Vehicle(TrackingInterface, ABC):
 
     # As of now, this is only used with TransportTask
     # TODO: As part of the vehicle interface refactoring, this should be used to have transparency about a vehicles current task at all time
-    def set_current_task(self, task) -> None:
+    def set_current_task(self, task: TransportTask | None) -> None:
         """Set the current task of the vehicle.
 
         Parameters
