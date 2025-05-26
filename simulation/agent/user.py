@@ -230,6 +230,8 @@ class User(Agent, DriverInterface, TrackingInterface):
 
             yield self._env.process(self.stop())
 
+            self.process_finished.succeed()
+
     def search_for_alternatives(self):
         """
             User searches for available mobility alternatives using concrete instance of py:mod:`~operator.SearchEngineInterface`
@@ -862,8 +864,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                             "User was not able to board vehicle, vehicle is full.",
                             extra={"clazz": self.__class__.__name__, "oid": self._id},
                         )
-
-        self.process_finished.succeed()
+            finally:
+                # Ensure this always gets called, even if there are unhandled exceptions
+                if not self.process_finished.triggered:
+                    self.process_finished.succeed()
 
     def search_for_alternatives(self):
         # Update current state
@@ -1258,6 +1262,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             )
 
             yield self._env.process(self.stop())
+
+            self.process_finished.succeed()
 
     def search_for_alternatives(self):
         """
