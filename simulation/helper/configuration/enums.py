@@ -88,3 +88,8 @@ class VehicleState(Enum):
     EN_ROUTE_DETOUR = 2012
 
     UNKNOWN = 2999
+
+
+class TransactionState(Enum):
+    FULFILLED = "Fulfilled"
+    MISSED = "Missed"

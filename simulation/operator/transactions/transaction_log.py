@@ -6,6 +6,8 @@ Implements the TransactionLog class for recording and querying transactions.
 
 import pandas as pd
 
+from simulation.helper.configuration.enums import TransactionState
+
 from .transaction import Transaction
 from .transaction_listener import TransactionListener
 
@@ -104,7 +106,7 @@ class TransactionLog:
         """
         if not self._has_successful_transaction:
             for transaction in self._transactions:
-                if transaction.state == "Fulfilled":
+                if transaction.state == TransactionState.FULFILLED:
                     self._has_successful_transaction = True
                     break
         return self._has_successful_transaction
