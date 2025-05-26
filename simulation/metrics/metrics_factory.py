@@ -13,7 +13,7 @@ class MetricsFactory:
         "_transactions",
     )
 
-    def __init__(self, transactions):
+    def __init__(self, transactions):  # noqa: ANN001, ANN204
         self._general_metrics = GeneralMetrics(transactions)
         self._service_provider = ServiceProviderMetrics(transactions)
         self._customer_metrics = CustomerMetrics(transactions)
@@ -36,17 +36,17 @@ class MetricsFactory:
     def society_metrics(self) -> SocietyMetrics:
         return self._society_metrics
 
-    def print_simulation_summary(
+    def print_simulation_summary(  # noqa: ANN201
         self,
         number_of_vehicles: dict,
         cost_per_vehicle_km: dict,
         co2_per_km_per_vehicle: dict,
     ):
-        print("############ Simulation Summary ############")
-        print(" ")
+        print("############ Simulation Summary ############")  # noqa: T201
+        print(" ")  # noqa: T201
         self._general_metrics.print_summary()
         self._service_provider.print_summary(number_of_vehicles, cost_per_vehicle_km)
         self._customer_metrics.print_summary()
         self._society_metrics.print_summary(co2_per_km_per_vehicle)
-        print(" ")
-        print("#" * 40)
+        print(" ")  # noqa: T201
+        print("#" * 40)  # noqa: T201

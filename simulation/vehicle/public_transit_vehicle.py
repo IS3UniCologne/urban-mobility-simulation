@@ -28,17 +28,17 @@ class PublicTransitVehicleFull(PublicTransitVehicleException):
 class PublicTransitVehicle(Vehicle, ABC):
     __slots__ = ("_current_stop", "_delay", "_route")
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         route: PublicTransitRoute,
         position: Position,
         fleet: VehicleFleet,
-        velocity,
+        velocity,  # noqa: ANN001
         vehicle_mode: VehicleMode,
-        max_available_seats,
+        max_available_seats,  # noqa: ANN001
     ):
-        super(PublicTransitVehicle, self).__init__(
+        super(PublicTransitVehicle, self).__init__(  # noqa: UP008
             env=env,
             fleet=fleet,
             position=position,
@@ -59,22 +59,22 @@ class PublicTransitVehicle(Vehicle, ABC):
         )
 
     @property
-    def route(self):
+    def route(self):  # noqa: ANN201
         return self._route
 
     @property
-    def current_stop(self):
+    def current_stop(self):  # noqa: ANN201
         return self._current_stop
 
     @current_stop.setter
-    def current_stop(self, stop: Stop):
+    def current_stop(self, stop: Stop):  # noqa: ANN202
         self._current_stop = stop
 
     @property
-    def delay(self):
+    def delay(self):  # noqa: ANN201
         return self._delay
 
-    def prognose_arrival(self, stop: Stop):
+    def prognose_arrival(self, stop: Stop):  # noqa: ANN201
         # TODO: this is pretty optimistic: What if the vehicle waits at intermediate stops
 
         distance = self._route.subroute(self._current_stop, stop).total_distance()

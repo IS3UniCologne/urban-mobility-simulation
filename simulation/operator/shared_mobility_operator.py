@@ -21,7 +21,7 @@ from simulation.tasks.transport_task import TransportTask
 class SharedMobilityOperator(Operator):
     __slots__ = ("_number_service_workers", "_workforce")
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         fleet: VehicleFleet,
@@ -31,7 +31,7 @@ class SharedMobilityOperator(Operator):
         allocation_engine: VehicleAllocationEngineInterface,
         number_service_workers: int,
     ):
-        super(SharedMobilityOperator, self).__init__(
+        super(SharedMobilityOperator, self).__init__(  # noqa: UP008
             env,
             fleet,
             charging_infrastructure,
@@ -45,7 +45,7 @@ class SharedMobilityOperator(Operator):
             env=self._env, number_service_workers=number_service_workers
         )
 
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask):
+    def withdraw_transportation_task(self, user, transportation_task: TransportTask):  # noqa: ANN001, ANN201
         vehicle_types = [
             mode.name
             for mode in Configuration().shared_vehicle_global.AVAILABLE_VEHICLE_MODES
@@ -97,6 +97,6 @@ class SharedMobilityOperator(Operator):
         )
 
         logging.info(
-            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
+            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )

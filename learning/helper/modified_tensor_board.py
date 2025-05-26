@@ -4,7 +4,7 @@ from keras.callbacks import TensorBoard
 
 class ModifiedTensorBoard(TensorBoard):
     # Overriding init to set initial step and writer (we want one log file for all .fit() calls)
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs):  # noqa: ANN003, ANN204
         super().__init__(**kwargs)
         self.step = 1
         self.writer = tf.summary.create_file_writer(self.log_dir)
@@ -20,22 +20,22 @@ class ModifiedTensorBoard(TensorBoard):
 
     # Overrided, saves logs with our step number
     # (otherwise every .fit() will start writing from 0th step)
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):  # noqa: ANN001, ANN201
         self.update_stats(**logs)
         self.step += 1
 
     # Overrided
     # We train for one batch only, no need to save anything at epoch end
-    def on_batch_end(self, batch, logs=None):
+    def on_batch_end(self, batch, logs=None):  # noqa: ANN001, ANN201
         pass
 
     # Overrided, so won't close writer
-    def on_train_end(self, _):
+    def on_train_end(self, _):  # noqa: ANN001, ANN201
         pass
 
     # Custom method for saving own metrics
     # Creates writer, writes custom metrics and closes writer
-    def update_stats(self, **stats):
+    def update_stats(self, **stats):  # noqa: ANN003, ANN201
         with self.writer.as_default():
             for key, value in stats.items():
                 tf.summary.scalar(key, value, step=self.step)

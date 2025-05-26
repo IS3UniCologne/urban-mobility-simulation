@@ -31,7 +31,7 @@ class VehicleFleet(ABC):
 
     fleet_id: int = 0
 
-    def __init__(self, env: simpy.Environment):
+    def __init__(self, env: simpy.Environment):  # noqa: ANN204
         self._id = VehicleFleet.fleet_id
         VehicleFleet.fleet_id += 1
         self._env: simpy.Environment = env

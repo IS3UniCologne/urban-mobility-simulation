@@ -12,7 +12,7 @@ class DynamicCheckpointRoutingTracker:
         "_tracking",
     )
 
-    def __init__(self):
+    def __init__(self):  # noqa: ANN204
         self._tracking = Tracking.instance()
         self._config = Configuration()
         self._agent = self._config.dynamic_checkpoint_routing_config.learning_agent
@@ -21,19 +21,19 @@ class DynamicCheckpointRoutingTracker:
         self._timestamped_bus_positions = {}
         self._timestamped_viable_demands = {}
 
-    def track(self):
+    def track(self):  # noqa: ANN201
         # initialize
         self._log_bus()
 
         while True:
-            yield self._problem._step_executed
+            yield self._problem._step_executed  # noqa: SLF001
             self._log_bus()
 
-            if self._problem._check_terminal():
+            if self._problem._check_terminal():  # noqa: SLF001
                 break
 
-    def _log_bus(self):
-        timestamp = self._problem.bus._time.now_as_str()
+    def _log_bus(self):  # noqa: ANN202
+        timestamp = self._problem.bus._time.now_as_str()  # noqa: SLF001
 
         # ... log bus position ...
         self._timestamped_bus_positions[timestamp] = self._tracking.get(
@@ -42,7 +42,7 @@ class DynamicCheckpointRoutingTracker:
 
         # ... log viable demands ...
         self._timestamped_viable_demands[timestamp] = (
-            self._problem._get_viable_demands()
+            self._problem._get_viable_demands()  # noqa: SLF001
         )
 
     # # ... build TimeStampedGeoJSON feature ...

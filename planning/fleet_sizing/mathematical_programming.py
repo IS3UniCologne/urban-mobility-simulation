@@ -6,7 +6,7 @@ import pandas as pd
 from docplex.mp.model import Model
 
 
-def planning():
+def planning():  # noqa: ANN201
     start_time = datetime.now()
     random.seed(2)
     mdl = Model("Charging-cluster_Management")
@@ -95,21 +95,21 @@ def planning():
     )
     Costs = mdl.sum(y_1[i] * 29.86 + y_2[i] * 7.66 for i in space_range)
     mdl.maximize(Revenue - Costs)
-    print(f"Start_time: {start_time}")
+    print(f"Start_time: {start_time}")  # noqa: T201
     mdl.print_information()
     assert mdl.solve()
     mdl.report()
-    print(f"Costs={Costs.solution_value}")
-    print(f"Revenue={Revenue.solution_value}")
+    print(f"Costs={Costs.solution_value}")  # noqa: T201
+    print(f"Revenue={Revenue.solution_value}")  # noqa: T201
     for i in space_range:
         if y_1[i].solution_value != 0:
-            print(f"y_1_{i} = {y_1[i].solution_value}")
+            print(f"y_1_{i} = {y_1[i].solution_value}")  # noqa: T201
         if y_2[i].solution_value != 0:
-            print(f"y_2_{i} = {y_2[i].solution_value}")
-    print(
+            print(f"y_2_{i} = {y_2[i].solution_value}")  # noqa: T201
+    print(  # noqa: T201
         f"x_{1} = {mdl.sum(x_1[i, j, t] for i in space_range for j in space_range for t in time_range).solution_value}"
     )
-    print(
+    print(  # noqa: T201
         f"x_{2} = {mdl.sum(x_2[i, j, t] for i in space_range for j in space_range for t in time_range).solution_value}"
     )
     """for i in space_range:

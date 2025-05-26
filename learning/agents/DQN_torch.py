@@ -2,7 +2,7 @@ import logging
 import random
 import sys
 from collections import deque
-from typing import List
+from typing import List  # noqa: UP035
 
 import numpy as np
 import torch
@@ -15,8 +15,8 @@ from simulation.helper.configuration.configuration import Configuration
 
 
 class DQNN(nn.Module):
-    def __init__(self, input_layer, action_layer):
-        super(DQNN, self).__init__()
+    def __init__(self, input_layer, action_layer):  # noqa: ANN001, ANN204
+        super(DQNN, self).__init__()  # noqa: UP008
 
         self._config = Configuration()
 
@@ -31,13 +31,13 @@ class DQNN(nn.Module):
             nn.Linear(self._config.DQN_config.q_net_layer[1], action_layer),
         )
 
-    def forward(self, x):
+    def forward(self, x):  # noqa: ANN001, ANN201
         return self.layers(x)
 
 
 class DQN(RLAgent):
-    def __init__(self, problem: LearningInterface):
-        super(DQN, self).__init__()
+    def __init__(self, problem: LearningInterface):  # noqa: ANN204
+        super(DQN, self).__init__()  # noqa: UP008
 
         # Get cpu or gpu device for training.
         self._device = "cpu"
@@ -46,7 +46,7 @@ class DQN(RLAgent):
         # elif torch.backends.mps.is_available():
         #     self._device = "mps"
         logging.debug(
-            f"Using {self._device} device",
+            f"Using {self._device} device",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
@@ -127,7 +127,7 @@ class DQN(RLAgent):
         self._target_q_net = None
         self._init_process = self.problem.env.process(self._delayed_init())
 
-    def _delayed_init(self):
+    def _delayed_init(self):  # noqa: ANN202
         yield self.problem.initialized
 
         # Neural Nets
@@ -142,7 +142,7 @@ class DQN(RLAgent):
             if type(self._config.DQN_config.weights) is str:
                 # filepath is given
                 logging.info(
-                    f"Loading model state_dict from {self._config.DQN_config.weights} ...",
+                    f"Loading model state_dict from {self._config.DQN_config.weights} ...",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 self._q_net.load_state_dict(torch.load(self._config.DQN_config.weights))
@@ -171,7 +171,7 @@ class DQN(RLAgent):
         if self._config.DQN_config.optimizer is not None:
             self._optimizer.load_state_dict(self._config.DQN_config.optimizer)
 
-    def run(self):
+    def run(self):  # noqa: ANN201
         yield self._init_process
 
         if self._config.DQN_config.evaluation:
@@ -179,7 +179,7 @@ class DQN(RLAgent):
         else:
             yield self.problem.env.process(self.learn())
 
-    def use(self):
+    def use(self):  # noqa: ANN201
         # Deep Q Learning with Experience Replay as in mnih2013 (deepmind atari paper)
         forbidden_actions = set()
         while True:
@@ -207,13 +207,13 @@ class DQN(RLAgent):
 
         self._cumulative_reward += reward
         logging.debug(
-            f"Current reward: {reward}, overall reward: {self._cumulative_reward}",
+            f"Current reward: {reward}, overall reward: {self._cumulative_reward}",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
         self.problem.reset()
 
-    def learn(self):
+    def learn(self):  # noqa: ANN201
         # Deep Q Learning with Experience Replay as in mnih2013 (deepmind atari paper)
         forbidden_actions = set()
         while True:
@@ -243,7 +243,7 @@ class DQN(RLAgent):
 
             self._cumulative_reward += reward
             logging.debug(
-                f"Current reward: {reward}, overall reward: {self._cumulative_reward}",
+                f"Current reward: {reward}, overall reward: {self._cumulative_reward}",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -293,7 +293,7 @@ class DQN(RLAgent):
         # retain decayed epsilon
         self._config.DQN_config.eps = self._eps
         logging.debug(
-            f"Saving decayed epsilon into config: {self._eps!s}",
+            f"Saving decayed epsilon into config: {self._eps!s}",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -309,7 +309,7 @@ class DQN(RLAgent):
         # retain replaybuffer
         self._config.DQN_config.replaybuffer = self._replaybuffer
         logging.debug(
-            f"Saving replay buffer into config. Size: {len(self._replaybuffer)!s}",
+            f"Saving replay buffer into config. Size: {len(self._replaybuffer)!s}",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -327,7 +327,7 @@ class DQN(RLAgent):
 
         self.problem.reset()
 
-    def policy(self, state, forbidden: List[int], exploit=False):
+    def policy(self, state, forbidden: List[int], exploit=False):  # noqa: ANN001, ANN201, UP006
         """
 
         :param state: state representation
@@ -354,7 +354,7 @@ class DQN(RLAgent):
 
         return a
 
-    def _train(self):
+    def _train(self):  # noqa: ANN202
         minibatch = random.sample(self._replaybuffer, self._minibatch_size)
 
         # Q(s,a) using policy net

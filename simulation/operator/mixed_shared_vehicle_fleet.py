@@ -5,10 +5,10 @@ from simulation.operator.vehicle_fleet import VehicleFleet
 
 
 class MixedSharedVehicleFleet(VehicleFleet):
-    def __init__(self, env: Environment):
-        super(MixedSharedVehicleFleet, self).__init__(env)
+    def __init__(self, env: Environment):  # noqa: ANN204
+        super(MixedSharedVehicleFleet, self).__init__(env)  # noqa: UP008
 
-    def vehicles_below_soc_threshold(self, state_of_charge_threshold):
+    def vehicles_below_soc_threshold(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
         Return all vehicles that need to be refueled/recharged
         :param state_of_charge_threshold: between 0 and 1
@@ -21,7 +21,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold
         }
 
-    def vehicles_below_soc_threshold_in_region(self, state_of_charge_threshold, region):
+    def vehicles_below_soc_threshold_in_region(self, state_of_charge_threshold, region):  # noqa: ANN001, ANN201
         """
         Return all vehicles that need to be refueled/recharged in a region
         :param state_of_charge_threshold: between 0 and 1
@@ -76,7 +76,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
 
         return supply
 
-    def vehicles_to_be_charged_per_region(self, state_of_charge_threshold):
+    def vehicles_to_be_charged_per_region(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
         Return a list of number of vehicles that need to be charged in each area.
 

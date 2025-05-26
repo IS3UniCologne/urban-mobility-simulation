@@ -1,4 +1,4 @@
-from typing import List
+from typing import List  # noqa: UP035
 
 
 from simulation.environment.geodesic_position import GeodesicPosition
@@ -13,10 +13,10 @@ from simulation.infrastructure.transit_network.stop import Stop
 class Route:
     __slots__ = ("_destination", "_origin", "_route_segments")
 
-    def __init__(self, origin: Position, destination: Position):
+    def __init__(self, origin: Position, destination: Position):  # noqa: ANN204
         self._origin = origin
         self._destination = destination
-        self._route_segments: List[Edge] = []
+        self._route_segments: List[Edge] = []  # noqa: UP006
 
         distance = origin >> destination  # euclidean distance
         self._route_segments.append(
@@ -24,19 +24,19 @@ class Route:
         )  # Append Dummy Edge
 
     @property
-    def origin(self):
+    def origin(self):  # noqa: ANN201
         return self._origin
 
     @property
-    def destination(self):
+    def destination(self):  # noqa: ANN201
         return self._destination
 
     @property
-    def route_segments(self):
+    def route_segments(self):  # noqa: ANN201
         return self._route_segments
 
     @property
-    def distance(self):
+    def distance(self):  # noqa: ANN201
         distance = 0
         for rs in self.route_segments:
             distance += rs.distance
@@ -60,69 +60,69 @@ class PublicTransitRoute(Route):
     - A "route segment" is the part of the route between two stops
     """
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         origin: GeodesicPosition,
         destination: GeodesicPosition,
         route_id: str,
         trip_id: str,
-        stops: List[Stop] = None,
-        segments: List[RouteSegment] = None,
+        stops: List[Stop] = None,  # noqa: UP006, RUF013
+        segments: List[RouteSegment] = None,  # noqa: UP006, RUF013
     ):
-        super(PublicTransitRoute, self).__init__(origin, destination)
+        super(PublicTransitRoute, self).__init__(origin, destination)  # noqa: UP008
 
         self._id = route_id
         self._trip_id = trip_id
         self._trips = None
 
         if stops is None:
-            self._route_stops: List[Stop] = []
+            self._route_stops: List[Stop] = []  # noqa: UP006
         else:
             self._route_stops = stops
         if segments is None:
-            self._route_segments: List[RouteSegment] = []
+            self._route_segments: List[RouteSegment] = []  # noqa: UP006
         else:
             self._route_segments = segments
 
     @property
-    def trip_id(self):
+    def trip_id(self):  # noqa: ANN201
         return self._trip_id
 
     @property
-    def origin(self):
+    def origin(self):  # noqa: ANN201
         return self._origin
 
     @property
-    def destination(self):
+    def destination(self):  # noqa: ANN201
         return self._destination
 
     @property
-    def route_segments(self):
+    def route_segments(self):  # noqa: ANN201
         return self._route_segments
 
-    def add_route_segment(self, segment: RouteSegment):
+    def add_route_segment(self, segment: RouteSegment):  # noqa: ANN201
         self._route_segments.append(segment)
 
-    def route_segment_by_id(self, id):
+    def route_segment_by_id(self, id):  # noqa: ANN001, ANN201
         return self._route_segments[id]
 
     @property
-    def route_stops(self):
+    def route_stops(self):  # noqa: ANN201
         return self._route_stops
 
-    def route_stop_by_id(self, id):
+    def route_stop_by_id(self, id):  # noqa: ANN001, ANN201
         return self._route_stops[id]
 
-    def route_stop_by_gtfs_id(self, gtfs_id):
+    def route_stop_by_gtfs_id(self, gtfs_id):  # noqa: ANN001, ANN201
         # TODO: this is stupid
         for s in self._route_stops:
             if s.gtfs_id == gtfs_id:
                 return s
 
-    def add_route_stop(self, stop: Stop):
+    def add_route_stop(self, stop: Stop):  # noqa: ANN201
         self._route_stops.append(stop)
 
-    def subroute(self, start: Stop, end: Stop):
+    def subroute(self, start: Stop, end: Stop):  # noqa: ANN201
         """
         Attention: The PublicTransitRoute that is returned does not adhere to index = stop ID!
         This is marked by the route_id being prefixed with SUB
@@ -139,10 +139,10 @@ class PublicTransitRoute(Route):
             self._route_segments[start.stop_id : end.stop_id],
         )
 
-    def total_distance(self):
+    def total_distance(self):  # noqa: ANN201
         return sum(self._route_segments)
 
-    def planned_duration(self):
+    def planned_duration(self):  # noqa: ANN201
         return SimulationTimeConverter.duration_between(
             self.route_stop_by_id(0).departure,
             self.route_stop_by_id(-1).departure,
@@ -152,5 +152,5 @@ class PublicTransitRoute(Route):
             else False,
         )
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"PublicTransitRoute with id/name {self._id} and trip id {self._trip_id}"
