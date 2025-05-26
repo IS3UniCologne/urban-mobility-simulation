@@ -110,6 +110,9 @@ class ChargingTask(ServiceTask):
             # Plugin Vehicle to Charging Station
             vehicle.plug_to_charging_station()
 
+            # increase charging station utilization by one
+            self._charging_station._utilization += 1
+
             # Charge Vehicle
             vehicle_charging_power = (
                 Configuration().shared_vehicle_operators[0].CHARGING_STATION_POWER

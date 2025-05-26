@@ -380,41 +380,95 @@ demand_factory = DemandFactory(
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
+fleet_0_transactions = ridehailing_operator_0.get_transactions()
+
 timestamp = []
-y1 = []
-y2 = []
+y1, y2, y3, y4, y5, y6, y7 = [], [], [], [], [], [], []
+
+# fleet_0_transactions = ridehailing_operator_0.get_transactions()
+# fleet_1_transactions = ridehailing_operator_1.get_transactions()
+
+# missed_trips_fleet_0 = fleet_0_transactions["state"].value_counts()["Missed"]
+# missed_trips_fleet_1 = fleet_1_transactions["state"].value_counts()["Missed"]
+
+# total_trips_fleet_0 = len(fleet_0_transactions["state"])
+# total_trips_fleet_1 = len(fleet_1_transactions["state"])
 
 # callback function to get data from world
 def get_n_users():
-    timestamp.append(env.now)
-    y1.append(len(world._users))
-    y2.append(len(world._user_processes))
+    """
+    needed data:
+    - plot 1: n successful transport tasks & total transport tasks
+    - plot 2: number of active users
+    - plot 3: charging station utilization global (avg. of each stations)
+    """
+    # transaction data
+    fleet_0_transactions = ridehailing_operator_0.get_transactions()
+    fleet_1_transactions = ridehailing_operator_1.get_transactions()
 
-    return timestamp, y1, y2
+
+    try:
+        missed_trips_fleet_0 = fleet_0_transactions["state"].apply(lambda x: "Fulfilled" in x).sum() # somehow works with "Fulfilled"
+        missed_trips_fleet_1 = fleet_1_transactions["state"].apply(lambda x: "Fulfilled" in x).sum()
+        total_trips_fleet_0 = len(fleet_0_transactions["state"])
+        total_trips_fleet_1 = len(fleet_1_transactions["state"])
+    #     total_trips_fleet_0 = len(fleet_0_transactions["state"])
+    #     total_trips_fleet_1 = len(fleet_1_transactions["state"]x)
+    #     missed_trips_fleet_0 = (total_trips_fleet_0 - fleet_0_transactions["state"].value_counts()["Fulfilled"])
+    #     missed_trips_fleet_1 = (total_trips_fleet_1 - fleet_1_transactions["state"].value_counts()["Fulfilled"])
+    except:
+        total_trips_fleet_0 = 0
+        total_trips_fleet_1 = 0
+        missed_trips_fleet_0 = 0
+        missed_trips_fleet_1 = 0
+    
+    # global avg station utilization
+    global_station_utilization = 0
+    for charging_station in charging_infrastructure.charging_stations:
+        global_station_utilization += charging_station._utilization
+
+    global_avg_station_utilization = global_station_utilization / len(charging_infrastructure.charging_stations)
+
+    timestamp.append(env.now)
+    y1.append(len(world._users))                # n users in world
+    y2.append(len(world._user_processes))       # n active users in world
+    y3.append(missed_trips_fleet_0)             # n transactions in state "Missed" for fleet 0
+    y4.append(missed_trips_fleet_1)             # n transactions in state "Missed" for fleet 1
+    y5.append(total_trips_fleet_0)              # n total transactions of fleet 0
+    y6.append(total_trips_fleet_1)              # n total transactions of fleet 1
+    y7.append(global_avg_station_utilization)   # average utilization of all charging stations
+
+    return timestamp, y1, y2, y3, y4, y5, y6, y7
 
 
 def animate(i, callback):
     if callback is not None:
-        timestamp, n_users, n_active_users = callback()
+        timestamp, n_users, n_active_users, missed_trips_0, missed_trips_1, total_trips_0, total_trips_1, avg_station_util = callback()
 
         # clear whole figure
         plt.clf()
 
         # plot 1
-        plt.subplot(3, 1, 1)
-        plt.plot(timestamp,n_users, n_active_users)
-        plt.title("n users in world")
-        plt.legend(["n_users", "n_user_processes"], loc="upper right")
+        plt.subplot(4, 1, 1)
+        plt.plot(timestamp, missed_trips_0, total_trips_0)
+        plt.title("missed vs. total trips (fleet 0)")
+        plt.legend(["missed_trips_0", "total_trips_0"], loc="upper right")
 
         # plot 2
-        plt.subplot(3, 1, 2)
-        plt.plot(timestamp,n_users)
-        plt.title("n users in world")
+        plt.subplot(4, 1, 2)
+        plt.plot(timestamp, missed_trips_1, total_trips_1)
+        plt.title("missed vs. total trips (fleet 1)")
+        plt.legend(["missed_trips_1", "total_trips_1"], loc="upper right")
 
         # plot 3
-        plt.subplot(3, 1, 3)
-        plt.plot(timestamp,n_users)
-        plt.title("n users in world")
+        plt.subplot(4, 1, 3)
+        plt.plot(timestamp, n_active_users)
+        plt.title("active users")
+
+        # plot 4
+        plt.subplot(4, 1, 4)
+        plt.plot(timestamp, avg_station_util)
+        plt.title("global average charging station utilization")
 
         plt.tight_layout()
 
