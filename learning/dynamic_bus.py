@@ -81,7 +81,7 @@ class DynamicBusProblem(LearningInterface):
         elif isinstance(self._config.dynamic_routing_config.corridor, set):
             self._corridor = self._config.dynamic_routing_config.corridor
         else:
-            with open(self._config.dynamic_routing_config.corridor, "r") as f:
+            with open(self._config.dynamic_routing_config.corridor) as f:
                 # also assign the parsed corridor back to the config for other reads of it
                 self._corridor = self._config.dynamic_routing_config.corridor = (
                     ast.literal_eval(f.read())
@@ -284,7 +284,7 @@ class DynamicBusProblem(LearningInterface):
         reward = self.bus._dropoffs * self._config.dynamic_routing_config.reward
         if reward > 0:
             logging.debug(
-                f"Service Level was increased by {str(reward)}",
+                f"Service Level was increased by {reward!s}",
                 extra={"clazz": self.__class__.__name__, "oid": self.bus._id},
             )
 

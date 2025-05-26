@@ -27,16 +27,16 @@ class RideHailingCar(RideHailingVehicle):
     vehicle_type = "ridehailing_car"  # TODO: make explicit that it's a human-driven car
 
     __slots__ = (
-        "car_id",
-        "_total_earn",
-        "_shift_earn",
-        "_shift_duration",
-        "_offline_duration",
-        "_shift_start_time",
-        "_shift_end_time",
         "_driver_payment_share",
-        "_online_event",
+        "_offline_duration",
         "_offline_event",
+        "_online_event",
+        "_shift_duration",
+        "_shift_earn",
+        "_shift_end_time",
+        "_shift_start_time",
+        "_total_earn",
+        "car_id",
     )
 
     def __init__(

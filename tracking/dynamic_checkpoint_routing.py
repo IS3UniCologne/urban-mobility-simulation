@@ -4,12 +4,12 @@ from tracking.tracking import Tracking
 
 class DynamicCheckpointRoutingTracker:
     __slots__ = (
-        "_tracking",
-        "_config",
         "_agent",
+        "_config",
         "_problem",
         "_timestamped_bus_positions",
         "_timestamped_viable_demands",
+        "_tracking",
     )
 
     def __init__(self):

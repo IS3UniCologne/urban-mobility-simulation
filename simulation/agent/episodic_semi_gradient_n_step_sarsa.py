@@ -15,15 +15,15 @@ from simulation.helper.configuration.enums import VehicleState
 
 class EpisodicSemiGradientNStepSarsa(RLAgent):
     __slots__ = (
+        "_G",
+        "_actions",
         "_alpha",
-        "_gamma",
         "_eps",
+        "_gamma",
         "_n",
         "_q_hat",
-        "_states",
-        "_actions",
         "_rewards",
-        "_G",
+        "_states",
     )
 
     def __init__(self, env: simpy.Environment, q_hat: ValueFunctionApproximator):

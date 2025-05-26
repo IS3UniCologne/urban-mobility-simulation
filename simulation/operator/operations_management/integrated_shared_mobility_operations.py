@@ -23,20 +23,20 @@ from simulation.operator.operations_management.service_tasks.relocation_task imp
 class IntegratedSharedMobilityOperations(OperationsInterface):
     # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
     __slots__ = (
-        "_time_between_operations",
-        "operation_duration",
+        "_available_vehicle_modes",
+        "_base_capacity",
+        "_base_regions",
+        "_charging_plan_updated",
         "_distance_matrix",
+        "_duration_of_operations",
+        "_max_vehicle_supply",
+        "_operations_started",
         "_ordered_available_vehicle_modes",
         "_ordered_max_vehicle_supply",
-        "_state_of_charge_threshold",
-        "_base_regions",
-        "_base_capacity",
-        "_available_vehicle_modes",
-        "_max_vehicle_supply",
         "_scheduled_tasks",
-        "_charging_plan_updated",
-        "_operations_started",
-        "_duration_of_operations",
+        "_state_of_charge_threshold",
+        "_time_between_operations",
+        "operation_duration",
     )
 
     def __init__(
@@ -1146,9 +1146,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         transactions["cheapest_vehicle_mode"] = ""
 
         for i in range(len(ordered_available_vehicle)):
-            query = "{} == {}".format(ordered_available_vehicle[i], 1)
+            query = f"{ordered_available_vehicle[i]} == {1}"
             for k in range(i):
-                query += " & {} == {}".format(ordered_available_vehicle[k], 0)
+                query += f" & {ordered_available_vehicle[k]} == {0}"
 
             qry_res = transactions.query(query)  # If not empty
             if qry_res.shape[0] > 0:
@@ -1183,8 +1183,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         unfolded_cols = ["hex_id"]
         for vehicle in vehicle_columns:
             unfolded_cols = unfolded_cols + [
-                "OutFlow_Fulfilled_{}".format(vehicle),
-                "OutFlow_Missed_{}".format(vehicle),
+                f"OutFlow_Fulfilled_{vehicle}",
+                f"OutFlow_Missed_{vehicle}",
             ]
 
         # Overwrite Column Names
@@ -1202,7 +1202,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         # Reset Multi-Index to Flat Index (keep vehicle column order)
         inflow = inflow.reset_index()
         inflow.columns = ["hex_id", "state"] + [
-            "Inflow_{}".format(vehicle) for vehicle in vehicle_columns
+            f"Inflow_{vehicle}" for vehicle in vehicle_columns
         ]
 
         # to ensure that "fulfilled" comes before "missed" during unstacking
@@ -1225,12 +1225,12 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         for vehicle in ordered_available_vehicle:
             if vehicle not in vehicle_columns:
-                result["Delta_{}".format(vehicle)] = 0
+                result[f"Delta_{vehicle}"] = 0
             else:
-                result["Delta_{}".format(vehicle)] = (
-                    result["Inflow_{}".format(vehicle)]
-                    - result["OutFlow_Fulfilled_{}".format(vehicle)]
-                    - result["OutFlow_Missed_{}".format(vehicle)]
+                result[f"Delta_{vehicle}"] = (
+                    result[f"Inflow_{vehicle}"]
+                    - result[f"OutFlow_Fulfilled_{vehicle}"]
+                    - result[f"OutFlow_Missed_{vehicle}"]
                 )
 
         return result

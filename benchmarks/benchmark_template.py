@@ -24,7 +24,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # Import simuliation modules here
-# from simulation.this.that import these  # noqa: E402
+# from simulation.this.that import these
 
 # Define any constants or setup needed for your benchmarks here
 

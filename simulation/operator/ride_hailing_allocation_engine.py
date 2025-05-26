@@ -16,9 +16,9 @@ from simulation.operator.interface.vehicle_allocation_engine_interface import (
 class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
     __slots__ = (
         "_env",
-        "_vehicles_assigned_to_users",
-        "_vehicle_assignment_requests",
         "_vehicle_assignment_ids",
+        "_vehicle_assignment_requests",
+        "_vehicles_assigned_to_users",
     )
 
     def __init__(self, env):

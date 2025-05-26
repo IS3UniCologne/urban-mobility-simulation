@@ -19,14 +19,14 @@ class VehicleFleet(ABC):
     """
 
     __slots__ = (
-        "_id",
         "_env",
-        "_vehicles",
+        "_id",
         "_resource",
         "_tracking",
+        "_vehicles",
         "_vehicles_by_mode",
-        "_vehicles_by_state",
         "_vehicles_by_region",
+        "_vehicles_by_state",
     )
 
     fleet_id: int = 0

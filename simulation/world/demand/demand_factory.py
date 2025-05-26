@@ -13,23 +13,23 @@ from simulation.world.world import World
 
 class DemandFactory:
     __slots__ = (
-        "_env",
-        "_time",
-        "_demand_profile",
-        "_demand_importer",
-        "_world",
-        "_origin_column",
-        "_destination_column",
-        "_temporal_column",
+        "_config",
         "_day_of_week_column",
+        "_demand_importer",
+        "_demand_profile",
+        "_destination_column",
+        "_env",
         "_maximal_demand",
+        "_mode",
         "_modifier_paths",
         "_modifiers",
-        "_spatial_units",
+        "_origin_column",
         "_random",
-        "_config",
-        "_mode",
         "_rng",
+        "_spatial_units",
+        "_temporal_column",
+        "_time",
+        "_world",
     )
     counter = 0
 
@@ -90,7 +90,7 @@ class DemandFactory:
         """
         for modifier in self._modifier_paths:
             try:
-                with open(modifier, "r") as f:
+                with open(modifier) as f:
                     geo = json.load(f)
             except FileNotFoundError:
                 logging.warning(

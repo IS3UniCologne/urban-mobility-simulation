@@ -12,7 +12,7 @@ class DistanceMatrixImporter:
     Distance between hexagon elements are computed using haversine distances
     """
 
-    __slots__ = ("_hexagons", "_resolution", "_data_path", "_city")
+    __slots__ = ("_city", "_data_path", "_hexagons", "_resolution")
 
     def __init__(self, hexagons, resolution, data_path, city):
         self._hexagons = hexagons

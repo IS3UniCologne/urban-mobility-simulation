@@ -58,7 +58,7 @@ def test_templates(script, config):
     log_file = new_log_files[0]
 
     # TODO: These tests are "special" temporary tests. They should be replaced with proper metrics tests once we solve #20 and have unified metrics.
-    with open(f"{output_dir}/logs/{log_file}", "r") as f:
+    with open(f"{output_dir}/logs/{log_file}") as f:
         log = f.read()
         assert "Ending Simulation" in log, "Simulation did not end properly."
         # if this is the ridehailing template, check the last entry with Total Revenue in the log

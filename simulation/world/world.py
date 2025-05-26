@@ -26,23 +26,23 @@ class World:
     # There is only one instance of this class.
     __instance = None
     __slots__ = (
-        "_env",
-        "_search_engine",
-        "_payment_engine",
-        "_vehicle_assignment_engine",
-        "_vehicle_choice_behavior",
-        "_demand_processes",
-        "_users",
-        "_user_processes",
-        "_vehicles",
-        "_vehicle_processes",
-        "_tracking",
+        "_changed",
         "_charging_infrastructure",
         "_config",
+        "_demand_processes",
+        "_env",
+        "_payment_engine",
         "_population_factory",
-        "_changed",
+        "_search_engine",
         "_simulation_finished",
+        "_tracking",
         "_user_limit",
+        "_user_processes",
+        "_users",
+        "_vehicle_assignment_engine",
+        "_vehicle_choice_behavior",
+        "_vehicle_processes",
+        "_vehicles",
     )
 
     @staticmethod

@@ -22,10 +22,10 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
     __slots__ = (
         "_auction",
         "_bidding_parameters",
-        "_state_of_charge_threshold",
-        "_distance_matrix",
-        "_config",
         "_charging_operations",
+        "_config",
+        "_distance_matrix",
+        "_state_of_charge_threshold",
         "_virtual_charging_infrastructure",
     )
 

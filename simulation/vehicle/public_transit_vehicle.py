@@ -26,7 +26,7 @@ class PublicTransitVehicleFull(PublicTransitVehicleException):
 
 
 class PublicTransitVehicle(Vehicle, ABC):
-    __slots__ = ("_route", "_current_stop", "_delay")
+    __slots__ = ("_current_stop", "_delay", "_route")
 
     def __init__(
         self,

@@ -24,14 +24,14 @@ class VirtualChargingInfrastructure:
     """
 
     __slots__ = (
-        "_env",
-        "_config",
-        "_lookahead",
-        "_use_virtual_cs",
         "_availability",
         "_charging_infrastructure",
-        "_virtual_charging_stations",
+        "_config",
+        "_env",
         "_listeners",
+        "_lookahead",
+        "_use_virtual_cs",
+        "_virtual_charging_stations",
     )
 
     def __init__(

@@ -293,7 +293,7 @@ class DQN(RLAgent):
         # retain decayed epsilon
         self._config.DQN_config.eps = self._eps
         logging.debug(
-            f"Saving decayed epsilon into config: {str(self._eps)}",
+            f"Saving decayed epsilon into config: {self._eps!s}",
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -309,7 +309,7 @@ class DQN(RLAgent):
         # retain replaybuffer
         self._config.DQN_config.replaybuffer = self._replaybuffer
         logging.debug(
-            f"Saving replay buffer into config. Size: {str(len(self._replaybuffer))}",
+            f"Saving replay buffer into config. Size: {len(self._replaybuffer)!s}",
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 

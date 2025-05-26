@@ -18,18 +18,18 @@ class AuctionClosedException(Exception):
 
 class Auction(ABC):
     __slots__ = (
-        "_env",
-        "_config",
-        "_start_condition",
-        "_end_condition",
-        "_is_open",
         "_bid_syntax",
         "_bids",
-        "_result_syntax",
-        "_result",
-        "open_for_bidding",
-        "cleared",
+        "_config",
+        "_end_condition",
+        "_env",
+        "_is_open",
         "_process",
+        "_result",
+        "_result_syntax",
+        "_start_condition",
+        "cleared",
+        "open_for_bidding",
     )
 
     def __init__(self, env: Environment, start_condition, end_condition) -> None:

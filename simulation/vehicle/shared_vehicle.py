@@ -15,30 +15,30 @@ from .vehicle import Vehicle
 
 class SharedVehicle(Vehicle, ABC):
     __slots__ = (
-        "_velocity",
-        "_max_available_seats",
-        "_max_state_of_charge",
-        "_energy_consumption",
-        "_price_per_minute",
-        "_price_per_trip",
-        "_driver",
         "_available_seats",
-        "_seats",
+        "_charging_station_charging_finished",
+        "_charging_station_charging_started",
+        "_charging_station_plugged_in",
+        "_charging_station_plugged_out",
         "_current_state_of_charge",
-        "_vehicle_parked",
-        "_user_mounted",
-        "_driving_started",
-        "_driving_finished",
-        "_user_unmounted",
+        "_driver",
         "_driver_mounted",
         "_driver_unmounted",
-        "_vehicle_relocation_started",
-        "_vehicle_relocation_finished",
-        "_charging_station_plugged_in",
-        "_charging_station_charging_started",
-        "_charging_station_charging_finished",
-        "_charging_station_plugged_out",
+        "_driving_finished",
+        "_driving_started",
+        "_energy_consumption",
+        "_max_available_seats",
+        "_max_state_of_charge",
+        "_price_per_minute",
+        "_price_per_trip",
         "_reserved_for_user",
+        "_seats",
+        "_user_mounted",
+        "_user_unmounted",
+        "_vehicle_parked",
+        "_vehicle_relocation_finished",
+        "_vehicle_relocation_started",
+        "_velocity",
     )
 
     def __init__(
@@ -164,7 +164,7 @@ class SharedVehicle(Vehicle, ABC):
 
         if not self.has_enough_state_of_charge(distance):
             raise RuntimeError(
-                f"{str(self.__class__.__name__)} {self._id} has been tried to move but has not enough state of charge."
+                f"{self.__class__.__name__!s} {self._id} has been tried to move but has not enough state of charge."
             )
 
         yield self._env.timeout(time)

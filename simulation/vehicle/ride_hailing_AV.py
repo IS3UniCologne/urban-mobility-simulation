@@ -9,7 +9,7 @@ class RideHailingAV(RideHailingVehicle):
     ride_hailing_av_id = 0
     vehicle_type = "ridehailing_AV"
 
-    __slots__ = ("car_id", "_price_per_min", "_emergency_soc_buffer_percent")
+    __slots__ = ("_emergency_soc_buffer_percent", "_price_per_min", "car_id")
 
     def __init__(
         self,

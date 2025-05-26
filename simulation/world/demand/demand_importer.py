@@ -12,10 +12,10 @@ from simulation.helper.configuration.configuration import (
 
 class DemandImporter:
     __slots__ = (
-        "_temporal_resolution",
-        "_spatial_resolution",
-        "_daily_resolution",
         "_city",
+        "_daily_resolution",
+        "_spatial_resolution",
+        "_temporal_resolution",
     )
 
     def __init__(

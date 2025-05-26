@@ -2,7 +2,7 @@ from simulation.infrastructure.network.vertex import Vertex
 
 
 class Edge:
-    __slots__ = ("_distance", "_origin", "_destination")
+    __slots__ = ("_destination", "_distance", "_origin")
 
     def __init__(self, distance, origin: Vertex, destination: Vertex):
         self._distance = distance

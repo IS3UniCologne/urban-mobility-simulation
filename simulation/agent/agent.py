@@ -4,7 +4,7 @@ from simulation.environment.position import Position
 
 
 class Agent(ABC):
-    __slots__ = ("_state", "_position")
+    __slots__ = ("_position", "_state")
 
     @abstractmethod
     def __init__(self):
