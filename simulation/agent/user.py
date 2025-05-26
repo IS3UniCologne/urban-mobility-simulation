@@ -56,7 +56,7 @@ if TYPE_CHECKING:
 
 class User(Agent, DriverInterface, TrackingInterface):
     user_id = 0
-    exposes = ["_position"]
+    exposes = ["_position"]  # noqa: RUF012
 
     __slots__ = (
         "_arrived_at_destination",
@@ -79,10 +79,10 @@ class User(Agent, DriverInterface, TrackingInterface):
         "process_finished",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
-        fleet,
-        position,
+        fleet,  # noqa: ANN001
+        position,  # noqa: ANN001
         transport_task: TransportTask,
         transportation_search_service: SearchEngineInterface,
         payment_service: PaymentInterface,
@@ -139,7 +139,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         return self._position
 
     @position.setter
-    def position(self, position: Position):
+    def position(self, position: Position):  # noqa: ANN202
         self._position = position
 
         self._position_changed.succeed(position)
@@ -149,7 +149,7 @@ class User(Agent, DriverInterface, TrackingInterface):
     def transport_task(self) -> TransportTask:
         return self._transport_task
 
-    def run(self):
+    def run(self):  # noqa: ANN201
         """
         Life Cycle of User
         :return:
@@ -177,7 +177,7 @@ class User(Agent, DriverInterface, TrackingInterface):
 
             if isinstance(selected_transportation_alternative.vehicle, Walking):
                 logging.debug(
-                    f"User {self.id} chooses to walk to destination",
+                    f"User {self.id} chooses to walk to destination",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
                 yield self._env.process(
@@ -188,7 +188,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                 )
 
                 logging.debug(
-                    f"User {self.id} has reached walking destination",
+                    f"User {self.id} has reached walking destination",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
             else:
@@ -232,7 +232,7 @@ class User(Agent, DriverInterface, TrackingInterface):
 
             self.process_finished.succeed()
 
-    def search_for_alternatives(self):
+    def search_for_alternatives(self):  # noqa: ANN201
         """
             User searches for available mobility alternatives using concrete instance of py:mod:`~operator.SearchEngineInterface`
         :return:
@@ -361,7 +361,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         # Trigger next event
         self._transportation_alternatives_received.succeed()
         logging.debug(
-            f"Received transportation alternatives: {available_transportation_alternatives}.",
+            f"Received transportation alternatives: {available_transportation_alternatives}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -398,7 +398,7 @@ class User(Agent, DriverInterface, TrackingInterface):
             selected_transportation_alternative
         )
         logging.debug(
-            f"Selected transportation alternative: {selected_transportation_alternative}.",
+            f"Selected transportation alternative: {selected_transportation_alternative}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -427,7 +427,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         if vehicle_allocation:
             # Trigger next event
             logging.debug(
-                f"Vehicle {vehicle_allocation.vehicle.id} has been allocated to user {self._id}.",
+                f"Vehicle {vehicle_allocation.vehicle.id} has been allocated to user {self._id}.",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
@@ -436,7 +436,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         else:
             return None
 
-    def move_to_pick_up_position(self, vehicle_assignment: VehicleAllocation):
+    def move_to_pick_up_position(self, vehicle_assignment: VehicleAllocation):  # noqa: ANN201
         # Wait for event
         yield self._vehicle_allocated
 
@@ -451,11 +451,11 @@ class User(Agent, DriverInterface, TrackingInterface):
         # Trigger next event
         self._arrived_at_pick_up_position.succeed()
         logging.debug(
-            f"Arrived at pick up position {self.position} at time {self._env.now}.",
+            f"Arrived at pick up position {self.position} at time {self._env.now}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def wait_for_vehicle(self, vehicle_assignment: VehicleAllocation):
+    def wait_for_vehicle(self, vehicle_assignment: VehicleAllocation):  # noqa: ANN201
         # Wait for event
         yield self._arrived_at_pick_up_position
 
@@ -471,16 +471,16 @@ class User(Agent, DriverInterface, TrackingInterface):
         )
 
         while self.position != vehicle_assignment.vehicle.position:
-            yield vehicle_assignment.vehicle._position_changed
+            yield vehicle_assignment.vehicle._position_changed  # noqa: SLF001
 
         # Trigger next event
         self._assigned_vehicle_arrived.succeed()
         logging.debug(
-            f"Vehicle {vehicle_assignment.vehicle.id} has arrived after {self._env.now - start_waiting} time units at pick up position to pick up user {self._id}",
+            f"Vehicle {vehicle_assignment.vehicle.id} has arrived after {self._env.now - start_waiting} time units at pick up position to pick up user {self._id}",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def start_driving(self, vehicle_allocation: VehicleAllocation):
+    def start_driving(self, vehicle_allocation: VehicleAllocation):  # noqa: ANN201
         # Wait for event
         yield self._assigned_vehicle_arrived
 
@@ -509,18 +509,18 @@ class User(Agent, DriverInterface, TrackingInterface):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def stop(self):
+    def stop(self):  # noqa: ANN201
         # Wait for next event
         yield self._arrived_at_destination
 
         # Update current state
         self._state = UserState.FULFILLED
         logging.debug(
-            f"Transport request of user {self._id} has been successfully fulfilled.",
+            f"Transport request of user {self._id} has been successfully fulfilled.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def withdraw_request(self):
+    def withdraw_request(self):  # noqa: ANN201
         """
 
         :param viable_vehicle_modes: User was willing to take either of the modes from this list
@@ -535,11 +535,11 @@ class User(Agent, DriverInterface, TrackingInterface):
         self._payment_service.withdraw_transportation_task(self, self._transport_task)
 
         logging.debug(
-            f"Transport request of user {self._id} has been withdrawn due to lack of vehicles.",
+            f"Transport request of user {self._id} has been withdrawn due to lack of vehicles.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def walk(self, origin: GeodesicPosition, destination: GeodesicPosition):
+    def walk(self, origin: GeodesicPosition, destination: GeodesicPosition):  # noqa: ANN201
         # duration = RoutePlanner.calculateDuration(user.position, vehicle_assignment.pick_up_position, Strategy.Walking)
         distance = origin >> destination
         duration = distance / 83.33  # 83.33 m/min (average agent speed = 5km/h)
@@ -550,11 +550,11 @@ class User(Agent, DriverInterface, TrackingInterface):
         Implementation of DriverInterface to navigate the as driver mounted vehicle
     """
 
-    def mount_vehicle_as_driver(self, vehicle):
+    def mount_vehicle_as_driver(self, vehicle):  # noqa: ANN001, ANN201
         # Mount Vehicle
         vehicle.mount_driver(self)
 
-    def drive_vehicle(self, vehicle, route):
+    def drive_vehicle(self, vehicle, route):  # noqa: ANN001, ANN201
         vehicle.start_driving()
 
         # State of Charge before driving
@@ -578,13 +578,13 @@ class User(Agent, DriverInterface, TrackingInterface):
         # Return how much energy we consumed (and other factors if needed such as time)
         return user_energy_consumption
 
-    def park_vehicle(self, vehicle):
+    def park_vehicle(self, vehicle):  # noqa: ANN001, ANN201
         vehicle.park()
 
-    def unmount_vehicle_as_driver(self, vehicle):
+    def unmount_vehicle_as_driver(self, vehicle):  # noqa: ANN001, ANN201
         vehicle.unmount_driver()
 
-    def identify_driver(self):
+    def identify_driver(self):  # noqa: ANN201
         return f"User {self._id}"
 
     """
@@ -592,10 +592,10 @@ class User(Agent, DriverInterface, TrackingInterface):
     """
 
     @property
-    def id(self):
+    def id(self):  # noqa: ANN201
         return self._id
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"
 
     def dump(self, exposed_only: bool = True) -> dict:
@@ -613,7 +613,7 @@ class User(Agent, DriverInterface, TrackingInterface):
 
 
 class TransitUser(User, PassengerInterface, TrackingInterface):
-    exposes = ["transport_task"]
+    exposes = ["transport_task"]  # noqa: RUF012
     transit_user_id = 0
 
     __slots__ = (
@@ -627,7 +627,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         "_world",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         position: GeodesicPosition,
         transport_task: TransportTask,
@@ -637,9 +637,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_type: PopulationType,
         env: simpy.Environment,
-        passive=False,
+        passive=False,  # noqa: ANN001
     ):
-        super(TransitUser, self).__init__(
+        super(TransitUser, self).__init__(  # noqa: UP008
             fleet=None,
             position=position,
             transport_task=transport_task,
@@ -679,7 +679,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         # Events
         self._arrived_at_last_stop = self._env.event()
 
-    def run(self):
+    def run(self):  # noqa: ANN201
         """
         Life Cycle of TransitUser
         :return:
@@ -755,7 +755,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                         self._state = UserState.MISSED
                         # self._payment_service.withdraw_transportation_task(self, self._transport_task)
                         logging.debug(
-                            f"User demand is not aligned with routing corridor of bus {vehicle.id}, ",
+                            f"User demand is not aligned with routing corridor of bus {vehicle.id}, ",  # noqa: G004
                             extra={"clazz": self.__class__.__name__, "oid": self._id},
                         )
                         break
@@ -772,7 +772,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                             PublicTransitRoute(
                                 self._transport_task.origin,
                                 self._transport_task.destination,
-                                vehicle.route._id,
+                                vehicle.route._id,  # noqa: SLF001
                                 vehicle.route.trip_id,
                             ),
                             price=0,
@@ -781,7 +781,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                             >> self._transport_task.destination,
                             convenience=0,  # TODO: only a placeholder
                         )
-                        self._payment_service._tracked_demands.add(
+                        self._payment_service._tracked_demands.add(  # noqa: SLF001
                             (
                                 self._transport_task.origin.getExactLocation(
                                     geojson=True
@@ -811,7 +811,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                             PublicTransitRoute(
                                 self._transport_task.origin,
                                 self._transport_task.destination,
-                                vehicle.route._id,
+                                vehicle.route._id,  # noqa: SLF001
                                 vehicle.route.trip_id,
                             ),
                             price=0,
@@ -820,7 +820,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                             >> self._transport_task.destination,
                             convenience=0,  # TODO: only a placeholder
                         )
-                        self._payment_service._tracked_demands.add(
+                        self._payment_service._tracked_demands.add(  # noqa: SLF001
                             (
                                 self._transport_task.origin.getExactLocation(
                                     geojson=True
@@ -840,7 +840,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                         novehicle = True
                 if self._state != UserState.MOVING_TO_DESTINATION or novehicle:
                     self._state = UserState.MISSED
-                    self._payment_service._tracked_demands.add(
+                    self._payment_service._tracked_demands.add(  # noqa: SLF001
                         (
                             self._transport_task.origin.getExactLocation(geojson=True),
                             self._transport_task.destination.getExactLocation(
@@ -869,7 +869,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                 if not self.process_finished.triggered:
                     self.process_finished.succeed()
 
-    def search_for_alternatives(self):
+    def search_for_alternatives(self):  # noqa: ANN201
         # Update current state
         self._state = UserState.SEARCHING_TRANSPORT_ALTERNATIVES
 
@@ -898,7 +898,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         # Trigger next event
         self._transportation_alternatives_received.succeed()
         logging.debug(
-            f"Received transportation alternatives: {available_transportation_alternatives}.",
+            f"Received transportation alternatives: {available_transportation_alternatives}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -919,7 +919,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
         return vehicle_allocation
 
-    def start_transit(self, vehicle_allocation: VehicleAllocation):
+    def start_transit(self, vehicle_allocation: VehicleAllocation):  # noqa: ANN201
         # Wait for event
         yield self._assigned_vehicle_arrived
 
@@ -932,12 +932,12 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         self.mount_vehicle(vehicle)
         # drive in vehicle until stop closest to destination is reached
         while vehicle.current_stop != route.destination:
-            yield vehicle._position_changed
+            yield vehicle._position_changed  # noqa: SLF001
         self.unmount_vehicle(vehicle)
 
         self._arrived_at_last_stop.succeed()
 
-    def _demand_aligns(self, vehicle: Bus):
+    def _demand_aligns(self, vehicle: Bus):  # noqa: ANN202
         if (
             self.transport_task.origin.get_region_id()
             == self.transport_task.destination.get_region_id()
@@ -967,7 +967,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         else:
             return True
 
-    def start_passive_transit(self, vehicle: PublicTransitVehicle):
+    def start_passive_transit(self, vehicle: PublicTransitVehicle):  # noqa: ANN201
         # Wait for event
         yield self._assigned_vehicle_arrived
 
@@ -985,14 +985,14 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         while self.transport_task.destination.get_region_id(
             self._bus_res
         ) != vehicle.position.get_region_id(self._bus_res):
-            yield vehicle._position_changed
+            yield vehicle._position_changed  # noqa: SLF001
 
         self.unmount_vehicle(vehicle)
-        vehicle._dropoffs += 1
+        vehicle._dropoffs += 1  # noqa: SLF001
 
         self._arrived_at_last_stop.succeed()
 
-    def start_passive_checkpoint_transit(self, vehicle: Bus):
+    def start_passive_checkpoint_transit(self, vehicle: Bus):  # noqa: ANN201
         # TODO: checkpoint logic
         # when the checkpoint problem is running, we need to unmount at a checkpoint
         # if the destination was "passed" already, meaning if it is not reachable anymore
@@ -1009,10 +1009,10 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             # Update current state
             self._state = UserState.IN_TRANSPORT
             self.mount_vehicle(vehicle)
-            vehicle._pickups += 1
+            vehicle._pickups += 1  # noqa: SLF001
 
         while True:
-            yield vehicle._position_changed
+            yield vehicle._position_changed  # noqa: SLF001
 
             # drive in vehicle while
             # a) destination not reached
@@ -1040,11 +1040,11 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
             if (unreachable_dest and at_checkpoint) or at_dest:
                 self.unmount_vehicle(vehicle)
-                vehicle._dropoffs += 1
+                vehicle._dropoffs += 1  # noqa: SLF001
                 self._arrived_at_last_stop.succeed()
                 break
 
-    def move_to_destination(self):
+    def move_to_destination(self):  # noqa: ANN201
         # Wait for event
         yield self._arrived_at_last_stop
 
@@ -1063,26 +1063,26 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         # Trigger next event
         self._arrived_at_destination.succeed()
 
-    def wait_for_transit(self, vehicle: Vehicle):
+    def wait_for_transit(self, vehicle: Vehicle):  # noqa: ANN201
         # wait indefinitely for transit pick up
         while self.position.get_region_id(
             self._bus_res
         ) != vehicle.position.get_region_id(self._bus_res):
-            yield vehicle._position_changed
+            yield vehicle._position_changed  # noqa: SLF001
 
         self._assigned_vehicle_arrived.succeed()
 
-    def mount_vehicle(self, vehicle):
+    def mount_vehicle(self, vehicle):  # noqa: ANN001, ANN201
         vehicle.mount_passenger(self)
 
-    def unmount_vehicle(self, vehicle):
+    def unmount_vehicle(self, vehicle):  # noqa: ANN001, ANN201
         vehicle.unmount_passenger(self)
 
-    def identify_passenger(self):
+    def identify_passenger(self):  # noqa: ANN201
         return f"TransitUser {self._id}"
 
     @property
-    def available_time(self):
+    def available_time(self):  # noqa: ANN201
         return self._available_time
 
     def dump(self, exposed_only: bool = True) -> dict:
@@ -1098,7 +1098,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             ]
             return {x: self.get(x) for x in dump_attr}
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"TransitUser with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"
 
 
@@ -1119,12 +1119,12 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         "_vehicle_choice_behavior",
     )
 
-    exposes = ["_position", "_state", "_transport_task"]
+    exposes = ["_position", "_state", "_transport_task"]  # noqa: RUF012
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
-        fleet,
-        position,
+        fleet,  # noqa: ANN001
+        position,  # noqa: ANN001
         transport_task: TransportTask,
         transportation_search_service: SearchEngineInterface,
         payment_service: PaymentInterface,
@@ -1196,17 +1196,17 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         return self._position
 
     @position.setter
-    def position(self, position: Position):
+    def position(self, position: Position):  # noqa: ANN202
         self._position = position
 
         self._position_changed.succeed(position)
         self._position_changed = self._env.event()
 
     @property
-    def transport_task(self):
+    def transport_task(self):  # noqa: ANN201
         return self._transport_task
 
-    def run(self):
+    def run(self):  # noqa: ANN201
         """
         Life Cycle of User
         :return:
@@ -1265,7 +1265,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
             self.process_finished.succeed()
 
-    def search_for_alternatives(self):
+    def search_for_alternatives(self):  # noqa: ANN201
         """
             User searches for available mobility alternatives using concrete instance of py:mod:`~operator.SearchEngineInterface`
         :return:
@@ -1334,7 +1334,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             # Trigger next event
 
             logging.debug(
-                f"Received transportation alternatives: {available_transportation_alternatives}.",
+                f"Received transportation alternatives: {available_transportation_alternatives}.",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
             # Break the loop if there is an available vehicle for the user
@@ -1352,7 +1352,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         self._transportation_alternatives_received.succeed()
         return available_transportation_alternatives
 
-    def complete_available_transportation_alternatives(self, alternatives):
+    def complete_available_transportation_alternatives(self, alternatives):  # noqa: ANN001, ANN201
         """
         This function ensures that there are always either two alternatives or zero
         :return:
@@ -1366,7 +1366,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
         return alternatives
 
-    def transportation_alternative_utility_function(
+    def transportation_alternative_utility_function(  # noqa: ANN201
         self, alternative: TransportationAlternativeRideHailing
     ):
         """
@@ -1391,7 +1391,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         utility = np.dot(coefficients, independent_variables)
         return utility
 
-    def get_utility_for_transportation_alternative(
+    def get_utility_for_transportation_alternative(  # noqa: ANN201
         self, available_transportation_alternatives: TransportationAlternativeBrowser
     ):
         """
@@ -1402,7 +1402,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         for (
             transportation_alternative
         ) in available_transportation_alternatives.transportation_alternatives:
-            transportation_alternative._utility = (
+            transportation_alternative._utility = (  # noqa: SLF001
                 self.transportation_alternative_utility_function(
                     transportation_alternative
                 )
@@ -1471,7 +1471,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         #            key=lambda alternative: alternative.utility)
         #
         # selected_transportation_alternative = sorted_alternative_based_on_utility[0]
-        selected_transportation_alternative.vehicle._suggested = True
+        selected_transportation_alternative.vehicle._suggested = True  # noqa: SLF001
 
         # if self._population_type == PopulationType.TECHNOLOGICALLY_SKEPTICAL:
         #     if not available_transportation_alternatives.transportation_alternatives[0].technology_skeptical:
@@ -1486,7 +1486,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             selected_transportation_alternative
         )
         logging.debug(
-            f"Selected transportation alternative: {selected_transportation_alternative.vehicle.state}.",
+            f"Selected transportation alternative: {selected_transportation_alternative.vehicle.state}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
         return selected_transportation_alternative
@@ -1502,7 +1502,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
         # if the selected vehicle is serving a user we need to wait until the service is over and then allocate it
         if selected_transportation_alternative.vehicle.state == VehicleState.DRIVING:
-            yield selected_transportation_alternative.vehicle._driving_finished
+            yield selected_transportation_alternative.vehicle._driving_finished  # noqa: SLF001
         # Get Vehicle Allocation
         vehicle_allocation = yield self._env.process(
             self._vehicle_assignment_service.request_vehicle_allocation(
@@ -1515,7 +1515,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         if vehicle_allocation:
             # Trigger next event
             logging.debug(
-                f"Vehicle {vehicle_allocation.vehicle.id} has been allocated to user {self._id}.",
+                f"Vehicle {vehicle_allocation.vehicle.id} has been allocated to user {self._id}.",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
@@ -1526,7 +1526,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         else:
             return None
 
-    def wait_for_vehicle(self, vehicle_assignment: VehicleAllocation):
+    def wait_for_vehicle(self, vehicle_assignment: VehicleAllocation):  # noqa: ANN201
         # Wait for event
         # yield self._arrived_at_pick_up_position
 
@@ -1542,15 +1542,15 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         )
 
         while self.position != vehicle_assignment.vehicle.position:
-            yield vehicle_assignment.vehicle._arrived_at_pick_up_position
+            yield vehicle_assignment.vehicle._arrived_at_pick_up_position  # noqa: SLF001
         # Trigger next event
         self._assigned_vehicle_arrived.succeed()
         logging.debug(
-            f"Vehicle {vehicle_assignment.vehicle.id} has arrived after {self._env.now - start_waiting} time units at pick up position to pick up user {self._id}",
+            f"Vehicle {vehicle_assignment.vehicle.id} has arrived after {self._env.now - start_waiting} time units at pick up position to pick up user {self._id}",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def start_driving(self, vehicle_allocation: VehicleAllocation):
+    def start_driving(self, vehicle_allocation: VehicleAllocation):  # noqa: ANN201
         # Wait for event
         yield self._assigned_vehicle_arrived
 
@@ -1579,18 +1579,18 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def stop(self):
+    def stop(self):  # noqa: ANN201
         # Wait for next event
         yield self._arrived_at_destination
 
         # Update current state
         self._state = UserState.FULFILLED
         logging.debug(
-            f"Transport request of user {self._id} has been successfully fulfilled.",
+            f"Transport request of user {self._id} has been successfully fulfilled.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def withdraw_request(self):
+    def withdraw_request(self):  # noqa: ANN201
         """
 
         :param viable_vehicle_modes: User was willing to take either of the modes from this list
@@ -1611,7 +1611,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             )
 
             logging.debug(
-                f"Transport request of user {self._id} has been withdrawn due to lack of vehicles.",
+                f"Transport request of user {self._id} has been withdrawn due to lack of vehicles.",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
         elif self._transportation_alternatives_refused:
@@ -1622,11 +1622,11 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             )
 
             logging.debug(
-                f"Transport request of user {self._id} has been refused.",
+                f"Transport request of user {self._id} has been refused.",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
-    def walk(self, origin: GeodesicPosition, destination: GeodesicPosition):
+    def walk(self, origin: GeodesicPosition, destination: GeodesicPosition):  # noqa: ANN201
         # duration = RoutePlanner.calculateDuration(user.position, vehicle_assignment.pick_up_position, Strategy.Walking)
         distance = origin >> destination
         duration = distance / 83.33  # 83.33 m/min (average agent speed = 5km/h)
@@ -1637,11 +1637,11 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         Implementation of DriverInterface to navigate the as driver mounted vehicle
     """
 
-    def mount_vehicle_as_driver(self, vehicle):
+    def mount_vehicle_as_driver(self, vehicle):  # noqa: ANN001, ANN201
         # Mount Vehicle
         vehicle.mount_driver(self)
 
-    def drive_vehicle(self, vehicle, route):
+    def drive_vehicle(self, vehicle, route):  # noqa: ANN001, ANN201
         vehicle.start_driving()
 
         # State of Charge before driving
@@ -1665,13 +1665,13 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         # Return how much energy we consumed (and other factors if needed such as time)
         return user_energy_consumption
 
-    def park_vehicle(self, vehicle):
+    def park_vehicle(self, vehicle):  # noqa: ANN001, ANN201
         vehicle.park()
 
-    def unmount_vehicle_as_driver(self, vehicle):
+    def unmount_vehicle_as_driver(self, vehicle):  # noqa: ANN001, ANN201
         vehicle.unmount_driver()
 
-    def identify_driver(self):
+    def identify_driver(self):  # noqa: ANN201
         return f"User {self._id}"
 
     def dump(self, exposed_only: bool = True) -> dict:
@@ -1685,8 +1685,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
     """
 
     @property
-    def id(self):
+    def id(self):  # noqa: ANN201
         return self._id
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"

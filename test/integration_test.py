@@ -7,7 +7,7 @@ import sys
 import pytest
 
 
-def run_template_script(script_path, config_file):
+def run_template_script(script_path, config_file):  # noqa: ANN001, ANN201
     cmd = [sys.executable, script_path, config_file]
     result = subprocess.run(cmd, capture_output=True, text=True)
     return result
@@ -25,7 +25,7 @@ configs = sorted(glob.glob(config_files_pattern))
 
 
 @pytest.mark.parametrize("script,config", itertools.product(templates, configs))
-def test_templates(script, config):
+def test_templates(script, config):  # noqa: ANN001, ANN201
     """We test each template in combination with each configuration file in the test directory.
     We check that the script runs without error and that a log file is generated properly.
     TODO: Check metrics once we have implemented them universally. Add more test configurations. (resolutions, etc.)

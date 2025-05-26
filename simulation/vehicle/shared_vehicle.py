@@ -41,19 +41,19 @@ class SharedVehicle(Vehicle, ABC):
         "_velocity",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         fleet: VehicleFleet,
-        position,
-        velocity,
+        position,  # noqa: ANN001
+        velocity,  # noqa: ANN001
         vehicle_mode: VehicleMode,
-        max_available_seats=1,
-        convenience=1,
-        max_state_of_charge=1,
-        energy_consumption=0.01,
-        price_per_min=1.0,
-        price_per_trip=0.0,
+        max_available_seats=1,  # noqa: ANN001
+        convenience=1,  # noqa: ANN001
+        max_state_of_charge=1,  # noqa: ANN001
+        energy_consumption=0.01,  # noqa: ANN001
+        price_per_min=1.0,  # noqa: ANN001
+        price_per_trip=0.0,  # noqa: ANN001
         driver: DriverInterface = None,
     ):
         super().__init__(
@@ -110,39 +110,39 @@ class SharedVehicle(Vehicle, ABC):
             self.mount_driver(driver)
 
     @property
-    def id(self):
+    def id(self):  # noqa: ANN201
         return self._id
 
     @property
-    def price_per_minute(self):
+    def price_per_minute(self):  # noqa: ANN201
         return self._price_per_minute
 
     @property
-    def price_per_trip(self):
+    def price_per_trip(self):  # noqa: ANN201
         return self._price_per_trip
 
     @property
-    def reserved_for_user(self):
+    def reserved_for_user(self):  # noqa: ANN201
         return self._reserved_for_user
 
     @property
-    def max_available_seats(self):
+    def max_available_seats(self):  # noqa: ANN201
         return self._max_available_seats
 
     @max_available_seats.setter
-    def max_available_seats(self, max_available_seats):
+    def max_available_seats(self, max_available_seats):  # noqa: ANN001, ANN202
         self._max_available_seats = max_available_seats
 
     @property
-    def max_state_of_charge(self):
+    def max_state_of_charge(self):  # noqa: ANN201
         return self._max_state_of_charge
 
     @property
-    def current_state_of_charge(self):
+    def current_state_of_charge(self):  # noqa: ANN201
         return self._current_state_of_charge
 
     @property
-    def current_relative_state_of_charge(self):
+    def current_relative_state_of_charge(self):  # noqa: ANN201
         return (
             self.current_state_of_charge / self.max_state_of_charge
             if self.max_state_of_charge != 0
@@ -150,14 +150,14 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     @property
-    def energy_consumption(self):
+    def energy_consumption(self):  # noqa: ANN201
         return self._energy_consumption
 
     @property
-    def velocity(self):
+    def velocity(self):  # noqa: ANN201
         return self._velocity
 
-    def move(self, route_segment: Edge):
+    def move(self, route_segment: Edge):  # noqa: ANN201
         distance = route_segment.distance
         velocity = self._velocity
         time = distance / velocity
@@ -172,7 +172,7 @@ class SharedVehicle(Vehicle, ABC):
         self._update_positions(route_segment.destination.position)
         self._update_state_of_charge(distance)
 
-    def start_driving(self):
+    def start_driving(self):  # noqa: ANN201
         self.state = VehicleState.DRIVING
 
         logging.debug(
@@ -180,7 +180,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def stop_driving(self):
+    def stop_driving(self):  # noqa: ANN201
         self.state = VehicleState.PARKING
         self.set_current_task(None)
         logging.debug(
@@ -188,7 +188,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def park(self):
+    def park(self):  # noqa: ANN201
         # Lift reservation
         self._reserved_for_user = None
 
@@ -199,17 +199,17 @@ class SharedVehicle(Vehicle, ABC):
             "Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
-    def reserve(self, user):
+    def reserve(self, user):  # noqa: ANN001, ANN201
         self.state = VehicleState.RESERVED
 
         self._reserved_for_user = user
 
         logging.debug(
-            f"Reserved to {user.id}.",
+            f"Reserved to {user.id}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def has_enough_state_of_charge(self, distance):
+    def has_enough_state_of_charge(self, distance):  # noqa: ANN001, ANN201
         """
         Check if vehicle has enough SoC left for trip
         :param distance: in meter
@@ -223,7 +223,7 @@ class SharedVehicle(Vehicle, ABC):
             return False
         return True
 
-    def _update_state_of_charge(self, distance):
+    def _update_state_of_charge(self, distance):  # noqa: ANN001, ANN202
         """
         Update state of charge of vehicles based on driven distance.
         SoC = SoC_old - EnergyConsumption (kWh/km) * km
@@ -236,11 +236,11 @@ class SharedVehicle(Vehicle, ABC):
             self._current_state_of_charge = 0.0
 
         logging.debug(
-            f"Current state of charge {round(self.current_state_of_charge, 2)}/{self.max_state_of_charge} ({round(self.current_state_of_charge / self.max_state_of_charge * 100, 2)}%).",
+            f"Current state of charge {round(self.current_state_of_charge, 2)}/{self.max_state_of_charge} ({round(self.current_state_of_charge / self.max_state_of_charge * 100, 2)}%).",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def _update_positions(self, new_position: Position):
+    def _update_positions(self, new_position: Position):  # noqa: ANN202
         # Update Vehicle Position
         self.position = new_position
 
@@ -255,11 +255,11 @@ class SharedVehicle(Vehicle, ABC):
         region_id = self.position.get_region_id()
 
         logging.debug(
-            f"Current position {self.position} in region {region_id}.",
+            f"Current position {self.position} in region {region_id}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def mount_driver(self, driver: DriverInterface):
+    def mount_driver(self, driver: DriverInterface):  # noqa: ANN201
         if self._driver is not None:
             raise Exception(
                 f"Vehicle {self._id} has already a driver {self._driver.identify_driver()}. Unable to mount driver."
@@ -272,11 +272,11 @@ class SharedVehicle(Vehicle, ABC):
         self.state = VehicleState.DRIVING
 
         logging.debug(
-            f"Driver: {driver.identify_driver()} mounted vehicle.",
+            f"Driver: {driver.identify_driver()} mounted vehicle.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def unmount_driver(self):
+    def unmount_driver(self):  # noqa: ANN201
         if self._driver is None:
             raise Exception("Vehicle has no driver to unmount.")
 
@@ -288,18 +288,18 @@ class SharedVehicle(Vehicle, ABC):
         self.state = VehicleState.PARKING
 
         logging.debug(
-            f"Driver: {tmp_driver_id} unmounted vehicle.",
+            f"Driver: {tmp_driver_id} unmounted vehicle.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def prepare_for_service_task(self, caller, task):
+    def prepare_for_service_task(self, caller, task):  # noqa: ANN001, ANN201
         self.state = VehicleState.PRE_SERVICE
         logging.debug(
-            f"Marked for Service Task [{task}] by {caller}.",
+            f"Marked for Service Task [{task}] by {caller}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def relocate(self, route_segment: Edge, time, relocator):
+    def relocate(self, route_segment: Edge, time, relocator):  # noqa: ANN001, ANN201
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
@@ -313,7 +313,7 @@ class SharedVehicle(Vehicle, ABC):
             or len(self._passengers) > 0
         ):
             logging.debug(
-                f"Vehicle {self._id} has a driver. Revoke relocation task.",
+                f"Vehicle {self._id} has a driver. Revoke relocation task.",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
@@ -344,11 +344,11 @@ class SharedVehicle(Vehicle, ABC):
         self.state = VehicleState.PARKING
 
         logging.debug(
-            f"Vehicle relocated by {relocator} from {old_position} to {self.position} in {time} minutes.",
+            f"Vehicle relocated by {relocator} from {old_position} to {self.position} in {time} minutes.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def plug_to_charging_station(self):
+    def plug_to_charging_station(self):  # noqa: ANN201
         self.state = VehicleState.CHARGING
 
         self._charging_station_plugged_in.succeed()
@@ -359,7 +359,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def unplug_from_charging_station(self):
+    def unplug_from_charging_station(self):  # noqa: ANN201
         self.state = VehicleState.PARKING
 
         self._charging_station_plugged_out.succeed()
@@ -370,7 +370,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def charge(self, charging_time, amount=0):
+    def charge(self, charging_time, amount=0):  # noqa: ANN001, ANN201
         # Notify charging
         self._charging_station_charging_started.succeed()
         self._charging_station_charging_started = self._env.event()
@@ -389,9 +389,9 @@ class SharedVehicle(Vehicle, ABC):
         self._charging_station_charging_finished = self._env.event()
 
         logging.debug(
-            f"Vehicle charged {amount} kWh and has now {self._current_state_of_charge} kWh out of {self._max_state_of_charge}.",
+            f"Vehicle charged {amount} kWh and has now {self._current_state_of_charge} kWh out of {self._max_state_of_charge}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"I have {self.available_seats} passengers on boards"

@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List
+from typing import Dict, List  # noqa: UP035
 
 import numpy as np
 import pandas as pd
@@ -23,8 +23,10 @@ class DowntimeMinWithoutLookahead:
         self._av_config = self._config.ride_hailing_vehicles["AutonomousCar"]
 
     def generate_charging_allocation(
-        self, vehicles, CSs
-    ) -> List[Dict[RideHailingVehicle, VirtualChargingStation]]:
+        self,
+        vehicles,  # noqa: ANN001
+        CSs,  # noqa: ANN001
+    ) -> List[Dict[RideHailingVehicle, VirtualChargingStation]]:  # noqa: UP006
         """
         This is a function of allocating charging vehicles to stations, using minimum downtime, only looking at the current situation, without pre-planning the future
 
@@ -198,7 +200,7 @@ class DowntimeMinWithoutLookahead:
                     if x[i.id, j.id].solution_value != 0:
                         pairs.append(dict(vehicle=j, charging_station=i))
             logging.info(
-                f"Number of vehicles with low SOC = {len(vehicles)}, Number of allocations = {len(pairs)}",
+                f"Number of vehicles with low SOC = {len(vehicles)}, Number of allocations = {len(pairs)}",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             T_d_sum = mdl.sum(
@@ -212,11 +214,11 @@ class DowntimeMinWithoutLookahead:
             ).solution_value
 
             logging.debug(
-                f"T_d = {T_d_sum}, T_c = {T_c_sum}, T_q = {T_q_sum}",
+                f"T_d = {T_d_sum}, T_c = {T_c_sum}, T_q = {T_q_sum}",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             logging.debug(
-                f"Penalty for not charging vehicles = {mdl.sum(mdl.sum(d[i.id, j.id] for i in CSs) * (1 - SoC[j.id]) * (1 - mdl.sum(x[i.id, j.id] for i in CSs)) for j in vehicles).solution_value}",
+                f"Penalty for not charging vehicles = {mdl.sum(mdl.sum(d[i.id, j.id] for i in CSs) * (1 - SoC[j.id]) * (1 - mdl.sum(x[i.id, j.id] for i in CSs)) for j in vehicles).solution_value}",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -234,7 +236,7 @@ class DowntimeMinWithoutLookahead:
                 .split("\n")
             )
             logging.debug(
-                f"Stats of allocations: {stats_allocations}",
+                f"Stats of allocations: {stats_allocations}",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             stats_candidates = (
@@ -244,7 +246,7 @@ class DowntimeMinWithoutLookahead:
                 .split("\n")
             )
             logging.debug(
-                f"Stats of candidates: {stats_candidates}",
+                f"Stats of candidates: {stats_candidates}",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
         return pairs

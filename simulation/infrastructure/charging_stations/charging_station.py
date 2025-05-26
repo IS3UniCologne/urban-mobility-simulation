@@ -23,9 +23,9 @@ class ChargingStation(TrackingInterface):
         "_queue_size",
     )
 
-    exposes = ["_location", "_plugs", "_current_queue_time"]
+    exposes = ["_location", "_plugs", "_current_queue_time"]  # noqa: RUF012
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         id: int,
         env: simpy.Environment,
@@ -68,53 +68,53 @@ class ChargingStation(TrackingInterface):
         self._env.process(self.calc_current_queue_time())
 
     @property
-    def capacity(self):
+    def capacity(self):  # noqa: ANN201
         return self._capacity
 
     @property
-    def plugs(self):
+    def plugs(self):  # noqa: ANN201
         return self._plugs
 
     @property
-    def power(self):
+    def power(self):  # noqa: ANN201
         return self._power
 
     @property
-    def centre(self):
+    def centre(self):  # noqa: ANN201
         return self._centre
 
     @property
-    def id(self):
+    def id(self):  # noqa: ANN201
         return self._id
 
     @property
-    def location(self):
+    def location(self):  # noqa: ANN201
         return self._location
 
     @property
-    def polygon(self):
+    def polygon(self):  # noqa: ANN201
         return self._polygon
 
     @property
-    def queue_size(self):
+    def queue_size(self):  # noqa: ANN201
         return self._queue_size
 
     @property
-    def current_queue_time(self):
+    def current_queue_time(self):  # noqa: ANN201
         return self._current_queue_time
 
     @property
-    def vehicle_plugged_in(self):
+    def vehicle_plugged_in(self):  # noqa: ANN201
         return self._vehicle_plugged_in
 
     @property
-    def vehicle_unplugged(self):
+    def vehicle_unplugged(self):  # noqa: ANN201
         return self._vehicle_unplugged
 
-    def register_event_subscriber(self, subscriber):
+    def register_event_subscriber(self, subscriber):  # noqa: ANN001, ANN201
         self._event_subscribers.append(subscriber)
 
-    def plug_in_notify(self):
+    def plug_in_notify(self):  # noqa: ANN201
         with self._plug_in_lock.request() as req:
             yield req
             self._vehicle_plugged_in.succeed()
@@ -131,7 +131,7 @@ class ChargingStation(TrackingInterface):
                     x.processed_plug_in_event = self._env.event()
             self._vehicle_plugged_in = self._env.event()
 
-    def plug_out_notify(self):
+    def plug_out_notify(self):  # noqa: ANN201
         with self._plug_out_lock.request() as req:
             yield req
             self._vehicle_unplugged.succeed()
@@ -149,7 +149,7 @@ class ChargingStation(TrackingInterface):
 
             self._vehicle_unplugged = self._env.event()
 
-    def calc_current_queue_time(self):
+    def calc_current_queue_time(self):  # noqa: ANN201
         # a charging station could expose the current expected queue time (if a vehicle would request charging right now) from the remaining charging times of vehicles in it and requests in the queue
         while True:
             yield self._env.timeout(1)
@@ -164,17 +164,19 @@ class ChargingStation(TrackingInterface):
 
             # that seems really hacky but the only way to directly access the caller that initiated the request to the simpy ressource, if you find a better way feel free to raise a pull request :)
             ongoing_charging_tasks = [
-                x.proc._generator.gi_frame.f_locals["self"] for x in self._plugs.users
+                x.proc._generator.gi_frame.f_locals["self"]  # noqa: SLF001
+                for x in self._plugs.users
             ]
             queued_tasks = [
-                x.proc._generator.gi_frame.f_locals["self"] for x in self._plugs.queue
+                x.proc._generator.gi_frame.f_locals["self"]  # noqa: SLF001
+                for x in self._plugs.queue
             ]
 
             ongoing_tasks_completion_time_asc = sorted(
                 [
-                    x._estimated_completion_time
+                    x._estimated_completion_time  # noqa: SLF001
                     for x in ongoing_charging_tasks
-                    if x._estimated_completion_time is not None
+                    if x._estimated_completion_time is not None  # noqa: SLF001
                 ]
             )
             queued_tasks_charging_time = [x.charging_duration for x in queued_tasks]
@@ -203,5 +205,5 @@ class ChargingStation(TrackingInterface):
         else:
             return {x: self.get(x) for x in self.__slots__}
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"ID: {self._id}, Location: {self._location}, Current Users: {len(self._plugs.users)}, Current Queue Size: {len(self._queue)}"

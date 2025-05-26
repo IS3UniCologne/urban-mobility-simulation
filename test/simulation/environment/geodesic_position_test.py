@@ -13,7 +13,7 @@ from simulation.environment.geodesic_position import GeodesicPosition
 class TestGeodesicPositionDistance(unittest.TestCase):
     """Tests for GeodesicPosition distance calculations"""
 
-    def test_distance_calculation_speed(self):
+    def test_distance_calculation_speed(self):  # noqa: ANN201
         """Compare performance of haversine vs euclidean distance calculations"""
         # Berlin's approximate bounding box
         min_lat, max_lat = 52.3, 52.7  # latitude range
@@ -44,10 +44,10 @@ class TestGeodesicPositionDistance(unittest.TestCase):
         euclidean_time = time.time() - start_time
 
         # Report results
-        print(f"\nPerformance comparison over {n_samples} distance calculations:")
-        print(f"Haversine (>>) time: {haversine_time:.4f} seconds")
-        print(f"Euclidean (<<) time: {euclidean_time:.4f} seconds")
-        print(f"Speedup factor: {haversine_time / euclidean_time:.2f}x")
+        print(f"\nPerformance comparison over {n_samples} distance calculations:")  # noqa: T201
+        print(f"Haversine (>>) time: {haversine_time:.4f} seconds")  # noqa: T201
+        print(f"Euclidean (<<) time: {euclidean_time:.4f} seconds")  # noqa: T201
+        print(f"Speedup factor: {haversine_time / euclidean_time:.2f}x")  # noqa: T201
 
         # Verify that euclidean is actually faster
         self.assertLess(
@@ -56,7 +56,7 @@ class TestGeodesicPositionDistance(unittest.TestCase):
             "Euclidean distance calculation should be faster than haversine",
         )
 
-    def test_distance_calculation_accuracy(self):
+    def test_distance_calculation_accuracy(self):  # noqa: ANN201
         """Compare accuracy of euclidean approximation vs haversine for Berlin distances"""
         # Berlin's approximate bounding box
         min_lat, max_lat = 52.3, 52.7  # latitude range
@@ -97,13 +97,13 @@ class TestGeodesicPositionDistance(unittest.TestCase):
         max_abs_error = max(absolute_errors)  # in meters
 
         # Report results
-        print("\nAccuracy of euclidean distance as approximation of haversine:")
-        print(f"Average relative error: {avg_rel_error:.2f}%")
-        print(f"Maximum relative error: {max_rel_error:.2f}%")
-        print(f"Minimum relative error: {min_rel_error:.2f}%")
-        print(f"Standard deviation of relative error: {std_rel_error:.2f}%")
-        print(f"Average absolute error: {avg_abs_error:.2f} meters")
-        print(f"Maximum absolute error: {max_abs_error:.2f} meters")
+        print("\nAccuracy of euclidean distance as approximation of haversine:")  # noqa: T201
+        print(f"Average relative error: {avg_rel_error:.2f}%")  # noqa: T201
+        print(f"Maximum relative error: {max_rel_error:.2f}%")  # noqa: T201
+        print(f"Minimum relative error: {min_rel_error:.2f}%")  # noqa: T201
+        print(f"Standard deviation of relative error: {std_rel_error:.2f}%")  # noqa: T201
+        print(f"Average absolute error: {avg_abs_error:.2f} meters")  # noqa: T201
+        print(f"Maximum absolute error: {max_abs_error:.2f} meters")  # noqa: T201
 
         # Create visualization
         plt.figure(figsize=(12, 10))

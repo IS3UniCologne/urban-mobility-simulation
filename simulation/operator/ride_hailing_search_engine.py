@@ -23,7 +23,7 @@ class RideHailingSearchEngine(SearchEngineInterface):
         "_price_per_minute",
     )
 
-    def __init__(self, env):
+    def __init__(self, env):  # noqa: ANN001, ANN204
         self._env = env
         self._fleet: MixedRideHailingFleet = None
 

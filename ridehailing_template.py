@@ -383,7 +383,7 @@ demand_factory = DemandFactory(
 
 
 # For multiple simulation runs
-def run_simulation(end_time, env=env):
+def run_simulation(end_time, env=env):  # noqa: ANN001, ANN201
     # Before a new simulation run, reset everything
     User.user_id = 0
     DemandFactory.counter = 0

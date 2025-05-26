@@ -11,14 +11,14 @@ class TransportTask:
         "_viable_vehicle_modes",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
-        time,
+        time,  # noqa: ANN001
         origin: Position,
         destination: Position,
-        viable_vehicle_modes,
-        max_wait_time=None,
-        actual_wait_time=None,
+        viable_vehicle_modes,  # noqa: ANN001
+        max_wait_time=None,  # noqa: ANN001
+        actual_wait_time=None,  # noqa: ANN001
     ):
         self._time = time
         self._origin = origin
@@ -28,40 +28,40 @@ class TransportTask:
         self._actual_wait_time = actual_wait_time
 
     @property
-    def time(self):
+    def time(self):  # noqa: ANN201
         return self._time
 
     @property
-    def origin(self):
+    def origin(self):  # noqa: ANN201
         return self._origin
 
     @origin.setter
-    def origin(self, position: Position):
+    def origin(self, position: Position):  # noqa: ANN202
         self._origin = position
 
     @property
-    def destination(self):
+    def destination(self):  # noqa: ANN201
         return self._destination
 
     @destination.setter
-    def destination(self, position: Position):
+    def destination(self, position: Position):  # noqa: ANN202
         self._destination = position
 
     @property
-    def viable_vehicle_modes(self):
+    def viable_vehicle_modes(self):  # noqa: ANN201
         return self._viable_vehicle_modes
 
     @property
-    def max_wait_time(self):
+    def max_wait_time(self):  # noqa: ANN201
         return self._max_wait_time
 
     @property
-    def actual_wait_time(self):
+    def actual_wait_time(self):  # noqa: ANN201
         return self._actual_wait_time
 
     @actual_wait_time.setter
-    def actual_wait_time(self, value):
+    def actual_wait_time(self, value):  # noqa: ANN001, ANN202
         self._actual_wait_time = value
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"From {self._origin} to {self._destination}"

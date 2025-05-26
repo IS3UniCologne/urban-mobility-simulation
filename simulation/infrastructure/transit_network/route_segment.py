@@ -4,7 +4,7 @@ from simulation.infrastructure.transit_network.stop import Stop
 class RouteSegment:
     __slots__ = ("_distance", "_end", "_segment_id", "_start")
 
-    def __init__(self, segment_id, start: Stop, end: Stop, distance):
+    def __init__(self, segment_id, start: Stop, end: Stop, distance):  # noqa: ANN001, ANN204
         self._segment_id = segment_id
         self._start = start
         self._end = end
@@ -12,23 +12,23 @@ class RouteSegment:
         # TODO: shape ?
 
     @property
-    def start(self):
+    def start(self):  # noqa: ANN201
         return self._start
 
     @property
-    def end(self):
+    def end(self):  # noqa: ANN201
         return self._end
 
     @property
-    def distance(self):
+    def distance(self):  # noqa: ANN201
         return self._distance
 
     @property
-    def segment_id(self):
+    def segment_id(self):  # noqa: ANN201
         return self._segment_id
 
     # '+' operator between RouteSegment Instances
-    def __add__(self, other):
+    def __add__(self, other):  # noqa: ANN001, ANN204
         if isinstance(other, RouteSegment):
             return self._distance + other._distance
         else:
@@ -36,5 +36,5 @@ class RouteSegment:
                 f"{other} is not a RouteSegment object, can't sum these two together"
             )
 
-    def __radd__(self, other):
+    def __radd__(self, other):  # noqa: ANN001, ANN204
         return other + self._distance

@@ -1,7 +1,7 @@
 import logging
 import random
 from collections import Counter
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union  # noqa: UP035
 
 import pandas as pd
 from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
@@ -27,22 +27,22 @@ class SharedChargingAuction(Auction, TrackingInterface):
         "_participants",
     )
 
-    exposes = ["_next_timeslot", "_bids", "_location_results"]
+    exposes = ["_next_timeslot", "_bids", "_location_results"]  # noqa: RUF012
 
     def __init__(
         self,
         env: Environment,
-        start_condition,
-        end_condition,
+        start_condition,  # noqa: ANN001
+        end_condition,  # noqa: ANN001
         charging_infrastructure: ChargingInfrastructure,
     ) -> None:
         super().__init__(env, start_condition, end_condition)
 
         # bids are a list of n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
-        self._bid_syntax = Dict[str, List[Tuple[int, Union[int, float], int]]]
+        self._bid_syntax = Dict[str, List[Tuple[int, Union[int, float], int]]]  # noqa: UP006
 
         # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
-        self._result_syntax = Dict[int, Dict[str, Tuple[int, float]]]
+        self._result_syntax = Dict[int, Dict[str, Tuple[int, float]]]  # noqa: UP006
 
         self._participants = []
         self._bids = {}
@@ -76,7 +76,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
                 timeslot=timeslot,
             )
 
-    def run(self):
+    def run(self):  # noqa: ANN201
         while True:
             if (
                 self._next_timeslot
@@ -296,27 +296,27 @@ class SharedChargingAuction(Auction, TrackingInterface):
             )
 
     @property
-    def result(self):
+    def result(self):  # noqa: ANN201
         # it is illegal for other participants to know the full results in this type of auction
         raise NotImplementedError(
             "Not implemented for FleetChargingAuction, results are distributed through events"
         )
 
     @property
-    def next_timeslot(self):
+    def next_timeslot(self):  # noqa: ANN201
         return self._next_timeslot
 
-    def get_auctioned_capacity(self) -> Dict[str, int]:
+    def get_auctioned_capacity(self) -> Dict[str, int]:  # noqa: UP006
         return self._charging_infrastructure.get_available_capacity(self._next_timeslot)
 
-    def _update_bids(self, single_bid):
+    def _update_bids(self, single_bid):  # noqa: ANN001, ANN202
         for location, bid in single_bid.items():
             if location not in self._bids:
                 self._bids[location] = []
             self._bids[location].extend(bid)
 
     @staticmethod
-    def __tiebreak_capacity(capacity, among):
+    def __tiebreak_capacity(capacity, among):  # noqa: ANN001, ANN205
         if len(among) >= capacity:
             return random.sample(among, capacity)
         else:
@@ -334,7 +334,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
             )
             return allocated_ids
 
-    def dump(self, exposed_only: bool = True) -> Dict:
+    def dump(self, exposed_only: bool = True) -> Dict:  # noqa: UP006
         return {
             "_next_timeslot": self._next_timeslot,
             "_bids": self._bids,

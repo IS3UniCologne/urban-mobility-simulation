@@ -32,7 +32,7 @@ class Auction(ABC):
         "open_for_bidding",
     )
 
-    def __init__(self, env: Environment, start_condition, end_condition) -> None:
+    def __init__(self, env: Environment, start_condition, end_condition) -> None:  # noqa: ANN001
         self._env = env
         self._config = Configuration()
         self._start_condition = start_condition
@@ -49,22 +49,22 @@ class Auction(ABC):
         self._process = self._env.process(self.run())
 
     @property
-    def result(self):
+    def result(self):  # noqa: ANN201
         return self._result
 
     @property
-    def is_open(self):
+    def is_open(self):  # noqa: ANN201
         return self._is_open
 
     @abstractmethod
-    def run(self):
+    def run(self):  # noqa: ANN201
         pass
 
     @abstractmethod
-    def clear(self):
+    def clear(self):  # noqa: ANN201
         pass
 
-    def place_bid(self, bid):
+    def place_bid(self, bid):  # noqa: ANN001, ANN201
         # check that bid conforms to the syntax
         try:
             die_if_unbearable(bid, self._bid_syntax)
@@ -80,7 +80,7 @@ class Auction(ABC):
         self._update_bids(bid)
 
     @abstractmethod
-    def _update_bids(self, single_bid):
+    def _update_bids(self, single_bid):  # noqa: ANN001, ANN202
         """
         This method updates the auction's bids. The auctioneer should implement the specifics per auction type."""
         pass

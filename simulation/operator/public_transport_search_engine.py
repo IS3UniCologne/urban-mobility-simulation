@@ -29,7 +29,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         "_user_config",
     )
 
-    def __init__(self, env, fleet: PublicTransportVehicleFleet):
+    def __init__(self, env, fleet: PublicTransportVehicleFleet):  # noqa: ANN001, ANN204
         self._env = env
         self._fleet = fleet
         self._config = Configuration()
@@ -39,11 +39,11 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         self._user_config = self._config.user
         self._geo_env = GeodesicEnvironment.getInstance()
 
-    def find_viable_transit(
+    def find_viable_transit(  # noqa: ANN201
         self,
-        transportation_search_task,
-        spatial_strategy="hexagon",
-        temporal_lookahead=10,
+        transportation_search_task,  # noqa: ANN001
+        spatial_strategy="hexagon",  # noqa: ANN001
+        temporal_lookahead=10,  # noqa: ANN001
     ):
         search_time = transportation_search_task.transport_task.time
         latest_departure = SimulationTimeConverter.as_str(
@@ -90,7 +90,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
 
                 if reachable_stops:
                     logging.debug(
-                        f"Bus {vehicle.id} is a viable transport alternative from "
+                        f"Bus {vehicle.id} is a viable transport alternative from "  # noqa: G004
                         f"{transportation_search_task.transport_task.origin} to "
                         f"{transportation_search_task.transport_task.destination}!",
                         extra={"clazz": self.__class__.__name__, "oid": ""},
@@ -170,10 +170,10 @@ class PublicTransportSearchEngine(SearchEngineInterface):
 
         return browser
 
-    def _check_viable_stops(
+    def _check_viable_stops(  # noqa: ANN202
         self,
         vehicle: PublicTransitVehicle,
-        strategy,
+        strategy,  # noqa: ANN001
         origin: GeodesicPosition,
         destination: GeodesicPosition,
     ):
@@ -226,13 +226,13 @@ class PublicTransportSearchEngine(SearchEngineInterface):
                 "Other strategies for aligning travel demands are not implemented."
             )
 
-    def _reachable_in_time(
+    def _reachable_in_time(  # noqa: ANN202
         self,
         stop: Stop,
         vehicle: PublicTransitVehicle,
-        current_time,
+        current_time,  # noqa: ANN001
         current_position: GeodesicPosition,
-        latest_departure,
+        latest_departure,  # noqa: ANN001
     ):
         walking_dist = stop >> current_position
         # reachable within the specified temporal_lookahead and depart after arrival by foot

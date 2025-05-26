@@ -19,25 +19,25 @@ class GeodesicEnvironment(Environment):
     __slots__ = ("_hex_geom_cache", "_rng")
 
     @staticmethod
-    def getInstance():
+    def getInstance():  # noqa: ANN205
         """Static access method."""
         if GeodesicEnvironment.__instance is None:
             GeodesicEnvironment()
         return GeodesicEnvironment.__instance
 
-    def __init__(self):
+    def __init__(self):  # noqa: ANN204
         """Virtually private constructor."""
         if GeodesicEnvironment.__instance is not None:
             raise Exception("This class is a singleton!")
         else:
             GeodesicEnvironment.__instance = self
-            super(GeodesicEnvironment, self).__init__()
+            super(GeodesicEnvironment, self).__init__()  # noqa: UP008
 
             self._rng = RandomManager().get_rng(component_name="GEOENV")
 
             self._hex_geom_cache = {}
 
-    def getLayer(self, layer_name: str):
+    def getLayer(self, layer_name: str):  # noqa: ANN201
         """
             Return layer
         :param layer_name: GeoDataFrame containing all spatial elements of that layer
@@ -45,7 +45,7 @@ class GeodesicEnvironment(Environment):
         """
         return self.layer[layer_name]
 
-    def addLayer(self, layer_name, layer):
+    def addLayer(self, layer_name, layer):  # noqa: ANN001, ANN201
         """
         Add a new layer to the environment. Typically, we assume a natural ordering of the layers (i.e., first layer is finest)
         :param layer_name: Layer name
@@ -77,7 +77,7 @@ class GeodesicEnvironment(Environment):
             if geometry.contains(pnt):
                 return pnt.y, pnt.x  # Latitude, Longitude
 
-    def get_centroid(self, hex_id, layer_name="hex_7"):
+    def get_centroid(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
         """
         Get centroid of hexagon
         :param hex_id: Hexagon ID
@@ -92,10 +92,10 @@ class GeodesicEnvironment(Environment):
 
         return geometry.centroid.y, geometry.centroid.x  # Lat, Lng
 
-    def is_in_layer(self, hex_id, layer_name="hex_7"):
+    def is_in_layer(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
         return hex_id in self.layer[layer_name].index
 
-    def get_hexagon(self, hex_id, layer_name="hex_7"):
+    def get_hexagon(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
         """
         Get geometry of hexagon with optimized lookup.
         :param hex_id: Hexagon ID
@@ -111,7 +111,7 @@ class GeodesicEnvironment(Environment):
         return self._hex_geom_cache[layer_name].get(hex_id, None)
 
     @staticmethod
-    def move_in_layer(hex_id, movement):
+    def move_in_layer(hex_id, movement):  # noqa: ANN001, ANN205
         """
               ___3___
            /           \
@@ -178,7 +178,7 @@ class GeodesicEnvironment(Environment):
         return new_hex_id
 
     @staticmethod
-    def corridor(start, end, k):
+    def corridor(start, end, k):  # noqa: ANN001, ANN205
         """
         Given a start and end hexagon id (with same resolution), return a straight line of hexagons between them
         plus (optionally for k>0) a buffer of k hex-cells around it.
@@ -194,7 +194,7 @@ class GeodesicEnvironment(Environment):
         }
 
     @staticmethod
-    def filter_demands_by_area(demands, area: Polygon):
+    def filter_demands_by_area(demands, area: Polygon):  # noqa: ANN001, ANN205
         """
         :param demands: [{origin: GeodesicPosition, destination: GeodesicPosition}, ...]
         :param area: shapely.Polygon
@@ -210,7 +210,7 @@ class GeodesicEnvironment(Environment):
 
         return filtered
 
-    def filter_demands_by_direction(self, demands, vehicle: "Vehicle"):
+    def filter_demands_by_direction(self, demands, vehicle: "Vehicle"):  # noqa: ANN001, ANN201
         route_direction = self.get_bearing(
             *vehicle.position.getExactLocation(),
             *vehicle.route.destination.getExactLocation(),
@@ -242,7 +242,7 @@ class GeodesicEnvironment(Environment):
         return filtered
 
     @staticmethod
-    def direction_aligns(direction, target, degrees=180) -> bool:
+    def direction_aligns(direction, target, degrees=180) -> bool:  # noqa: ANN001
         assert degrees < 360
         target_range = (target - (degrees / 2), target + (degrees / 2))
         target_norm = tuple(x % 360 for x in target_range)
@@ -259,7 +259,7 @@ class GeodesicEnvironment(Environment):
             return False
 
     @staticmethod
-    def get_bearing(lat1, long1, lat2, long2):
+    def get_bearing(lat1, long1, lat2, long2):  # noqa: ANN001, ANN205
         # great circle bearing without projection
         # from https://stackoverflow.com/a/64747209
         dLon = long2 - long1

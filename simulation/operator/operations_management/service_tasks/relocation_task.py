@@ -22,17 +22,17 @@ class RelocationTask(ServiceTask):
         "_vehicle_mode",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
-        origin,
-        destination,
-        number_of_vehicles_to_relocate,
-        distance,
-        vehicle_mode,
+        origin,  # noqa: ANN001
+        destination,  # noqa: ANN001
+        number_of_vehicles_to_relocate,  # noqa: ANN001
+        distance,  # noqa: ANN001
+        vehicle_mode,  # noqa: ANN001
         vehicle_fleet: VehicleFleet,
     ):
-        super(RelocationTask, self).__init__(env)
+        super(RelocationTask, self).__init__(env)  # noqa: UP008
 
         self._origin = origin
         self._destination = destination
@@ -42,7 +42,7 @@ class RelocationTask(ServiceTask):
         self._vehicle_fleet = vehicle_fleet
         self._distance = distance
 
-    def execute(self, *args):
+    def execute(self, *args):  # noqa: ANN002, ANN201
         # Get Spatial Environment
         geo_env = GeodesicEnvironment.getInstance()
 
@@ -113,8 +113,8 @@ class RelocationTask(ServiceTask):
         # Notify all
         self._task_finished = self._env.event()
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"Relocating {self._number_of_vehicles_to_relocate} {self._vehicle_mode} from {self._origin} to {self._destination} (distance = {self._distance})"
 
-    def __repr__(self):
+    def __repr__(self):  # noqa: ANN204
         return self.__str__()

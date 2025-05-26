@@ -14,7 +14,7 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
         "_substitution_boundary",
     )
 
-    def __init__(self, path_to_choice_model, substitution_boundary, available_vehicles):
+    def __init__(self, path_to_choice_model, substitution_boundary, available_vehicles):  # noqa: ANN001, ANN204
         # Load Choice Model
         self._choice_model = load_pickle(path_to_choice_model)
 
@@ -25,7 +25,7 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
 
         self._available_vehicles = available_vehicles
 
-    def choose_vehicle(self, trip_characteristics: TripCharacteristics):
+    def choose_vehicle(self, trip_characteristics: TripCharacteristics):  # noqa: ANN201
         # Predict single outcome (1, distance) (1 = constant)
         # (Car, Kick Scooter, Scooter)
         # (p_car, p_ks, p_scooter)
