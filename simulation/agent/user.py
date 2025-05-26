@@ -237,6 +237,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                 energy_consumed=energy_consumed,
                 actual_wait_time=wait_time,
             )
+            self._transport_task.actual_wait_time = wait_time
 
             self._payment_service.pay_for_fulfilled_transportation_task(
                 self, self._transport_task, selected_transportation_alternative
