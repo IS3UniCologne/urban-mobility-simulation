@@ -3,7 +3,6 @@ from pathlib import Path
 
 import h3
 import pandas as pd
-from pandas import DataFrame
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
@@ -18,6 +17,8 @@ from simulation.operator.operations_management.service_tasks.multi_service_task 
 from simulation.operator.operations_management.service_tasks.relocation_task import (
     RelocationTask,
 )
+from simulation.operator.transactions import DemandMonitor
+from simulation.operator.transactions.demand_monitor import VehicleDemandByRegion
 
 
 class IntegratedSharedMobilityOperations(OperationsInterface):
@@ -31,7 +32,6 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         "_duration_of_operations",
         "_max_vehicle_supply",
         "_operations_started",
-        "_ordered_available_vehicle_modes",
         "_ordered_max_vehicle_supply",
         "_scheduled_tasks",
         "_state_of_charge_threshold",
@@ -61,7 +61,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         # For example: If we observe a demand for KickScooter and Scooter, we count that
         # demand to KickScooter. This ordering is defined according to the following list
         # (from left to right)
-        self._available_vehicle_modes = (
+        self._available_vehicle_modes: list[str] = (
             ordered_available_vehicle_modes  # TODO: get from fleet
         )
         self._max_vehicle_supply = ordered_max_vehicle_supply  # TODO: get from fleet
@@ -82,6 +82,17 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         # Shift Duration (OM shift duration)
         self._duration_of_operations = operation_duration  # mins
 
+    @property
+    def available_vehicle_modes(self) -> list[str]:
+        """Get the list of available vehicle modes.
+
+        Returns
+        -------
+        list[str]
+            A list of available vehicle modes.
+        """
+        return self._available_vehicle_modes
+
     def execute(self):  # noqa: ANN201
         """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
@@ -93,21 +104,14 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             # Clean old jobs (if there are some left)
             self.operator._workforce.task_queue.clear()  # noqa: SLF001
 
-            # Retrieve Vehicle Transactions
-            transactions = self._operator_reference.get_transactions()
-
-            condition = (
-                transactions["selected_vehicle_mode"].apply(lambda x: x == "None")
-            ).all()
-
-            if condition:
+            if not self.operator.transaction_log.has_successful_transaction:
                 logging.debug(
                     "Skip operations, cause there has not been one successful transaction yet"
                 )
                 continue
 
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-            charging_plans, used_capacity = self.generate_charging_plan(transactions)
+            charging_plans, used_capacity = self.generate_charging_plan()
 
             # We track the charging events
             charging_events = []
@@ -218,9 +222,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 # Wait 2 Minutes, then (re-)schedule relocation
                 yield self._env.timeout(2)
 
-                transactions = self._operator_reference.get_transactions()
-
-                relocations = self.generate_relocation_plan(transactions)
+                relocations = self.generate_relocation_plan()
 
                 # We track the charging events
                 relocation_events = []
@@ -321,22 +323,22 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
 
-    def generate_relocation_plan(self, transactions):  # noqa: ANN001, ANN201
+    def generate_relocation_plan(self):  # noqa: ANN201
         """
 
         Return relocation plan
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows (from PaymentEngine)
         :return: Dict of potential relocations {"SharedCar": [(origin, destination, no, distance)], ..}
         """
-        state = self.calculate_residual_supply(
-            self._operator_reference.fleet, transactions
+        fleet_state = self.calculate_residual_supply(
+            self._operator_reference.fleet, self.operator.demand_monitor
         )
 
-        relocation_plans = self.identify_potential_relocations(state)
+        relocation_plans = self.identify_potential_relocations(fleet_state)
 
         return relocation_plans
 
-    def generate_charging_plan(self, transactions):  # noqa: ANN001, ANN201
+    def generate_charging_plan(self):  # noqa: ANN201
         """
         Generate a rule based charging plan based on given service worker capacity
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
@@ -346,7 +348,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         """
         # Get Current Fleet State
         state = self.calculate_residual_supply(
-            self._operator_reference.fleet, transactions=transactions
+            self._operator_reference.fleet, self._operator_reference.demand_monitor
         )
 
         config = Configuration()
@@ -1045,194 +1047,119 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def calculate_residual_supply(  # noqa: ANN201
-        self,
-        vehicle_fleet: MixedSharedVehicleFleet,
-        transactions,  # noqa: ANN001
-    ):
+    def calculate_residual_supply(
+        self, vehicle_fleet: MixedSharedVehicleFleet, demand_monitor: DemandMonitor
+    ) -> pd.DataFrame:
         """
-        Calculate Relocation Strategy based on (Expected) Demand, Supply and Vehicles to be Charged
-        :param vehicle_fleet: (Mixed) Vehicle Fleet
-        :param transactions: Transaction record from @PaymentInterface
-        :return:
-        """
+        Calculate relocation strategy based on (expected) demand, supply and vehicles to be charged.
 
+        Parameters
+        ----------
+        vehicle_fleet : MixedSharedVehicleFleet
+            Mixed vehicle fleet object.
+        demand_monitor : DemandMonitor
+            The demand monitor containing incremental demand statistics.
+
+        Returns
+        -------
+        pd.DataFrame
+            Fleet state with residual supply calculations.
+        """
         # Get Vehicle Supply per Hexagon
         supply = vehicle_fleet.supply_per_region()
-
         supply_df = pd.DataFrame(supply).T.reset_index()
         supply_df.rename(columns={"index": "hex_id"}, inplace=True)
 
-        # Get LoW Soc Vehicle Supply per Hexagon
+        # Get Low SoC Vehicle Supply per Hexagon
         low_soc_supply = vehicle_fleet.vehicles_to_be_charged_per_region(
             self._state_of_charge_threshold
         )
-
         df_low_soc = pd.DataFrame(low_soc_supply).T.reset_index()
         df_low_soc.rename(columns={"index": "hex_id"}, inplace=True)
 
         # Get Expected Demand (Delta) per Hexagon
-        expected_demand = self.estimate_delta_demand(
-            transactions, self._available_vehicle_modes
-        )
+        expected_demand = self.aggregate_delta_demand(demand_monitor)
 
-        # Merge Demand, Suppy and Low SoC Vehicles
-        state = expected_demand.merge(supply_df, how="outer", on="hex_id")
-        state = state.merge(
+        # Merge Demand, Supply and Low SoC Vehicles
+        fleet_state = expected_demand.merge(supply_df, how="outer", on="hex_id")
+        fleet_state = fleet_state.merge(
             df_low_soc, how="outer", on="hex_id", suffixes=("", "_Low_SoC")
         )
-        state.fillna(0, inplace=True)
+        fleet_state.fillna(0, inplace=True)
 
         # Calculate Residual Supply for each vehicle type
-        # RS = Supply - Low SoC Vehicles - Delta Demand (i.e., E[Inflow]-E[Outflow]-E[Missed Trips]
         for vehicle in self._available_vehicle_modes:
+            # TODO: Make this dependent on vehicle drive, not mode
             if vehicle == "SharedBike":
-                # + Delta because delta is negative or positive based on calc delta demand
-                state[f"Residual_Supply_{vehicle}"] = (
-                    state[vehicle] + state[f"Delta_{vehicle}"]
+                fleet_state[f"Residual_Supply_{vehicle}"] = (
+                    fleet_state[vehicle] + fleet_state[f"Delta_{vehicle}"]
                 )
             else:
-                # + Delta because delta is negative or positive based on calc delta demand
-                state[f"Residual_Supply_{vehicle}"] = (
-                    state[vehicle]
-                    - state[f"{vehicle}_Low_SoC"]
-                    + state[f"Delta_{vehicle}"]
+                fleet_state[f"Residual_Supply_{vehicle}"] = (
+                    fleet_state[vehicle]
+                    - fleet_state[f"{vehicle}_Low_SoC"]
+                    + fleet_state[f"Delta_{vehicle}"]
                 )
 
-        return state
+        return fleet_state
 
-    def estimate_delta_demand(self, transactions: DataFrame, ordered_available_vehicle):  # noqa: ANN001, ANN201
+    def aggregate_delta_demand(self, demand_monitor: DemandMonitor) -> pd.DataFrame:
         """
-        Compute the expected demand in a hexagon based on collected rental transactions from the simulation.
+        Compute net vehicle flow (vehicle surplus or excess demand) for each hexagon and vehicle type.
 
-        Transactions: Transaction Records from the Payment Interface
-        Ordered_Available_Vehicle: List with Available Vehicles and Natural Ordering of Preference in case of neutrality
-            i.e., the following hodls
-                ordered_available_vehicle[i] = 1 and ordered_available_vehicle[k] = 1
+        For each region (hexagon) and vehicle mode, this function calculates the net vehicle flow as the
+        difference between the number of vehicles arriving (inflow) and the total outflow, where outflow
+        is the sum of fulfilled departures and missed demand (unfulfilled requests). The result is a
+        DataFrame with one row per hexagon and columns for inflow, fulfilled outflow, missed outflow,
+        and net vehicle flow for each vehicle type.
 
-                                        k > i
+        Parameters
+        ----------
+        demand_monitor : DemandMonitor
+            Demand monitor containing cumulative demand statistics for each hexagon and vehicle type.
 
-                =>
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with one row per hexagon and the following columns for each vehicle type:
+            - 'Inflow_<vehicle>': int
+                Number of vehicles arriving at the hexagon.
+            - 'OutFlow_Fulfilled_<vehicle>': int
+                Number of fulfilled departures from the hexagon.
+            - 'OutFlow_Missed_<vehicle>': int
+                Number of missed departures (unfulfilled requests) from the hexagon.
+            - 'Delta_<vehicle>': int
+                Net vehicle flow: inflow - outflow_fulfilled - outflow_missed.
 
-                Demand is counted for: ordered_available_vehicle[i] as we assume preference order i << k
-
-        We calculate for each vehicle type -- based on the previous assumption -- the delta demand:
-
-                E[Delta Demand| Hexagon ID] = E[Inflow | Hexagon ID] - E[Outflow s| Hexagon ID] - E[Missed Trips | Hexagon ID]
+        Notes
+        -----
+        - Outflow is the sum of fulfilled departures and missed demand (unfulfilled requests).
+        - A negative delta indicates excess demand (more departures or missed requests than arrivals).
+        - A positive delta indicates a vehicle surplus (more arrivals than departures).
         """
-        transactions = transactions.copy()
+        vehicle_demand: VehicleDemandByRegion = demand_monitor.get_demand_data()
+        ordered_available_vehicle = demand_monitor.ordered_available_vehicles
 
-        diff = set(transactions["selected_vehicle_mode"].unique()) - set(
-            ordered_available_vehicle + ["None"]  # noqa: RUF005
-        )
-
-        if len(diff) > 0:
-            raise RuntimeError(
-                "There are more vehicle types than defined in ordered available vehicle"
-            )
-
-        if len(set(transactions["selected_vehicle_mode"].unique())) == 1:
-            raise RuntimeError(
-                "There are not enough transactions to calculate historical values"
-            )
-
-        # Rearrange Columns according to Vehicle Preferences
-        cols = transactions.columns.tolist()
-        cols = cols[: -(len(ordered_available_vehicle))] + ordered_available_vehicle
-
-        # Rearrange Columns
-        transactions = transactions[cols]
-
-        # Get the cheapest (most-preferred) mode for that trip.
-        # In other words, if a trip can be undertaken either by scooter or car, count this as a scooter trip
-        transactions["cheapest_vehicle_mode"] = ""
-
-        for i in range(len(ordered_available_vehicle)):
-            query = f"{ordered_available_vehicle[i]} == {1}"
-            for k in range(i):
-                query += f" & {ordered_available_vehicle[k]} == {0}"
-
-            qry_res = transactions.query(query)  # If not empty
-            if qry_res.shape[0] > 0:
-                transactions.loc[qry_res.index, "cheapest_vehicle_mode"] = (
-                    ordered_available_vehicle[i]
+        rows = []
+        for hex_id in vehicle_demand.keys():
+            row: dict[str, int | str] = {"hex_id": hex_id}
+            for vehicle in ordered_available_vehicle:
+                inflow = (
+                    vehicle_demand.get(hex_id, {}).get(vehicle, {}).get("inflow", 0)
                 )
-
-        # (All) Hexagons
-        hexagons = pd.unique(transactions[["origin", "destination"]].values.ravel("K"))
-        hexagons = pd.DataFrame(hexagons, columns=["hex_id"])
-
-        # Calculate Expected Outflow
-        outflow = transactions.groupby(
-            ["origin", "state", "cheapest_vehicle_mode"]
-        ).agg({"destination": "count"})
-
-        # Unstack Vehicle Type Level
-        outflow = outflow.unstack()
-        vehicle_columns = list(outflow["destination"].columns.values)
-        # Reset Multi-Index to Flat Index
-        outflow = outflow.reset_index()
-        outflow.columns = ["origin", "state"] + vehicle_columns  # noqa: RUF005
-
-        # to ensure that "fulfilled" comes before "missed" during unstacking
-        outflow = outflow.sort_values(["origin", "state"])
-
-        # Unstack State Column
-        outflow = outflow.set_index(["origin", "state"])
-        outflow = outflow.unstack().reset_index()
-
-        # Arrange Column Names
-        unfolded_cols = ["hex_id"]
-        for vehicle in vehicle_columns:
-            unfolded_cols = unfolded_cols + [  # noqa: RUF005
-                f"OutFlow_Fulfilled_{vehicle}",
-                f"OutFlow_Missed_{vehicle}",
-            ]
-
-        # Overwrite Column Names
-        outflow.columns = unfolded_cols
-
-        # Calculate Expected Inflow
-        inflow = transactions.groupby(
-            ["destination", "state", "cheapest_vehicle_mode"]
-        ).agg({"origin": "count"})
-
-        # Unstack Vehicle Type Level
-        inflow = inflow.unstack()
-        vehicle_columns = list(inflow["origin"].columns.values)
-
-        # Reset Multi-Index to Flat Index (keep vehicle column order)
-        inflow = inflow.reset_index()
-        inflow.columns = ["hex_id", "state"] + [
-            f"Inflow_{vehicle}" for vehicle in vehicle_columns
-        ]
-
-        # to ensure that "fulfilled" comes before "missed" during unstacking
-        inflow = inflow.sort_values(["hex_id", "state"])
-
-        # Inflow, we just need fulfilled trips to estimate expected inflow
-        inflow = inflow[inflow["state"] == "Fulfilled"]
-        inflow = inflow.drop(columns={"state"})
-        inflow = inflow.reset_index()
-        inflow.drop(columns={"index"}, inplace=True)
-
-        # Put together expected outflow and inflow
-        result = hexagons.merge(inflow, on=["hex_id"], how="left", suffixes=("", ""))
-        result = result.merge(
-            outflow, on=["hex_id"], how="left", suffixes=("_inflow", "_outflow")
-        )
-        result.fillna(0, inplace=True)
-
-        # Calculate Delta (Expected Inflow - Expected Outflow - Missed Demand)
-
-        for vehicle in ordered_available_vehicle:
-            if vehicle not in vehicle_columns:
-                result[f"Delta_{vehicle}"] = 0
-            else:
-                result[f"Delta_{vehicle}"] = (
-                    result[f"Inflow_{vehicle}"]
-                    - result[f"OutFlow_Fulfilled_{vehicle}"]
-                    - result[f"OutFlow_Missed_{vehicle}"]
+                outflow_fulfilled = (
+                    vehicle_demand.get(hex_id, {})
+                    .get(vehicle, {})
+                    .get("outflow_fulfilled", 0)
                 )
-
-        return result
+                outflow_missed = (
+                    vehicle_demand.get(hex_id, {})
+                    .get(vehicle, {})
+                    .get("outflow_missed", 0)
+                )
+                row[f"Inflow_{vehicle}"] = inflow
+                row[f"OutFlow_Fulfilled_{vehicle}"] = outflow_fulfilled
+                row[f"OutFlow_Missed_{vehicle}"] = outflow_missed
+                row[f"Delta_{vehicle}"] = inflow - outflow_fulfilled - outflow_missed
+            rows.append(row)
+        return pd.DataFrame(rows)

@@ -10,6 +10,7 @@ except ImportError:
         "Run `uv pip install -e .` to install all required packages."
     )
 from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.environment.position import RegionId
 
 from ..helper.configuration.configuration import Configuration
 from .position import Position
@@ -99,11 +100,11 @@ class GeodesicPosition(Position):
 
         return cy_euclidean_distance(self._lat, self._lng, other._lat, other._lng)
 
-    def get_region_id(self, resolution=0) -> str:  # noqa: ANN001
+    def get_region_id(self, resolution: int = 0) -> RegionId:
         """
         Return h3 hexagon index based on current position (lng, lat)
         :param resolution: H3 Resolution (res = 0 <=> default => use global setting)
-        :return: hex_id:   String
+        :return: hex_id:   RegionId
         """
         # If resolution is set to default, use global settings
         if resolution == 0:
@@ -111,12 +112,11 @@ class GeodesicPosition(Position):
 
         try:
             hex = self._default_hexagon[resolution]
-
         except KeyError:
             hex = h3.geo_to_h3(self._lat, self._lng, resolution)
             self._default_hexagon[resolution] = hex
 
-        return hex
+        return RegionId(hex)
 
     def is_in_geometry(self, geometry):  # noqa: ANN001, ANN201
         if self._geometry.intersects(geometry):

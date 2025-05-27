@@ -13,6 +13,7 @@ from simulation.helper.configuration.enums import (
     VehicleMode,
     VehicleState,
 )
+from simulation.operator.data_transfer_object.trip_record import TripRecord
 from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.vehicle.walking import Walking
@@ -98,6 +99,8 @@ class User(Agent, DriverInterface, TrackingInterface):
         self._transport_task = transport_task  # Objective of generated agent
         self._fleet = fleet  # The target fleet of user
 
+        self._trip_record: None | TripRecord = None
+
         # Operator Interfaces
         self._transportation_search_service = (
             transportation_search_service  # Register Transport Search Service
@@ -144,6 +147,12 @@ class User(Agent, DriverInterface, TrackingInterface):
 
         self._position_changed.succeed(position)
         self._position_changed = self._env.event()
+
+    @property
+    def trip_record(self) -> TripRecord:
+        if self._trip_record is None:
+            raise ValueError("Trip record is not available yet.")
+        return self._trip_record
 
     @property
     def transport_task(self) -> TransportTask:
@@ -216,13 +225,19 @@ class User(Agent, DriverInterface, TrackingInterface):
 
             wait_time = start_driving_time - start_ordering_time
 
-            self._transport_task.actual_wait_time = wait_time
-
             yield self._env.process(self.move_to_pick_up_position(vehicle_allocation))
 
             yield self._env.process(self.wait_for_vehicle(vehicle_allocation))
 
-            yield self._env.process(self.start_driving(vehicle_allocation))
+            energy_consumed = yield self._env.process(
+                self.start_driving(vehicle_allocation)
+            )
+            self._trip_record = TripRecord(
+                alternative=selected_transportation_alternative,
+                energy_consumed=energy_consumed,
+                actual_wait_time=wait_time,
+            )
+            self._transport_task.actual_wait_time = wait_time
 
             self._payment_service.pay_for_fulfilled_transportation_task(
                 self, self._transport_task, selected_transportation_alternative
@@ -499,15 +514,14 @@ class User(Agent, DriverInterface, TrackingInterface):
         self.unmount_vehicle_as_driver(vehicle_allocation.vehicle)
 
         # Update Trip Information
-        vehicle_allocation.associated_transportation_alternative.set_energy_consumed(
-            energy_consumed
-        )
+
         # Trigger next event
         self._arrived_at_destination.succeed()
         logging.debug(
             "Arrived at destination.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
+        return energy_consumed
 
     def stop(self):  # noqa: ANN201
         # Wait for next event

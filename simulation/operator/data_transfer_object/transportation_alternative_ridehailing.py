@@ -1,6 +1,6 @@
 from simulation.helper.configuration.enums import VehicleState
 from simulation.infrastructure.route import Route
-from simulation.vehicle.vehicle import Vehicle
+from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 
 class TransportationAlternativeRideHailing:
@@ -26,7 +26,7 @@ class TransportationAlternativeRideHailing:
 
     def __init__(  # noqa: ANN204
         self,
-        vehicle: Vehicle,
+        vehicle: RideHailingVehicle,
         route: Route,
         price,  # noqa: ANN001
         duration,  # noqa: ANN001

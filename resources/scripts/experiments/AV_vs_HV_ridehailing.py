@@ -422,8 +422,8 @@ def run_single_simulation(  # noqa: ANN201
         - total_operational_cost["ride_hailing_1"],
     }
     transactions = {
-        "ride_hailing_0": ridehailing_operator_0.get_transactions(),
-        "ride_hailing_1": ridehailing_operator_1.get_transactions(),
+        "ride_hailing_0": ridehailing_operator_0.transaction_df,
+        "ride_hailing_1": ridehailing_operator_1.transaction_df,
     }
 
     if config.settings.PERSIST_RESULTS:

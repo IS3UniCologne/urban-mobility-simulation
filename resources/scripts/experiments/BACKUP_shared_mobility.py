@@ -492,7 +492,7 @@ def run_single_simulation(  # noqa: ANN201
         operator.total_revenue - total_cost_per_day - operator.total_missed_revenue
     )
     # print("Objective Function:" + str(func_objective))
-    transactions = operator.get_transactions()
+    transactions = operator.transaction_df
 
     if store_results:
         transactions.to_csv(Path(output_folder, transaction_file), index=False)

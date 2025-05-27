@@ -471,8 +471,8 @@ avg_infra_util = (
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-fleet_0_transactions = ridehailing_operator_0.get_transactions()
-fleet_1_transactions = ridehailing_operator_1.get_transactions()
+fleet_0_transactions = ridehailing_operator_0.transaction_df
+fleet_1_transactions = ridehailing_operator_1.transaction_df
 
 fleet_0_transactions.to_csv(
     f"data/output/transactions/{output_timestamp}_fleet_0_transactions.csv", index=False
