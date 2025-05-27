@@ -17,13 +17,13 @@ from simulation.operator.operations_management.integrated_shared_mobility_operat
 )
 from simulation.operator.operator import Operator
 from simulation.operator.service_workforce import ServiceWorkforce
-from simulation.operator.transactions import DemandTracker
+from simulation.operator.transactions import DemandMonitor
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.tasks.transport_task import TransportTask
 
 
 class SharedMobilityOperator(Operator):
-    __slots__ = ("_demand_tracker", "_number_service_workers", "_workforce")
+    __slots__ = ("_demand_monitor", "_number_service_workers", "_workforce")
 
     def __init__(  # noqa: ANN204
         self,
@@ -43,11 +43,11 @@ class SharedMobilityOperator(Operator):
             search_engine,
             allocation_engine,
         )
-        # Register demand tracker to transaction log
-        self._demand_tracker: DemandTracker = DemandTracker(
+        # Register demand monitor to transaction log
+        self._demand_monitor: DemandMonitor = DemandMonitor(
             operations._available_vehicle_modes  # noqa: SLF001
         )
-        self._transaction_log.add_listener(self._demand_tracker)
+        self._transaction_log.add_listener(self._demand_monitor)
 
         # Shared Mobility specific: Service Workforce
         self._workforce = ServiceWorkforce(
@@ -55,16 +55,16 @@ class SharedMobilityOperator(Operator):
         )
 
     @property
-    def demand_tracker(self) -> DemandTracker:
+    def demand_monitor(self) -> DemandMonitor:
         """
-        Demand tracker for the operator.
+        Demand monitor for the operator.
 
         Returns
         -------
-        DemandTracker
-            The demand tracker instance.
+        DemandMonitor
+            The demand monitor instance.
         """
-        return self._demand_tracker
+        return self._demand_monitor
 
     def withdraw_transportation_task(  # noqa: ANN201
         self, user: User, transportation_task: TransportTask
