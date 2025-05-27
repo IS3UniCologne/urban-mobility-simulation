@@ -187,3 +187,6 @@ profile.html
 
 # pytest
 pytest.ini
+
+# local settings overrides
+.ruff.toml

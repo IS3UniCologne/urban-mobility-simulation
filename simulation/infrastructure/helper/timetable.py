@@ -14,18 +14,18 @@ class AmbiguousTripException(Exception):
 
 
 class Timetable:
-    __slots__ = ("_data_path", "_trips", "_geo_env")
+    __slots__ = ("_data_path", "_geo_env", "_trips")
 
-    def __init__(self, data_path):
+    def __init__(self, data_path):  # noqa: ANN001, ANN204
         self._data_path = data_path
         self._trips = None
         self._geo_env = GeodesicEnvironment.getInstance()
 
     @property
-    def trips(self):
+    def trips(self):  # noqa: ANN201
         return self._trips
 
-    def trip_by_id(self, trip_id):
+    def trip_by_id(self, trip_id):  # noqa: ANN001, ANN201
         trip = self._trips[self._trips["trip_id"] == trip_id]
         trip = trip.sort_values(by="stop_sequence")
 
@@ -37,7 +37,7 @@ class Timetable:
 
         return trip
 
-    def import_timetable(self):
+    def import_timetable(self):  # noqa: ANN201
         logging.debug(
             "Importing GTFS data...",
             extra={"clazz": self.__class__.__name__, "oid": ""},
@@ -47,7 +47,7 @@ class Timetable:
             self._trips = pd.read_csv(self._data_path)
         except FileNotFoundError:
             logging.error(
-                f"{self._data_path} does not exist, use Prepare_Transit_Data notebook to generate first.",
+                f"{self._data_path} does not exist, use Prepare_Transit_Data notebook to generate first.",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -59,7 +59,7 @@ class Timetable:
         )
         self._trips.sort_values(by=["trip_id", "stop_sequence"], inplace=True)
 
-    def next_trips(self, time: SimulationTime, lookahead: int):
+    def next_trips(self, time: SimulationTime, lookahead: int):  # noqa: ANN201
         # look ahead 'lookahead' minutes, simulation time is in minutes
         # yield all trips that start (on this weekday) within the next lookahead minutes
         lookahead = int(lookahead)
@@ -92,11 +92,11 @@ class Timetable:
 
         return trips
 
-    def find_viable_trips(
+    def find_viable_trips(  # noqa: ANN201
         self,
-        transportation_search_task,
-        spatial_strategy="hexagon",
-        temporal_lookahead=10,
+        transportation_search_task,  # noqa: ANN001
+        spatial_strategy="hexagon",  # noqa: ANN001
+        temporal_lookahead=10,  # noqa: ANN001
     ):
         """
         User facing method that enables users to find viable public transportation trips for a search task
@@ -150,8 +150,11 @@ class Timetable:
 
         return viable_trips
 
-    def _find_viable_stops(
-        self, trips: gpd.GeoDataFrame, strategy, position: GeodesicPosition
+    def _find_viable_stops(  # noqa: ANN202
+        self,
+        trips: gpd.GeoDataFrame,
+        strategy,  # noqa: ANN001
+        position: GeodesicPosition,
     ):
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon

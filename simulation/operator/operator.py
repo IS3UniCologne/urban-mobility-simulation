@@ -22,21 +22,21 @@ class Operator:
     operator_id = 0
 
     __slots__ = (
+        "_allocation_engine",
+        "_charging_infrastructure",
         "_env",
         "_fleet",
-        "_charging_infrastructure",
         "_operations",
         "_search_engine",
-        "_allocation_engine",
-        "id",
-        "_total_revenue",
         "_total_fulfilled_trips",
-        "_total_missed_trips",
         "_total_missed_revenue",
+        "_total_missed_trips",
+        "_total_revenue",
         "_transactions",
+        "id",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         fleet: VehicleFleet,
@@ -70,38 +70,38 @@ class Operator:
         self._env.process(self._operations.execute())
 
     @property
-    def total_revenue(self):
+    def total_revenue(self):  # noqa: ANN201
         return self._total_revenue
 
     @property
-    def total_fulfilled_trips(self):
+    def total_fulfilled_trips(self):  # noqa: ANN201
         return self._total_fulfilled_trips
 
     @property
-    def total_missed_trips(self):
+    def total_missed_trips(self):  # noqa: ANN201
         return self._total_missed_trips
 
     @property
-    def total_missed_revenue(self):
+    def total_missed_revenue(self):  # noqa: ANN201
         return self._total_missed_revenue
 
     @property
-    def fleet(self):
+    def fleet(self):  # noqa: ANN201
         return self._fleet
 
     @property
-    def charging_infrastructure(self):
+    def charging_infrastructure(self):  # noqa: ANN201
         return self._charging_infrastructure
 
-    def increase_total_revenue(self, additional_revenue):
+    def increase_total_revenue(self, additional_revenue):  # noqa: ANN001, ANN201
         self._total_fulfilled_trips += 1
         self._total_revenue += additional_revenue
 
-    def increase_total_missed_trips(self, missed_revenue):
+    def increase_total_missed_trips(self, missed_revenue):  # noqa: ANN001, ANN201
         self._total_missed_revenue += missed_revenue
         self._total_missed_trips += 1
 
-    def get_transactions(self):
+    def get_transactions(self):  # noqa: ANN201
         """
         Return all transactions (fulfilled and missed) as a DataFrame
 
@@ -121,9 +121,9 @@ class Operator:
         """
         return pd.DataFrame(self._transactions)
 
-    def pay_for_fulfilled_transportation_task(
+    def pay_for_fulfilled_transportation_task(  # noqa: ANN201
         self,
-        user,
+        user,  # noqa: ANN001
         transportation_task: TransportTask,
         selected_transportation_alternative: TransportationAlternative,
     ):
@@ -150,11 +150,11 @@ class Operator:
         )
 
         logging.info(
-            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
+            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask):
+    def withdraw_transportation_task(self, user, transportation_task: TransportTask):  # noqa: ANN001, ANN201
         self.increase_total_missed_trips(0)
 
         # Add Transaction to Log
@@ -177,6 +177,6 @@ class Operator:
         )
 
         logging.debug(
-            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
+            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )

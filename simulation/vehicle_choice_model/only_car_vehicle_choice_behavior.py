@@ -11,10 +11,10 @@ class OnlyCarVehicleChoiceBehavior(VehicleChoiceBehaviorInterface):
 
     __slots__ = ("_available_modes",)
 
-    def __init__(self, available_modes):
+    def __init__(self, available_modes):  # noqa: ANN001, ANN204
         self._available_modes = available_modes
 
-    def choose_vehicle(self, trip_characteristics: TripCharacteristics):
+    def choose_vehicle(self, trip_characteristics: TripCharacteristics):  # noqa: ANN201
         # return the only known PublicTransit Mode: Bus as the viable "choice"
         result = {}
 

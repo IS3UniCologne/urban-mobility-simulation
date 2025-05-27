@@ -22,21 +22,21 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
     __slots__ = (
         "_auction",
         "_bidding_parameters",
-        "_state_of_charge_threshold",
-        "_distance_matrix",
-        "_config",
         "_charging_operations",
+        "_config",
+        "_distance_matrix",
+        "_state_of_charge_threshold",
         "_virtual_charging_infrastructure",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         auction: Auction,
         # bidding_strategy,
         bidding_parameters: dict,
         state_of_charge_threshold: float,
-        distance_matrix=None,
+        distance_matrix=None,  # noqa: ANN001
     ):
         OperationsInterface.__init__(self, env)
         BidderInterface.__init__(self, env, auction)
@@ -51,7 +51,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
         self._charging_operations = None
 
-    def execute(self):
+    def execute(self):  # noqa: ANN201
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             env=self._env,
@@ -92,7 +92,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
             yield self._env.process(self._bid_for_capacity())
 
-    def _bid_for_capacity(self):
+    def _bid_for_capacity(self):  # noqa: ANN202
         yield self._auction.open_for_bidding
         # timeslots are denoted by their start time and have length `self._config.shared_charging_auction.TIMESLOT_DURATION`
         auctioned_timeslot = self._auction.next_timeslot
@@ -153,12 +153,12 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
             timeslot=auctioned_timeslot,
         )
 
-    def _delay_charging_operations(self):
+    def _delay_charging_operations(self):  # noqa: ANN202
         # Logic: Wait until t=1 because we start auctions at t=0+(auction_interval) and then the charging operations process can run in intervals of auction_interval, this works because the auction is instant from simulation-time perspective
 
         yield self._env.timeout(1)
         self._env.process(self._charging_operations.execute())
 
     @property
-    def task_transactions(self):
+    def task_transactions(self):  # noqa: ANN201
         return self._charging_operations.task_transactions

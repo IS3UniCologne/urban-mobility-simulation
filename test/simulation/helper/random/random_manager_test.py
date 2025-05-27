@@ -7,28 +7,28 @@ from simulation.helper.random.random_manager import RandomManager
 
 
 # Test component seed generation
-def test_component_seed_generation():
-    seed1 = RandomManager()._generate_component_seed("test_component")
-    seed2 = RandomManager()._generate_component_seed("test_component")
+def test_component_seed_generation():  # noqa: ANN201
+    seed1 = RandomManager()._generate_component_seed("test_component")  # noqa: SLF001
+    seed2 = RandomManager()._generate_component_seed("test_component")  # noqa: SLF001
     assert seed1 == seed2, "Component seeds should be the same for the same component"
-    assert seed1 != RandomManager()._generate_component_seed("different_component"), (
+    assert seed1 != RandomManager()._generate_component_seed("different_component"), (  # noqa: SLF001
         "Component seeds should be different for different components"
     )
 
 
 # Test get_rng functionality
-def test_get_rng_default():
+def test_get_rng_default():  # noqa: ANN201
     """Test that get_rng() returns the main RNG when no component is specified."""
     random_manager = RandomManager()
 
     # Check that default RNG is the main RNG
-    assert random_manager.get_rng() is random_manager._main_rng
+    assert random_manager.get_rng() is random_manager._main_rng  # noqa: SLF001
 
     # Check that multiple calls return the same RNG
     assert random_manager.get_rng() is random_manager.get_rng()
 
 
-def test_get_rng_component():
+def test_get_rng_component():  # noqa: ANN201
     """Test that get_rng creates and returns component-specific RNGs."""
     random_manager = RandomManager()
 
@@ -37,14 +37,14 @@ def test_get_rng_component():
     rng = random_manager.get_rng(component_name)
 
     # Should be in the component RNGs dictionary
-    assert component_name in random_manager._component_rngs
-    assert random_manager._component_rngs[component_name] is rng
+    assert component_name in random_manager._component_rngs  # noqa: SLF001
+    assert random_manager._component_rngs[component_name] is rng  # noqa: SLF001
 
     # Multiple calls should return the same RNG instance
     assert random_manager.get_rng(component_name) is rng
 
 
-def test_rng_reproducibility():
+def test_rng_reproducibility():  # noqa: ANN201
     """Test that RNGs with the same seed produce the same sequence of numbers."""
     # Set a specific seed
     random_manager = RandomManager()
@@ -62,7 +62,7 @@ def test_rng_reproducibility():
     np.testing.assert_array_equal(numbers1, numbers2)
 
 
-def test_component_rng_reproducibility():
+def test_component_rng_reproducibility():  # noqa: ANN201
     """Test that component RNGs with the same seed produce the same sequence."""
     random_manager = RandomManager()
     object.__setattr__(Configuration().random_manager, "SEED", 42)
@@ -81,7 +81,7 @@ def test_component_rng_reproducibility():
     np.testing.assert_array_equal(numbers1, numbers2)
 
 
-def test_different_components_different_sequences():
+def test_different_components_different_sequences():  # noqa: ANN201
     """Test that different components get different random sequences."""
     random_manager = RandomManager()
     object.__setattr__(Configuration().random_manager, "SEED", 42)
@@ -99,7 +99,7 @@ def test_different_components_different_sequences():
         np.testing.assert_array_equal(numbers1, numbers2)
 
 
-def test_component_independence():
+def test_component_independence():  # noqa: ANN201
     """Test that component RNGs are independent of each other."""
     random_manager = RandomManager()
     object.__setattr__(Configuration().random_manager, "SEED", 42)
@@ -125,24 +125,24 @@ def test_component_independence():
     np.testing.assert_array_equal(numbers1_before + numbers1_after, expected_numbers)
 
 
-def test_seed_zero():
+def test_seed_zero():  # noqa: ANN201
     """Setting the seed to zero should lead to a random seed being generated."""
     random_manager = RandomManager()
     object.__setattr__(Configuration().random_manager, "SEED", 0)
     random_manager.reset_all_rng()
 
     # Should not be zero
-    main_seed1 = random_manager._main_seed
+    main_seed1 = random_manager._main_seed  # noqa: SLF001
     assert main_seed1 != 0
 
     # Resetting the seed should give a different random seed
     random_manager.reset_all_rng()
-    main_seed2 = random_manager._main_seed
+    main_seed2 = random_manager._main_seed  # noqa: SLF001
     assert main_seed2 != 0
     assert main_seed1 != main_seed2
 
 
-def test_uniform():
+def test_uniform():  # noqa: ANN201
     """Test that the uniform method returns values between 0 and 1."""
     random_manager = RandomManager()
     object.__setattr__(Configuration().random_manager, "SEED", 42)

@@ -14,16 +14,16 @@ from simulation.vehicle.vehicle import Vehicle
 
 class MixedRideHailingFleet(VehicleFleet):
     __slots__ = (
-        "_config",
-        "_ridehailing_cars",
         "_autonomous_cars",
+        "_config",
         "_distance_threshold_to_user",
         "_driver_availability_vector",
         "_recharging_threshold",
+        "_ridehailing_cars",
     )
 
-    def __init__(self, env: Environment):
-        super(MixedRideHailingFleet, self).__init__(env)
+    def __init__(self, env: Environment):  # noqa: ANN204
+        super(MixedRideHailingFleet, self).__init__(env)  # noqa: UP008
         self._env = env
         self._config = Configuration()
 
@@ -40,7 +40,7 @@ class MixedRideHailingFleet(VehicleFleet):
         ].RECHARGE_THRESHOLD
         self._env.process(self.fleet_size_monitor())
 
-    def _add_vehicle(self, vehicle: RideHailingVehicle):
+    def _add_vehicle(self, vehicle: RideHailingVehicle):  # noqa: ANN202
         if vehicle not in self._vehicles:
             if isinstance(vehicle, RideHailingCar):
                 self._vehicles.append(vehicle)
@@ -53,7 +53,7 @@ class MixedRideHailingFleet(VehicleFleet):
         else:
             raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
 
-    def get_available_vehicles_to_user(self, origin: Position):
+    def get_available_vehicles_to_user(self, origin: Position):  # noqa: ANN201
         """
         Find available vehicles that can serve a user at a given origin location.
 
@@ -79,7 +79,9 @@ class MixedRideHailingFleet(VehicleFleet):
         parking_cars: set[Vehicle] = self._vehicles_by_state[VehicleState.PARKING]
         # TODO: we should not acceess _suggested directly
         parking_cars_not_suggested: list[Vehicle] = [
-            car for car in parking_cars if not car._suggested
+            car
+            for car in parking_cars
+            if not car._suggested  # noqa: SLF001
         ]
 
         if not parking_cars_not_suggested:
@@ -98,7 +100,7 @@ class MixedRideHailingFleet(VehicleFleet):
         serving_cars = [
             car
             for car in serving_vehicles
-            if car._suggested
+            if car._suggested  # noqa: SLF001
             and car.current_relative_state_of_charge > state_of_charge_threshold + 5
         ]
 
@@ -114,7 +116,7 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return parking_cars_in_area + serving_cars_in_area
 
-    def count_vehicles_below_soc_level(self, state_of_charge_threshold):
+    def count_vehicles_below_soc_level(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
         Return all vehicles that need to be refueled/recharged
         :param state_of_charge_threshold: between 0 and 1
@@ -128,7 +130,7 @@ class MixedRideHailingFleet(VehicleFleet):
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold
         )
 
-    def get_operational_costs(self):
+    def get_operational_costs(self):  # noqa: ANN201
         operational_costs = 0
         all_vehicle_list = self._vehicles
         for vehicle in all_vehicle_list:
@@ -136,8 +138,10 @@ class MixedRideHailingFleet(VehicleFleet):
                 operational_costs += vehicle.travel_costs + vehicle.charging_costs
         return operational_costs
 
-    def get_all_vehicles_below_soc_level_in_region(
-        self, state_of_charge_threshold, region
+    def get_all_vehicles_below_soc_level_in_region(  # noqa: ANN201
+        self,
+        state_of_charge_threshold,  # noqa: ANN001
+        region,  # noqa: ANN001
     ):
         """
         Return all vehicles that need to be refueled/recharged in a region
@@ -153,16 +157,16 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return below_soc_level_vehicles
 
-    def count_cars(self):
+    def count_cars(self):  # noqa: ANN201
         return len(self._vehicles)
 
-    def driver_availability_vector(self):
+    def driver_availability_vector(self):  # noqa: ANN201
         return self._driver_availability_vector
 
-    def count_total(self):
+    def count_total(self):  # noqa: ANN201
         return self.count_cars()
 
-    def calc_supply_per_region(self):
+    def calc_supply_per_region(self):  # noqa: ANN201
         """TODO: We can probably get rid of this ? If we need it in the future we should implement it with cached values
         Return a list of number of vehicles in each region
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
@@ -192,7 +196,7 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return supply
 
-    def calc_vehicles_to_be_charged_per_region(self, state_of_charge_threshold):
+    def calc_vehicles_to_be_charged_per_region(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
         Return a list of number of vehicles that need to be charged in each area.
 
@@ -226,7 +230,7 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return low_soc_supply
 
-    def mark_vehicles_to_be_charged(self, state_of_charge_threshold):
+    def mark_vehicles_to_be_charged(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
         Return a list of number of vehicles that need to be charged in each area.
 
@@ -248,7 +252,7 @@ class MixedRideHailingFleet(VehicleFleet):
         for vehicle in parking_vehicles:
             if (
                 vehicle.current_relative_state_of_charge < state_of_charge_threshold
-                and not vehicle._suggested
+                and not vehicle._suggested  # noqa: SLF001
             ):
                 low_soc_supply.append(vehicle)
 
@@ -257,7 +261,7 @@ class MixedRideHailingFleet(VehicleFleet):
         )
         return low_soc_supply
 
-    def get_online_vehicles(self):
+    def get_online_vehicles(self):  # noqa: ANN201
         """
         Return all vehicles which are online
 
@@ -271,7 +275,7 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return online_vehicles
 
-    def get_offline_vehicles(self):
+    def get_offline_vehicles(self):  # noqa: ANN201
         """
         Return all vehicles which are online
 
@@ -285,7 +289,7 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return online_vehicles
 
-    def fleet_size_monitor(self):
+    def fleet_size_monitor(self):  # noqa: ANN201
         """
         Monitoring the number of online vehicles
         :return:
@@ -293,7 +297,7 @@ class MixedRideHailingFleet(VehicleFleet):
         while True:
             number_of_online_vehicles = len(self.get_online_vehicles())
             logging.info(
-                f"Fleet has {number_of_online_vehicles} online vehicles",
+                f"Fleet has {number_of_online_vehicles} online vehicles",  # noqa: G004
                 extra={"clazz": self.__class__.__name__},
             )
             yield self._env.timeout(60)

@@ -5,33 +5,33 @@ from simulation.vehicle.vehicle import Vehicle
 
 class TransportationAlternativeRideHailing:
     __slots__ = (
+        "_autonomous_vehicle",
+        "_convenience",
+        "_distance",
+        "_distance_to_pickup",
+        "_duration",
+        "_electric_vehicle",
+        "_energy_consumed",
+        "_environment",
+        "_pick_up_time",
+        "_price",
+        "_route",
+        "_route_to_pickup",
+        "_technology_skeptical",
+        "_utility",
         "_vehicle",
         "_vehicle_type",
-        "_price",
-        "_duration",
-        "_distance",
-        "_route",
-        "_convenience",
-        "_energy_consumed",
         "_waiting_time",
-        "_environment",
-        "_technology_skeptical",
-        "_electric_vehicle",
-        "_autonomous_vehicle",
-        "_route_to_pickup",
-        "_distance_to_pickup",
-        "_pick_up_time",
-        "_utility",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         vehicle: Vehicle,
         route: Route,
-        price,
-        duration,
-        distance,
-        convenience,
+        price,  # noqa: ANN001
+        duration,  # noqa: ANN001
+        distance,  # noqa: ANN001
+        convenience,  # noqa: ANN001
         route_to_pickup: Route,
     ):
         self._vehicle = vehicle
@@ -53,7 +53,7 @@ class TransportationAlternativeRideHailing:
         self._waiting_time = 0.0  # Is set after successful allocation
         self._energy_consumed = 0.0  # Is set after successful trip
 
-    def set_pick_up_time(self):
+    def set_pick_up_time(self):  # noqa: ANN201
         if self.vehicle.state == VehicleState.PARKING:
             return self._distance_to_pickup / self.vehicle.velocity
 
@@ -61,103 +61,103 @@ class TransportationAlternativeRideHailing:
             return (
                 self._distance_to_pickup / self.vehicle.velocity
                 + self.vehicle.estimated_completion_time
-                - self.vehicle._env.now
+                - self.vehicle._env.now  # noqa: SLF001
             )
 
-    def set_environment(self):
+    def set_environment(self):  # noqa: ANN201
         if self._vehicle.is_electric:
             return 1
         else:
             return 0
 
-    def set_technology_skeptical(self):
+    def set_technology_skeptical(self):  # noqa: ANN201
         if self._vehicle_type == "AutonomousCar":
             return 0
         else:
             return 1
 
-    def set_autonomous_vehicle(self):
+    def set_autonomous_vehicle(self):  # noqa: ANN201
         if self._vehicle_type == "AutonomousCar":
             return 1
         else:
             return 0
 
     @property
-    def environment(self):
+    def environment(self):  # noqa: ANN201
         return self._environment
 
     @property
-    def electric_vehicle(self):
+    def electric_vehicle(self):  # noqa: ANN201
         return self._electric_vehicle
 
     @property
-    def autonomous_vehicle(self):
+    def autonomous_vehicle(self):  # noqa: ANN201
         return self._autonomous_vehicle
 
     @property
-    def utility(self):
+    def utility(self):  # noqa: ANN201
         return self._utility
 
     @property
-    def technology_skeptical(self):
+    def technology_skeptical(self):  # noqa: ANN201
         return self._technology_skeptical
 
     @property
-    def vehicle(self):
+    def vehicle(self):  # noqa: ANN201
         return self._vehicle
 
     @property
-    def vehicle_type(self):
+    def vehicle_type(self):  # noqa: ANN201
         return self._vehicle_type
 
     @property
-    def price(self):
+    def price(self):  # noqa: ANN201
         return self._price
 
     @property
-    def duration(self):
+    def duration(self):  # noqa: ANN201
         return self._duration
 
     @property
-    def distance(self):
+    def distance(self):  # noqa: ANN201
         return self._distance
 
     @property
-    def route(self):
+    def route(self):  # noqa: ANN201
         return self._route
 
     @property
-    def convenience(self):
+    def convenience(self):  # noqa: ANN201
         return self._convenience
 
     @property
-    def route_to_pickup(self):
+    def route_to_pickup(self):  # noqa: ANN201
         return self._route_to_pickup
 
     @property
-    def distance_to_pickup(self):
+    def distance_to_pickup(self):  # noqa: ANN201
         return self._distance_to_pickup
 
     @property
-    def pick_up_time(self):
+    def pick_up_time(self):  # noqa: ANN201
         return self._pick_up_time
 
     # Perhaps it makes sense to encapsulate TransportationAlternative
     #  around a "SuccessfulTrip" where we store this object along with
     #  variables pertaining the to trip (as energy consumed, (real) travelled distance)
     @property
-    def energy_consumed(self):
+    def energy_consumed(self):  # noqa: ANN201
         return self._energy_consumed
 
-    def set_energy_consumed(self, energy_consumption):
+    def set_energy_consumed(self, energy_consumption):  # noqa: ANN001, ANN201
         # energy_consumption: in kWh
         self._energy_consumed += energy_consumption
 
     @property
-    def waiting_time(self):
+    def waiting_time(self):  # noqa: ANN201
         return self._waiting_time
 
-    def set_waiting_time(self, waiting_time):
+    def set_waiting_time(self, waiting_time):  # noqa: ANN001, ANN201
         # energy_consumption: in kWh
         self._waiting_time += waiting_time
 

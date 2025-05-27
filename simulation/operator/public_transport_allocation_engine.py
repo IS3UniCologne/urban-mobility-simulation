@@ -12,12 +12,14 @@ from simulation.operator.interface.vehicle_allocation_engine_interface import (
 class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
     __slots__ = ("_env", "_vehicles_assigned_to_users")
 
-    def __init__(self, env):
+    def __init__(self, env):  # noqa: ANN001, ANN204
         self._env = env
         self._vehicles_assigned_to_users = self._env.event()
 
     def request_vehicle_allocation(
-        self, user, selected_transportation_alternative: TransportationAlternative
+        self,
+        user,  # noqa: ANN001
+        selected_transportation_alternative: TransportationAlternative,
     ) -> VehicleAllocation:
         """
         In case of public transit allocate each request succesfully as long as the vehicle has available seats
@@ -42,7 +44,7 @@ class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
         else:
             return None
 
-    def notify_user_arrival_at_pick_up_position(
+    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201
         self, vehicle_assignment: VehicleAllocation
     ):
         pass
