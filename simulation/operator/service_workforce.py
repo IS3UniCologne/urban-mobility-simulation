@@ -5,9 +5,9 @@ from simulation.operator.service_worker import ServiceWorker
 
 
 class ServiceWorkforce:
-    __slots__ = ("_service_workers", "_task_queue", "_number_service_workers")
+    __slots__ = ("_number_service_workers", "_service_workers", "_task_queue")
 
-    def __init__(self, env: Environment, number_service_workers: int):
+    def __init__(self, env: Environment, number_service_workers: int):  # noqa: ANN204
         self._service_workers = []
         self._task_queue = TaskQueue(env=env)
         self._number_service_workers = number_service_workers
@@ -18,11 +18,11 @@ class ServiceWorkforce:
             )
 
     @property
-    def task_queue(self):
+    def task_queue(self):  # noqa: ANN201
         return self._task_queue
 
     @property
-    def number_service_workers(self):
+    def number_service_workers(self):  # noqa: ANN201
         return self._number_service_workers
 
     # TODO: Properties thread safe?

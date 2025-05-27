@@ -42,11 +42,11 @@ def main() -> None:
     ]
 
     if not matched:
-        print(f"No benchmark files matched '{filter_str}'")
+        print(f"No benchmark files matched '{filter_str}'")  # noqa: T201
         return
 
     for file in matched:
-        print(f"\n=== Running {os.path.basename(file)} ===")
+        print(f"\n=== Running {os.path.basename(file)} ===")  # noqa: T201
         runpy.run_path(file, run_name="__main__")
 
 

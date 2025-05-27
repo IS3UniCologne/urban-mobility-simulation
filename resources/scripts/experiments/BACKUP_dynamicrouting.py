@@ -231,7 +231,7 @@ timetable = Timetable(transit_timetable_path)
 timetable.import_timetable()
 
 
-def run_simulation(start_time: int, end_time: int, seed=4711):
+def run_simulation(start_time: int, end_time: int, seed=4711):  # noqa: ANN001, ANN201
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Setup Simulation Environment.           #
@@ -358,7 +358,8 @@ episodes = []
 
 for e in tqdm(range(DQN_config.episodes)):
     logging.debug(
-        f"Starting Episode {DQN_config.episode}", extra={"clazz": "Main Routine"}
+        f"Starting Episode {DQN_config.episode}",  # noqa: G004
+        extra={"clazz": "Main Routine"},
     )
     reached_destination, distance, duration, service_level = run_simulation(
         start_time=14 * 60, end_time=16 * 60
@@ -368,7 +369,7 @@ for e in tqdm(range(DQN_config.episodes)):
     episode = deepcopy(
         {
             "episode": DQN_config.episode,
-            "return": dynamic_routing_config.learning_agent._cumulative_reward,
+            "return": dynamic_routing_config.learning_agent._cumulative_reward,  # noqa: SLF001
             "service_level": service_level,
             "reached_destination": reached_destination,
             "distance": distance,
@@ -385,4 +386,4 @@ for e in tqdm(range(DQN_config.episodes)):
 episodes = pd.DataFrame.from_records(episodes)
 episodes = episodes.set_index("episode")
 
-print(episodes)
+print(episodes)  # noqa: T201

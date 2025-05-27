@@ -9,18 +9,18 @@ class RideHailingAV(RideHailingVehicle):
     ride_hailing_av_id = 0
     vehicle_type = "ridehailing_AV"
 
-    __slots__ = ("car_id", "_price_per_min", "_emergency_soc_buffer_percent")
+    __slots__ = ("_emergency_soc_buffer_percent", "_price_per_min", "car_id")
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
-        fleet,
-        position,
-        velocity,
-        max_available_seats=4,
-        max_state_of_charge=16.7,
-        energy_consumption=0.152,
-        price_per_min=0.26,
+        fleet,  # noqa: ANN001
+        position,  # noqa: ANN001
+        velocity,  # noqa: ANN001
+        max_available_seats=4,  # noqa: ANN001
+        max_state_of_charge=16.7,  # noqa: ANN001
+        energy_consumption=0.152,  # noqa: ANN001
+        price_per_min=0.26,  # noqa: ANN001
     ):
         """
 
@@ -32,7 +32,7 @@ class RideHailingAV(RideHailingVehicle):
         :param energy_consumption: 15.2 kWh/100km as per Smart EQ specification
         :param velocity:
         """
-        super(RideHailingAV, self).__init__(
+        super(RideHailingAV, self).__init__(  # noqa: UP008
             env,
             fleet,
             position,

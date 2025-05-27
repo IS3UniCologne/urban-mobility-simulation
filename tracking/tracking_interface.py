@@ -11,19 +11,19 @@ class TrackingInterface(ABC):
 
     exposes: list = NotImplemented
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs):  # noqa: ANN003, ANN204
         super().__init_subclass__(**kwargs)
         if cls.exposes is NotImplemented:
             raise NotImplementedError(
                 "Please implement the `exposes` class variable for any class that implements the TrackingInterface AbstractBaseClass"
             )
 
-    def get(self, attribute: str):
+    def get(self, attribute: str):  # noqa: ANN201
         if attribute in self.exposes and hasattr(self, attribute):
             return getattr(self, attribute)
         else:
             logging.debug(
-                f"Tracking tried to request an unexposed or private attribute ({attribute}) from this object",
+                f"Tracking tried to request an unexposed or private attribute ({attribute}) from this object",  # noqa: G004
                 extra={
                     "clazz": self.__class__.__name__,
                     "oid": getattr(self, "_id", "unknown"),

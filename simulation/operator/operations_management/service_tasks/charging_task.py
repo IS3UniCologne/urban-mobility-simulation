@@ -13,27 +13,27 @@ from simulation.operator.operations_management.service_tasks.service_task import
 
 class ChargingTask(ServiceTask):
     __slots__ = (
-        "_origin",
         "_destination",
-        "_number_of_vehicles_to_charge",
-        "_vehicle_mode",
         "_distance_to_fleet_base",
-        "_vehicle_fleet",
+        "_number_of_vehicles_to_charge",
+        "_origin",
         "_state_of_charge_threshold",
+        "_vehicle_fleet",
+        "_vehicle_mode",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
-        origin,
-        destination,
-        number_of_vehicles_to_charge,
-        vehicle_mode,
-        distance_to_fleet_base,
-        vehicle_fleet,
-        state_of_charge_threshold,
+        origin,  # noqa: ANN001
+        destination,  # noqa: ANN001
+        number_of_vehicles_to_charge,  # noqa: ANN001
+        vehicle_mode,  # noqa: ANN001
+        distance_to_fleet_base,  # noqa: ANN001
+        vehicle_fleet,  # noqa: ANN001
+        state_of_charge_threshold,  # noqa: ANN001
     ):
-        super(ChargingTask, self).__init__(env)
+        super(ChargingTask, self).__init__(env)  # noqa: UP008
 
         self._origin = origin
         self._destination = destination
@@ -44,7 +44,7 @@ class ChargingTask(ServiceTask):
         self._vehicle_fleet = vehicle_fleet
         self._state_of_charge_threshold = state_of_charge_threshold
 
-    def execute(self, *args):
+    def execute(self, *args):  # noqa: ANN002, ANN201
         """
             Execute charging tasks
         :param simpy_env: SimPy Environment
@@ -127,7 +127,7 @@ class ChargingTask(ServiceTask):
             # Note: See text regarding linearization
             # *60 as state of charge is in kWh => kWmin
             charging_duration_per_vehicles = (
-                (vehicle._max_state_of_charge / vehicle_charging_power) * 60
+                (vehicle._max_state_of_charge / vehicle_charging_power) * 60  # noqa: SLF001
             ) / len(selected_vehicles_to_charge)
 
             yield self._env.process(vehicle.charge(charging_duration_per_vehicles))
@@ -141,8 +141,8 @@ class ChargingTask(ServiceTask):
         # Notify all
         self._task_finished = self._env.event()
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"Charging Task for {self._number_of_vehicles_to_charge} {self._vehicle_mode} from {self._origin} to {self._destination} (distance = {self._distance_to_fleet_base})"
 
-    def __repr__(self):
+    def __repr__(self):  # noqa: ANN204
         return self.__str__()

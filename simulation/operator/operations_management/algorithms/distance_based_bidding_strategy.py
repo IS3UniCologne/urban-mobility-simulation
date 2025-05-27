@@ -2,14 +2,14 @@ import numpy as np
 import pandas as pd
 
 
-def get_bid(
-    operator_referece,
-    auctioned_timeslot,
-    auctioned_capacity,
-    bidding_parameters,
-    participant_id,
-    state_of_charge_threshold,
-    distance_matrix,
+def get_bid(  # noqa: ANN201
+    operator_referece,  # noqa: ANN001
+    auctioned_timeslot,  # noqa: ANN001
+    auctioned_capacity,  # noqa: ANN001
+    bidding_parameters,  # noqa: ANN001
+    participant_id,  # noqa: ANN001
+    state_of_charge_threshold,  # noqa: ANN001
+    distance_matrix,  # noqa: ANN001
     # return_bid_log=False,
 ):
     auctioned_capacity = auctioned_capacity

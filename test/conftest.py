@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_test_environment():
+def setup_test_environment():  # noqa: ANN201
     """Set up the test environment for all tests."""
     # Store original arguments
     original_argv = sys.argv.copy()

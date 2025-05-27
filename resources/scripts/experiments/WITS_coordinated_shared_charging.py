@@ -199,12 +199,12 @@ charging_infrastructure = ChargingInfrastructure(
 charging_stations_track = []
 
 
-def track_charging_stations():
+def track_charging_stations():  # noqa: ANN201
     while True:
         yield env.timeout(1)
         values = [
             {
-                "time": env._now,
+                "time": env._now,  # noqa: SLF001
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
                 "_plugs.queuesize": len(d["_plugs"].queue),
@@ -351,14 +351,14 @@ ride_hailing_fleet_1 = generate_AV_fleet(
 vehicles_track = []
 
 
-def track_fleets(fleet_id):
+def track_fleets(fleet_id):  # noqa: ANN001, ANN201
     # attention: this only works because we do not dynamically create and destroy vehicles like we do with users!
     tracked_list = tracking.list_tracked("RideHailingAV")
 
     while True:
         yield env.timeout(1)
         envtime, values = (
-            env._now,
+            env._now,  # noqa: SLF001
             {
                 "_fleet": fleet_id,
                 "_state": [
@@ -439,7 +439,7 @@ bidders_to_track.append(
 bidding_track = []
 
 
-def track_bidders(bidder_uid):
+def track_bidders(bidder_uid):  # noqa: ANN001, ANN201
     while True:
         yield charging_auction.cleared
         envtime, participant = tracking.get(bidder_uid, "auction_participant_id")
@@ -623,6 +623,6 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             service_rate_fleet_1,
             avg_infra_util,
             None,
-            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''},queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, overbidding: ({str(random_overbidding)}, {str(overbid_prob)}), auction_interval: {str(config.shared_charging_auction.AUCTION_INTERVAL)}, timeslot_duration: {str(config.shared_charging_auction.TIMESLOT_DURATION)}, auction_lookahead: {str(config.shared_charging_auction.AUCTION_LOOKAHEAD)}",
+            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''},queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, overbidding: ({random_overbidding!s}, {overbid_prob!s}), auction_interval: {config.shared_charging_auction.AUCTION_INTERVAL!s}, timeslot_duration: {config.shared_charging_auction.TIMESLOT_DURATION!s}, auction_lookahead: {config.shared_charging_auction.AUCTION_LOOKAHEAD!s}",
         ]
     )

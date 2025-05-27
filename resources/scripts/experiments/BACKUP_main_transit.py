@@ -210,7 +210,7 @@ logging.getLogger("fiona").setLevel(logging.WARNING)
 cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf_init)
 
-logging.info(f"Tensorboard logdir: {logdir}", extra={"clazz": __name__, "oid": ""})
+logging.info(f"Tensorboard logdir: {logdir}", extra={"clazz": __name__, "oid": ""})  # noqa: G004
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -220,7 +220,7 @@ logging.info(f"Tensorboard logdir: {logdir}", extra={"clazz": __name__, "oid": "
 # # # # # # # # # # # # # # # # # # # # # #
 
 
-def load_environment():
+def load_environment():  # noqa: ANN201
     # Read Environment Files
     filename = bounding_box_path
     with open(filename) as file:
@@ -296,14 +296,14 @@ timetable.import_timetable()
 ActionSpace.init(actions)
 
 
-def run_single_simulation(
-    start_time=0,
-    end_time=60,
-    price_sensitive_pop_prob=0.0,
-    seed=4711,
-    weights=None,
-    replay_buffer=None,
-    episode=1,
+def run_single_simulation(  # noqa: ANN201
+    start_time=0,  # noqa: ANN001
+    end_time=60,  # noqa: ANN001
+    price_sensitive_pop_prob=0.0,  # noqa: ANN001
+    seed=4711,  # noqa: ANN001
+    weights=None,  # noqa: ANN001
+    replay_buffer=None,  # noqa: ANN001
+    episode=1,  # noqa: ANN001
 ):
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -404,7 +404,7 @@ def run_single_simulation(
 
 
 @profile
-def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):
+def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):  # noqa: ANN001, ANN201
     global global_config
 
     if nn_weights is None:
@@ -456,9 +456,9 @@ def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):
             seed=run_seed,
         )
 
-        t = operator._rl_agent_reached_destination
-        dis = operator._rl_agent_distance
-        dur = operator._rl_agent_duration
+        t = operator._rl_agent_reached_destination  # noqa: SLF001
+        dis = operator._rl_agent_distance  # noqa: SLF001
+        dur = operator._rl_agent_duration  # noqa: SLF001
 
         if nn_weights is None:
             episode_returns.append(
@@ -493,8 +493,8 @@ def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):
                 # collect movements
                 ms = None  # movement start
                 for coordinates, time_ in zip(
-                    operator._timestamped_position["geometry"]["coordinates"],
-                    operator._timestamped_position["properties"]["times"],
+                    operator._timestamped_position["geometry"]["coordinates"],  # noqa: SLF001
+                    operator._timestamped_position["properties"]["times"],  # noqa: SLF001
                 ):
                     if ms is None:
                         # first movement
@@ -515,7 +515,7 @@ def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):
                 # collect tracked demands
                 # > convert set to list
                 # > and append run number at front of all tuples
-                demands.extend([(i + 1,) + x for x in operator._tracked_demands])
+                demands.extend([(i + 1,) + x for x in operator._tracked_demands])  # noqa: SLF001, RUF005
 
     if track and nn_weights is not None:
         tracks = pd.DataFrame.from_records(tracks)
@@ -529,14 +529,14 @@ def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):
             os.path.join(
                 output_folder,
                 "tracking",
-                f"{str(runs)}_benchmark_agent_movements_{strf}.csv",
+                f"{runs!s}_benchmark_agent_movements_{strf}.csv",
             )
         )
         demands.to_csv(
             os.path.join(
                 output_folder,
                 "tracking",
-                f"{str(runs)}_benchmark_demands_hex{demand_res}_{strf}.csv",
+                f"{runs!s}_benchmark_demands_hex{demand_res}_{strf}.csv",
             ),
             index=False,
         )
@@ -546,58 +546,60 @@ def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):
 
 
 # the experiment=None hack is to ensure a range works as well for pqdm
-def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
+def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):  # noqa: ANN001, ANN003, ANN201
     if kwargs:
         for k, v in kwargs.items():
             if k == "penalty":
                 logging.info(
-                    f"Agent Penalty set to {str(v)}",
+                    f"Agent Penalty set to {v!s}",  # noqa: G004
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.penalty = v
             if k == "q_net_layer":
                 logging.info(
-                    f"DQN layer configuration set to {str(v)}",
+                    f"DQN layer configuration set to {v!s}",  # noqa: G004
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.q_net_layer = v
             if k == "batchsize":
                 logging.info(
-                    f"Batchsize set to {str(v)}", extra={"clazz": __name__, "oid": ""}
+                    f"Batchsize set to {v!s}",  # noqa: G004
+                    extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.batchsize = v
             if k == "buffersize":
                 logging.info(
-                    f"Experience replay buffer size set to {str(v)}",
+                    f"Experience replay buffer size set to {v!s}",  # noqa: G004
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.buffersize = v
             if k == "action_space":
                 logging.info(
-                    f"Action space set to {str(v)}",
+                    f"Action space set to {v!s}",  # noqa: G004
                     extra={"clazz": __name__, "oid": ""},
                 )
                 ActionSpace.init(v, reset=True)
             if k == "lr_decay":
                 logging.info(
-                    f"Learning rate decay set to {str(v)}",
+                    f"Learning rate decay set to {v!s}",  # noqa: G004
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.lr_decay = v
             if k == "reward":
                 logging.info(
-                    f"Reward set to {str(v)}", extra={"clazz": __name__, "oid": ""}
+                    f"Reward set to {v!s}",  # noqa: G004
+                    extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.reward = v
             if k == "doubleQ":
                 logging.info(
-                    f"Usage of Double Q set to {str(v)}",
+                    f"Usage of Double Q set to {v!s}",  # noqa: G004
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.double_q = v
             if k == "eps_decay":
                 logging.info(
-                    f"Epsilon decay set to {str(v)}",
+                    f"Epsilon decay set to {v!s}",  # noqa: G004
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.eps_decay = v
@@ -610,7 +612,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
                     bus_agent_config.tau = None
                 else:
                     logging.info(
-                        f"Using soft updates of target Q-network with tau of {str(v)}",
+                        f"Using soft updates of target Q-network with tau of {v!s}",  # noqa: G004
                         extra={"clazz": __name__, "oid": ""},
                     )
                     bus_agent_config.tau = v
@@ -620,7 +622,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
                     )
             if k == "eps_decay_strategy":
                 logging.info(
-                    f"Epsilon decay strategy set to {str(v)}",
+                    f"Epsilon decay strategy set to {v!s}",  # noqa: G004
                     extra={"clazz": __name__, "oid": ""},
                 )
                 bus_agent_config.eps_decay_strategy = v
@@ -644,9 +646,9 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
         time.sleep(random.random())
         strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
         if not kwargs:
-            track_path = f"{str(episodes)}_episodes_movements_{strf}.csv"
+            track_path = f"{episodes!s}_episodes_movements_{strf}.csv"
         else:
-            track_path = f"{str(episodes)}_episodes_{experiments}_movements_{strf}.csv"
+            track_path = f"{episodes!s}_episodes_{experiments}_movements_{strf}.csv"
 
         track_dir = os.path.join(
             output_folder, "tracking", track_path.replace(".csv", "/")
@@ -672,16 +674,16 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
         except PublicTransitVehicleFull:
             pass
 
-        w = operator._rl_agent_weights
-        b = operator._rl_agent_replay_buffer
-        e = operator._rl_agent_episode
-        lr = operator._rl_agent_lr
-        t = operator._rl_agent_reached_destination
+        w = operator._rl_agent_weights  # noqa: SLF001
+        b = operator._rl_agent_replay_buffer  # noqa: SLF001
+        e = operator._rl_agent_episode  # noqa: SLF001
+        lr = operator._rl_agent_lr  # noqa: SLF001
+        t = operator._rl_agent_reached_destination  # noqa: SLF001
 
         episode = deepcopy(
             {
                 "episode": e,
-                "return": operator._rewards_sum[-1],
+                "return": operator._rewards_sum[-1],  # noqa: SLF001
                 "service_level": service_level,
                 "lr": lr,
                 "reached_destination": t,
@@ -696,7 +698,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
 
         if track:
             # collect movements
-            for coordinates in operator._timestamped_position["geometry"][
+            for coordinates in operator._timestamped_position["geometry"][  # noqa: SLF001
                 "coordinates"
             ]:
                 tracks.append({"episode": e, "position": coordinates})
@@ -721,12 +723,12 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
 
             m = folium.Map(location=[52.52, 13.40])
 
-            if operator._tracked_demands:
+            if operator._tracked_demands:  # noqa: SLF001
                 t = TimestampedGeoJson(
                     {
                         "type": "FeatureCollection",
-                        "features": [operator._timestamped_position]
-                        + [eval(template) for d in operator._tracked_demands],
+                        "features": [operator._timestamped_position]  # noqa: SLF001
+                        + [eval(template) for d in operator._tracked_demands],  # noqa: SLF001
                     },
                     loop=False,
                     period="PT1M",
@@ -737,14 +739,14 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
                 t = TimestampedGeoJson(
                     {
                         "type": "FeatureCollection",
-                        "features": [operator._timestamped_position],
+                        "features": [operator._timestamped_position],  # noqa: SLF001
                     },
                     loop=False,
                     period="PT1M",
                 )
 
             t.add_to(m)
-            m.save(os.path.join(track_dir, f"bus_movement_episode_{str(e)}.html"))
+            m.save(os.path.join(track_dir, f"bus_movement_episode_{e!s}.html"))
 
         e += 1
 
@@ -752,13 +754,13 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
     if not kwargs:
-        weights_path = f"{str(episodes)}_episodes_weights_{strf}.keras"
+        weights_path = f"{episodes!s}_episodes_weights_{strf}.keras"
     else:
-        weights_path = f"{str(episodes)}_episodes_{experiments}_weights_{strf}.keras"
+        weights_path = f"{episodes!s}_episodes_{experiments}_weights_{strf}.keras"
 
     return_path = weights_path.replace("weights", "returns").replace("keras", "csv")
 
-    operator._rl_agent_model.save_weights(
+    operator._rl_agent_model.save_weights(  # noqa: SLF001
         os.path.join(output_folder, "weights", weights_path)
     )
 
@@ -789,8 +791,8 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs):
             for k, v in kwargs.items():
                 returns[k] = str(v)
         except Exception as e:
-            print("cant append experiment params to returns DF")
-            print(e)
+            print("cant append experiment params to returns DF")  # noqa: T201
+            print(e)  # noqa: T201
     plt.show()
 
     if prepare_benchmark:
@@ -824,7 +826,7 @@ if __name__ == "__main__":
     strf = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     results.to_csv(
         os.path.join(
-            output_folder, "benchmarks", f"{str(runs)}_episodes_benchmark_{strf}.csv"
+            output_folder, "benchmarks", f"{runs!s}_episodes_benchmark_{strf}.csv"
         ),
         index=False,
     )

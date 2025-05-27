@@ -2,12 +2,18 @@ from simulation.environment.geodesic_position import GeodesicPosition
 
 
 class Stop(GeodesicPosition):
-    __slots__ = ("_stop_id", "_gtfs_id", "_departure", "_departure_next_day")
+    __slots__ = ("_departure", "_departure_next_day", "_gtfs_id", "_stop_id")
 
-    def __init__(
-        self, stop_id, gtfs_id, latitude, longitude, departure, departure_next_day: bool
+    def __init__(  # noqa: ANN204
+        self,
+        stop_id,  # noqa: ANN001
+        gtfs_id,  # noqa: ANN001
+        latitude,  # noqa: ANN001
+        longitude,  # noqa: ANN001
+        departure,  # noqa: ANN001
+        departure_next_day: bool,
     ):
-        super(Stop, self).__init__(latitude, longitude)
+        super(Stop, self).__init__(latitude, longitude)  # noqa: UP008
 
         self._stop_id = stop_id
         self._gtfs_id = gtfs_id
@@ -15,17 +21,17 @@ class Stop(GeodesicPosition):
         self._departure_next_day = departure_next_day
 
     @property
-    def stop_id(self):
+    def stop_id(self):  # noqa: ANN201
         return self._stop_id
 
     @property
-    def gtfs_id(self):
+    def gtfs_id(self):  # noqa: ANN201
         return self._gtfs_id
 
     @property
-    def departure(self):
+    def departure(self):  # noqa: ANN201
         return self._departure
 
     @property
-    def departure_next_day(self):
+    def departure_next_day(self):  # noqa: ANN201
         return self._departure_next_day

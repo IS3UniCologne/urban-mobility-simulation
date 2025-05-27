@@ -8,7 +8,7 @@ from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 
 class SearchEngineInterface(ABC):
-    def register_fleet(self, fleet: VehicleFleet):
+    def register_fleet(self, fleet: VehicleFleet):  # noqa: ANN201
         # TODO: can we omit this and have search engines always refer to the operator's fleet?
         self._fleet = fleet
 

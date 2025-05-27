@@ -214,18 +214,19 @@ charging_stations_track_0 = []
 charging_stations_track_1 = []
 
 
-def track_charging_stations(infra, target):
+def track_charging_stations(infra, target):  # noqa: ANN001, ANN201
     while True:
         yield env.timeout(1)
         values = [
             {
-                "time": env._now,
+                "time": env._now,  # noqa: SLF001
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
                 "_plugs.queuesize": len(d["_plugs"].queue),
             }
             for d in [
-                tracking.dump(tracking._get_uid(x))[1] for x in infra.charging_stations
+                tracking.dump(tracking._get_uid(x))[1]  # noqa: SLF001
+                for x in infra.charging_stations
             ]
         ]
         target.extend(values)
@@ -322,14 +323,14 @@ ride_hailing_fleet_1 = generate_AV_fleet(
 vehicles_track = []
 
 
-def track_fleets(fleet_id):
+def track_fleets(fleet_id):  # noqa: ANN001, ANN201
     # attention: this only works because we do not dynamically create and destroy vehicles like we do with users!
     tracked_list = tracking.list_tracked("RideHailingAV")
 
     while True:
         yield env.timeout(1)
         envtime, values = (
-            env._now,
+            env._now,  # noqa: SLF001
             {
                 "_fleet": fleet_id,
                 "_state": [
