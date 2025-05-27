@@ -13,7 +13,7 @@ from IPython.display import set_matplotlib_formats
 set_matplotlib_formats("retina")
 
 
-def set_style():
+def set_style():  # noqa: ANN201
     # This sets reasonable defaults for font size for a figure that will go in a paper
     sns.set_context("paper")
     plt.rcParams.update({"font.size": 20})
@@ -27,7 +27,7 @@ def set_style():
     )
 
 
-def transform_df_to_gdf(df, crs="EPSG:4326"):
+def transform_df_to_gdf(df, crs="EPSG:4326"):  # noqa: ANN001, ANN201
     return gpd.GeoDataFrame(
         data=df,
         geometry=list(
@@ -43,14 +43,14 @@ def transform_df_to_gdf(df, crs="EPSG:4326"):
 
 
 # A function plotting a choropleth map for a geo data frame. It zooms in to Berlin and adds points of interest.
-def plot_static_choropleth_map(
-    gdf,
-    ax,
-    title,
-    column="num_trips",
-    label="Number of trips by hexagon",
-    cmap="Reds",
-    crs="EPSG:4326",
+def plot_static_choropleth_map(  # noqa: ANN201
+    gdf,  # noqa: ANN001
+    ax,  # noqa: ANN001
+    title,  # noqa: ANN001
+    column="num_trips",  # noqa: ANN001
+    label="Number of trips by hexagon",  # noqa: ANN001
+    cmap="Reds",  # noqa: ANN001
+    crs="EPSG:4326",  # noqa: ANN001
 ):
     # Construct choropleth map
     gdf.cx[13.25:13.55, 52.4:52.6].plot(
@@ -72,7 +72,7 @@ def plot_static_choropleth_map(
     ax.legend()
 
 
-def clean(x):
+def clean(x):  # noqa: ANN001, ANN201
     if type(x) is not float:
         x = x.replace("[", "").replace("]", "")
     return x
@@ -115,18 +115,18 @@ def clean(x):
 #     plt.savefig("profit_RL.pdf")
 #     plt.show()
 #
-def profit_analysis(profit_data, service_level_data):
+def profit_analysis(profit_data, service_level_data):  # noqa: ANN001, ANN201
     random.seed = 42
     set_style()
     plt.rcParams.update({"font.size": 16})
     profit_data["Reoptimisation Benchmark"] = (
         profit_data["Reoptimisation Benchmark"] + np.random.uniform(500, 700) * 10
     )
-    print(profit_data["Reoptimisation Benchmark"])
+    print(profit_data["Reoptimisation Benchmark"])  # noqa: T201
     service_level_data["Reoptimisation Benchmark"] = service_level_data[
         "Reoptimisation Benchmark"
     ] + np.random.uniform(0.003, 0.007)
-    print(service_level_data["Reoptimisation Benchmark"])
+    print(service_level_data["Reoptimisation Benchmark"])  # noqa: T201
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
     ax[0].plot(
         profit_data["Episode"],

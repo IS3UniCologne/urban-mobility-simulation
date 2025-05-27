@@ -23,9 +23,9 @@ from simulation.tasks.transport_task import TransportTask
 
 
 class SharedMobilityOperator(Operator):
-    __slots__ = ("_number_service_workers", "_workforce", "_demand_tracker")
+    __slots__ = ("_demand_tracker", "_number_service_workers", "_workforce")
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         fleet: VehicleFleet,
@@ -45,7 +45,7 @@ class SharedMobilityOperator(Operator):
         )
         # Register demand tracker to transaction log
         self._demand_tracker: DemandTracker = DemandTracker(
-            operations._available_vehicle_modes
+            operations._available_vehicle_modes  # noqa: SLF001
         )
         self._transaction_log.add_listener(self._demand_tracker)
 
@@ -66,7 +66,7 @@ class SharedMobilityOperator(Operator):
         """
         return self._demand_tracker
 
-    def withdraw_transportation_task(
+    def withdraw_transportation_task(  # noqa: ANN201
         self, user: User, transportation_task: TransportTask
     ):
         vehicle_types = [
@@ -107,6 +107,6 @@ class SharedMobilityOperator(Operator):
         )
 
         logging.info(
-            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
+            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )

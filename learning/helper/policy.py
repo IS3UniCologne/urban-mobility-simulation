@@ -5,11 +5,11 @@ from simulation.agent.action_space import ActionSpace
 
 class Policy:
     # TODO: currently this class is tailored for action-value functions, generalize
-    def __init__(self):
+    def __init__(self):  # noqa: ANN204
         pass
 
     @staticmethod
-    def argmax_rand(arr):
+    def argmax_rand(arr):  # noqa: ANN001, ANN205
         """
         :param arr: Vector of (State-/Action-)Value Function Values
         :return: Index of max value in arr, with ties broken randomly
@@ -21,7 +21,7 @@ class Policy:
             raise Exception("possible NaNs in NN encountered")
 
     @classmethod
-    def decide(cls, state, q_hat, eps):
+    def decide(cls, state, q_hat, eps):  # noqa: ANN001, ANN206
         """
 
         :param state: State as n-dim (numpy) vector

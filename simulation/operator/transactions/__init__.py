@@ -9,4 +9,4 @@ from .transaction import Transaction
 from .transaction_listener import TransactionListener
 from .transaction_log import TransactionLog
 
-__all__ = ["Transaction", "TransactionListener", "TransactionLog", "DemandTracker"]
+__all__ = ["DemandTracker", "Transaction", "TransactionListener", "TransactionLog"]

@@ -14,7 +14,7 @@ class LearningInterface(ABC):
 
     # TODO: ideally, the RL agent facing interface should be a gym-compatible API?
 
-    def __init__(self, env: simpy.Environment):
+    def __init__(self, env: simpy.Environment):  # noqa: ANN204
         self.env = env
         self._problem_config = None
         self._state_size_flattened = None
@@ -22,18 +22,18 @@ class LearningInterface(ABC):
         self._step_executed = self.env.event()
 
     @property
-    def initialized(self):
+    def initialized(self):  # noqa: ANN201
         return self._initialized
 
     @property
-    def problem_config(self):
+    def problem_config(self):  # noqa: ANN201
         return self._problem_config
 
     @property
-    def state_size_flattened(self):
+    def state_size_flattened(self):  # noqa: ANN201
         return self._state_size_flattened
 
-    def step(self, action, evaluation=False):
+    def step(self, action, evaluation=False):  # noqa: ANN001, ANN201
         """
         This method directly interacts with the simulation, the expected behavior of receiving an action instruction
         must thus be implemented in the receiving agent in the simulation!
@@ -50,13 +50,13 @@ class LearningInterface(ABC):
         except (BadAction, ForbiddenAction) as e:
             if evaluation and isinstance(e, BadAction):
                 logging.debug(
-                    f"Action {action} is considered bad, but allowed in evaluation",
+                    f"Action {action} is considered bad, but allowed in evaluation",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 pass
             elif not evaluation and isinstance(e, BadAction):
                 logging.debug(
-                    f"Action {action} is considered bad, delegate decision",
+                    f"Action {action} is considered bad, delegate decision",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 try:
@@ -70,7 +70,7 @@ class LearningInterface(ABC):
 
         yield self.env.process(self._take_action(action))
         logging.debug(
-            f"Agent takes action {action}",
+            f"Agent takes action {action}",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
@@ -84,7 +84,7 @@ class LearningInterface(ABC):
         )
 
     @abstractmethod
-    def state(self):
+    def state(self):  # noqa: ANN201
         """
         This method requests the information necessary for constructing a problem-specific state from tracking
         The tracking capability must be implemented before you can request information!
@@ -94,23 +94,23 @@ class LearningInterface(ABC):
         pass
 
     @abstractmethod
-    def _check_terminal(self):
+    def _check_terminal(self):  # noqa: ANN202
         pass
 
     @abstractmethod
-    def _get_reward(self):
+    def _get_reward(self):  # noqa: ANN202
         pass
 
     @abstractmethod
-    def _take_action(self, action):
+    def _take_action(self, action):  # noqa: ANN001, ANN202
         pass
 
     @abstractmethod
-    def _test_action(self, action):
+    def _test_action(self, action):  # noqa: ANN001, ANN202
         pass
 
     @abstractmethod
-    def _handle_bad_action(self, action):
+    def _handle_bad_action(self, action):  # noqa: ANN001, ANN202
         """
         Problem-specific method to handle an action that is considered bad but is not forbidden
         Might raise ForbiddenAction, if the action is not executed
@@ -122,7 +122,7 @@ class LearningInterface(ABC):
         pass
 
     @abstractmethod
-    def reset(self):
+    def reset(self):  # noqa: ANN201
         """
         In its current form, tell the simulation that the episode is finished, i.e. halt it
         TODO: gym-compatible?

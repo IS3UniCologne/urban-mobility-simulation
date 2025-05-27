@@ -13,7 +13,7 @@ from simulation.tasks.transportation_search_task import TransportationSearchTask
 class SharedVehicleSearchEngine(SearchEngineInterface):
     __slots__ = ("_env", "_fleet")
 
-    def __init__(self, env):
+    def __init__(self, env):  # noqa: ANN001, ANN204
         self._env = env
         self._fleet: MixedSharedVehicleFleet = None
 

@@ -311,7 +311,7 @@ demand_factory = DemandFactory(
 )
 
 
-def get_cost_per_vehicle_km():
+def get_cost_per_vehicle_km():  # noqa: ANN201
     res = {}
 
     for key, value in config.shared_vehicles.items():
@@ -320,7 +320,7 @@ def get_cost_per_vehicle_km():
     return res
 
 
-def get_co2_per_vehicle_km():
+def get_co2_per_vehicle_km():  # noqa: ANN201
     res = {}
 
     for key, value in config.shared_vehicles.items():
@@ -330,7 +330,7 @@ def get_co2_per_vehicle_km():
 
 
 # For multiple simulation runs
-def run_simulation(end_time, env=env):
+def run_simulation(end_time, env=env):  # noqa: ANN001, ANN201
     # Before a new simulation run, reset everything
     User.user_id = 0
     DemandFactory.counter = 0

@@ -20,23 +20,23 @@ class RideHailingMPChargingOperations(OperationsInterface):
     """
 
     __slots__ = (
-        "_time_between_operations",
-        "_state_of_charge_threshold",
         "_algo",
+        "_state_of_charge_threshold",
         "_task_queue",
         "_task_transactions",
+        "_time_between_operations",
         "_virtual_charging_infrastructure",
         "_world",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         time_between_operations: float,
         state_of_charge_threshold: float,
-        algo=None,  # optimization problem
+        algo=None,  # optimization problem  # noqa: ANN001
     ):
-        super(RideHailingMPChargingOperations, self).__init__(env=env)
+        super(RideHailingMPChargingOperations, self).__init__(env=env)  # noqa: UP008
 
         self._world = None  # defer
         self._time_between_operations = time_between_operations
@@ -112,7 +112,7 @@ class RideHailingMPChargingOperations(OperationsInterface):
             while self._task_queue.count > 0:
                 next_task = self._task_queue.popleft()
                 logging.debug(
-                    f"Processing following task: {next_task}.",
+                    f"Processing following task: {next_task}.",  # noqa: G004
                     extra={
                         "clazz": self.__class__.__name__,
                         "oid": self._operator_reference.id,
@@ -129,33 +129,33 @@ class RideHailingMPChargingOperations(OperationsInterface):
                 # and look out for when it arrives
                 self._env.process(self._update_after_arrival(next_task))
 
-    def _update_after_arrival(self, task):
+    def _update_after_arrival(self, task):  # noqa: ANN001, ANN202
         # as soon as the vehicle really arrives, we can undo this because its then reflected in the capacity
-        yield task._arrived_at_charging_station
+        yield task._arrived_at_charging_station  # noqa: SLF001
         availability = self._virtual_charging_infrastructure.get_available_capacity()
         availability[task.destination] += 1
         self._virtual_charging_infrastructure.update(availability=availability)
 
-    def _track_task(self, task):
+    def _track_task(self, task):  # noqa: ANN001, ANN202
         yield AnyOf(self._env, [task.task_finished, self._world.simulation_finished])
 
         self._task_transactions.append(
             {
-                "start_time": task._start_time,
-                "estimated_arrival_time": task._estimated_arrival_time,
-                "scheduled_time": task._scheduled_time,
+                "start_time": task._start_time,  # noqa: SLF001
+                "estimated_arrival_time": task._estimated_arrival_time,  # noqa: SLF001
+                "scheduled_time": task._scheduled_time,  # noqa: SLF001
                 "end_time": self._env.now,
-                "vehicle": task._vehicle.id,
+                "vehicle": task._vehicle.id,  # noqa: SLF001
                 "state": task.state,
-                "fleet": task._vehicle.fleet.id,
-                "charging_station": task._charging_station.location,
+                "fleet": task._vehicle.fleet.id,  # noqa: SLF001
+                "charging_station": task._charging_station.location,  # noqa: SLF001
                 "waiting_time": task.waiting_time,
                 "charging_duration": task.charging_duration,
-                "estimated_completion_time": task._estimated_completion_time,
+                "estimated_completion_time": task._estimated_completion_time,  # noqa: SLF001
                 "kWh_charged": task.kWh_charged,
             }
         )
 
     @property
-    def task_transactions(self):
+    def task_transactions(self):  # noqa: ANN201
         return pd.DataFrame(self._task_transactions)

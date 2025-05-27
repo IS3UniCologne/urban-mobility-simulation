@@ -27,29 +27,29 @@ class RideHailingCar(RideHailingVehicle):
     vehicle_type = "ridehailing_car"  # TODO: make explicit that it's a human-driven car
 
     __slots__ = (
-        "car_id",
-        "_total_earn",
-        "_shift_earn",
-        "_shift_duration",
-        "_offline_duration",
-        "_shift_start_time",
-        "_shift_end_time",
         "_driver_payment_share",
-        "_online_event",
+        "_offline_duration",
         "_offline_event",
+        "_online_event",
+        "_shift_duration",
+        "_shift_earn",
+        "_shift_end_time",
+        "_shift_start_time",
+        "_total_earn",
+        "car_id",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
-        fleet,
+        fleet,  # noqa: ANN001
         position: GeodesicPosition,
-        velocity,
-        max_available_seats=4,
-        max_state_of_charge=16.7,
-        energy_consumption=0.152,
-        price_per_min=0.26,
-        is_electric=True,
+        velocity,  # noqa: ANN001
+        max_available_seats=4,  # noqa: ANN001
+        max_state_of_charge=16.7,  # noqa: ANN001
+        energy_consumption=0.152,  # noqa: ANN001
+        price_per_min=0.26,  # noqa: ANN001
+        is_electric=True,  # noqa: ANN001
     ):
         """
 
@@ -61,7 +61,7 @@ class RideHailingCar(RideHailingVehicle):
         :param energy_consumption: 15.2 kWh/100km as per Smart EQ specification
         :param velocity:
         """
-        super(RideHailingCar, self).__init__(
+        super(RideHailingCar, self).__init__(  # noqa: UP008
             env,
             fleet,
             position,
@@ -98,89 +98,89 @@ class RideHailingCar(RideHailingVehicle):
         self._env.process(self.run_shift_check_process())
 
     @property
-    def total_earn(self):
+    def total_earn(self):  # noqa: ANN201
         return self._total_earn
 
     @property
-    def shift_earn(self):
+    def shift_earn(self):  # noqa: ANN201
         return self._shift_earn
 
     @property
-    def shift_duration(self):
+    def shift_duration(self):  # noqa: ANN201
         return self._shift_duration
 
     @property
-    def offline_duration(self):
+    def offline_duration(self):  # noqa: ANN201
         return self._offline_duration
 
     @property
-    def shift_start_time(self):
+    def shift_start_time(self):  # noqa: ANN201
         return self._shift_start_time
 
     @property
-    def shift_end_time(self):
+    def shift_end_time(self):  # noqa: ANN201
         return self._shift_end_time
 
-    def update_shift_start_time(self):
+    def update_shift_start_time(self):  # noqa: ANN201
         time = self._env.now
         self._shift_start_time = time
 
         logging.debug(
-            f"RideHailingCar {self.car_id} started its shift at {time}.",
+            f"RideHailingCar {self.car_id} started its shift at {time}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
-    def update_shift_end_time(self):
+    def update_shift_end_time(self):  # noqa: ANN201
         time = self._env.now
         self._shift_end_time = time
 
         logging.debug(
-            f"RideHailingCar {self.car_id} ended its shift at {time}.",
+            f"RideHailingCar {self.car_id} ended its shift at {time}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
-    def update_shift_duration(self):
+    def update_shift_duration(self):  # noqa: ANN201
         self._shift_duration = self._env.now - self._shift_start_time
 
-    def update_offline_duration(self):
+    def update_offline_duration(self):  # noqa: ANN201
         self._offline_duration = self._env.now - self._shift_end_time
 
-    def update_idle_time(self):  # TODO
+    def update_idle_time(self):  # TODO  # noqa: ANN201
         pass
 
-    def update_earned_money(self, payment):
+    def update_earned_money(self, payment):  # noqa: ANN001, ANN201
         # Notify earned money for a human-driven car
         earn = payment * self._driver_payment_share
         self._total_earn += earn
         self._shift_earn += earn
 
         logging.debug(
-            f"RideHailingCar {self.car_id} earned {self.shift_earn} since he/she started the shift.",
+            f"RideHailingCar {self.car_id} earned {self.shift_earn} since he/she started the shift.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
-    def get_online(self):
+    def get_online(self):  # noqa: ANN201
         self.state = VehicleState.PARKING
         self.update_shift_start_time()
         self._online_event.succeed()
         self._online_event = self._env.event()
         logging.debug(
-            f"Driver {self.car_id} gets online.",
+            f"Driver {self.car_id} gets online.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
-    def get_offline(self):
+    def get_offline(self):  # noqa: ANN201
         self.state = VehicleState.OFFLINE
         self._shift_earn = 0
         self.update_shift_end_time()
         self._offline_event.succeed()
         self._offline_event = self._env.event()
         logging.debug(
-            f"Driver {self.car_id} gets offline.",
+            f"Driver {self.car_id} gets offline.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
-    def decide_to_get_online(self):
+    def decide_to_get_online(self):  # noqa: ANN201
         go_online = False
         ### comment off when we have mode chioce variables
         # self.update_offline_duration()
@@ -200,7 +200,7 @@ class RideHailingCar(RideHailingVehicle):
             go_online = True
         return go_online
 
-    def decide_to_get_offline(self):
+    def decide_to_get_offline(self):  # noqa: ANN201
         go_offline = False
         ### comment off when we have mode chioce variables
         # self.update_shift_duration()
@@ -221,7 +221,7 @@ class RideHailingCar(RideHailingVehicle):
 
         return go_offline
 
-    def run_shift_check_process(self):
+    def run_shift_check_process(self):  # noqa: ANN201
         """
         Run availability decision-making process of drivers
         :return:
@@ -244,7 +244,7 @@ class RideHailingCar(RideHailingVehicle):
                     # if the driver has a task to do we yield until its completion
                     else:
                         logging.debug(
-                            f"Driver {self._id} is {self.state} and has a task to do before getting offline.",
+                            f"Driver {self._id} is {self.state} and has a task to do before getting offline.",  # noqa: G004
                             extra={
                                 "clazz": self.__class__.__name__,
                                 "oid": self.car_id,

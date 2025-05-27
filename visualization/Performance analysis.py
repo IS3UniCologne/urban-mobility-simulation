@@ -3,13 +3,13 @@ import pandas as pd
 import seaborn as sns
 
 
-def clean(x):
+def clean(x):  # noqa: ANN001, ANN201
     if type(x) is not float:
         x = x.replace("[", "").replace("]", "")
     return x
 
 
-def set_style():
+def set_style():  # noqa: ANN201
     # This sets reasonable defaults for font size for a figure that will go in a paper
     sns.set_context("paper")
 
@@ -23,7 +23,7 @@ def set_style():
     )
 
 
-def data_preparation(df_raw):
+def data_preparation(df_raw):  # noqa: ANN001, ANN201
     df_raw["phase"] += 1
     df_raw["total_profit_ride_hailing"] = (
         df_raw["total_cost_per_day_ride_hailing"] + df_raw["total_profit_ride_hailing"]
@@ -46,7 +46,7 @@ def data_preparation(df_raw):
     return df_raw
 
 
-def plot_CS_Benchmark(dg):
+def plot_CS_Benchmark(dg):  # noqa: ANN001, ANN201
     set_style()
     fig, ax = plt.subplots(nrows=1, ncols=4, figsize=(12, 4), constrained_layout=True)
     HUE = "scenario"
@@ -95,7 +95,7 @@ def plot_CS_Benchmark(dg):
     plt.show()
 
 
-def plot_CS_Benchmark_new(dg):
+def plot_CS_Benchmark_new(dg):  # noqa: ANN001, ANN201
     set_style()
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
     HUE = "scenario"
@@ -156,7 +156,7 @@ for i in range(5):
     new_df["scenario"] = f"{i + 1}"
     df_raw_results = pd.concat([df_raw_results, new_df], axis=0)
 dg = data_preparation(df_raw_results)
-print(dg.groupby(["phase", "scenario"]).agg({"service_quality": "mean"}))
+print(dg.groupby(["phase", "scenario"]).agg({"service_quality": "mean"}))  # noqa: T201
 plot_CS_Benchmark(dg)
 
 

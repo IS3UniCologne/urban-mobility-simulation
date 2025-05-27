@@ -23,14 +23,14 @@ from simulation.tasks.transport_task import TransportTask
 
 class PublicTransitOperator(Operator):
     __slots__ = (
-        "_timetable",
-        "_time",
         "_busses",
+        "_time",
+        "_timetable",
         "_total_missed_car_trips",
         "_tracked_demands",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         fleet: VehicleFleet,
@@ -54,9 +54,9 @@ class PublicTransitOperator(Operator):
         self._time = SimulationTime(env)
         self._busses = []
 
-    def pay_for_fulfilled_transportation_task(
+    def pay_for_fulfilled_transportation_task(  # noqa: ANN201
         self,
-        user,
+        user,  # noqa: ANN001
         transportation_task: TransportTask,
         selected_transportation_alternative: TransportationAlternative,
     ):
@@ -72,12 +72,15 @@ class PublicTransitOperator(Operator):
         )
 
         logging.info(
-            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
+            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
-    def withdraw_transportation_task(
-        self, user, transportation_task: TransportTask, state="Widthdrawn"
+    def withdraw_transportation_task(  # noqa: ANN201
+        self,
+        user,  # noqa: ANN001
+        transportation_task: TransportTask,
+        state="Widthdrawn",  # noqa: ANN001
     ):
         self.increase_total_missed_trips(0)
 
@@ -86,6 +89,6 @@ class PublicTransitOperator(Operator):
         self.log_transaction(transportation_task, None, state=state)
 
         logging.debug(
-            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
+            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
