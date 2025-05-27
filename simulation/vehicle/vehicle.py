@@ -65,7 +65,7 @@ class Vehicle(TrackingInterface, ABC):
         vehicle_mode: VehicleMode,
         convenience: int = 1,
     ):
-        self._id = Vehicle.vehicle_id
+        self._id: int = Vehicle.vehicle_id
         Vehicle.vehicle_id += 1  # Increment Vehicle Id
 
         self._env: Environment = env

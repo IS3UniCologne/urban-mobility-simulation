@@ -1,4 +1,8 @@
 from abc import ABC, abstractmethod
+from typing import NewType
+
+# RegionId represents a unique identifier for a spatial region (e.g., an H3 hex ID).
+RegionId = NewType("RegionId", str)
 
 
 class Position(ABC):
@@ -14,14 +18,14 @@ class Position(ABC):
         pass
 
     @abstractmethod
-    def __str__(self):  # noqa: ANN204
+    def __str__(self) -> str:
         pass
 
     @abstractmethod
-    def get_region_id(self) -> str:
+    def get_region_id(self) -> RegionId:
         """
         Get the region ID of the position
-        :return: str
+        :return: RegionId
         """
         pass
 

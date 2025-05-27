@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-import pandas as pd
-
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
@@ -18,8 +16,6 @@ class PaymentInterface(ABC):
 
         # Make this dynamic with a dictionary
         self._total_missed_car_trips = 0
-
-        self._transactions = []
 
         # only for bus tracking
         self._tracked_demands = set()
@@ -60,24 +56,3 @@ class PaymentInterface(ABC):
     def increase_total_missed_trips(self, missed_revenue):  # noqa: ANN001, ANN201
         self._total_missed_revenue += missed_revenue
         self._total_missed_trips += 1
-
-    # TODO: I think this can go ?
-    def get_transactions(self):  # noqa: ANN201
-        """
-        Return all transactions (fulfilled and missed) as a DataFrame
-
-        DataFrame has the following columns
-        "origin": Origin of Request
-        "destination": Destination of Request
-        "time_start": Trip Request Start Time
-        "time_end": Trip Request End Time
-        "price": Trip Price (0.0 if missed)
-        "distance": (Expected) distance,
-        "duration": Duration in minutes, 0.0 if missed
-        "selected_vehicle_mode": Selected Vehicle Mode
-        "state": Missed or Fulfilled
-        "viable_vehicle_modes": List of viable modes for this trip (set 1 and 0 columnwise per Vehicle)
-
-        :return: DataFrame
-        """
-        return pd.DataFrame(self._transactions)
