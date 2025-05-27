@@ -8,16 +8,16 @@ from simulation.vehicle.vehicle import Vehicle
 
 class VehicleAllocation:
     __slots__ = (
-        "_user",
-        "_vehicle",
         "_associated_alternative",
         "_pick_up_position",
         "_pick_up_time",
+        "_user",
+        "_vehicle",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
-        user,
+        user,  # noqa: ANN001
         vehicle: Vehicle,
         associated_transportation_alternative: TransportationAlternative,
         pick_up_position: Position,
@@ -34,21 +34,21 @@ class VehicleAllocation:
         self._pick_up_time = pick_up_time  # Pick up time (i.e., when will be the vehicle be at pickup pos)
 
     @property
-    def user(self):
+    def user(self):  # noqa: ANN201
         return self._user
 
     @property
-    def vehicle(self):
+    def vehicle(self):  # noqa: ANN201
         return self._vehicle
 
     @property
-    def associated_transportation_alternative(self):
+    def associated_transportation_alternative(self):  # noqa: ANN201
         return self._associated_alternative
 
     @property
-    def pick_up_position(self):
+    def pick_up_position(self):  # noqa: ANN201
         return self._pick_up_position
 
     @property
-    def pick_up_time(self):
+    def pick_up_time(self):  # noqa: ANN201
         return self._pick_up_time

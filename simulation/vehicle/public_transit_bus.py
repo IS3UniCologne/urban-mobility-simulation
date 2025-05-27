@@ -20,31 +20,31 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     bus_id = 0
 
     __slots__ = (
-        "_time",
-        "_spawned",
-        "_has_reached_terminal",
         "_config",
-        "_problem_config",
-        "_geodesic_env",
-        "_world",
-        "_dropoffs",
-        "_pickups",
         "_dist_traveled",
-        "_use_learning_agent",
+        "_dropoffs",
+        "_geodesic_env",
+        "_has_reached_terminal",
+        "_pickups",
+        "_problem_config",
         "_process",
+        "_spawned",
+        "_time",
+        "_use_learning_agent",
+        "_world",
     )
     # Tracking
-    exposes = ["_position", "state", "_available_seats"]
+    exposes = ["_position", "state", "_available_seats"]  # noqa: RUF012
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         route: PublicTransitRoute,
         position: GeodesicPosition,
         fleet: VehicleFleet,
         use_learning_agent: bool,
-        velocity,
-        max_available_seats=100,
+        velocity,  # noqa: ANN001
+        max_available_seats=100,  # noqa: ANN001
     ):
         """
 
@@ -89,7 +89,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
             # use learning agent
             self._process = self._env.process(self._problem_config.learning_agent.run())
 
-    def _run(self):
+    def _run(self):  # noqa: ANN202
         """
         Bus Lifecycle (with planned stops, not RL agent)
 
@@ -158,11 +158,11 @@ class Bus(PublicTransitVehicle, TrackingInterface):
 
         self._has_reached_terminal.succeed()
 
-    def _move_to_next_stop(self):
+    def _move_to_next_stop(self):  # noqa: ANN202
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
         yield self._env.process(self.move(route_segment))
 
-    def move(self, route_segment: RouteSegment):
+    def move(self, route_segment: RouteSegment):  # noqa: ANN201
         # TODO: use road network speed limits?
 
         distance = route_segment.distance  # in meter
@@ -171,7 +171,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         self.state = VehicleState.EN_ROUTE_PLANNED
 
         logging.debug(
-            f"Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.",
+            f"Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -183,18 +183,18 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         if self._current_stop == self._route.destination:
             self.state = VehicleState.AT_TERMINAL_DESTINATION
             logging.debug(
-                f"Bus has arrived at its terminal destination - stop {self._current_stop.stop_id} "
+                f"Bus has arrived at its terminal destination - stop {self._current_stop.stop_id} "  # noqa: G004
                 f"at time {self._time.now_as_str()}",
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
         else:
             self.state = VehicleState.AT_STOP
             logging.debug(
-                f"Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}",
+                f"Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
-    def _update_positions(self, new_position):
+    def _update_positions(self, new_position):  # noqa: ANN001, ANN202
         # Update Vehicle Position
         self.position = new_position
 
@@ -293,7 +293,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #     self._agent_completed_step.succeed((before_state, action, self._rl_agent.reward, self._rl_agent.reward_sum))
     #     self._agent_completed_step = self._env.event()
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"I have {len(self._passengers)} passengers on boards"
 
     def dump(self, exposed_only: bool = True) -> dict:

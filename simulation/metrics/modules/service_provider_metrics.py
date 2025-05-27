@@ -1,13 +1,13 @@
 class ServiceProviderMetrics:
     __slots__ = ("_transactions",)
 
-    def __init__(self, transactions):
+    def __init__(self, transactions):  # noqa: ANN001, ANN204
         self._transactions = transactions
 
-    def get_revenue(self):
+    def get_revenue(self):  # noqa: ANN201
         return self._transactions["price"].sum()
 
-    def get_fleet_utilization(self, number_of_vehicles: dict):
+    def get_fleet_utilization(self, number_of_vehicles: dict):  # noqa: ANN201
         self._transactions["hour"] = self._transactions["time_start"] // 60
         grouped_df = self._transactions.groupby(
             ["selected_vehicle_mode", "vehicle_id", "hour"]
@@ -37,30 +37,30 @@ class ServiceProviderMetrics:
 
         return total_capacity_per_hour
 
-    def get_avg_fleet_utilization(self, number_of_vehicles: dict):
+    def get_avg_fleet_utilization(self, number_of_vehicles: dict):  # noqa: ANN201
         return self.get_fleet_utilization(number_of_vehicles).mean()
 
-    def get_fleet_cost(self, cost_per_vehicle_km):
+    def get_fleet_cost(self, cost_per_vehicle_km):  # noqa: ANN001, ANN201
         self._transactions["trip_costs"] = self._transactions[
             "distance"
         ] * self._transactions["selected_vehicle_mode"].map(cost_per_vehicle_km)
 
         return self._transactions.groupby("selected_vehicle_mode")["trip_costs"].sum()
 
-    def get_fleet_profit(self, cost_per_vehicle_km: dict):
+    def get_fleet_profit(self, cost_per_vehicle_km: dict):  # noqa: ANN201
         revenue_by_vehicle = self._transactions.groupby("selected_vehicle_mode")[
             "price"
         ].sum()
 
         return revenue_by_vehicle - self.get_fleet_cost(cost_per_vehicle_km)
 
-    def print_summary(self, number_of_vehicles: dict, cost_per_vehicle_km: dict):
-        print("")
-        print("#--------Service Provider Metrics--------")
-        print(" ")
-        print(
+    def print_summary(self, number_of_vehicles: dict, cost_per_vehicle_km: dict):  # noqa: ANN201
+        print("")  # noqa: T201
+        print("#--------Service Provider Metrics--------")  # noqa: T201
+        print(" ")  # noqa: T201
+        print(  # noqa: T201
             f"#  Avg. Fleet. Utilization: {self.get_avg_fleet_utilization(number_of_vehicles)} "
         )
-        print(f"#  Fleet Profit: {self.get_fleet_profit(cost_per_vehicle_km).sum()} ")
-        print(" ")
-        print("-" * 40)
+        print(f"#  Fleet Profit: {self.get_fleet_profit(cost_per_vehicle_km).sum()} ")  # noqa: T201
+        print(" ")  # noqa: T201
+        print("-" * 40)  # noqa: T201

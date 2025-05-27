@@ -9,12 +9,12 @@ class Position(ABC):
     __slots__ = ("_x", "_y")
 
     @abstractmethod
-    def __init__(self):
+    def __init__(self):  # noqa: ANN204
         self._x = "I have a x position"
         self._y = "I have a y position"
 
     @abstractmethod
-    def getExactLocation(self):
+    def getExactLocation(self):  # noqa: ANN201
         pass
 
     @abstractmethod
@@ -30,6 +30,6 @@ class Position(ABC):
         pass
 
     @abstractmethod
-    def __rshift__(self, other) -> float:
+    def __rshift__(self, other) -> float:  # noqa: ANN001
         # Calculate distance between two positions
         pass

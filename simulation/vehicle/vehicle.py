@@ -29,22 +29,22 @@ class Vehicle(TrackingInterface, ABC):
     vehicle_type: str
 
     __slots__ = (
-        "_id",
-        "__state",
-        "_env",
         "__position",
-        "_velocity",
-        "_mode",
-        "_max_available_seats",
+        "__state",
         "_convenience",
-        "_seats",
-        "_position_changed",
-        "_distance_travelled",
-        "_current_task",
         "_current_region",
+        "_current_task",
+        "_distance_travelled",
+        "_env",
+        "_id",
+        "_max_available_seats",
+        "_mode",
+        "_position_changed",
+        "_seats",
+        "_velocity",
     )
 
-    exposes = ["_id", "state", "position", "_distance_travelled"]
+    exposes = ["_id", "state", "position", "_distance_travelled"]  # noqa: RUF012
 
     # We need to override __eq__ and __hash__ to use Vehicles in sets
     def __eq__(self, other: object) -> bool:
@@ -55,7 +55,7 @@ class Vehicle(TrackingInterface, ABC):
     def __hash__(self) -> int:
         return hash(self._id)
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         fleet: "VehicleFleet",

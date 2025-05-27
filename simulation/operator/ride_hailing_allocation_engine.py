@@ -16,19 +16,19 @@ from simulation.operator.interface.vehicle_allocation_engine_interface import (
 class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
     __slots__ = (
         "_env",
-        "_vehicles_assigned_to_users",
-        "_vehicle_assignment_requests",
         "_vehicle_assignment_ids",
+        "_vehicle_assignment_requests",
+        "_vehicles_assigned_to_users",
     )
 
-    def __init__(self, env):
+    def __init__(self, env):  # noqa: ANN001, ANN204
         self._env = env
         self._vehicles_assigned_to_users = self._env.event()
         self._env.process(self.run())
         self._vehicle_assignment_requests = []
         self._vehicle_assignment_ids = set()
 
-    def run(self):
+    def run(self):  # noqa: ANN201
         while True:
             yield self._env.timeout(1)
 
@@ -63,7 +63,7 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
             self._add_request(user, selected_transportation_alternative)
         except Exception:
             logging.error(
-                f"Vehicle {selected_transportation_alternative.vehicle.id} already assigned to user {selected_transportation_alternative.vehicle.reserved_for_user.id}",
+                f"Vehicle {selected_transportation_alternative.vehicle.id} already assigned to user {selected_transportation_alternative.vehicle.reserved_for_user.id}",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -85,7 +85,7 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
             selected_transportation_alternative.pick_up_time,
         )
 
-    def notify_user_arrival_at_pick_up_position(
+    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201
         self, vehicle_assignment: VehicleAllocation
     ):
         pass
@@ -96,14 +96,14 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
         # vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
         # self._env.process(self.test(vehicle_assignment, old_position))
 
-    def _add_request(self, user, vehicle_assignment):
+    def _add_request(self, user, vehicle_assignment):  # noqa: ANN001, ANN202
         if vehicle_assignment.vehicle.id not in self._vehicle_assignment_ids:
             self._vehicle_assignment_requests.append((user, vehicle_assignment))
             self._vehicle_assignment_ids.add(vehicle_assignment.vehicle.id)
         else:
             raise Exception
 
-    def test(self, vehicle_assignment, old_position):
+    def test(self, vehicle_assignment, old_position):  # noqa: ANN001, ANN201
         # Notify operator that user has arrived at location
 
         # self._env.process()

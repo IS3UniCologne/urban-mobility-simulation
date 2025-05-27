@@ -24,34 +24,34 @@ from simulation.operator.transactions.demand_tracker import VehicleDemandByRegio
 class IntegratedSharedMobilityOperations(OperationsInterface):
     # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
     __slots__ = (
+        "_available_vehicle_modes",
+        "_base_capacity",
+        "_base_regions",
+        "_charging_plan_updated",
+        "_distance_matrix",
+        "_duration_of_operations",
+        "_max_vehicle_supply",
+        "_operations_started",
+        "_ordered_max_vehicle_supply",
+        "_scheduled_tasks",
+        "_state_of_charge_threshold",
         "_time_between_operations",
         "operation_duration",
-        "_distance_matrix",
-        "_ordered_max_vehicle_supply",
-        "_state_of_charge_threshold",
-        "_base_regions",
-        "_base_capacity",
-        "_available_vehicle_modes",
-        "_max_vehicle_supply",
-        "_scheduled_tasks",
-        "_charging_plan_updated",
-        "_operations_started",
-        "_duration_of_operations",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
-        env,
-        time_between_operations,
-        operation_duration,
-        distance_matrix,
-        ordered_available_vehicle_modes,
-        ordered_max_vehicle_supply,
-        state_of_charge_threshold,
-        base_regions,
-        base_capacity,
+        env,  # noqa: ANN001
+        time_between_operations,  # noqa: ANN001
+        operation_duration,  # noqa: ANN001
+        distance_matrix,  # noqa: ANN001
+        ordered_available_vehicle_modes,  # noqa: ANN001
+        ordered_max_vehicle_supply,  # noqa: ANN001
+        state_of_charge_threshold,  # noqa: ANN001
+        base_regions,  # noqa: ANN001
+        base_capacity,  # noqa: ANN001
     ):
-        super(IntegratedSharedMobilityOperations, self).__init__(env=env)
+        super(IntegratedSharedMobilityOperations, self).__init__(env=env)  # noqa: UP008
 
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
@@ -93,7 +93,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         """
         return self._available_vehicle_modes
 
-    def execute(self):
+    def execute(self):  # noqa: ANN201
         """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
         """
@@ -102,7 +102,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             yield self._env.timeout(self._time_between_operations)
 
             # Clean old jobs (if there are some left)
-            self.operator._workforce.task_queue.clear()
+            self.operator._workforce.task_queue.clear()  # noqa: SLF001
 
             if not self.operator.transaction_log.has_successful_transaction:
                 logging.debug(
@@ -188,17 +188,17 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         no_vehicles_scheduled_to_charge[mode] += no_vehicle_to_charge
 
             # Insert Tasks into Task Queue
-            self._operator_reference._workforce.task_queue.bulk_append(
+            self._operator_reference._workforce.task_queue.bulk_append(  # noqa: SLF001
                 self._scheduled_tasks
             )
 
             logging.info(
-                f"There are {len(self._operator_reference.fleet.vehicles_below_soc_threshold(self._state_of_charge_threshold))} vehicles with low state of charge.",
+                f"There are {len(self._operator_reference.fleet.vehicles_below_soc_threshold(self._state_of_charge_threshold))} vehicles with low state of charge.",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
             logging.info(
-                f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",
+                f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -302,7 +302,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                             )
 
                 # Insert Tasks into Task Queue
-                self._operator_reference._workforce.task_queue.bulk_append(
+                self._operator_reference._workforce.task_queue.bulk_append(  # noqa: SLF001
                     self._scheduled_tasks
                 )
 
@@ -323,7 +323,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
 
-    def generate_relocation_plan(self):
+    def generate_relocation_plan(self):  # noqa: ANN201
         """
 
         Return relocation plan
@@ -338,7 +338,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return relocation_plans
 
-    def generate_charging_plan(self):
+    def generate_charging_plan(self):  # noqa: ANN201
         """
         Generate a rule based charging plan based on given service worker capacity
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
@@ -368,7 +368,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def calculate_charging_plan(self, fleet_state):
+    def calculate_charging_plan(self, fleet_state):  # noqa: ANN001, ANN201
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
@@ -399,7 +399,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             state,
             self._available_vehicle_modes,
             self._max_vehicle_supply,
-            self._operator_reference._workforce.number_service_workers,
+            self._operator_reference._workforce.number_service_workers,  # noqa: SLF001
         )
 
         # We calculate for each vehicle mode dedicated charging plans based on the available resources
@@ -564,12 +564,12 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return all_charging_plans, used_resources
 
-    def calculate_resource_capacity_split_for_charging(
+    def calculate_resource_capacity_split_for_charging(  # noqa: ANN201
         self,
-        fleet_state,
-        available_vehicle_modes,
-        max_vehicle_supply,
-        number_service_workers_per_mode,
+        fleet_state,  # noqa: ANN001
+        available_vehicle_modes,  # noqa: ANN001
+        max_vehicle_supply,  # noqa: ANN001
+        number_service_workers_per_mode,  # noqa: ANN001
     ):
         """
             Determine Service Worker Split Between Modes (How many workers should be assigned to charge how many vehicles)
@@ -641,7 +641,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return capacity
 
-    def get_max_capacity_per_unit(self, mode):
+    def get_max_capacity_per_unit(self, mode):  # noqa: ANN001, ANN201
         # Mode Specific Collection Capacity per Service Worker (i.e., how many vehicles can one sw collect)
         if mode == "KickScooter":
             max_capacity_per_unit = 40
@@ -661,7 +661,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def identify_potential_relocations(self, state):
+    def identify_potential_relocations(self, state):  # noqa: ANN001, ANN201
         """
         Calculate how many vehicles need to be moved (or can be) from origin to destination
 
@@ -697,7 +697,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             state,
             self._available_vehicle_modes,
             self._max_vehicle_supply,
-            self._operator_reference._workforce.number_service_workers,
+            self._operator_reference._workforce.number_service_workers,  # noqa: SLF001
         )
         for i, mode in enumerate(self._available_vehicle_modes):
             # Relocation List containing tuples (origin, destination, number_of_vehicles_to_be_relocated, distance)
@@ -798,7 +798,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 # Break loop if there is no "excess" supply
                 if len(local_relocation_schedule) == 0:
                     logging.info(
-                        f"Cannot calculate relocation plan for {mode} as there are no regions with excess supply.",
+                        f"Cannot calculate relocation plan for {mode} as there are no regions with excess supply.",  # noqa: G004
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
                     break
@@ -960,12 +960,12 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return relocations
 
-    def calculate_resource_capacity_split_for_relocation(
+    def calculate_resource_capacity_split_for_relocation(  # noqa: ANN201
         self,
-        fleet_state,
-        available_vehicle_modes,
-        max_vehicle_supply,
-        number_service_workers_per_mode,
+        fleet_state,  # noqa: ANN001
+        available_vehicle_modes,  # noqa: ANN001
+        max_vehicle_supply,  # noqa: ANN001
+        number_service_workers_per_mode,  # noqa: ANN001
     ):
         """
             Determine Service Worker Split Between Modes (How many workers should be assigned to relocate how many vehicles)

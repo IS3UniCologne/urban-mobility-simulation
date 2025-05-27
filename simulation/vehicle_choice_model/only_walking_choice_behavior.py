@@ -11,9 +11,9 @@ class OnlyWalkingChoiceBehavior(VehicleChoiceBehaviorInterface):
 
     __slots__ = ("_available_modes",)
 
-    def __init__(self, available_modes):
+    def __init__(self, available_modes):  # noqa: ANN001, ANN204
         self._available_modes = available_modes
 
-    def choose_vehicle(self, trip_characteristics: TripCharacteristics):
+    def choose_vehicle(self, trip_characteristics: TripCharacteristics):  # noqa: ANN201
         result = {self._available_modes[0]: 1}
         return result

@@ -41,20 +41,20 @@ class ChargingTaskRidehailing(ServiceTask):
         "_config",
     )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         origin: str,
         destination: str,
-        number_of_vehicles_to_charge,
-        distance_to_fleet_base,
-        state_of_charge_threshold,
+        number_of_vehicles_to_charge,  # noqa: ANN001
+        distance_to_fleet_base,  # noqa: ANN001
+        state_of_charge_threshold,  # noqa: ANN001
         charging_station: ChargingStation = None,
         vehicle: Vehicle = None,
-        vehicle_mode=None,
-        scheduled_time=None,
+        vehicle_mode=None,  # noqa: ANN001
+        scheduled_time=None,  # noqa: ANN001
     ):
-        super(ChargingTaskRidehailing, self).__init__(env)
+        super(ChargingTaskRidehailing, self).__init__(env)  # noqa: UP008
 
         _geo_env = GeodesicEnvironment.getInstance()
         self._origin = origin
@@ -83,7 +83,7 @@ class ChargingTaskRidehailing(ServiceTask):
                 + (
                     (vehicle.position >> self._destination_position)
                     / 1000
-                    * vehicle._energy_consumption
+                    * vehicle._energy_consumption  # noqa: SLF001
                 )
             )
             / charging_station.power
@@ -99,22 +99,22 @@ class ChargingTaskRidehailing(ServiceTask):
         self._started_charging = self._env.event()
 
     @property
-    def destination(self):
+    def destination(self):  # noqa: ANN201
         return self._destination
 
     @property
-    def waiting_time(self):
+    def waiting_time(self):  # noqa: ANN201
         return self._waiting_time
 
     @property
-    def charging_duration(self):
+    def charging_duration(self):  # noqa: ANN201
         return self._charging_duration
 
     @property
-    def kWh_charged(self):
+    def kWh_charged(self):  # noqa: ANN201
         return self._kWh_charged
 
-    def execute(self):
+    def execute(self):  # noqa: ANN201
         """
         Execute charging tasks
         :param simpy_env: SimPy Environment
@@ -150,7 +150,7 @@ class ChargingTaskRidehailing(ServiceTask):
                         self._waiting_time = self._scheduled_time - self._env.now
                         if self._waiting_time > 0:
                             logging.debug(
-                                f"Vehicle {self._vehicle.id} waits {self._waiting_time} minutes for reserved slot.",
+                                f"Vehicle {self._vehicle.id} waits {self._waiting_time} minutes for reserved slot.",  # noqa: G004
                                 extra={"clazz": self.__class__.__name__},
                             )
                             self._state = TaskState.EXECUTING_WAITING
@@ -264,11 +264,11 @@ class ChargingTaskRidehailing(ServiceTask):
         # Notify all
         self._task_finished.succeed()
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"Charging Task for Vehicle {self._vehicle.id} from {self._origin} to {self._destination} (distance = {self._distance})"
 
-    def __repr__(self):
+    def __repr__(self):  # noqa: ANN204
         return self.__str__()
 
-    def get_charging_station(self):
+    def get_charging_station(self):  # noqa: ANN201
         pass
