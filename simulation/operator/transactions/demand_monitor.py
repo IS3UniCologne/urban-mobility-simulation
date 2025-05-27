@@ -1,7 +1,7 @@
 """
 Demand tracking for each region and vehicle type.
 
-Implements the DemandTracker class for tracking demand statistics.
+Implements the DemandMonitor class for tracking demand statistics.
 """
 
 from collections import defaultdict
@@ -23,7 +23,7 @@ class VehicleFlow(TypedDict):
 VehicleDemandByRegion = dict[RegionId, dict[str, VehicleFlow]]
 
 
-class DemandTracker(TransactionListener):
+class DemandMonitor(TransactionListener):
     """
     Tracks demand statistics for each region and vehicle type.
 

@@ -17,8 +17,8 @@ from simulation.operator.operations_management.service_tasks.multi_service_task 
 from simulation.operator.operations_management.service_tasks.relocation_task import (
     RelocationTask,
 )
-from simulation.operator.transactions import DemandTracker
-from simulation.operator.transactions.demand_tracker import VehicleDemandByRegion
+from simulation.operator.transactions import DemandMonitor
+from simulation.operator.transactions.demand_monitor import VehicleDemandByRegion
 
 
 class IntegratedSharedMobilityOperations(OperationsInterface):
@@ -331,7 +331,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         :return: Dict of potential relocations {"SharedCar": [(origin, destination, no, distance)], ..}
         """
         fleet_state = self.calculate_residual_supply(
-            self._operator_reference.fleet, self.operator.demand_tracker
+            self._operator_reference.fleet, self.operator.demand_monitor
         )
 
         relocation_plans = self.identify_potential_relocations(fleet_state)
@@ -348,7 +348,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         """
         # Get Current Fleet State
         state = self.calculate_residual_supply(
-            self._operator_reference.fleet, self._operator_reference.demand_tracker
+            self._operator_reference.fleet, self._operator_reference.demand_monitor
         )
 
         config = Configuration()
@@ -1048,7 +1048,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
 
     def calculate_residual_supply(
-        self, vehicle_fleet: MixedSharedVehicleFleet, demand_tracker: DemandTracker
+        self, vehicle_fleet: MixedSharedVehicleFleet, demand_monitor: DemandMonitor
     ) -> pd.DataFrame:
         """
         Calculate relocation strategy based on (expected) demand, supply and vehicles to be charged.
@@ -1057,8 +1057,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         ----------
         vehicle_fleet : MixedSharedVehicleFleet
             Mixed vehicle fleet object.
-        demand_tracker : DemandTracker
-            The demand tracker containing incremental demand statistics.
+        demand_monitor : DemandMonitor
+            The demand monitor containing incremental demand statistics.
 
         Returns
         -------
@@ -1078,7 +1078,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         df_low_soc.rename(columns={"index": "hex_id"}, inplace=True)
 
         # Get Expected Demand (Delta) per Hexagon
-        expected_demand = self.aggregate_delta_demand(demand_tracker)
+        expected_demand = self.aggregate_delta_demand(demand_monitor)
 
         # Merge Demand, Supply and Low SoC Vehicles
         fleet_state = expected_demand.merge(supply_df, how="outer", on="hex_id")
@@ -1103,7 +1103,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return fleet_state
 
-    def aggregate_delta_demand(self, demand_tracker: DemandTracker) -> pd.DataFrame:
+    def aggregate_delta_demand(self, demand_monitor: DemandMonitor) -> pd.DataFrame:
         """
         Compute net vehicle flow (vehicle surplus or excess demand) for each hexagon and vehicle type.
 
@@ -1115,8 +1115,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         Parameters
         ----------
-        demand_tracker : DemandTracker
-            Demand tracker containing cumulative demand statistics for each hexagon and vehicle type.
+        demand_monitor : DemandMonitor
+            Demand monitor containing cumulative demand statistics for each hexagon and vehicle type.
 
         Returns
         -------
@@ -1137,8 +1137,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         - A negative delta indicates excess demand (more departures or missed requests than arrivals).
         - A positive delta indicates a vehicle surplus (more arrivals than departures).
         """
-        vehicle_demand: VehicleDemandByRegion = demand_tracker.get_demand_data()
-        ordered_available_vehicle = demand_tracker.ordered_available_vehicles
+        vehicle_demand: VehicleDemandByRegion = demand_monitor.get_demand_data()
+        ordered_available_vehicle = demand_monitor.ordered_available_vehicles
 
         rows = []
         for hex_id in vehicle_demand.keys():
