@@ -1,7 +1,7 @@
 # urban-mobility-simulation
 
 [![ruff-fix.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml)
-[![integration-test.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/integration-test.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/integration-test.yml)
+[![ci.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml)
 
 We provide a simulation platform considering shared mobility (ride sharing, vehicle sharing) services along with infrastructure services (e.g., charging)
 
