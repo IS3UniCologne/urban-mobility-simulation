@@ -1,7 +1,7 @@
 import logging
 import random
 from collections import Counter
-from typing import Dict, List, Tuple, Union  # noqa: UP035
+from typing import Dict, List, Tuple  # noqa: UP035
 
 import pandas as pd
 from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
@@ -39,7 +39,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         super().__init__(env, start_condition, end_condition)
 
         # bids are a list of n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
-        self._bid_syntax = Dict[str, List[Tuple[int, Union[int, float], int]]]  # noqa: UP006
+        self._bid_syntax = Dict[str, List[Tuple[int, int | float, int]]]  # noqa: UP006
 
         # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
         self._result_syntax = Dict[int, Dict[str, Tuple[int, float]]]  # noqa: UP006
