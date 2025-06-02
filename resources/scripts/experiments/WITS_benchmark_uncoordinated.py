@@ -3,6 +3,8 @@
 import csv
 import logging
 import os
+import shutil
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -56,12 +58,27 @@ from tracking.tracking import Tracking
 # Custom module imports
 from utils import load_geodesic_environment
 
-# Change working directory to path of this file
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Load Configuration from TOML file.      #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# make a copy of the used config file that references this run
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+output_config_dir = os.path.normpath(os.path.join("data", "output", "configs"))
+if not os.path.exists(output_config_dir):
+    os.makedirs(output_config_dir)
+shutil.copy(sys.argv[1], os.path.join(output_config_dir, f"{output_timestamp}.toml"))
+
+# Change working directory to path of this script
+# TODO: why would we want to do that?
+# tests: bad idea
+# scripts? -> have to copy it out of here anyways
 # working_dir = Path(__file__).parent
 # os.chdir(working_dir)
 
-
-# Initialize Configuration Object
+# Initialize Configuration
 config = Configuration()
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -70,43 +87,51 @@ config = Configuration()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Log Level
-log_level = config.settings.LOG_LEVEL
-file_log_level = config.settings.FILE_LOG_LEVEL
+# Disable the default handler of the root logger
+logging.getLogger().handlers.clear()
+
+logger = logging.getLogger()
+# Set to logging.DEBUG to see all logs
+logger.setLevel(logging.DEBUG)
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
+logging.getLogger("docplex").setLevel(logging.WARNING)
 
-logger = logging.getLogger()
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+)
 
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+# Create a console handler with its own level (LOG_LEVEL)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(config.settings.LOG_LEVEL)
+console_handler.setFormatter(formatter)
+
 # Record the start time
 real_start_time = time.time()
 
-# Make it beautiful
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-    filename=f"data/output/logs/{output_timestamp}.log",
-    encoding="utf-8",
-    level=file_log_level,  # set it to lowest so the handlers can decide
-)
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
+# Create directory for logs if not exists
+if not os.path.exists(logs_dir):
+    os.makedirs(logs_dir)
+log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(formatter)
+file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
+
+
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+edf = ExtraDefaultFilter(filter_name="add_default_value")
+logger.addFilter(edf)
 
 # Add Custom Init Filters (which work without the ENV obj)
 cf = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf)
 
-consolehandler = logging.StreamHandler()
-consolehandler.setLevel(log_level)
-consolehandler.addFilter(cf)
-logger.addHandler(consolehandler)
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Basic Configuration                     #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
+# some hacking around bad coding
 
 if (
     config.mode_choice_model.MODE_CHOICE_STRATEGY
@@ -118,6 +143,7 @@ if (
 
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -139,6 +165,7 @@ logger.addFilter(edf)
 population_factory = PopulationFactory(
     config.population.RIDE_HAILING_POPULATION_PROBABILITIES
 )
+
 # Load Spatial Environment and the environment files
 load_geodesic_environment()
 
@@ -171,12 +198,12 @@ charging_infrastructure = ChargingInfrastructure(
 charging_stations_track = []
 
 
-def track_charging_stations():
+def track_charging_stations():  # noqa: ANN201
     while True:
         yield env.timeout(1)
         values = [
             {
-                "time": env._now,
+                "time": env._now,  # noqa: SLF001
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
                 "_plugs.queuesize": len(d["_plugs"].queue),
@@ -280,18 +307,18 @@ ride_hailing_fleet_1 = generate_AV_fleet(
 vehicles_track = []
 
 
-def track_fleets(fleet_id):
+def track_fleets(fleet_id):  # noqa: ANN001, ANN201
     # attention: this only works because we do not dynamically create and destroy vehicles like we do with users!
     tracked_list = tracking.list_tracked("RideHailingAV")
 
     while True:
         yield env.timeout(1)
         envtime, values = (
-            env._now,
+            env._now,  # noqa: SLF001
             {
                 "_fleet": fleet_id,
                 "_state": [
-                    tracking.get(x, "_state")[1]
+                    tracking.get(x, "state")[1]
                     for x in tracked_list
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
@@ -301,7 +328,7 @@ def track_fleets(fleet_id):
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_vdt": [
-                    tracking.get(x, "_vdt")[1]
+                    tracking.get(x, "_distance_travelled")[1]
                     for x in tracked_list
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
@@ -444,8 +471,8 @@ avg_infra_util = (
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-fleet_0_transactions = ridehailing_operator_0.get_transactions()
-fleet_1_transactions = ridehailing_operator_1.get_transactions()
+fleet_0_transactions = ridehailing_operator_0.transaction_df
+fleet_1_transactions = ridehailing_operator_1.transaction_df
 
 fleet_0_transactions.to_csv(
     f"data/output/transactions/{output_timestamp}_fleet_0_transactions.csv", index=False

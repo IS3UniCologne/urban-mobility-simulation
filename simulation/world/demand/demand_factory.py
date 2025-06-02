@@ -12,17 +12,36 @@ from simulation.world.world import World
 
 
 class DemandFactory:
+    __slots__ = (
+        "_config",
+        "_day_of_week_column",
+        "_demand_importer",
+        "_demand_profile",
+        "_destination_column",
+        "_env",
+        "_maximal_demand",
+        "_mode",
+        "_modifier_paths",
+        "_modifiers",
+        "_origin_column",
+        "_random",
+        "_rng",
+        "_spatial_units",
+        "_temporal_column",
+        "_time",
+        "_world",
+    )
     counter = 0
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
-        env,
-        demand_profile,
+        env,  # noqa: ANN001
+        demand_profile,  # noqa: ANN001
         demand_importer: DemandImporter,
         world: World,
-        modifiers,
-        mode,
-        maximal_demand=3_000_000,
+        modifiers,  # noqa: ANN001
+        mode,  # noqa: ANN001
+        maximal_demand=3_000_000,  # noqa: ANN001
     ):
         self._env = env
         self._time = SimulationTime(env)
@@ -31,9 +50,9 @@ class DemandFactory:
         self._world = world
         self._mode = mode
 
-        origin, destination = demand_importer._get_spatial_column()
-        temporal = demand_importer._get_temporal_column()
-        day_of_week_column = demand_importer._get_day_of_week_column()
+        origin, destination = demand_importer._get_spatial_column()  # noqa: SLF001
+        temporal = demand_importer._get_temporal_column()  # noqa: SLF001
+        day_of_week_column = demand_importer._get_day_of_week_column()  # noqa: SLF001
 
         self._origin_column = origin
         self._destination_column = destination
@@ -55,7 +74,7 @@ class DemandFactory:
 
         self._load_modifiers()
 
-    def _register_modifier(self, geomodifier):
+    def _register_modifier(self, geomodifier):  # noqa: ANN001, ANN202
         multiplier = geomodifier["properties"]["demandMultiplier"]
         hex_ids = h3.polyfill(
             geomodifier["geometry"],
@@ -65,17 +84,17 @@ class DemandFactory:
 
         self._modifiers.update({x: multiplier for x in hex_ids})
 
-    def _load_modifiers(self):
+    def _load_modifiers(self):  # noqa: ANN202
         """
         Loads and registers per-hexagon demand modifiers (floating number multiplier) from GeoJSON
         """
         for modifier in self._modifier_paths:
             try:
-                with open(modifier, "r") as f:
+                with open(modifier) as f:
                     geo = json.load(f)
             except FileNotFoundError:
                 logging.warning(
-                    f'Demand modifier at "{modifier}" doesn\'t exist, skipping.'
+                    f'Demand modifier at "{modifier}" doesn\'t exist, skipping.'  # noqa: G004
                 )
                 continue
 
@@ -87,7 +106,7 @@ class DemandFactory:
             else:
                 self._register_modifier(geo)
 
-    def generate_demand(self):
+    def generate_demand(self):  # noqa: ANN201
         """
         Invokes for each spatial unit a dedicated process which generates demand
         """
@@ -100,7 +119,7 @@ class DemandFactory:
 
         yield spawned.succeed()
 
-    def spawn_demand_process(self, spatial_unit):
+    def spawn_demand_process(self, spatial_unit):  # noqa: ANN001, ANN201
         """
         Spawn a demand generator on given spatial unit.
         :param spatial_unit: Identifier of the spatial unit (e.g., hex id)
@@ -118,7 +137,7 @@ class DemandFactory:
                 # Transform current time to temporal buckets as defined in the demand profile
                 time_bucket = SimulationTimeConverter.convert_to_temporal_bucket(
                     self._time.now(),
-                    self._demand_importer._get_temporal_duration_in_hours(),
+                    self._demand_importer._get_temporal_duration_in_hours(),  # noqa: SLF001
                 )
                 non_working_day = SimulationTimeConverter.convert_to_day_of_week_bucket(
                     self._time.now()
@@ -134,7 +153,7 @@ class DemandFactory:
                 ]
                 if demand_slice.shape[0] == 0:
                     logging.debug(
-                        f"Hex: {spatial_unit}  Time: {time_bucket}  Date:{non_working_day}  Env Time: {self._time.now()}",
+                        f"Hex: {spatial_unit}  Time: {time_bucket}  Date:{non_working_day}  Env Time: {self._time.now()}",  # noqa: G004
                         extra={"clazz": self.__class__.__name__},
                     )
                     # no lambda for given demand slice means there were no arrivals in the sample (lambda was zero)
@@ -157,7 +176,7 @@ class DemandFactory:
                 if poisson_lambda == 0:
                     # lambda is zero, waiting until next timebucket is reached
                     bucket_in_minutes = (
-                        self._demand_importer._get_temporal_duration_in_hours() * 60
+                        self._demand_importer._get_temporal_duration_in_hours() * 60  # noqa: SLF001
                     )
                     time_to_next_bucket = bucket_in_minutes - (
                         self._time.now() % bucket_in_minutes
@@ -168,7 +187,7 @@ class DemandFactory:
                     try:
                         if self._modifiers[spatial_unit] == 0:
                             logging.debug(
-                                f"Spatial unit {spatial_unit} is removed from demand generation process"
+                                f"Spatial unit {spatial_unit} is removed from demand generation process"  # noqa: G004
                             )
                             break
 
@@ -178,14 +197,14 @@ class DemandFactory:
                             self._rng.exponential(
                                 1.0 / poisson_lambda / self._modifiers[spatial_unit]
                             )
-                            * self._demand_importer._get_temporal_duration_in_hours()
+                            * self._demand_importer._get_temporal_duration_in_hours()  # noqa: SLF001
                             * 60
                         )
                     except KeyError:
                         # no modifier is registered for that spatial unit
                         inter_arrival_time = (
                             self._rng.exponential(1.0 / poisson_lambda)
-                            * self._demand_importer._get_temporal_duration_in_hours()
+                            * self._demand_importer._get_temporal_duration_in_hours()  # noqa: SLF001
                             * 60
                         )
 
@@ -207,7 +226,7 @@ class DemandFactory:
                     # Append Arrival to World
                     # create agent or similar consumers
                     logging.debug(
-                        f"Demand generated from hexagon {spatial_unit} to {destination}. Fleet {fleet}",
+                        f"Demand generated from hexagon {spatial_unit} to {destination}. Fleet {fleet}",  # noqa: G004
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
 
@@ -218,7 +237,7 @@ class DemandFactory:
             except simpy.Interrupt:
                 break
 
-    def reset(self):
+    def reset(self):  # noqa: ANN201
         # Terminate all ongoing demand processes
         self._world.stop_all_processes()
 

@@ -41,7 +41,7 @@ class RandomManager(metaclass=Singleton):
         self._main_rng = None
         self._fixed_seed_components = None
         self._component_rngs = {}
-        self.reset_rng()
+        self.reset_all_rng()
 
     def reset_fixed_seed_components(self) -> None:
         """Reset the fixed seed components' generators to their initial state."""
@@ -60,7 +60,7 @@ class RandomManager(metaclass=Singleton):
                 component, self._fixed_seed_components[component]
             )
 
-    def reset_rng(self) -> None:
+    def reset_all_rng(self) -> None:
         """Resets all random number generators to their inital state (same as restarting the simulation)."""
         self._main_seed = None
         self._main_rng = None
@@ -83,11 +83,11 @@ class RandomManager(metaclass=Singleton):
         random.seed(main_seed)
 
         logging.info(
-            f"Random seed set to {main_seed}",
+            f"Random seed set to {main_seed}",  # noqa: G004
             extra={"clazz": "RandomManager", "oid": ""},
         )
 
-    def get_rng(self, component_name: str = None) -> Generator:
+    def get_rng(self, component_name: str = None) -> Generator:  # noqa: RUF013
         """
         Get a random number generator for a specific component.
         If no component name is provided, returns the main RNG.
@@ -105,7 +105,9 @@ class RandomManager(metaclass=Singleton):
         return self._component_rngs[component_name]
 
     def _create_component_rng(
-        self, component_name: str, component_seed: int = None
+        self,
+        component_name: str,
+        component_seed: int = None,  # noqa: RUF013
     ) -> None:
         """Create a new random number generator for a specific component."""
         if component_seed is None:
@@ -114,7 +116,7 @@ class RandomManager(metaclass=Singleton):
             PCG64(component_seed)
         )
         logging.info(
-            f"New RNG created for component {component_name} with seed {component_seed} ",
+            f"New RNG created for component {component_name} with seed {component_seed} ",  # noqa: G004
             extra={"clazz": "RandomManager", "oid": ""},
         )
         return

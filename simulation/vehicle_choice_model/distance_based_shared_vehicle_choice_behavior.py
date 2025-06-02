@@ -7,23 +7,25 @@ from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
 
 
 class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInterface):
-    def __init__(self, path_to_choice_model, substitution_boundary, available_vehicles):
+    __slots__ = (
+        "_available_vehicles",
+        "_choice_model",
+        "_class_mapping",
+        "_substitution_boundary",
+    )
+
+    def __init__(self, path_to_choice_model, substitution_boundary, available_vehicles):  # noqa: ANN001, ANN204
         # Load Choice Model
         self._choice_model = load_pickle(path_to_choice_model)
 
         self._substitution_boundary = substitution_boundary
 
         # derived order through: sm.MNLogit(Y, X)._ynames_map
-        self._class_mapping = {
-            0: "SharedBike",
-            1: "SharedCar",
-            2: "SharedKickScooter",
-            3: "SharedScooter",
-        }
+        self._class_mapping = {0: "Bike", 1: "Car", 2: "KickScooter", 3: "Scooter"}
 
         self._available_vehicles = available_vehicles
 
-    def choose_vehicle(self, trip_characteristics: TripCharacteristics):
+    def choose_vehicle(self, trip_characteristics: TripCharacteristics):  # noqa: ANN201
         # Predict single outcome (1, distance) (1 = constant)
         # (Car, Kick Scooter, Scooter)
         # (p_car, p_ks, p_scooter)
@@ -32,7 +34,7 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
             (1, trip_characteristics.distance)
         )
         choice_probabilities = choice_probabilities.reshape(
-            (-1)
+            -1
         )  # Transform 2D array to 1D array
         result = {}
 

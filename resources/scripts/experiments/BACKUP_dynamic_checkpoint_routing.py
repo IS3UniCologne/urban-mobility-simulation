@@ -224,7 +224,7 @@ logging.getLogger("fiona").setLevel(logging.WARNING)
 cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
 logger.addFilter(cf_init)
 
-logging.debug(f"Tensorboard logdir: {logdir}")
+logging.debug(f"Tensorboard logdir: {logdir}")  # noqa: G004
 
 # 1. Initialize Simulation and simpy Environment
 # # # # # # # # # # # # # # # # # # # # # #
@@ -272,7 +272,7 @@ timetable = Timetable(transit_timetable_path)
 timetable.import_timetable()
 
 
-def run_simulation(start_time: int, end_time: int, seed=4711):
+def run_simulation(start_time: int, end_time: int, seed=4711):  # noqa: ANN001, ANN201
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
     # Setup Simulation Environment.           #
@@ -413,7 +413,8 @@ episodes = []
 
 for e in tqdm(range(DQN_config.episodes)):
     logging.debug(
-        f"Starting Episode {DQN_config.episode}", extra={"clazz": "Main Routine"}
+        f"Starting Episode {DQN_config.episode}",  # noqa: G004
+        extra={"clazz": "Main Routine"},
     )
 
     if (
@@ -430,7 +431,7 @@ for e in tqdm(range(DQN_config.episodes)):
         {
             "episode": DQN_config.episode,
             "evaluation": DQN_config.evaluation,
-            "return": dynamic_checkpoint_routing_config.learning_agent._cumulative_reward,
+            "return": dynamic_checkpoint_routing_config.learning_agent._cumulative_reward,  # noqa: SLF001
             "service_level": service_level,
             "reached_destination": reached_destination,
             "distance": distance,
@@ -450,11 +451,11 @@ for e in tqdm(range(DQN_config.episodes)):
 episodes = pd.DataFrame.from_records(episodes)
 episodes = episodes.set_index("episode")
 
-print(episodes.tail(20))
+print(episodes.tail(20))  # noqa: T201
 episodes.to_csv(f"./data/output/returns/{logtime}.csv")
-logging.info(f"Tensorboard logdir: {logdir}", extra={"clazz": "Main Routine"})
+logging.info(f"Tensorboard logdir: {logdir}", extra={"clazz": "Main Routine"})  # noqa: G004
 logging.info(
-    f"Episode Returns: {f'./data/output/returns/{logtime}.csv'}",
+    f"Episode Returns: {f'./data/output/returns/{logtime}.csv'}",  # noqa: G004
     extra={"clazz": "Main Routine"},
 )
 

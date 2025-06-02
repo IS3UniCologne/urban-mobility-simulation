@@ -7,7 +7,7 @@ import pandas as pd
 from main import run_single_simulation
 
 
-def fitness_function(generation, experience):
+def fitness_function(generation, experience):  # noqa: ANN001, ANN201
     objectives = []
     for i in generation:
         value = experience.loc[
@@ -32,7 +32,7 @@ def fitness_function(generation, experience):
         else:
             objective = value
         objectives.append(objective)
-        print(objectives)
+        print(objectives)  # noqa: T201
     return objectives, experience
 
 
@@ -81,20 +81,20 @@ if first_generation == "from_experience":
         new_experience[4] = "None"
         experience = experience.append(new_experience)
 
-print(new_population)
+print(new_population)  # noqa: T201
 
 best_outputs = []
 num_generations = 100
 
 for generation in range(num_generations):
-    print("Generation : ", generation)
+    print("Generation : ", generation)  # noqa: T201
     # Measuring the fitness of each chromosome in the population.
     output = fitness_function(new_population, experience)
     fitness = output[0]
     experience = output[1]
-    print("Fitness")
-    print(fitness)
-    print(experience)
+    print("Fitness")  # noqa: T201
+    print(fitness)  # noqa: T201
+    print(experience)  # noqa: T201
 
     # best_outputs.append(numpy.max(numpy.sum(new_population * equation_inputs, axis=1)))
     # # The best result in the current iteration.
@@ -102,8 +102,8 @@ for generation in range(num_generations):
 
     # Selecting the best parents in the population for mating.
     parents = ga.select_mating_pool(new_population, fitness, num_parents_mating)
-    print("Parents")
-    print(parents)
+    print("Parents")  # noqa: T201
+    print(parents)  # noqa: T201
 
     # Generating next generation using crossover.
     offspring_crossover = ga.crossover(
@@ -111,8 +111,8 @@ for generation in range(num_generations):
     )
     if approximation == "hundreds":
         offspring_crossover = numpy.round(offspring_crossover / 10) * 10
-    print("Crossover")
-    print(offspring_crossover)
+    print("Crossover")  # noqa: T201
+    print(offspring_crossover)  # noqa: T201
 
     # Adding some variations to the offspring using mutation.
     offspring_mutation = ga.mutation(
@@ -121,8 +121,8 @@ for generation in range(num_generations):
         mutation_rate=max(0.5, (0.8 - generation * 0.01)),
     )
 
-    print("Mutation")
-    print(offspring_mutation)
+    print("Mutation")  # noqa: T201
+    print(offspring_mutation)  # noqa: T201
 
     # Creating the new population based on the parents and offspring.
     new_population[0 : parents.shape[0], :] = parents
@@ -138,7 +138,7 @@ fitness = fitness_function(new_population)
 # Then return the index of that solution corresponding to the best fitness.
 best_match_idx = numpy.where(fitness == numpy.max(fitness))
 
-print("Best solution : ", new_population[best_match_idx, :])
+print("Best solution : ", new_population[best_match_idx, :])  # noqa: T201
 # print("Best solution fitness : ", fitness[best_match_idx])
 
 matplotlib.pyplot.plot(best_outputs)

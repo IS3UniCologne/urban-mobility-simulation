@@ -10,12 +10,24 @@ from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproxima
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.vehicle.public_transit_bus import PublicTransitVehicleState
+from simulation.helper.configuration.enums import VehicleState
 
 
 class EpisodicSemiGradientNStepSarsa(RLAgent):
-    def __init__(self, env: simpy.Environment, q_hat: ValueFunctionApproximator):
-        super(EpisodicSemiGradientNStepSarsa, self).__init__(env)
+    __slots__ = (
+        "_G",
+        "_actions",
+        "_alpha",
+        "_eps",
+        "_gamma",
+        "_n",
+        "_q_hat",
+        "_rewards",
+        "_states",
+    )
+
+    def __init__(self, env: simpy.Environment, q_hat: ValueFunctionApproximator):  # noqa: ANN204
+        super(EpisodicSemiGradientNStepSarsa, self).__init__(env)  # noqa: UP008
 
         # Configuration
         self._alpha = self._config.transit_agent_config.alpha
@@ -34,8 +46,8 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
         # n-step return
         self._G = 0
 
-    def run(self, bus):
-        s0 = deepcopy(bus._env_state)
+    def run(self, bus):  # noqa: ANN001, ANN201
+        s0 = deepcopy(bus._env_state)  # noqa: SLF001
         self._states.append(s0)
         self._decide_next_action(bus, s0)
 
@@ -45,11 +57,13 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
 
         while True:
             if t < T:
-                self._env.process(bus._update_reward(self._states[t]))  # S_t
+                self._env.process(
+                    bus._update_reward(self._states[t])  # noqa: SLF001
+                )  # S_t
                 yield self._env.process(self._take_action(bus, self._actions[t]))  # A_t
                 self._rewards.append(self._reward)  # R_t+1
-                self._states.append(deepcopy(bus._env_state))  # S_t+1
-                if bus.state is PublicTransitVehicleState.AT_TERMINAL_DESTINATION:
+                self._states.append(deepcopy(bus._env_state))  # S_t+1  # noqa: SLF001
+                if bus.state is VehicleState.AT_TERMINAL_DESTINATION:
                     T = t + 1
                 else:
                     self._decide_next_action(bus, self._states[t + 1])  # A_t+1
@@ -77,7 +91,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
             if tau == T - 1:
                 break
 
-    def _decide_next_action(self, bus, state):
+    def _decide_next_action(self, bus, state):  # noqa: ANN001, ANN202
         while True:
             a = Policy.decide(self._vectorize_state(state), self._q_hat, self._eps)
             try:
@@ -85,20 +99,20 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
             except NotImplementedError:
                 # hexagon is out of layer bounding box - action is forbidden
                 logging.debug(
-                    f"Action {a} is forbidden, sampling again",
+                    f"Action {a} is forbidden, sampling again",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": bus.id},
                 )
                 continue
             break
 
         logging.debug(
-            f"Bus takes action {a}",
+            f"Bus takes action {a}",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": bus.id},
         )
 
         self._actions.append(a)
 
-    def _take_action(self, bus, action=None):
+    def _take_action(self, bus, action=None):  # noqa: ANN001, ANN202
         """
         Actions in hexagonal grid, stay is also allowed.
 
@@ -117,28 +131,28 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
                 *bus.position.getExactLocation(),
                 resolution=self._config.transit_agent_config.action_resolution,
             )
-            new_hex = bus._geodesic_env.move_in_layer(hex_id, action)
-            new_centroid = bus._geodesic_env.get_centroid(
+            new_hex = bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
+            new_centroid = bus._geodesic_env.get_centroid(  # noqa: SLF001
                 new_hex, f"hex_{self._config.transit_agent_config.action_resolution}"
             )
 
             new_position = GeodesicPosition(*new_centroid)
 
             distance = bus.position >> new_position
-            duration = distance / bus._velocity  # in minutes
+            duration = distance / bus._velocity  # in minutes  # noqa: SLF001
 
-            self._state = PublicTransitVehicleState.EN_ROUTE_DETOUR
+            self._state = VehicleState.EN_ROUTE_DETOUR
 
             yield self._env.timeout(duration)
 
-            bus._update_positions(new_position)
+            bus._update_positions(new_position)  # noqa: SLF001
 
-        bus._action_taken.succeed(action)
-        bus._action_taken = self._env.event()
+        bus._action_taken.succeed(action)  # noqa: SLF001
+        bus._action_taken = self._env.event()  # noqa: SLF001
 
         return action
 
-    def _update_policy(self, s, a):
+    def _update_policy(self, s, a):  # noqa: ANN001, ANN202
         # update weights based on semi gradient n-step sarsa
 
         self._q_hat.weights = self._q_hat.weights + self._alpha * (
@@ -146,7 +160,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
         ) * self._q_hat.evaluate_gradient(s, a)
 
     @staticmethod
-    def reward_state(state, terminal=False):
+    def reward_state(state, terminal=False):  # noqa: ANN001, ANN205
         """
 
         This function maps bus states to rewards.
@@ -166,5 +180,5 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
             return -distance
 
     @staticmethod
-    def _vectorize_state(state):
+    def _vectorize_state(state):  # noqa: ANN001, ANN205
         return np.array([state["d_terminal"][0], state["d_terminal"][1]])

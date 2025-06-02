@@ -6,7 +6,7 @@ import pandas as pd
 from docplex.mp.model import Model
 
 
-def planning():
+def planning():  # noqa: ANN201
     start_time = datetime.now()
     random.seed(2)
     mdl = Model("Charging-cluster_Management")
@@ -140,39 +140,39 @@ def planning():
     )
     Costs = mdl.sum(y_1[i] * 29.86 + y_2[i] * 7.66 for i in space_range)
     mdl.maximize(Revenue - Costs)
-    print("Start_time: {}".format(start_time))
+    print(f"Start_time: {start_time}")  # noqa: T201
     mdl.print_information()
     assert mdl.solve()
     mdl.report()
 
     for t in time_range:
-        print(
+        print(  # noqa: T201
             f"S_1_{t} = {mdl.sum(s_1[i, t, e] for e in energy_range for i in space_range).solution_value}"
         )
-        print(
+        print(  # noqa: T201
             f"S_2_{t} = {mdl.sum(s_2[i, t, e] for e in energy_range for i in space_range).solution_value}"
         )
     for i in space_range:
         if y_1[i].solution_value != 0:
-            print(f"y_1_{i} = {y_1[i].solution_value}")
+            print(f"y_1_{i} = {y_1[i].solution_value}")  # noqa: T201
         if y_2[i].solution_value != 0:
-            print(f"y_2_{i} = {y_2[i].solution_value}")
+            print(f"y_2_{i} = {y_2[i].solution_value}")  # noqa: T201
         for t in time_range:
             for e in energy_range:
                 if s_1[i, t, e].solution_value != 0:
-                    print(f"S_1_{i, t, e} = {s_1[i, t, e].solution_value}")
+                    print(f"S_1_{i, t, e} = {s_1[i, t, e].solution_value}")  # noqa: T201
 
                 if s_2[i, t, e].solution_value != 0:
-                    print(f"S_2_{i, t, e} = {s_2[i, t, e].solution_value}")
+                    print(f"S_2_{i, t, e} = {s_2[i, t, e].solution_value}")  # noqa: T201
                 for j in space_range:
                     if x_1[i, j, t, e].solution_value != 0:
-                        print(f"x_1_{i, j, t, e} = {x_1[i, j, t, e].solution_value}")
+                        print(f"x_1_{i, j, t, e} = {x_1[i, j, t, e].solution_value}")  # noqa: T201
                     if x_2[i, j, t, e].solution_value != 0:
-                        print(f"x_2_{i, j, t, e} = {x_2[i, j, t, e].solution_value}")
-    print(
+                        print(f"x_2_{i, j, t, e} = {x_2[i, j, t, e].solution_value}")  # noqa: T201
+    print(  # noqa: T201
         f"x_{1} = {mdl.sum(x_1[i, j, t, e] for i in space_range for j in space_range for t in time_range for e in energy_range).solution_value}"
     )
-    print(
+    print(  # noqa: T201
         f"x_{2} = {mdl.sum(x_2[i, j, t, e] for i in space_range for j in space_range for t in time_range for e in energy_range).solution_value}"
     )
     """for i in space_range:

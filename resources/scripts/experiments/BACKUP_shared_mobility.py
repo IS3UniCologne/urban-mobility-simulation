@@ -220,7 +220,7 @@ logger.addFilter(cf_init)
 # # # # # # # # # # # # # # # # # # # # # #
 
 
-def load_environment():
+def load_environment():  # noqa: ANN201
     # Read Environment Files
     filename = bounding_box_path
     with open(filename) as file:
@@ -282,17 +282,17 @@ dmi = DistanceMatrixImporter(
 distance_matrix = dmi.load_distance_matrix()
 
 
-def run_single_simulation(
-    start_time=0,
-    end_time=20,
-    n_bikes=0,
-    n_cars=0,
-    n_scooter=0,
-    n_kick_scooter=0,
-    seed=42,
-    substitution=0.1,
-    price_sensitive_pop_prob=0.0,
-    returnDataFrame=False,
+def run_single_simulation(  # noqa: ANN201
+    start_time=0,  # noqa: ANN001
+    end_time=20,  # noqa: ANN001
+    n_bikes=0,  # noqa: ANN001
+    n_cars=0,  # noqa: ANN001
+    n_scooter=0,  # noqa: ANN001
+    n_kick_scooter=0,  # noqa: ANN001
+    seed=42,  # noqa: ANN001
+    substitution=0.1,  # noqa: ANN001
+    price_sensitive_pop_prob=0.0,  # noqa: ANN001
+    returnDataFrame=False,  # noqa: ANN001
 ):
     """
     :param start_time:
@@ -480,7 +480,7 @@ def run_single_simulation(
     # print("Total Missed Revenue: " + str(payment_engine.total_missed_revenue))
 
     no_vehicles_to_be_charged = len(
-        mixed_fleet.get_all_vehicles_below_soc_level(
+        mixed_fleet.vehicles_below_soc_threshold(
             global_config.shared_vehicle_operator_config.recharge_threshold
         )
     )
@@ -492,7 +492,7 @@ def run_single_simulation(
         operator.total_revenue - total_cost_per_day - operator.total_missed_revenue
     )
     # print("Objective Function:" + str(func_objective))
-    transactions = operator.get_transactions()
+    transactions = operator.transaction_df
 
     if store_results:
         transactions.to_csv(Path(output_folder, transaction_file), index=False)
@@ -547,7 +547,7 @@ def run_single_simulation(
                 )
                 .reset_index(drop=True)
             )
-            rentals = rentals.add_prefix("{}_".format(mode))
+            rentals = rentals.add_prefix(f"{mode}_")
             overall_rentals = pd.concat([overall_rentals, rentals], axis=1)
 
             # Prepare KPI per Mode (Distance, Duration, Revenue)
@@ -555,7 +555,7 @@ def run_single_simulation(
             kpi_for_mode.rename(
                 columns={"price": "revenue"}, inplace=True
             )  # to avoid future confusion
-            kpi_for_mode = kpi_for_mode.add_prefix("{}_".format(mode))
+            kpi_for_mode = kpi_for_mode.add_prefix(f"{mode}_")
             overall_rentals = pd.concat([overall_rentals, kpi_for_mode], axis=1)
 
         return overall_rentals
@@ -627,4 +627,4 @@ result = run_single_simulation(
 #     # After each seed save
 #     all_simulations.to_csv("all_simulation_results.csv")
 
-print("FINISHED")
+print("FINISHED")  # noqa: T201

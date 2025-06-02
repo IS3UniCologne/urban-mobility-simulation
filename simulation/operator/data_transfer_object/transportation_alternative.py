@@ -1,59 +1,45 @@
+"""
+Data transfer object for transportation alternatives.
+
+Represents a potential trip option with estimated properties.
+"""
+
+from dataclasses import dataclass
+
 from simulation.infrastructure.route import Route
 from simulation.vehicle.vehicle import Vehicle
 
 
+@dataclass(frozen=True, slots=True)
 class TransportationAlternative:
-    def __init__(
-        self, vehicle: Vehicle, route: Route, price, duration, distance, convenience
-    ):
-        self._vehicle = vehicle
-        self._price = price
-        self._duration = duration
-        self._distance = distance
-        self._route = route
-        self._convenience = convenience  # the ranking (the lower, the better)
+    """
+    Represents a potential transportation alternative.
 
-        self._energy_consumed = 0.0  # Is set after successful trip
-        self._waiting_time = 0
+    Parameters
+    ----------
+    vehicle : Vehicle
+        The vehicle associated with this alternative.
+    route : Route
+        The route for this alternative.
+    price : float
+        The price of the trip.
+    duration : float
+        The estimated duration of the trip.
+    distance : float
+        The estimated distance of the trip.
+    convenience : float
+        The convenience score (lower is better).
+    """
 
-    @property
-    def vehicle(self):
-        return self._vehicle
-
-    @property
-    def price(self):
-        return self._price
-
-    @property
-    def duration(self):
-        return self._duration
-
-    @property
-    def distance(self):
-        return self._distance
-
-    @property
-    def route(self):
-        return self._route
-
-    @property
-    def convenience(self):
-        return self._convenience
-
-    @property
-    def waiting_time(self):
-        return self._waiting_time
-
-    # Perhaps it makes sense to encapsulate TransportationAlternative
-    #  around a "SuccessfulTrip" where we store this object along with
-    #  variables pertaining the to trip (as energy consumed, (real) travelled distance)
-    @property
-    def energy_consumed(self):
-        return self._energy_consumed
-
-    def set_energy_consumed(self, energy_consumption):
-        # energy_consumption: in kWh
-        self._energy_consumed = energy_consumption
+    vehicle: Vehicle
+    route: Route
+    price: float
+    duration: float
+    distance: float
+    convenience: float
 
     def __str__(self) -> str:
-        return f"Vehicle {self._vehicle}, Price {self._price}, Duration {self._duration}, Distance {self._distance}, Convenience {self._convenience}"
+        return (
+            f"Vehicle {self.vehicle}, Price {self.price}, Duration {self.duration}, "
+            f"Distance {self.distance}, Convenience {self.convenience}"
+        )

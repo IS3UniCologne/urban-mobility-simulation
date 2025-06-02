@@ -12,8 +12,8 @@ from learning.spaces.action_space import BadAction, ForbiddenAction
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.time import SimulationTimeConverter
-from simulation.vehicle.public_transit_vehicle import PublicTransitVehicleState
 from simulation.world.world import World
 from tracking.tracking import Tracking
 
@@ -33,8 +33,8 @@ class DynamicBusCheckpointProblem(LearningInterface):
     version 0.1
     """
 
-    def __init__(self, env: Environment):
-        super(DynamicBusCheckpointProblem, self).__init__(env)
+    def __init__(self, env: Environment):  # noqa: ANN204
+        super(DynamicBusCheckpointProblem, self).__init__(env)  # noqa: UP008
 
         self._config = Configuration()
         self._problem_config = self._config.dynamic_checkpoint_routing_config
@@ -76,7 +76,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # TODO: should the problem define the state space? Or should a StateSpace handle this?
         self._state_size_flattened = None
 
-    def problem_init(self):
+    def problem_init(self):  # noqa: ANN201
         # parse or create corridor
         if self._problem_config.corridor is None:
             self._corridor = self._geodesic_env.corridor(
@@ -87,7 +87,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         elif isinstance(self._problem_config.corridor, set):
             self._corridor = self._problem_config.corridor
         else:
-            with open(self._problem_config.corridor, "r") as f:
+            with open(self._problem_config.corridor) as f:
                 # also assign the parsed corridor back to the config for other reads of it
                 self._corridor = self._problem_config.corridor = ast.literal_eval(
                     f.read()
@@ -101,7 +101,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
             )
         else:
             # also include the terminal destination stop id
-            self._checkpoints = self._problem_config.checkpoints + [
+            self._checkpoints = self._problem_config.checkpoints + [  # noqa: RUF005
                 self.bus.route.destination.stop_id
             ]
 
@@ -141,7 +141,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # let learning agent know
         self._initialized.succeed()
 
-    def state(self):
+    def state(self):  # noqa: ANN201
         """
         We need:
         - Pick-up demands, aggregates per corridor cell
@@ -172,7 +172,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
                 x[self._corridor_dim + start] += 1
             except ValueError as e:
                 logging.debug(
-                    f"Bus update state: Encountered demand at edge of hexagon: {e}",
+                    f"Bus update state: Encountered demand at edge of hexagon: {e}",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 # for now we are skipping it. I don't see a good way to solve the geometry inconsistency
@@ -190,7 +190,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
             x[2 * self._corridor_dim + i] = 1 if c >= self._next_checkpoint else 0
             x[2 * self._corridor_dim + self._checkpoint_dim + i] = self._timelimits[
                 i
-            ] - (self.env.now - self.bus._spawned)
+            ] - (self.env.now - self.bus._spawned)  # noqa: SLF001
 
         # scale timelimits to [-1,1] but keep sign ([-1,1] only possible if min = max)
         # TODO: is this a good scaling method?
@@ -202,7 +202,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         return x
         # return np.zeros(self._state_size_flattened, dtype=int)
 
-    def reset(self):
+    def reset(self):  # noqa: ANN201
         # not a reset function, strictly speaking as would be with a gym environment
         # rather this halts the simulation such that a new run can be started from the outer routine
         self._world.stop_all_processes()  # this stops demand generation and deregisters users
@@ -210,17 +210,15 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # retain cache
         self._problem_config.alignment_cache = self._demands_in_corridor_cache
 
-    def _check_terminal(self):
+    def _check_terminal(self):  # noqa: ANN202
         self.reached_destination = (
-            True
-            if self.bus.state is PublicTransitVehicleState.AT_TERMINAL_DESTINATION
-            else False
+            True if self.bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
         )
         self._reached_timelimit = (
-            True if self.env.now - self.bus._spawned > self._timelimits[-1] else False
+            True if self.env.now - self.bus._spawned > self._timelimits[-1] else False  # noqa: SLF001
         )
 
-        remaining_time = self._timelimits[-1] - (self.env.now - self.bus._spawned)
+        remaining_time = self._timelimits[-1] - (self.env.now - self.bus._spawned)  # noqa: SLF001
         # the minimum time to destination is a "straight" h3 line times edge length (-1) divided by speed
         time_to_destination = (
             (
@@ -233,7 +231,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
                 - 1
             )
             * h3.edge_length(self._action_res, unit="m")
-            / self.bus._velocity
+            / self.bus._velocity  # noqa: SLF001
         )
         self._unreachable_destination = (
             True if remaining_time < time_to_destination else False
@@ -250,16 +248,16 @@ class DynamicBusCheckpointProblem(LearningInterface):
         else:
             return False
 
-    def _get_reward(self):
+    def _get_reward(self):  # noqa: ANN202
         self._check_terminal()
 
         # reward is service level (1 pick-up = +1 reward)
-        reward = self.bus._pickups * self._problem_config.reward
+        reward = self.bus._pickups * self._problem_config.reward  # noqa: SLF001
 
         if reward > 0:
             logging.debug(
-                f"Service Level was increased by {str(reward)}",
-                extra={"clazz": self.__class__.__name__, "oid": self.bus._id},
+                f"Service Level was increased by {reward!s}",  # noqa: G004
+                extra={"clazz": self.__class__.__name__, "oid": self.bus._id},  # noqa: SLF001
             )
 
         if self._unreachable_destination:
@@ -285,7 +283,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
                 0,
                 (
                     self._timelimits[self._checkpoints.index(self._next_checkpoint)]
-                    - (self.env.now - self.bus._spawned)
+                    - (self.env.now - self.bus._spawned)  # noqa: SLF001
                 ),
             )
             * self._problem_config.penalty_checkpoints
@@ -294,12 +292,12 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # TODO: penalize non-dropped of passengers?
 
         # reset drop offs and pickups
-        self.bus._dropoffs = 0
-        self.bus._pickups = 0
+        self.bus._dropoffs = 0  # noqa: SLF001
+        self.bus._pickups = 0  # noqa: SLF001
 
         return np.float32(reward)  # for tensors later on
 
-    def _take_action(self, action):
+    def _take_action(self, action):  # noqa: ANN001, ANN202
         """
         Actions in hexagonal grid
 
@@ -313,44 +311,46 @@ class DynamicBusCheckpointProblem(LearningInterface):
         hex_id = h3.geo_to_h3(
             *self.bus.position.getExactLocation(), resolution=self._action_res
         )
-        new_hex = self.bus._geodesic_env.move_in_layer(hex_id, action)
-        new_centroid = self.bus._geodesic_env.get_centroid(
+        new_hex = self.bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
+        new_centroid = self.bus._geodesic_env.get_centroid(  # noqa: SLF001
             new_hex, f"hex_{self._action_res}"
         )
 
         new_position = GeodesicPosition(*new_centroid)
 
         distance = self.bus.position >> new_position
-        self.bus._dist_traveled += distance  # add to overall travel distance
-        duration = distance / self.bus._velocity  # in minutes
+        self.bus._dist_traveled += (  # noqa: SLF001
+            distance  # add to overall travel distance
+        )
+        duration = distance / self.bus._velocity  # in minutes  # noqa: SLF001
 
-        self._state = PublicTransitVehicleState.EN_ROUTE_DETOUR
+        self._state = VehicleState.EN_ROUTE_DETOUR
 
         yield self.env.timeout(duration)
 
         self.distance += distance
         self.duration += duration
 
-        self.bus._update_positions(new_position)
+        self.bus._update_positions(new_position)  # noqa: SLF001
 
         # region_id, _ = new_position.get_hexagon(self._action_res)
 
         if new_hex == self.bus.route.destination.get_hexagon_id(self._action_res):
-            self.bus._state = PublicTransitVehicleState.AT_TERMINAL_DESTINATION
+            self.bus._state = VehicleState.AT_TERMINAL_DESTINATION  # noqa: SLF001
             logging.info(
-                f"Bus has arrived at its terminal destination at time {self.bus._time.now_as_str()}",
-                extra={"clazz": self.__class__.__name__, "oid": f"Bus {self.bus._id}"},
+                f"Bus has arrived at its terminal destination at time {self.bus._time.now_as_str()}",  # noqa: G004, SLF001
+                extra={"clazz": self.__class__.__name__, "oid": f"Bus {self.bus._id}"},  # noqa: SLF001
             )
-            self.bus._has_reached_terminal.succeed()
+            self.bus._has_reached_terminal.succeed()  # noqa: SLF001
             return
 
         if new_hex == self.bus.route.route_stop_by_id(
             self._next_checkpoint
         ).get_hexagon_id(self._action_res):
-            self.bus._state = PublicTransitVehicleState.AT_STOP
+            self.bus._state = VehicleState.AT_STOP  # noqa: SLF001
             logging.info(
-                f"Bus has arrived at the next checkpoint at time {self.bus._time.now_as_str()}",
-                extra={"clazz": self.__class__.__name__, "oid": f"Bus {self.bus._id}"},
+                f"Bus has arrived at the next checkpoint at time {self.bus._time.now_as_str()}",  # noqa: G004, SLF001
+                extra={"clazz": self.__class__.__name__, "oid": f"Bus {self.bus._id}"},  # noqa: SLF001
             )
 
             # advance checkpoint
@@ -362,7 +362,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
             self.bus.route.route_stop_by_id(self._next_checkpoint)
         )
 
-    def _test_action(self, action):
+    def _test_action(self, action):  # noqa: ANN001, ANN202
         """
 
         :param evaluation:
@@ -370,7 +370,8 @@ class DynamicBusCheckpointProblem(LearningInterface):
         :return: bool
         """
         hex_id = h3.geo_to_h3(
-            *self.bus._position.getExactLocation(), resolution=self._action_res
+            *self.bus._position.getExactLocation(),  # noqa: SLF001
+            resolution=self._action_res,
         )
 
         # check if hexagon is out of corridor - action is forbidden
@@ -391,7 +392,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         if not indirection:
             raise BadAction
 
-    def _handle_bad_action(self, action):
+    def _handle_bad_action(self, action):  # noqa: ANN001, ANN202
         # # with 50/50 reject the bad action or execute it with penalty
         # reject = True if np.random.rand() <= .5 else False
         # if reject:
@@ -400,12 +401,12 @@ class DynamicBusCheckpointProblem(LearningInterface):
         #     raise ForbiddenAction
         return 0
 
-    def _get_direction(self, destination: GeodesicPosition):
+    def _get_direction(self, destination: GeodesicPosition):  # noqa: ANN202
         return self._geodesic_env.get_bearing(
             *self.bus.position.getExactLocation(), *destination.getExactLocation()
         )
 
-    def _get_viable_demands(self):
+    def _get_viable_demands(self):  # noqa: ANN202
         users = self._tracking.list_tracked("TransitUser")
         transport_tasks = [self._tracking.get(x, "transport_task")[1] for x in users]
 
@@ -416,7 +417,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
         return demands_in_direction
 
-    def _demands_in_corridor(self, transport_tasks):
+    def _demands_in_corridor(self, transport_tasks):  # noqa: ANN001, ANN202
         d = []
         task_keys = [
             (x.origin.getExactLocation(), x.destination.getExactLocation())
@@ -470,7 +471,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
         return d
 
-    def _equidistant_checkpoints(self, n_checkpoints):
+    def _equidistant_checkpoints(self, n_checkpoints):  # noqa: ANN001, ANN202
         diff_od = self.bus.route.destination.difference(self.bus.route.origin)
         diff_per_n = tuple(x / (n_checkpoints + 1) for x in diff_od)
 

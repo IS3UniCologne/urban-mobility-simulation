@@ -1,4 +1,4 @@
-from typing import List
+from typing import List  # noqa: UP035
 
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from tracking.tracking import Tracking
@@ -6,6 +6,16 @@ from tracking.tracking import Tracking
 
 class ChargingInfrastructure:
     __instance = None
+
+    __slots__ = (
+        "_capacity_list",
+        "_charging_stations",
+        "_env",
+        "_location_list",
+        "_power_list",
+        "_queue_size",
+        "_tracking",
+    )
 
     @staticmethod
     def instance() -> "ChargingInfrastructure":
@@ -16,13 +26,13 @@ class ChargingInfrastructure:
             return ChargingInfrastructure.__instance
 
     @staticmethod
-    def init(
-        env,
-        location_list: List[str],
-        power_list: List[float],
-        capacity_list: List[int],
-        queue_size: List[int],
-        reset=False,
+    def init(  # noqa: ANN205
+        env,  # noqa: ANN001
+        location_list: List[str],  # noqa: UP006
+        power_list: List[float],  # noqa: UP006
+        capacity_list: List[int],  # noqa: UP006
+        queue_size: List[int],  # noqa: UP006
+        reset=False,  # noqa: ANN001
     ):
         """Static access method."""
         if ChargingInfrastructure.__instance is None or reset is True:
@@ -31,13 +41,13 @@ class ChargingInfrastructure:
             )
         return ChargingInfrastructure.__instance
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
-        env,
-        location_list: List[str],
-        power_list: List[float],
-        capacity_list: List[int],
-        queue_size: List[int],
+        env,  # noqa: ANN001
+        location_list: List[str],  # noqa: UP006
+        power_list: List[float],  # noqa: UP006
+        capacity_list: List[int],  # noqa: UP006
+        queue_size: List[int],  # noqa: UP006
         reset: bool = False,
     ):
         """Virtually private constructor."""
@@ -45,7 +55,7 @@ class ChargingInfrastructure:
             raise Exception("This class is a singleton!")
         else:
             ChargingInfrastructure.__instance = self
-            super(ChargingInfrastructure, self).__init__()
+            super(ChargingInfrastructure, self).__init__()  # noqa: UP008
         self._env = env
         self._tracking = Tracking.instance()
         self._location_list = location_list
@@ -55,7 +65,7 @@ class ChargingInfrastructure:
         self._charging_stations = []  # a list of charger objects
         self._initialise_charging_stations()
 
-    def _initialise_charging_stations(self):
+    def _initialise_charging_stations(self):  # noqa: ANN202
         for i, location in enumerate(self._location_list):
             charging_station = ChargingStation(
                 id=i,
@@ -69,8 +79,8 @@ class ChargingInfrastructure:
             self._tracking.register(charging_station)
 
     @property
-    def charging_stations(self):
+    def charging_stations(self):  # noqa: ANN201
         return self._charging_stations
 
-    def get_locations(self):
+    def get_locations(self):  # noqa: ANN201
         return self._location_list

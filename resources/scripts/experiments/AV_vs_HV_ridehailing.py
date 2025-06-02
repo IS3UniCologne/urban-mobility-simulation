@@ -112,7 +112,7 @@ logger.addFilter(cf_init)
 # # Add file handler to the logger
 # logger.addHandler(file_handler)
 
-print("Basic config initialized")
+print("Basic config initialized")  # noqa: T201
 
 # logger.addHandler(file_handler)
 
@@ -161,24 +161,24 @@ dmi = DistanceMatrixImporter(
 distance_matrix = dmi.load_distance_matrix()
 
 
-def run_single_simulation(
-    start_time=0,
-    end_time=20,
-    n_cars=500,
-    seed=42,
-    phase=1,
-    AV_trust=config.mode_choice_model.AV_TRUST,
-    pop_prob=config.population.RIDE_HAILING_POPULATION_PROBABILITIES,
-    allocation=None,
-    EV_penetration=1,
-    AV_penetration=1,
-    returnDataFrame=False,
-    charging_capacity=20,
-    charging_power=50,
-    AV_price_reduction=None,
-    discount_rate=0,
-    MoD_interval_reduction=0,
-    mode_choice_strategy=config.mode_choice_model.MODE_CHOICE_STRATEGY,
+def run_single_simulation(  # noqa: ANN201
+    start_time=0,  # noqa: ANN001
+    end_time=20,  # noqa: ANN001
+    n_cars=500,  # noqa: ANN001
+    seed=42,  # noqa: ANN001
+    phase=1,  # noqa: ANN001
+    AV_trust=config.mode_choice_model.AV_TRUST,  # noqa: ANN001
+    pop_prob=config.population.RIDE_HAILING_POPULATION_PROBABILITIES,  # noqa: ANN001
+    allocation=None,  # noqa: ANN001
+    EV_penetration=1,  # noqa: ANN001
+    AV_penetration=1,  # noqa: ANN001
+    returnDataFrame=False,  # noqa: ANN001
+    charging_capacity=20,  # noqa: ANN001
+    charging_power=50,  # noqa: ANN001
+    AV_price_reduction=None,  # noqa: ANN001
+    discount_rate=0,  # noqa: ANN001
+    MoD_interval_reduction=0,  # noqa: ANN001
+    mode_choice_strategy=config.mode_choice_model.MODE_CHOICE_STRATEGY,  # noqa: ANN001
 ):
     """
     :param price_params_ride_hailing:
@@ -422,8 +422,8 @@ def run_single_simulation(
         - total_operational_cost["ride_hailing_1"],
     }
     transactions = {
-        "ride_hailing_0": ridehailing_operator_0.get_transactions(),
-        "ride_hailing_1": ridehailing_operator_1.get_transactions(),
+        "ride_hailing_0": ridehailing_operator_0.transaction_df,
+        "ride_hailing_1": ridehailing_operator_1.transaction_df,
     }
 
     if config.settings.PERSIST_RESULTS:
@@ -521,7 +521,7 @@ def run_single_simulation(
                 .agg({"RideHailingCar": "sum", "AutonomousCar": "sum"})
                 .reset_index(drop=True)
             )
-            rentals = rentals.add_prefix("{}_".format(mode))
+            rentals = rentals.add_prefix(f"{mode}_")
             overall_rentals = pd.concat([overall_rentals, rentals], axis=1)
             # "RideHailingCar_True": "sum", "RideHailingCar_False": "sum", "AutonomousCar_True": "sum"
             # Prepare KPI per Mode (Distance, Duration, Revenue)
@@ -543,7 +543,7 @@ def run_single_simulation(
             kpi_for_mode.rename(
                 columns={"price": "revenue"}, inplace=True
             )  # to avoid future confusion
-            kpi_for_mode = kpi_for_mode.add_prefix("{}_".format(mode))
+            kpi_for_mode = kpi_for_mode.add_prefix(f"{mode}_")
             overall_rentals = pd.concat([overall_rentals, kpi_for_mode], axis=1)
 
         return overall_rentals

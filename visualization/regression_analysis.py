@@ -78,4 +78,4 @@ with open(
     "../data/output/AV_trust_analysis_regression_summary.txt", "w"
 ) as file:  # population, AV_trust
     file.write(summary_str)
-print(stats_model.summary())
+print(stats_model.summary())  # noqa: T201

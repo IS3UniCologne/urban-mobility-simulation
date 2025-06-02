@@ -1,7 +1,7 @@
 # urban-mobility-simulation
 
 [![ruff-fix.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml)
-[![integration-test.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/integration-test.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/integration-test.yml)
+[![ci.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml)
 
 We provide a simulation platform considering shared mobility (ride sharing, vehicle sharing) services along with infrastructure services (e.g., charging)
 
@@ -15,6 +15,8 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 - Use `uv sync --all-extras` to install all optional dependencies simultaneously
 
 > Some optimization algorithms might require working CPLEX binaries. These have to be installed separately.
+- Community Edition CPLEX binaries are installed by `uv sync --extra ml`
+- If you want to upgrade you will need to add the path to your local installation of ILOG Optimization Studio to your `PYTHONPATH` and execute `uv run docplex config --upgrade YOURPATH` and check if everything worked with `uv run python -m docplex.mp.check_list`
 
 ## Running an experiment
 
@@ -86,7 +88,7 @@ All active feature branches should have an active pull request associated to tra
 All pull requests must conform in formatting and linting to the interpretation of _ruff_ on _blacks_ code style and to the PEP definitions and their interpretation. In case a pull request's check of the _ruff_ style fails, you have to run ruff locally. Simply use the following command:
 
 ```
-ruff check .
+uv run ruff check .
 ```
 
 In the output, you can see what exactly is causing the problems. In order for the pull request to pass, you need to fix all issues and commit the changes to your pull request. After that, the code checks should complete successfully.
@@ -94,5 +96,5 @@ In the output, you can see what exactly is causing the problems. In order for th
 You can use ruff to format your code as well. In that case, use the following command:
 
 ```
-ruff format
+uv run ruff format
 ```

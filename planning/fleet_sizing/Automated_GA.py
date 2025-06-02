@@ -8,8 +8,8 @@ from main import run_single_simulation
 experience = pd.DataFrame(columns=[0, 1, 2, 3])
 
 
-def f(i):
-    print(i)
+def f(i):  # noqa: ANN001, ANN201
+    print(i)  # noqa: T201
     i = [int(numeric_string) for numeric_string in i]
     new_experience = pd.DataFrame([i, i]).drop_duplicates()
     new_experience[3] = "None"
@@ -17,13 +17,11 @@ def f(i):
     experience = experience.append(new_experience)
     # print(experience)
     objective = -float(
-        (
-            run_single_simulation(
-                end_time=1400, allocation=i, seed=42, substitution=0.1
-            )[-1]
-        )
+        run_single_simulation(end_time=1400, allocation=i, seed=42, substitution=0.1)[
+            -1
+        ]
     )
-    print(objective)
+    print(objective)  # noqa: T201
     # experience.loc[
     #     (experience[0] == i[0]) & (experience[1] == i[1]) & (experience[2] == i[2]), 3] = objective
     # # print(experience)

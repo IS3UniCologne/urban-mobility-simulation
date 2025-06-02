@@ -2,6 +2,7 @@ import logging
 
 from simpy import Environment
 
+from simulation.agent.user import User
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
@@ -20,7 +21,9 @@ from simulation.tasks.transport_task import TransportTask
 
 
 class RideHailingOperator(Operator):
-    def __init__(
+    __slots__ = ("_driver_payment_share",)
+
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         fleet: VehicleFleet,
@@ -42,9 +45,9 @@ class RideHailingOperator(Operator):
             Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
         )
 
-    def pay_for_fulfilled_transportation_task(
+    def pay_for_fulfilled_transportation_task(  # noqa: ANN201
         self,
-        user,
+        user,  # noqa: ANN001
         transportation_task: TransportTask,
         selected_transportation_alternative: TransportationAlternativeRideHailing,
     ):
@@ -59,36 +62,19 @@ class RideHailingOperator(Operator):
             self.increase_total_revenue(payment)
 
         # Add Transaction to Log
-        self._transactions.append(
-            {
-                "vehicle_id": selected_transportation_alternative.vehicle.id,
-                "origin": selected_transportation_alternative.route.origin.get_hexagon_id(),
-                "destination": selected_transportation_alternative.route.destination.get_hexagon_id(),
-                "time_start": transportation_task.time,
-                "time_end": self._env.now,
-                "price": selected_transportation_alternative.price,
-                "distance": selected_transportation_alternative.distance,
-                "duration": selected_transportation_alternative.duration,
-                "wait_time": transportation_task.actual_wait_time,
-                "energy_consumption": selected_transportation_alternative.energy_consumed,
-                "waiting_time": selected_transportation_alternative.waiting_time,
-                "pick_up_time": selected_transportation_alternative.pick_up_time,
-                "selected_vehicle_mode": selected_transportation_alternative.vehicle.__class__.__name__
-                + "_"
-                + str(selected_transportation_alternative.vehicle.is_electric),
-                "selected_vehicle_EV": selected_transportation_alternative.vehicle.is_electric,
-                "state": "Fulfilled",
-                **transportation_task.viable_vehicle_modes,
-            }
+        self.log_transaction(
+            transportation_task=transportation_task,
+            transportation_alternative=selected_transportation_alternative,
+            state="Fulfilled",
         )
 
         logging.info(
-            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",
+            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._fleet.id},
         )
 
-    def withdraw_transportation_task(
-        self, user, transportation_task: TransportTask, state=None
+    def withdraw_transportation_task(  # noqa: ANN201
+        self, user: User, transportation_task: TransportTask, state: str | None = None
     ):
         # distance = transportation_task.origin >> transportation_task.destination
         # TODO: define price of the trip
@@ -96,27 +82,13 @@ class RideHailingOperator(Operator):
         self.increase_total_missed_trips(1)
 
         # Add Transaction to Log
-        self._transactions.append(
-            {
-                "origin": transportation_task.origin.get_hexagon_id(),
-                "destination": transportation_task.destination.get_hexagon_id(),
-                "time_start": self._env.now,
-                "time_end": self._env.now,
-                "price": 0.0,
-                "distance": transportation_task.origin
-                >> transportation_task.destination,
-                "duration": 0.0,
-                "energy_consumption": 0.0,
-                "waiting_time": user._waiting_time,
-                "pick_up_time": 0.0,
-                "selected_vehicle_mode": "None",
-                "selected_vehicle_EV": "None",
-                "state": state,
-                **transportation_task.viable_vehicle_modes,
-            }
+        self.log_transaction(
+            transportation_task=transportation_task,
+            transportation_alternative=None,
+            state=state,
         )
 
         logging.info(
-            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",
+            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": self._fleet.id},
         )

@@ -1,5 +1,6 @@
 import logging
 
+import simpy
 from numpy.random import normal
 from simpy import Environment
 
@@ -24,6 +25,25 @@ from tracking.tracking import Tracking
 class World:
     # There is only one instance of this class.
     __instance = None
+    __slots__ = (
+        "_changed",
+        "_charging_infrastructure",
+        "_config",
+        "_demand_processes",
+        "_env",
+        "_payment_engine",
+        "_population_factory",
+        "_search_engine",
+        "_simulation_finished",
+        "_tracking",
+        "_user_limit",
+        "_user_processes",
+        "_users",
+        "_vehicle_assignment_engine",
+        "_vehicle_choice_behavior",
+        "_vehicle_processes",
+        "_vehicles",
+    )
 
     @staticmethod
     def instance() -> "World":
@@ -34,15 +54,15 @@ class World:
             return World.__instance
 
     @staticmethod
-    def init(
-        env,
-        search_engine,
-        payment_engine,
-        vehicle_assignment_engine,
-        vehicle_choice_behavior,
-        population_factory,
-        charging_infrastructure,
-        reset=False,
+    def init(  # noqa: ANN205
+        env,  # noqa: ANN001
+        search_engine,  # noqa: ANN001
+        payment_engine,  # noqa: ANN001
+        vehicle_assignment_engine,  # noqa: ANN001
+        vehicle_choice_behavior,  # noqa: ANN001
+        population_factory,  # noqa: ANN001
+        charging_infrastructure,  # noqa: ANN001
+        reset=False,  # noqa: ANN001
     ):
         """Static access method."""
         if World.__instance is None or reset is True:
@@ -58,15 +78,15 @@ class World:
             )
         return World.__instance
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
         search_engine: SearchEngineInterface,
-        payment_engine,
+        payment_engine,  # noqa: ANN001
         vehicle_assignment_engine: VehicleAllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_factory: PopulationFactory,
-        charging_infrastructure,
+        charging_infrastructure,  # noqa: ANN001
         reset: bool = False,
     ):
         """Virtually private constructor."""
@@ -74,7 +94,7 @@ class World:
             raise Exception("This class is a singleton!")
         else:
             World.__instance = self
-            super(World, self).__init__()
+            super(World, self).__init__()  # noqa: UP008
 
         self._env = env
         self._search_engine = search_engine  # Allows users to search for vehicles
@@ -88,12 +108,12 @@ class World:
         self._demand_processes = []
 
         # Store all current users
-        self._users = []
-        self._user_processes = []
+        self._users: set[user.User] = set()
+        self._user_processes: dict[int, simpy.Process] = {}
 
         # Store all current vehicles
-        self._vehicles = []
-        self._vehicle_processes = []
+        self._vehicles: set[Vehicle] = set()
+        self._vehicle_processes: dict[int, simpy.Process] = {}
 
         # TODO: keep track of fleets here as well
 
@@ -116,18 +136,18 @@ class World:
         self._user_limit = 10_000_000
 
     @property
-    def user_processes(self):
+    def user_processes(self):  # noqa: ANN201
         return self._user_processes
 
     @property
-    def demand_processes(self):
+    def demand_processes(self):  # noqa: ANN201
         return self._demand_processes
 
     @property
-    def vehicle_processes(self):
+    def vehicle_processes(self):  # noqa: ANN201
         return self._vehicle_processes
 
-    def add_user(self, mode, fleet, origin, destination):
+    def add_user(self, mode, fleet, origin, destination):  # noqa: ANN001, ANN201
         """
         Add a user agent to the world with an origin and a destination.
 
@@ -216,7 +236,7 @@ class World:
                     self._env,
                 )
                 logging.debug(
-                    f" Shared-vehicle user {new_user.user_id} starts searching for fleet {fleet} at {self._env.now}.",
+                    f" Shared-vehicle user {new_user.user_id} starts searching for fleet {fleet} at {self._env.now}.",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
             elif mode == "ride_hailing":
@@ -244,7 +264,7 @@ class World:
                     self._env,
                 )
                 logging.debug(
-                    f"Ride-hailing user {new_user.user_id, population_type} request a vehicle at {self._env.now}.",
+                    f"Ride-hailing user {new_user.user_id, population_type} request a vehicle at {self._env.now}.",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
             elif mode == "walking":
@@ -273,65 +293,87 @@ class World:
             else:
                 raise NotImplementedError('User mode "{mode}" not implemented.')
 
-            # Add user to user list
-            self._users.append(new_user)
+            # Add user to user set
+            self._users.add(new_user)
             # register user with tracking
             new_user_uid = self._tracking.register(new_user)
 
             # Start Process for each new user
-            self._user_processes.append(
-                {"id": new_user.id, "proc": self._env.process(new_user.run())}
-            )
+            self._user_processes[new_user.id] = self._env.process(new_user.run())
 
             # Spawn cleanup process for that user
             self._env.process(self._cleanup_user(new_user, new_user_uid))
 
             if len(self._users) == self._user_limit:
                 logging.info(
-                    f"Reached User Limit of {self._user_limit}. Not adding more users to world.",
+                    f"Reached User Limit of {self._user_limit}. Not adding more users to world.",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
 
-    def _cleanup_user(self, user, user_uid):
+    def _cleanup_user(self, user, user_uid: str):  # noqa: ANN001, ANN202
+        """
+        Wait for the user process to finish, then remove the user from the simulation.
+
+        Parameters
+        ----------
+        user : User or subclass
+            The user agent to clean up.
+        user_uid : str
+            The unique identifier for tracking.
+        """
         yield user.process_finished
 
+        # Remove user from tracking
         self._tracking.unregister_by_uid(user_uid)
 
-    def add_vehicle(self, vehicle: Vehicle):
-        self._vehicles.append(vehicle)
+        # Remove user from self._users
+        self._users.discard(user)
+
+        # Remove user process from self._user_processes
+        if user.id in self._user_processes:
+            del self._user_processes[user.id]
+
+        logging.debug(
+            "User %s removed from simulation after process finished.",
+            user.id,
+            extra={"clazz": self.__class__.__name__, "oid": " "},
+        )
+
+    def add_vehicle(self, vehicle: Vehicle):  # noqa: ANN201
+        self._vehicles.add(vehicle)
 
         # TODO: register vehicle with tracking
 
-    def remove_vehicle(self, vehicle: Vehicle):
-        self._vehicles.remove(vehicle)
+    def remove_vehicle(self, vehicle: Vehicle):  # noqa: ANN201
+        self._vehicles.discard(vehicle)
 
         # TODO: de-register vehicle with tracking
 
     @property
-    def users(self):
+    def users(self):  # noqa: ANN201
         return self._users
 
     @property
-    def vehicles(self):
+    def vehicles(self):  # noqa: ANN201
         return self._vehicles
 
     @property
-    def charging_infrastructure(self):
+    def charging_infrastructure(self):  # noqa: ANN201
         return self._charging_infrastructure
 
     @property
-    def simulation_finished(self):
+    def simulation_finished(self):  # noqa: ANN201
         return self._simulation_finished
 
     @property
-    def changed(self):
+    def changed(self):  # noqa: ANN201
         return self._changed
 
     @changed.setter
-    def changed(self, event):
+    def changed(self, event):  # noqa: ANN001, ANN202
         self._changed = event
 
-    def stop_all_processes(self):
+    def stop_all_processes(self):  # noqa: ANN201
         # stop demand generation
         for d in self.demand_processes:
             try:
@@ -341,13 +383,12 @@ class World:
                 pass
 
         # clean up user demands
-        for u in self.user_processes:
+        for process in self.user_processes.values():
             try:
-                u["proc"].interrupt()
+                process.interrupt()
             except RuntimeError:
                 # already terminated
                 pass
 
-    def user_process_by_id(self, user_id):
-        procs = [p for p in self._user_processes if p["id"] == user_id]
-        return procs[0]  # TODO: what about some error handling
+    def user_process_by_id(self, user_id):  # noqa: ANN001, ANN201
+        return self._user_processes.get(user_id)  # returns the process or None

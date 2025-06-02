@@ -20,8 +20,8 @@ from learning.spaces.action_space import ForbiddenAction
 
 
 class DQN(RLAgent):
-    def __init__(self, problem: LearningInterface):
-        super(DQN, self).__init__()
+    def __init__(self, problem: LearningInterface):  # noqa: ANN204
+        super(DQN, self).__init__()  # noqa: UP008
 
         self.problem = problem
         self._problem_config = self.problem.problem_config
@@ -109,7 +109,7 @@ class DQN(RLAgent):
         self._target_q_net = None
         self.problem.env.process(self._delayed_init())
 
-    def _delayed_init(self):
+    def _delayed_init(self):  # noqa: ANN202
         yield self.problem.initialized
 
         # Neural Nets
@@ -119,7 +119,7 @@ class DQN(RLAgent):
             if type(self._config.DQN_config.weights) is str:
                 # filepath is given
                 logging.info(
-                    f"Loading weights from {self._config.DQN_config.weights} ...",
+                    f"Loading weights from {self._config.DQN_config.weights} ...",  # noqa: G004
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 self._q_net.load_weights(self._config.DQN_config.weights)
@@ -138,7 +138,7 @@ class DQN(RLAgent):
             # in the first episode, initialize target q net weights = q net weights
             self._target_q_net.set_weights(self._q_net.get_weights())
 
-    def _create_model(self):
+    def _create_model(self):  # noqa: ANN202
         model = Sequential()
 
         input_layer_size = self.problem.state_size_flattened
@@ -167,13 +167,13 @@ class DQN(RLAgent):
 
         return model
 
-    def run(self):
+    def run(self):  # noqa: ANN201
         if self._config.DQN_config.evaluation:
             yield self.problem.env.process(self.use())
         else:
             yield self.problem.env.process(self.learn())
 
-    def use(self):
+    def use(self):  # noqa: ANN201
         # Deep Q Learning with Experience Replay as in mnih2013 (deepmind atari paper)
         while True:
             state = deepcopy(self.problem.state())  # S_t, as dict
@@ -187,7 +187,7 @@ class DQN(RLAgent):
             if finished:
                 break
 
-    def learn(self):
+    def learn(self):  # noqa: ANN201
         # Deep Q Learning with Experience Replay as in mnih2013 (deepmind atari paper)
         actions_tried = set()
         step = 0
@@ -228,7 +228,7 @@ class DQN(RLAgent):
 
             self._cumulative_reward += reward
             logging.debug(
-                f"Current reward: {reward}, overall reward: {self._cumulative_reward}",
+                f"Current reward: {reward}, overall reward: {self._cumulative_reward}",  # noqa: G004
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -256,7 +256,7 @@ class DQN(RLAgent):
         # retain decayed epsilon
         self._config.DQN_config.eps = self._eps
         logging.debug(
-            f"Saving decayed epsilon into config: {str(self._eps)}",
+            f"Saving decayed epsilon into config: {self._eps!s}",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -264,7 +264,7 @@ class DQN(RLAgent):
         self._config.DQN_config.optimizer = self._optimizer
         if self._config.DQN_config.lr_decay:
             logging.debug(
-                f"Saving decayed learning rate into config: {str(self._learning_rate(self._optimizer.iterations))}",
+                f"Saving decayed learning rate into config: {self._learning_rate(self._optimizer.iterations)!s}",  # noqa: G004
                 extra={
                     "clazz": self.__class__.__name__,
                     "oid": f"Episode {self._episode}",
@@ -274,7 +274,7 @@ class DQN(RLAgent):
         # retain replaybuffer
         self._config.DQN_config.replaybuffer = self._replaybuffer
         logging.debug(
-            f"Saving replay buffer into config. Size: {str(len(self._replaybuffer))}",
+            f"Saving replay buffer into config. Size: {len(self._replaybuffer)!s}",  # noqa: G004
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -291,7 +291,7 @@ class DQN(RLAgent):
         self.problem.reset()
 
     @profile
-    def policy(self, state):
+    def policy(self, state):  # noqa: ANN001, ANN201
         q_values = self._target_predict(tf.expand_dims(state, axis=0))
         # TODO: normalize / probabilities instead of argmax?
         max_q = Policy.argmax_rand(q_values)
@@ -299,7 +299,7 @@ class DQN(RLAgent):
 
         return a
 
-    def _train(self, terminal_state: bool):
+    def _train(self, terminal_state: bool):  # noqa: ANN202
         minibatch = random.sample(self._replaybuffer, self._minibatch_size)
         # minibatch = self._random.choice(self._replay_buffer, self._minibatch_size, replace=False)
 
@@ -368,12 +368,12 @@ class DQN(RLAgent):
                 self._target_q_net.set_weights(self._q_net.get_weights())
 
     @tf.function
-    def _target_predict(self, state):
+    def _target_predict(self, state):  # noqa: ANN001, ANN202
         try:
             return self._target_q_net(state, training=False)
         except Exception:
             pass
 
     @tf.function
-    def _eval_predict(self, state):
+    def _eval_predict(self, state):  # noqa: ANN001, ANN202
         return self._q_net(state, training=False)

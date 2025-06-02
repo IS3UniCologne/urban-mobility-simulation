@@ -133,7 +133,6 @@ logger.addFilter(cf)
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-
 mode_choice_strategy = config.mode_choice_model.MODE_CHOICE_STRATEGY
 if mode_choice_strategy == ModeChoiceStrategy.SUBSTITUTION_AWARE:
     vehicle_choice_model = OnlyCarVehicleChoiceBehavior(
@@ -166,6 +165,7 @@ population_factory = PopulationFactory(
 # Load Spatial Environment
 
 load_geodesic_environment()
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -486,7 +486,7 @@ def animate(i, callback):
 
 
 # For multiple simulation runs
-def run_simulation(end_time, env=env):
+def run_simulation(end_time, env=env):  # noqa: ANN001, ANN201
     # Before a new simulation run, reset everything
     User.user_id = 0
     DemandFactory.counter = 0
