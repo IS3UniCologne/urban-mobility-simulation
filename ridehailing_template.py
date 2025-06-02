@@ -4,18 +4,18 @@ import logging
 import os
 import shutil
 import sys
+
+# Live Visualization
+import threading
 from datetime import datetime
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
 
 # Third-party library imports
 import simpy
-
-# Live Visualization
-import threading
 from matplotlib.animation import FuncAnimation
-import matplotlib.pyplot as plt
 
 # Imports world related modules
 from simulation.agent.user import User
@@ -94,6 +94,7 @@ logger.setLevel(logging.DEBUG)
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 formatter = logging.Formatter(
     "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
@@ -426,7 +427,9 @@ def get_n_users() -> list:
     global_station_utilization = 0
     for charging_station in charging_infrastructure.charging_stations:
         # global_station_utilization += charging_station.count  # does not crash, does not show
-        global_station_utilization += charging_station.plugs.count # does not crash, does not show
+        global_station_utilization += (
+            charging_station.plugs.count
+        )  # does not crash, does not show
         # global_station_utilization += 1
 
     global_avg_station_utilization = global_station_utilization / len(

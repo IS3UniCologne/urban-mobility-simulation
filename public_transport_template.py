@@ -4,16 +4,17 @@ import logging
 import os
 import shutil
 import sys
-from datetime import datetime
-from pathlib import Path
-
-# Third-party library imports
-import simpy
 
 # Live Visualization
 import threading
-from matplotlib.animation import FuncAnimation
+from datetime import datetime
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+
+# Third-party library imports
+import simpy
+from matplotlib.animation import FuncAnimation
 
 # Imports world related modules
 from simulation.agent.user import User
@@ -99,6 +100,7 @@ logger.setLevel(logging.DEBUG)
 
 # Block Logger of third party software
 logging.getLogger("fiona").setLevel(logging.WARNING)
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 formatter = logging.Formatter(
     "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
