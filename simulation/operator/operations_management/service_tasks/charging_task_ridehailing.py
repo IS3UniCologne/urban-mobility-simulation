@@ -238,7 +238,7 @@ class ChargingTaskRidehailing(ServiceTask):
                     # Plugin Vehicle to Charging Station
                     self._arrived_at_charging_station.succeed()
                     self._vehicle.plug_to_charging_station()
-                    
+
                     self._env.process(self._charging_station.plug_in_notify())
 
                     if not isinstance(self._charging_station, VirtualChargingStation):
