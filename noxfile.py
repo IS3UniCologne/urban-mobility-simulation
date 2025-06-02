@@ -13,8 +13,10 @@ python_versions = nox.project.python_versions(nox.project.load_toml())
 def mypy(session: nox.Session) -> None:
     """Run mypy type checking.
 
-    Args:
-        session: Nox session.
+    Parameters
+    ----------
+    session : nox.Session
+        Nox session.
     """
     session.run_install(
         *UV_SYNC_COMMAND,
@@ -28,8 +30,10 @@ def mypy(session: nox.Session) -> None:
 def pre_commit(session: nox.Session) -> None:
     """Run pre-commit linting and auto-fixes.
 
-    Args:
-        session: Nox session.
+    Parameters
+    ----------
+    session: nox.Session
+        Nox session.
     """
     args = session.posargs or ("run", "--all-files")
     session.run_install(
@@ -48,10 +52,12 @@ def _run_pytest(session: nox.Session) -> None:
 
 @nox.session(name="pytest", python=python_versions, tags=("test", "pytest"))
 def pytest_session(session: nox.Session) -> None:
-    """Run pytest to test Meltano.
+    """Run pytest for unit and integration tests.
 
-    Args:
-        session: Nox session.
+    Parameters
+    ----------
+    session: nox.Session
+        Nox session.
     """
     session.run_install(
         *UV_SYNC_COMMAND,
