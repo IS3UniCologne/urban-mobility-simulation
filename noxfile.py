@@ -58,4 +58,8 @@ def pytest_session(session: nox.Session) -> None:
         "--group=testing",
         env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
     )
+
+    # Force rebuild of Cython extensions
+    session.run("uv", "pip", "install", "-e", ".", "--force-reinstall", "--no-deps")
+
     _run_pytest(session)
