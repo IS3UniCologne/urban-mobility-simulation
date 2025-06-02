@@ -290,16 +290,20 @@ timestamp = []
 y1 = []
 y2 = []
 
+
 # callback function to get data from world
-def get_n_users():
+def get_n_users() -> list:
     timestamp.append(env.now)
-    y1.append(len(world._users))
-    y2.append(len(world._user_processes))
+    # y1.append(len(world._users))
+    # y2.append(len(world._user_processes))
+    # temporary placeholders
+    y1.append(1)
+    y2.append(2)
 
     return timestamp, y1, y2
 
 
-def animate(i, callback):
+def animate(i: int, callback: list) -> None:
     if callback is not None:
         timestamp, n_users, n_active_users = callback()
 
@@ -308,21 +312,22 @@ def animate(i, callback):
 
         # plot 1
         plt.subplot(3, 1, 1)
-        plt.plot(timestamp,n_users, n_active_users)
+        plt.plot(timestamp, n_users, n_active_users)
         plt.title("n users in world")
         plt.legend(["n_users", "n_user_processes"], loc="upper right")
 
         # plot 2
         plt.subplot(3, 1, 2)
-        plt.plot(timestamp,n_users)
+        plt.plot(timestamp, n_users)
         plt.title("n users in world")
 
         # plot 3
         plt.subplot(3, 1, 3)
-        plt.plot(timestamp,n_users)
+        plt.plot(timestamp, n_users)
         plt.title("n users in world")
 
         plt.tight_layout()
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -385,7 +390,7 @@ for i in range(sum_iterations):
         frames=100,
         interval=1000,
         cache_frame_data=False,
-        fargs=(get_n_users,)
+        fargs=(get_n_users,),
     )
     plt.show()
 
