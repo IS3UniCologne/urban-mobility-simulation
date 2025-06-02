@@ -8,7 +8,6 @@ import pytest
 from simulation.environment.geodesic_position import GeodesicPosition
 
 
-@pytest.mark.unit
 class TestGeodesicPositionDistance:
     """Tests for GeodesicPosition distance calculations."""
 

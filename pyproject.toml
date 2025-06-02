@@ -1,9 +1,9 @@
 [project]
-description     = "Urban Mobility Simulation"
-name            = "urban-mobility-simulation"
-readme          = "README.md"
-requires-python = ">=3.10, <3.13.0"
-version         = "0.1.0"
+name = "urban-mobility-simulation"
+version = "0.1.0"
+description = "Urban Mobility Simulation"
+readme = "README.md"
+requires-python = ">=3.10"
 
 classifiers = [
   "Private :: Do Not Upload",
@@ -32,17 +32,18 @@ dependencies = [
 ]
 [dependency-groups]
 dev = [
+  { include-group = "typing" },
   { include-group = "performance" },
   { include-group = "pre-commit" },
   { include-group = "testing" },
-  { include-group = "typing" },
+  { include-group = "pre-commit" },
 ]
 
 performance = ["py-spy>=0.3.11", "pyperf>=2.9.0", "scalene>=1.5.51"]
 
 pre-commit = ["pre-commit>=4.2.0", "ruff>=0.11.0"]
 
-testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=8.3.5"]
+testing = ["pytest>=8.3.5", "pytest-coverage>=0.0", "pytest-xdist~=3.6"]
 
 typing = ["mypy>=1.15.0", "pandas-stubs>=2.2.2.240807"]
 
@@ -114,10 +115,7 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 # These directories do not follow the same style as the rest of the codebase.
-"learning/*"      = ["D"]
-"planning/*"      = ["D"]
-"resources/*"     = ["D"]
-"tests/*"         = ["D", "SLF001"]
+"tests/*" = ["D"]
 "visualization/*" = ["D"]
 #TODO: These should be gradually removed once properly annotated.
 "public_transport_template.py"      = ["D"]
@@ -266,19 +264,20 @@ module = [
 ]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 addopts = [
-  "--durations=10",
-  "--strict-config",
   "--strict-markers",
-  "--tb=short",
+  "--strict-config",
+  "--durations=10",
   "-ra",
+  "--tb=short",
 ]
 markers = [
+  "unit: Unit tests",
   "integration: Integration tests",
   "slow: Slow running tests (deselect with '-m \"not slow\"')",
-  "unit: Unit tests",
 ]
-python_classes = ["Test*"]
-python_files = ["*_test.py", "test_*.py"]
-python_functions = ["test_*"]
-testpaths = ["tests"]
+filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
