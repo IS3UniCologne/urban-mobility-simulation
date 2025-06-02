@@ -83,6 +83,54 @@ if not os.path.exists(output_config_dir):
     os.makedirs(output_config_dir)
 shutil.copy(sys.argv[1], os.path.join(output_config_dir, f"{output_timestamp}.toml"))
 
+# # # # # # # # # # # # # # # # # # # # # #
+#                                         #
+# Logging                                 #
+#                                         #
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Disable the default handler of the root logger
+logging.getLogger().handlers.clear()
+
+logger = logging.getLogger()
+# Set to logging.DEBUG to see all logs
+logger.setLevel(logging.DEBUG)
+
+# Block Logger of third party software
+logging.getLogger("fiona").setLevel(logging.WARNING)
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+)
+
+# Create a console handler with its own level (LOG_LEVEL)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(config.settings.LOG_LEVEL)
+console_handler.setFormatter(formatter)
+
+
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
+# Create directory for logs if not exists
+if not os.path.exists(logs_dir):
+    os.makedirs(logs_dir)
+log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(formatter)
+file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
+
+
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+edf = ExtraDefaultFilter(filter_name="add_default_value")
+logger.addFilter(edf)
+
+# Add Custom Init Filters (which work without the ENV obj)
+cf = SimulationContextFilter(filter_name="add_env", extra=[])
+logger.addFilter(cf)
+
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
