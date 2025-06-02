@@ -238,9 +238,6 @@ class ChargingTaskRidehailing(ServiceTask):
                     # Plugin Vehicle to Charging Station
                     self._arrived_at_charging_station.succeed()
                     self._vehicle.plug_to_charging_station()
-
-                    # increase charging station utilization by one
-                    self._charging_station._utilization += 1
                     
                     self._env.process(self._charging_station.plug_in_notify())
 

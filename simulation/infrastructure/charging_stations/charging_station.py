@@ -53,9 +53,6 @@ class ChargingStation(TrackingInterface):
         self._queue = []
         self._queue_size = queue_size
         self._current_queue_time = 0
-        
-        # live visualization
-        self._utilization = 0
 
         # Events
         self._vehicle_plugged_in = self._env.event()
