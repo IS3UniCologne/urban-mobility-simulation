@@ -425,8 +425,9 @@ def get_n_users() -> list:
     # global avg station utilization
     global_station_utilization = 0
     for charging_station in charging_infrastructure.charging_stations:
-        # global_station_utilization += charging_station.count
-        global_station_utilization += charging_station._plugs
+        # global_station_utilization += charging_station.count  # does not crash, does not show
+        global_station_utilization += charging_station.plugs.count # does not crash, does not show
+        # global_station_utilization += 1
 
     global_avg_station_utilization = global_station_utilization / len(
         charging_infrastructure.charging_stations
