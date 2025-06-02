@@ -1,4 +1,4 @@
-from typing import Optional, Tuple  # noqa: UP035
+from typing import Tuple  # noqa: UP035
 
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 
@@ -42,7 +42,7 @@ class VirtualChargingStation:
         yield self._env.process(self._physical_charging_station.plug_out_notify())
         assert self._plugs.users == self._physical_charging_station.plugs.users
 
-    def update_capacity(self, capacity, valid_timeframe: Optional[Tuple[float, float]]):  # noqa: ANN001, ANN201, UP006
+    def update_capacity(self, capacity, valid_timeframe: Tuple[float, float] | None):  # noqa: ANN001, ANN201, UP006
         self._capacity = capacity
         self._valid_timeframe = valid_timeframe
 

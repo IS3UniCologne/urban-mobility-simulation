@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Optional, Tuple, Union  # noqa: UP035
+from typing import Any, Tuple  # noqa: UP035
 
 from beartype.door import is_bearable  # like "isinstance(...)"
 from simpy import Environment
@@ -43,7 +43,7 @@ class Tracking:
         self.__env = env
         self.tracked = {}
 
-    def register(self, to_track: TrackingInterface, id: Optional[int] = None) -> str:
+    def register(self, to_track: TrackingInterface, id: int | None = None) -> str:
         """
 
         :param to_track: Agent (user, vehicle, ...) or resource in the simulation to register with the tracking. Must
@@ -111,7 +111,7 @@ class Tracking:
                 )
                 return None
 
-    def dump(self, uid, exposed_only: bool = True) -> Optional[Tuple[float, dict]]:  # noqa: ANN001, UP006
+    def dump(self, uid, exposed_only: bool = True) -> Tuple[float, dict] | None:  # noqa: ANN001, UP006
         try:
             return self.__env.now, self.tracked[uid]["reference"].dump(exposed_only)
         except KeyError:
@@ -121,7 +121,7 @@ class Tracking:
             )
             return None
 
-    def list_tracked(self, cls: Union[type, str]) -> list:
+    def list_tracked(self, cls: type | str) -> list:
         """
         List tracked uid's of the specific class requested
 
@@ -133,7 +133,7 @@ class Tracking:
             return [x for x, y in self.tracked.items() if y["class"] == cls]
         return [x for x, y in self.tracked.items() if is_bearable(y["reference"], cls)]
 
-    def _get_object(self, uid) -> Optional[TrackingInterface]:  # noqa: ANN001
+    def _get_object(self, uid) -> TrackingInterface | None:  # noqa: ANN001
         """
         It is discouraged to use this method extensively, rather use the get() and dump() methods that tracking exposes.
 
