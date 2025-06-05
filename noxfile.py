@@ -62,6 +62,8 @@ def pytest_session(session: nox.Session) -> None:
     session.run_install(
         *UV_SYNC_COMMAND,
         "--group=testing",
+        "--python",
+        session.python,
         env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
     )
 
