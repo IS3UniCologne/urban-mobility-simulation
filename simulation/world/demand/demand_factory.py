@@ -7,7 +7,6 @@ import simpy
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.random.random_manager import RandomManager
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
-from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.world import World
 
 
@@ -37,7 +36,6 @@ class DemandFactory:
         self,
         env,  # noqa: ANN001
         demand_profile,  # noqa: ANN001
-        demand_importer: DemandImporter,
         world: World,
         modifiers,  # noqa: ANN001
         mode,  # noqa: ANN001
@@ -46,13 +44,13 @@ class DemandFactory:
         self._env = env
         self._time = SimulationTime(env)
         self._demand_profile = demand_profile
-        self._demand_importer = demand_importer
-        self._world = world
+        self._world: World = world
         self._mode = mode
 
-        origin, destination = demand_importer._get_spatial_column()  # noqa: SLF001
-        temporal = demand_importer._get_temporal_column()  # noqa: SLF001
-        day_of_week_column = demand_importer._get_day_of_week_column()  # noqa: SLF001
+        origin: str = world.spatial_resolution.origin_column_name
+        destination: str = world.spatial_resolution.destination_column_name
+        temporal: str = world.temporal_resolution.column_name
+        day_of_week_column: str = world.daily_resolution.day_of_week_column_name
 
         self._origin_column = origin
         self._destination_column = destination
@@ -136,8 +134,7 @@ class DemandFactory:
             try:
                 # Transform current time to temporal buckets as defined in the demand profile
                 time_bucket = SimulationTimeConverter.convert_to_temporal_bucket(
-                    self._time.now(),
-                    self._demand_importer._get_temporal_duration_in_hours(),  # noqa: SLF001
+                    self._time.now(), self._world.temporal_resolution
                 )
                 non_working_day = SimulationTimeConverter.convert_to_day_of_week_bucket(
                     self._time.now()
@@ -175,9 +172,7 @@ class DemandFactory:
 
                 if poisson_lambda == 0:
                     # lambda is zero, waiting until next timebucket is reached
-                    bucket_in_minutes = (
-                        self._demand_importer._get_temporal_duration_in_hours() * 60  # noqa: SLF001
-                    )
+                    bucket_in_minutes = self._world.temporal_resolution * 60
                     time_to_next_bucket = bucket_in_minutes - (
                         self._time.now() % bucket_in_minutes
                     )
@@ -193,20 +188,14 @@ class DemandFactory:
 
                         # TODO: is this a viable way of modifying exponential sampling using the scale factor?
                         # TODO: if we wait for longer than the timebucket is long, we should probably consider no demand (otherwise we spawn this in the next timebucket and skew the real demand distribution)
-                        inter_arrival_time = (
-                            self._rng.exponential(
-                                1.0 / poisson_lambda / self._modifiers[spatial_unit]
-                            )
-                            * self._demand_importer._get_temporal_duration_in_hours()  # noqa: SLF001
-                            * 60
-                        )
+                        inter_arrival_time = self._rng.exponential(
+                            1.0 / poisson_lambda / self._modifiers[spatial_unit]
+                        ) * float(self._world.temporal_resolution * 60)
                     except KeyError:
                         # no modifier is registered for that spatial unit
-                        inter_arrival_time = (
-                            self._rng.exponential(1.0 / poisson_lambda)
-                            * self._demand_importer._get_temporal_duration_in_hours()  # noqa: SLF001
-                            * 60
-                        )
+                        inter_arrival_time = self._rng.exponential(
+                            1.0 / poisson_lambda
+                        ) * float(self._world.temporal_resolution * 60)
 
                     # await next arrival
                     yield self._env.timeout(inter_arrival_time)
