@@ -437,20 +437,17 @@ def get_n_users() -> list:
     )
 
     timestamp.append(env.now)
-    y1.append(len(world._users))  # n users in world
-    y2.append(len(world._user_processes))  # n active users in world
+    y1.append(len(world.users))
+    y2.append(len(world.user_processes))
     # y3.append(missed_trips_fleet_0)
-    y3.append(9)  # n transactions in state "Missed" for fleet 0
+    y3.append(9)
     # y4.append(missed_trips_fleet_1)
-    y4.append(9)  # n transactions in state "Missed" for fleet 1
-    # y5.append(total_trips_fleet_0)              # n total transactions of fleet 0
+    y4.append(9)
+    # y5.append(total_trips_fleet_0)
     y5.append(9)
-    # y6.append(total_trips_fleet_1)              # n total transactions of fleet 1
+    # y6.append(total_trips_fleet_1)
     y6.append(9)
-    y7.append(
-        global_avg_station_utilization
-    )  # average utilization of all charging stations
-
+    y7.append(global_avg_station_utilization)
     return timestamp, y1, y2, y3, y4, y5, y6, y7
 
 
