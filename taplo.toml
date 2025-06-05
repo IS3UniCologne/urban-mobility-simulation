@@ -1,0 +1,26 @@
+# Taplo configuration file
+# This file is used to configure the Taplo formatter and linter for TOML files.
+
+#Use default settings for formatting toml files not specified in rules.
+[formatting]
+column_width        = 80
+align_entries       = true
+align_comments      = true
+array_auto_expand   = true
+array_auto_collapse = true
+inline_table_expand = true
+reorder_arrays      = true
+reorder_keys        = true
+
+# Rules specific to configuration files
+[[rule]]
+include = ["resources/configurations/*.toml", "test/configurations/*.toml"]
+
+[rule.formatting]
+array_auto_collapse = true
+array_auto_expand   = false
+allowed_blank_lines = 2
+column_width        = 800
+align_entries       = true
+align_comments      = true
+inline_table_expand = false

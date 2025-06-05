@@ -30,12 +30,16 @@ dependencies = [
   "tqdm>=4.67.1",
 ]
 [dependency-groups]
+<<<<<<< HEAD
 dev = [
   { include-group = "typing" },
   { include-group = "performance" },
   { include-group = "testing" },
   { include-group = "pre-commit" },
 ]
+=======
+dev = ["ruff>=0.11.0", { include-group = "typing" }, { include-group = "performance" }, { include-group = "testing" }]
+>>>>>>> 6312af0 (update taplo config)
 
 performance = ["py-spy>=0.3.11", "pyperf>=2.9.0", "scalene>=1.5.51"]
 
@@ -45,27 +49,18 @@ testing = ["pytest>=8.3.5", "pytest-coverage>=0.0", "pytest-xdist~=3.6"]
 
 typing = ["mypy>=1.15.0", "pandas-stubs>=2.2.2.240807"]
 
+
 [project.optional-dependencies]
-notebooks = [
-  "contextily>=1.6.2",
-  "ipython>=8.18.1",
-  "notebook>=7.3.2",
-  "seaborn>=0.13.2",
-  "sidetable>=0.9.1",
-]
-ml = ["torch>=2.6.0", "docplex>=2.29.241", "cplex>=22.1.2.0"]
+notebooks = ["contextily>=1.6.2", "ipython>=8.18.1", "notebook>=7.3.2", "seaborn>=0.13.2", "sidetable>=0.9.1"]
+ml        = ["torch>=2.6.0", "docplex>=2.29.241", "cplex>=22.1.2.0"]
 
 [build-system]
-requires = ["setuptools", "cython"]
+requires      = ["setuptools", "cython"]
 build-backend = "setuptools.build_meta"
 
 
 [tool.setuptools]
-packages = [
-  "simulation",
-  "simulation.environment",
-  "simulation.environment.cython_ext",
-]
+packages = ["simulation", "simulation.environment", "simulation.environment.cython_ext"]
 
 ext-modules = [
   { name = "simulation.environment.cython_ext.cy_geodesic", sources = [
@@ -77,8 +72,8 @@ ext-modules = [
 
 
 [tool.ruff]
-fix = true
-output-format = "grouped"
+fix            = true
+output-format  = "grouped"
 extend-exclude = ["*.ipynb"]
 [tool.ruff.format]
 skip-magic-trailing-comma = true
@@ -90,20 +85,7 @@ python-preference = "only-managed"
 
 [tool.ruff.lint]
 # defaults: ["E4", "E7", "E9", "F"]
-select = [
-  "ANN",
-  "D",
-  "E4",
-  "E7",
-  "E9",
-  "F",
-  "G",
-  "PLC0205",
-  "RUF",
-  "SLF",
-  "T20",
-  "UP",
-]
+select = ["ANN", "D", "E4", "E7", "E9", "F", "G", "PLC0205", "RUF", "SLF", "T20", "UP"]
 # Skip unused variable rules (`F841`).
 ignore = ["E721"]
 
@@ -112,60 +94,51 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 # These directories do not follow the same style as the rest of the codebase.
+<<<<<<< HEAD
 "tests/*" = ["D", "SLF001"]
+=======
+"test/*"          = ["D"]
+>>>>>>> 6312af0 (update taplo config)
 "visualization/*" = ["D"]
-"resources/*" = ["D"]
-"planning/*" = ["D"]
-"learning/*" = ["D"]
+"resources/*"     = ["D"]
+"planning/*"      = ["D"]
+"learning/*"      = ["D"]
 #TODO: These should be gradually removed once properly annotated.
-"simulation/agent/*" = ["D"]
-"simulation/environment/*" = ["D"]
-"simulation/helper/*" = ["D"]
-"simulation/infrastructure/*" = ["D"]
-"simulation/metrics/*" = ["D"]
-"simulation/operator/*" = ["D"]
-"simulation/tasks/*" = ["D"]
-"simulation/vehicle/*" = ["D"]
+"simulation/agent/*"                = ["D"]
+"simulation/environment/*"          = ["D"]
+"simulation/helper/*"               = ["D"]
+"simulation/infrastructure/*"       = ["D"]
+"simulation/metrics/*"              = ["D"]
+"simulation/operator/*"             = ["D"]
+"simulation/tasks/*"                = ["D"]
+"simulation/vehicle/*"              = ["D"]
 "simulation/vehicle_choice_model/*" = ["D"]
-"simulation/world/*" = ["D"]
-"tracking/*" = ["D"]
-"simulation/__init__.py" = ["D"]
-"walking_template.py" = ["D"]
-"shared_vehicle_fleet_template.py" = ["D"]
-"ridehailing_template.py" = ["D"]
-"public_transport_template.py" = ["D"]
-"utils.py" = ["D"]
-
-[tool.taplo]
-include = ["resources/configurations/*.toml"]
-
-[tool.taplo.formatting]
-array_auto_collapse = true
-array_auto_expand = false
-allowed_blank_lines = 2
-column_width = 800
-align_entries = true
-align_comments = true
-inline_table_expand = false
-
+"simulation/world/*"                = ["D"]
+"tracking/*"                        = ["D"]
+"simulation/__init__.py"            = ["D"]
+"walking_template.py"               = ["D"]
+"shared_vehicle_fleet_template.py"  = ["D"]
+"ridehailing_template.py"           = ["D"]
+"public_transport_template.py"      = ["D"]
+"utils.py"                          = ["D"]
 
 [tool.mypy]
 # Enable type checking for all simulation modules
-files = ["simulation/"]
+files   = ["simulation/"]
 exclude = []
 
 # General type checking options
-check_untyped_defs = true
-warn_unreachable = true
+check_untyped_defs  = true
+warn_unreachable    = true
 warn_unused_configs = true
 
 # Strictness and error reporting
-warn_redundant_casts = true
-warn_return_any = true
-no_implicit_optional = true
-disallow_untyped_defs = true
+warn_redundant_casts     = true
+warn_return_any          = true
+no_implicit_optional     = true
+disallow_untyped_defs    = true
 disallow_incomplete_defs = true
-disallow_any_generics = true
+disallow_any_generics    = true
 
 # Enable specific error codes
 enable_error_code = ["redundant-expr", "truthy-bool"]
