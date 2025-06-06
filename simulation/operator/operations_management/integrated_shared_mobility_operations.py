@@ -719,7 +719,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             already_relocated = dict(zip(hexagons, [0] * len(hexagons)))
 
             # Sort Ascending
-            state = state.sort_values(by=[f"Residual_Supply_{mode}"])
+            state = state.sort_values(by=[f"Residual_Supply_{mode}", "hex_id"])
 
             for index, next_hex in state[
                 state[f"Residual_Supply_{mode}"] < 0
@@ -751,7 +751,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
                 # Sort by distance (in meter) (i.e., prefer neighbours first)
                 distance_to_other_hexagons = distance_to_other_hexagons.sort_values(
-                    by=[next_hex_id]
+                    by=[next_hex_id, "hex_id"]
                 )
 
                 # Only consider regions having additional supply
