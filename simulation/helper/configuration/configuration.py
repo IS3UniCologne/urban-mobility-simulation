@@ -12,7 +12,7 @@ from simulation.helper.configuration.enums import (
     ModeChoiceStrategy,
     PopulationType,
     SpatialResolution,
-    TemporalBucket,
+    TemporalResolution,
     VehicleMode,
 )
 from simulation.helper.singleton import Singleton
@@ -123,7 +123,7 @@ class RandomManagerConfig:
 @dataclass(slots=True, frozen=True)
 class WorldConfig:
     SPATIAL_RESOLUTION: SpatialResolution
-    TEMPORAL_RESOLUTION: TemporalBucket
+    TEMPORAL_RESOLUTION: TemporalResolution
     DAILY_RESOLUTION: DailyResolution
     CITY: str
 
@@ -133,16 +133,18 @@ class WorldConfig:
             self, "SPATIAL_RESOLUTION", SpatialResolution(self.SPATIAL_RESOLUTION)
         )
         object.__setattr__(
-            self, "TEMPORAL_RESOLUTION", TemporalBucket(self.TEMPORAL_RESOLUTION)
+            self, "TEMPORAL_RESOLUTION", TemporalResolution(self.TEMPORAL_RESOLUTION)
         )
         object.__setattr__(
             self, "DAILY_RESOLUTION", DailyResolution(self.DAILY_RESOLUTION)
         )
 
+    # TODO: get rid of these
     @property
     def SPATIAL_RESOLUTION_VALUE(self) -> int:
         return self.SPATIAL_RESOLUTION.value
 
+    # TODO: get rid of these
     @property
     def SPATIAL_RESOLUTION_COLUMN(self) -> str:
         """Returns the column name for the spatial resolution. E.g. 'hex_id_7'
@@ -180,14 +182,18 @@ class PathConfig:
         for field_obj in fields(self):
             field_name = field_obj.name
             value = getattr(self, field_name)
+            # Format city placeholder if present
             if isinstance(value, str) and "{city}" in value:
-                # Use object.__setattr__ to bypass dataclass immutability with frozen
                 object.__setattr__(self, field_name, value.format(city=city))
-
-        # Format demand modifiers if present
+                value = getattr(self, field_name)
+            # Normalize all string paths
+            if isinstance(value, str):
+                object.__setattr__(self, field_name, os.path.normpath(value))
+        # Format and normalize demand modifiers if present
         if self.PATH_DEMAND_MODIFIERS:
             formatted_modifiers = [
-                value.format(city=city) for value in self.PATH_DEMAND_MODIFIERS
+                os.path.normpath(value.format(city=city))
+                for value in self.PATH_DEMAND_MODIFIERS
             ]
             object.__setattr__(self, "PATH_DEMAND_MODIFIERS", formatted_modifiers)
 

@@ -1,4 +1,4 @@
-from enum import Enum, IntEnum, StrEnum
+from enum import Enum, IntEnum
 
 try:
     from enum import StrEnum  # Python 3.11+
