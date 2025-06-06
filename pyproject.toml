@@ -47,13 +47,17 @@ typing = ["mypy>=1.15.0", "pandas-stubs>=2.2.2.240807"]
 
 [project.optional-dependencies]
 notebooks = [
-  "contextily>=1.6.2",
-  "ipython>=8.18.1",
-  "notebook>=7.3.2",
-  "seaborn>=0.13.2",
-  "sidetable>=0.9.1",
+    "contextily>=1.6.2",
+    "ipython>=8.18.1",
+    "notebook>=7.3.2",
+    "seaborn>=0.13.2",
+    "sidetable>=0.9.1",
 ]
-ml = ["torch>=2.6.0", "docplex>=2.29.241", "cplex>=22.1.2.0"]
+ml = [
+    "torch>=2.6.0",
+    "highspy>=1.10.0",
+    "pyomo>=6.9.2",
+]
 
 [build-system]
 requires = ["setuptools", "cython"]
