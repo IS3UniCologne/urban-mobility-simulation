@@ -407,7 +407,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         for i, mode in enumerate(self._available_vehicle_modes):
             # Sort State by Regions with highest number of SoC (per vehicle)
-            state = state.sort_values(by=[f"{mode}_Low_SoC"], ascending=False)
+            state = state.sort_values(
+                by=[f"{mode}_Low_SoC", "hex_id"], ascending=[False, True]
+            )
 
             # Get Max Charging Capacity per Service Worker Unit
             # e.g., 40 Kick Scooters by one SW, 1 Car by one SW
