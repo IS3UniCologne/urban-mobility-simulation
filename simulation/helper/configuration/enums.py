@@ -4,9 +4,10 @@ try:
     from enum import StrEnum  # Python 3.11+
 except ImportError:
 
-    class StrEnum(str, Enum):
+    class StrEnum(str, Enum):  # type: ignore[no-redef]
         """
         StrEnum replacement for Python < 3.11.
+
         We can remove this once we drop support for Python 3.11.
         """
 
