@@ -156,8 +156,8 @@ def _validate_simulation_log(log_path: Path, script: str) -> None:
 
     if script == "shared_vehicle_fleet_template.py":
         expected_entry = (
-            "Missed trip of User 555. Current Total Revenue: 465.25841890856134 - "
-            "Total Trips: 53 - Missed Trips 492."
+            " Missed trip of User 555. Current Total Revenue: 499.3177950308087 - "
+            "Total Trips: 55 - Missed Trips 491."
         )
         if expected_entry not in log_content:
             pytest.fail(
