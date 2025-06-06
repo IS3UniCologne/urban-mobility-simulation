@@ -85,6 +85,8 @@ We mostly try to adhere to [trunk-based development](https://trunkbaseddevelopme
 What this means is that we do issues that translate to feature branches that should be short-lived, but if they stick around for longer, you need to make sure to be up-to-date with `develop` by merging it to this branch from time to time.
 All active feature branches should have an active pull request associated to track progress.
 
+### Ruff linter and formatter
+
 All pull requests must conform in formatting and linting to the interpretation of _ruff_ on _blacks_ code style and to the PEP definitions and their interpretation. In case a pull request's check of the _ruff_ style fails, you have to run ruff locally. Simply use the following command:
 
 ```
@@ -97,4 +99,56 @@ You can use ruff to format your code as well. In that case, use the following co
 
 ```
 uv run ruff format
+```
+
+### Handling Ruff Noqa Statements
+
+Our codebase currently contains numerous `#noqa` comments that suppress ruff warnings. While these were necessary to maintain compatibility during the transition to ruff, we would like to gradually reduce and eliminate them.
+
+#### Example Noqa Comments
+
+```python
+# Suppress specific rule
+def example():  # noqa: ANN201
+    pass
+
+# Suppress multiple rules
+variable = value  # noqa: ANN001, SLF001
+
+# Suppress all rules (please don't do this :) )
+problematic_code()  # noqa
+```
+
+#### Ruff rules explanation
+
+All ruff rules can be looked up via their code here: https://docs.astral.sh/ruff/rules/
+
+This includes examples with suggested fixes.
+
+
+#### Gradual Cleanup Strategy
+
+If you are modifying an existing class or function containing `#noqa`  statements, please take the opportunity to fix them. Ruff will automatically remove the `#noqa` statement once it is no longer necessary.
+
+### Task automation with Nox
+
+> We use [nox](https://nox.thea.codes/) for task automation and testing across multiple Python environments. This ensures that all tasks run in a clean and reproducible environment. The CI pipeline also uses the same nox sessions.
+
+#### Available Nox Sessions:
+
+```bash
+# Run type checking with mypy
+nox -rs mypy
+
+# Run pre-commit hooks (linting, formatting, etc.)
+nox -rs pre-commit
+
+# Run all tests
+nox -rs pytest
+
+# Run only unit tests
+nox -rs pytest -- -m unit
+
+# Run only integration tests
+nox -rs pytest -- -m integration
 ```
