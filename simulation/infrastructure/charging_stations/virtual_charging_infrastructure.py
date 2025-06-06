@@ -1,6 +1,6 @@
 import logging
 from types import SimpleNamespace
-from typing import Dict, Optional  # noqa: UP035
+from typing import Dict  # noqa: UP035
 
 from beartype.door import die_if_unbearable
 from beartype.roar import BeartypeDoorHintViolation
@@ -38,7 +38,7 @@ class VirtualChargingInfrastructure:
         self,
         env,  # noqa: ANN001
         charging_infrastructure: ChargingInfrastructure,
-        lookahead: Optional[int] = None,
+        lookahead: int | None = None,
         use_virtual_cs=True,  # noqa: ANN001
     ):
         self._env = env
@@ -88,7 +88,7 @@ class VirtualChargingInfrastructure:
         else:
             return self._virtual_charging_stations
 
-    def get_available_locations(self, at_timeslot: Optional[int]):  # noqa: ANN201
+    def get_available_locations(self, at_timeslot: int | None):  # noqa: ANN201
         if at_timeslot is None:
             return [
                 location
@@ -105,7 +105,7 @@ class VirtualChargingInfrastructure:
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_available_capacity(self, at_timeslot: Optional[int] = None):  # noqa: ANN201
+    def get_available_capacity(self, at_timeslot: int | None = None):  # noqa: ANN201
         if self._lookahead is None:
             return self._availability
         try:
@@ -147,7 +147,7 @@ class VirtualChargingInfrastructure:
                 else None,
             )
 
-    def update(self, availability: Dict[str, int], timeslot: Optional[int] = None):  # noqa: ANN201, UP006
+    def update(self, availability: Dict[str, int], timeslot: int | None = None):  # noqa: ANN201, UP006
         try:
             die_if_unbearable(availability, Dict[str, int])  # noqa: UP006
             if self._lookahead is None:
