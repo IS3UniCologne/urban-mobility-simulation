@@ -3,7 +3,7 @@ name = "urban-mobility-simulation"
 version = "0.1.0"
 description = "Urban Mobility Simulation"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10, <3.13.0"
 
 classifiers = [
   "Private :: Do Not Upload",
