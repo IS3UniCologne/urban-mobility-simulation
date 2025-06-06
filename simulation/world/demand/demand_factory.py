@@ -3,10 +3,12 @@ import logging
 
 import h3
 import simpy
+from pandas import DataFrame
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.random.random_manager import RandomManager
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
+from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.world import World
 
 
@@ -14,7 +16,6 @@ class DemandFactory:
     __slots__ = (
         "_config",
         "_day_of_week_column",
-        "_demand_importer",
         "_demand_profile",
         "_destination_column",
         "_env",
@@ -35,15 +36,14 @@ class DemandFactory:
     def __init__(  # noqa: ANN204
         self,
         env,  # noqa: ANN001
-        demand_profile,  # noqa: ANN001
         world: World,
         modifiers,  # noqa: ANN001
         mode,  # noqa: ANN001
         maximal_demand=3_000_000,  # noqa: ANN001
     ):
+        self._config = Configuration()
         self._env = env
         self._time = SimulationTime(env)
-        self._demand_profile = demand_profile
         self._world: World = world
         self._mode = mode
 
@@ -62,15 +62,28 @@ class DemandFactory:
         self._modifier_paths = modifiers
         self._modifiers = {}
 
+        self._demand_profile = self._load_demand_profile()
         self._spatial_units = list(self._demand_profile[origin].unique())
 
         # Random Number Generators
         self._rng = RandomManager().get_rng("DEMANDFACTORY")
 
-        # Config
-        self._config = Configuration()
-
         self._load_modifiers()
+
+    def _load_demand_profile(self) -> DataFrame:
+        """
+        Loads the demand profile from the configured path using the DemandImporte.
+        """
+
+        demand_importer = DemandImporter(
+            self._world.temporal_resolution,
+            self._world.spatial_resolution,
+            self._world.daily_resolution,
+            self._config.world.CITY,
+        )
+        return demand_importer.extract_spatio_temporal_demand_estimates(
+            self._config.path.PATH_TRIP_DEMAND
+        )
 
     def _register_modifier(self, geomodifier):  # noqa: ANN001, ANN202
         multiplier = geomodifier["properties"]["demandMultiplier"]
@@ -123,7 +136,6 @@ class DemandFactory:
         :param spatial_unit: Identifier of the spatial unit (e.g., hex id)
         :return: None
         """
-
         # Filter data on spatial unit such that we don't need to filter on the entire demand profile
         local_demand_profile = self._demand_profile[
             (self._demand_profile[self._origin_column] == spatial_unit)

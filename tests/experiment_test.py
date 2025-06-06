@@ -6,9 +6,9 @@ import sys
 
 import pytest
 
-# pytestmark = pytest.mark.skip(
-#     reason="This runs all experiments, which is slow and not needed for every test."
-# )
+pytestmark = pytest.mark.skip(
+    reason="This runs all experiments, which is slow and not needed for every test."
+)
 
 
 def run_template_script(script_path, config_file):  # noqa: ANN001, ANN201
@@ -30,7 +30,7 @@ def run_template_script(script_path, config_file):  # noqa: ANN001, ANN201
 
 
 # Grab all *.toml files in the test/configurations directory
-config_files_pattern = os.path.join("test", "configurations", "*.toml")
+config_files_pattern = os.path.join("tests", "configurations", "*.toml")
 configs = sorted(glob.glob(config_files_pattern))
 
 # Grab all experiments in the resources/scripts/experiments directory

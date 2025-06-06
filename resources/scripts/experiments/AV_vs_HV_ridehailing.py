@@ -38,7 +38,6 @@ from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
     OnlyCarVehicleChoiceBehavior,
 )
 from simulation.world.demand.demand_factory import DemandFactory
-from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 from tracking.tracking import Tracking
@@ -125,23 +124,6 @@ print("Basic config initialized")  # noqa: T201
 
 # Load Spatial Environment
 utils.load_geodesic_environment()
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Load Demand Data (once).                #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-p = Path(config.path.PATH_TRIP_DEMAND)
-di = DemandImporter(
-    spatial_resolution=config.world.SPATIAL_RESOLUTION,
-    temporal_resolution=config.world.TEMPORAL_RESOLUTION,
-    daily_resolution=config.world.DAILY_RESOLUTION,
-    city=config.world.CITY,
-)
-
-demand_profile = di.extract_spatio_temporal_demand_estimates(p)
-
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
 # Load Distance Matrix (once).            #
@@ -359,12 +341,7 @@ def run_single_simulation(  # noqa: ANN201
     # # # # # # # # # # # # # # # # # # # # # #
 
     ride_hailing_demand_factory = DemandFactory(
-        env,
-        demand_profile,
-        di,
-        world,
-        config.path.PATH_DEMAND_MODIFIERS,
-        mode="ride_hailing",
+        env, world, config.path.PATH_DEMAND_MODIFIERS, mode="ride_hailing"
     )
 
     env.process(ride_hailing_demand_factory.generate_demand())

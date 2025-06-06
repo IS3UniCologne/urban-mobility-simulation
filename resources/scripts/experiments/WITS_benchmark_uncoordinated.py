@@ -7,7 +7,6 @@ import shutil
 import sys
 import time
 from datetime import datetime
-from pathlib import Path
 
 import pandas as pd
 
@@ -50,7 +49,6 @@ from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
     OnlyCarVehicleChoiceBehavior,
 )
 from simulation.world.demand.demand_factory import DemandFactory
-from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 from tracking.tracking import Tracking
@@ -219,23 +217,6 @@ env.process(track_charging_stations())
 
 
 #### End Charging Infrastructure Configuration #####
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Load Demand Data (once).                #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-p = Path(config.path.PATH_TRIP_DEMAND)
-di = DemandImporter(
-    spatial_resolution=config.world.SPATIAL_RESOLUTION,
-    temporal_resolution=config.world.TEMPORAL_RESOLUTION,
-    daily_resolution=config.world.DAILY_RESOLUTION,
-    city=config.world.CITY,
-)
-
-
-demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -423,12 +404,7 @@ world = World.init(
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env,
-    demand_profile,
-    di,
-    world,
-    config.path.PATH_DEMAND_MODIFIERS,
-    mode="ride_hailing",
+    env, world, config.path.PATH_DEMAND_MODIFIERS, mode="ride_hailing"
 )
 env.process(demand_factory.generate_demand())
 
