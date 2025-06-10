@@ -384,6 +384,7 @@ demand_factory = DemandFactory(
 timestamp = []
 y1, y2, y3, y4, y5, y6, y7 = [], [], [], [], [], [], []
 
+
 # callback function to get data from world
 def get_n_users() -> list:
     # fulfilled trips vs. total trips
@@ -391,11 +392,15 @@ def get_n_users() -> list:
     fleet_1_transactions = ridehailing_operator_1.transaction_df
 
     try:
-        fulfilled_trips_fleet_0 = fleet_0_transactions["state"].apply(lambda x: "Fulfilled" in x).sum()
-        fulfilled_trips_fleet_1 = fleet_1_transactions["state"].apply(lambda x: "Fulfilled" in x).sum()
+        fulfilled_trips_fleet_0 = (
+            fleet_0_transactions["state"].apply(lambda x: "Fulfilled" in x).sum()
+        )
+        fulfilled_trips_fleet_1 = (
+            fleet_1_transactions["state"].apply(lambda x: "Fulfilled" in x).sum()
+        )
         total_trips_fleet_0 = len(fleet_0_transactions["state"])
         total_trips_fleet_1 = len(fleet_1_transactions["state"])
-    except Exception as e:
+    except Exception:
         fulfilled_trips_fleet_0 = 0
         fulfilled_trips_fleet_1 = 0
         total_trips_fleet_0 = 0
@@ -404,9 +409,7 @@ def get_n_users() -> list:
     # global avg station utilization
     global_station_utilization = 0
     for charging_station in charging_infrastructure.charging_stations:
-        global_station_utilization += (
-            charging_station.plugs.count
-        )
+        global_station_utilization += charging_station.plugs.count
 
     global_avg_station_utilization = global_station_utilization / len(
         charging_infrastructure.charging_stations
