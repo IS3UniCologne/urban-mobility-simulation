@@ -1,5 +1,16 @@
 from enum import Enum
 
+try:
+    from enum import StrEnum  # Python 3.11+
+except ImportError:
+
+    class StrEnum(str, Enum):  # type: ignore[no-redef]
+        """
+        StrEnum replacement for Python < 3.11.
+
+        We can remove this once we drop support for Python 3.11.
+        """
+
 
 class TemporalBucket(Enum):
     HOURLY_BUCKETS = 1
@@ -90,6 +101,6 @@ class VehicleState(Enum):
     UNKNOWN = 2999
 
 
-class TransactionState(Enum):
+class TransactionState(StrEnum):
     FULFILLED = "Fulfilled"
     MISSED = "Missed"
