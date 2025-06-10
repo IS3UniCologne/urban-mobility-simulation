@@ -173,7 +173,8 @@ class DQN(RLAgent):
             if type(weights) is str:
                 # filepath is given
                 logging.info(
-                    f"Loading weights from {weights} ...",  # noqa: G004
+                    "Loading weights from %s ...",
+                    weights,
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 self._q_net.load_weights(weights)
@@ -317,7 +318,8 @@ class DQN(RLAgent):
         # retain decayed epsilon
         self._config.transit_agent_config.eps = self._eps
         logging.debug(
-            f"Saving decayed epsilon into config: {self._eps!s}",  # noqa: G004
+            "Saving decayed epsilon into config: %s",
+            str(self._eps),
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -325,7 +327,8 @@ class DQN(RLAgent):
         self._config.transit_agent_config.optimizer = self._optimizer
         if self._config.transit_agent_config.lr_decay:
             logging.debug(
-                f"Saving decayed learning rate into config: {self._learning_rate(self._optimizer.iterations)!s}",  # noqa: G004
+                "Saving decayed learning rate into config: %s",
+                str(self._learning_rate(self._optimizer.iterations)),
                 extra={
                     "clazz": self.__class__.__name__,
                     "oid": f"Episode {self._episode}",
@@ -333,7 +336,8 @@ class DQN(RLAgent):
             )
 
         logging.debug(
-            f"Current Replay Buffer size: {len(self._replay_buffer)!s}",  # noqa: G004
+            "Current Replay Buffer size: %s",
+            str(len(self._replay_buffer)),
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -463,14 +467,16 @@ class DQN(RLAgent):
             if not bus.test_action(a, corridor=True):
                 # hexagon is out of layer bounding box - action is forbidden
                 logging.debug(
-                    f"Action {a} is forbidden, sampling again",  # noqa: G004
+                    "Action %s is forbidden, sampling again",
+                    a,
                     extra={"clazz": self.__class__.__name__, "oid": bus.id},
                 )
                 continue
             break
 
         logging.debug(
-            f"Bus takes action {a}",  # noqa: G004
+            "Bus takes action %s",
+            a,
             extra={"clazz": self.__class__.__name__, "oid": bus.id},
         )
 
@@ -554,7 +560,8 @@ class DQN(RLAgent):
         self._latest_reward = bus._dropoffs * self._reward  # noqa: SLF001
         if self._latest_reward > 0:
             logging.debug(
-                f"Service Level was increased by {self._latest_reward!s}",  # noqa: G004
+                "Service Level was increased by %s",
+                str(self._latest_reward),
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -564,7 +571,9 @@ class DQN(RLAgent):
         self._reward_sum = self._reward_sum + self._latest_reward
 
         logging.debug(
-            f"Current reward: {self._latest_reward}, overall reward: {self._reward_sum}",  # noqa: G004
+            "Current reward: %s, overall reward: %s",
+            self._latest_reward,
+            self._reward_sum,
             extra={"clazz": self.__class__.__name__, "oid": bus.id},
         )
 

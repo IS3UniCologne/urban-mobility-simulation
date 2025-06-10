@@ -92,7 +92,9 @@ class DemandImporter:
             if cache_path.exists():
                 # Load cached data and return
                 logging.debug(
-                    f"Demand File already existing for selected resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.",  # noqa: G004
+                    "Demand File already existing for selected resolution: (%s, %s). Loading from cache.",
+                    self._spatial_resolution,
+                    self._temporal_resolution,
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 if ext == "parquet":
@@ -101,7 +103,9 @@ class DemandImporter:
                     return pd.read_csv(cache_path)
 
         logging.debug(
-            f"Generating demand data based on mobility trip data for resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.",  # noqa: G004
+            "Generating demand data based on mobility trip data for resolution: (%s, %s). Loading from cache.",
+            self._spatial_resolution,
+            self._temporal_resolution,
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 

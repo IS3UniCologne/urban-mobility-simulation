@@ -165,7 +165,10 @@ class RideHailingBaseChargingOperations(OperationsInterface):
             self._task_queue.bulk_append(self._scheduled_tasks)
 
             logging.info(
-                f"There are {self._operator_reference.fleet.count_vehicles_below_soc_level(self._state_of_charge_threshold)} vehicles with low state of charge.",  # noqa: G004
+                "There are %s vehicles with low state of charge.",
+                self._operator_reference.fleet.count_vehicles_below_soc_level(
+                    self._state_of_charge_threshold
+                ),
                 extra={
                     "clazz": self.__class__.__name__,
                     "oid": self._operator_reference.id,
@@ -173,7 +176,8 @@ class RideHailingBaseChargingOperations(OperationsInterface):
             )
 
             logging.info(
-                f"Charging Tasks scheduled. In total {len(charging_plans)} charging tasks are generated.",  # noqa: G004
+                "Charging Tasks scheduled. In total %s charging tasks are generated.",
+                len(charging_plans),
                 extra={
                     "clazz": self.__class__.__name__,
                     "oid": self._operator_reference.id,
@@ -186,7 +190,8 @@ class RideHailingBaseChargingOperations(OperationsInterface):
             while self._task_queue.count > 0:
                 next_task = self._task_queue.popleft()
                 logging.debug(
-                    f"Processing following task: {next_task}.",  # noqa: G004
+                    "Processing following task: %s.",
+                    next_task,
                     extra={
                         "clazz": self.__class__.__name__,
                         "oid": self._operator_reference.id,
@@ -293,7 +298,9 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                     selected_base_distance, consider_buffer=False
                 ):
                     logging.debug(
-                        f"Vehicle {vehicle.id} considered for charging at {selected_base} has not enough state of charge to relocate there, skipping.",  # noqa: G004
+                        "Vehicle %s considered for charging at %s has not enough state of charge to relocate there, skipping.",
+                        vehicle.id,
+                        selected_base,
                         extra={
                             "clazz": self.__class__.__name__,
                             "oid": self._operator_reference.id,
@@ -367,7 +374,9 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                         selected_base_distance, consider_buffer=False
                     ):
                         logging.debug(
-                            f"Vehicle {vehicle.id} considered for charging at {selected_charging_station} has not enough state of charge to relocate there, skipping.",  # noqa: G004
+                            "Vehicle %s considered for charging at %s has not enough state of charge to relocate there, skipping.",
+                            vehicle.id,
+                            selected_charging_station,
                             extra={
                                 "clazz": self.__class__.__name__,
                                 "oid": self._operator_reference.id,

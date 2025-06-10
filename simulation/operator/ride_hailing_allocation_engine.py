@@ -63,7 +63,9 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
             self._add_request(user, selected_transportation_alternative)
         except Exception:
             logging.error(
-                f"Vehicle {selected_transportation_alternative.vehicle.id} already assigned to user {selected_transportation_alternative.vehicle.reserved_for_user.id}",  # noqa: G004
+                "Vehicle %s already assigned to user %s",
+                selected_transportation_alternative.vehicle.id,
+                selected_transportation_alternative.vehicle.reserved_for_user.id,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
