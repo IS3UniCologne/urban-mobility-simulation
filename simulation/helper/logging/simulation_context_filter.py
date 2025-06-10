@@ -22,9 +22,9 @@ class SimulationContextFilter(logging.Filter):
 
     __slots__ = ("_env",)
 
-    def __init__(self, filter_name: str, extra: simpy.Environment) -> None:
+    def __init__(self, filter_name: str, env: simpy.Environment) -> None:
         super().__init__(filter_name)
-        self._env: simpy.Environment = extra
+        self._env: simpy.Environment = env
 
     def filter(self, record: logging.LogRecord) -> bool:
         """
