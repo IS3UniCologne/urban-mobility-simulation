@@ -1,5 +1,13 @@
+"""
+Demand generation factory.
+
+This module provides the DemandFactory class, which generates and manages demand
+based on spatio-temporal demand profiles and configurable modifiers.
+"""
+
 import json
 import logging
+from collections.abc import Generator
 
 import h3
 import simpy
@@ -13,6 +21,55 @@ from simulation.world.world import World
 
 
 class DemandFactory:
+    """
+    Factory for generating and managing demand based on spatio-temporal demand profiles and configurable modifiers.
+
+    This class loads demand profiles, applies modifiers, and spawns demand generation processes
+    for each spatial unit in the simulation environment.
+
+    Attributes
+    ----------
+    _config : Configuration
+        The configuration instance containing simulation settings.
+    _env : simpy.Environment
+        The simulation environment.
+    _time : SimulationTime
+        The simulation time manager.
+    _world : World
+        The simulation world instance.
+    _mode : str
+        The demand mode (e.g., vehicle type or service type).
+    _origin_column : str
+        Name of the origin column in the demand profile.
+    _destination_column : str
+        Name of the destination column in the demand profile.
+    _temporal_column : str
+        Name of the temporal column in the demand profile.
+    _day_of_week_column : str
+        Name of the day-of-week column in the demand profile.
+    _maximal_demand : int
+        Maximum number of demand events to generate.
+    _modifier_paths : list of str
+        Paths to GeoJSON files containing demand modifiers.
+    _modifiers : dict
+        Mapping of spatial unit IDs to demand multipliers.
+    _demand_profile : DataFrame
+        The loaded demand profile data.
+    _spatial_units : list of str
+        List of unique spatial unit IDs.
+    _rng : numpy.random.Generator
+        Random number generator for demand sampling.
+
+    Methods
+    -------
+    generate_demand()
+        Starts demand generation processes for all spatial units.
+    spawn_demand_process(spatial_unit: str)
+        Generator for demand events in a specific spatial unit.
+    reset()
+        Resets the demand factory and clears all demand-related state.
+    """
+
     __slots__ = (
         "_config",
         "_day_of_week_column",
@@ -33,29 +90,24 @@ class DemandFactory:
     )
     counter = 0
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env,  # noqa: ANN001
+        env: simpy.Environment,
         world: World,
-        modifiers,  # noqa: ANN001
-        mode,  # noqa: ANN001
-        maximal_demand=3_000_000,  # noqa: ANN001
-    ):
+        modifiers: list[str],
+        mode: str,
+        maximal_demand: int = 3_000_000,
+    ) -> None:
         self._config = Configuration()
         self._env = env
         self._time = SimulationTime(env)
         self._world: World = world
         self._mode = mode
 
-        origin: str = world.spatial_resolution.origin_column_name
-        destination: str = world.spatial_resolution.destination_column_name
-        temporal: str = world.temporal_resolution.column_name
-        day_of_week_column: str = world.daily_resolution.day_of_week_column_name
-
-        self._origin_column = origin
-        self._destination_column = destination
-        self._temporal_column = temporal
-        self._day_of_week_column = day_of_week_column
+        self._origin_column = world.spatial_resolution.origin_column_name
+        self._destination_column = world.spatial_resolution.destination_column_name
+        self._temporal_column = world.temporal_resolution.column_name
+        self._day_of_week_column = world.daily_resolution.day_of_week_column_name
 
         self._maximal_demand = maximal_demand
 
@@ -63,7 +115,7 @@ class DemandFactory:
         self._modifiers = {}
 
         self._demand_profile = self._load_demand_profile()
-        self._spatial_units = list(self._demand_profile[origin].unique())
+        self._spatial_units = list(self._demand_profile[self._origin_column].unique())
 
         # Random Number Generators
         self._rng = RandomManager().get_rng("DEMANDFACTORY")
@@ -71,21 +123,20 @@ class DemandFactory:
         self._load_modifiers()
 
     def _load_demand_profile(self) -> DataFrame:
-        """
-        Loads the demand profile from the configured path using the DemandImporte.
-        """
-
-        demand_importer = DemandImporter(
-            self._world.temporal_resolution,
-            self._world.spatial_resolution,
-            self._world.daily_resolution,
-            self._config.world.CITY,
+        """Load the demand profile from the configured path using the DemandImporter."""
+        demand_importer: DemandImporter = DemandImporter(
+            temporal_resolution=self._world.temporal_resolution,
+            spatial_resolution=self._world.spatial_resolution,
+            daily_resolution=self._world.daily_resolution,
+            city=self._config.world.CITY,
         )
+        from pathlib import Path
+
         return demand_importer.extract_spatio_temporal_demand_estimates(
-            self._config.path.PATH_TRIP_DEMAND
+            trip_data_path=Path(self._config.path.PATH_TRIP_DEMAND)
         )
 
-    def _register_modifier(self, geomodifier):  # noqa: ANN001, ANN202
+    def _register_modifier(self, geomodifier) -> None:  # noqa: ANN001
         multiplier = geomodifier["properties"]["demandMultiplier"]
         hex_ids = h3.polyfill(
             geomodifier["geometry"],
@@ -95,10 +146,8 @@ class DemandFactory:
 
         self._modifiers.update({x: multiplier for x in hex_ids})
 
-    def _load_modifiers(self):  # noqa: ANN202
-        """
-        Loads and registers per-hexagon demand modifiers (floating number multiplier) from GeoJSON
-        """
+    def _load_modifiers(self) -> None:
+        """Load and register per-hexagon demand modifiers (floating number multiplier) from GeoJSON."""
         for modifier in self._modifier_paths:
             try:
                 with open(modifier) as f:
@@ -118,9 +167,7 @@ class DemandFactory:
                 self._register_modifier(geo)
 
     def generate_demand(self):  # noqa: ANN201
-        """
-        Invokes for each spatial unit a dedicated process which generates demand
-        """
+        """Invoke for each spatial unit a dedicated process which generates demand."""
         spawned = self._env.event()
 
         for unit in self._spatial_units:
@@ -130,11 +177,18 @@ class DemandFactory:
 
         yield spawned.succeed()
 
-    def spawn_demand_process(self, spatial_unit):  # noqa: ANN001, ANN201
-        """
-        Spawn a demand generator on given spatial unit.
-        :param spatial_unit: Identifier of the spatial unit (e.g., hex id)
-        :return: None
+    def spawn_demand_process(self, spatial_unit: str) -> Generator[simpy.Timeout]:
+        """Spawn a demand generator on given spatial unit.
+
+        Parameters
+        ----------
+        spatial_unit : str
+            The hexagon ID of the spatial unit for which to spawn the demand generator.
+
+        Yields
+        ------
+        simpy.Timeout
+            A timeout until the next demand is generated based on the demand profile.
         """
         # Filter data on spatial unit such that we don't need to filter on the entire demand profile
         local_demand_profile = self._demand_profile[
@@ -238,7 +292,13 @@ class DemandFactory:
             except simpy.Interrupt:
                 break
 
-    def reset(self):  # noqa: ANN201
+    def reset(self) -> None:
+        """
+        Reset the demand factory and clear all demand-related state.
+
+        This method terminates all ongoing demand processes, clears previous demand and user processes,
+        resets the list of users, and resets the global demand counter to zero.
+        """
         # Terminate all ongoing demand processes
         self._world.stop_all_processes()
 
