@@ -395,7 +395,7 @@ def get_n_users() -> list:
         fulfilled_trips_fleet_1 = fleet_1_transactions["state"].apply(lambda x: "Fulfilled" in x).sum()
         total_trips_fleet_0 = len(fleet_0_transactions["state"])
         total_trips_fleet_1 = len(fleet_1_transactions["state"])
-    except:
+    except Exception as e:
         fulfilled_trips_fleet_0 = 0
         fulfilled_trips_fleet_1 = 0
         total_trips_fleet_0 = 0
