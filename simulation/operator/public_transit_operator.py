@@ -72,7 +72,10 @@ class PublicTransitOperator(Operator):
         )
 
         logging.info(
-            f"New Payment ({payment}) received from User {user.id}. Current Total Revenue: {self.total_revenue}.",  # noqa: G004
+            "New Payment (%s) received from User %s. Current Total Revenue: %s.",
+            payment,
+            user.id,
+            self.total_revenue,
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
@@ -89,6 +92,10 @@ class PublicTransitOperator(Operator):
         self.log_transaction(transportation_task, None, state=state)
 
         logging.debug(
-            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",  # noqa: G004
+            "Missed trip of User %s. Current Total Revenue: %s - Total Trips: %s - Missed Trips %s.",
+            user.id,
+            self.total_revenue,
+            self.total_fulfilled_trips,
+            self.total_missed_trips,
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )

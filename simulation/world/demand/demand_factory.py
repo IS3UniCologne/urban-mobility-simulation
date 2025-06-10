@@ -94,7 +94,7 @@ class DemandFactory:
                     geo = json.load(f)
             except FileNotFoundError:
                 logging.warning(
-                    f'Demand modifier at "{modifier}" doesn\'t exist, skipping.'  # noqa: G004
+                    'Demand modifier at "%s" doesn\'t exist, skipping.', modifier
                 )
                 continue
 
@@ -153,7 +153,11 @@ class DemandFactory:
                 ]
                 if demand_slice.shape[0] == 0:
                     logging.debug(
-                        f"Hex: {spatial_unit}  Time: {time_bucket}  Date:{non_working_day}  Env Time: {self._time.now()}",  # noqa: G004
+                        "Hex: %s  Time: %s  Date:%s  Env Time: %s",
+                        spatial_unit,
+                        time_bucket,
+                        non_working_day,
+                        self._time.now(),
                         extra={"clazz": self.__class__.__name__},
                     )
                     # no lambda for given demand slice means there were no arrivals in the sample (lambda was zero)
@@ -187,7 +191,9 @@ class DemandFactory:
                     try:
                         if self._modifiers[spatial_unit] == 0:
                             logging.debug(
-                                f"Spatial unit {spatial_unit} is removed from demand generation process"  # noqa: G004
+                                "Spatial unit %s is removed from demand generation process",
+                                spatial_unit,
+                                extra={"clazz": self.__class__.__name__},
                             )
                             break
 
@@ -226,7 +232,10 @@ class DemandFactory:
                     # Append Arrival to World
                     # create agent or similar consumers
                     logging.debug(
-                        f"Demand generated from hexagon {spatial_unit} to {destination}. Fleet {fleet}",  # noqa: G004
+                        "Demand generated from hexagon %s to %s. Fleet %s",
+                        spatial_unit,
+                        destination,
+                        fleet,
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
 

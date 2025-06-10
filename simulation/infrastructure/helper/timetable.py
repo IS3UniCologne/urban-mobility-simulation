@@ -47,7 +47,8 @@ class Timetable:
             self._trips = pd.read_csv(self._data_path)
         except FileNotFoundError:
             logging.error(
-                f"{self._data_path} does not exist, use Prepare_Transit_Data notebook to generate first.",  # noqa: G004
+                "%s does not exist, use Prepare_Transit_Data notebook to generate first.",
+                self._data_path,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 

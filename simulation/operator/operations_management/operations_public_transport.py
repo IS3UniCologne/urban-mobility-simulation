@@ -65,7 +65,8 @@ class OperationsPublicTransport(OperationsInterface):
         while True:
             try:
                 logging.debug(
-                    f"TransitOperator is at time {self._time.now_as_str()}",  # noqa: G004
+                    "TransitOperator is at time %s",
+                    self._time.now_as_str(),
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
 
