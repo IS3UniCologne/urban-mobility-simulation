@@ -381,84 +381,55 @@ demand_factory = DemandFactory(
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# fleet_0_transactions = ridehailing_operator_0.get_transactions()
-
 timestamp = []
 y1, y2, y3, y4, y5, y6, y7 = [], [], [], [], [], [], []
 
-# fleet_0_transactions = ridehailing_operator_0.get_transactions()
-# fleet_1_transactions = ridehailing_operator_1.get_transactions()
-
-# missed_trips_fleet_0 = fleet_0_transactions["state"].value_counts()["Missed"]
-# missed_trips_fleet_1 = fleet_1_transactions["state"].value_counts()["Missed"]
-
-# total_trips_fleet_0 = len(fleet_0_transactions["state"])
-# total_trips_fleet_1 = len(fleet_1_transactions["state"])
-
-
 # callback function to get data from world
 def get_n_users() -> list:
-    """
-    needed data:
-    - plot 1: n successful transport tasks & total transport tasks
-    - plot 2: number of active users
-    - plot 3: charging station utilization global (avg. of each stations)
-    """
-    # transaction data
-    # fleet_0_transactions = ridehailing_operator_0.get_transactions()
-    # fleet_1_transactions = ridehailing_operator_1.get_transactions()
+    # fulfilled trips vs. total trips
+    fleet_0_transactions = ridehailing_operator_0.transaction_df
+    fleet_1_transactions = ridehailing_operator_1.transaction_df
 
-    # try:
-    #     missed_trips_fleet_0 = fleet_0_transactions["state"].apply(lambda x: "Fulfilled" in x).sum() # somehow works with "Fulfilled"
-    #     missed_trips_fleet_1 = fleet_1_transactions["state"].apply(lambda x: "Fulfilled" in x).sum()
-    #     total_trips_fleet_0 = len(fleet_0_transactions["state"])
-    #     total_trips_fleet_1 = len(fleet_1_transactions["state"])
-    # #     total_trips_fleet_0 = len(fleet_0_transactions["state"])
-    # #     total_trips_fleet_1 = len(fleet_1_transactions["state"]x)
-    # #     missed_trips_fleet_0 = (total_trips_fleet_0 - fleet_0_transactions["state"].value_counts()["Fulfilled"])
-    # #     missed_trips_fleet_1 = (total_trips_fleet_1 - fleet_1_transactions["state"].value_counts()["Fulfilled"])
-    # except:
-    #     total_trips_fleet_0 = 0
-    #     total_trips_fleet_1 = 0
-    #     missed_trips_fleet_0 = 0
-    #     missed_trips_fleet_1 = 0
+    try:
+        fulfilled_trips_fleet_0 = fleet_0_transactions["state"].apply(lambda x: "Fulfilled" in x).sum()
+        fulfilled_trips_fleet_1 = fleet_1_transactions["state"].apply(lambda x: "Fulfilled" in x).sum()
+        total_trips_fleet_0 = len(fleet_0_transactions["state"])
+        total_trips_fleet_1 = len(fleet_1_transactions["state"])
+    except:
+        fulfilled_trips_fleet_0 = 0
+        fulfilled_trips_fleet_1 = 0
+        total_trips_fleet_0 = 0
+        total_trips_fleet_1 = 0
 
     # global avg station utilization
     global_station_utilization = 0
     for charging_station in charging_infrastructure.charging_stations:
-        # global_station_utilization += charging_station.count  # does not crash, does not show
         global_station_utilization += (
             charging_station.plugs.count
-        )  # does not crash, does not show
-        # global_station_utilization += 1
+        )
 
     global_avg_station_utilization = global_station_utilization / len(
         charging_infrastructure.charging_stations
     )
 
+    # add all data to dictionary
     timestamp.append(env.now)
-    y1.append(len(world.users))
-    y2.append(len(world.user_processes))
-    # y3.append(missed_trips_fleet_0)
-    y3.append(9)
-    # y4.append(missed_trips_fleet_1)
-    y4.append(9)
-    # y5.append(total_trips_fleet_0)
-    y5.append(9)
-    # y6.append(total_trips_fleet_1)
-    y6.append(9)
-    y7.append(global_avg_station_utilization)
-    return timestamp, y1, y2, y3, y4, y5, y6, y7
+    y1.append(len(world.user_processes))
+    y2.append(fulfilled_trips_fleet_0)
+    y3.append(fulfilled_trips_fleet_1)
+    y4.append(total_trips_fleet_0)
+    y5.append(total_trips_fleet_1)
+    y6.append(global_avg_station_utilization)
+    return timestamp, y1, y2, y3, y4, y5, y6
 
 
 def animate(i: int, callback: list) -> None:
     if callback is not None:
         (
             timestamp,
-            n_users,
             n_active_users,
-            missed_trips_0,
-            missed_trips_1,
+            fulfilled_trips_0,
+            fulfilled_trips_1,
             total_trips_0,
             total_trips_1,
             avg_station_util,
@@ -469,15 +440,15 @@ def animate(i: int, callback: list) -> None:
 
         # plot 1
         plt.subplot(4, 1, 1)
-        plt.plot(timestamp, missed_trips_0, total_trips_0)
-        plt.title("missed vs. total trips (fleet 0)")
-        plt.legend(["missed_trips_0", "total_trips_0"], loc="upper right")
+        plt.plot(timestamp, fulfilled_trips_0, total_trips_0)
+        plt.title("fulfilled vs. total trips (fleet 0)")
+        plt.legend(["fulfilled_trips_0", "total_trips_0"], loc="upper right")
 
         # plot 2
         plt.subplot(4, 1, 2)
-        plt.plot(timestamp, missed_trips_1, total_trips_1)
-        plt.title("missed vs. total trips (fleet 1)")
-        plt.legend(["missed_trips_1", "total_trips_1"], loc="upper right")
+        plt.plot(timestamp, fulfilled_trips_1, total_trips_1)
+        plt.title("fulfilled vs. total trips (fleet 1)")
+        plt.legend(["fulfilled_trips_1", "total_trips_1"], loc="upper right")
 
         # plot 3
         plt.subplot(4, 1, 3)
