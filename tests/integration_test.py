@@ -154,7 +154,15 @@ def _validate_simulation_log(log_path: Path, script: str) -> None:
         if expected_entry not in log_content:
             pytest.fail("Total revenue not as expected in public transport template")
 
-    # Note: shared_vehicle_fleet_template validation is commented out in original
+    if script == "shared_vehicle_fleet_template.py":
+        expected_entry = (
+            " Missed trip of User 555. Current Total Revenue: 499.3177950308087 - "
+            "Total Trips: 55 - Missed Trips 491."
+        )
+        if expected_entry not in log_content:
+            pytest.fail(
+                "Total revenue not as expected in shared vehicle fleet template"
+            )
     logging.info(
         "Successfully validated log file %s for template %s",
         log_path.name,
