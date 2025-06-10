@@ -4,6 +4,7 @@ LogManager for centralized logging setup.
 This class encapsulates all logging configuration, including formatters, handlers, log levels, and filters.
 """
 
+import atexit
 import logging
 import os
 from datetime import datetime
@@ -46,17 +47,38 @@ class LogManager:
         # Block third-party loggers
         logging.getLogger("fiona").setLevel(logging.WARNING)
 
-        formatter = logging.Formatter(
-            "[%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-        )
+        formatter = LogManager._create_formatter(config)
 
-        # Console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(config.settings.LOG_LEVEL)
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        LogManager._setup_console_handler(config, logger, formatter)
+        LogManager._setup_file_logging(config, logger, formatter, 1000)
 
-        # File handler with MemoryHandler for buffering
+        # Add filters
+        edf = ExtraDefaultFilter(filter_name="add_default_value")
+        logger.addFilter(edf)
+        cf = SimulationContextFilter(filter_name="add_env", env=env)
+        logger.addFilter(cf)
+
+    @staticmethod
+    def _setup_file_logging(
+        config: Configuration,
+        logger: logging.Logger,
+        formatter: logging.Formatter,
+        buffer_size: int,
+    ) -> None:
+        """
+        Set up file logging handler.
+
+        Creates a directory for logs if it does not exist, and sets up a file handler with a memory buffer.
+
+        Parameters
+        ----------
+        config : Configuration
+            The configuration object containing logging settings and paths.
+        logger : logging.Logger
+            The logger instance to which the handler will be added.
+        formatter : logging.Formatter
+            The formatter to be used by the handler.
+        """
         output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
         logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
         if not os.path.exists(logs_dir):
@@ -65,14 +87,52 @@ class LogManager:
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(formatter)
         file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
-        # Buffer up to 1000 records, flush on ERROR or higher
         memory_handler = MemoryHandler(
-            capacity=1000, flushLevel=logging.ERROR, target=file_handler
+            capacity=buffer_size, flushLevel=logging.ERROR, target=file_handler
         )
         logger.addHandler(memory_handler)
+        atexit.register(memory_handler.flush)
 
-        # Add filters
-        edf = ExtraDefaultFilter(filter_name="add_default_value")
-        logger.addFilter(edf)
-        cf = SimulationContextFilter(filter_name="add_env", extra=env)
-        logger.addFilter(cf)
+    @staticmethod
+    def _setup_console_handler(
+        config: Configuration, logger: logging.Logger, formatter: logging.Formatter
+    ) -> None:
+        """
+        Set up console logging handler.
+
+        Parameters
+        ----------
+        config : Configuration
+            The configuration object containing logging settings.
+        logger : logging.Logger
+            The logger instance to which the handler will be added.
+        formatter : logging.Formatter
+            The formatter to be used by the handler.
+        """
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(config.settings.LOG_LEVEL)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
+    @staticmethod
+    def _create_formatter(config: Configuration) -> logging.Formatter:
+        """
+        Return a logging.Formatter instance based on configuration.
+
+        Parameters
+        ----------
+        log_timestamps : bool
+            Whether to include timestamps in log output.
+
+        Returns
+        -------
+        logging.Formatter
+            Configured formatter instance.
+        """
+        formatter = (
+            "[%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
+        )
+        if config.settings.LOG_TIMESTAMPS:
+            formatter = "%(asctime)s " + formatter
+
+        return logging.Formatter(formatter)
