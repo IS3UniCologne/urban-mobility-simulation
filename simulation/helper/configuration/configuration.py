@@ -100,6 +100,7 @@ def beartype_after_post_init(cls: T) -> T:
 class SettingsConfig:
     LOG_LEVEL: str
     FILE_LOG_LEVEL: str
+    LOG_TIMESTAMPS: bool
 
     PERSIST_RESULTS: bool
     TRACK_AGENT: bool

@@ -12,8 +12,7 @@ from simulation.agent.user import (
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.configuration.enums import ModeChoiceStrategy
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.helper.logging.log_manager import LogManager
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -61,60 +60,14 @@ config = Configuration()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
-# Configure Logging.                      #
+# Setup Simulation Environment.           #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Make it beautiful
-# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-)
+# Init. Simulation Environment
+env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
 
-logger = logging.getLogger()
-logger.setLevel(config.settings.LOG_LEVEL)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf_init)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-file_handler = logging.FileHandler("report.log")
-file_handler.setFormatter(formatter)
-file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf_init)
-
-# # Set the basic configuration
-# log_level = logging.INFO
-# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)20s] [%(clazz)30s %(oid)3s]: %(message)s',
-#                     datefmt='%m/%d/%Y %I:%M:%S %p')
-
-# # Set the logger level
-# logger.setLevel(log_level)
-
-# # Block Logger of third party software
-# logging.getLogger("fiona").setLevel(logging.WARNING)
-
-# # Set up file handler with formatter
-# formatter = logging.Formatter('%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s')
-# file_handler = logging.FileHandler('report.log')
-# file_handler.setFormatter(formatter)
-# file_handler.setLevel(log_level)
-
-# # Add file handler to the logger
-# logger.addHandler(file_handler)
-
-print("Basic config initialized")  # noqa: T201
-
-# logger.addHandler(file_handler)
+LogManager.setup_logging(config, env)
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -198,26 +151,12 @@ def run_single_simulation(  # noqa: ANN201
     :param pop_prob: 1.0 means only price sensitive users, 0.0 means only sustainable users
     :return:
     """
-    # # # # # # # # # # # # # # # # # # # # # #
-    #                                         #
-    # Setup Simulation Environment.           #
-    #                                         #
-    # # # # # # # # # # # # # # # # # # # # # #
-
-    # Simulation Environment
-    env = simpy.Environment(initial_time=start_time)
 
     # Before each simulation run, reset counter and random number generators
     RideHailingCar.ride_hailing_car_id = 0
     RideHailingAV.ride_hailing_av_id = 0
     User.user_id = 0
     DemandFactory.counter = 0
-
-    # Inject Simulation Environment to Logger (such that we can log the env time)
-    cf = SimulationContextFilter(filter_name="add_env", extra=env)
-    edf = ExtraDefaultFilter(filter_name="add_default_value")
-    logger.addFilter(cf)
-    logger.addFilter(edf)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -747,7 +686,7 @@ result = run_single_simulation(
 #
 #                 # After each seed save
 #                 all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
-#
+
 # print("FINISHED")
 
 # for pop_prob in [[1.0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]:
