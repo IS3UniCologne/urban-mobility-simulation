@@ -319,7 +319,7 @@ class DQN(RLAgent):
         self._config.transit_agent_config.eps = self._eps
         logging.debug(
             "Saving decayed epsilon into config: %s",
-            str(self._eps),
+            self._eps,
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -328,7 +328,7 @@ class DQN(RLAgent):
         if self._config.transit_agent_config.lr_decay:
             logging.debug(
                 "Saving decayed learning rate into config: %s",
-                str(self._learning_rate(self._optimizer.iterations)),
+                self._learning_rate(self._optimizer.iterations),
                 extra={
                     "clazz": self.__class__.__name__,
                     "oid": f"Episode {self._episode}",
@@ -337,7 +337,7 @@ class DQN(RLAgent):
 
         logging.debug(
             "Current Replay Buffer size: %s",
-            str(len(self._replay_buffer)),
+            len(self._replay_buffer),
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -561,7 +561,7 @@ class DQN(RLAgent):
         if self._latest_reward > 0:
             logging.debug(
                 "Service Level was increased by %s",
-                str(self._latest_reward),
+                self._latest_reward,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
