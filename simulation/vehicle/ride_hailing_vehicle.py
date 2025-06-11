@@ -263,7 +263,9 @@ class RideHailingVehicle(Vehicle):
         # Trigger next event
         self._arrived_at_pick_up_position.succeed()
         logging.debug(
-            f"Arrived at pick up position {self.position} at time {self._env.now}.",  # noqa: G004
+            "Arrived at pick up position %s at time %s.",
+            self.position,
+            self._env.now,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
         self._arrived_at_pick_up_position = self._env.event()
@@ -306,7 +308,9 @@ class RideHailingVehicle(Vehicle):
         self._reserved_for_user = user
 
         logging.debug(
-            f"Reserved to {user.id} and previous state was {previous_state}.",  # noqa: G004
+            "Reserved to %s and previous state was %s.",
+            user.id,
+            previous_state,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -344,7 +348,10 @@ class RideHailingVehicle(Vehicle):
             self._current_state_of_charge = 0.0
 
         logging.debug(
-            f"Current state of charge {round(self.current_state_of_charge, 2)}/{self.max_state_of_charge} ({round(self.current_state_of_charge / self.max_state_of_charge * 100, 2)}%).",  # noqa: G004
+            "Current state of charge %s/%s (%s%%).",
+            round(self.current_state_of_charge, 2),
+            self.max_state_of_charge,
+            round(self.current_state_of_charge / self.max_state_of_charge * 100, 2),
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -364,7 +371,10 @@ class RideHailingVehicle(Vehicle):
         region_id = self.position.get_region_id()
 
         logging.debug(
-            f"Old position {old_position} > Current position {self.position} in region {region_id}.",  # noqa: G004
+            "Old position %s > Current position %s in region %s.",
+            old_position,
+            self.position,
+            region_id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -381,7 +391,8 @@ class RideHailingVehicle(Vehicle):
         self.state = VehicleState.DRIVING
 
         logging.debug(
-            f"Driver: {driver.identify_driver()} mounted vehicle.",  # noqa: G004
+            "Driver: %s mounted vehicle.",
+            driver.identify_driver(),
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -397,14 +408,17 @@ class RideHailingVehicle(Vehicle):
         self.state = VehicleState.PARKING
 
         logging.debug(
-            f"Driver: {tmp_driver_id} unmounted vehicle.",  # noqa: G004
+            "Driver: %s unmounted vehicle.",
+            tmp_driver_id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
     def prepare_for_service_task(self, caller, task):  # noqa: ANN001, ANN201
         self.state = VehicleState.PRE_SERVICE
         logging.debug(
-            f"Marked for Service Task [{task}] by {caller}.",  # noqa: G004
+            "Marked for Service Task [%s] by %s.",
+            task,
+            caller,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -418,7 +432,9 @@ class RideHailingVehicle(Vehicle):
         """
         if self._driver is not None or len(self._passengers) > 0:
             logging.debug(
-                f"Vehicle {self._id} has a driver {self._driver.identify_driver()}. Revoke relocation task.",  # noqa: G004
+                "Vehicle %s has a driver %s. Revoke relocation task.",
+                self._id,
+                self._driver.identify_driver(),
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
@@ -494,7 +510,10 @@ class RideHailingVehicle(Vehicle):
         self._charging_station_charging_finished = self._env.event()
 
         logging.debug(
-            f"Vehicle charged {amount} kWh and has now {self._current_state_of_charge} kWh out of {self._max_state_of_charge}.",  # noqa: G004
+            "Vehicle charged %s kWh and has now %s kWh out of %s.",
+            amount,
+            self._current_state_of_charge,
+            self._max_state_of_charge,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 

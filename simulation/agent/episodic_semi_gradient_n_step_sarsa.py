@@ -99,14 +99,16 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
             except NotImplementedError:
                 # hexagon is out of layer bounding box - action is forbidden
                 logging.debug(
-                    f"Action {a} is forbidden, sampling again",  # noqa: G004
+                    "Action %s is forbidden, sampling again",
+                    a,
                     extra={"clazz": self.__class__.__name__, "oid": bus.id},
                 )
                 continue
             break
 
         logging.debug(
-            f"Bus takes action {a}",  # noqa: G004
+            "Bus takes action %s",
+            a,
             extra={"clazz": self.__class__.__name__, "oid": bus.id},
         )
 

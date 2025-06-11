@@ -200,7 +200,9 @@ class DowntimeMinWithoutLookahead:
                     if x[i.id, j.id].solution_value != 0:
                         pairs.append(dict(vehicle=j, charging_station=i))
             logging.info(
-                f"Number of vehicles with low SOC = {len(vehicles)}, Number of allocations = {len(pairs)}",  # noqa: G004
+                "Number of vehicles with low SOC = %s, Number of allocations = %s",
+                len(vehicles),
+                len(pairs),
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             T_d_sum = mdl.sum(
@@ -214,11 +216,20 @@ class DowntimeMinWithoutLookahead:
             ).solution_value
 
             logging.debug(
-                f"T_d = {T_d_sum}, T_c = {T_c_sum}, T_q = {T_q_sum}",  # noqa: G004
+                "T_d = %s, T_c = %s, T_q = %s",
+                T_d_sum,
+                T_c_sum,
+                T_q_sum,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             logging.debug(
-                f"Penalty for not charging vehicles = {mdl.sum(mdl.sum(d[i.id, j.id] for i in CSs) * (1 - SoC[j.id]) * (1 - mdl.sum(x[i.id, j.id] for i in CSs)) for j in vehicles).solution_value}",  # noqa: G004
+                "Penalty for not charging vehicles = %s",
+                mdl.sum(
+                    mdl.sum(d[i.id, j.id] for i in CSs)
+                    * (1 - SoC[j.id])
+                    * (1 - mdl.sum(x[i.id, j.id] for i in CSs))
+                    for j in vehicles
+                ).solution_value,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -236,7 +247,8 @@ class DowntimeMinWithoutLookahead:
                 .split("\n")
             )
             logging.debug(
-                f"Stats of allocations: {stats_allocations}",  # noqa: G004
+                "Stats of allocations: %s",
+                stats_allocations,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             stats_candidates = (
@@ -246,7 +258,8 @@ class DowntimeMinWithoutLookahead:
                 .split("\n")
             )
             logging.debug(
-                f"Stats of candidates: {stats_candidates}",  # noqa: G004
+                "Stats of candidates: %s",
+                stats_candidates,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
         return pairs

@@ -8,6 +8,7 @@
 # Logging
 LOG_LEVEL      = "WARNING"
 FILE_LOG_LEVEL = "DEBUG"
+LOG_TIMESTAMPS = true
 
 # Output
 PERSIST_RESULTS = true
