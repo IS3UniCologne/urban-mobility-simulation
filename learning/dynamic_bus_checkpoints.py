@@ -228,7 +228,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
                 )
                 - 1
             )
-            * h3.edge_length(self._action_res, unit="m")
+            * h3.average_hexagon_edge_length(self._action_res, unit="m")
             / self.bus._velocity  # noqa: SLF001
         )
         self._unreachable_destination = (
