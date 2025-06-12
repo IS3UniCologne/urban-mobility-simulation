@@ -44,8 +44,8 @@ class LogManager:
         logger = logging.getLogger()
 
         # Determine the minimum level among all handlers
-        console_level = config.settings.LOG_LEVEL
-        file_level = config.settings.FILE_LOG_LEVEL
+        console_level = getattr(logging, config.settings.LOG_LEVEL)
+        file_level = getattr(logging, config.settings.FILE_LOG_LEVEL)
         logger.setLevel(min(console_level, file_level))
 
         # Block third-party loggers
