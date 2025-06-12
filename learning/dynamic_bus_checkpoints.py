@@ -3,7 +3,6 @@ import logging
 
 import h3
 import numpy as np
-from h3.unstable import vect
 from shapely.geometry import Polygon
 from simpy import Environment
 
@@ -76,7 +75,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # TODO: should the problem define the state space? Or should a StateSpace handle this?
         self._state_size_flattened = None
 
-    def problem_init(self):  # noqa: ANN201
+    def problem_init(self) -> None:
         # parse or create corridor
         if self._problem_config.corridor is None:
             self._corridor = self._geodesic_env.corridor(
@@ -128,9 +127,8 @@ class DynamicBusCheckpointProblem(LearningInterface):
         self._checkpoint_dim = len(self._checkpoints)
         self._corridor_dim = len(self._corridor)
         self._corridor_sorted = sorted(self._corridor)
-        self._corridor_poly = Polygon(
-            h3.h3_set_to_multi_polygon(self._corridor, geo_json=False)[0][0]
-        )
+        self._corridor_poly = Polygon(h3.cells_to_h3shape(self._corridor, tight=False)[0].outer)
+
         self._problem_config.area = self._corridor_poly
         # using this, initialize state size for agent
         # corridor_dim * 2 (position bus and demand origins)
@@ -210,7 +208,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         # retain cache
         self._problem_config.alignment_cache = self._demands_in_corridor_cache
 
-    def _check_terminal(self):  # noqa: ANN202
+    def _check_terminal(self) -> bool:
         self.reached_destination = (
             True if self.bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
         )
@@ -223,7 +221,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         time_to_destination = (
             (
                 len(
-                    h3.h3_line(
+                    h3.grid_path_cells(
                         self.bus.position.get_hexagon_id(),
                         self.bus.route.destination.get_hexagon_id(),
                     )
@@ -308,7 +306,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
                     down
 
         """
-        hex_id = h3.geo_to_h3(
+        hex_id = h3.latlng_to_cell(
             *self.bus.position.getExactLocation(), resolution=self._action_res
         )
         new_hex = self.bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
@@ -362,14 +360,14 @@ class DynamicBusCheckpointProblem(LearningInterface):
             self.bus.route.route_stop_by_id(self._next_checkpoint)
         )
 
-    def _test_action(self, action):  # noqa: ANN001, ANN202
+    def _test_action(self, action: str) -> bool:
         """
 
         :param evaluation:
         :param action: the action to test
         :return: bool
         """
-        hex_id = h3.geo_to_h3(
+        hex_id = h3.latlng_to_cell(
             *self.bus._position.getExactLocation(),  # noqa: SLF001
             resolution=self._action_res,
         )
@@ -383,14 +381,14 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
         # check if the direction of the action is target towards the next checkpoint
         allowed_direction = self._problem_config.direction
-        lat, lng = h3.h3_to_geo(new_hex)
+        lat, lng = h3.cell_to_latlng(new_hex)
         projected_direction = self._get_direction(GeodesicPosition(lat, lng))
         indirection = self._geodesic_env.direction_aligns(
             projected_direction, allowed_direction
         )
 
         if not indirection:
-            raise BadAction
+            raise BadAction  
 
     def _handle_bad_action(self, action):  # noqa: ANN001, ANN202
         # # with 50/50 reject the bad action or execute it with penalty
@@ -417,7 +415,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
         return demands_in_direction
 
-    def _demands_in_corridor(self, transport_tasks):  # noqa: ANN001, ANN202
+    def _demands_in_corridor(self, transport_tasks: list) -> list:
         d = []
         task_keys = [
             (x.origin.getExactLocation(), x.destination.getExactLocation())
@@ -435,23 +433,13 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
         # use iterable is True if not empty
         if check_keys:
-            # hint: geojson=False (default) is deliberate, as vect.geo_to_h3 expects (lat,lng)
-            check_cells = list(
-                zip(
-                    *(
-                        vect.geo_to_h3(
-                            *zip(*[x.origin.getExactLocation() for x in check_tasks]),
-                            res=self._action_res,
-                        ),
-                        vect.geo_to_h3(
-                            *zip(
-                                *[x.destination.getExactLocation() for x in check_tasks]
-                            ),
-                            res=self._action_res,
-                        ),
-                    )
-                )
-            )
+            origins = [x.origin.getExactLocation() for x in check_tasks]
+            destinations = [x.destination.getExactLocation() for x in check_tasks]
+            res = self._action_res
+            origin_cells = [h3.latlng_to_cell(lat, lng, res) for lat, lng in origins]
+            destination_cells = [h3.latlng_to_cell(lat, lng, res) for lat, lng in destinations]
+            check_cells = list(zip(origin_cells, destination_cells))
+
             for i, k, v in zip(check_keys, check_cells, check_tasks):
                 try:
                     d.append(v) if self._demands_in_cell_cache[k] else None
@@ -491,3 +479,5 @@ class DynamicBusCheckpointProblem(LearningInterface):
         c.append(self.bus.route.destination)
 
         return c
+    
+
