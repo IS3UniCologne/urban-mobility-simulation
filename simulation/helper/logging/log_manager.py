@@ -42,7 +42,11 @@ class LogManager:
         # Remove all handlers from the root logger so that we can set up our own
         logging.getLogger().handlers.clear()
         logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
+
+        # Determine the minimum level among all handlers
+        console_level = getattr(logging, config.settings.LOG_LEVEL)
+        file_level = getattr(logging, config.settings.FILE_LOG_LEVEL)
+        logger.setLevel(min(console_level, file_level))
 
         # Block third-party loggers
         logging.getLogger("fiona").setLevel(logging.WARNING)
@@ -91,6 +95,7 @@ class LogManager:
         memory_handler = MemoryHandler(
             capacity=buffer_size, flushLevel=logging.ERROR, target=file_handler
         )
+        memory_handler.setLevel(config.settings.FILE_LOG_LEVEL)
         logger.addHandler(memory_handler)
         atexit.register(memory_handler.flush)
 
