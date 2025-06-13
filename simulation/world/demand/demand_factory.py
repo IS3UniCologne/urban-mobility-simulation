@@ -8,6 +8,7 @@ based on spatio-temporal demand profiles and configurable modifiers.
 import json
 import logging
 from collections.abc import Generator
+from pathlib import Path
 
 import h3
 import simpy
@@ -130,7 +131,6 @@ class DemandFactory:
             daily_resolution=self._world.daily_resolution,
             city=self._config.world.CITY,
         )
-        from pathlib import Path
 
         return demand_importer.extract_spatio_temporal_demand_estimates(
             trip_data_path=Path(self._config.path.PATH_TRIP_DEMAND)
