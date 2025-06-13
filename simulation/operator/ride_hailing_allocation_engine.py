@@ -62,10 +62,10 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
         try:
             self._add_request(user, selected_transportation_alternative)
         except Exception:
+            # TODO: Is this an error or expected behavior? Should we change the way we reserve vehicles?
             logging.error(
-                "Vehicle %s already assigned to user %s",
+                "Vehicle %s already assigned to other user",
                 selected_transportation_alternative.vehicle.id,
-                selected_transportation_alternative.vehicle.reserved_for_user.id,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
