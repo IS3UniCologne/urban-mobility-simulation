@@ -1,9 +1,13 @@
 import logging
 from pathlib import Path
+from typing import Any, Generator
 
 import h3
 import pandas as pd
+import simpy
 
+from simulation.environment.environment import Environment
+from simulation.environment.position import Position
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
@@ -41,15 +45,15 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
     def __init__(  # noqa: ANN204
         self,
-        env,  # noqa: ANN001
-        time_between_operations,  # noqa: ANN001
-        operation_duration,  # noqa: ANN001
-        distance_matrix,  # noqa: ANN001
-        ordered_available_vehicle_modes,  # noqa: ANN001
-        ordered_max_vehicle_supply,  # noqa: ANN001
-        state_of_charge_threshold,  # noqa: ANN001
-        base_regions,  # noqa: ANN001
-        base_capacity,  # noqa: ANN001
+        env: Environment,  # noqa: ANN001
+        time_between_operations: float,  # noqa: ANN001
+        operation_duration: float,  # noqa: ANN001
+        distance_matrix: pd.DataFrame,  # noqa: ANN001
+        ordered_available_vehicle_modes: list[str],  # noqa: ANN001
+        ordered_max_vehicle_supply: list[int],  # noqa: ANN001
+        state_of_charge_threshold: float,  # noqa: ANN001
+        base_regions: list[str],  # noqa: ANN001
+        base_capacity: int,  # noqa: ANN001
     ):
         super(IntegratedSharedMobilityOperations, self).__init__(env=env)  # noqa: UP008
 
@@ -64,23 +68,23 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         self._available_vehicle_modes: list[str] = (
             ordered_available_vehicle_modes  # TODO: get from fleet
         )
-        self._max_vehicle_supply = ordered_max_vehicle_supply  # TODO: get from fleet
+        self._max_vehicle_supply: list[int] = ordered_max_vehicle_supply  # TODO: get from fleet
         self._base_regions = base_regions
         self._base_capacity = base_capacity
 
-        self._state_of_charge_threshold = state_of_charge_threshold
+        self._state_of_charge_threshold: float = state_of_charge_threshold
 
-        self._scheduled_tasks = []  # TODO: move to workforce? or internal schedule?
+        self._scheduled_tasks: list = []  # TODO: move to workforce? or internal schedule?
 
         # Events
-        self._charging_plan_updated = env.event()
-        self._operations_started = env.event()
+        self._charging_plan_updated: simpy.Event = env.event()
+        self._operations_started: simpy.Event = env.event()
 
         # When to start operations (every 1440 min)
         self._time_between_operations = time_between_operations
 
         # Shift Duration (OM shift duration)
-        self._duration_of_operations = operation_duration  # mins
+        self._duration_of_operations: int= operation_duration  # mins
 
     @property
     def available_vehicle_modes(self) -> list[str]:
@@ -93,7 +97,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         """
         return self._available_vehicle_modes
 
-    def execute(self):  # noqa: ANN201
+    def execute(self) -> Generator[Any, Any, Any]:
         """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
         """
@@ -330,7 +334,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
 
-    def generate_relocation_plan(self):  # noqa: ANN201
+    def generate_relocation_plan(self) -> dict[str, list[tuple[Position, Position, int, float]]]:  # noqa: ANN201
         """
 
         Return relocation plan
@@ -345,7 +349,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return relocation_plans
 
-    def generate_charging_plan(self):  # noqa: ANN201
+    def generate_charging_plan(self) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:  # noqa: ANN201
         """
         Generate a rule based charging plan based on given service worker capacity
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
@@ -375,7 +379,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def calculate_charging_plan(self, fleet_state):  # noqa: ANN001, ANN201
+    def calculate_charging_plan(self, fleet_state) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:  # noqa: ANN201
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
@@ -575,11 +579,11 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
     def calculate_resource_capacity_split_for_charging(  # noqa: ANN201
         self,
-        fleet_state,  # noqa: ANN001
-        available_vehicle_modes,  # noqa: ANN001
-        max_vehicle_supply,  # noqa: ANN001
-        number_service_workers_per_mode,  # noqa: ANN001
-    ):
+        fleet_state: pd.DataFrame,  # noqa: ANN001
+        available_vehicle_modes: list[str],  # noqa: ANN001
+        max_vehicle_supply: list[int],  # noqa: ANN001
+        number_service_workers_per_mode: list[int],  # noqa: ANN001
+    ) -> list[int]:
         """
             Determine Service Worker Split Between Modes (How many workers should be assigned to charge how many vehicles)
 
@@ -650,7 +654,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return capacity
 
-    def get_max_capacity_per_unit(self, mode):  # noqa: ANN001, ANN201
+    def get_max_capacity_per_unit(self, mode) -> int:  # noqa: ANN001, ANN201
         # Mode Specific Collection Capacity per Service Worker (i.e., how many vehicles can one sw collect)
         if mode == "KickScooter":
             max_capacity_per_unit = 40
@@ -670,7 +674,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def identify_potential_relocations(self, state):  # noqa: ANN001, ANN201
+    def identify_potential_relocations(self, state) -> dict[str, list[tuple[Position, Position, int, float]]]:  # noqa: ANN201
         """
         Calculate how many vehicles need to be moved (or can be) from origin to destination
 

@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from collections.abc import Generator
 
 from simpy import Environment, Event
@@ -10,6 +10,8 @@ from simulation.environment.position import Position
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
+from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+from simulation.operator.operations_management.service_tasks.service_task import ServiceTask
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 
 from ..helper.configuration.configuration import Configuration
@@ -75,7 +77,7 @@ class RideHailingVehicle(Vehicle):
     def __init__(  # noqa: ANN204
         self,
         env: Environment,
-        fleet,  # noqa: ANN001
+        fleet: MixedSharedVehicleFleet,
         position: "GeodesicPosition",
         velocity: float,
         vehicle_mode: VehicleMode,
@@ -98,8 +100,8 @@ class RideHailingVehicle(Vehicle):
         self._price_per_minute = price_per_min
         self._driver = None
         self._is_electric = is_electric
-        self.travel_costs = 0
-        self.charging_costs = 0
+        self.travel_costs: int = 0
+        self.charging_costs: int = 0
 
         self._config = Configuration()
 
@@ -189,7 +191,7 @@ class RideHailingVehicle(Vehicle):
         return self._reserved_for_user
 
     @property
-    def max_state_of_charge(self):  # noqa: ANN201
+    def max_state_of_charge(self) -> float:
         return self._max_state_of_charge
 
     @property
@@ -205,7 +207,7 @@ class RideHailingVehicle(Vehicle):
         return self._energy_consumption
 
     @property
-    def estimated_completion_time(self):  # noqa: ANN201
+    def estimated_completion_time(self) ->float:
         return self._estimated_completion_time
 
     @estimated_completion_time.setter
@@ -331,7 +333,7 @@ class RideHailingVehicle(Vehicle):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def has_enough_state_of_charge(self, distance: float, consider_buffer=True) -> bool:  # noqa: ANN001
+    def has_enough_state_of_charge(self, distance: float, consider_buffer: bool=True) -> bool:
         """
         Check if vehicle has enough SoC left for trip
         :param distance: in meter
@@ -430,7 +432,7 @@ class RideHailingVehicle(Vehicle):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def prepare_for_service_task(self, caller, task):  # noqa: ANN001, ANN201
+    def prepare_for_service_task(self, caller: "User", task: "ServiceTask") -> None:
         self.state = VehicleState.PRE_SERVICE
         logging.debug(
             "Marked for Service Task [%s] by %s.",
@@ -439,7 +441,7 @@ class RideHailingVehicle(Vehicle):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def relocate(self, route_segment: Edge):  # noqa: ANN201
+    def relocate(self, route_segment: Edge) -> Generator[Any, Any, Any]:
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:

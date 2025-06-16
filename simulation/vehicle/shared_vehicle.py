@@ -1,5 +1,6 @@
 import logging
 from abc import ABC
+from typing import Any, Generator
 
 from simpy import Environment, Event
 
@@ -9,6 +10,7 @@ from simulation.environment.position import Position
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
+from simulation.operator.operations_management.service_tasks.service_task import ServiceTask
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 
@@ -128,7 +130,7 @@ class SharedVehicle(Vehicle, ABC):
         return self._reserved_for_user
 
     @property
-    def max_available_seats(self):  # noqa: ANN201
+    def max_available_seats(self) -> int:
         return self._max_available_seats
 
     @max_available_seats.setter
@@ -144,7 +146,7 @@ class SharedVehicle(Vehicle, ABC):
         return self._current_state_of_charge
 
     @property
-    def current_relative_state_of_charge(self) -> int:
+    def current_relative_state_of_charge(self) -> float:
         return (
             self.current_state_of_charge / self.max_state_of_charge
             if self.max_state_of_charge != 0
@@ -152,14 +154,14 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     @property
-    def energy_consumption(self) -> int:
+    def energy_consumption(self) -> float:
         return self._energy_consumption
 
     @property
     def velocity(self) -> float:
         return self._velocity
 
-    def move(self, route_segment: Edge) -> None:
+    def move(self, route_segment: Edge) -> Generator[Any, Any, Any]:
         distance = route_segment.distance
         velocity = self._velocity
         time = distance / velocity
@@ -302,7 +304,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def prepare_for_service_task(self, caller, task):  # noqa: ANN001, ANN201
+    def prepare_for_service_task(self, caller: "User", task: "ServiceTask") -> None:
         self.state = VehicleState.PRE_SERVICE
         logging.debug(
             "Marked for Service Task [%s] by %s.",
@@ -311,7 +313,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def relocate(self, route_segment: Edge, time, relocator):  # noqa: ANN001, ANN201
+    def relocate(self, route_segment: Edge, time: float, relocator: str) -> Generator[Any, Any, Any]:  # noqa: ANN001, ANN201
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
@@ -365,7 +367,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def plug_to_charging_station(self):  # noqa: ANN201
+    def plug_to_charging_station(self) -> None:  # noqa: ANN201
         self.state = VehicleState.CHARGING
 
         self._charging_station_plugged_in.succeed()
@@ -387,7 +389,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def charge(self, charging_time, amount=0):  # noqa: ANN001, ANN201
+    def charge(self, charging_time: float, amount=0) -> Generator[Any, Any, Any]:
         # Notify charging
         self._charging_station_charging_started.succeed()
         self._charging_station_charging_started = self._env.event()
@@ -413,5 +415,5 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def __str__(self):  # noqa: ANN204
+    def __str__(self) -> str:
         return f"I have {self.available_seats} passengers on boards"
