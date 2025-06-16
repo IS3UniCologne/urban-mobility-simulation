@@ -6,6 +6,7 @@ from simpy import Environment, Event
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
+from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 
@@ -46,7 +47,7 @@ class RideHailingCar(RideHailingVehicle):
     def __init__(  # noqa: ANN204
         self,
         env: Environment,
-        fleet,  # noqa: ANN001
+        fleet: MixedSharedVehicleFleet,
         position: GeodesicPosition,
         velocity: float,
         max_available_seats: int = 4,
