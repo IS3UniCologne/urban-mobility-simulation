@@ -1,4 +1,4 @@
-from typing import List
+from typing import List  # noqa: UP035
 
 
 from simulation.helper.configuration.enums import PopulationType
@@ -6,7 +6,9 @@ from simulation.helper.random.random_manager import RandomManager
 
 
 class PopulationFactory:
-    def __init__(self, prob: List[float]) -> None:
+    __slots__ = ("_prob", "_rng")
+
+    def __init__(self, prob: List[float]) -> None:  # noqa: UP006
         # Random Number Generator
         self._rng = RandomManager().get_rng(component_name="POPULATIONFACTORY")
 

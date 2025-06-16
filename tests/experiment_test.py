@@ -6,8 +6,12 @@ import sys
 
 import pytest
 
+# pytestmark = pytest.mark.skip(
+#     reason="This runs all experiments, which is slow and not needed for every test."
+# )
 
-def run_template_script(script_path, config_file):
+
+def run_template_script(script_path, config_file):  # noqa: ANN001, ANN201
     # make sure they run in the base directory of the repo
     # Find the repository root directory (parent of the test directory)
     test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -34,7 +38,7 @@ templates = glob.glob("resources/scripts/experiments/*.py")
 
 
 @pytest.mark.parametrize("script,config", itertools.product(templates, configs))
-def test_experiments(script, config):
+def test_experiments(script, config):  # noqa: ANN001, ANN201
     """We test each template in combination with each configuration file in the test directory.
     We check that the script runs without error and that a log file is generated properly.
     TODO: Check metrics once we have implemented them universally. Add more test configurations. (resolutions, etc.)

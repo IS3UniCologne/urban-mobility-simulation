@@ -12,8 +12,7 @@ from simulation.agent.user import (
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.configuration.enums import ModeChoiceStrategy
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.helper.logging.log_manager import LogManager
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -61,60 +60,14 @@ config = Configuration()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
-# Configure Logging.                      #
+# Setup Simulation Environment.           #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Make it beautiful
-# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-)
+# Init. Simulation Environment
+env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
 
-logger = logging.getLogger()
-logger.setLevel(config.settings.LOG_LEVEL)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf_init)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-file_handler = logging.FileHandler("report.log")
-file_handler.setFormatter(formatter)
-file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf_init = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf_init)
-
-# # Set the basic configuration
-# log_level = logging.INFO
-# logging.basicConfig(format='%(asctime)s [%(levelname)s] [Time %(env_time)20s] [%(clazz)30s %(oid)3s]: %(message)s',
-#                     datefmt='%m/%d/%Y %I:%M:%S %p')
-
-# # Set the logger level
-# logger.setLevel(log_level)
-
-# # Block Logger of third party software
-# logging.getLogger("fiona").setLevel(logging.WARNING)
-
-# # Set up file handler with formatter
-# formatter = logging.Formatter('%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s')
-# file_handler = logging.FileHandler('report.log')
-# file_handler.setFormatter(formatter)
-# file_handler.setLevel(log_level)
-
-# # Add file handler to the logger
-# logger.addHandler(file_handler)
-
-print("Basic config initialized")
-
-# logger.addHandler(file_handler)
+LogManager.setup_logging(config, env)
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -161,24 +114,24 @@ dmi = DistanceMatrixImporter(
 distance_matrix = dmi.load_distance_matrix()
 
 
-def run_single_simulation(
-    start_time=0,
-    end_time=20,
-    n_cars=500,
-    seed=42,
-    phase=1,
-    AV_trust=config.mode_choice_model.AV_TRUST,
-    pop_prob=config.population.RIDE_HAILING_POPULATION_PROBABILITIES,
-    allocation=None,
-    EV_penetration=1,
-    AV_penetration=1,
-    returnDataFrame=False,
-    charging_capacity=20,
-    charging_power=50,
-    AV_price_reduction=None,
-    discount_rate=0,
-    MoD_interval_reduction=0,
-    mode_choice_strategy=config.mode_choice_model.MODE_CHOICE_STRATEGY,
+def run_single_simulation(  # noqa: ANN201
+    start_time=0,  # noqa: ANN001
+    end_time=20,  # noqa: ANN001
+    n_cars=500,  # noqa: ANN001
+    seed=42,  # noqa: ANN001
+    phase=1,  # noqa: ANN001
+    AV_trust=config.mode_choice_model.AV_TRUST,  # noqa: ANN001
+    pop_prob=config.population.RIDE_HAILING_POPULATION_PROBABILITIES,  # noqa: ANN001
+    allocation=None,  # noqa: ANN001
+    EV_penetration=1,  # noqa: ANN001
+    AV_penetration=1,  # noqa: ANN001
+    returnDataFrame=False,  # noqa: ANN001
+    charging_capacity=20,  # noqa: ANN001
+    charging_power=50,  # noqa: ANN001
+    AV_price_reduction=None,  # noqa: ANN001
+    discount_rate=0,  # noqa: ANN001
+    MoD_interval_reduction=0,  # noqa: ANN001
+    mode_choice_strategy=config.mode_choice_model.MODE_CHOICE_STRATEGY,  # noqa: ANN001
 ):
     """
     :param price_params_ride_hailing:
@@ -198,26 +151,12 @@ def run_single_simulation(
     :param pop_prob: 1.0 means only price sensitive users, 0.0 means only sustainable users
     :return:
     """
-    # # # # # # # # # # # # # # # # # # # # # #
-    #                                         #
-    # Setup Simulation Environment.           #
-    #                                         #
-    # # # # # # # # # # # # # # # # # # # # # #
-
-    # Simulation Environment
-    env = simpy.Environment(initial_time=start_time)
 
     # Before each simulation run, reset counter and random number generators
     RideHailingCar.ride_hailing_car_id = 0
     RideHailingAV.ride_hailing_av_id = 0
     User.user_id = 0
     DemandFactory.counter = 0
-
-    # Inject Simulation Environment to Logger (such that we can log the env time)
-    cf = SimulationContextFilter(filter_name="add_env", extra=env)
-    edf = ExtraDefaultFilter(filter_name="add_default_value")
-    logger.addFilter(cf)
-    logger.addFilter(edf)
 
     # # # # # # # # # # # # # # # # # # # # # #
     #                                         #
@@ -422,8 +361,8 @@ def run_single_simulation(
         - total_operational_cost["ride_hailing_1"],
     }
     transactions = {
-        "ride_hailing_0": ridehailing_operator_0.get_transactions(),
-        "ride_hailing_1": ridehailing_operator_1.get_transactions(),
+        "ride_hailing_0": ridehailing_operator_0.transaction_df,
+        "ride_hailing_1": ridehailing_operator_1.transaction_df,
     }
 
     if config.settings.PERSIST_RESULTS:
@@ -521,7 +460,7 @@ def run_single_simulation(
                 .agg({"RideHailingCar": "sum", "AutonomousCar": "sum"})
                 .reset_index(drop=True)
             )
-            rentals = rentals.add_prefix("{}_".format(mode))
+            rentals = rentals.add_prefix(f"{mode}_")
             overall_rentals = pd.concat([overall_rentals, rentals], axis=1)
             # "RideHailingCar_True": "sum", "RideHailingCar_False": "sum", "AutonomousCar_True": "sum"
             # Prepare KPI per Mode (Distance, Duration, Revenue)
@@ -543,7 +482,7 @@ def run_single_simulation(
             kpi_for_mode.rename(
                 columns={"price": "revenue"}, inplace=True
             )  # to avoid future confusion
-            kpi_for_mode = kpi_for_mode.add_prefix("{}_".format(mode))
+            kpi_for_mode = kpi_for_mode.add_prefix(f"{mode}_")
             overall_rentals = pd.concat([overall_rentals, kpi_for_mode], axis=1)
 
         return overall_rentals
@@ -747,7 +686,7 @@ result = run_single_simulation(
 #
 #                 # After each seed save
 #                 all_simulations.to_csv(Path(output_folder, scenario_name + '_simulation_results.csv'), index=False)
-#
+
 # print("FINISHED")
 
 # for pop_prob in [[1.0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]:

@@ -11,18 +11,31 @@ from simulation.operator.operations_management.ridehailing_base_charging_operati
 
 
 class RideHailingUncoordinatedChargingOperations(OperationsInterface):
-    def __init__(
+    __slots__ = (
+        "_allow_queue",
+        "_available_modes",
+        "_available_modes_supply",
+        "_charging_operations",
+        "_config",
+        "_distance_matrix",
+        "_operation_duration",
+        "_state_of_charge_threshold",
+        "_time_between_operations",
+        "_virtual_charging_infrastructure",
+    )
+
+    def __init__(  # noqa: ANN204
         self,
-        env,
-        distance_matrix,
-        time_between_operations,
-        operation_duration,
-        available_modes,
-        available_modes_supply,
-        state_of_charge_threshold,
-        allow_queue,
+        env,  # noqa: ANN001
+        distance_matrix,  # noqa: ANN001
+        time_between_operations,  # noqa: ANN001
+        operation_duration,  # noqa: ANN001
+        available_modes,  # noqa: ANN001
+        available_modes_supply,  # noqa: ANN001
+        state_of_charge_threshold,  # noqa: ANN001
+        allow_queue,  # noqa: ANN001
     ):
-        super(RideHailingUncoordinatedChargingOperations, self).__init__(env=env)
+        super(RideHailingUncoordinatedChargingOperations, self).__init__(env=env)  # noqa: UP008
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
         self._charging_operations = None
 
@@ -36,7 +49,7 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         self._state_of_charge_threshold = state_of_charge_threshold
         self._allow_queue = allow_queue
 
-    def execute(self):
+    def execute(self):  # noqa: ANN201
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             env=self._env,
@@ -72,14 +85,14 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
 
         yield self._env.process(self._charging_operations.execute())
 
-    def _listen_for_tasks(self):
+    def _listen_for_tasks(self):  # noqa: ANN202
         while True:
             task = yield self._charging_operations.task_executed
             # update virtual infra with vehicles on their way
             self._update_after_sending(task)
             self._env.process(self._update_after_arrival(task))
 
-    def _update_after_sending(self, task):
+    def _update_after_sending(self, task):  # noqa: ANN001, ANN202
         # Update virtual capacity when sending out a vehicle
 
         availability = (
@@ -88,9 +101,9 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         availability[task.destination] -= 1
         self._virtual_charging_infrastructure.update(availability=availability)
 
-    def _update_after_arrival(self, task):
+    def _update_after_arrival(self, task):  # noqa: ANN001, ANN202
         # as soon as the vehicle really arrives, we can undo this because its then reflected in the capacity
-        yield task._arrived_at_charging_station
+        yield task._arrived_at_charging_station  # noqa: SLF001
         availability = (
             self._virtual_charging_infrastructure.get_available_capacity().copy()
         )
@@ -98,5 +111,5 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         self._virtual_charging_infrastructure.update(availability=availability)
 
     @property
-    def task_transactions(self):
+    def task_transactions(self):  # noqa: ANN201
         return self._charging_operations.task_transactions

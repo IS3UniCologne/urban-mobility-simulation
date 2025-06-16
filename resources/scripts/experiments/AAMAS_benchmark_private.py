@@ -23,8 +23,7 @@ from simulation.helper.configuration.configuration import (
     Configuration,
     ModeChoiceStrategy,
 )
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.helper.logging.log_manager import LogManager
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -86,54 +85,15 @@ config = Configuration()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
-# Logging                                 #
+# Init. Simulation Environment            #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Disable the default handler of the root logger
-logging.getLogger().handlers.clear()
+env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
+LogManager.setup_logging(config, env)
 
-logger = logging.getLogger()
-# Set to logging.DEBUG to see all logs
-logger.setLevel(logging.DEBUG)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-logging.getLogger("docplex").setLevel(logging.WARNING)
-
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-
-# Create a console handler with its own level (LOG_LEVEL)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(config.settings.LOG_LEVEL)
-console_handler.setFormatter(formatter)
-
-# Record the start time
 real_start_time = time.time()
-
 output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
-logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
-# Create directory for logs if not exists
-if not os.path.exists(logs_dir):
-    os.makedirs(logs_dir)
-log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
-file_handler = logging.FileHandler(log_file)
-file_handler.setFormatter(formatter)
-file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
-
-
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
-
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-logger.addFilter(edf)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf)
-
 # some hacking around bad coding
 
 if (
@@ -147,21 +107,6 @@ if (
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Init. Simulation Environment            #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
-
-# Inject Simulation Environment to Logger (such that we can log the env time)
-cf = SimulationContextFilter(filter_name="add_env", extra=env)
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-
-logger.addFilter(cf)
-logger.addFilter(edf)
 
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52
@@ -214,18 +159,19 @@ charging_stations_track_0 = []
 charging_stations_track_1 = []
 
 
-def track_charging_stations(infra, target):
+def track_charging_stations(infra, target):  # noqa: ANN001, ANN201
     while True:
         yield env.timeout(1)
         values = [
             {
-                "time": env._now,
+                "time": env._now,  # noqa: SLF001
                 "_location": d["_location"],
                 "_plugs.count": d["_plugs"].count,
                 "_plugs.queuesize": len(d["_plugs"].queue),
             }
             for d in [
-                tracking.dump(tracking._get_uid(x))[1] for x in infra.charging_stations
+                tracking.dump(tracking._get_uid(x))[1]  # noqa: SLF001
+                for x in infra.charging_stations
             ]
         ]
         target.extend(values)
@@ -322,18 +268,18 @@ ride_hailing_fleet_1 = generate_AV_fleet(
 vehicles_track = []
 
 
-def track_fleets(fleet_id):
+def track_fleets(fleet_id):  # noqa: ANN001, ANN201
     # attention: this only works because we do not dynamically create and destroy vehicles like we do with users!
     tracked_list = tracking.list_tracked("RideHailingAV")
 
     while True:
         yield env.timeout(1)
         envtime, values = (
-            env._now,
+            env._now,  # noqa: SLF001
             {
                 "_fleet": fleet_id,
                 "_state": [
-                    tracking.get(x, "_state")[1]
+                    tracking.get(x, "state")[1]
                     for x in tracked_list
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
@@ -343,7 +289,7 @@ def track_fleets(fleet_id):
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
                 "_vdt": [
-                    tracking.get(x, "_vdt")[1]
+                    tracking.get(x, "_distance_travelled")[1]
                     for x in tracked_list
                     if tracking.get(x, "_fleet")[1].id == fleet_id
                 ],
@@ -497,8 +443,8 @@ avg_infra_util_1 = (
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-fleet_0_transactions = ridehailing_operator_0.get_transactions()
-fleet_1_transactions = ridehailing_operator_1.get_transactions()
+fleet_0_transactions = ridehailing_operator_0.transaction_df
+fleet_1_transactions = ridehailing_operator_1.transaction_df
 
 fleet_0_transactions.to_csv(
     f"data/output/transactions/{output_timestamp}_fleet_0_transactions.csv", index=False

@@ -19,38 +19,41 @@ from simulation.agent.action_space import ActionSpace
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.time import SimulationTimeConverter
-from simulation.vehicle.public_transit_bus import Bus, PublicTransitVehicleState
+from simulation.vehicle.public_transit_bus import Bus
 
 
 class ModifiedTensorBoard(TensorBoard):
-    def __init__(self, **kwargs):
+    __slots__ = ("_log_write_dir", "_step", "_writer")
+
+    def __init__(self, **kwargs):  # noqa: ANN003, ANN204
         super().__init__(**kwargs)
         self.step = 1
         self.writer = tf.summary.create_file_writer(self.log_dir)
         self._log_write_dir = self.log_dir
 
-    def set_model(self, model):
+    def set_model(self, model):  # noqa: ANN001, ANN201
         self.model = model
 
         self._train_dir = os.path.join(self._log_write_dir, "train")
-        self._train_step = self.model._train_counter
+        self._train_step = self.model._train_counter  # noqa: SLF001
 
         self._val_dir = os.path.join(self._log_write_dir, "validation")
-        self._val_step = self.model._test_counter
+        self._val_step = self.model._test_counter  # noqa: SLF001
 
         self._should_write_train_graph = False
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):  # noqa: ANN001, ANN201
         self.update_stats(**logs)
 
-    def on_batch_end(self, batch, logs=None):
+    def on_batch_end(self, batch, logs=None):  # noqa: ANN001, ANN201
         pass
 
-    def on_train_end(self, _):
+    def on_train_end(self, _):  # noqa: ANN001, ANN201
         pass
 
-    def update_stats(self, **stats):
+    def update_stats(self, **stats):  # noqa: ANN003, ANN201
         with self.writer.as_default():
             for key, value in stats.items():
                 tf.summary.scalar(key, value, step=self.step)
@@ -58,15 +61,46 @@ class ModifiedTensorBoard(TensorBoard):
 
 
 class DQN(RLAgent):
-    def __init__(
+    __slots__ = (
+        "_action_space",
+        "_alpha",
+        "_episode",
+        "_eps",
+        "_eps_decay",
+        "_eps_decay_strategy",
+        "_eps_min",
+        "_gamma",
+        "_latest_reward",
+        "_learning_rate",
+        "_learning_rate_decay_steps",
+        "_min_experience",
+        "_minibatch_size",
+        "_optimizer",
+        "_penalty",
+        "_q_net",
+        "_q_net_layer",
+        "_random",
+        "_replay_buffer",
+        "_replay_buffer_size",
+        "_state",
+        "_target_net_update_threshold",
+        "_target_q_net",
+        "_tau",
+        "_tensorboard",
+        "_timelimit",
+        "_total_episodes",
+        "_use_double_q",
+    )
+
+    def __init__(  # noqa: ANN204
         self,
         env: simpy.Environment,
-        state_dims,
+        state_dims,  # noqa: ANN001
         weights: tuple,
-        replay_buffer,
-        episode=1,
+        replay_buffer,  # noqa: ANN001
+        episode=1,  # noqa: ANN001
     ):
-        super(DQN, self).__init__(env)
+        super(DQN, self).__init__(env)  # noqa: UP008
 
         self._total_episodes = self._config.transit_agent_config.episodes
         self._episode = episode  # starting from 1
@@ -139,7 +173,8 @@ class DQN(RLAgent):
             if type(weights) is str:
                 # filepath is given
                 logging.info(
-                    f"Loading weights from {weights} ...",
+                    "Loading weights from %s ...",
+                    weights,
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 self._q_net.load_weights(weights)
@@ -173,7 +208,7 @@ class DQN(RLAgent):
         else:
             self._replay_buffer = []
 
-    def _create_model(self, input_dims):
+    def _create_model(self, input_dims):  # noqa: ANN001, ANN202
         model = keras.Sequential()
 
         # Input
@@ -203,7 +238,7 @@ class DQN(RLAgent):
 
         return model
 
-    def run(self, bus: Bus):
+    def run(self, bus: Bus):  # noqa: ANN201
         # set timelimit to multiplier specified in config * planned route total time
         route_duration = SimulationTimeConverter.duration_between(
             bus.route.origin.departure, bus.route.destination.departure
@@ -215,7 +250,7 @@ class DQN(RLAgent):
 
         # Deep Q Learning with Experience Replay as in mnih2013 (deepmind atari paper)
         while True:
-            state = deepcopy(bus._env_state)  # S_t, as dict
+            state = deepcopy(bus._env_state)  # S_t, as dict  # noqa: SLF001
             state_processed = self._state_to_numpy(state)  # S_t, as numpy 3d matrix
             action = self._decide_next_action(
                 bus, state_processed
@@ -230,23 +265,21 @@ class DQN(RLAgent):
             self._track(bus)
 
             reward = self._latest_reward  # R_t
-            next_state = deepcopy(bus._env_state)  # S_t, as dict
+            next_state = deepcopy(bus._env_state)  # S_t, as dict  # noqa: SLF001
             next_state_processed = self._state_to_numpy(
                 next_state
             )  # S_t, as numpy 3d matrix
 
             reached_destination = (
-                True
-                if bus.state is PublicTransitVehicleState.AT_TERMINAL_DESTINATION
-                else False
+                True if bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
             )
             reached_timelimit = (
-                True if self._env.now - bus._spawned > self._timelimit else False
+                True if self._env.now - bus._spawned > self._timelimit else False  # noqa: SLF001
             )
 
             # TODO: this is still optimistic, bus needs to move between hexagons, not euclidean/haversine
-            remaining_time = self._timelimit - (self._env.now - bus._spawned)
-            timeto_destination = (bus.position >> bus.route.destination) / bus._velocity
+            remaining_time = self._timelimit - (self._env.now - bus._spawned)  # noqa: SLF001
+            timeto_destination = (bus.position >> bus.route.destination) / bus._velocity  # noqa: SLF001
             unreachable_destination = (
                 True if remaining_time < timeto_destination else False
             )
@@ -285,7 +318,8 @@ class DQN(RLAgent):
         # retain decayed epsilon
         self._config.transit_agent_config.eps = self._eps
         logging.debug(
-            f"Saving decayed epsilon into config: {str(self._eps)}",
+            "Saving decayed epsilon into config: %s",
+            self._eps,
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
@@ -293,7 +327,8 @@ class DQN(RLAgent):
         self._config.transit_agent_config.optimizer = self._optimizer
         if self._config.transit_agent_config.lr_decay:
             logging.debug(
-                f"Saving decayed learning rate into config: {str(self._learning_rate(self._optimizer.iterations))}",
+                "Saving decayed learning rate into config: %s",
+                self._learning_rate(self._optimizer.iterations),
                 extra={
                     "clazz": self.__class__.__name__,
                     "oid": f"Episode {self._episode}",
@@ -301,24 +336,25 @@ class DQN(RLAgent):
             )
 
         logging.debug(
-            f"Current Replay Buffer size: {str(len(self._replay_buffer))}",
+            "Current Replay Buffer size: %s",
+            len(self._replay_buffer),
             extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
         )
 
         # clean up processes
-        bus._state_update_process.interrupt()
+        bus._state_update_process.interrupt()  # noqa: SLF001
 
         # stop demand generation
-        bus._world.stop_all_processes()
+        bus._world.stop_all_processes()  # noqa: SLF001
 
         # retain parameters
         # TODO: refactor such that weights etc are retained through config instead of being passed around?
 
         duration = (
-            self._env.now - bus._spawned if reached_destination else None
+            self._env.now - bus._spawned if reached_destination else None  # noqa: SLF001
         )  # None if episode is canceled
-        distance = bus._dist_traveled if reached_destination else None
-        bus._has_reached_terminal.succeed(
+        distance = bus._dist_traveled if reached_destination else None  # noqa: SLF001
+        bus._has_reached_terminal.succeed(  # noqa: SLF001
             (
                 self._q_net,
                 self._target_q_net,
@@ -335,13 +371,13 @@ class DQN(RLAgent):
             )
         )
 
-    def _track(self, bus: Bus):
+    def _track(self, bus: Bus):  # noqa: ANN202
         demands = bus.get_viable_demands()
 
-        bus._agent_completed_step.succeed((bus.position, demands))
-        bus._agent_completed_step = self._env.event()
+        bus._agent_completed_step.succeed((bus.position, demands))  # noqa: SLF001
+        bus._agent_completed_step = self._env.event()  # noqa: SLF001
 
-    def _train(self, terminal_state: bool):
+    def _train(self, terminal_state: bool):  # noqa: ANN202
         if self._episode >= self._min_experience:
             minibatch = random.sample(self._replay_buffer, self._minibatch_size)
             # minibatch = self._random.choice(self._replay_buffer, self._minibatch_size, replace=False)
@@ -408,14 +444,14 @@ class DQN(RLAgent):
                     self._target_q_net.set_weights(self._q_net.get_weights())
 
     @tf.function
-    def _target_predict(self, state):
+    def _target_predict(self, state):  # noqa: ANN001, ANN202
         return self._target_q_net(state, training=False)
 
     @tf.function
-    def _eval_predict(self, state):
+    def _eval_predict(self, state):  # noqa: ANN001, ANN202
         return self._q_net(state, training=False)
 
-    def _decide_next_action(self, bus: Bus, state):
+    def _decide_next_action(self, bus: Bus, state):  # noqa: ANN001, ANN202
         rand = True if np.random.rand() <= self._eps else False
 
         while True:
@@ -431,20 +467,22 @@ class DQN(RLAgent):
             if not bus.test_action(a, corridor=True):
                 # hexagon is out of layer bounding box - action is forbidden
                 logging.debug(
-                    f"Action {a} is forbidden, sampling again",
+                    "Action %s is forbidden, sampling again",
+                    a,
                     extra={"clazz": self.__class__.__name__, "oid": bus.id},
                 )
                 continue
             break
 
         logging.debug(
-            f"Bus takes action {a}",
+            "Bus takes action %s",
+            a,
             extra={"clazz": self.__class__.__name__, "oid": bus.id},
         )
 
         return a
 
-    def _take_action(self, bus: Bus, action=None):
+    def _take_action(self, bus: Bus, action=None):  # noqa: ANN001, ANN202
         """
         Actions in hexagonal grid, stay is also allowed.
 
@@ -464,52 +502,52 @@ class DQN(RLAgent):
                     resolution=self._config.transit_agent_config.action_resolution,
                     unit="m",
                 )
-                / bus._velocity
+                / bus._velocity  # noqa: SLF001
             )
         else:
             hex_id = h3.geo_to_h3(
                 *bus.position.getExactLocation(),
                 resolution=self._config.transit_agent_config.action_resolution,
             )
-            new_hex = bus._geodesic_env.move_in_layer(hex_id, action)
-            new_centroid = bus._geodesic_env.get_centroid(
+            new_hex = bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
+            new_centroid = bus._geodesic_env.get_centroid(  # noqa: SLF001
                 new_hex, f"hex_{self._config.transit_agent_config.action_resolution}"
             )
 
             new_position = GeodesicPosition(*new_centroid)
 
             distance = bus.position >> new_position
-            bus._dist_traveled += distance  # add to overall travel distance
-            duration = distance / bus._velocity  # in minutes
+            bus._dist_traveled += (  # noqa: SLF001
+                distance  # add to overall travel distance
+            )
+            duration = distance / bus._velocity  # in minutes  # noqa: SLF001
 
-            self._state = PublicTransitVehicleState.EN_ROUTE_DETOUR
+            self._state = VehicleState.EN_ROUTE_DETOUR
 
             yield self._env.timeout(duration)
 
-            bus._update_positions(new_position)
+            bus._update_positions(new_position)  # noqa: SLF001
 
-        bus._action_taken.succeed(action)
+        bus._action_taken.succeed(action)  # noqa: SLF001
 
         return action
 
-    def _update_reward(self, bus):
-        yield bus._action_taken
-        bus._action_taken = (
+    def _update_reward(self, bus):  # noqa: ANN001, ANN202
+        yield bus._action_taken  # noqa: SLF001
+        bus._action_taken = (  # noqa: SLF001
             self._env.event()
         )  # only reset it after we have entered the method
 
         reached_destination = (
-            True
-            if bus.state is PublicTransitVehicleState.AT_TERMINAL_DESTINATION
-            else False
+            True if bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
         )
         reached_timelimit = (
-            True if self._env.now - bus._spawned > self._timelimit else False
+            True if self._env.now - bus._spawned > self._timelimit else False  # noqa: SLF001
         )
 
         # TODO: this is still optimistic, bus needs to move between hexagons, not euclidean/haversine
-        remaining_time = self._timelimit - (self._env.now - bus._spawned)
-        timeto_destination = (bus.position >> bus.route.destination) / bus._velocity
+        remaining_time = self._timelimit - (self._env.now - bus._spawned)  # noqa: SLF001
+        timeto_destination = (bus.position >> bus.route.destination) / bus._velocity  # noqa: SLF001
         unreachable_destination = True if remaining_time < timeto_destination else False
         # unreachable_destination = False # JUST FOR DEBUGGING
         if unreachable_destination:
@@ -519,10 +557,11 @@ class DQN(RLAgent):
             )
 
         # reward is service level (1 drop off = +1 reward)
-        self._latest_reward = bus._dropoffs * self._reward
+        self._latest_reward = bus._dropoffs * self._reward  # noqa: SLF001
         if self._latest_reward > 0:
             logging.debug(
-                f"Service Level was increased by {str(self._latest_reward)}",
+                "Service Level was increased by %s",
+                self._latest_reward,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -532,23 +571,25 @@ class DQN(RLAgent):
         self._reward_sum = self._reward_sum + self._latest_reward
 
         logging.debug(
-            f"Current reward: {self._latest_reward}, overall reward: {self._reward_sum}",
+            "Current reward: %s, overall reward: %s",
+            self._latest_reward,
+            self._reward_sum,
             extra={"clazz": self.__class__.__name__, "oid": bus.id},
         )
 
         # reset drop offs
-        bus._dropoffs = 0
+        bus._dropoffs = 0  # noqa: SLF001
 
         # bus._agent_completed_step.succeed((before_state, action, self._latest_reward, self._reward_sum))
         # bus._agent_completed_step.succeed(self._reward_sum)
 
-    def _state_to_tensor(self, state: dict):
+    def _state_to_tensor(self, state: dict):  # noqa: ANN202
         # tensor of corridor dim * corridor dim + corridor dim + 1
         # 1) OD demands (matrix) 2) agent position (one hot vector), 3) driving time (scalar)
         return tf.convert_to_tensor(self._state_to_numpy(state), tf.dtypes.int32)
 
     @staticmethod
-    def _state_to_numpy(state: dict):
+    def _state_to_numpy(state: dict):  # noqa: ANN205
         # ndarray of corridor dim * corridor dim + corridor dim + 1
         # 1) OD demands (matrix) 2) agent position (one hot vector), 3) remaining driving time (scalar)
         # TODO: add "dtype=int" to concatenate call when numpy >= 1.20.0 in environment
@@ -557,5 +598,5 @@ class DQN(RLAgent):
         )
 
     @staticmethod
-    def _single_tensor_to_batch(tensor):
+    def _single_tensor_to_batch(tensor):  # noqa: ANN001, ANN205
         return tf.reshape(tensor, (-1, *tensor.shape))

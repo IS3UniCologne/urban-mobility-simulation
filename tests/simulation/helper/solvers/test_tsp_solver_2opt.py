@@ -1,20 +1,16 @@
-import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
 
-sys.argv = [
-    sys.argv[0],
-    "resources/configurations/config_template.toml",
-]  # Add a path to a test config file
 
-
+@pytest.mark.unit
 class TestSolveTSP(unittest.TestCase):
-    def setUp(self):
+    def setUp(self):  # noqa: ANN201
         # Mock environment and other dependencies
         self.env = MagicMock()
 
@@ -35,7 +31,7 @@ class TestSolveTSP(unittest.TestCase):
         self.distance_matrix = pd.DataFrame(distances, index=hex_ids, columns=hex_ids)
 
     @patch("simulation.helper.random.random_manager.RandomManager")
-    def test_solve_tsp_returns_valid_solution(self, mock_random_manager):
+    def test_solve_tsp_returns_valid_solution(self, mock_random_manager):  # noqa: ANN001, ANN201
         # Set up mock RandomManager
         mock_instance = MagicMock()
         mock_instance.integers.return_value = 42  # Fixed seed for reproducibility
@@ -91,7 +87,7 @@ class TestSolveTSP(unittest.TestCase):
             )
 
     @patch("simulation.helper.random.random_manager.RandomManager")
-    def test_solve_tsp_small_case(self, mock_random_manager):
+    def test_solve_tsp_small_case(self, mock_random_manager):  # noqa: ANN001, ANN201
         # Test with the smallest possible TSP (2 nodes)
         mock_instance = MagicMock()
         mock_instance.integers.return_value = 42
@@ -117,7 +113,7 @@ class TestSolveTSP(unittest.TestCase):
             "For a 2-node TSP, fitness should equal the round trip distance between nodes",
         )
 
-    def test_solve_tsp_six_nodes(self):
+    def test_solve_tsp_six_nodes(self):  # noqa: ANN201
         """Test TSP solver with a larger 6-node problem."""
 
         # Create a 6-node distance matrix

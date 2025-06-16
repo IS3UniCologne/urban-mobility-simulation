@@ -1,4 +1,5 @@
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
@@ -7,14 +8,24 @@ from simulation.operator.data_transfer_object.transportation_alternative_ridehai
     TransportationAlternativeRideHailing,
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
+from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.tasks.transportation_search_task import TransportationSearchTask
-from simulation.vehicle.vehicle import VehicleState
 
 
 class RideHailingSearchEngine(SearchEngineInterface):
-    def __init__(self, env):
+    __slots__ = (
+        "_AV_price_reduction",
+        "_env",
+        "_fleet",
+        "_min_price",
+        "_price_entering",
+        "_price_per_km",
+        "_price_per_minute",
+    )
+
+    def __init__(self, env):  # noqa: ANN001, ANN204
         self._env = env
-        self._fleet = None
+        self._fleet: MixedRideHailingFleet = None
 
         config = Configuration()
 

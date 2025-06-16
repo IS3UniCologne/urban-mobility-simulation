@@ -11,12 +11,14 @@ from simulation.operator.data_transfer_object.vehicle_allocation import (
 class VehicleAllocationEngineInterface(ABC):
     @abstractmethod
     def request_vehicle_allocation(
-        self, user, selected_transportation_alternative: TransportationAlternative
+        self,
+        user,  # noqa: ANN001
+        selected_transportation_alternative: TransportationAlternative,
     ) -> VehicleAllocation:
         pass  # Implement filtering
 
     @abstractmethod
-    def notify_user_arrival_at_pick_up_position(
+    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201
         self, vehicle_assignment: VehicleAllocation
     ):
         pass  # Implement Notification

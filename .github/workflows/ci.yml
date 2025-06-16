@@ -1,7 +1,7 @@
 ### This workflow is used to test the templates as an integration test
 ### The results are stored in a JSON file on the self-hosted runner and can be accessed via SSH
 
-name: Integration Test
+name: CI Pipeline
 on:
   # run when pushing to main or develop
   push:
@@ -15,12 +15,55 @@ permissions:
   contents: read
 
 jobs:
-  test-templates:
+  mypy:
     runs-on: self-hosted
-    name: Test Templates
+    name: Mypy static type checking
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v4
+
+    - name: Install the latest version of uv
+      uses:  astral-sh/setup-uv@v6
+      with:
+        version: "latest"
+
+    - name: Install Nox
+      run: |
+        uv tool install nox
+
+    - name: Run mypy
+      run: |
+        nox -rs mypy
+
+  unit-test:
+    runs-on: self-hosted
+    name: Unit Test
     steps:
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nox
+        run: |
+          uv tool install nox
+
+      - name: Run Unit Tests
+        id: unit_test
+        run: |
+          nox -rs pytest -- --durations=10 -m unit
+
+  integration-test:
+    runs-on: self-hosted
+    name: Integration Test
+    needs: unit-test # Ensure unit tests pass before running integration tests
+    steps:
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
         with:
           version: "latest"
 
@@ -30,13 +73,14 @@ jobs:
       - name: Copy local files to workspace
         run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/data
 
-      - name: Set up Environment
-        run: uv sync --no-dev
+      - name: Install Nox
+        run: |
+          uv tool install nox
 
-      - name: Run Integration Test
+      - name: Run Integration Tests
         id: integration_test
         run: |
-          uv run pytest test/integration_test.py --durations=0
+          nox -rs pytest -- --durations=10 -m integration
 
       - name: Copy simulation logs on failure
         if: failure()

@@ -65,7 +65,7 @@ df_vehicle_sub = pd.read_csv(PATH_sub).drop("Unnamed: 0", axis=1)
 # df_vehicle_full = pd.read_csv(PATH_full).drop('Unnamed: 0', axis=1)
 
 
-def set_style():
+def set_style():  # noqa: ANN201
     # This sets reasonable defaults for font size for a figure that will go in a paper
     sns.set_context("paper")
 
@@ -79,7 +79,7 @@ def set_style():
     )
 
 
-def data_vehicles(vehicles, fs=200, et="normal"):
+def data_vehicles(vehicles, fs=200, et="normal"):  # noqa: ANN001, ANN201
     rng = range(1, fs * 3, 3)
     SOC = (
         vehicles.iloc[rng]
@@ -115,7 +115,7 @@ def data_vehicles(vehicles, fs=200, et="normal"):
     return dgg, modes
 
 
-def plot_vehicels_SOC_2(dg1, dg2):
+def plot_vehicels_SOC_2(dg1, dg2):  # noqa: ANN001, ANN201
     set_style()
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
     sns.lineplot(data=dg1, x="hour", y="SOC", ci=100, hue="day", legend=False, ax=ax[0])
@@ -135,7 +135,7 @@ def plot_vehicels_SOC_2(dg1, dg2):
     plt.show()
 
 
-def adjust(x):
+def adjust(x):  # noqa: ANN001, ANN201
     if x["hour"] in range(1, 4):
         return x["SOC"] * 1.05
     if x["hour"] in range(8, 9):
@@ -158,7 +158,7 @@ def adjust(x):
         return x["SOC"]
 
 
-def plot_vehicels_SOC_3(dg1, dg2, dg3):
+def plot_vehicels_SOC_3(dg1, dg2, dg3):  # noqa: ANN001, ANN201
     set_style()
     # dg3['SOC']=dg3.apply(lambda x:adjust(x), axis=1)
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4), constrained_layout=True)
@@ -185,7 +185,7 @@ def plot_vehicels_SOC_3(dg1, dg2, dg3):
     plt.show()
 
 
-def plot_vehicels_SOC_4(dg1, dg2, dg3, dg4):
+def plot_vehicels_SOC_4(dg1, dg2, dg3, dg4):  # noqa: ANN001, ANN201
     set_style()
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 6), constrained_layout=True)
     sns.lineplot(
@@ -224,7 +224,7 @@ def plot_vehicels_SOC_4(dg1, dg2, dg3, dg4):
     plt.show()
 
 
-def plot_vehicels_mode_4(dg1, dg2, dg3, dg4):
+def plot_vehicels_mode_4(dg1, dg2, dg3, dg4):  # noqa: ANN001, ANN201
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 6), constrained_layout=True)
     sns.barplot(
         data=dg1 / 1440 * 7, palette=sns.color_palette("mako", n_colors=6), ax=ax[0][0]
@@ -263,7 +263,7 @@ def plot_vehicels_mode_4(dg1, dg2, dg3, dg4):
 
 
 #
-def plot_vehicels_mode_3(dg1, dg2, dg3):
+def plot_vehicels_mode_3(dg1, dg2, dg3):  # noqa: ANN001, ANN201
     set_style()
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(16, 4), constrained_layout=True)
     sns.barplot(
@@ -330,7 +330,7 @@ dg_vehicle_single = data_vehicles(df_vehicle_single)[0]
 # dg_vehicle_central_mode = data_vehicles(df_vehicle_central, strategy='central')[1]
 # dg_vehicle_sub_mode = data_vehicles(df_vehicle_sub)[1]
 # dg_vehicle_Q_learning_mode = data_vehicles(df_vehicle_Q_learning)[1]
-print("data is done")
+print("data is done")  # noqa: T201
 # plot_vehicels_SOC_4(dg_vehicle_sub_150_SOC, dg_vehicle_sub_SOC, dg_vehicle_sub_250_SOC, dg_vehicle_sub_300_SOC)
 # plot_vehicels_SOC_3(dg_vehicle_sub_flat_tariff_SOC, dg_vehicle_sub_250_SOC,dg_vehicle_sub_high_price_SOC)
 # plot_vehicels_SOC_4(dg_vehicle_sub_150_SOC ,dg_vehicle_sub_SOC, dg_vehicle_sub_250_SOC, dg_vehicle_sub_300_SOC)

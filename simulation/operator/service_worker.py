@@ -18,7 +18,9 @@ class ServiceWorkerState(Enum):
 class ServiceWorker:
     service_worker_id = 0
 
-    def __init__(self, env: Environment, task_queue: TaskQueue):
+    __slots__ = ("_env", "_id", "_state", "_task_finished", "_task_queue")
+
+    def __init__(self, env: Environment, task_queue: TaskQueue):  # noqa: ANN204
         self._id = ServiceWorker.service_worker_id
 
         self._env = env
@@ -30,7 +32,7 @@ class ServiceWorker:
 
         ServiceWorker.service_worker_id += 1
 
-    def run(self):
+    def run(self):  # noqa: ANN201
         while True:
             # Wait until operation management engine puts tasks into queue
             yield self._task_queue.task_queue_updated
@@ -55,7 +57,7 @@ class ServiceWorker:
             # Go back to sleep
             self._state = ServiceWorkerState.HIBERNATE
 
-    def execute_task(self, service_task: ServiceTask):
+    def execute_task(self, service_task: ServiceTask):  # noqa: ANN201
         """
         Execute assigned task
         :param service_task:
@@ -64,7 +66,8 @@ class ServiceWorker:
         self._state = ServiceWorkerState.WORKING
 
         logging.debug(
-            f"Processing following task: {service_task}.",
+            "Processing following task: %s.",
+            service_task,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -77,9 +80,9 @@ class ServiceWorker:
         self._task_finished = self._env.event()
 
     @property
-    def task_finished(self):
+    def task_finished(self):  # noqa: ANN201
         return self._task_finished
 
     @property
-    def state(self):
+    def state(self):  # noqa: ANN201
         return self._state

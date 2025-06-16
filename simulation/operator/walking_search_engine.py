@@ -13,7 +13,9 @@ from simulation.vehicle.walking import Walking
 
 
 class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
-    def __init__(self, env):
+    __slots__ = ("_env", "_walking")
+
+    def __init__(self, env):  # noqa: ANN001, ANN204
         PaymentInterface.__init__(self)
         self._env = env
         self._walking = Walking(env)
@@ -52,13 +54,13 @@ class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
 
         return browser
 
-    def pay_for_fulfilled_transportation_task(
+    def pay_for_fulfilled_transportation_task(  # noqa: ANN201
         self,
-        user,
+        user,  # noqa: ANN001
         transportation_task: TransportTask,
         selected_transportation_alternative: TransportationAlternative,
     ):
         pass
 
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask):
+    def withdraw_transportation_task(self, user, transportation_task: TransportTask):  # noqa: ANN001, ANN201
         pass

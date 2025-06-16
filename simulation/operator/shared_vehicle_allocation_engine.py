@@ -1,4 +1,5 @@
 from simulation.agent.user import User
+from simulation.helper.configuration.enums import VehicleState
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
@@ -8,17 +9,18 @@ from simulation.operator.data_transfer_object.vehicle_allocation import (
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
 )
-from simulation.vehicle.vehicle import VehicleState
 
 
 class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
-    def __init__(self, env):
+    __slots__ = ("_env", "_vehicle_assignment_requests", "_vehicles_assigned_to_users")
+
+    def __init__(self, env):  # noqa: ANN001, ANN204
         self._env = env
         self._vehicles_assigned_to_users = self._env.event()
         self._env.process(self.run())
         self._vehicle_assignment_requests = []
 
-    def run(self):
+    def run(self):  # noqa: ANN201
         while True:
             yield self._env.timeout(2)
 
@@ -67,7 +69,7 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
             None,
         )
 
-    def notify_user_arrival_at_pick_up_position(
+    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201
         self, vehicle_assignment: VehicleAllocation
     ):
         pass
@@ -78,7 +80,7 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
         # vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
         # self._env.process(self.test(vehicle_assignment, old_position))
 
-    def test(self, vehicle_assignment, old_position):
+    def test(self, vehicle_assignment, old_position):  # noqa: ANN001, ANN201
         # Notify operator that user has arrived at location
 
         # self._env.process()

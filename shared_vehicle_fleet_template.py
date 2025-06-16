@@ -24,8 +24,7 @@ from simulation.helper.configuration.configuration import (
     ModeChoiceStrategy,
 )
 from simulation.helper.configuration.enums import VehicleMode
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.helper.logging.log_manager import LogManager
 
 # Import infrastructure related modules
 from simulation.infrastructure.helper.distance_matrix_importer import (
@@ -48,12 +47,8 @@ from simulation.operator.shared_vehicle_allocation_engine import (
     SharedVehicleAllocationEngine,
 )
 from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
-from simulation.vehicle.shared_bike import SharedBike
 
 # Import vehicle types and vehicle choice options
-from simulation.vehicle.shared_car import SharedCar
-from simulation.vehicle.shared_kick_scooter import SharedKickScooter
-from simulation.vehicle.shared_scooter import SharedScooter
 from simulation.vehicle.shared_vehicle import SharedVehicle
 from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import (
     DistanceBasedSharedVehicleVehicleChoiceBehavior,
@@ -85,50 +80,14 @@ shutil.copy(sys.argv[1], f"data/output/configs/{output_timestamp}.toml")
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
-# Logging                                 #
+# Init. Simulation Environment            #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Disable the default handler of the root logger
-logging.getLogger().handlers.clear()
+env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
 
-logger = logging.getLogger()
-# Set to logging.DEBUG to see all logs
-logger.setLevel(logging.DEBUG)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-
-# Create a console handler with its own level (LOG_LEVEL)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(config.settings.LOG_LEVEL)
-console_handler.setFormatter(formatter)
-
-
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
-logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
-# Create directory for logs if not exists
-if not os.path.exists(logs_dir):
-    os.makedirs(logs_dir)
-log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
-file_handler = logging.FileHandler(log_file)
-file_handler.setFormatter(formatter)
-file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
-
-
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
-
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-logger.addFilter(edf)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf)
+# Logging
+LogManager.setup_logging(config, env)
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -151,20 +110,6 @@ if (
     )
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Init. Simulation Environment            #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
-
-# Inject Simulation Environment to Logger (such that we can log the env time)
-cf = SimulationContextFilter(filter_name="add_env", extra=env)
-logger.addFilter(cf)
-
-
 # Population Type
 population_factory = PopulationFactory(
     config.population.SHARED_VEHICLE_POPULATION_PROBABILITIES
@@ -215,12 +160,7 @@ distance_matrix = dmi.load_distance_matrix()
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-SharedBike.shared_bike_id = 0
 SharedVehicle.shared_vehicle_id = 0
-SharedCar.car_id = 0
-SharedKickScooter.shared_kick_scooter_id = 0
-SharedScooter.shared_scooter_id = 0
-SharedBike.shared_bike_id = 0
 User.user_id = 0
 DemandFactory.counter = 0
 
@@ -251,12 +191,12 @@ supply_prob = pd.read_csv(os.path.normpath(config.path.PATH_VEHICLE_SUPPLY))
 # Configure and generate / spawn shared fleet vehicles
 shared_vehicle_fleet_config = generate_fleet_config(
     supply_prob,
-    n_cars=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.SharedCar],
-    n_scooter=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.SharedScooter],
+    n_cars=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.Car],
+    n_scooter=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.Scooter],
     n_kick_scooter=config.shared_vehicle_operators[0].N_VEHICLES[
-        VehicleMode.SharedKickScooter
+        VehicleMode.KickScooter
     ],
-    n_bikes=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.SharedBike],
+    n_bikes=config.shared_vehicle_operators[0].N_VEHICLES[VehicleMode.Bike],
 )
 mixed_fleet = generate_mixed_fleet(env, shared_vehicle_fleet_config)
 
@@ -320,7 +260,7 @@ demand_factory = DemandFactory(
 )
 
 
-def get_cost_per_vehicle_km():
+def get_cost_per_vehicle_km():  # noqa: ANN201
     res = {}
 
     for key, value in config.shared_vehicles.items():
@@ -329,7 +269,7 @@ def get_cost_per_vehicle_km():
     return res
 
 
-def get_co2_per_vehicle_km():
+def get_co2_per_vehicle_km():  # noqa: ANN201
     res = {}
 
     for key, value in config.shared_vehicles.items():
@@ -339,20 +279,11 @@ def get_co2_per_vehicle_km():
 
 
 # For multiple simulation runs
-def run_simulation(end_time, seed=4711, env=env):
+def run_simulation(end_time, env=env):  # noqa: ANN001, ANN201
     # Before a new simulation run, reset everything
     User.user_id = 0
     DemandFactory.counter = 0
-    SharedCar.car_id = 0
-    SharedKickScooter.shared_kick_scooter_id = 0
-    SharedScooter.shared_scooter_id = 0
     DemandFactory.counter = 0
-
-    # Inject Simulation Environment to Logger (such that we can log the env time)
-    cf = SimulationContextFilter(filter_name="add_env", extra=env)
-    edf = ExtraDefaultFilter(filter_name="add_default_value")
-    logger.addFilter(cf)
-    logger.addFilter(edf)
 
     env.process(operations.execute())
 
@@ -368,7 +299,7 @@ def run_simulation(end_time, seed=4711, env=env):
 
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
-    transactions = operator.get_transactions()
+    transactions = operator.transaction_df
     if transactions.size > 0:
         transactions_dir = os.path.normpath(os.path.join("data", "output"))
         transactions.to_csv(
@@ -378,14 +309,12 @@ def run_simulation(end_time, seed=4711, env=env):
         metrics_factory = MetricsFactory(transactions)
 
         num_vehicles = {
-            "SharedBike": config.shared_vehicle_global.VEHICLES[VehicleMode.SharedBike],
-            "SharedCar": config.shared_vehicle_global.VEHICLES[VehicleMode.SharedCar],
+            "SharedBike": config.shared_vehicle_global.VEHICLES[VehicleMode.Bike],
+            "SharedCar": config.shared_vehicle_global.VEHICLES[VehicleMode.Car],
             "SharedKickScooter": config.shared_vehicle_global.VEHICLES[
-                VehicleMode.SharedKickScooter
+                VehicleMode.KickScooter
             ],
-            "SharedScooter": config.shared_vehicle_global.VEHICLES[
-                VehicleMode.SharedScooter
-            ],
+            "SharedScooter": config.shared_vehicle_global.VEHICLES[VehicleMode.Scooter],
         }
 
         metrics_factory.print_simulation_summary(

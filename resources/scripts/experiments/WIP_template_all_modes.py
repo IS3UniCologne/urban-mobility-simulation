@@ -641,7 +641,7 @@ vehicle_assignment_engine = {
 shared_vehicle_fleet_config = generate_fleet_config(
     supply_prob,
     n_cars=global_config.shared_vehicle_operator_config.n_cars,
-    n_scooter=global_config._shared_vehicle_operator_config.n_scooters,
+    n_scooter=global_config._shared_vehicle_operator_config.n_scooters,  # noqa: SLF001
     n_kick_scooter=global_config.shared_vehicle_operator_config.n_kickscooters,
     n_bikes=global_config.shared_vehicle_operator_config.n_bikes,
 )
@@ -682,7 +682,7 @@ rs_ridehailing_0 = RebalancingSchedulerRidehailing(
     global_config.ridehailing_operator_config.base_regions,
     global_config.ridehailing_operator_config.base_capacity,
     global_config.ridehailing_operator_config.recharge_threshold,
-    charging_infrastructure._charging_stations,
+    charging_infrastructure._charging_stations,  # noqa: SLF001
 )
 
 # Ridehailing operator manages all operations belonging to the ridehailing fleet
@@ -697,7 +697,7 @@ ops_ridehailing_0 = OperationsRidehailing(
     global_config.ridehailing_operator_config.available_modes_supply,
     global_config.ridehailing_operator_config.recharge_threshold,
     task_queue_ridehailing,
-    charging_infrastructure._charging_stations,
+    charging_infrastructure._charging_stations,  # noqa: SLF001
 )
 
 # Relocation scheduler creates the charging schedule and relocates vehicles in the shared mobility fleet
@@ -750,7 +750,7 @@ env.process(ops_ridehailing_0.run_operations())
 # env.process(shared_operator.run_operations())
 
 # Start operations for public operator
-env.process(public_operator._run())
+env.process(public_operator._run())  # noqa: SLF001
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -778,7 +778,7 @@ demand_factory = DemandFactory(
 # logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
 
-### Things to do while changing the mode: ####
+### Things to do while changing the mode: ####  # noqa: RUF003
 
 # - Modify population factory (just comment out the other pop factories)
 # - To run RideHailing fleet comment out the running of the shared operator
@@ -786,7 +786,7 @@ demand_factory = DemandFactory(
 # - Comment out all the operator modules from other fleets for the public operator
 
 
-def run_simulation(end_time, seed=4711, env=env):
+def run_simulation(end_time, seed=4711, env=env):  # noqa: ANN001, ANN201
     # Before a new simulation run, reset everything
     User.user_id = 0
     SharedCar.car_id = 0

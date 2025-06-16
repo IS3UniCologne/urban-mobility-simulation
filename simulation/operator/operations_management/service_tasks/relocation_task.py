@@ -3,26 +3,36 @@ from simpy import Environment
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import VehicleState
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
     ServiceTask,
 )
-from simulation.vehicle.vehicle import VehicleState
+from simulation.operator.vehicle_fleet import VehicleFleet
 
 
 class RelocationTask(ServiceTask):
-    def __init__(
+    __slots__ = (
+        "_destination",
+        "_distance",
+        "_number_of_vehicles_to_relocate",
+        "_origin",
+        "_vehicle_fleet",
+        "_vehicle_mode",
+    )
+
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
-        origin,
-        destination,
-        number_of_vehicles_to_relocate,
-        distance,
-        vehicle_mode,
-        vehicle_fleet,
+        origin,  # noqa: ANN001
+        destination,  # noqa: ANN001
+        number_of_vehicles_to_relocate,  # noqa: ANN001
+        distance,  # noqa: ANN001
+        vehicle_mode,  # noqa: ANN001
+        vehicle_fleet: VehicleFleet,
     ):
-        super(RelocationTask, self).__init__(env)
+        super(RelocationTask, self).__init__(env)  # noqa: UP008
 
         self._origin = origin
         self._destination = destination
@@ -32,7 +42,7 @@ class RelocationTask(ServiceTask):
         self._vehicle_fleet = vehicle_fleet
         self._distance = distance
 
-    def execute(self, *args):
+    def execute(self, *args):  # noqa: ANN002, ANN201
         # Get Spatial Environment
         geo_env = GeodesicEnvironment.getInstance()
 
@@ -42,8 +52,8 @@ class RelocationTask(ServiceTask):
             yield req
 
             # Identify vehicles to relocate
-            potential_vehicles_to_relocate = (
-                self._vehicle_fleet.get_all_available_vehicles(self._origin)
+            potential_vehicles_to_relocate = self._vehicle_fleet.get_vehicles_in_region(
+                self._origin
             )
             selected_vehicles_to_relocate = []
 
@@ -51,10 +61,9 @@ class RelocationTask(ServiceTask):
             for vehicle in potential_vehicles_to_relocate:
                 # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
                 if (
-                    vehicle.__class__.__name__ == self._vehicle_mode
+                    vehicle.mode.name
+                    == self._vehicle_mode  # TODO: This should not be based on the class name
                     and vehicle.state == VehicleState.PARKING
-                    and len(selected_vehicles_to_relocate)
-                    < self._number_of_vehicles_to_relocate
                 ):
                     # Mark Vehicle => Change state su
                     # ch that other service workers don't touch it!!
@@ -63,7 +72,12 @@ class RelocationTask(ServiceTask):
                     )
                     # Add to charging list
                     selected_vehicles_to_relocate.append(vehicle)
-
+                    if (
+                        len(selected_vehicles_to_relocate)
+                        >= self._number_of_vehicles_to_relocate
+                    ):
+                        # leave the loop if we have enough vehicles
+                        break
         # Start Relocation Process
         for vehicle in selected_vehicles_to_relocate:
             # Random Destination at Dest Region
@@ -99,8 +113,8 @@ class RelocationTask(ServiceTask):
         # Notify all
         self._task_finished = self._env.event()
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"Relocating {self._number_of_vehicles_to_relocate} {self._vehicle_mode} from {self._origin} to {self._destination} (distance = {self._distance})"
 
-    def __repr__(self):
+    def __repr__(self):  # noqa: ANN204
         return self.__str__()

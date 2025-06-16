@@ -1,14 +1,14 @@
 import numpy
 
 
-def cal_pop_fitness(equation_inputs, pop):
+def cal_pop_fitness(equation_inputs, pop):  # noqa: ANN001, ANN201
     # Calculating the fitness value of each solution in the current population.
     # The fitness function calulates the sum of products between each input and its corresponding weight.
     fitness = numpy.sum(pop * equation_inputs, axis=1)
     return fitness
 
 
-def select_mating_pool(pop, fitness, num_parents):
+def select_mating_pool(pop, fitness, num_parents):  # noqa: ANN001, ANN201
     # Selecting the best individuals in the current generation as parents for producing the offspring of the next generation.
     parents = numpy.empty((num_parents, pop.shape[1]))
     for parent_num in range(num_parents):
@@ -19,7 +19,7 @@ def select_mating_pool(pop, fitness, num_parents):
     return parents
 
 
-def crossover(parents, offspring_size):
+def crossover(parents, offspring_size):  # noqa: ANN001, ANN201
     offspring = numpy.empty(offspring_size)
     # The point at which crossover takes place between two parents. Usually, it is at the center.
     crossover_point = numpy.uint8(offspring_size[1] / 2)
@@ -36,7 +36,7 @@ def crossover(parents, offspring_size):
     return offspring
 
 
-def mutation(offspring_crossover, num_mutations=1, mutation_rate=0.1):
+def mutation(offspring_crossover, num_mutations=1, mutation_rate=0.1):  # noqa: ANN001, ANN201
     mutations_counter = numpy.uint8(offspring_crossover.shape[1] / num_mutations)
     # Mutation changes a number of genes as defined by the num_mutations argument. The changes are random.
     for idx in range(offspring_crossover.shape[0]):
