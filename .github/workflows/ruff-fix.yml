@@ -36,6 +36,6 @@ jobs:
       #       Commit fixes done by ruff
       #----------------------------------------------
       # Commit all changed files back to the repository
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: "chore: fix style with ruff"
