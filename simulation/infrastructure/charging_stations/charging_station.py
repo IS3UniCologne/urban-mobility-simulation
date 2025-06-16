@@ -26,7 +26,6 @@ class ChargingStation(TrackingInterface):
 
     exposes = ["_location", "_plugs", "_current_queue_time"]  # noqa: RUF012
 
-    
     def __init__(
         self,
         id: int,
@@ -113,8 +112,7 @@ class ChargingStation(TrackingInterface):
     def vehicle_unplugged(self) -> simpy.Event:
         return self._vehicle_unplugged
 
-    
-    def register_event_subscriber(self, subscriber:Any) -> None: # noqa: ANN401
+    def register_event_subscriber(self, subscriber: Any) -> None:  # noqa: ANN401
         self._event_subscribers.append(subscriber)
 
     def plug_in_notify(self) -> simpy.events.Generator:
@@ -202,7 +200,6 @@ class ChargingStation(TrackingInterface):
             # the current queue time for a new vehicle is then the difference between the earliest possible finish time and the current time
             self._current_queue_time = min(finish_times) - self._env.now
 
-    
     def dump(self, exposed_only: bool = True) -> dict[str, Any]:
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}

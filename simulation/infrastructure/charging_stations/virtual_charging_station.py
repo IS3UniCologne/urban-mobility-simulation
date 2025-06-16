@@ -21,7 +21,6 @@ class VirtualChargingStation:
         "_current_queue_time",
     )
 
-    
     def __init__(self, charging_station: ChargingStation) -> None:
         self._env = charging_station._env  # noqa: SLF001
         self._physical_charging_station = charging_station

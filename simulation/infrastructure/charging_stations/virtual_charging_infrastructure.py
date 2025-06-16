@@ -34,7 +34,6 @@ class VirtualChargingInfrastructure:
         "_virtual_charging_stations",
     )
 
-    
     def __init__(
         self,
         env: Environment,

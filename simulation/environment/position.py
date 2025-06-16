@@ -14,7 +14,6 @@ class Position(ABC):
         self._y: str = "I have a y position"
 
     @abstractmethod
-    
     def getExactLocation(self) -> tuple[float, float]:
         pass
 
