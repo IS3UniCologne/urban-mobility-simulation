@@ -27,7 +27,6 @@ class ChargingInfrastructure:
             return ChargingInfrastructure.__instance
 
     @staticmethod
-    
     def init(
         env: Environment,
         location_list: List[str],  # noqa: UP006
@@ -43,7 +42,6 @@ class ChargingInfrastructure:
             )
         return ChargingInfrastructure.__instance
 
-    
     def __init__(
         self,
         env: Environment,
@@ -85,6 +83,5 @@ class ChargingInfrastructure:
     def charging_stations(self) -> list[ChargingStation]:
         return self._charging_stations
 
-    
     def get_locations(self) -> list[str]:
         return self._location_list

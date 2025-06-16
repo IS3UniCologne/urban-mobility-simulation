@@ -15,7 +15,6 @@ class Agent(ABC):
         return self._state
 
     @state.setter
-    
     def state(self, state) -> None:  # noqa: ANN001
         self._state = state
 
@@ -24,7 +23,6 @@ class Agent(ABC):
         return self._position
 
     @position.setter
-    
     def position(self, position: Position) -> None:
         self._position = position
 

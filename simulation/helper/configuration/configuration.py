@@ -95,7 +95,6 @@ def beartype_after_post_init(cls: T) -> T:
     return cls
 
 
-
 @dataclass(slots=True, frozen=True)
 class SettingsConfig:
     LOG_LEVEL: str
@@ -106,12 +105,10 @@ class SettingsConfig:
     TRACK_AGENT: bool
 
 
-
 @dataclass(slots=True, frozen=True)
 class ExperimentManagementConfig:
     START_TIME: int
     END_TIME: int
-
 
 
 @dataclass(slots=True, frozen=True)
@@ -154,7 +151,6 @@ class WorldConfig:
         return f"hex_id_{self.SPATIAL_RESOLUTION_VALUE}"
 
 
-
 @dataclass(slots=True, frozen=True)
 class PathConfig:
     PATH_ENV_BOUNDING_BOX: str
@@ -191,7 +187,6 @@ class PathConfig:
                 value.format(city=city) for value in self.PATH_DEMAND_MODIFIERS
             ]
             object.__setattr__(self, "PATH_DEMAND_MODIFIERS", formatted_modifiers)
-
 
 
 @dataclass(slots=True, frozen=True)
@@ -311,7 +306,6 @@ class ModeChoiceModelConfig:
         return trust_value
 
 
-
 @dataclass(slots=True, frozen=True)
 class ChargingInfrastructureConfig:
     NUMBER_OF_CHARGING_STATIONS: int
@@ -423,7 +417,6 @@ class RideHailingOperatorConfig:
         )
 
 
-
 @dataclass(slots=True, frozen=True)
 class TransitOperatorConfig:
     PLANNING_LOOKAHEAD: int
@@ -491,6 +484,7 @@ class RideHailingGlobalConfig:
         # TODO: This has to be inferred instead of doing it this way. This is very error prone
         return [self.N_AUTONOMOUS_CARS, self.N_RIDE_HAILING_CARS]
 
+
 @beartype_after_post_init
 @dataclass(slots=True, frozen=True)
 class SharedVehicleGlobalConfig:
@@ -523,7 +517,7 @@ class SharedVehicleGlobalConfig:
             return list(self.VEHICLES.keys())
 
 
-# 
+#
 # @dataclass(slots=True, frozen=True)
 # class TransitGlobalConfig:
 #     @property
@@ -539,12 +533,10 @@ class SharedVehicleGlobalConfig:
 #         return [self.N_BUSES_TOTAL]
 
 
-
 @dataclass(slots=True, frozen=True)
 class AuctionConfig:
     AUCTION_START: int
     AUCTION_END: int
-
 
 
 @dataclass(slots=True, frozen=True)
@@ -552,7 +544,6 @@ class SharedChargingAuctionConfig:
     AUCTION_INTERVAL: int
     TIMESLOT_DURATION: int
     AUCTION_LOOKAHEAD: int
-
 
 
 @dataclass(slots=True, frozen=True)
@@ -563,7 +554,6 @@ class DynamicRoutingConfig:
     PENALTY: float
     REWARD: float
     TIMELIMIT: float
-
 
 
 @dataclass(slots=True, frozen=True)
