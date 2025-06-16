@@ -3,7 +3,7 @@ import pandas as pd
 import seaborn as sns
 
 
-def set_style():
+def set_style():  # noqa: ANN201
     # This sets reasonable defaults for font size for a figure that will go in a paper
     sns.set_context("paper")
 

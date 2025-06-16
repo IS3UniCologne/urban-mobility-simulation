@@ -1,25 +1,28 @@
 from typing import TYPE_CHECKING
 from simpy import Environment
 
+from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.configuration.enums import VehicleMode
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
-if TYPE_CHECKING:
-    from simulation.environment.geodesic_position import GeodesicPosition
 
 class RideHailingAV(RideHailingVehicle):
     # Autonomous Ride Hailing Car Counter
     ride_hailing_av_id:int = 0
     vehicle_type:str = "ridehailing_AV"
 
-    def __init__(
+    __slots__ = ("_emergency_soc_buffer_percent", "_price_per_min", "car_id")
+
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
-        position: "GeodesicPosition",
-        velocity:float,
-        max_available_seats: int=4,
-        max_state_of_charge: float=16.7,
-        energy_consumption: float=0.152,
-        price_per_min: float=0.26,
+        fleet,  # noqa: ANN001
+        position: GeodesicPosition,  # noqa: ANN001
+        velocity:float,  # noqa: ANN001
+        max_available_seats: int=4,  # noqa: ANN001
+        max_state_of_charge: float=16.7,  # noqa: ANN001
+        energy_consumption: float=0.152,  # noqa: ANN001
+        price_per_min: float=0.26,  # noqa: ANN001
     ):
         """
 
@@ -31,10 +34,12 @@ class RideHailingAV(RideHailingVehicle):
         :param energy_consumption: 15.2 kWh/100km as per Smart EQ specification
         :param velocity:
         """
-        super(RideHailingAV, self).__init__(
+        super(RideHailingAV, self).__init__(  # noqa: UP008
             env,
+            fleet,
             position,
             velocity,
+            VehicleMode.Car,
             max_available_seats,
             max_state_of_charge,
             energy_consumption,
@@ -44,7 +49,7 @@ class RideHailingAV(RideHailingVehicle):
 
         # Increment Shared Car ID
         self.car_id:int = RideHailingAV.ride_hailing_av_id
-        self._price_per_minute:float = price_per_min
+        self._price_per_min:float = price_per_min
         self._emergency_soc_buffer_percent:float = self._config.ride_hailing_vehicles[
             "AutonomousCar"
         ].EMERGENCY_SOC_BUFFER

@@ -9,7 +9,7 @@ class TspResult(NamedTuple):
     distance_lookup: dict[tuple[int, int], float]
 
 
-def solve_tsp(hexagons: dict, distance_matrix: pd.DataFrame) -> TspResult:
+def solve_tsp(hexagons: dict[str, int], distance_matrix: pd.DataFrame) -> TspResult:
     """
     Solve the Traveling Salesman Problem for a given set of hexagons using the 2-opt algorithm.
     TODO: Implement Lin-Kernighan heuristic or 3-opt and make configurable.
@@ -20,12 +20,16 @@ def solve_tsp(hexagons: dict, distance_matrix: pd.DataFrame) -> TspResult:
     """
 
     # Create a distance lookup dictionary for faster access
-    dist_lookup = {}
-    for i, value_i in hexagons.items():
-        for j, value_j in hexagons.items():
-            if i != j:
-                dist_lookup[(value_i, value_j)] = distance_matrix.loc[j][i]
-                dist_lookup[(value_j, value_i)] = distance_matrix.loc[j][i]
+    dist_lookup: dict[tuple[int, int], float] = {}
+    for hex_i, value_i in hexagons.items():
+        for hex_j, value_j in hexagons.items():
+            if hex_i != hex_j:
+                dist_lookup[(value_i, value_j)] = float(
+                    distance_matrix.at[hex_j, hex_i]
+                )
+                dist_lookup[(value_j, value_i)] = float(
+                    distance_matrix.at[hex_j, hex_i]
+                )
 
     n = len(hexagons)
 
@@ -94,11 +98,11 @@ def calculate_tour_length(
     :param dist_lookup: Dictionary mapping node pairs to distances
     :return: Total tour length
     """
-    length = 0
-    n = len(tour)
+    length: float = 0.0
+    n: int = len(tour)
 
     for i in range(n):
         j = (i + 1) % n  # Next node (wraps around)
-        length += dist_lookup.get((tour[i], tour[j]), 0)
+        length += dist_lookup.get((tour[i], tour[j]), 0.0)
 
     return length

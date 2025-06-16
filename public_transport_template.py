@@ -16,8 +16,7 @@ from simulation.environment.geodesic_environment import GeodesicEnvironment
 
 # Import configurations and extra logging filters
 from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.helper.logging.log_manager import LogManager
 
 # Import infrastructure related modules
 from simulation.infrastructure.helper.distance_matrix_importer import (
@@ -79,53 +78,6 @@ if not os.path.exists(output_config_dir):
     os.makedirs(output_config_dir)
 shutil.copy(sys.argv[1], os.path.join(output_config_dir, f"{output_timestamp}.toml"))
 
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Logging                                 #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-# Disable the default handler of the root logger
-logging.getLogger().handlers.clear()
-
-logger = logging.getLogger()
-# Set to logging.DEBUG to see all logs
-logger.setLevel(logging.DEBUG)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-
-# Create a console handler with its own level (LOG_LEVEL)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(config.settings.LOG_LEVEL)
-console_handler.setFormatter(formatter)
-
-
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
-logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
-# Create directory for logs if not exists
-if not os.path.exists(logs_dir):
-    os.makedirs(logs_dir)
-log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
-file_handler = logging.FileHandler(log_file)
-file_handler.setFormatter(formatter)
-file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
-
-
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
-
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-logger.addFilter(edf)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf)
-
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -135,9 +87,9 @@ logger.addFilter(cf)
 
 env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
 
-# Inject Simulation Environment to Logger (such that we can log the env time)
-cf = SimulationContextFilter(filter_name="add_env", extra=env)
-logger.addFilter(cf)
+# Logging
+LogManager.setup_logging(config, env)
+
 
 # Load Spatial Environment
 load_geodesic_environment()
@@ -290,19 +242,13 @@ demand_factory = DemandFactory(
 # logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 
 
-def run_simulation(end_time, env=env):
+def run_simulation(end_time, env=env):  # noqa: ANN001, ANN201
     # Before a new simulation run, reset everything
     User.user_id = 0
     DemandFactory.counter = 0
     Vehicle.vehicle_id = 0
     PublicTransitVehicle.public_transit_vehicle_id = 0
     Bus.bus_id = 0
-
-    # Inject Simulation Environment to Logger (such that we can log the env time)
-    cf = SimulationContextFilter(filter_name="add_env", extra=env)
-    edf = ExtraDefaultFilter(filter_name="add_default_value")
-    logger.addFilter(cf)
-    logger.addFilter(edf)
 
     # Use only if the configuration parameters stay unchanged to avoid reloading everytime. Reload demand factory if the demand profile is different between consecutive runs
     demand_factory.reset()
@@ -317,7 +263,7 @@ def run_simulation(end_time, env=env):
 
     logging.warning("Ending Simulation.", extra={"clazz": "main", "oid": ""})
 
-    transactions = operator.get_transactions()
+    transactions = operator.transaction_df
     transactions_dir = os.path.normpath(os.path.join("data", "output"))
     transactions.to_csv(os.path.join(transactions_dir, "transactions.csv"), index=False)
 

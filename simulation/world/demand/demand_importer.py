@@ -11,7 +11,14 @@ from simulation.helper.configuration.configuration import (
 
 
 class DemandImporter:
-    def __init__(
+    __slots__ = (
+        "_city",
+        "_daily_resolution",
+        "_spatial_resolution",
+        "_temporal_resolution",
+    )
+
+    def __init__(  # noqa: ANN204
         self,
         temporal_resolution: TemporalBucket = TemporalBucket.FOUR_HOURLY_BUCKETS,
         spatial_resolution: SpatialResolution = SpatialResolution.HEX_7,
@@ -33,18 +40,18 @@ class DemandImporter:
         self._city = city
 
     @property
-    def city(self):
+    def city(self):  # noqa: ANN201
         return self._city
 
     @property
-    def temporal_resolution(self):
+    def temporal_resolution(self):  # noqa: ANN201
         return self._temporal_resolution
 
     @property
-    def spatial_resolution(self):
+    def spatial_resolution(self):  # noqa: ANN201
         return self._spatial_resolution
 
-    def extract_spatio_temporal_demand_estimates(self, trip_data_path: Path):
+    def extract_spatio_temporal_demand_estimates(self, trip_data_path: Path):  # noqa: ANN201
         """
         Returns a DataFrame with distributional data regarding arrival times (poisson) and origin destination trips (frequency)
         in spatio-temporal resolution.
@@ -85,7 +92,9 @@ class DemandImporter:
             if cache_path.exists():
                 # Load cached data and return
                 logging.debug(
-                    f"Demand File already existing for selected resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.",
+                    "Demand File already existing for selected resolution: (%s, %s). Loading from cache.",
+                    self._spatial_resolution,
+                    self._temporal_resolution,
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 if ext == "parquet":
@@ -94,7 +103,9 @@ class DemandImporter:
                     return pd.read_csv(cache_path)
 
         logging.debug(
-            f"Generating demand data based on mobility trip data for resolution: ({self._spatial_resolution}, {self._temporal_resolution}). Loading from cache.",
+            "Generating demand data based on mobility trip data for resolution: (%s, %s). Loading from cache.",
+            self._spatial_resolution,
+            self._temporal_resolution,
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
@@ -280,7 +291,7 @@ class DemandImporter:
 
         return result
 
-    def _get_spatial_column(self):
+    def _get_spatial_column(self):  # noqa: ANN202
         if self.spatial_resolution == SpatialResolution.HEX_7:
             return "h3_start_7", "h3_end_7"
         elif self.spatial_resolution == SpatialResolution.HEX_8:
@@ -290,7 +301,7 @@ class DemandImporter:
         else:
             return "h3_start_9", "h3_end_9"
 
-    def _get_temporal_column(self):
+    def _get_temporal_column(self):  # noqa: ANN202
         if self.temporal_resolution == TemporalBucket.HOURLY_BUCKETS:
             return "hour_of_day"
         elif self.temporal_resolution == TemporalBucket.TWO_HOURLY_BUCKETS:
@@ -306,10 +317,10 @@ class DemandImporter:
         else:
             return "time_bucket_4h"  # default
 
-    def _get_day_of_week_column(self):
+    def _get_day_of_week_column(self):  # noqa: ANN202
         return "is_holiday"
 
-    def _get_temporal_duration_in_hours(self):
+    def _get_temporal_duration_in_hours(self):  # noqa: ANN202
         """
         Get the length of each temporal unit
         :return:

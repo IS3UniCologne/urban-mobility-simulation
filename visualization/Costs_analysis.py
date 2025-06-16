@@ -35,7 +35,7 @@ charging_cost = [
 ]
 
 
-def set_style():
+def set_style():  # noqa: ANN201
     # This sets reasonable defaults for font size for a figure that will go in a paper
     sns.set_context("paper")
 
@@ -49,19 +49,19 @@ def set_style():
     )
 
 
-def clean(x):
+def clean(x):  # noqa: ANN001, ANN201
     if type(x) is not float:
         x = x.replace("[", "").replace("]", "")
     return x
 
 
-def charge_duration(SOC_send, SOC_end, start):
+def charge_duration(SOC_send, SOC_end, start):  # noqa: ANN001, ANN201
     duration = (SOC_end - SOC_send) * 50 / (100 * 11 / 60)
     end = start + duration
     return [duration, end]
 
 
-def charging(df):
+def charging(df):  # noqa: ANN001, ANN201
     dff = pd.DataFrame()
     df["time_start"] = df.apply(lambda row: clean(row["time_start"]), axis=1).astype(
         "float"
@@ -99,11 +99,11 @@ def charging(df):
 
     dff = pd.DataFrame(dff.sum()).reset_index()
     dff.columns = ["Type of Costs", "Costs"]
-    print(dff)
+    print(dff)  # noqa: T201
     return dff
 
 
-def plot_charge(dg1, dg2, dg3, dg4):
+def plot_charge(dg1, dg2, dg3, dg4):  # noqa: ANN001, ANN201
     dg1 = dg1.reset_index()
     dg1 = dg1.groupby(["hour"]).agg({"vehicle_id": "mean"})
     dg2 = dg2.reset_index()
@@ -124,7 +124,7 @@ def plot_charge(dg1, dg2, dg3, dg4):
     plt.show()
 
 
-def plot_costs_4(dg, mode):
+def plot_costs_4(dg, mode):  # noqa: ANN001, ANN201
     set_style()
     X = "Type of Costs"
     X_title = "Type of Costs"

@@ -12,8 +12,16 @@ from tracking.tracking import Tracking
 
 
 class PublicTransportVehicleFleet(VehicleFleet):
-    def __init__(self, env: Environment):
-        super(PublicTransportVehicleFleet, self).__init__(env)
+    __slots__ = (
+        "_bus_velocity",
+        "_busses",
+        "_config",
+        "_unserved_passengers",
+        "_world",
+    )
+
+    def __init__(self, env: Environment):  # noqa: ANN204
+        super(PublicTransportVehicleFleet, self).__init__(env)  # noqa: UP008
         self._env = env
         self._config = Configuration()
         self._busses = []
@@ -25,17 +33,12 @@ class PublicTransportVehicleFleet(VehicleFleet):
         self._tracking = (
             None  # defer loading to run process, otherwise circular dependency
         )
+        self._unserved_passengers = 0
 
         self._tracking = Tracking.instance()
 
-    def get_available_vehicles(self, region):
-        pass
-
-    def vehicles_in_region(self, region: str):
-        pass
-
     # Add the bus
-    def spawn_bus(self, route: PublicTransitRoute):
+    def spawn_bus(self, route: PublicTransitRoute):  # noqa: ANN201
         init_position = GeodesicPosition(*route.origin.getExactLocation())
         self._world = World.instance()
 
@@ -43,6 +46,7 @@ class PublicTransportVehicleFleet(VehicleFleet):
             env=self._env,
             route=route,
             position=init_position,
+            fleet=self,
             use_learning_agent=False,
             velocity=self._bus_velocity,
         )
@@ -54,8 +58,8 @@ class PublicTransportVehicleFleet(VehicleFleet):
 
         return bus
 
-    def clean_up_bus(self, bus: Bus):
-        yield bus._has_reached_terminal
+    def clean_up_bus(self, bus: Bus):  # noqa: ANN201
+        yield bus._has_reached_terminal  # noqa: SLF001
 
         self._busses.remove(bus)
         self._world.remove_vehicle(bus)
@@ -64,11 +68,12 @@ class PublicTransportVehicleFleet(VehicleFleet):
         # Check this again, what happens when the trip time is over but there are still passengers in the bus?
         # TODO: unmount all remaining passengers - is there a need for this?
         logging.debug(
-            f"There are still {str(len(bus._seats))} passengers onboard the bus",
+            "There are still %s passengers onboard the bus",
+            len(bus._passengers),  # noqa: SLF001
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
-        self._unserved_passengers = len(bus._seats)
+        self._unserved_passengers = len(bus._passengers)  # noqa: SLF001
 
     # Return current busses
-    def get_busses(self):
+    def get_busses(self):  # noqa: ANN201
         return self._busses

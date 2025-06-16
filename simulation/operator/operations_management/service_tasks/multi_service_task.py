@@ -6,12 +6,14 @@ from simulation.operator.operations_management.service_tasks.service_task import
 
 
 class MultiServiceTask(ServiceTask):
-    def __init__(self, env: Environment):
+    __slots__ = ("_service_tasks",)
+
+    def __init__(self, env: Environment):  # noqa: ANN204
         super().__init__(env)
 
         self._service_tasks = []
 
-    def execute(self, *args):
+    def execute(self, *args):  # noqa: ANN002, ANN201
         events = []
         for service_task in self._service_tasks:
             events.append(service_task.task_finished)
@@ -25,8 +27,8 @@ class MultiServiceTask(ServiceTask):
         # Notify all
         self._task_finished = self._env.event()
 
-    def append_task(self, service_task: ServiceTask):
+    def append_task(self, service_task: ServiceTask):  # noqa: ANN201
         self._service_tasks.append(service_task)
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"Multi Tasks with {len(self._service_tasks)} sub tasks:{self._service_tasks}"

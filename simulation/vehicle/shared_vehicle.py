@@ -1,52 +1,77 @@
 import logging
 from abc import ABC
-from enum import Enum
 
 from typing import TYPE_CHECKING
 from simpy import Environment, Event
 
+from simulation.agent.user import User
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.environment.position import Position
+from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
+from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
-from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 
-from .vehicle import Vehicle, VehicleState
-
-if TYPE_CHECKING:
-    from simulation.environment.geodesic_position import GeodesicPosition
-    from simulation.agent.user import User
-
-
-
-class SharedVehicleState(VehicleState, Enum):
-    SOME_STATE = 1002
-    RESERVED = 1001
+from .vehicle import Vehicle
 
 
 class SharedVehicle(Vehicle, ABC):
-    shared_vehicle_id: int = 0
+    __slots__ = (
+        "_available_seats",
+        "_charging_station_charging_finished",
+        "_charging_station_charging_started",
+        "_charging_station_plugged_in",
+        "_charging_station_plugged_out",
+        "_current_state_of_charge",
+        "_driver",
+        "_driver_mounted",
+        "_driver_unmounted",
+        "_driving_finished",
+        "_driving_started",
+        "_energy_consumption",
+        "_max_available_seats",
+        "_max_state_of_charge",
+        "_price_per_minute",
+        "_price_per_trip",
+        "_reserved_for_user",
+        "_seats",
+        "_user_mounted",
+        "_user_unmounted",
+        "_vehicle_parked",
+        "_vehicle_relocation_finished",
+        "_vehicle_relocation_started",
+        "_velocity",
+    )
 
-    def __init__(
+    def __init__(  # noqa: ANN204
         self,
         env: Environment,
-        position: "GeodesicPosition",
-        velocity: float,
-        max_available_seats:int =1,
-        max_state_of_charge:int =1,
-        energy_consumption:float =0.01,
-        price_per_min:int =1,
+        fleet: VehicleFleet,
+        position: GeodesicPosition,  # noqa: ANN001
+        velocity: float,  # noqa: ANN001
+        vehicle_mode: VehicleMode,
+        max_available_seats:int =1,  # noqa: ANN001
+        convenience: int=1,  # noqa: ANN001
+        max_state_of_charge:int =1,  # noqa: ANN001
+        energy_consumption:float =0.01,  # noqa: ANN001
+        price_per_min:int =1.0,  # noqa: ANN001
+        price_per_trip: float=0.0,  # noqa: ANN001
         driver: DriverInterface = None,
     ):
-        super(SharedVehicle, self).__init__(env, position)
+        super().__init__(
+            env,
+            fleet,
+            position,
+            velocity,
+            max_available_seats,
+            vehicle_mode,
+            convenience,
+        )
 
-        self._id:int = SharedVehicle.shared_vehicle_id
-        self._price_per_minute:int  = price_per_min
-        self._available_seats:int = max_available_seats
-        self._max_available_seats:int = max_available_seats
-        self._seats:list[int] = []
+        self._price_per_minute: int = price_per_min
+        self._price_per_trip: float = price_per_trip if price_per_trip else 0.0
         self._driver = None
-        self._velocity:float = velocity  # meter per minute (16.67m/min = 1kmh)
 
         # State Of Charge
         self._max_state_of_charge:int = max_state_of_charge  # in kWh
@@ -78,7 +103,7 @@ class SharedVehicle(Vehicle, ABC):
         self._charging_station_plugged_out: Event = self._env.event()
 
         # Initial State
-        self._state: VehicleState = SharedVehicleState.PARKING
+        self.state: VehicleState = VehicleState.PARKING
 
         # Vehicle Reservation
         self._reserved_for_user: "User" = None
@@ -87,50 +112,40 @@ class SharedVehicle(Vehicle, ABC):
         if driver is not None:
             self.mount_driver(driver)
 
-        SharedVehicle.shared_vehicle_id += 1
-
     @property
-    def id(self) -> int:
+    def id(self) -> int:  # noqa: ANN201
         return self._id
 
     @property
-    def price_per_minute(self) -> int:
+    def price_per_minute(self) -> int:  # noqa: ANN201
         return self._price_per_minute
 
-    @price_per_minute.setter
-    def price_per_minute(self, price_per_minute: int) -> None:
-        self._price_per_minute = price_per_minute
+    @property
+    def price_per_trip(self) -> None:  # noqa: ANN201
+        return self._price_per_trip
 
     @property
-    def reserved_for_user(self) -> "User":
+    def reserved_for_user(self) -> "User":  # noqa: ANN201
         return self._reserved_for_user
 
     @property
-    def available_seats(self) -> int:
-        return self._available_seats
-
-    @available_seats.setter
-    def available_seats(self, available_seats: int) -> None:
-        self._available_seats = available_seats
-
-    @property
-    def max_available_seats(self) -> int:
+    def max_available_seats(self):  # noqa: ANN201
         return self._max_available_seats
 
     @max_available_seats.setter
-    def max_available_seats(self, max_available_seats: int) -> None:
+    def max_available_seats(self, max_available_seats: int) -> None:  # noqa: ANN001, ANN202
         self._max_available_seats = max_available_seats
 
     @property
-    def max_state_of_charge(self) -> int:
+    def max_state_of_charge(self) -> int:  # noqa: ANN201
         return self._max_state_of_charge
 
     @property
-    def current_state_of_charge(self) -> float:
+    def current_state_of_charge(self) -> float:  # noqa: ANN201
         return self._current_state_of_charge
 
     @property
-    def current_relative_state_of_charge(self) -> int:
+    def current_relative_state_of_charge(self) -> int:  # noqa: ANN201
         return (
             self.current_state_of_charge / self.max_state_of_charge
             if self.max_state_of_charge != 0
@@ -138,21 +153,21 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     @property
-    def energy_consumption(self) -> int:
+    def energy_consumption(self) -> int:  # noqa: ANN201
         return self._energy_consumption
 
     @property
-    def velocity(self) -> float:
+    def velocity(self) -> float:  # noqa: ANN201
         return self._velocity
 
-    def move(self, route_segment: Edge) -> None:
+    def move(self, route_segment: Edge) -> None:  # noqa: ANN201
         distance = route_segment.distance
         velocity = self._velocity
         time = distance / velocity
 
         if not self.has_enough_state_of_charge(distance):
             raise RuntimeError(
-                f"{str(self.__class__.__name__)} {self._id} has been tried to move but has not enough state of charge."
+                f"{self.__class__.__name__!s} {self._id} has been tried to move but has not enough state of charge."
             )
 
         yield self._env.timeout(time)
@@ -160,54 +175,59 @@ class SharedVehicle(Vehicle, ABC):
         self._update_positions(route_segment.destination.position)
         self._update_state_of_charge(distance)
 
-    def start_driving(self) -> None:
-        self.state = SharedVehicleState.DRIVING
+    def start_driving(self) -> None:  # noqa: ANN201
+        self.state = VehicleState.DRIVING
 
         logging.debug(
             "Driving started.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def stop_driving(self) -> None:
-        self.state = SharedVehicleState.PARKING
+    def stop_driving(self) -> None:  # noqa: ANN201
+        self.state = VehicleState.PARKING
         self.set_current_task(None)
         logging.debug(
             "Driving stopped.",
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def park(self) -> None:
+    def park(self) -> None:  # noqa: ANN201
         # Lift reservation
         self._reserved_for_user = None
 
         # Make vehicle available for others again
-        self.state = SharedVehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         logging.debug(
             "Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
-    def reserve(self, user: "User") -> None:
-        self.state = SharedVehicleState.RESERVED
+    def reserve(self, user: "User") -> None:  # noqa: ANN001, ANN201
+        self.state = VehicleState.RESERVED
 
         self._reserved_for_user = user
 
         logging.debug(
-            f"Reserved to {user.id}.",
+            "Reserved to %s.",
+            user.id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def has_enough_state_of_charge(self, distance: float) -> bool:
+    def has_enough_state_of_charge(self, distance: float) -> bool:  # noqa: ANN001, ANN201
         """
         Check if vehicle has enough SoC left for trip
         :param distance: in meter
         :return:
         """
+        # Bike does not need to check SoC
+        if self._mode == VehicleMode.Bike:
+            return True
+
         if self.energy_consumption * distance / 1000 >= self._current_state_of_charge:
             return False
         return True
 
-    def _update_state_of_charge(self, distance: float) -> None:
+    def _update_state_of_charge(self, distance: float) -> None:  # noqa: ANN001, ANN202
         """
         Update state of charge of vehicles based on driven distance.
         SoC = SoC_old - EnergyConsumption (kWh/km) * km
@@ -220,11 +240,14 @@ class SharedVehicle(Vehicle, ABC):
             self._current_state_of_charge = 0.0
 
         logging.debug(
-            f"Current state of charge {round(self.current_state_of_charge, 2)}/{self.max_state_of_charge} ({round(self.current_state_of_charge / self.max_state_of_charge * 100, 2)}%).",
+            "Current state of charge %s/%s (%s%%).",
+            round(self.current_state_of_charge, 2),
+            self.max_state_of_charge,
+            round(self.current_state_of_charge / self.max_state_of_charge * 100, 2),
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def _update_positions(self, new_position: Position) -> None:
+    def _update_positions(self, new_position: Position) -> None:  # noqa: ANN202
         # Update Vehicle Position
         self.position = new_position
 
@@ -233,17 +256,19 @@ class SharedVehicle(Vehicle, ABC):
             self._driver.position = new_position
 
         # Update Position of Passengers
-        for passenger in self._seats:
+        for passenger in self._passengers:
             passenger.position = new_position
 
-        region_id = self._position.get_hexagon_id()
+        region_id = self.position.get_region_id()
 
         logging.debug(
-            f"Current position {self._position} in region {region_id}.",
+            "Current position %s in region %s.",
+            self.position,
+            region_id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def mount_driver(self, driver: DriverInterface) -> None:
+    def mount_driver(self, driver: DriverInterface) -> None:  # noqa: ANN201
         if self._driver is not None:
             raise Exception(
                 f"Vehicle {self._id} has already a driver {self._driver.identify_driver()}. Unable to mount driver."
@@ -253,14 +278,15 @@ class SharedVehicle(Vehicle, ABC):
         self._driver_mounted.succeed()
         self._driver_mounted = self._env.event()
 
-        self._state = VehicleState.DRIVING
+        self.state = VehicleState.DRIVING
 
         logging.debug(
-            f"Driver: {driver.identify_driver()} mounted vehicle.",
+            "Driver: %s mounted vehicle.",
+            driver.identify_driver(),
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def unmount_driver(self) -> None:
+    def unmount_driver(self) -> None:  # noqa: ANN201
         if self._driver is None:
             raise Exception("Vehicle has no driver to unmount.")
 
@@ -269,54 +295,24 @@ class SharedVehicle(Vehicle, ABC):
         self._driver_unmounted.succeed()
         self._driver_unmounted = self._env.event()
 
-        self._state = VehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         logging.debug(
-            f"Driver: {tmp_driver_id} unmounted vehicle.",
+            "Driver: %s unmounted vehicle.",
+            tmp_driver_id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def mount_passenger(self, passenger: PassengerInterface) -> None:
-        if len(self._seats) < self._available_seats:
-            self._seats.append(passenger)
-            self._available_seats -= 1
-
-            self._user_mounted.succeed()
-            self._user_mounted = self._env.event()
-
-            logging.debug(
-                f"Passenger: {passenger.identify_passenger()} mounted vehicle.",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
-
-        elif passenger in self._seats:
-            raise Exception("Passenger is already in vehicle.")
-        else:
-            raise Exception("Vehicle is full.")
-
-    def prepare_for_service_task(self, caller, task):
-        self._state = VehicleState.PRE_SERVICE
+    def prepare_for_service_task(self, caller, task):  # noqa: ANN001, ANN201
+        self.state = VehicleState.PRE_SERVICE
         logging.debug(
-            f"Marked for Service Task [{task}] by {caller}.",
+            "Marked for Service Task [%s] by %s.",
+            task,
+            caller,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def unmount_passenger(self, passenger: PassengerInterface):
-        if passenger in self._seats:
-            self._seats.remove(passenger)
-            self._available_seats += 1
-
-            self._user_unmounted.succeed()
-            self._user_unmounted = self._env.event()
-
-            logging.debug(
-                f"Passenger: {passenger.identify_passenger()} unmounted vehicle.",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
-        else:
-            raise Exception("Agent is not in vehicle.")
-
-    def relocate(self, route_segment: Edge, time, relocator):
+    def relocate(self, route_segment: Edge, time, relocator):  # noqa: ANN001, ANN201
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
@@ -326,11 +322,12 @@ class SharedVehicle(Vehicle, ABC):
         """
         if (
             self._driver is not None
-            or self.state == SharedVehicleState.RESERVED
-            or len(self._seats) > 0
+            or self.state == VehicleState.RESERVED
+            or len(self._passengers) > 0
         ):
             logging.debug(
-                f"Vehicle {self._id} has a driver. Revoke relocation task.",
+                "Vehicle %s has a driver. Revoke relocation task.",
+                self._id,
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
@@ -344,12 +341,12 @@ class SharedVehicle(Vehicle, ABC):
         self._vehicle_relocation_started.succeed()
         self._vehicle_relocation_started = self._env.event()
 
-        self._state = VehicleState.RELOCATING
+        self.state = VehicleState.RELOCATING
 
         yield self._env.timeout(time)
 
         # Save old position for logging purposes
-        old_position = self._position
+        old_position = self.position
 
         # Update new position of vehicle
         self._update_positions(route_segment.destination.position)
@@ -358,15 +355,19 @@ class SharedVehicle(Vehicle, ABC):
         self._vehicle_relocation_finished.succeed()
         self._vehicle_relocation_finished = self._env.event()
 
-        self._state = VehicleState.PARKING
+        self.state = VehicleState.PARKING
 
         logging.debug(
-            f"Vehicle relocated by {relocator} from {old_position} to {self._position} in {time} minutes.",
+            "Vehicle relocated by %s from %s to %s in %s minutes.",
+            relocator,
+            old_position,
+            self.position,
+            time,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def plug_to_charging_station(self):
-        self._state = VehicleState.CHARGING
+    def plug_to_charging_station(self):  # noqa: ANN201
+        self.state = VehicleState.CHARGING
 
         self._charging_station_plugged_in.succeed()
         self._charging_station_plugged_in = self._env.event()
@@ -376,8 +377,8 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def unplug_from_charging_station(self):
-        self._state = VehicleState.PARKING
+    def unplug_from_charging_station(self):  # noqa: ANN201
+        self.state = VehicleState.PARKING
 
         self._charging_station_plugged_out.succeed()
         self._charging_station_plugged_out = self._env.event()
@@ -387,7 +388,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def charge(self, charging_time, amount=0):
+    def charge(self, charging_time, amount=0):  # noqa: ANN001, ANN201
         # Notify charging
         self._charging_station_charging_started.succeed()
         self._charging_station_charging_started = self._env.event()
@@ -406,9 +407,12 @@ class SharedVehicle(Vehicle, ABC):
         self._charging_station_charging_finished = self._env.event()
 
         logging.debug(
-            f"Vehicle charged {amount} kWh and has now {self._current_state_of_charge} kWh out of {self._max_state_of_charge}.",
+            "Vehicle charged %s kWh and has now %s kWh out of %s.",
+            amount,
+            self._current_state_of_charge,
+            self._max_state_of_charge,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def __str__(self):
+    def __str__(self):  # noqa: ANN204
         return f"I have {self.available_seats} passengers on boards"

@@ -1,5 +1,5 @@
 ##############################################################################################
-### This is the default configuration file template                                        ###                   
+### This is the default configuration file template                                        ###
 ### for instructions on adding new configuration parameters, check the Configuration class ###
 ##############################################################################################
 
@@ -8,6 +8,7 @@
 # Logging
 LOG_LEVEL      = "DEBUG"
 FILE_LOG_LEVEL = "DEBUG"
+LOG_TIMESTAMPS = true
 
 # Output
 PERSIST_RESULTS = true
@@ -27,7 +28,7 @@ SEED = 42
 # Set to any other value to use that value as the seed for the component.
 [RANDOM_MANAGER.COMPONENT_SEEDS]
 # POPULATIONFACTORY = 0
-# FLEETFACTORY =0 
+# FLEETFACTORY =0
 # DEMANDFACTORY     = 0
 # INITIALSOC        = 0
 # GEOENV            = 0
@@ -125,7 +126,7 @@ CHARGING_STATION_QUEUE_SIZE = [99]
 
 [[SHARED_VEHICLE_OPERATOR]]
 # When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
-RECHARGE_THRESHOLD = 0.4
+RECHARGE_THRESHOLD = 0.1
 # Installed Charging Station Power
 # kW (slow charger), or 7 kW or 22 kW (fast charger)
 CHARGING_STATION_POWER = 50.0
@@ -144,10 +145,10 @@ VEHICLE_RELOCATION_VELOCITY = 9.54
 BASE_REGIONS = ["871f18869ffffff", "871f18b0dffffff", "871f18b23ffffff", "871f18b26ffffff", "871f18b35ffffff", "871f1d483ffffff", "871f1d489ffffff", "871f1d48bffffff", "871f1d48effffff", "871f1d49cffffff", "871f1d4aaffffff", "871f1d4b3ffffff", "871f1d4d2ffffff", "871f1d4d3ffffff", "871f1d4f3ffffff", "871f1d4f6ffffff"]
 
 [SHARED_VEHICLE_OPERATOR.N_VEHICLES]
-SharedCar         = 500
-SharedScooter     = 500
-SharedKickScooter = 700
-SharedBike        = 200
+Car         = 500
+Scooter     = 500
+KickScooter = 700
+Bike        = 200
 
 [[RIDE_HAILING_OPERATOR]]
 # When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
@@ -227,7 +228,9 @@ INITIAL_SOC                    = 0.50
 EMERGENCY_SOC_BUFFER = 0.05
 
 # Economic parameters
-PRICE_PER_MIN         = 0.35
+PRICE_PER_MIN = 0.35
+#Flat price per trip started (e.g. unlock fee)
+PRICE_PER_TRIP        = 0.0
 DAILY_TOTAL_COST      = 29.0
 COST_PER_KM           = 0.45
 PRICE_PER_KM          = 1.3
@@ -237,6 +240,8 @@ KG_CO2_PER_KM         = 0.105
 #Other parameters
 # Maximum distance a user is willing to walk to get to a vehicle
 WALKING_DISTANCE = 500
+# How convenient is the vehicle for the user, lower is better
+CONVENIENCE = 1
 
 
 [RIDE_HAILING_VEHICLES.AutonomousCar]
@@ -274,7 +279,7 @@ PRICE_PER_KM          = 1.3
 CHARGING_COST_PER_KWH = 0.43
 
 
-[SHARED_VEHICLES.SharedCar]
+[SHARED_VEHICLES.Car]
 PRICE_PER_MIN                  = 0.35
 MAX_STATE_OF_CHARGE            = 50.0
 ENERGY_CONSUMPTION             = 0.20
@@ -288,9 +293,10 @@ CHARGING_COST_PER_KWH          = 0.23
 PRICE_PER_KM                   = 1.3   #TODOO: Not needed? I forgot why I wrote this
 WALKING_DISTANCE               = 500
 KG_CO2_PER_KM                  = 0.236
+CONVENIENCE                    = 3
 
 
-[SHARED_VEHICLES.SharedScooter]
+[SHARED_VEHICLES.Scooter]
 PRICE_PER_MIN                  = 0.23
 MAX_STATE_OF_CHARGE            = 4.8
 ENERGY_CONSUMPTION             = 0.048
@@ -302,10 +308,12 @@ COST_PER_KM                    = 0.53
 CHARGING_COST_PER_KWH          = 0.23
 WALKING_DISTANCE               = 350
 KG_CO2_PER_KM                  = 0.051
+CONVENIENCE                    = 2
 
 
-[SHARED_VEHICLES.SharedKickScooter]
+[SHARED_VEHICLES.KickScooter]
 PRICE_PER_MIN                  = 0.19
+PRICE_PER_TRIP                 = 1.0
 MAX_STATE_OF_CHARGE            = 0.288
 ENERGY_CONSUMPTION             = 0.0072
 VELOCITY                       = 2.82
@@ -316,9 +324,10 @@ COST_PER_KM                    = 0.53
 CHARGING_COST_PER_KWH          = 0.23
 WALKING_DISTANCE               = 200
 KG_CO2_PER_KM                  = 0.105
+CONVENIENCE                    = 1
 
 
-[SHARED_VEHICLES.SharedBike]
+[SHARED_VEHICLES.Bike]
 PRICE_PER_MIN       = 0.08
 MAX_STATE_OF_CHARGE = 1.0
 ENERGY_CONSUMPTION  = 0.0
@@ -329,6 +338,7 @@ INITIAL_SOC         = 1.0
 COST_PER_KM         = 0.1
 WALKING_DISTANCE    = 200
 KG_CO2_PER_KM       = 0.046
+CONVENIENCE         = 1
 
 
 [TRANSIT_VEHICLES.Bus]

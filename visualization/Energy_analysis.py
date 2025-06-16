@@ -3,13 +3,13 @@ import pandas as pd
 import seaborn as sns
 
 
-def clean(x):
+def clean(x):  # noqa: ANN001, ANN201
     if type(x) is not float:
         x = x.replace("[", "").replace("]", "")
     return x
 
 
-def set_style():
+def set_style():  # noqa: ANN201
     # This sets reasonable defaults for font size for a figure that will go in a paper
     sns.set_context("paper")
 
@@ -23,7 +23,7 @@ def set_style():
     )
 
 
-def data_preparation(df_raw):
+def data_preparation(df_raw):  # noqa: ANN001, ANN201
     df_raw["phase"] += 1
     df_raw.fillna(value=0)
     df_raw["total_profit_ride_hailing"] = (
@@ -64,7 +64,7 @@ def data_preparation(df_raw):
     return df_raw
 
 
-def plot_CS_Benchmark(dg):
+def plot_CS_Benchmark(dg):  # noqa: ANN001, ANN201
     set_style()
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
     HUE = "scenario"

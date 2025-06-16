@@ -14,6 +14,8 @@ class DistanceMatrixImporter:
     Distance between hexagon elements are computed using haversine distances
     """
 
+    __slots__ = ("_city", "_data_path", "_hexagons", "_resolution")
+
     @beartype
     def __init__(
         self, 
@@ -21,13 +23,13 @@ class DistanceMatrixImporter:
         resolution: int, 
         data_path: Union[str, Path], 
         city: str
-    ) -> None:
+    ) -> None:  # noqa: ANN001, ANN204
         self._hexagons = hexagons
         self._resolution = resolution
         self._data_path = data_path
         self._city = city
 
-    def load_distance_matrix(self) -> pd.DataFrame:
+    def load_distance_matrix(self) -> pd.DataFrame:  # noqa: ANN201
         """
         Load or calculate distance matrix between hexagon elements
         :return:

@@ -1,4 +1,15 @@
-from enum import Enum, IntEnum
+from enum import Enum
+
+try:
+    from enum import StrEnum  # Python 3.11+
+except ImportError:
+
+    class StrEnum(str, Enum):  # type: ignore[no-redef]
+        """
+        StrEnum replacement for Python < 3.11.
+
+        We can remove this once we drop support for Python 3.11.
+        """
 
 
 class TemporalBucket(Enum):
@@ -37,11 +48,12 @@ class PopulationType(Enum):
     CONVENIENCE_SEEKER = 5
 
 
-class VehicleMode(IntEnum):
-    SharedCar = 0
-    SharedScooter = 1
-    SharedKickScooter = 2
-    SharedBike = 3
+class VehicleMode(Enum):
+    Car = 0
+    Scooter = 1
+    KickScooter = 2
+    Bike = 3
+    Bus = 4
 
 
 class UserState(Enum):
@@ -61,3 +73,34 @@ class UserState(Enum):
     # transit user specifics
     IN_TRANSPORT = 101
     MOVING_TO_DESTINATION = 102  # walk after last transit stop
+
+
+class VehicleState(Enum):
+    ### Generic vehicle states ###
+    INITIALIZED = 0
+    PARKING = 1
+    DRIVING = 2
+    RELOCATING = 3
+    CHARGING = 4
+    PRE_SERVICE = 5
+    ONLINE = 6  # When the driver is online
+    OFFLINE = 7  # When the driver is offline
+    SOME_STATE = 1002
+    RESERVED = 1001
+    MOVING_TO_PICK_UP_POS = 1003
+
+    ### Public transport vehicle states ###
+    AT_TERMINAL_ORIGIN = 2001
+    AT_TERMINAL_DESTINATION = 2002
+    AT_STOP = 2003
+
+    # bus specific
+    EN_ROUTE_PLANNED = 2011
+    EN_ROUTE_DETOUR = 2012
+
+    UNKNOWN = 2999
+
+
+class TransactionState(StrEnum):
+    FULFILLED = "Fulfilled"
+    MISSED = "Missed"

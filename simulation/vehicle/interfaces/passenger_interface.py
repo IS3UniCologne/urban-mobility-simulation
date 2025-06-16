@@ -3,13 +3,13 @@ from abc import ABC, abstractmethod
 
 class PassengerInterface(ABC):
     @abstractmethod
-    def mount_vehicle(self, vehicle):
+    def mount_vehicle(self, vehicle):  # noqa: ANN001, ANN201
         pass
 
     @abstractmethod
-    def unmount_vehicle(self, vehicle):
+    def unmount_vehicle(self, vehicle):  # noqa: ANN001, ANN201
         pass
 
     @abstractmethod
-    def identify_passenger(self):
+    def identify_passenger(self):  # noqa: ANN201
         pass

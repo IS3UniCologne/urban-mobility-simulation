@@ -19,20 +19,20 @@ class TaskState(Enum):
 class ServiceTask(ABC):
     __slots__ = ("_env", "_start_time", "_state", "_task_finished")
 
-    def __init__(self, env: Environment):
+    def __init__(self, env: Environment):  # noqa: ANN204
         self._env = env
         self._start_time = self._env.now
         self._state: TaskState = TaskState.INITIALIZED
         self._task_finished = self._env.event()
 
     @abstractmethod
-    def execute(self):
+    def execute(self):  # noqa: ANN201
         pass
 
     @property
-    def state(self):
+    def state(self):  # noqa: ANN201
         return self._state
 
     @property
-    def task_finished(self):
+    def task_finished(self):  # noqa: ANN201
         return self._task_finished
