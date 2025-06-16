@@ -69,7 +69,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         self._available_vehicle_modes: list[str] = (
             ordered_available_vehicle_modes  # TODO: get from fleet
         )
-        self._max_vehicle_supply: list[int] = ordered_max_vehicle_supply  # TODO: get from fleet
+        self._max_vehicle_supply: list[int] = (
+            ordered_max_vehicle_supply  # TODO: get from fleet
+        )
         self._base_regions = base_regions
         self._base_capacity = base_capacity
 
@@ -85,7 +87,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         self._time_between_operations = time_between_operations
 
         # Shift Duration (OM shift duration)
-        self._duration_of_operations: int= operation_duration  # mins
+        self._duration_of_operations: int = operation_duration  # mins
 
     @property
     def available_vehicle_modes(self) -> list[str]:
@@ -335,7 +337,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
 
-    def generate_relocation_plan(self) -> dict[str, list[tuple[Position, Position, int, float]]]:
+    def generate_relocation_plan(
+        self,
+    ) -> dict[str, list[tuple[Position, Position, int, float]]]:
         """
 
         Return relocation plan
@@ -350,7 +354,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return relocation_plans
 
-    def generate_charging_plan(self) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:
+    def generate_charging_plan(
+        self,
+    ) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:
         """
         Generate a rule based charging plan based on given service worker capacity
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
@@ -380,7 +386,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def calculate_charging_plan(self, fleet_state: pd.DataFrame) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:
+    def calculate_charging_plan(
+        self, fleet_state: pd.DataFrame
+    ) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
@@ -675,7 +683,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def identify_potential_relocations(self, state:pd.DataFrame ) -> dict[str, list[tuple[Position, Position, int, float]]]:
+    def identify_potential_relocations(
+        self, state: pd.DataFrame
+    ) -> dict[str, list[tuple[Position, Position, int, float]]]:
         """
         Calculate how many vehicles need to be moved (or can be) from origin to destination
 

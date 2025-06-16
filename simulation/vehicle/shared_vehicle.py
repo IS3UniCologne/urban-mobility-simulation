@@ -11,7 +11,9 @@ from simulation.environment.position import Position
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
-from simulation.operator.operations_management.service_tasks.service_task import ServiceTask
+from simulation.operator.operations_management.service_tasks.service_task import (
+    ServiceTask,
+)
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 
@@ -314,7 +316,9 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def relocate(self, route_segment: Edge, time: float, relocator: str) -> Generator[Any, Any, Any]:
+    def relocate(
+        self, route_segment: Edge, time: float, relocator: str
+    ) -> Generator[Any, Any, Any]:
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
@@ -390,7 +394,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def charge(self, charging_time: float, amount:int=0) -> Generator[Any, Any, Any]:
+    def charge(self, charging_time: float, amount: int = 0) -> Generator[Any, Any, Any]:
         # Notify charging
         self._charging_station_charging_started.succeed()
         self._charging_station_charging_started = self._env.event()

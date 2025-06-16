@@ -103,7 +103,7 @@ class TransportationAlternativeRideHailing:
         return self._technology_skeptical
 
     @property
-    def vehicle(self) -> RideHailingVehicle: 
+    def vehicle(self) -> RideHailingVehicle:
         return self._vehicle
 
     @property
