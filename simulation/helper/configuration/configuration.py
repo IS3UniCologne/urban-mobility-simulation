@@ -100,6 +100,7 @@ def beartype_after_post_init(cls: T) -> T:
 class SettingsConfig:
     LOG_LEVEL: str
     FILE_LOG_LEVEL: str
+    LOG_TIMESTAMPS: bool
 
     PERSIST_RESULTS: bool
     TRACK_AGENT: bool
@@ -267,6 +268,8 @@ class ModeChoiceModelConfig:
     MOD_P_VALUES: list[list[float]]
     MOD_COEFFICIENT_INTERVAL_ADJUSTER: float
 
+    rng: np.random.Generator | None = None
+
     def __post_init__(self) -> None:
         # convert from str to enum
         object.__setattr__(
@@ -274,12 +277,15 @@ class ModeChoiceModelConfig:
             "MODE_CHOICE_STRATEGY",
             ModeChoiceStrategy[str(self.MODE_CHOICE_STRATEGY)],
         )
+        # Import here to avoid circular dependency
+        from simulation.helper.random.random_manager import RandomManager
+
+        # Use object.__setattr__ to bypass frozen dataclass restriction
+        object.__setattr__(self, "rng", RandomManager().get_rng("MODE_CHOICE_MODEL"))
 
     def generate_mode_choice_coefficients(
         self, population_type: PopulationType
     ) -> np.ndarray:
-        # TODO: This shouldn't be in here, can't use random manager because of circular import, fix once it's moved
-        rng = np.random.default_rng(seed=Configuration().random_manager.SEED)
         mode_choice_coefficients_ci_lower = self.MOD_COEFFICIENTS_CI_LOWER[
             population_type.value
         ]
@@ -299,17 +305,15 @@ class ModeChoiceModelConfig:
         )
         mode_choice_coefficients_ci_lower = mode_choice_coefficients_ci_lower + adjuster
         mode_choice_coefficients_ci_upper = mode_choice_coefficients_ci_upper - adjuster
-        mode_choice_coefficients = rng.uniform(
+        mode_choice_coefficients = self.rng.uniform(
             mode_choice_coefficients_ci_lower, mode_choice_coefficients_ci_upper
         )
         return mode_choice_coefficients
 
     def generate_AV_trust(self, population_type: PopulationType) -> float:
-        # TODO: This shouldn't be in here, can't use random manager because of circular import, fix once it's moved
-        rng = np.random.default_rng(seed=Configuration().random_manager.SEED)
         trust_value_lower = self.AV_TRUST[population_type.value] - 0.5
         trust_value_upper = self.AV_TRUST[population_type.value] + 0.5
-        trust_value = rng.uniform(trust_value_lower, trust_value_upper)
+        trust_value = self.rng.uniform(trust_value_lower, trust_value_upper)
         return trust_value
 
 

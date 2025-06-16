@@ -66,7 +66,8 @@ class ServiceWorker:
         self._state = ServiceWorkerState.WORKING
 
         logging.debug(
-            f"Processing following task: {service_task}.",  # noqa: G004
+            "Processing following task: %s.",
+            service_task,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 

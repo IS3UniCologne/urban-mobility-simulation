@@ -205,7 +205,8 @@ class VirtualChargingInfrastructure:
                 if self._use_virtual_cs:
                     self._update_virtual_cs()
                 logging.debug(
-                    f"Plugged in registered at {charging_station.location}.",  # noqa: G004
+                    "Plugged in registered at %s.",
+                    charging_station.location,
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 self._listeners[cs.id].processed_plug_in_event.succeed()
@@ -214,7 +215,8 @@ class VirtualChargingInfrastructure:
                 if self._use_virtual_cs:
                     self._update_virtual_cs()
                 logging.debug(
-                    f"Plugged out registered at {charging_station.location}.",  # noqa: G004
+                    "Plugged out registered at %s.",
+                    charging_station.location,
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
                 self._listeners[cs.id].processed_plug_out_event.succeed()

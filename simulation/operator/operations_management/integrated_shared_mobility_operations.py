@@ -193,12 +193,19 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             )
 
             logging.info(
-                f"There are {len(self._operator_reference.fleet.vehicles_below_soc_threshold(self._state_of_charge_threshold))} vehicles with low state of charge.",  # noqa: G004
+                "There are %s vehicles with low state of charge.",
+                len(
+                    self._operator_reference.fleet.vehicles_below_soc_threshold(
+                        self._state_of_charge_threshold
+                    )
+                ),
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
             logging.info(
-                f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",  # noqa: G004
+                "Charging Tasks scheduled. In total %s charging tasks are generated. Count: %s",
+                len(charging_events),
+                no_vehicles_scheduled_to_charge,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -800,7 +807,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 # Break loop if there is no "excess" supply
                 if len(local_relocation_schedule) == 0:
                     logging.info(
-                        f"Cannot calculate relocation plan for {mode} as there are no regions with excess supply.",  # noqa: G004
+                        "Cannot calculate relocation plan for %s as there are no regions with excess supply.",
+                        mode,
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
                     break

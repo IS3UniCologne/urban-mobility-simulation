@@ -186,7 +186,8 @@ class User(Agent, DriverInterface, TrackingInterface):
 
             if isinstance(selected_transportation_alternative.vehicle, Walking):
                 logging.debug(
-                    f"User {self.id} chooses to walk to destination",  # noqa: G004
+                    "User %s chooses to walk to destination",
+                    self.id,
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
                 yield self._env.process(
@@ -197,7 +198,8 @@ class User(Agent, DriverInterface, TrackingInterface):
                 )
 
                 logging.debug(
-                    f"User {self.id} has reached walking destination",  # noqa: G004
+                    "User %s has reached walking destination",
+                    self.id,
                     extra={"clazz": self.__class__.__name__, "oid": self._id},
                 )
             else:
@@ -376,7 +378,8 @@ class User(Agent, DriverInterface, TrackingInterface):
         # Trigger next event
         self._transportation_alternatives_received.succeed()
         logging.debug(
-            f"Received transportation alternatives: {available_transportation_alternatives}.",  # noqa: G004
+            "Received transportation alternatives: %s.",
+            available_transportation_alternatives,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -413,7 +416,8 @@ class User(Agent, DriverInterface, TrackingInterface):
             selected_transportation_alternative
         )
         logging.debug(
-            f"Selected transportation alternative: {selected_transportation_alternative}.",  # noqa: G004
+            "Selected transportation alternative: %s.",
+            selected_transportation_alternative,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -442,7 +446,9 @@ class User(Agent, DriverInterface, TrackingInterface):
         if vehicle_allocation:
             # Trigger next event
             logging.debug(
-                f"Vehicle {vehicle_allocation.vehicle.id} has been allocated to user {self._id}.",  # noqa: G004
+                "Vehicle %s has been allocated to user %s.",
+                vehicle_allocation.vehicle.id,
+                self._id,
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
@@ -466,7 +472,9 @@ class User(Agent, DriverInterface, TrackingInterface):
         # Trigger next event
         self._arrived_at_pick_up_position.succeed()
         logging.debug(
-            f"Arrived at pick up position {self.position} at time {self._env.now}.",  # noqa: G004
+            "Arrived at pick up position %s at time %s.",
+            self.position,
+            self._env.now,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -491,7 +499,10 @@ class User(Agent, DriverInterface, TrackingInterface):
         # Trigger next event
         self._assigned_vehicle_arrived.succeed()
         logging.debug(
-            f"Vehicle {vehicle_assignment.vehicle.id} has arrived after {self._env.now - start_waiting} time units at pick up position to pick up user {self._id}",  # noqa: G004
+            "Vehicle %s has arrived after %s time units at pick up position to pick up user %s",
+            vehicle_assignment.vehicle.id,
+            self._env.now - start_waiting,
+            self._id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -530,7 +541,8 @@ class User(Agent, DriverInterface, TrackingInterface):
         # Update current state
         self._state = UserState.FULFILLED
         logging.debug(
-            f"Transport request of user {self._id} has been successfully fulfilled.",  # noqa: G004
+            "Transport request of user %s has been successfully fulfilled.",
+            self._id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -549,7 +561,8 @@ class User(Agent, DriverInterface, TrackingInterface):
         self._payment_service.withdraw_transportation_task(self, self._transport_task)
 
         logging.debug(
-            f"Transport request of user {self._id} has been withdrawn due to lack of vehicles.",  # noqa: G004
+            "Transport request of user %s has been withdrawn due to lack of vehicles.",
+            self._id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -769,7 +782,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                         self._state = UserState.MISSED
                         # self._payment_service.withdraw_transportation_task(self, self._transport_task)
                         logging.debug(
-                            f"User demand is not aligned with routing corridor of bus {vehicle.id}, ",  # noqa: G004
+                            "User demand is not aligned with routing corridor of bus %s, ",
+                            vehicle.id,
                             extra={"clazz": self.__class__.__name__, "oid": self._id},
                         )
                         break
@@ -912,7 +926,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         # Trigger next event
         self._transportation_alternatives_received.succeed()
         logging.debug(
-            f"Received transportation alternatives: {available_transportation_alternatives}.",  # noqa: G004
+            "Received transportation alternatives: %s.",
+            available_transportation_alternatives,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -1348,7 +1363,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             # Trigger next event
 
             logging.debug(
-                f"Received transportation alternatives: {available_transportation_alternatives}.",  # noqa: G004
+                "Received transportation alternatives: %s.",
+                available_transportation_alternatives,
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
             # Break the loop if there is an available vehicle for the user
@@ -1500,7 +1516,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             selected_transportation_alternative
         )
         logging.debug(
-            f"Selected transportation alternative: {selected_transportation_alternative.vehicle.state}.",  # noqa: G004
+            "Selected transportation alternative: %s.",
+            selected_transportation_alternative,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
         return selected_transportation_alternative
@@ -1529,7 +1546,9 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         if vehicle_allocation:
             # Trigger next event
             logging.debug(
-                f"Vehicle {vehicle_allocation.vehicle.id} has been allocated to user {self._id}.",  # noqa: G004
+                "Vehicle %s has been allocated to user %s.",
+                vehicle_allocation.vehicle.id,
+                self._id,
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
@@ -1560,7 +1579,10 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         # Trigger next event
         self._assigned_vehicle_arrived.succeed()
         logging.debug(
-            f"Vehicle {vehicle_assignment.vehicle.id} has arrived after {self._env.now - start_waiting} time units at pick up position to pick up user {self._id}",  # noqa: G004
+            "Vehicle %s has arrived after %s time units at pick up position to pick up user %s",
+            vehicle_assignment.vehicle.id,
+            self._env.now - start_waiting,
+            self._id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -1600,7 +1622,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         # Update current state
         self._state = UserState.FULFILLED
         logging.debug(
-            f"Transport request of user {self._id} has been successfully fulfilled.",  # noqa: G004
+            "Transport request of user %s has been successfully fulfilled.",
+            self._id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -1625,7 +1648,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             )
 
             logging.debug(
-                f"Transport request of user {self._id} has been withdrawn due to lack of vehicles.",  # noqa: G004
+                "Transport request of user %s has been withdrawn due to lack of vehicles.",
+                self._id,
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
         elif self._transportation_alternatives_refused:
@@ -1636,7 +1660,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             )
 
             logging.debug(
-                f"Transport request of user {self._id} has been refused.",  # noqa: G004
+                "Transport request of user %s has been refused.",
+                self._id,
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 

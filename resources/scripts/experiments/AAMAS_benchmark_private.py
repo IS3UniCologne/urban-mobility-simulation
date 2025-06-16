@@ -22,8 +22,7 @@ from simulation.helper.configuration.configuration import (
     Configuration,
     ModeChoiceStrategy,
 )
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.helper.logging.log_manager import LogManager
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -84,54 +83,15 @@ config = Configuration()
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
-# Logging                                 #
+# Init. Simulation Environment            #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Disable the default handler of the root logger
-logging.getLogger().handlers.clear()
+env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
+LogManager.setup_logging(config, env)
 
-logger = logging.getLogger()
-# Set to logging.DEBUG to see all logs
-logger.setLevel(logging.DEBUG)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-logging.getLogger("docplex").setLevel(logging.WARNING)
-
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-
-# Create a console handler with its own level (LOG_LEVEL)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(config.settings.LOG_LEVEL)
-console_handler.setFormatter(formatter)
-
-# Record the start time
 real_start_time = time.time()
-
 output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
-logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
-# Create directory for logs if not exists
-if not os.path.exists(logs_dir):
-    os.makedirs(logs_dir)
-log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
-file_handler = logging.FileHandler(log_file)
-file_handler.setFormatter(formatter)
-file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
-
-
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
-
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-logger.addFilter(edf)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf)
-
 # some hacking around bad coding
 
 if (
@@ -145,21 +105,6 @@ if (
 else:
     raise NotImplementedError("Other Vehicle Choice Models not Implemented yet.")
 
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Init. Simulation Environment            #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-env = simpy.Environment(initial_time=config.experiment_management.START_TIME)
-
-# Inject Simulation Environment to Logger (such that we can log the env time)
-cf = SimulationContextFilter(filter_name="add_env", extra=env)
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-
-logger.addFilter(cf)
-logger.addFilter(edf)
 
 # Population Type
 # TODO: Generate population for multiple modes at once --> https://github.com/IS3UniCologne/urban-mobility-simulation/issues/52

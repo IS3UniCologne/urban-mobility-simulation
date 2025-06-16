@@ -275,7 +275,10 @@ class World:
                     self._env,
                 )
                 logging.debug(
-                    f" Shared-vehicle user {new_user.user_id} starts searching for fleet {fleet} at {self._env.now}.",  # noqa: G004
+                    " Shared-vehicle user %s starts searching for fleet %s at %s.",
+                    new_user.user_id,
+                    fleet,
+                    self._env.now,
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
             elif mode == "ride_hailing":
@@ -303,7 +306,10 @@ class World:
                     self._env,
                 )
                 logging.debug(
-                    f"Ride-hailing user {new_user.user_id, population_type} request a vehicle at {self._env.now}.",  # noqa: G004
+                    "Ride-hailing user %s, %s request a vehicle at %s.",
+                    new_user.user_id,
+                    population_type,
+                    self._env.now,
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
             elif mode == "walking":
@@ -345,7 +351,8 @@ class World:
 
             if len(self._users) == self._user_limit:
                 logging.info(
-                    f"Reached User Limit of {self._user_limit}. Not adding more users to world.",  # noqa: G004
+                    "Reached User Limit of %s. Not adding more users to world.",
+                    self._user_limit,
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
 
