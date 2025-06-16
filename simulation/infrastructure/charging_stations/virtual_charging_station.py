@@ -1,4 +1,4 @@
-from typing import Tuple, Option, Any  # noqa: UP035, Any
+from typing import Optional, Tuple, Any  # noqa: UP035
 from beartype import beartype
 import simpy
 from shapely.geometry import Polygon
