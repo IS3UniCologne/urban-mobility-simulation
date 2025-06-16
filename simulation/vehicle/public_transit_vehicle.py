@@ -4,11 +4,11 @@ import logging
 from abc import ABC
 from typing import TYPE_CHECKING
 
-from simpy import Environment, Event
+from simpy import Environment
 
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.environment.position import Position
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
-from simulation.environment.position import Position
 from simulation.helper.time import SimulationTimeConverter
 from simulation.infrastructure.route import Route
 from simulation.infrastructure.transit_network.stop import Stop
@@ -17,6 +17,7 @@ from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
     from simulation.infrastructure.route import PublicTransitRoute
+
 
 class PublicTransitVehicleException(Exception):
     pass
@@ -35,9 +36,9 @@ class PublicTransitVehicle(Vehicle, ABC):
         route: PublicTransitRoute,
         position: GeodesicPosition,
         fleet: VehicleFleet,
-        velocity:float,  # noqa: ANN001
+        velocity: float,
         vehicle_mode: VehicleMode,
-        max_available_seats:int,  # noqa: ANN001
+        max_available_seats: int,
     ):
         super(PublicTransitVehicle, self).__init__(  # noqa: UP008
             env=env,
@@ -48,8 +49,8 @@ class PublicTransitVehicle(Vehicle, ABC):
             max_available_seats=max_available_seats,
         )
 
-        self._route:Route = route
-        self._current_stop:Position = route.origin
+        self._route: Route = route
+        self._current_stop: Position = route.origin
         self._delay: int = 0  # in seconds from planned route timetable
 
         # Initialize state
@@ -60,19 +61,19 @@ class PublicTransitVehicle(Vehicle, ABC):
         )
 
     @property
-    def route(self) -> Route:  # noqa: ANN201
+    def route(self) -> Route:
         return self._route
 
     @property
-    def current_stop(self) -> Stop:  # noqa: ANN201
+    def current_stop(self) -> Stop:
         return self._current_stop
 
     @current_stop.setter
-    def current_stop(self, stop: Stop) -> None:  # noqa: ANN202
+    def current_stop(self, stop: Stop) -> None:
         self._current_stop = stop
 
     @property
-    def delay(self) -> int:  # noqa: ANN201
+    def delay(self) -> int:
         return self._delay
 
     def prognose_arrival(self, stop: Stop):  # noqa: ANN201

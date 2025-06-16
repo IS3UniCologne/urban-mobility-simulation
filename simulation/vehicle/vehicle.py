@@ -56,7 +56,7 @@ class Vehicle(TrackingInterface, ABC):
     def __hash__(self) -> int:
         return hash(self._id)
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
         env: Environment,
         fleet: "VehicleFleet",

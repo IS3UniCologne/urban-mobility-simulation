@@ -1,6 +1,4 @@
 from pathlib import Path
-from typing import List, Union
-from beartype import beartype
 
 import h3
 import pandas as pd
@@ -16,20 +14,16 @@ class DistanceMatrixImporter:
 
     __slots__ = ("_city", "_data_path", "_hexagons", "_resolution")
 
-    @beartype
+    
     def __init__(
-        self, 
-        hexagons: List[str], 
-        resolution: int, 
-        data_path: Union[str, Path], 
-        city: str
-    ) -> None:  # noqa: ANN001, ANN204
+        self, hexagons: list[str], resolution: int, data_path: str | Path, city: str
+    ) -> None:
         self._hexagons = hexagons
         self._resolution = resolution
         self._data_path = data_path
         self._city = city
 
-    def load_distance_matrix(self) -> pd.DataFrame:  # noqa: ANN201
+    def load_distance_matrix(self) -> pd.DataFrame:
         """
         Load or calculate distance matrix between hexagon elements
         :return:

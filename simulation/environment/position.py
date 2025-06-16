@@ -3,21 +3,19 @@ from typing import NewType
 
 # RegionId represents a unique identifier for a spatial region (e.g., an H3 hex ID).
 RegionId = NewType("RegionId", str)
-from typing import Tuple, Any
-from beartype import beartype
 
 
 class Position(ABC):
     __slots__ = ("_x", "_y")
 
     @abstractmethod
-    def __init__(self) -> None:  # noqa: ANN204
+    def __init__(self) -> None:
         self._x: str = "I have a x position"
         self._y: str = "I have a y position"
 
     @abstractmethod
-    @beartype
-    def getExactLocation(self) -> Tuple[float, float]:  # noqa: ANN201
+    
+    def getExactLocation(self) -> tuple[float, float]:
         pass
 
     @abstractmethod

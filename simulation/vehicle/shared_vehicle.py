@@ -1,7 +1,6 @@
 import logging
 from abc import ABC
 
-from typing import TYPE_CHECKING
 from simpy import Environment, Event
 
 from simulation.agent.user import User
@@ -48,15 +47,15 @@ class SharedVehicle(Vehicle, ABC):
         self,
         env: Environment,
         fleet: VehicleFleet,
-        position: GeodesicPosition,  # noqa: ANN001
-        velocity: float,  # noqa: ANN001
+        position: GeodesicPosition,
+        velocity: float,
         vehicle_mode: VehicleMode,
-        max_available_seats:int =1,  # noqa: ANN001
-        convenience: int=1,  # noqa: ANN001
-        max_state_of_charge:int =1,  # noqa: ANN001
-        energy_consumption:float =0.01,  # noqa: ANN001
-        price_per_min:int =1.0,  # noqa: ANN001
-        price_per_trip: float=0.0,  # noqa: ANN001
+        max_available_seats: int = 1,
+        convenience: int = 1,
+        max_state_of_charge: int = 1,
+        energy_consumption: float = 0.01,
+        price_per_min: int = 1.0,
+        price_per_trip: float = 0.0,
         driver: DriverInterface = None,
     ):
         super().__init__(
@@ -74,12 +73,12 @@ class SharedVehicle(Vehicle, ABC):
         self._driver = None
 
         # State Of Charge
-        self._max_state_of_charge:int = max_state_of_charge  # in kWh
-        self._current_state_of_charge:float = RandomManager().uniform(
+        self._max_state_of_charge: int = max_state_of_charge  # in kWh
+        self._current_state_of_charge: float = RandomManager().uniform(
             low=0, high=max_state_of_charge, component="INITIALSOC"
         )  # in kWh
 
-        self._energy_consumption:int = energy_consumption  # in kWh/km
+        self._energy_consumption: int = energy_consumption  # in kWh/km
 
         #### Vehicle Events
         # Driving Events
@@ -106,26 +105,26 @@ class SharedVehicle(Vehicle, ABC):
         self.state: VehicleState = VehicleState.PARKING
 
         # Vehicle Reservation
-        self._reserved_for_user: "User" = None
+        self._reserved_for_user: User = None
 
         # Driver Interface
         if driver is not None:
             self.mount_driver(driver)
 
     @property
-    def id(self) -> int:  # noqa: ANN201
+    def id(self) -> int:
         return self._id
 
     @property
-    def price_per_minute(self) -> int:  # noqa: ANN201
+    def price_per_minute(self) -> int:
         return self._price_per_minute
 
     @property
-    def price_per_trip(self) -> None:  # noqa: ANN201
+    def price_per_trip(self) -> None:
         return self._price_per_trip
 
     @property
-    def reserved_for_user(self) -> "User":  # noqa: ANN201
+    def reserved_for_user(self) -> "User":
         return self._reserved_for_user
 
     @property
@@ -133,19 +132,19 @@ class SharedVehicle(Vehicle, ABC):
         return self._max_available_seats
 
     @max_available_seats.setter
-    def max_available_seats(self, max_available_seats: int) -> None:  # noqa: ANN001, ANN202
+    def max_available_seats(self, max_available_seats: int) -> None:
         self._max_available_seats = max_available_seats
 
     @property
-    def max_state_of_charge(self) -> int:  # noqa: ANN201
+    def max_state_of_charge(self) -> int:
         return self._max_state_of_charge
 
     @property
-    def current_state_of_charge(self) -> float:  # noqa: ANN201
+    def current_state_of_charge(self) -> float:
         return self._current_state_of_charge
 
     @property
-    def current_relative_state_of_charge(self) -> int:  # noqa: ANN201
+    def current_relative_state_of_charge(self) -> int:
         return (
             self.current_state_of_charge / self.max_state_of_charge
             if self.max_state_of_charge != 0
@@ -153,14 +152,14 @@ class SharedVehicle(Vehicle, ABC):
         )
 
     @property
-    def energy_consumption(self) -> int:  # noqa: ANN201
+    def energy_consumption(self) -> int:
         return self._energy_consumption
 
     @property
-    def velocity(self) -> float:  # noqa: ANN201
+    def velocity(self) -> float:
         return self._velocity
 
-    def move(self, route_segment: Edge) -> None:  # noqa: ANN201
+    def move(self, route_segment: Edge) -> None:
         distance = route_segment.distance
         velocity = self._velocity
         time = distance / velocity
@@ -175,7 +174,7 @@ class SharedVehicle(Vehicle, ABC):
         self._update_positions(route_segment.destination.position)
         self._update_state_of_charge(distance)
 
-    def start_driving(self) -> None:  # noqa: ANN201
+    def start_driving(self) -> None:
         self.state = VehicleState.DRIVING
 
         logging.debug(
@@ -183,7 +182,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def stop_driving(self) -> None:  # noqa: ANN201
+    def stop_driving(self) -> None:
         self.state = VehicleState.PARKING
         self.set_current_task(None)
         logging.debug(
@@ -191,7 +190,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def park(self) -> None:  # noqa: ANN201
+    def park(self) -> None:
         # Lift reservation
         self._reserved_for_user = None
 
@@ -202,7 +201,7 @@ class SharedVehicle(Vehicle, ABC):
             "Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
-    def reserve(self, user: "User") -> None:  # noqa: ANN001, ANN201
+    def reserve(self, user: "User") -> None:
         self.state = VehicleState.RESERVED
 
         self._reserved_for_user = user
@@ -213,7 +212,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def has_enough_state_of_charge(self, distance: float) -> bool:  # noqa: ANN001, ANN201
+    def has_enough_state_of_charge(self, distance: float) -> bool:
         """
         Check if vehicle has enough SoC left for trip
         :param distance: in meter
@@ -227,7 +226,7 @@ class SharedVehicle(Vehicle, ABC):
             return False
         return True
 
-    def _update_state_of_charge(self, distance: float) -> None:  # noqa: ANN001, ANN202
+    def _update_state_of_charge(self, distance: float) -> None:
         """
         Update state of charge of vehicles based on driven distance.
         SoC = SoC_old - EnergyConsumption (kWh/km) * km
@@ -247,7 +246,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def _update_positions(self, new_position: Position) -> None:  # noqa: ANN202
+    def _update_positions(self, new_position: Position) -> None:
         # Update Vehicle Position
         self.position = new_position
 
@@ -268,7 +267,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def mount_driver(self, driver: DriverInterface) -> None:  # noqa: ANN201
+    def mount_driver(self, driver: DriverInterface) -> None:
         if self._driver is not None:
             raise Exception(
                 f"Vehicle {self._id} has already a driver {self._driver.identify_driver()}. Unable to mount driver."
@@ -286,7 +285,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def unmount_driver(self) -> None:  # noqa: ANN201
+    def unmount_driver(self) -> None:
         if self._driver is None:
             raise Exception("Vehicle has no driver to unmount.")
 
