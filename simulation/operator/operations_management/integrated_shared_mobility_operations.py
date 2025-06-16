@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
+from collections.abc import Generator
 
 import h3
 import pandas as pd
@@ -45,15 +46,15 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
     def __init__(  # noqa: ANN204
         self,
-        env: Environment,  # noqa: ANN001
-        time_between_operations: float,  # noqa: ANN001
-        operation_duration: float,  # noqa: ANN001
-        distance_matrix: pd.DataFrame,  # noqa: ANN001
-        ordered_available_vehicle_modes: list[str],  # noqa: ANN001
-        ordered_max_vehicle_supply: list[int],  # noqa: ANN001
-        state_of_charge_threshold: float,  # noqa: ANN001
-        base_regions: list[str],  # noqa: ANN001
-        base_capacity: int,  # noqa: ANN001
+        env: Environment,
+        time_between_operations: float,
+        operation_duration: float,
+        distance_matrix: pd.DataFrame,
+        ordered_available_vehicle_modes: list[str],
+        ordered_max_vehicle_supply: list[int],
+        state_of_charge_threshold: float,
+        base_regions: list[str],
+        base_capacity: int,
     ):
         super(IntegratedSharedMobilityOperations, self).__init__(env=env)  # noqa: UP008
 
@@ -334,7 +335,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     extra={"clazz": self.__class__.__name__, "oid": ""},
                 )
 
-    def generate_relocation_plan(self) -> dict[str, list[tuple[Position, Position, int, float]]]:  # noqa: ANN201
+    def generate_relocation_plan(self) -> dict[str, list[tuple[Position, Position, int, float]]]:
         """
 
         Return relocation plan
@@ -349,7 +350,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return relocation_plans
 
-    def generate_charging_plan(self) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:  # noqa: ANN201
+    def generate_charging_plan(self) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:
         """
         Generate a rule based charging plan based on given service worker capacity
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
@@ -379,7 +380,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def calculate_charging_plan(self, fleet_state) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:  # noqa: ANN201
+    def calculate_charging_plan(self, fleet_state: pd.DataFrame) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
@@ -577,12 +578,12 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return all_charging_plans, used_resources
 
-    def calculate_resource_capacity_split_for_charging(  # noqa: ANN201
+    def calculate_resource_capacity_split_for_charging(
         self,
-        fleet_state: pd.DataFrame,  # noqa: ANN001
-        available_vehicle_modes: list[str],  # noqa: ANN001
-        max_vehicle_supply: list[int],  # noqa: ANN001
-        number_service_workers_per_mode: list[int],  # noqa: ANN001
+        fleet_state: pd.DataFrame,
+        available_vehicle_modes: list[str],
+        max_vehicle_supply: list[int],
+        number_service_workers_per_mode: list[int],
     ) -> list[int]:
         """
             Determine Service Worker Split Between Modes (How many workers should be assigned to charge how many vehicles)
@@ -654,7 +655,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return capacity
 
-    def get_max_capacity_per_unit(self, mode) -> int:  # noqa: ANN001, ANN201
+    def get_max_capacity_per_unit(self, mode) -> int:  # noqa: ANN001
         # Mode Specific Collection Capacity per Service Worker (i.e., how many vehicles can one sw collect)
         if mode == "KickScooter":
             max_capacity_per_unit = 40
@@ -674,7 +675,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def identify_potential_relocations(self, state) -> dict[str, list[tuple[Position, Position, int, float]]]:  # noqa: ANN201
+    def identify_potential_relocations(self, state:pd.DataFrame ) -> dict[str, list[tuple[Position, Position, int, float]]]:
         """
         Calculate how many vehicles need to be moved (or can be) from origin to destination
 

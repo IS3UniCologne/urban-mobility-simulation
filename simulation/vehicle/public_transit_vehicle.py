@@ -76,7 +76,7 @@ class PublicTransitVehicle(Vehicle, ABC):
     def delay(self) -> int:
         return self._delay
 
-    def prognose_arrival(self, stop: Stop) -> float:  # noqa: ANN201
+    def prognose_arrival(self, stop: Stop) -> float:
         # TODO: this is pretty optimistic: What if the vehicle waits at intermediate stops
 
         distance = self._route.subroute(self._current_stop, stop).total_distance()

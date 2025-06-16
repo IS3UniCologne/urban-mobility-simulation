@@ -9,7 +9,7 @@ from simulation.operator.data_transfer_object.transportation_alternative_ridehai
 class TransportationAlternativeBrowser:
     __slots__ = ("_transportation_alternatives",)
 
-    def __init__(self) -> None:  # noqa: ANN204
+    def __init__(self) -> None:
         self._transportation_alternatives = []
 
     def add_transportation_alternative(

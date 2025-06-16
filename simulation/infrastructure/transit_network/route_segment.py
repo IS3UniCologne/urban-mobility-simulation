@@ -12,23 +12,23 @@ class RouteSegment:
         # TODO: shape ?
 
     @property
-    def start(self) -> Stop:  # noqa: ANN201
+    def start(self) -> Stop:
         return self._start
 
     @property
-    def end(self) -> Stop:  # noqa: ANN201
+    def end(self) -> Stop:
         return self._end
 
     @property
-    def distance(self) -> float:  # noqa: ANN201
+    def distance(self) -> float:
         return self._distance
 
     @property
-    def segment_id(self) -> int:  # noqa: ANN201
+    def segment_id(self) -> int:
         return self._segment_id
 
     # '+' operator between RouteSegment Instances
-    def __add__(self, other) -> float:  # noqa: ANN001, ANN204
+    def __add__(self, other) -> float:  # noqa: ANN001
         if isinstance(other, RouteSegment):
             return self._distance + other._distance
         else:
@@ -36,5 +36,5 @@ class RouteSegment:
                 f"{other} is not a RouteSegment object, can't sum these two together"
             )
 
-    def __radd__(self, other) -> float:  # noqa: ANN001, ANN204
+    def __radd__(self, other) -> float:  # noqa: ANN001
         return other + self._distance

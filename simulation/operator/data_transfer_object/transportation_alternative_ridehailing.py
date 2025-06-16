@@ -28,10 +28,10 @@ class TransportationAlternativeRideHailing:
         self,
         vehicle: RideHailingVehicle,
         route: Route,
-        price: float,  # noqa: ANN001
-        duration: float,  # noqa: ANN001
-        distance: float,  # noqa: ANN001
-        convenience: float,  # noqa: ANN001
+        price: float,
+        duration: float,
+        distance: float,
+        convenience: float,
         route_to_pickup: Route,
     ):
         self._vehicle = vehicle
@@ -64,19 +64,19 @@ class TransportationAlternativeRideHailing:
                 - self.vehicle._env.now  # noqa: SLF001
             )
 
-    def set_environment(self) -> int:  # noqa: ANN201
+    def set_environment(self) -> int:
         if self._vehicle.is_electric:
             return 1
         else:
             return 0
 
-    def set_technology_skeptical(self) -> int:  # noqa: ANN201
+    def set_technology_skeptical(self) -> int:
         if self._vehicle_type == "AutonomousCar":
             return 0
         else:
             return 1
 
-    def set_autonomous_vehicle(self) -> int:  # noqa: ANN201
+    def set_autonomous_vehicle(self) -> int:
         if self._vehicle_type == "AutonomousCar":
             return 1
         else:

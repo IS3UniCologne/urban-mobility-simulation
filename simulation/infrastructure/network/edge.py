@@ -10,7 +10,7 @@ class Edge:
         self._destination = destination
 
     @property
-    def distance(self) -> float:  # noqa: ANN201
+    def distance(self) -> float:
         return self._distance
 
     @property
