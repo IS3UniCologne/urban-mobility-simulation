@@ -36,7 +36,7 @@ class MetricsFactory:
     def society_metrics(self) -> SocietyMetrics:
         return self._society_metrics
 
-    def print_simulation_summary( 
+    def print_simulation_summary(
         self,
         number_of_vehicles: dict,
         cost_per_vehicle_km: dict,
