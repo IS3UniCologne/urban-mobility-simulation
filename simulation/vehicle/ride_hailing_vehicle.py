@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING, Generator
 
 from simpy import Environment, Event
 
-from simulation.agent.user import User
+
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.environment.position import Position
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.helper.random.random_manager import RandomManager
 from simulation.infrastructure.network.edge import Edge
@@ -13,6 +14,9 @@ from simulation.vehicle.interfaces.driver_interface import DriverInterface
 from ..helper.configuration.configuration import Configuration
 from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
 from .vehicle import Vehicle
+if TYPE_CHECKING:
+    from simulation.agent.user import User
+
 
 # class RideHailingVehicleState(Enum):
 #     INITIALIZED = 0
@@ -176,7 +180,7 @@ class RideHailingVehicle(Vehicle):
         self._price_per_minute = price_per_minute
 
     @property
-    def reserved_for_user(self) -> User:  # noqa: ANN201
+    def reserved_for_user(self) -> "User":  # noqa: ANN201
         return self._reserved_for_user
 
     @property
@@ -305,7 +309,7 @@ class RideHailingVehicle(Vehicle):
             "Parked.", extra={"clazz": self.__class__.__name__, "oid": self._id}
         )
 
-    def reserve(self, user: User) -> None:  # noqa: ANN001, ANN201
+    def reserve(self, user: "User") -> None:  # noqa: ANN001, ANN201
         previous_state = self.state
         self.state = VehicleState.RESERVED
 
