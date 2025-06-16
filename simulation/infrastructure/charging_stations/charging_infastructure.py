@@ -1,6 +1,6 @@
-from typing import List, Any  # noqa: UP035
-from beartype import beartype
+from typing import List  # noqa: UP035
 
+from simulation.environment.environment import Environment
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from tracking.tracking import Tracking
 
@@ -27,14 +27,14 @@ class ChargingInfrastructure:
             return ChargingInfrastructure.__instance
 
     @staticmethod
-    @beartype
-    def init(  # noqa: ANN205
-        env: Any,  # noqa: ANN001
+    
+    def init(
+        env: Environment,
         location_list: List[str],  # noqa: UP006
         power_list: List[float],  # noqa: UP006
         capacity_list: List[int],  # noqa: UP006
         queue_size: List[int],  # noqa: UP006
-        reset: bool = False,  # noqa: ANN001
+        reset: bool = False,
     ) -> "ChargingInfrastructure":
         """Static access method."""
         if ChargingInfrastructure.__instance is None or reset is True:
@@ -43,10 +43,10 @@ class ChargingInfrastructure:
             )
         return ChargingInfrastructure.__instance
 
-    @beartype
-    def __init__(  # noqa: ANN204
+    
+    def __init__(
         self,
-        env: Any,  # noqa: ANN001
+        env: Environment,
         location_list: List[str],  # noqa: UP006
         power_list: List[float],  # noqa: UP006
         capacity_list: List[int],  # noqa: UP006
@@ -68,7 +68,7 @@ class ChargingInfrastructure:
         self._charging_stations = []  # a list of charger objects
         self._initialise_charging_stations()
 
-    def _initialise_charging_stations(self) -> None:  # noqa: ANN202
+    def _initialise_charging_stations(self) -> None:
         for i, location in enumerate(self._location_list):
             charging_station = ChargingStation(
                 id=i,
@@ -82,9 +82,9 @@ class ChargingInfrastructure:
             self._tracking.register(charging_station)
 
     @property
-    def charging_stations(self) -> List[ChargingStation]:  # noqa: ANN201
+    def charging_stations(self) -> list[ChargingStation]:
         return self._charging_stations
 
-    @beartype
-    def get_locations(self) -> List[str]:  # noqa: ANN201
+    
+    def get_locations(self) -> list[str]:
         return self._location_list

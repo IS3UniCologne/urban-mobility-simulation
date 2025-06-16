@@ -1,5 +1,3 @@
-from typing import Optional, Tuple, Any  # noqa: UP035
-from beartype import beartype
 import simpy
 from shapely.geometry import Polygon
 
@@ -23,8 +21,8 @@ class VirtualChargingStation:
         "_current_queue_time",
     )
 
-    @beartype
-    def __init__(self, charging_station: ChargingStation) -> None:  # noqa: ANN204
+    
+    def __init__(self, charging_station: ChargingStation) -> None:
         self._env = charging_station._env  # noqa: SLF001
         self._physical_charging_station = charging_station
         self._valid_timeframe = None
@@ -39,54 +37,56 @@ class VirtualChargingStation:
         self._queue_size = charging_station._queue_size  # noqa: SLF001
         self._current_queue_time = charging_station._current_queue_time  # noqa: SLF001
 
-    def plug_in_notify(self) -> simpy.events.Generator:  # noqa: ANN201
+    def plug_in_notify(self) -> simpy.events.Generator:
         yield self._env.process(self._physical_charging_station.plug_in_notify())
         assert self._plugs.users == self._physical_charging_station.plugs.users
 
-    def plug_out_notify(self) -> simpy.events.Generator:  # noqa: ANN201
+    def plug_out_notify(self) -> simpy.events.Generator:
         yield self._env.process(self._physical_charging_station.plug_out_notify())
         assert self._plugs.users == self._physical_charging_station.plugs.users
 
-    def update_capacity(self, capacity: int, valid_timeframe: Tuple[float, float] | None) -> None:  # noqa: ANN001, ANN201, UP006
+    def update_capacity(
+        self, capacity: int, valid_timeframe: tuple[float, float] | None
+    ) -> None:
         self._capacity = capacity
         self._valid_timeframe = valid_timeframe
 
     @property
-    def valid_timeframe(self) -> Optional[Tuple[float, float]]:  # noqa: ANN201
+    def valid_timeframe(self) -> tuple[float, float] | None:
         return self._valid_timeframe
 
     @property
-    def capacity(self) -> int:  # noqa: ANN201
+    def capacity(self) -> int:
         return self._capacity
 
     @property
-    def plugs(self) -> simpy.PriorityResource:  # noqa: ANN201
+    def plugs(self) -> simpy.PriorityResource:
         return self._plugs
 
     @property
-    def power(self) -> float:  # noqa: ANN201
+    def power(self) -> float:
         return self._power
 
     @property
-    def centre(self) -> GeodesicPosition:  # noqa: ANN201
+    def centre(self) -> GeodesicPosition:
         return self._centre
 
     @property
-    def id(self) -> int:  # noqa: ANN201
+    def id(self) -> int:
         return self._id
 
     @property
-    def location(self) -> str:  # noqa: ANN201
+    def location(self) -> str:
         return self._location
 
     @property
-    def polygon(self) -> Polygon:  # noqa: ANN201
+    def polygon(self) -> Polygon:
         return self._polygon
 
     @property
-    def queue_size(self) -> int:  # noqa: ANN201
+    def queue_size(self) -> int:
         return self._queue_size
 
     @property
-    def current_queue_time(self) -> float:  # noqa: ANN201
+    def current_queue_time(self) -> float:
         return self._physical_charging_station.current_queue_time

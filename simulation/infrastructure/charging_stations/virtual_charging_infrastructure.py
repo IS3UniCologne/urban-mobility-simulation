@@ -1,7 +1,6 @@
 import logging
 from types import SimpleNamespace
-from typing import Dict, Optional, List, Union, Any  # noqa: UP035, List, Union, Any
-from beartype import beartype
+from typing import Dict, Generator  # noqa: UP035, List, Union, Any
 
 from beartype.door import die_if_unbearable
 from beartype.roar import BeartypeDoorHintViolation
@@ -35,13 +34,13 @@ class VirtualChargingInfrastructure:
         "_virtual_charging_stations",
     )
 
-    @beartype
-    def __init__(  # noqa: ANN204
+    
+    def __init__(
         self,
-        env: Environment,  # noqa: ANN001
+        env: Environment,
         charging_infrastructure: ChargingInfrastructure,
         lookahead: int | None = None,
-        use_virtual_cs: bool = True,  # noqa: ANN001
+        use_virtual_cs: bool = True,
     ) -> None:
         self._env = env
         self._config = Configuration()
@@ -79,10 +78,10 @@ class VirtualChargingInfrastructure:
             self._listeners = None
 
     @property
-    def charging_stations(self) -> List[VirtualChargingStation]:  # noqa: ANN201
+    def charging_stations(self) -> list[VirtualChargingStation]:
         return self._charging_stations()
 
-    def _charging_stations(self) -> List[VirtualChargingStation]:  # noqa: ANN202
+    def _charging_stations(self) -> list[VirtualChargingStation]:
         if self._virtual_charging_stations is None:
             raise NotImplementedError(
                 "This virtual charging infrastructure was initialized without virtual charging stations!"
@@ -115,14 +114,14 @@ class VirtualChargingInfrastructure:
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_locations(self) -> List[str]:  # noqa: ANN201
+    def get_locations(self) -> list[str]:
         """
         Defaults to `get_available_locations() at self._default_lookahead`
         which is the next timeslot that was already auctioned, or None
         """
         return self.get_available_locations(self._lookahead)
 
-    def _update_virtual_cs(self, init: bool = False) -> None:  # noqa: ANN001, ANN202
+    def _update_virtual_cs(self, init: bool = False) -> None:
         for cs in self._virtual_charging_stations:
             # availability might be negative if we account for some vehicle on the way and in the meantime another vehicle arrives at the already full station
             bounded_capa = (
@@ -149,7 +148,7 @@ class VirtualChargingInfrastructure:
                 else None,
             )
 
-    def update(self, availability: Dict[str, int], timeslot: int | None = None) -> None:  # noqa: ANN201, UP006
+    def update(self, availability: Dict[str, int], timeslot: int | None = None) -> None:  # noqa: UP006
         try:
             die_if_unbearable(availability, Dict[str, int])  # noqa: UP006
             if self._lookahead is None:
@@ -173,7 +172,9 @@ class VirtualChargingInfrastructure:
         if self._virtual_charging_stations is not None:
             self._update_virtual_cs()
 
-    def _sync_with_real(self, charging_station: VirtualChargingStation) -> Any:  # noqa: ANN202
+    def _sync_with_real(
+        self, charging_station: VirtualChargingStation
+    ) -> Generator[None, None, None]:
         cs = charging_station._physical_charging_station  # noqa: SLF001
         # Listener = namedtuple(
         #     "Listener", ["processed_plug_in_event", "processed_plug_out_event"]
@@ -182,7 +183,7 @@ class VirtualChargingInfrastructure:
             processed_plug_in_event=self._env.event(),
             processed_plug_out_event=self._env.event(),
         )
-# self._listeners[cs.id] = {
+        # self._listeners[cs.id] = {
         #     "processed_plug_in_event": self._env.event(),
         #     "processed_plug_out_event": self._env.event(),
         # }

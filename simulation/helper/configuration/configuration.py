@@ -23,7 +23,7 @@ try:
 except ModuleNotFoundError:
     import pip._vendor.tomli as tomllib
 
-from beartype import BeartypeConf, beartype
+from beartype import BeartypeConf
 from beartype.door import die_if_unbearable
 
 # remove color from beartype exceptions to avoid unreadable debug output,
@@ -95,7 +95,7 @@ def beartype_after_post_init(cls: T) -> T:
     return cls
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class SettingsConfig:
     LOG_LEVEL: str
@@ -106,14 +106,14 @@ class SettingsConfig:
     TRACK_AGENT: bool
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class ExperimentManagementConfig:
     START_TIME: int
     END_TIME: int
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class RandomManagerConfig:
     SEED: int
@@ -154,7 +154,7 @@ class WorldConfig:
         return f"hex_id_{self.SPATIAL_RESOLUTION_VALUE}"
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class PathConfig:
     PATH_ENV_BOUNDING_BOX: str
@@ -193,7 +193,7 @@ class PathConfig:
             object.__setattr__(self, "PATH_DEMAND_MODIFIERS", formatted_modifiers)
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class PopulationConfig:
     POPULATION_PROBABILITIES: list[float]
@@ -311,7 +311,7 @@ class ModeChoiceModelConfig:
         return trust_value
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class ChargingInfrastructureConfig:
     NUMBER_OF_CHARGING_STATIONS: int
@@ -423,7 +423,7 @@ class RideHailingOperatorConfig:
         )
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class TransitOperatorConfig:
     PLANNING_LOOKAHEAD: int
@@ -491,7 +491,6 @@ class RideHailingGlobalConfig:
         # TODO: This has to be inferred instead of doing it this way. This is very error prone
         return [self.N_AUTONOMOUS_CARS, self.N_RIDE_HAILING_CARS]
 
-
 @beartype_after_post_init
 @dataclass(slots=True, frozen=True)
 class SharedVehicleGlobalConfig:
@@ -524,7 +523,7 @@ class SharedVehicleGlobalConfig:
             return list(self.VEHICLES.keys())
 
 
-# @beartype
+# 
 # @dataclass(slots=True, frozen=True)
 # class TransitGlobalConfig:
 #     @property
@@ -540,14 +539,14 @@ class SharedVehicleGlobalConfig:
 #         return [self.N_BUSES_TOTAL]
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class AuctionConfig:
     AUCTION_START: int
     AUCTION_END: int
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class SharedChargingAuctionConfig:
     AUCTION_INTERVAL: int
@@ -555,7 +554,7 @@ class SharedChargingAuctionConfig:
     AUCTION_LOOKAHEAD: int
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class DynamicRoutingConfig:
     ACTION_SPACE: list[str]
@@ -566,7 +565,7 @@ class DynamicRoutingConfig:
     TIMELIMIT: float
 
 
-@beartype
+
 @dataclass(slots=True, frozen=True)
 class DynamicCheckpointRoutingConfig:
     ACTION_SPACE: list[str]
