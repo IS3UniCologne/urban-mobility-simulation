@@ -207,7 +207,7 @@ class Vehicle(TrackingInterface, ABC):
         self.__state = state
 
     @property
-    def position(self) -> GeodesicPosition:
+    def position(self) -> Position:
         """Get the current position of the vehicle.
 
         Returns

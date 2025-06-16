@@ -97,17 +97,17 @@ class PublicTransitRoute(Route):
         return self._destination
 
     @property
-    def route_segments(self) -> List[RouteSegment]:
+    def route_segments(self) -> list[RouteSegment]:
         return self._route_segments
 
-    def add_route_segment(self, segment: RouteSegment):
+    def add_route_segment(self, segment: RouteSegment) -> None:
         self._route_segments.append(segment)
 
     def route_segment_by_id(self, id: int) -> RouteSegment:
         return self._route_segments[id]
 
     @property
-    def route_stops(self) -> List[Stop]:
+    def route_stops(self) -> list[Stop]:
         return self._route_stops
 
     def route_stop_by_id(self, id: int) -> Stop:
@@ -152,5 +152,5 @@ class PublicTransitRoute(Route):
             else False,
         )
 
-    def __str__(self) -> str:  # noqa: ANN204
+    def __str__(self) -> str:
         return f"PublicTransitRoute with id/name {self._id} and trip id {self._trip_id}"

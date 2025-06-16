@@ -6,11 +6,11 @@ class Stop(GeodesicPosition):
 
     def __init__(  # noqa: ANN204
         self,
-        stop_id: str,  # noqa: ANN001
-        gtfs_id: str,  # noqa: ANN001
-        latitude: float,  # noqa: ANN001
-        longitude: float,  # noqa: ANN001
-        departure: float,  # noqa: ANN001
+        stop_id: str,
+        gtfs_id: str,
+        latitude: float,
+        longitude: float,
+        departure: float,
         departure_next_day: bool,
     ):
         super(Stop, self).__init__(latitude, longitude)  # noqa: UP008
@@ -21,17 +21,17 @@ class Stop(GeodesicPosition):
         self._departure_next_day = departure_next_day
 
     @property
-    def stop_id(self) -> str:  # noqa: ANN201
+    def stop_id(self) -> str:
         return self._stop_id
 
     @property
-    def gtfs_id(self) -> str:  # noqa: ANN201
+    def gtfs_id(self) -> str:
         return self._gtfs_id
 
     @property
-    def departure(self) -> float:  # noqa: ANN201
+    def departure(self) -> float:
         return self._departure
 
     @property
-    def departure_next_day(self) -> bool:  # noqa: ANN201
+    def departure_next_day(self) -> bool:
         return self._departure_next_day

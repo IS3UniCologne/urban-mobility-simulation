@@ -1,6 +1,7 @@
 import logging
 from abc import ABC
-from typing import Any, Generator
+from typing import Any
+from collections.abc import Generator
 
 from simpy import Environment, Event
 
@@ -313,7 +314,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def relocate(self, route_segment: Edge, time: float, relocator: str) -> Generator[Any, Any, Any]:  # noqa: ANN001, ANN201
+    def relocate(self, route_segment: Edge, time: float, relocator: str) -> Generator[Any, Any, Any]:
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
@@ -367,7 +368,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def plug_to_charging_station(self) -> None:  # noqa: ANN201
+    def plug_to_charging_station(self) -> None:
         self.state = VehicleState.CHARGING
 
         self._charging_station_plugged_in.succeed()
@@ -389,7 +390,7 @@ class SharedVehicle(Vehicle, ABC):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
-    def charge(self, charging_time: float, amount=0) -> Generator[Any, Any, Any]:
+    def charge(self, charging_time: float, amount:int=0) -> Generator[Any, Any, Any]:
         # Notify charging
         self._charging_station_charging_started.succeed()
         self._charging_station_charging_started = self._env.event()
