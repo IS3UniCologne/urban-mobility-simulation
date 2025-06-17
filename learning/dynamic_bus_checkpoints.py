@@ -127,7 +127,9 @@ class DynamicBusCheckpointProblem(LearningInterface):
         self._checkpoint_dim = len(self._checkpoints)
         self._corridor_dim = len(self._corridor)
         self._corridor_sorted = sorted(self._corridor)
-        self._corridor_poly = Polygon(h3.cells_to_h3shape(self._corridor, tight=False)[0].outer)
+        self._corridor_poly = Polygon(
+            h3.cells_to_h3shape(self._corridor, tight=False)[0].outer
+        )
 
         self._problem_config.area = self._corridor_poly
         # using this, initialize state size for agent
@@ -388,7 +390,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         )
 
         if not indirection:
-            raise BadAction  
+            raise BadAction
 
     def _handle_bad_action(self, action):  # noqa: ANN001, ANN202
         # # with 50/50 reject the bad action or execute it with penalty
@@ -437,7 +439,9 @@ class DynamicBusCheckpointProblem(LearningInterface):
             destinations = [x.destination.getExactLocation() for x in check_tasks]
             res = self._action_res
             origin_cells = [h3.latlng_to_cell(lat, lng, res) for lat, lng in origins]
-            destination_cells = [h3.latlng_to_cell(lat, lng, res) for lat, lng in destinations]
+            destination_cells = [
+                h3.latlng_to_cell(lat, lng, res) for lat, lng in destinations
+            ]
             check_cells = list(zip(origin_cells, destination_cells))
 
             for i, k, v in zip(check_keys, check_cells, check_tasks):
@@ -479,5 +483,3 @@ class DynamicBusCheckpointProblem(LearningInterface):
         c.append(self.bus.route.destination)
 
         return c
-    
-
