@@ -111,7 +111,7 @@ class GeodesicEnvironment(Environment):
         return self._hex_geom_cache[layer_name].get(hex_id, None)
 
     @staticmethod
-    def move_in_layer(hex_id, movement):  # noqa: ANN001, ANN205
+    def move_in_layer(hex_id: str, movement: str) -> str:
         """
               ___3___
            /           \
@@ -157,8 +157,8 @@ class GeodesicEnvironment(Environment):
         neighbors = {
             int(
                 f"{int(x, base=16) + 0x200:0>64b}"[5:8], base=2
-            ): h3.get_destination_h3_index_from_unidirectional_edge(x)
-            for x in h3.get_h3_unidirectional_edges_from_hexagon(hex_id)
+            ): h3.get_directed_edge_destination(x)
+            for x in h3.origin_to_directed_edges(hex_id)
         }
 
         assert len(neighbors) == 6
@@ -166,19 +166,19 @@ class GeodesicEnvironment(Environment):
         new_hex_id = neighbors[EDGE_MAPPING[movement]]
 
         # quick sanity check
-        assert h3.h3_get_resolution(hex_id) == h3.h3_get_resolution(new_hex_id)
-        assert h3.h3_indexes_are_neighbors(hex_id, new_hex_id)  # should be neighbors
-        assert h3.h3_get_faces(hex_id) == h3.h3_get_faces(
+        assert h3.get_resolution(hex_id) == h3.get_resolution(new_hex_id)
+        assert h3.are_neighbor_cells(hex_id, new_hex_id)  # should be neighbors
+        assert h3.get_icosahedron_faces(hex_id) == h3.get_icosahedron_faces(
             new_hex_id
         )  # should be on the same icosahedron face
-        assert h3.h3_get_base_cell(hex_id) == h3.h3_get_base_cell(
+        assert h3.get_base_cell_number(hex_id) == h3.get_base_cell_number(
             new_hex_id
         )  # TODO: should be on the same base cell?
 
         return new_hex_id
 
     @staticmethod
-    def corridor(start, end, k):  # noqa: ANN001, ANN205
+    def corridor(start: str, end: str, k:int) -> set[str]:
         """
         Given a start and end hexagon id (with same resolution), return a straight line of hexagons between them
         plus (optionally for k>0) a buffer of k hex-cells around it.
@@ -188,9 +188,9 @@ class GeodesicEnvironment(Environment):
         :param k: k-hex buffer
         :return: set of hexagon ids
         """
-        straight = h3.h3_line(start, end)
+        straight = h3.grid_path_cells(start, end)
         return {
-            item for sublist in [h3.k_ring(h, k) for h in straight] for item in sublist
+            item for sublist in [h3.grid_disk(h, k) for h in straight] for item in sublist
         }
 
     @staticmethod

@@ -309,7 +309,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
         """
         hex_id = h3.latlng_to_cell(
-            *self.bus.position.getExactLocation(), resolution=self._action_res
+            *self.bus.position.getExactLocation(),self._action_res
         )
         new_hex = self.bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
         new_centroid = self.bus._geodesic_env.get_centroid(  # noqa: SLF001
@@ -371,7 +371,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         """
         hex_id = h3.latlng_to_cell(
             *self.bus._position.getExactLocation(),  # noqa: SLF001
-            resolution=self._action_res,
+            self._action_res,
         )
 
         # check if hexagon is out of corridor - action is forbidden
