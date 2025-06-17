@@ -1,341 +1,95 @@
-import logging
+"""Demand data import and processing.
+
+This module provides the DemandImporter class which coordinates the import
+and processing and caching of transportation demand data,
+"""
+
 from pathlib import Path
 
 import pandas as pd
+from pandas import DataFrame
 
-from simulation.helper.configuration.configuration import (
+from simulation.helper.configuration.enums import (
     DailyResolution,
     SpatialResolution,
-    TemporalBucket,
+    TemporalResolution,
 )
+
+from .demand_cache_manager import DemandCacheManager
+from .demand_processor import DemandProcessor
 
 
 class DemandImporter:
-    __slots__ = (
-        "_city",
-        "_daily_resolution",
-        "_spatial_resolution",
-        "_temporal_resolution",
-    )
+    """Coordinates demand data import and processing."""
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        temporal_resolution: TemporalBucket = TemporalBucket.FOUR_HOURLY_BUCKETS,
-        spatial_resolution: SpatialResolution = SpatialResolution.HEX_7,
-        daily_resolution: DailyResolution = DailyResolution.WEEKDAY_WEEKEND,
-        city: str = "chicago",
-    ):
-        """
-        Initizalize Demand Importer. Reads Trip Data and transform it to spatio-temporal cells
-        (see extract_spatio_temporal_demand_estimates)
-
-        :param temporal_resolution: Temporal Resolution (see TemporalBucket)
-        :param spatial_resolution: Spatial Resolution (see SpatialResolution)
-        :param day_of_week: True => Differentiate between working days and weekend/holidays
-        """
-
-        self._temporal_resolution = temporal_resolution
-        self._spatial_resolution = spatial_resolution
-        self._daily_resolution = daily_resolution
+        temporal_resolution: TemporalResolution,
+        spatial_resolution: SpatialResolution,
+        daily_resolution: DailyResolution,
+        city: str,
+    ) -> None:
+        self._temporal_resolution: TemporalResolution = temporal_resolution
+        self._spatial_resolution: SpatialResolution = spatial_resolution
+        self._daily_resolution: DailyResolution = daily_resolution
         self._city = city
 
-    @property
-    def city(self):  # noqa: ANN201
-        return self._city
+        self._cache_manager = DemandCacheManager(city)
 
-    @property
-    def temporal_resolution(self):  # noqa: ANN201
-        return self._temporal_resolution
+    def extract_spatio_temporal_demand_estimates(
+        self, trip_data_path: Path
+    ) -> pd.DataFrame:
+        """Extract demand estimates from trip data.
 
-    @property
-    def spatial_resolution(self):  # noqa: ANN201
-        return self._spatial_resolution
-
-    def extract_spatio_temporal_demand_estimates(self, trip_data_path: Path):  # noqa: ANN201
-        """
         Returns a DataFrame with distributional data regarding arrival times (poisson) and origin destination trips (frequency)
         in spatio-temporal resolution.
 
         Input Distribution generated using Script: Prepare_Trip_Demand_Data
 
-        :param trip_data: Path to Mobility Trip Data
-        :return: Pandas DataFrame
-            - Column:
+        Parameters
+        ----------
+        trip_data_path : Path
+            Path to the trip data file
+
+        Returns
+        -------
+        DataFrame
+            Contains the following columns:
                 - is_holiday: yes/no (!weekday)
-                - temporal bucket: TemporalBucket
+                - temporal bucket: TemporalResolution
                 - origin: Hexagon ID by given resolution
                 - destination: Hexagon ID by given resolution
                 - od_multinom_p_est: Multionomial Distribution Coeffcients for P(D | is_holiday, temp_bucket, origin). Add up to 1 for each triplet.
                 - o_poisson_est: Lambda of poisson distribution for each triplet (is_holiday, temp_bucket, origin); destination not considered
+
+        Raises
+        ------
+        NotImplementedError
+        If the daily resolution is not supported.
         """
-
-        hex_start_column, hex_end_column = self._get_spatial_column()
-        temporal_column = self._get_temporal_column()
-        day_of_week_column = self._get_day_of_week_column()
-        city = self.city
-        date_column = "date_start"
-
         if self._daily_resolution != DailyResolution.WEEKDAY_WEEKEND:
             raise NotImplementedError(
-                "Currently we can only distuinguish between weekday and weekend demand."
+                "Currently only weekday/weekend distinction supported."
             )
 
-        # First try to load cache
-        cache_path = Path(
-            "data/demand/", f"{city}_weekday_{temporal_column}_{hex_start_column}"
+        # Try to load from cache first
+        cache_path: Path = self._cache_manager.get_cache_path(
+            temporal_column=self._temporal_resolution.column_name,
+            origin_column=self._spatial_resolution.origin_column_name,
         )
+        cached_data: DataFrame | None = self._cache_manager.load_cached_data(cache_path)
+        if cached_data is not None:
+            return cached_data
 
-        extensions = ["parquet", "csv"]
-
-        for ext in extensions:
-            cache_path = cache_path.with_suffix(f".{ext}")
-            if cache_path.exists():
-                # Load cached data and return
-                logging.debug(
-                    "Demand File already existing for selected resolution: (%s, %s). Loading from cache.",
-                    self._spatial_resolution,
-                    self._temporal_resolution,
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
-                )
-                if ext == "parquet":
-                    return pd.read_parquet(cache_path)
-                else:
-                    return pd.read_csv(cache_path)
-
-        logging.debug(
-            "Generating demand data based on mobility trip data for resolution: (%s, %s). Loading from cache.",
-            self._spatial_resolution,
-            self._temporal_resolution,
-            extra={"clazz": self.__class__.__name__, "oid": ""},
+        # Process data if not cached
+        processor: DemandProcessor = DemandProcessor(
+            spatial_columns=self._spatial_resolution.column_names,
+            temporal_column=self._temporal_resolution.column_name,
+            day_column=self._daily_resolution.day_of_week_column_name,
         )
+        result: DataFrame = processor.process_trip_data(trip_data_path=trip_data_path)
 
-        # Read Data
-        trip_data = pd.read_csv(trip_data_path)
-
-        ##################################
-        #### First Calculate Arrival Times
-        ##################################
-
-        # Count Trips in spatio temporal resolution
-        tmp_res = (
-            trip_data.groupby(
-                [date_column, day_of_week_column, temporal_column, hex_start_column]
-            )
-            .agg({"id": "count"})
-            .reset_index()
-        )
-
-        arrival_times = (
-            tmp_res.groupby([day_of_week_column, temporal_column, hex_start_column])
-            .agg({"id": "mean"})
-            .reset_index()
-        )
-
-        # Number of potential temporal combinations (day of week, time of day). We need for each combi a distinct lambda.
-        number_of_temporal_combinations = len(
-            arrival_times[day_of_week_column].unique()
-        ) * len(arrival_times[temporal_column].unique())
-
-        # Consider only hexagons that have data for each temporal data bucket
-        hexagon_to_consider = (
-            arrival_times.groupby([hex_start_column]).agg({"id": "count"}).reset_index()
-        )
-        hexagon_to_consider = hexagon_to_consider[
-            hexagon_to_consider["id"] == number_of_temporal_combinations
-        ]
-        hexagon_to_consider.drop(columns={"id"}, inplace=True)
-        hexagon_to_consider = hexagon_to_consider.sort_values(by=[hex_start_column])
-        hexagon_to_consider["key"] = 1  # For Cross Join Later
-
-        # Strip out records for which we don't have complete data (hexagons where #data points < number_of_temporal_combinations)
-        arrival_times = arrival_times.merge(
-            hexagon_to_consider, on=hex_start_column, how="inner"
-        )
-
-        ####################################################################
-        #### Second Calculate Destinations Distribution
-        ####################################################################
-
-        destination_counts = trip_data.groupby(
-            [
-                date_column,
-                day_of_week_column,
-                temporal_column,
-                hex_start_column,
-                hex_end_column,
-            ]
-        ).agg({"id": "count"})
-
-        # Raw Combinations Date, Holiday, Time Bucket
-        raw_date = (
-            trip_data.groupby([date_column, day_of_week_column])
-            .agg({"id": "count"})
-            .reset_index()
-        )
-        raw_time = (
-            trip_data.groupby([temporal_column]).agg({"id": "count"}).reset_index()
-        )
-
-        raw_date["key"] = 1
-        raw_time["key"] = 1
-
-        raw_temporal = raw_date.merge(raw_time, on="key")
-
-        # Raw Combinations of Origin and Destination Hexagons
-        raw_origin = hexagon_to_consider.copy(deep=True)
-        raw_destination = hexagon_to_consider.copy(deep=True)
-
-        raw_origin["key"] = 1
-        raw_destination["key"] = 1
-
-        raw_destination.rename(columns={hex_start_column: hex_end_column}, inplace=True)
-
-        raw_spatial = raw_origin.merge(raw_destination, on="key")
-
-        # Join Temporal and Spatial raw blank
-        raw_od = raw_temporal.merge(raw_spatial, on="key")
-        raw_od.drop(columns={"id_x", "id_y", "key"}, inplace=True)
-
-        # Join raw blank (all feasible) Origin Destination combinations with calculated data
-        od = raw_od.merge(
-            destination_counts,
-            on=[
-                date_column,
-                day_of_week_column,
-                temporal_column,
-                hex_start_column,
-                hex_end_column,
-            ],
-            how="left",
-        )
-
-        # Using these origin destination samples, we need to derive a distribution function.
-        # That distribution function is a conditional probability: P(destination | day_of_week, time_of_day, origin)
-        # In other words: we need to calcuate for each triplet (day_of_week, time_of_day, origin)
-        # a distribution function as follows:
-
-        # We estimate a ***Multinomial Distribution*** for origin destination trip generation
-        # We need to calculate for each (Day Of Week, Time_Bucket, Origin) a seperate Multinomial Distribution
-        # Calculate Daily Trips from Region to Region for each time bucket and weekday
-        trips_per_day_per_region = (
-            od.groupby(
-                [day_of_week_column, temporal_column, hex_start_column, hex_end_column]
-            )
-            .agg({"id": "sum"})
-            .reset_index()
-        )
-        trips_per_day_per_region = trips_per_day_per_region.rename(
-            columns={"id": "total_trips"}
-        )
-
-        # Calculate for each (Day Of Week, Time_Bucket, Origin) Sum_k^K n_{k}
-        trip_count_overall = (
-            trips_per_day_per_region.groupby(
-                [day_of_week_column, temporal_column, hex_start_column]
-            )
-            .agg({"total_trips": "sum"})
-            .reset_index()
-        )
-        trip_count_overall.rename(
-            columns={"total_trips": "sum_total_trips"}, inplace=True
-        )
-
-        # Join Counts with Total Sum
-        trips_per_day_per_region = trips_per_day_per_region.merge(
-            trip_count_overall,
-            on=[day_of_week_column, temporal_column, hex_start_column],
-            how="inner",
-        )
-
-        # Calculate p_i for each destination for each (Day Of Week, Time_Bucket, Origin) triplet
-        trips_per_day_per_region["prob"] = (
-            trips_per_day_per_region["total_trips"]
-            / trips_per_day_per_region["sum_total_trips"]
-        )
-
-        # Merge OD Distribution with Arrival Time Values
-        result = trips_per_day_per_region.merge(
-            arrival_times,
-            on=[day_of_week_column, temporal_column, hex_start_column],
-            how="left",
-        )
-
-        result.rename(
-            columns={"prob": "od_multinom_p_est", "id": "o_poisson_est"}, inplace=True
-        )
-        result.drop(columns={"key"}, inplace=True)
-
-        """
-        # How To Sample from that Distribution for a given Triplet
-        # Convert Probabilities to Numpy Array
-        sub_set = result[(result["is_holiday"] == False) & (result["time_bucket_4h"] == 0) & (result["h3_start_7"] == "871f18869ffffff")]
-
-        prob_array = sub_set["od_multinom_p_est"].to_numpy()
-
-        low_soc_vehicle_sample = np.random.multinomial(1, prob_array) # No of vehicles to be charged
-
-
-        idx = low_soc_vehicle_sample.argmax()
-
-        sub_set.iloc[idx] or sub_set.iloc[idx]["h3_end_7"]
-
-        """
-
-        cache_path = Path(
-            "data/demand/",
-            f"{city}_weekday_{temporal_column}_{hex_start_column}.parquet",
-        )
-
-        # Cache results
-        result.to_parquet(cache_path, index=False)
+        # Cache the result
+        self._cache_manager.save_to_cache(data=result, cache_path=cache_path)
 
         return result
-
-    def _get_spatial_column(self):  # noqa: ANN202
-        if self.spatial_resolution == SpatialResolution.HEX_7:
-            return "h3_start_7", "h3_end_7"
-        elif self.spatial_resolution == SpatialResolution.HEX_8:
-            return "h3_start_8", "h3_end_8"
-        elif self.spatial_resolution == SpatialResolution.HEX_9:
-            return "h3_start_9", "h3_end_9"
-        else:
-            return "h3_start_9", "h3_end_9"
-
-    def _get_temporal_column(self):  # noqa: ANN202
-        if self.temporal_resolution == TemporalBucket.HOURLY_BUCKETS:
-            return "hour_of_day"
-        elif self.temporal_resolution == TemporalBucket.TWO_HOURLY_BUCKETS:
-            return "time_bucket_2h"
-        elif self.temporal_resolution == TemporalBucket.FOUR_HOURLY_BUCKETS:
-            return "time_bucket_4h"
-        elif self.temporal_resolution == TemporalBucket.SIX_HOURLY_BUCKETS:
-            return "time_bucket_6h"
-        elif self.temporal_resolution == TemporalBucket.EIGHT_HOURLY_BUCKETS:
-            return "time_bucket_8h"
-        elif self.temporal_resolution == TemporalBucket.TWELVE_HOURLY_BUCKETS:
-            return "time_bucket_12h"
-        else:
-            return "time_bucket_4h"  # default
-
-    def _get_day_of_week_column(self):  # noqa: ANN202
-        return "is_holiday"
-
-    def _get_temporal_duration_in_hours(self):  # noqa: ANN202
-        """
-        Get the length of each temporal unit
-        :return:
-        """
-        if self.temporal_resolution == TemporalBucket.HOURLY_BUCKETS:
-            return 1
-        elif self.temporal_resolution == TemporalBucket.TWO_HOURLY_BUCKETS:
-            return 2
-        elif self.temporal_resolution == TemporalBucket.FOUR_HOURLY_BUCKETS:
-            return 4
-        elif self.temporal_resolution == TemporalBucket.SIX_HOURLY_BUCKETS:
-            return 6
-        elif self.temporal_resolution == TemporalBucket.EIGHT_HOURLY_BUCKETS:
-            return 8
-        elif self.temporal_resolution == TemporalBucket.TWELVE_HOURLY_BUCKETS:
-            return 12
-        else:
-            return 4

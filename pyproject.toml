@@ -1,9 +1,9 @@
 [project]
-name = "urban-mobility-simulation"
-version = "0.1.0"
-description = "Urban Mobility Simulation"
-readme = "README.md"
+description     = "Urban Mobility Simulation"
+name            = "urban-mobility-simulation"
+readme          = "README.md"
 requires-python = ">=3.10, <3.13.0"
+version         = "0.1.0"
 
 classifiers = [
   "Private :: Do Not Upload",
@@ -17,6 +17,7 @@ classifiers = [
 dependencies = [
   "beartype>=0.20.0",
   "cython>=3.1.0",
+  "geojson>=3.2.0",
   "geopandas>=1.0.1",
   "h3>=3.7.1, <4",
   "haversine>=2.9.0",
@@ -31,21 +32,23 @@ dependencies = [
 ]
 [dependency-groups]
 dev = [
-  { include-group = "typing" },
   { include-group = "performance" },
-  { include-group = "testing" },
   { include-group = "pre-commit" },
+  { include-group = "testing" },
+  { include-group = "typing" },
 ]
 
 performance = ["py-spy>=0.3.11", "pyperf>=2.9.0", "scalene>=1.5.51"]
 
 pre-commit = ["pre-commit>=4.2.0", "ruff>=0.11.0"]
 
-testing = ["pytest>=8.3.5", "pytest-coverage>=0.0", "pytest-xdist~=3.6"]
+testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=8.3.5"]
 
 typing = ["mypy>=1.15.0", "pandas-stubs>=2.2.2.240807"]
 
+
 [project.optional-dependencies]
+ml = ["cplex>=22.1.2.0", "docplex>=2.29.241", "torch>=2.6.0"]
 notebooks = [
   "contextily>=1.6.2",
   "ipython>=8.18.1",
@@ -53,11 +56,10 @@ notebooks = [
   "seaborn>=0.13.2",
   "sidetable>=0.9.1",
 ]
-ml = ["torch>=2.6.0", "docplex>=2.29.241", "cplex>=22.1.2.0"]
 
 [build-system]
-requires = ["setuptools", "cython"]
 build-backend = "setuptools.build_meta"
+requires      = ["cython", "setuptools"]
 
 
 [tool.setuptools]
@@ -77,9 +79,9 @@ ext-modules = [
 
 
 [tool.ruff]
-fix = true
-output-format = "grouped"
 extend-exclude = ["*.ipynb"]
+fix            = true
+output-format  = "grouped"
 [tool.ruff.format]
 skip-magic-trailing-comma = true
 [tool.ruff.lint.mccabe]
@@ -112,60 +114,49 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 # These directories do not follow the same style as the rest of the codebase.
-"tests/*" = ["D", "SLF001"]
+"learning/*"      = ["D"]
+"planning/*"      = ["D"]
+"resources/*"     = ["D"]
+"tests/*"         = ["D", "SLF001"]
 "visualization/*" = ["D"]
-"resources/*" = ["D"]
-"planning/*" = ["D"]
-"learning/*" = ["D"]
 #TODO: These should be gradually removed once properly annotated.
-"simulation/agent/*" = ["D"]
-"simulation/environment/*" = ["D"]
-"simulation/helper/*" = ["D"]
-"simulation/infrastructure/*" = ["D"]
-"simulation/metrics/*" = ["D"]
-"simulation/operator/*" = ["D"]
-"simulation/tasks/*" = ["D"]
-"simulation/vehicle/*" = ["D"]
+"public_transport_template.py"      = ["D"]
+"ridehailing_template.py"           = ["D"]
+"shared_vehicle_fleet_template.py"  = ["D"]
+"simulation/__init__.py"            = ["D"]
+"simulation/agent/*"                = ["D"]
+"simulation/environment/*"          = ["D"]
+"simulation/helper/*"               = ["D"]
+"simulation/infrastructure/*"       = ["D"]
+"simulation/metrics/*"              = ["D"]
+"simulation/operator/*"             = ["D"]
+"simulation/tasks/*"                = ["D"]
+"simulation/vehicle/*"              = ["D"]
 "simulation/vehicle_choice_model/*" = ["D"]
-"simulation/world/*" = ["D"]
-"tracking/*" = ["D"]
-"simulation/__init__.py" = ["D"]
-"walking_template.py" = ["D"]
-"shared_vehicle_fleet_template.py" = ["D"]
-"ridehailing_template.py" = ["D"]
-"public_transport_template.py" = ["D"]
-"utils.py" = ["D"]
-
-[tool.taplo]
-include = ["resources/configurations/*.toml"]
-
-[tool.taplo.formatting]
-array_auto_collapse = true
-array_auto_expand = false
-allowed_blank_lines = 2
-column_width = 800
-align_entries = true
-align_comments = true
-inline_table_expand = false
-
+"simulation/world/markets/*"        = ["D"]
+"simulation/world/population/*"     = ["D"]
+"simulation/world/world.py"         = ["D"]
+"tracking/*"                        = ["D"]
+"utils.py"                          = ["D"]
+"walking_template.py"               = ["D"]
 
 [tool.mypy]
 # Enable type checking for all simulation modules
-files = ["simulation/"]
 exclude = []
+files   = ["simulation/"]
 
 # General type checking options
-check_untyped_defs = true
-warn_unreachable = true
+check_untyped_defs  = true
+warn_unreachable    = true
 warn_unused_configs = true
 
 # Strictness and error reporting
-warn_redundant_casts = true
-warn_return_any = true
-no_implicit_optional = true
-disallow_untyped_defs = true
+disallow_any_generics    = true
 disallow_incomplete_defs = true
-disallow_any_generics = true
+disallow_untyped_defs    = true
+no_implicit_optional     = true
+warn_redundant_casts     = true
+warn_return_any          = true
 
 # Enable specific error codes
 enable_error_code = ["redundant-expr", "truthy-bool"]
@@ -175,8 +166,6 @@ enable_error_code = ["redundant-expr", "truthy-bool"]
 [[tool.mypy.overrides]]
 ignore_errors = true
 module = [
-  "simulation.world",
-  "simulation.operator",
   "simulation.agent.action_space",
   "simulation.agent.agent",
   "simulation.agent.deep_q_learning",
@@ -210,6 +199,7 @@ module = [
   "simulation.metrics.modules.general_metrics",
   "simulation.metrics.modules.service_provider_metrics",
   "simulation.metrics.modules.society_metrics",
+  "simulation.operator",
   "simulation.operator.data_transfer_object.transportation_alternative",
   "simulation.operator.data_transfer_object.transportation_alternative_browser",
   "simulation.operator.data_transfer_object.transportation_alternative_ridehailing",
@@ -223,14 +213,14 @@ module = [
   "simulation.operator.operations_management.algorithms.charging_station_allocation",
   "simulation.operator.operations_management.algorithms.distance_based_bidding_strategy",
   "simulation.operator.operations_management.integrated_shared_mobility_operations",
-  "simulation.operator.operations_management.operations_public_transport",
   "simulation.operator.operations_management.operations",
-  "simulation.operator.operations_management.ridehailing_base_charging_operations",
+  "simulation.operator.operations_management.operations_public_transport",
   "simulation.operator.operations_management.ridehailing_MP_charging_operations",
+  "simulation.operator.operations_management.ridehailing_base_charging_operations",
   "simulation.operator.operations_management.ridehailing_shared_charging_operations",
   "simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations",
-  "simulation.operator.operations_management.service_tasks.charging_task_ridehailing",
   "simulation.operator.operations_management.service_tasks.charging_task",
+  "simulation.operator.operations_management.service_tasks.charging_task_ridehailing",
   "simulation.operator.operations_management.service_tasks.multi_service_task",
   "simulation.operator.operations_management.service_tasks.relocation_task",
   "simulation.operator.operations_management.service_tasks.service_task",
@@ -251,13 +241,6 @@ module = [
   "simulation.operator.walking_search_engine",
   "simulation.tasks.transport_task",
   "simulation.tasks.transportation_search_task",
-  "tracking.tracking",
-  "tracking.tracking_interface",
-  "simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior",
-  "simulation.vehicle_choice_model.only_car_vehicle_choice_behavior",
-  "simulation.vehicle_choice_model.only_walking_choice_behavior",
-  "simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior",
-  "simulation.vehicle_choice_model.trip_characteristics",
   "simulation.vehicle.interfaces.driver_interface",
   "simulation.vehicle.interfaces.passenger_interface",
   "simulation.vehicle.public_transit_bus",
@@ -267,28 +250,35 @@ module = [
   "simulation.vehicle.ride_hailing_vehicle",
   "simulation.vehicle.shared_vehicle",
   "simulation.vehicle.walking",
+  "simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior",
+  "simulation.vehicle_choice_model.only_car_vehicle_choice_behavior",
+  "simulation.vehicle_choice_model.only_walking_choice_behavior",
+  "simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior",
+  "simulation.vehicle_choice_model.trip_characteristics",
+  "simulation.world",
   "simulation.world.demand.demand_factory",
-  "simulation.world.demand.demand_importer",
   "simulation.world.markets.auction",
   "simulation.world.markets.interfaces.bidder_interface",
   "simulation.world.markets.shared_charging_auction",
   "simulation.world.world",
+  "tracking.tracking",
+  "tracking.tracking_interface",
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
 addopts = [
-  "--strict-markers",
-  "--strict-config",
   "--durations=10",
-  "-ra",
+  "--strict-config",
+  "--strict-markers",
   "--tb=short",
+  "-ra",
 ]
 markers = [
-  "unit: Unit tests",
   "integration: Integration tests",
   "slow: Slow running tests (deselect with '-m \"not slow\"')",
+  "unit: Unit tests",
 ]
+python_classes = ["Test*"]
+python_files = ["*_test.py", "test_*.py"]
+python_functions = ["test_*"]
+testpaths = ["tests"]

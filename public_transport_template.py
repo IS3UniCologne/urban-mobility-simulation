@@ -47,7 +47,6 @@ from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior impo
     PublicTransitVehicleChoiceBehavior,
 )
 from simulation.world.demand.demand_factory import DemandFactory
-from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 
 # must come before DemandFactory, otherwise circular imports
@@ -101,23 +100,6 @@ load_geodesic_environment()
 # # # # # # # # # # # # # # # # # # # # # #
 
 tracking = Tracking.init(env)
-
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Load Demand Data (once).                #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-p = os.path.normpath(config.path.PATH_TRIP_DEMAND)
-di = DemandImporter(
-    spatial_resolution=config.world.SPATIAL_RESOLUTION,
-    temporal_resolution=config.world.TEMPORAL_RESOLUTION,
-    daily_resolution=config.world.DAILY_RESOLUTION,
-    city=config.world.CITY,
-)
-
-demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -218,8 +200,6 @@ world = World.init(
 
 demand_factory = DemandFactory(
     env,
-    demand_profile,
-    di,
     world,
     modifiers=[os.path.normpath(path) for path in config.path.PATH_DEMAND_MODIFIERS],
     mode="public_transport",
