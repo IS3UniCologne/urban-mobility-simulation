@@ -113,7 +113,7 @@ class GeodesicPosition(Position):
         try:
             hex = self._default_hexagon[resolution]
         except KeyError:
-            hex = h3.geo_to_h3(self._lat, self._lng, resolution)
+            hex = h3.latlng_to_cell(self._lat, self._lng, resolution)
             self._default_hexagon[resolution] = hex
 
         return RegionId(hex)

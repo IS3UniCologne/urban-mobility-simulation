@@ -25,7 +25,7 @@ class ChargingStation(TrackingInterface):
 
     exposes = ["_location", "_plugs", "_current_queue_time"]  # noqa: RUF012
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
         id: int,
         env: simpy.Environment,
@@ -33,13 +33,15 @@ class ChargingStation(TrackingInterface):
         power: float,
         capacity: int,
         queue_size: int,
-    ):
+    )-> None:
         self._env = env
         self._capacity = int(capacity)
         self._polygon = shape(
             {
                 "type": "Polygon",
-                "coordinates": [h3.h3_to_geo_boundary(location, geo_json=True)],
+                "coordinates": [[
+                    [lon, lat] for lat, lon in h3.cell_to_boundary(location)
+                ]],
                 "properties": "",
             }
         )
