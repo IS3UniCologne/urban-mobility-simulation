@@ -9,7 +9,6 @@ from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
-
 # class RideHailingCarState(Enum):
 #     INITIALIZED = 0
 #     PARKING = 1
@@ -91,7 +90,7 @@ class RideHailingCar(RideHailingVehicle):
         self._driver_payment_share: float = (
             Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
         )
-        self._state: VehicleState = VehicleState.OFFLINE
+        self.state: VehicleState = VehicleState.OFFLINE
         self._online_event: Event = self._env.event()
         self._offline_event: Event = self._env.event()
         RideHailingCar.ride_hailing_car_id += 1
