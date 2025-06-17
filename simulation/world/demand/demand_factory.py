@@ -10,6 +10,7 @@ import logging
 from collections.abc import Generator
 from pathlib import Path
 
+import geojson
 import h3
 import simpy
 from pandas import DataFrame
@@ -151,13 +152,31 @@ class DemandFactory:
         for modifier in self._modifier_paths:
             try:
                 with open(modifier) as f:
-                    geo = json.load(f)
-            except FileNotFoundError:
-                logging.warning(
-                    'Demand modifier at "%s" doesn\'t exist, skipping.', modifier
-                )
-                continue
+                    if not geojson.load(f).is_valid:
+                        logging.warning(
+                            'Demand modifier provided at "%s" is not valid GeoJSON, skipping.',
+                            modifier,
+                            extra={"clazz": self.__class__.__name__, "oid": ""},
+                        )
+                        continue
+            except (FileNotFoundError, ValueError) as e:
+                if isinstance(e, FileNotFoundError):
+                    logging.warning(
+                        'Demand modifier at "%s" doesn\'t exist, skipping.',
+                        modifier,
+                        extra={"clazz": self.__class__.__name__, "oid": ""},
+                    )
+                    continue
+                elif isinstance(e, ValueError):
+                    logging.warning(
+                        'Demand modifier at "%s" is not valid GeoJSON, skipping.',
+                        modifier,
+                        extra={"clazz": self.__class__.__name__, "oid": ""},
+                    )
+                    continue
 
+            with open(modifier) as f:
+                geo = json.load(f)
             featurecollection = True if "features" in geo else False
 
             if featurecollection:
@@ -221,7 +240,7 @@ class DemandFactory:
                         time_bucket,
                         non_working_day,
                         self._time.now(),
-                        extra={"clazz": self.__class__.__name__},
+                        extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
                     # no lambda for given demand slice means there were no arrivals in the sample (lambda was zero)
                     poisson_lambda = 0
@@ -254,7 +273,7 @@ class DemandFactory:
                             logging.debug(
                                 "Spatial unit %s is removed from demand generation process",
                                 spatial_unit,
-                                extra={"clazz": self.__class__.__name__},
+                                extra={"clazz": self.__class__.__name__, "oid": ""},
                             )
                             break
 
