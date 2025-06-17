@@ -37,7 +37,7 @@ SEED = 42
 [WORLD]
 SPATIAL_RESOLUTION  = 7
 TEMPORAL_RESOLUTION = 4
-DAILY_RESOLUTION    = 1
+DAILY_RESOLUTION    = "weekday_weekend"
 CITY                = "berlin"
 
 
