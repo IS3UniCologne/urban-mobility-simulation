@@ -3,8 +3,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from simpy import Environment, Event
-
-from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.environment.position import Position
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.infrastructure.network.edge import Edge
@@ -60,7 +58,7 @@ class Vehicle(TrackingInterface, ABC):
         self,
         env: Environment,
         fleet: "VehicleFleet",
-        position: GeodesicPosition,
+        position: Position,
         velocity: float,
         max_available_seats: int,
         vehicle_mode: VehicleMode,
@@ -218,7 +216,7 @@ class Vehicle(TrackingInterface, ABC):
         return self.__position
 
     @position.setter
-    def position(self, position: GeodesicPosition) -> None:
+    def position(self, position: Position) -> None:
         self._distance_travelled += self.__position >> position
 
         new_region = position.get_region_id()
