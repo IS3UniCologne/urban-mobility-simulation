@@ -178,7 +178,7 @@ class GeodesicEnvironment(Environment):
         return new_hex_id
 
     @staticmethod
-    def corridor(start: str, end: str, k:int) -> set[str]:
+    def corridor(start: str, end: str, k: int) -> set[str]:
         """
         Given a start and end hexagon id (with same resolution), return a straight line of hexagons between them
         plus (optionally for k>0) a buffer of k hex-cells around it.
@@ -190,7 +190,9 @@ class GeodesicEnvironment(Environment):
         """
         straight = h3.grid_path_cells(start, end)
         return {
-            item for sublist in [h3.grid_disk(h, k) for h in straight] for item in sublist
+            item
+            for sublist in [h3.grid_disk(h, k) for h in straight]
+            for item in sublist
         }
 
     @staticmethod

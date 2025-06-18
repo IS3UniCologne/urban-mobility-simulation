@@ -3,7 +3,7 @@ import os
 import sys
 from dataclasses import dataclass, fields
 from functools import wraps
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import numpy as np
 
@@ -173,7 +173,7 @@ class PathConfig:
     FLEET_STATE_FILE: str
 
     PATH_TRIP_DEMAND: str
-    PATH_DEMAND_MODIFIERS: Optional[list[str]] = None
+    PATH_DEMAND_MODIFIERS: list[str] | None = None
 
     def __post_init__(self) -> None:
         city = Configuration().world.CITY
@@ -223,22 +223,22 @@ class VehicleConfig:
     VELOCITY: float
     MAX_AVAILABLE_SEATS: int
 
-    WALKING_DISTANCE: Optional[int] = None
-    CONVENIENCE: Optional[int] = None
+    WALKING_DISTANCE: int | None = None
+    CONVENIENCE: int | None = None
 
-    MAX_STATE_OF_CHARGE: Optional[float] = None
-    ENERGY_CONSUMPTION: Optional[float] = None
-    EV_RELATIVE_ENERGY_CONSUMPTION: Optional[float] = None
-    INITIAL_SOC: Optional[float] = None
-    EMERGENCY_SOC_BUFFER: Optional[float] = None
+    MAX_STATE_OF_CHARGE: float | None = None
+    ENERGY_CONSUMPTION: float | None = None
+    EV_RELATIVE_ENERGY_CONSUMPTION: float | None = None
+    INITIAL_SOC: float | None = None
+    EMERGENCY_SOC_BUFFER: float | None = None
 
-    PRICE_PER_MIN: Optional[float] = None
-    PRICE_PER_TRIP: Optional[float] = None
-    DAILY_TOTAL_COST: Optional[float] = None
-    COST_PER_KM: Optional[float] = None
-    PRICE_PER_KM: Optional[float] = None
-    CHARGING_COST_PER_KWH: Optional[float] = None
-    KG_CO2_PER_KM: Optional[float] = None
+    PRICE_PER_MIN: float | None = None
+    PRICE_PER_TRIP: float | None = None
+    DAILY_TOTAL_COST: float | None = None
+    COST_PER_KM: float | None = None
+    PRICE_PER_KM: float | None = None
+    CHARGING_COST_PER_KWH: float | None = None
+    KG_CO2_PER_KM: float | None = None
 
     def __post_init__(self) -> None:
         # convert velocity km/h to m/s
@@ -491,7 +491,7 @@ class RideHailingGlobalConfig:
 @beartype_after_post_init
 @dataclass(slots=True, frozen=True)
 class SharedVehicleGlobalConfig:
-    VEHICLES: Optional[dict[VehicleMode, int]] = None
+    VEHICLES: dict[VehicleMode, int] | None = None
 
     def __post_init__(self) -> None:
         # Calculate vehicles as totals from all operators
@@ -744,7 +744,7 @@ class Configuration(metaclass=Singleton):
         return {VehicleMode[key]: value for key, value in config.items()}
 
     @property
-    def transit_vehicles(self) -> Optional[dict[str, VehicleConfig]]:
+    def transit_vehicles(self) -> dict[str, VehicleConfig] | None:
         """Dictionary containing VehicleConfig objects for shared vehicles.
 
         Returns:

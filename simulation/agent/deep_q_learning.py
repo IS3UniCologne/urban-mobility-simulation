@@ -494,8 +494,7 @@ class DQN(RLAgent):
             # otherwise the action does have no consequence, when another action immediately follows
             yield self._env.timeout(
                 h3.average_hexagon_edge_length(
-                    self._config.transit_agent_config.action_resolution,
-                    unit="m",
+                    self._config.transit_agent_config.action_resolution, unit="m"
                 )
                 / bus._velocity  # noqa: SLF001
             )
