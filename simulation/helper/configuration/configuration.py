@@ -94,6 +94,7 @@ def beartype_after_post_init(cls: T) -> T:
         setattr(cls, "__post_init__", default_post_init)
     return cls
 
+
 @beartype
 @dataclass(slots=True, frozen=True)
 class SettingsConfig:
@@ -104,17 +105,20 @@ class SettingsConfig:
     PERSIST_RESULTS: bool
     TRACK_AGENT: bool
 
+
 @beartype
 @dataclass(slots=True, frozen=True)
 class ExperimentManagementConfig:
     START_TIME: int
     END_TIME: int
 
+
 @beartype
 @dataclass(slots=True, frozen=True)
 class RandomManagerConfig:
     SEED: int
     COMPONENT_SEEDS: dict[str, int]
+
 
 @beartype_after_post_init
 @dataclass(slots=True, frozen=True)
@@ -148,6 +152,7 @@ class WorldConfig:
             str: Column name, e.g. 'hex_id_7'
         """
         return f"hex_id_{self.SPATIAL_RESOLUTION_VALUE}"
+
 
 @beartype
 @dataclass(slots=True, frozen=True)
@@ -186,6 +191,7 @@ class PathConfig:
                 value.format(city=city) for value in self.PATH_DEMAND_MODIFIERS
             ]
             object.__setattr__(self, "PATH_DEMAND_MODIFIERS", formatted_modifiers)
+
 
 @beartype
 @dataclass(slots=True, frozen=True)
@@ -304,6 +310,7 @@ class ModeChoiceModelConfig:
         trust_value = self.rng.uniform(trust_value_lower, trust_value_upper)
         return trust_value
 
+
 @beartype
 @dataclass(slots=True, frozen=True)
 class ChargingInfrastructureConfig:
@@ -414,6 +421,7 @@ class RideHailingOperatorConfig:
             "VEHICLE_RELOCATION_VELOCITY",
             SimulationVelocityConverter.convert_kmh(self.VEHICLE_RELOCATION_VELOCITY),
         )
+
 
 @beartype
 @dataclass(slots=True, frozen=True)
@@ -531,11 +539,13 @@ class SharedVehicleGlobalConfig:
 #     def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
 #         return [self.N_BUSES_TOTAL]
 
+
 @beartype
 @dataclass(slots=True, frozen=True)
 class AuctionConfig:
     AUCTION_START: int
     AUCTION_END: int
+
 
 @beartype
 @dataclass(slots=True, frozen=True)
@@ -543,6 +553,7 @@ class SharedChargingAuctionConfig:
     AUCTION_INTERVAL: int
     TIMESLOT_DURATION: int
     AUCTION_LOOKAHEAD: int
+
 
 @beartype
 @dataclass(slots=True, frozen=True)
@@ -553,6 +564,7 @@ class DynamicRoutingConfig:
     PENALTY: float
     REWARD: float
     TIMELIMIT: float
+
 
 @beartype
 @dataclass(slots=True, frozen=True)
@@ -567,6 +579,7 @@ class DynamicCheckpointRoutingConfig:
     REWARD: float
     TIMELIMIT: float
     PERIODIC_TESTING: int
+
 
 @beartype_after_post_init
 @dataclass(slots=True, frozen=True)
