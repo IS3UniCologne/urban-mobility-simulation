@@ -112,7 +112,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
 
         self._actions.append(a)
 
-    def _take_action(self, bus, action=None)-> simpy.events.Event:
+    def _take_action(self, bus, action=None) -> simpy.events.Event:
         """
         Actions in hexagonal grid, stay is also allowed.
 
