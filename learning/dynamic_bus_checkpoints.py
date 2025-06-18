@@ -36,7 +36,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
         super(DynamicBusCheckpointProblem, self).__init__(env)  # noqa: UP008
 
         self._config = Configuration()
-        self._problem_config = self._config.dynamic_checkpoint_routing_config
+        self._problem_config = self._config.dynamic_checkpoint_routing
 
         # Environment / World state
         self._geodesic_env = GeodesicEnvironment.getInstance()
@@ -309,7 +309,7 @@ class DynamicBusCheckpointProblem(LearningInterface):
 
         """
         hex_id = h3.latlng_to_cell(
-            *self.bus.position.getExactLocation(),self._action_res
+            *self.bus.position.getExactLocation(), self._action_res
         )
         new_hex = self.bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
         new_centroid = self.bus._geodesic_env.get_centroid(  # noqa: SLF001

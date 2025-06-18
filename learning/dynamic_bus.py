@@ -182,7 +182,7 @@ class DynamicBusProblem(LearningInterface):
             dtype=int,
         )
 
-    def _take_action(self, action: str | None = None):
+    def _take_action(self, action: str | None = None):  # noqa: ANN202
         """
         Actions in hexagonal grid, stay is also allowed.
 
@@ -199,8 +199,7 @@ class DynamicBusProblem(LearningInterface):
             # otherwise the action does have no consequence, when another action immediately follows
             yield self.env.timeout(
                 h3.average_hexagon_edge_length(
-                    self._config.dynamic_routing_config.action_resolution,
-                    unit="m",
+                    self._config.dynamic_routing_config.action_resolution, unit="m"
                 )
                 / self.bus._velocity  # noqa: SLF001
             )
