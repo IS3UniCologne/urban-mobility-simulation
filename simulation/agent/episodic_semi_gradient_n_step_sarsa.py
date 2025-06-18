@@ -4,7 +4,6 @@ from math import sqrt
 
 import h3
 import numpy as np
-from typing import Optional
 import simpy
 from simpy import Event
 
@@ -114,7 +113,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
 
         self._actions.append(a)
 
-    def _take_action(self, bus, action: Optional[str] = None) -> Event: # noqa: ANN001
+    def _take_action(self, bus, action: str | None = None) -> Event:  # noqa: ANN001
         """
         Actions in hexagonal grid, stay is also allowed.
 

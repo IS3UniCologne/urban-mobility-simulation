@@ -14,7 +14,6 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.losses import Huber
 from tensorflow.keras.optimizers import Adam
-from typing import Optional
 
 from simulation.agent.action_space import ActionSpace
 from simulation.agent.policy import Policy
@@ -477,7 +476,7 @@ class DQN(RLAgent):
 
         return a
 
-    def _take_action(self, bus: Bus, action: Optional[str] = None) -> simpy.events.Event:
+    def _take_action(self, bus: Bus, action: str | None = None) -> simpy.events.Event:
         """
         Actions in hexagonal grid, stay is also allowed.
 
