@@ -4,7 +4,9 @@ from math import sqrt
 
 import h3
 import numpy as np
+from typing import Optional
 import simpy
+from simpy import Event
 
 from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator
 from simulation.agent.policy import Policy
@@ -112,7 +114,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
 
         self._actions.append(a)
 
-    def _take_action(self, bus, action=None)-> simpy.events.Event:
+    def _take_action(self, bus, action: Optional[str] = None) -> Event: # noqa: ANN001
         """
         Actions in hexagonal grid, stay is also allowed.
 

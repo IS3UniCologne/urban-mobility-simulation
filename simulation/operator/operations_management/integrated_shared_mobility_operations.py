@@ -19,7 +19,7 @@ from simulation.operator.operations_management.service_tasks.relocation_task imp
 )
 from simulation.operator.transactions import DemandMonitor
 from simulation.operator.transactions.demand_monitor import VehicleDemandByRegion
-from typing import Dict, List, Tuple, Any
+from typing import dict, list, tuple
 
 
 class IntegratedSharedMobilityOperations(OperationsInterface):
@@ -369,7 +369,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def calculate_charging_plan(self, fleet_state: pd.DataFrame)-> Tuple[Dict[str, List[List[Tuple[str, str, float, float]]]], int]:
+    def calculate_charging_plan(self, fleet_state: pd.DataFrame)-> tuple[dict[str, dict[list[tuple[str, str, float, float]]]], int]:
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
