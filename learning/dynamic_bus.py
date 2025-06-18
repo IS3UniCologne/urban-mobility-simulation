@@ -3,7 +3,8 @@ import logging
 
 import h3
 import numpy as np
-from simpy import Environment
+from simpy import Environment, events
+from collections.abc import Generator
 
 from learning.interface.learning_interface import LearningInterface
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -182,7 +183,7 @@ class DynamicBusProblem(LearningInterface):
             dtype=int,
         )
 
-    def _take_action(self, action: str | None = None):
+    def _take_action(self, action: str | None = None) -> Generator[events.Event, None, None]:
         """
         Actions in hexagonal grid, stay is also allowed.
 
