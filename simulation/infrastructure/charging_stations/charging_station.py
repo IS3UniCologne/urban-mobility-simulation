@@ -33,15 +33,15 @@ class ChargingStation(TrackingInterface):
         power: float,
         capacity: int,
         queue_size: int,
-    )-> None:
+    ) -> None:
         self._env = env
         self._capacity = int(capacity)
         self._polygon = shape(
             {
                 "type": "Polygon",
-                "coordinates": [[
-                    [lon, lat] for lat, lon in h3.cell_to_boundary(location)
-                ]],
+                "coordinates": [
+                    [[lon, lat] for lat, lon in h3.cell_to_boundary(location)]
+                ],
                 "properties": "",
             }
         )
