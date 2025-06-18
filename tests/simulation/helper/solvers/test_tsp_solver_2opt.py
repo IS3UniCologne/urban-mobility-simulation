@@ -3,10 +3,12 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
 
 
+@pytest.mark.unit
 class TestSolveTSP(unittest.TestCase):
     def setUp(self):  # noqa: ANN201
         # Mock environment and other dependencies
