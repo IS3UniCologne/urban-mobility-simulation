@@ -1,12 +1,12 @@
 import logging
 from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 from simpy import Environment, Event
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
-from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 # class RideHailingCarState(Enum):
@@ -21,6 +21,9 @@ from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 #     MOVING_TO_PICK_UP_POS = 1003
 #     ONLINE = 6  # When the driver is online
 #     OFFLINE = 7  # When the driver is offline
+
+if TYPE_CHECKING:
+    from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 
 
 class RideHailingCar(RideHailingVehicle):
@@ -46,7 +49,7 @@ class RideHailingCar(RideHailingVehicle):
     def __init__(  # noqa: ANN204
         self,
         env: Environment,
-        fleet: MixedSharedVehicleFleet,
+        fleet: "MixedRideHailingFleet",
         position: GeodesicPosition,
         velocity: float,
         max_available_seats: int = 4,
