@@ -35,6 +35,7 @@ class TransportationAlternativeRideHailing:
         route_to_pickup: Route,
     ):
         self._vehicle = vehicle
+        # TODO  This should not be based on class name
         self._vehicle_type = vehicle.__class__.__name__
         self._price = price
         self._duration = duration
