@@ -1,3 +1,5 @@
+"""Base class for simulation objects with UID generation and logging capabilities."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
@@ -14,6 +16,8 @@ class SimulationBase:
 
     UIDs are a combination of the class name and an incrementing integer.
     Each class gets its own logger for individual log level control.
+    The class logger is wrapped in a UidLoggerAdapter to automatically include the UID
+    in all log records without needing to specify it manually.
     """
 
     _uid_counters: ClassVar[dict[type, int]] = {}
