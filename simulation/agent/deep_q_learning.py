@@ -1,4 +1,3 @@
-import logging
 import os
 import random
 from collections import deque
@@ -20,11 +19,12 @@ from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTimeConverter
 from simulation.vehicle.public_transit_bus import Bus
 
 
-class ModifiedTensorBoard(TensorBoard):
+class ModifiedTensorBoard(TensorBoard, SimulationBase):
     __slots__ = ("_log_write_dir", "_step", "_writer")
 
     def __init__(self, **kwargs):  # noqa: ANN003, ANN204
@@ -60,7 +60,7 @@ class ModifiedTensorBoard(TensorBoard):
                 self.writer.flush()
 
 
-class DQN(RLAgent):
+class DQN(RLAgent, SimulationBase):
     __slots__ = (
         "_action_space",
         "_alpha",
@@ -172,11 +172,7 @@ class DQN(RLAgent):
         if weights is not None:
             if type(weights) is str:
                 # filepath is given
-                logging.info(
-                    "Loading weights from %s ...",
-                    weights,
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
-                )
+                self.logger.info("Loading weights from %s ...", weights)
                 self._q_net.load_weights(weights)
                 self._target_q_net.load_weights(weights)
             else:
@@ -185,10 +181,7 @@ class DQN(RLAgent):
                 self._q_net.set_weights(eval_weights)
                 self._target_q_net.set_weights(target_weights)
         else:
-            logging.debug(
-                self._q_net.summary(),
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
+            self.logger.debug(self._q_net.summary())
 
             # in the first episode, initialize target q net weights = q net weights
             self._target_q_net.set_weights(self._q_net.get_weights())
@@ -317,28 +310,25 @@ class DQN(RLAgent):
 
         # retain decayed epsilon
         self._config.transit_agent_config.eps = self._eps
-        logging.debug(
+        self.logger.debug(
             "Saving decayed epsilon into config: %s",
             self._eps,
-            extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
+            extra={f"Episode {self._episode}"},
         )
 
         # retain optimizer steps for decayed learning rate
         self._config.transit_agent_config.optimizer = self._optimizer
         if self._config.transit_agent_config.lr_decay:
-            logging.debug(
+            self.logger.debug(
                 "Saving decayed learning rate into config: %s",
                 self._learning_rate(self._optimizer.iterations),
-                extra={
-                    "clazz": self.__class__.__name__,
-                    "oid": f"Episode {self._episode}",
-                },
+                extra={f"Episode {self._episode}"},
             )
 
-        logging.debug(
+        self.logger.debug(
             "Current Replay Buffer size: %s",
             len(self._replay_buffer),
-            extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
+            extra={f"Episode {self._episode}"},
         )
 
         # clean up processes
@@ -466,19 +456,11 @@ class DQN(RLAgent):
 
             if not bus.test_action(a, corridor=True):
                 # hexagon is out of layer bounding box - action is forbidden
-                logging.debug(
-                    "Action %s is forbidden, sampling again",
-                    a,
-                    extra={"clazz": self.__class__.__name__, "oid": bus.id},
-                )
+                self.logger.debug("Action %s is forbidden, sampling again", a)
                 continue
             break
 
-        logging.debug(
-            "Bus takes action %s",
-            a,
-            extra={"clazz": self.__class__.__name__, "oid": bus.id},
-        )
+        self.logger.debug("Bus takes action %s", a)
 
         return a
 
@@ -509,8 +491,8 @@ class DQN(RLAgent):
                 *bus.position.getExactLocation(),
                 resolution=self._config.transit_agent_config.action_resolution,
             )
-            new_hex = bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
-            new_centroid = bus._geodesic_env.get_centroid(  # noqa: SLF001
+            new_hex = bus._geo_env.move_in_layer(hex_id, action)  # noqa: SLF001
+            new_centroid = bus._geo_env.get_centroid(  # noqa: SLF001
                 new_hex, f"hex_{self._config.transit_agent_config.action_resolution}"
             )
 
@@ -551,30 +533,24 @@ class DQN(RLAgent):
         unreachable_destination = True if remaining_time < timeto_destination else False
         # unreachable_destination = False # JUST FOR DEBUGGING
         if unreachable_destination:
-            logging.info(
-                "Episode is cancelled, destination is unreachable within time limit",
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+            self.logger.info(
+                "Episode is cancelled, destination is unreachable within time limit"
             )
 
         # reward is service level (1 drop off = +1 reward)
         self._latest_reward = bus._dropoffs * self._reward  # noqa: SLF001
         if self._latest_reward > 0:
-            logging.debug(
-                "Service Level was increased by %s",
-                self._latest_reward,
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
+            self.logger.debug("Service Level was increased by %s", self._latest_reward)
 
         if (reached_timelimit and not reached_destination) or unreachable_destination:
             self._latest_reward -= self._penalty
 
         self._reward_sum = self._reward_sum + self._latest_reward
 
-        logging.debug(
+        self.logger.debug(
             "Current reward: %s, overall reward: %s",
             self._latest_reward,
             self._reward_sum,
-            extra={"clazz": self.__class__.__name__, "oid": bus.id},
         )
 
         # reset drop offs

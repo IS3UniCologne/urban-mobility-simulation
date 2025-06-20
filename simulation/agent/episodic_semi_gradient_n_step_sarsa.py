@@ -1,4 +1,3 @@
-import logging
 from copy import deepcopy
 from math import sqrt
 
@@ -11,9 +10,10 @@ from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.simulation_base import SimulationBase
 
 
-class EpisodicSemiGradientNStepSarsa(RLAgent):
+class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):
     __slots__ = (
         "_G",
         "_actions",
@@ -27,7 +27,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
     )
 
     def __init__(self, env: simpy.Environment, q_hat: ValueFunctionApproximator):  # noqa: ANN204
-        super(EpisodicSemiGradientNStepSarsa, self).__init__(env)  # noqa: UP008
+        super().__init__(env)
 
         # Configuration
         self._alpha = self._config.transit_agent_config.alpha
@@ -98,19 +98,13 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
                 bus.test_action(a)
             except NotImplementedError:
                 # hexagon is out of layer bounding box - action is forbidden
-                logging.debug(
-                    "Action %s is forbidden, sampling again",
-                    a,
-                    extra={"clazz": self.__class__.__name__, "oid": bus.id},
+                self.logger.debug(
+                    "Action %s is forbidden to bus %s, sampling again", a, bus.id
                 )
                 continue
             break
 
-        logging.debug(
-            "Bus takes action %s",
-            a,
-            extra={"clazz": self.__class__.__name__, "oid": bus.id},
-        )
+        self.logger.debug("Bus %s takes action %s", bus.id, a)
 
         self._actions.append(a)
 
