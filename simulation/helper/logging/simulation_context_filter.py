@@ -5,7 +5,7 @@ import logging
 import simpy
 
 
-class SimulationContextFilter(logging.Filter):
+class EnvTimeInjector(logging.Filter):
     """
     Logging filter that injects the current simulation time from a SimPy environment into log records.
 
@@ -40,5 +40,6 @@ class SimulationContextFilter(logging.Filter):
         bool
             Always returns True to allow the log record to be processed.
         """
-        record.env_time = round(self._env.now, 2)
+        # This is faster than rounding, rounding errors should not be an issue
+        record.env_time = int(self._env.now * 100) / 100
         return True
