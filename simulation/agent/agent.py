@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
 
 from simulation.environment.position import Position
+from simulation.helper.simulation_base import SimulationBase
 
 
-class Agent(ABC):
+class Agent(SimulationBase, ABC):
     __slots__ = ("_position", "_state")
 
-    @abstractmethod
-    def __init__(self):  # noqa: ANN204
-        pass
+    def __init__(self) -> None:
+        super().__init__()
 
     @property
     def state(self):  # noqa: ANN201
