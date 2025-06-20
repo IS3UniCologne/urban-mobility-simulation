@@ -1,14 +1,13 @@
-import logging
-
 import h3
 import simpy
 from shapely.geometry import shape
 
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.simulation_base import SimulationBase
 from tracking.tracking_interface import TrackingInterface
 
 
-class ChargingStation(TrackingInterface):
+class ChargingStation(TrackingInterface, SimulationBase):
     __slots__ = (
         "_capacity",
         "_centre",
@@ -27,7 +26,6 @@ class ChargingStation(TrackingInterface):
 
     def __init__(  # noqa: ANN204
         self,
-        id: int,
         env: simpy.Environment,
         location: str,
         power: float,
@@ -123,9 +121,8 @@ class ChargingStation(TrackingInterface):
                     self._env,
                     [x.processed_plug_in_event for x in self._event_subscribers],
                 )
-                logging.debug(
-                    "All listeners have processed the plug in event, resetting",
-                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                self.logger.debug(
+                    "All listeners have processed the plug in event, resetting"
                 )
                 for x in self._event_subscribers:
                     x.processed_plug_in_event = self._env.event()
@@ -140,9 +137,8 @@ class ChargingStation(TrackingInterface):
                     self._env,
                     [x.processed_plug_out_event for x in self._event_subscribers],
                 )
-                logging.debug(
-                    "All listeners have processed the plug out event, resetting",
-                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                self.logger.debug(
+                    "All listeners have processed the plug out event, resetting"
                 )
                 for x in self._event_subscribers:
                     x.processed_plug_out_event = self._env.event()
