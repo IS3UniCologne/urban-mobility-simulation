@@ -1,4 +1,3 @@
-import logging
 from types import SimpleNamespace
 from typing import Dict  # noqa: UP035
 
@@ -7,6 +6,7 @@ from beartype.roar import BeartypeDoorHintViolation
 from simpy import AnyOf
 
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.simulation_base import SimulationBase
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -15,7 +15,7 @@ from simulation.infrastructure.charging_stations.virtual_charging_station import
 )
 
 
-class VirtualChargingInfrastructure:
+class VirtualChargingInfrastructure(SimulationBase):
     """
     This class provides a virtual charging infrastructure (a special view on the physical charging infrastructure) to a certain observer.
     This could e.g. be fleet operators that are only allowed to charge at locations where they buy capacity.
@@ -204,19 +204,15 @@ class VirtualChargingInfrastructure:
                 self._availability[charging_station.location] -= 1
                 if self._use_virtual_cs:
                     self._update_virtual_cs()
-                logging.debug(
-                    "Plugged in registered at %s.",
-                    charging_station.location,
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                self.logger.debug(
+                    "Plugged in registered at %s.", charging_station.location
                 )
                 self._listeners[cs.id].processed_plug_in_event.succeed()
             elif cs.vehicle_unplugged in event:
                 self._availability[charging_station.location] += 1
                 if self._use_virtual_cs:
                     self._update_virtual_cs()
-                logging.debug(
-                    "Plugged out registered at %s.",
-                    charging_station.location,
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                self.logger.debug(
+                    "Plugged out registered at %s.", charging_station.location
                 )
                 self._listeners[cs.id].processed_plug_out_event.succeed()

@@ -68,7 +68,6 @@ class ChargingInfrastructure:
     def _initialise_charging_stations(self):  # noqa: ANN202
         for i, location in enumerate(self._location_list):
             charging_station = ChargingStation(
-                id=i,
                 env=self._env,
                 location=location,
                 power=self._power_list[i],
