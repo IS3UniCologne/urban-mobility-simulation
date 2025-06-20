@@ -164,7 +164,20 @@ class SimulationTimeConverter:
 
 
 class SimulationVelocityConverter:
+    # TODO: A class for this seems overkill.
     # Convert the velocity of kilometer/hour to simulation velocity of meter/minute
     @staticmethod
     def convert_kmh(velocity: float) -> float:
+        """Convert velocity from kilometers per hour to meters per minute.
+
+        Parameters
+        ----------
+        velocity : float
+            Velocity in kilometers per hour.
+
+        Returns
+        -------
+        float
+            Velocity in meters per minute.
+        """
         return (velocity * 1000) / 60
