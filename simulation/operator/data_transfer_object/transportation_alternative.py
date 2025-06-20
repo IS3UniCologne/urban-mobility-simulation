@@ -43,3 +43,6 @@ class TransportationAlternative:
             f"Vehicle {self.vehicle}, Price {self.price}, Duration {self.duration}, "
             f"Distance {self.distance}, Convenience {self.convenience}"
         )
+
+    def __repr__(self) -> str:
+        return self.__str__()
