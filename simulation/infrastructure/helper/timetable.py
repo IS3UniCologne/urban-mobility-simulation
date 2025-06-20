@@ -1,5 +1,5 @@
 import datetime
-import logging
+from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
@@ -16,10 +16,10 @@ class AmbiguousTripException(Exception):
 class Timetable:
     __slots__ = ("_data_path", "_geo_env", "_trips")
 
-    def __init__(self, data_path):  # noqa: ANN001, ANN204
+    def __init__(self, data_path: Path, geo_env: GeodesicEnvironment) -> None:
         self._data_path = data_path
         self._trips = None
-        self._geo_env = GeodesicEnvironment.getInstance()
+        self._geo_env = geo_env
 
     @property
     def trips(self):  # noqa: ANN201
@@ -38,18 +38,14 @@ class Timetable:
         return trip
 
     def import_timetable(self):  # noqa: ANN201
-        logging.debug(
-            "Importing GTFS data...",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )
+        self.logger.debug("Importing GTFS data...")
 
         try:
             self._trips = pd.read_csv(self._data_path)
         except FileNotFoundError:
-            logging.error(
+            self.logger.error(
                 "%s does not exist, use Prepare_Transit_Data notebook to generate first.",
                 self._data_path,
-                extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
         self._trips = gpd.GeoDataFrame(
