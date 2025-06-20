@@ -1,16 +1,22 @@
-import logging
+"""Random number generation management for the simulation.
+
+This module provides the RandomManager class for centralized random number
+generation throughout the simulation, ensuring reproducibility and component
+isolation.
+"""
+
 import random
 
 import numpy as np
 from numpy.random import PCG64, Generator
 
 from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.singleton import Singleton
+from simulation.helper.simulation_base import SimulationBase
 
 
-class RandomManager(metaclass=Singleton):
-    """
-    Singleton class to manage random number generation throughout the simulation.
+class RandomManager(SimulationBase):
+    """Singleton class to manage random number generation throughout the simulation.
+
     Ensures reproducibility when using the same seed and configuration.
 
     Each simulation component can have its own random number generator to avoid interference between components.
@@ -36,7 +42,9 @@ class RandomManager(metaclass=Singleton):
     ```
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: Configuration) -> None:
+        super().__init__()
+        self._config = config
         self._main_seed = None
         self._main_rng = None
         self._fixed_seed_components = None
@@ -45,11 +53,8 @@ class RandomManager(metaclass=Singleton):
 
     def reset_fixed_seed_components(self) -> None:
         """Reset the fixed seed components' generators to their initial state."""
-
         self._fixed_seed_components = None
-        self._fixed_seed_components = (
-            Configuration().random_manager.COMPONENT_SEEDS.copy()
-        )
+        self._fixed_seed_components = self._config.random_manager.COMPONENT_SEEDS.copy()
 
         for component, seed in self._fixed_seed_components.items():
             if seed == 0:
@@ -61,14 +66,14 @@ class RandomManager(metaclass=Singleton):
             )
 
     def reset_all_rng(self) -> None:
-        """Resets all random number generators to their inital state (same as restarting the simulation)."""
+        """Reset all random number generators to their inital state (same as restarting the simulation)."""
         self._main_seed = None
         self._main_rng = None
         self._component_rngs = {}
 
         self.reset_fixed_seed_components()
 
-        main_seed = Configuration().random_manager.SEED
+        main_seed = self._config.random_manager.SEED
         # If the seed is 0, we use a random seed
         if main_seed == 0:
             main_seed = np.random.SeedSequence().entropy % 2**32
@@ -82,19 +87,16 @@ class RandomManager(metaclass=Singleton):
         np.random.seed(main_seed)
         random.seed(main_seed)
 
-        logging.info(
-            "Random seed set to %s",
-            main_seed,
-            extra={"clazz": "RandomManager", "oid": ""},
-        )
+        self.logger.info("Random seed set to %s", main_seed)
 
     def get_rng(self, component_name: str = None) -> Generator:  # noqa: RUF013
-        """
-        Get a random number generator for a specific component.
+        """Get a random number generator for a specific component.
+
         If no component name is provided, returns the main RNG.
         If the generator for the component does not exist, it is created.
 
-        Returns:
+        Returns
+        -------
             np.random.Generator: A NumPy Generator instance
         """
         if component_name is None:
@@ -116,11 +118,10 @@ class RandomManager(metaclass=Singleton):
         self._component_rngs[component_name] = np.random.Generator(
             PCG64(component_seed)
         )
-        logging.info(
+        self.logger.info(
             "New RNG created for component %s with seed %s ",
             component_name,
             component_seed,
-            extra={"clazz": "RandomManager", "oid": ""},
         )
         return
 
@@ -137,10 +138,11 @@ class RandomManager(metaclass=Singleton):
 
         return (self._main_seed + hash_value) % 2**32
 
-    # Random sampling methods, these are just thin wrappers around NumPy's Generator methods
-    # They can be called directly on the RandomManager instance without needing to get the RNG first
-    # Example:
-    # random_number = RandomManager().uniform(0, 1, component="MYCOMPONENT")
+    """Random sampling methods, these are just thin wrappers around NumPy's Generator methods
+    They can be called directly on the RandomManager instance without needing to get the RNG first
+
+    Example:
+    random_number = RandomManager().uniform(0, 1, component="MYCOMPONENT")"""
 
     def uniform(
         self,
