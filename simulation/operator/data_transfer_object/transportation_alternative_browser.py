@@ -28,4 +28,9 @@ class TransportationAlternativeBrowser:
         self._transportation_alternatives = transportation_alternatives
 
     def __str__(self) -> str:
-        return str(self._transportation_alternatives)
+        if not self._transportation_alternatives:
+            return "[]"
+
+        # Use the __str__ method of each alternative instead of __repr__
+        alternatives_str = [str(alt) for alt in self._transportation_alternatives]
+        return "[" + ", ".join(alternatives_str) + "]"
