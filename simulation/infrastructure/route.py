@@ -1,6 +1,5 @@
 from typing import List  # noqa: UP035
 
-
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.environment.position import Position
 from simulation.helper.time import SimulationTimeConverter
@@ -41,6 +40,12 @@ class Route:
         for rs in self.route_segments:
             distance += rs.distance
         return distance
+
+    def __str__(self) -> str:
+        return f"Route(origin={self._origin}, destination={self._destination}, distance={self.distance})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
 
 class PublicTransitRoute(Route):
