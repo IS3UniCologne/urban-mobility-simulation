@@ -1,11 +1,13 @@
 import math
 from typing import TYPE_CHECKING
 
+import geopandas as gpd
 import h3
 import numpy
 from shapely.geometry import Point, Polygon
 
 from simulation.environment.environment import Environment
+from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.random.random_manager import RandomManager
 
 if TYPE_CHECKING:
@@ -13,29 +15,38 @@ if TYPE_CHECKING:
 
 
 class GeodesicEnvironment(Environment):
-    # There is only one instance of this class.
-    __instance = None
-
     __slots__ = ("_hex_geom_cache", "_rng")
 
-    @staticmethod
-    def getInstance():  # noqa: ANN205
-        """Static access method."""
-        if GeodesicEnvironment.__instance is None:
-            GeodesicEnvironment()
-        return GeodesicEnvironment.__instance
+    def __init__(self, config: Configuration, random_manager: RandomManager) -> None:
+        super().__init__()
 
-    def __init__(self):  # noqa: ANN204
-        """Virtually private constructor."""
-        if GeodesicEnvironment.__instance is not None:
-            raise Exception("This class is a singleton!")
-        else:
-            GeodesicEnvironment.__instance = self
-            super(GeodesicEnvironment, self).__init__()  # noqa: UP008
+        self._rng: numpy.random.Generator = random_manager.get_rng(
+            component_name="GEOENV"
+        )
 
-            self._rng = RandomManager().get_rng(component_name="GEOENV")
+        self._hex_geom_cache = {}
 
-            self._hex_geom_cache = {}
+        # TODO Why are we reading all the files? One should be enough.
+        # Read Environment Files
+        with open(config.path.PATH_ENV_BOUNDING_BOX, encoding="utf-8") as file:
+            env_df = gpd.read_file(file)
+
+        with open(config.path.PATH_ENV_HEX_LAYER_RES_9, encoding="utf-8") as file:
+            env_df_hex_9 = gpd.read_file(file)
+            env_df_hex_9.set_index("hex_id_9", inplace=True)
+
+        with open(config.path.PATH_ENV_HEX_LAYER_RES_8, encoding="utf-8") as file:
+            env_df_hex_8 = gpd.read_file(file)
+            env_df_hex_8.set_index("hex_id_8", inplace=True)
+
+        with open(config.path.PATH_ENV_HEX_LAYER_RES_7, encoding="utf-8") as file:
+            env_df_hex_7 = gpd.read_file(file)
+            env_df_hex_7.set_index("hex_id_7", inplace=True)
+
+        self.addLayer("bounding_box", env_df)
+        self.addLayer("hex_9", env_df_hex_9)
+        self.addLayer("hex_8", env_df_hex_8)
+        self.addLayer("hex_7", env_df_hex_7)
 
     def getLayer(self, layer_name: str):  # noqa: ANN201
         """
@@ -54,6 +65,7 @@ class GeodesicEnvironment(Environment):
         """
         self.layer[layer_name] = layer
 
+    # TODO: Hardcoded layer here is dangerous
     def get_random_position(
         self, hex_id: str, layer_name: str = "hex_7"
     ) -> tuple[float, float]:
