@@ -4,10 +4,11 @@ from typing import Any, Tuple  # noqa: UP035
 from beartype.door import is_bearable  # like "isinstance(...)"
 from simpy import Environment
 
+from simulation.helper.simulation_base import SimulationBase
 from tracking.tracking_interface import TrackingInterface
 
 
-class Tracking:
+class Tracking(SimulationBase):
     slots__ = ("__env", "tracked")
     """
     Singleton Class that controls all tracking and communication of tracking-exposed values in the simulation to
@@ -68,7 +69,7 @@ class Tracking:
         self.tracked[uid] = {"class": classname, "id": id, "reference": to_track}
         logging.debug(
             f"Registered {classname} with ID {id}",  # noqa: G004
-            extra={"clazz": self.__class__.__name__, "oid": ""},
+            extra={"uid": self.__class__.__name__},
         )
 
         return uid
@@ -78,12 +79,12 @@ class Tracking:
             result = self.tracked.pop(uid)
             logging.debug(
                 f"Unregistered {result['class']} with ID {result['id']}",  # noqa: G004
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+                extra={"uid": self.__class__.__name__},
             )
         except KeyError:
             logging.warning(
                 f"Trying to unregister uid {uid}, but this uid is currently not tracked!",  # noqa: G004
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+                extra={"uid": self.__class__.__name__},
             )
 
     def unregister_by_obj(self, to_untrack: TrackingInterface):  # noqa: ANN201
@@ -101,13 +102,13 @@ class Tracking:
             if type(e) is KeyError:
                 logging.error(
                     f"Trying to access {attribute} of uid {obj}, but this uid is currently not tracked!",  # noqa: G004
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                    extra={"uid": self.__class__.__name__},
                 )
                 return None
             elif type(e) is PermissionError:
                 logging.error(
                     f"{attribute} of uid {obj} is not exposed or does not exist!",  # noqa: G004
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                    extra={"uid": self.__class__.__name__},
                 )
                 return None
 
@@ -117,7 +118,7 @@ class Tracking:
         except KeyError:
             logging.error(
                 f"Trying to dump attributes of uid {uid}, but this uid is currently not tracked!",  # noqa: G004
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+                extra={"uid": self.__class__.__name__},
             )
             return None
 
@@ -145,7 +146,7 @@ class Tracking:
         except KeyError:
             logging.error(
                 f"Trying to access object at uid {uid}, but this uid is currently not tracked!",  # noqa: G004
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+                extra={"uid": self.__class__.__name__},
             )
             return None
 
@@ -166,7 +167,7 @@ class Tracking:
         if uid not in self.tracked:
             logging.warning(
                 f"Generated uid for object at uid {uid}, but this uid is currently not tracked!",  # noqa: G004
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+                extra={"uid": self.__class__.__name__},
             )
 
         return uid
