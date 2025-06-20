@@ -22,6 +22,14 @@ from .demand_processor import DemandProcessor
 class DemandImporter:
     """Coordinates demand data import and processing."""
 
+    __slots__ = (
+        "_cache_manager",
+        "_city",
+        "_daily_resolution",
+        "_spatial_resolution",
+        "_temporal_resolution",
+    )
+
     def __init__(
         self,
         temporal_resolution: TemporalResolution,
@@ -83,7 +91,7 @@ class DemandImporter:
 
         # Process data if not cached
         processor: DemandProcessor = DemandProcessor(
-            spatial_columns=self._spatial_resolution.column_names,
+            spatial_columns=self._spatial_resolution.origin_destination_columns,
             temporal_column=self._temporal_resolution.column_name,
             day_column=self._daily_resolution.day_of_week_column_name,
         )
