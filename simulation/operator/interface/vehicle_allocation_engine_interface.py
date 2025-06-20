@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from simulation.helper.simulation_base import SimulationBase
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
@@ -8,7 +9,10 @@ from simulation.operator.data_transfer_object.vehicle_allocation import (
 )
 
 
-class VehicleAllocationEngineInterface(ABC):
+class VehicleAllocationEngineInterface(ABC, SimulationBase):
+    def __init__(self) -> None:
+        super().__init__()
+
     @abstractmethod
     def request_vehicle_allocation(
         self,
@@ -18,7 +22,7 @@ class VehicleAllocationEngineInterface(ABC):
         pass  # Implement filtering
 
     @abstractmethod
-    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201
+    def notify_user_arrival_at_pick_up_position(
         self, vehicle_assignment: VehicleAllocation
-    ):
+    ) -> None:
         pass  # Implement Notification
