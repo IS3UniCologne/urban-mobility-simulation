@@ -1,3 +1,12 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+    from simulation.tasks.transportation_search_task import TransportationSearchTask
+
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
@@ -6,15 +15,14 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
     TransportationAlternativeBrowser,
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
-from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 
 class SharedVehicleSearchEngine(SearchEngineInterface):
-    __slots__ = ("_env", "_fleet")
+    __slots__ = ("_env", "_fleet", "_sim")
 
-    def __init__(self, env):  # noqa: ANN001, ANN204
-        self._env = env
+    def __init__(self, sim: SimulationContext) -> None:
+        self._sim = sim
+        self._env = sim.env
         self._fleet: MixedSharedVehicleFleet = None
 
     def search_for_transportation_alternatives(
@@ -32,7 +40,12 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
         parking_vehicles_in_region = self._fleet.parking_vehicles_in_region(
             hexagon_origin
         )
+        # Sort vehicles by ID to ensure deterministic iteration order
+        parking_vehicles_sorted = sorted(
+            parking_vehicles_in_region, key=lambda v: v.uid
+        )
 
+        # TODO: Shouldn't we use the vehicles position instead of the task's origin?
         origin = vehicle_search_task.transport_task.origin
         destination = vehicle_search_task.transport_task.destination
 
@@ -44,7 +57,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
         distance = route.distance  # Euclidean Distance
 
         # Add all available cars to alternative browser
-        for vehicle in parking_vehicles_in_region:
+        for vehicle in parking_vehicles_sorted:
             # Calc Duration
             duration = distance / vehicle.velocity
 

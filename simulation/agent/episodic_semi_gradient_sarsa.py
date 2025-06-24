@@ -1,14 +1,21 @@
+from __future__ import annotations
+
 from copy import deepcopy
 from math import sqrt
+from typing import TYPE_CHECKING
 
 import numpy as np
-import simpy
 
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.simulation_base import SimulationBase
+
+if TYPE_CHECKING:
+    import simpy
+
+    from simulation.context.simulation_context import SimulationContext
 
 
 class ValueFunctionApproximator(SimulationBase):
@@ -43,8 +50,14 @@ class ValueFunctionApproximator(SimulationBase):
         "])"
     )
 
-    def __init__(self, state_dim, action_dim, init_values=None) -> None:  # noqa: ANN001
-        super().__init__()
+    def __init__(
+        self,
+        sim: SimulationContext,
+        state_dim,  # noqa: ANN001
+        action_dim,  # noqa: ANN001
+        init_values=None,  # noqa: ANN001
+    ) -> None:
+        super().__init__(sim)
         if init_values is not None:
             assert state_dim * action_dim == len(init_values)
             self._weights = np.zeros(state_dim * action_dim) + init_values

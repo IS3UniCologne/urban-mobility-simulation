@@ -31,27 +31,18 @@ class TestLogManager:
         # Create mock SimPy environment
         self.env = Mock()
 
-    def teardown_method(self) -> None:
-        """Clean up after each test method."""
-        # Reset LogManager state
-        LogManager._loggers = {}
-        LogManager._is_initialized = False
-
-        # Clear root logger handlers
-        logging.getLogger().handlers.clear()
-
     @patch("simulation.helper.logging.log_manager.os.makedirs")
     @patch("simulation.helper.logging.log_manager.os.path.exists")
     @patch("simulation.helper.logging.log_manager.logging.FileHandler")
     @patch("simulation.helper.logging.log_manager.datetime")
-    def test_should_setup_logging_successfully_when_valid_config_provided(
+    def test_should_initialize_logging_successfully_when_valid_config_provided(
         self,
         mock_datetime: Mock,
         mock_file_handler: Mock,
         mock_exists: Mock,
         mock_makedirs: Mock,
     ) -> None:
-        """Test that setup_logging configures logging correctly with valid configuration."""
+        """Test that LogManager initializes logging correctly with valid configuration."""
         # Arrange
         mock_datetime.now.return_value = datetime(2023, 1, 1, 12, 0, 0)
         mock_datetime.strftime = datetime.strftime
@@ -60,41 +51,13 @@ class TestLogManager:
         mock_file_handler.return_value = mock_file_handler_instance
 
         # Act
-        LogManager.setup_logging(self.config, self.env)
+        log_manager = LogManager(self.config, self.env)
 
         # Assert
-        assert LogManager._is_initialized is True
-        assert LogManager._config is self.config
-        assert LogManager._class_overrides == {"TestClass": "DEBUG"}
+        assert log_manager._config is self.config
+        assert log_manager._class_overrides == {"TestClass": "DEBUG"}
         mock_makedirs.assert_called_once()
         mock_file_handler.assert_called()
-
-    def test_should_raise_runtime_error_when_setup_logging_called_twice(self) -> None:
-        """Test that calling setup_logging twice raises RuntimeError."""
-        # Arrange
-        with (
-            patch("simulation.helper.logging.log_manager.os.makedirs"),
-            patch(
-                "simulation.helper.logging.log_manager.os.path.exists",
-                return_value=True,
-            ),
-            patch("simulation.helper.logging.log_manager.logging.FileHandler"),
-        ):
-            LogManager.setup_logging(self.config, self.env)
-
-        # Act & Assert
-        with pytest.raises(
-            RuntimeError, match="LogManager has already been initialized"
-        ):
-            LogManager.setup_logging(self.config, self.env)
-
-    def test_should_raise_runtime_error_when_get_class_logger_called_before_setup(
-        self,
-    ) -> None:
-        """Test that get_class_logger raises RuntimeError when called before setup_logging."""
-        # Act & Assert
-        with pytest.raises(RuntimeError, match="LogManager has not been initialized"):
-            LogManager.get_class_logger("TestClass")
 
     @patch("simulation.helper.logging.log_manager.os.makedirs")
     @patch("simulation.helper.logging.log_manager.os.path.exists", return_value=True)
@@ -106,10 +69,10 @@ class TestLogManager:
         # Arrange
         mock_file_handler_instance = Mock()
         mock_file_handler.return_value = mock_file_handler_instance
-        LogManager.setup_logging(self.config, self.env)
+        log_manager = LogManager(self.config, self.env)
 
         # Act
-        logger = LogManager.get_class_logger("RegularClass")
+        logger = log_manager.get_class_logger("RegularClass")
 
         # Assert
         assert isinstance(logger, logging.Logger)
@@ -128,10 +91,10 @@ class TestLogManager:
         # Arrange
         mock_file_handler_instance = Mock()
         mock_file_handler.return_value = mock_file_handler_instance
-        LogManager.setup_logging(self.config, self.env)
+        log_manager = LogManager(self.config, self.env)
 
         # Act
-        logger = LogManager.get_class_logger("TestClass")
+        logger = log_manager.get_class_logger("TestClass")
 
         # Assert
         assert isinstance(logger, logging.Logger)
@@ -150,11 +113,11 @@ class TestLogManager:
         # Arrange
         mock_file_handler_instance = Mock()
         mock_file_handler.return_value = mock_file_handler_instance
-        LogManager.setup_logging(self.config, self.env)
+        log_manager = LogManager(self.config, self.env)
 
         # Act
-        logger1 = LogManager.get_class_logger("TestClass")
-        logger2 = LogManager.get_class_logger("TestClass")
+        logger1 = log_manager.get_class_logger("TestClass")
+        logger2 = log_manager.get_class_logger("TestClass")
 
         # Assert
         assert logger1 is logger2
@@ -163,9 +126,10 @@ class TestLogManager:
         """Test that _create_formatter includes timestamps when LOG_TIMESTAMPS is True."""
         # Arrange
         self.config.settings.LOG_TIMESTAMPS = True
+        log_manager = LogManager(config=self.config, env=self.env)
 
         # Act
-        formatter = LogManager._create_formatter(self.config)
+        formatter = log_manager._create_formatter(self.config)
 
         # Assert
         assert isinstance(formatter, logging.Formatter)
@@ -175,9 +139,10 @@ class TestLogManager:
         """Test that _create_formatter excludes timestamps when LOG_TIMESTAMPS is False."""
         # Arrange
         self.config.settings.LOG_TIMESTAMPS = False
+        log_manager = LogManager(config=self.config, env=self.env)
 
         # Act
-        formatter = LogManager._create_formatter(self.config)
+        formatter = log_manager._create_formatter(self.config)
 
         # Assert
         assert isinstance(formatter, logging.Formatter)
@@ -194,7 +159,7 @@ class TestLogManager:
         mock_exists: Mock,
         mock_makedirs: Mock,
     ) -> None:
-        """Test that setup_logging creates log directory when it doesn't exist."""
+        """Test that LogManager creates log directory when it doesn't exist."""
         # Arrange
         mock_datetime.now.return_value = datetime(2023, 1, 1, 12, 0, 0)
         mock_datetime.strftime = datetime.strftime
@@ -203,7 +168,7 @@ class TestLogManager:
         mock_file_handler.return_value = mock_file_handler_instance
 
         # Act
-        LogManager.setup_logging(self.config, self.env)
+        LogManager(self.config, self.env)
 
         # Assert
         expected_logs_dir = os.path.normpath(os.path.join("/tmp/test_output", "logs"))
@@ -220,7 +185,7 @@ class TestLogManager:
         mock_exists: Mock,
         mock_makedirs: Mock,
     ) -> None:
-        """Test that setup_logging doesn't create log directory when it already exists."""
+        """Test that LogManager doesn't create log directory when it already exists."""
         # Arrange
         mock_datetime.now.return_value = datetime(2023, 1, 1, 12, 0, 0)
         mock_datetime.strftime = datetime.strftime
@@ -229,7 +194,7 @@ class TestLogManager:
         mock_file_handler.return_value = mock_file_handler_instance
 
         # Act
-        LogManager.setup_logging(self.config, self.env)
+        LogManager(self.config, self.env)
 
         # Assert
         mock_makedirs.assert_not_called()
@@ -251,7 +216,7 @@ class TestLogManager:
         mock_file_handler.return_value = mock_file_handler_instance
 
         # Act
-        LogManager.setup_logging(self.config, self.env)
+        LogManager(self.config, self.env)
 
         # Assert
         assert mock_atexit_register.call_count == 2  # One for shared, one for override
@@ -266,7 +231,7 @@ class TestLogManager:
         # Arrange
         mock_file_handler_instance = Mock()
         mock_file_handler.return_value = mock_file_handler_instance
-        LogManager.setup_logging(self.config, self.env)
+        log_manager = LogManager(self.config, self.env)
 
         with patch(
             "simulation.helper.logging.uid_logger_adapter.UidLoggerAdapter"
@@ -275,7 +240,7 @@ class TestLogManager:
             mock_adapter_class.return_value = mock_adapter_instance
 
             # Act
-            result = LogManager.get_uid_logger("TestClass_123")
+            result = log_manager.get_uid_logger("TestClass_123")
 
             # Assert
             assert result is mock_adapter_instance
@@ -299,7 +264,7 @@ class TestLogManager:
         # Arrange
         mock_file_handler_instance = Mock()
         mock_file_handler.return_value = mock_file_handler_instance
-        LogManager.setup_logging(self.config, self.env)
+        log_manager = LogManager(self.config, self.env)
 
         with patch(
             "simulation.helper.logging.uid_logger_adapter.UidLoggerAdapter"
@@ -308,7 +273,7 @@ class TestLogManager:
             mock_adapter_class.return_value = mock_adapter_instance
 
             # Act
-            LogManager.get_uid_logger("ComplexClassName_456_extra")
+            log_manager.get_uid_logger("ComplexClassName_456_extra")
 
             # Assert
             call_args = mock_adapter_class.call_args
@@ -330,8 +295,8 @@ class TestLogManager:
             patch("simulation.helper.logging.log_manager.logging.FileHandler"),
         ):
             # Act & Assert (should not raise exception)
-            LogManager.setup_logging(self.config, self.env)
-            assert LogManager._class_overrides == {}
+            log_manager = LogManager(self.config, self.env)
+            assert log_manager._class_overrides == {}
 
     @pytest.mark.parametrize(
         "log_level,file_log_level,expected_min_level",
@@ -345,7 +310,7 @@ class TestLogManager:
     @patch("simulation.helper.logging.log_manager.os.makedirs")
     @patch("simulation.helper.logging.log_manager.os.path.exists", return_value=True)
     @patch("simulation.helper.logging.log_manager.logging.FileHandler")
-    def test_setup_logging_sets_correct_root_level(
+    def test_initialization_sets_correct_root_level(
         self,
         mock_file_handler: Mock,
         mock_exists: Mock,
@@ -354,7 +319,7 @@ class TestLogManager:
         file_log_level: str,
         expected_min_level: int,
     ) -> None:
-        """Test that setup_logging sets root logger to minimum of console and file levels.
+        """Test that initialization sets root logger to minimum of console and file levels.
 
         Parameters
         ----------
@@ -370,7 +335,7 @@ class TestLogManager:
         self.config.settings.FILE_LOG_LEVEL = file_log_level
 
         # Act
-        LogManager.setup_logging(self.config, self.env)
+        LogManager(self.config, self.env)
 
         # Assert - Check the actual state instead of mock calls
         root_logger = logging.getLogger()

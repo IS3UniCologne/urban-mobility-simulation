@@ -1,15 +1,17 @@
-import logging
+from __future__ import annotations
 
-from simpy import Environment
+from typing import TYPE_CHECKING
 
-from simulation.environment.position import Position
-from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.configuration.enums import VehicleState
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
-from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
-from simulation.vehicle.vehicle import Vehicle
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.position import Position
+    from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
+    from simulation.vehicle.vehicle import Vehicle
 
 
 class MixedRideHailingFleet(VehicleFleet):
@@ -22,11 +24,9 @@ class MixedRideHailingFleet(VehicleFleet):
         "_ridehailing_cars",
     )
 
-    def __init__(self, env: Environment):  # noqa: ANN204
-        super(MixedRideHailingFleet, self).__init__(env)  # noqa: UP008
-        self._env = env
-        self._config = Configuration()
-
+    def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim=sim)
+        self._config = sim.config
         self._ridehailing_cars = []
         self._autonomous_cars = []
         self._distance_threshold_to_user = (
@@ -38,7 +38,7 @@ class MixedRideHailingFleet(VehicleFleet):
         self._recharging_threshold = self._config.ride_hailing_operators[
             0
         ].RECHARGE_THRESHOLD
-        self._env.process(self.fleet_size_monitor())
+        self._sim.env.process(self.fleet_size_monitor())
 
     def _add_vehicle(self, vehicle: RideHailingVehicle):  # noqa: ANN202
         if vehicle not in self._vehicles:
@@ -49,7 +49,6 @@ class MixedRideHailingFleet(VehicleFleet):
                 self._vehicles.append(vehicle)
                 self._autonomous_cars.append(vehicle)
 
-            self._tracking.register(vehicle)
         else:
             raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
 
@@ -77,10 +76,13 @@ class MixedRideHailingFleet(VehicleFleet):
         """
 
         parking_cars: set[Vehicle] = self._vehicles_by_state[VehicleState.PARKING]
-        # TODO: we should not acceess _suggested directly
+
+        # TODO: Check if this is necessary
+        parking_cars_sorted = sorted(parking_cars, key=lambda v: v.uid)
         parking_cars_not_suggested: list[Vehicle] = [
             car
-            for car in parking_cars
+            for car in parking_cars_sorted
+            # TODO: we should not acceess _suggested directly
             if not car._suggested  # noqa: SLF001
         ]
 
@@ -95,11 +97,13 @@ class MixedRideHailingFleet(VehicleFleet):
 
         serving_state = VehicleState.DRIVING
         serving_vehicles = self._vehicles_by_state[serving_state]
-        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+        hour = int((self._sim.env.now % 1440 - self._sim.env.now % 60) / 60)
         state_of_charge_threshold = self._recharging_threshold[hour]
+        # TODO: Check if this is necessary
+        serving_vehicles_sorted = sorted(serving_vehicles, key=lambda v: v.uid)
         serving_cars = [
             car
-            for car in serving_vehicles
+            for car in serving_vehicles_sorted
             if car._suggested  # noqa: SLF001
             and car.current_relative_state_of_charge > state_of_charge_threshold + 5
         ]
@@ -107,7 +111,7 @@ class MixedRideHailingFleet(VehicleFleet):
         serving_cars_in_area = []
         for car in serving_cars:
             distance_to_current_destination = (
-                car.estimated_completion_time - self._env.now
+                car.estimated_completion_time - self._sim.env.now
             ) * car.velocity
             if (
                 car.destination.position << origin
@@ -122,7 +126,7 @@ class MixedRideHailingFleet(VehicleFleet):
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
-        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+        hour = int((self._sim.env.now % 1440 - self._sim.env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
         return sum(
             1
@@ -150,8 +154,10 @@ class MixedRideHailingFleet(VehicleFleet):
         """
         below_soc_level_vehicles = []
         cars_in_area = self.vehicles_in_region(region)
+        # TODO: Check if this is necessary
+        cars_in_area_sorted = sorted(cars_in_area, key=lambda v: v.uid)
 
-        for vehicle in [*cars_in_area]:
+        for vehicle in cars_in_area_sorted:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
                 below_soc_level_vehicles.append(vehicle)
 
@@ -244,12 +250,14 @@ class MixedRideHailingFleet(VehicleFleet):
         # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = []
-        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+        hour = int((self._sim.env.now % 1440 - self._sim.env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
 
         parking_vehicles = self._vehicles_by_state[VehicleState.PARKING]
+        # TODO: Check if this is necessary
+        parking_vehicles_sorted = sorted(parking_vehicles, key=lambda v: v.uid)
 
-        for vehicle in parking_vehicles:
+        for vehicle in parking_vehicles_sorted:
             if (
                 vehicle.current_relative_state_of_charge < state_of_charge_threshold
                 and not vehicle._suggested  # noqa: SLF001
@@ -296,9 +304,5 @@ class MixedRideHailingFleet(VehicleFleet):
         """
         while True:
             number_of_online_vehicles = len(self.get_online_vehicles())
-            logging.info(
-                "Fleet has %s online vehicles",
-                number_of_online_vehicles,
-                extra={"clazz": self.__class__.__name__},
-            )
-            yield self._env.timeout(60)
+            self.logger.info("Fleet has %s online vehicles", number_of_online_vehicles)
+            yield self._sim.env.timeout(60)

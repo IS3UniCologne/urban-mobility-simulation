@@ -1,7 +1,13 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from simpy import Environment
+
+if TYPE_CHECKING:
+    from simpy import Event
+    from simulation.context.simulation_context import SimulationContext
 
 
 class TaskState(Enum):
@@ -17,22 +23,23 @@ class TaskState(Enum):
 
 
 class ServiceTask(ABC):
-    __slots__ = ("_env", "_start_time", "_state", "_task_finished")
+    __slots__ = ("_env", "_sim", "_start_time", "_state", "_task_finished")
 
-    def __init__(self, env: Environment):  # noqa: ANN204
-        self._env = env
+    def __init__(self, sim: SimulationContext) -> None:
+        self._sim = sim
+        self._env = sim.env
         self._start_time = self._env.now
         self._state: TaskState = TaskState.INITIALIZED
         self._task_finished = self._env.event()
 
     @abstractmethod
-    def execute(self):  # noqa: ANN201
+    def execute(self) -> None:
         pass
 
     @property
-    def state(self):  # noqa: ANN201
+    def state(self) -> TaskState:
         return self._state
 
     @property
-    def task_finished(self):  # noqa: ANN201
+    def task_finished(self) -> Event:
         return self._task_finished

@@ -1,23 +1,28 @@
-import logging
+from __future__ import annotations
 
-from simpy import Environment
+from typing import TYPE_CHECKING
 
-from simulation.agent.user import User
-from simulation.helper.configuration.configuration import Configuration
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
-)
-from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
-    TransportationAlternativeRideHailing,
-)
-from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
-)
-from simulation.operator.operations_management.operations import OperationsInterface
+if TYPE_CHECKING:
+    from simulation.agent.user import User
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.infrastructure.charging_stations.charging_infastructure import (
+        ChargingInfrastructure,
+    )
+    from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
+        TransportationAlternativeRideHailing,
+    )
+    from simulation.operator.interface.search_engine_interface import (
+        SearchEngineInterface,
+    )
+    from simulation.operator.interface.vehicle_allocation_engine_interface import (
+        VehicleAllocationEngineInterface,
+    )
+    from simulation.operator.operations_management.operations import OperationsInterface
+    from simulation.operator.vehicle_fleet import VehicleFleet
+    from simulation.tasks.transport_task import TransportTask
+
+from simulation.helper.configuration.enums import OperatorMode
 from simulation.operator.operator import Operator
-from simulation.operator.vehicle_fleet import VehicleFleet
-from simulation.tasks.transport_task import TransportTask
 
 
 class RideHailingOperator(Operator):
@@ -25,7 +30,7 @@ class RideHailingOperator(Operator):
 
     def __init__(  # noqa: ANN204
         self,
-        env: Environment,
+        sim: SimulationContext,
         fleet: VehicleFleet,
         charging_infrastructure: ChargingInfrastructure,
         operations: OperationsInterface,
@@ -33,16 +38,16 @@ class RideHailingOperator(Operator):
         allocation_engine: VehicleAllocationEngineInterface,
     ):
         super().__init__(
-            env,
-            fleet,
-            charging_infrastructure,
-            operations,
-            search_engine,
-            allocation_engine,
+            sim=sim,
+            fleet=fleet,
+            charging_infrastructure=charging_infrastructure,
+            operations=operations,
+            search_engine=search_engine,
+            allocation_engine=allocation_engine,
         )
-
+        self._mode = OperatorMode.RIDE_HAILING
         self._driver_payment_share = (
-            Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
+            self._sim.config.ride_hailing_global.DRIVER_PAYMENT_SHARE
         )
 
     def pay_for_fulfilled_transportation_task(  # noqa: ANN201
@@ -52,14 +57,11 @@ class RideHailingOperator(Operator):
         selected_transportation_alternative: TransportationAlternativeRideHailing,
     ):
         payment = selected_transportation_alternative.price
-        vehicle = selected_transportation_alternative.vehicle
-        # we need to pay the driver costs
-        if vehicle.__class__.__name__ == "RideHailingCar":
-            self.increase_total_revenue(payment * (1 - self._driver_payment_share))
-            vehicle.update_earned_money(payment)
-
-        else:
-            self.increase_total_revenue(payment)
+        # # we need to pay the driver costs
+        # TODO : What do we do about this? Do we want to keep the driver payment share ?
+        # if vehicle.__class__.__name__ == "RideHailingCar":
+        #     self.increase_total_revenue(payment * (1 - self._driver_payment_share))
+        #     vehicle.update_earned_money(payment)
 
         # Add Transaction to Log
         self.log_transaction(
@@ -68,21 +70,13 @@ class RideHailingOperator(Operator):
             state="Fulfilled",
         )
 
-        logging.info(
-            "New Payment (%s) received from User %s. Current Total Revenue: %s.",
-            payment,
-            user.id,
-            self.total_revenue,
-            extra={"clazz": self.__class__.__name__, "oid": self._fleet.id},
-        )
+        self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
 
-    def withdraw_transportation_task(  # noqa: ANN201
+    def withdraw_transportation_task(
         self, user: User, transportation_task: TransportTask, state: str | None = None
-    ):
+    ) -> None:
         # distance = transportation_task.origin >> transportation_task.destination
         # TODO: define price of the trip
-
-        self.increase_total_missed_trips(1)
 
         # Add Transaction to Log
         self.log_transaction(
@@ -91,11 +85,4 @@ class RideHailingOperator(Operator):
             state=state,
         )
 
-        logging.info(
-            "Missed trip of User %s. Current Total Revenue: %s - Total Trips: %s - Missed Trips %s.",
-            user.id,
-            self.total_revenue,
-            self.total_fulfilled_trips,
-            self.total_missed_trips,
-            extra={"clazz": self.__class__.__name__, "oid": self._fleet.id},
-        )
+        self.logger.info("Missed trip of User %s.", user.uid)

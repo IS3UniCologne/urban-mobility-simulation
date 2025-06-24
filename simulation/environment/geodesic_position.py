@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import h3 as h3
 from haversine import Unit, haversine
 from shapely.geometry import Point
@@ -9,39 +11,36 @@ except ImportError:
         "Required cython dependency not found.\n"
         "Run `uv pip install -e .` to install all required packages."
     )
-from simulation.environment.geodesic_environment import GeodesicEnvironment
+
+from typing import TYPE_CHECKING
+
 from simulation.environment.position import RegionId
 
-from ..helper.configuration.configuration import Configuration
 from .position import Position
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
 
 
 class GeodesicPosition(Position):
-    __slots__ = (
-        "_default_hexagon",
-        "_geo_env",
-        "_geometry",
-        "_global_resolution",
-        "_lat",
-        "_lng",
-    )
+    __slots__ = ("_geometry", "_hex_id_by_resolution", "_lat", "_lng")
 
-    def __init__(self, latitude, longitude, default_hexagon=None) -> object:  # noqa: ANN001
-        super(GeodesicPosition, self).__init__()  # noqa: UP008
+    def __init__(
+        self,
+        sim: SimulationContext,
+        latitude: float,
+        longitude: float,
+        default_res_hex_id: str | None = None,
+    ) -> None:
+        super().__init__()
         self._lat = latitude
         self._lng = longitude
+        self._default_resolution = sim.config.world.SPATIAL_RESOLUTION
+        self._hex_id_by_resolution = {}
 
-        self._default_hexagon = {}
-        self._global_resolution = Configuration().world.SPATIAL_RESOLUTION
-
-        Configuration().mode_choice_model.MODE_CHOICE_STRATEGY
-
-        if default_hexagon is not None:
-            self._default_hexagon[self._global_resolution] = default_hexagon
-
+        # Resolution 0 is the default resolution
+        self._hex_id_by_resolution[self._default_resolution] = default_res_hex_id
         self._geometry = Point(self._lng, self._lat)
-
-        self._geo_env = GeodesicEnvironment.getInstance()
 
     def getExactLocation(self, geojson=False):  # noqa: ANN001, ANN201
         if geojson:
@@ -50,10 +49,10 @@ class GeodesicPosition(Position):
             return (self._lat, self._lng)
 
     @property
-    def geometry(self):  # noqa: ANN201
+    def geometry(self) -> Point:
         return self._geometry
 
-    def __str__(self):  # noqa: ANN204
+    def __str__(self) -> str:
         return f"Latitude {self._lat} : Longitude {self._lng}"
 
     # ==
@@ -69,7 +68,7 @@ class GeodesicPosition(Position):
             return self._lat == other._lat and self._lng == other._lng
 
     # >>
-    def __rshift__(self, other) -> float:  # noqa: ANN001
+    def __rshift__(self, other: GeodesicPosition) -> float:
         """
         Calculate haversine distance between two positions
         :param other: GeodesicPosition
@@ -78,7 +77,7 @@ class GeodesicPosition(Position):
         return haversine((self._lat, self._lng), (other._lat, other._lng), Unit.METERS)
 
     # <<
-    def __lshift__(self, other: "GeodesicPosition") -> float:
+    def __lshift__(self, other: GeodesicPosition) -> float:
         """
         Calculate euclidean distance between two positions.
 
@@ -100,39 +99,34 @@ class GeodesicPosition(Position):
 
         return cy_euclidean_distance(self._lat, self._lng, other._lat, other._lng)
 
-    def get_region_id(self, resolution: int = 0) -> RegionId:
-        """
-        Return h3 hexagon index based on current position (lng, lat)
-        :param resolution: H3 Resolution (res = 0 <=> default => use global setting)
-        :return: hex_id:   RegionId
-        """
-        # If resolution is set to default, use global settings
-        if resolution == 0:
-            resolution = self._global_resolution
+    def _compute_hex_id(self, resolution: int) -> str:
+        """Compute H3 hex ID for given resolution."""
+        return h3.geo_to_h3(self._lat, self._lng, resolution)
 
-        try:
-            hex = self._default_hexagon[resolution]
-        except KeyError:
-            hex = h3.geo_to_h3(self._lat, self._lng, resolution)
-            self._default_hexagon[resolution] = hex
+    def get_region_id(self, resolution: int | None = None) -> RegionId:
+        """
+        Return H3 hexagon index based on current position.
 
-        return RegionId(hex)
+        Parameters
+        ----------
+        resolution : int or None
+            H3 Resolution. If None, uses the default resolution.
+
+        Returns
+        -------
+        RegionId
+            The hexagon ID for this position.
+        """
+        if resolution is None:
+            resolution = self._default_resolution
+
+        if resolution not in self._hex_id_by_resolution:
+            self._hex_id_by_resolution[resolution] = self._compute_hex_id(resolution)
+
+        return RegionId(self._hex_id_by_resolution[resolution])
 
     def is_in_geometry(self, geometry):  # noqa: ANN001, ANN201
         if self._geometry.intersects(geometry):
             return True
         else:
             return False
-
-    def difference(self, other: "GeodesicPosition"):  # noqa: ANN201
-        """
-        This function is meant for getting the full distance vector of the (lat, lng) coordinate system
-        of two GeodesicPositions. This might not be vastly intelligent in terms of what the result means geographically
-        but it is needed for constructing states for public vehicle agents.
-
-        :param other: GeodesicPosition
-        :return: returns a tuple of (self.lat - other.lat, self.lon - other.lon)
-        """
-        return tuple(
-            x - y for x, y in zip(self.getExactLocation(), other.getExactLocation())
-        )

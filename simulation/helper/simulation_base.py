@@ -1,18 +1,16 @@
-"""Base class for simulation objects with UID generation and logging capabilities."""
+"""Base class for simulation objects with UID assignment and logging capabilities."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
-
-from simulation.helper.logging.log_manager import LogManager
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
     from simulation.helper.logging.uid_logger_adapter import UidLoggerAdapter
 
 
 class SimulationBase:
-    """
-    Base class for UID generation and logging.
+    """Base class for UID assignment and logging.
 
     UIDs are a combination of the class name and an incrementing integer.
     Each class gets its own logger for individual log level control.
@@ -20,17 +18,13 @@ class SimulationBase:
     in all log records without needing to specify it manually.
     """
 
-    _uid_counters: ClassVar[dict[type, int]] = {}
+    __slots__ = ("_logger", "_uid")
 
-    def __init__(self) -> None:
+    def __init__(self, sim: SimulationContext) -> None:
         # Initialize the unique identifier for the instance.
         cls = self.__class__
-        if cls not in SimulationBase._uid_counters:
-            SimulationBase._uid_counters[cls] = 0
-        self._uid = f"{self.__class__.__name__}_{SimulationBase._uid_counters[cls]}"
-        SimulationBase._uid_counters[cls] += 1
-
-        self._logger: UidLoggerAdapter = LogManager.get_uid_logger(self._uid)
+        self._uid = sim.uid_manager.generate_uid(cls)
+        self._logger: UidLoggerAdapter = sim.log_manager.get_uid_logger(self._uid)
 
     @property
     def uid(self) -> str:

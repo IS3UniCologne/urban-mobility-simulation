@@ -16,16 +16,19 @@ class TestRandomManager:
     def setup_method(self) -> None:
         """Set up test environment before each test method.
 
-        We set up a mock configuration with a fixed seed.
+        We set up a mock simulation context with a mock configuration.
         """
         self.config = Mock()
         self.config.random_manager = Mock()
         self.config.random_manager.SEED = 42
         self.config.random_manager.COMPONENT_SEEDS = {}
 
+        self.sim = Mock()
+        self.sim.config = self.config
+
     def test_component_seed_generation(self) -> None:
         """Test that component seeds are generated consistently and uniquely."""
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         # Same component should get same seed
         seed1 = random_manager._generate_component_seed("test_component")
@@ -42,7 +45,7 @@ class TestRandomManager:
 
     def test_get_rng_default(self) -> None:
         """Test that get_rng returns the main RNG when no component is specified."""
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         # Check that default RNG is the main RNG
         assert random_manager.get_rng() is random_manager._main_rng
@@ -52,7 +55,7 @@ class TestRandomManager:
 
     def test_get_rng_component(self) -> None:
         """Test that get_rng creates and returns component-specific RNGs."""
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
         component_name = "test_component"
 
         # Getting a component RNG should create a new one
@@ -67,7 +70,7 @@ class TestRandomManager:
 
     def test_rng_reproducibility(self) -> None:
         """Test that RNGs with the same seed produce the same sequence of numbers."""
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         # Generate some random numbers
         numbers1 = [random_manager.uniform() for _ in range(10)]
@@ -81,7 +84,7 @@ class TestRandomManager:
 
     def test_component_rng_reproducibility(self) -> None:
         """Test that component RNGs with the same seed produce the same sequence."""
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         component = "test_component"
 
@@ -97,7 +100,7 @@ class TestRandomManager:
 
     def test_different_components_different_sequences(self) -> None:
         """Test that different components get different random sequences."""
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         # Generate numbers from two different components
         component1 = "component_1"
@@ -112,7 +115,7 @@ class TestRandomManager:
 
     def test_component_independence(self) -> None:
         """Test that component RNGs are independent of each other."""
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         component1 = "component_1"
         component2 = "component_2"
@@ -145,7 +148,7 @@ class TestRandomManager:
         """Test that setting seed to zero generates a random seed."""
         # Set seed to 0 in config
         object.__setattr__(self.config.random_manager, "SEED", 0)
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         # Should not be zero
         main_seed1 = random_manager._main_seed
@@ -159,7 +162,7 @@ class TestRandomManager:
 
     def test_uniform_distribution_properties(self) -> None:
         """Test that the uniform method returns values with correct properties."""
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         # Generate sample of random numbers
         sample_size = 1000
@@ -176,7 +179,7 @@ class TestRandomManager:
 
     def test_uniform_reproducibility_with_seed(self) -> None:
         """Test that uniform method produces reproducible results with same seed."""
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         # Generate first sequence
         numbers1 = [random_manager.uniform() for _ in range(100)]
@@ -191,12 +194,12 @@ class TestRandomManager:
 
     def test_uniform_different_seeds_different_sequences(self) -> None:
         """Test that different seeds produce different random sequences."""
-        random_manager1 = RandomManager(self.config)
+        random_manager1 = RandomManager(self.sim)
         numbers1 = [random_manager1.uniform() for _ in range(100)]
 
         # Generate sequence with seed 43
         object.__setattr__(self.config.random_manager, "SEED", 43)
-        random_manager2 = RandomManager(self.config)
+        random_manager2 = RandomManager(self.sim)
         numbers2 = [random_manager2.uniform() for _ in range(100)]
 
         assert not np.allclose(np.array(numbers1), np.array(numbers2)), (
@@ -207,7 +210,7 @@ class TestRandomManager:
         """Test that component seed zero generates different results on each reset."""
         # Set seed to 0 in config
         object.__setattr__(self.config.random_manager, "SEED", 0)
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         component = "test_component"
         self.config.random_manager.COMPONENT_SEEDS[component] = 0
@@ -235,7 +238,7 @@ class TestRandomManager:
         component_name : str
             Name of the component to test RNG isolation for.
         """
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         # Get RNG for this component
         component_rng = random_manager.get_rng(component_name)
@@ -253,7 +256,7 @@ class TestRandomManager:
 
     def test_reset_all_rng_resets_component_rngs(self) -> None:
         """Test that reset_all_rng properly resets component RNGs to initial state."""
-        random_manager = RandomManager(self.config)
+        random_manager = RandomManager(self.sim)
 
         component = "test_component"
 

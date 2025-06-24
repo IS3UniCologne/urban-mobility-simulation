@@ -1,4 +1,3 @@
-import logging
 from collections import namedtuple
 
 from simpy import Environment
@@ -36,6 +35,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         # bidding_strategy,
         bidding_parameters: dict,
         state_of_charge_threshold: float,
+        config: Configuration,
         distance_matrix=None,  # noqa: ANN001
     ):
         OperationsInterface.__init__(self, env)
@@ -46,9 +46,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._bidding_parameters = bidding_parameters
         self._state_of_charge_threshold = state_of_charge_threshold
         self._distance_matrix = distance_matrix
-
-        self._config = Configuration()
-
+        self._config = config
         self._charging_operations = None
 
     def execute(self):  # noqa: ANN201
@@ -65,7 +63,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
             distance_matrix=self._distance_matrix,
             time_between_operations=self._config.shared_charging_auction.AUCTION_INTERVAL,
             operation_duration=None,  # does not matter
-            available_modes=self._config.ride_hailing_global.AVAILABLE_VEHICLE_MODES,
+            available_modes=self._config.ride_hailing_global.AVAILABLE_VEHICLE_TYPES,
             available_modes_supply=self._config.ride_hailing_global.AVAILABLE_MODES_SUPPLY,
             state_of_charge_threshold=self._state_of_charge_threshold,
             allow_queue=False,  # no queue, only reserved slots
@@ -97,14 +95,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         # timeslots are denoted by their start time and have length `self._config.shared_charging_auction.TIMESLOT_DURATION`
         auctioned_timeslot = self._auction.next_timeslot
         auctioned_capacity = self._auction.get_auctioned_capacity()
-        logging.debug(
-            "Auction opened for timeslot %s",
-            auctioned_timeslot,
-            extra={
-                "clazz": self.__class__.__name__,
-                "oid": self._auction_participant_id,
-            },
-        )
+        self.logger.debug("Auction opened for timeslot %s", auctioned_timeslot)
 
         # TODO: refactor to be a method of somethign like "BiddingStrategy"
         # TODO: right now we track bids through the auction, maybe we can use transactions for that?
@@ -128,25 +119,11 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
         self.bidding_done.succeed()
         self.bidding_done = self._env.event()
-        logging.debug(
-            "Bids placed for timeslot %s",
-            auctioned_timeslot,
-            extra={
-                "clazz": self.__class__.__name__,
-                "oid": self._auction_participant_id,
-            },
-        )
+        self.logger.debug("Bids placed for timeslot %s", auctioned_timeslot)
 
         self._result = yield self.result_announced
         self.result_announced = self._env.event()
-        logging.debug(
-            "Results received for timeslot %s",
-            auctioned_timeslot,
-            extra={
-                "clazz": self.__class__.__name__,
-                "oid": self._auction_participant_id,
-            },
-        )
+        self.logger.debug("Results received for timeslot %s", auctioned_timeslot)
 
         self._virtual_charging_infrastructure.update(
             availability={k: v[0] for k, v in self._result.items()},

@@ -1,17 +1,19 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from simpy import Environment
+from simulation.context.simulation_context import SimulationContext
+from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
     from simulation.operator.operator import Operator
 
 
-class OperationsInterface(ABC):
+class OperationsInterface(ABC, SimulationBase):
     __slots__ = ("_env", "_operator_reference")
 
-    def __init__(self, env: Environment) -> None:
-        self._env = env
+    def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim)
+        self._env = sim.env
         self._operator_reference = None
 
     def register_operator_reference(self, operator_reference: "Operator") -> None:

@@ -1,10 +1,15 @@
-import logging
+from __future__ import annotations
 
-from simulation.agent.user import RideHailingUser
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.agent.user import RideHailingUser
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
+    )
+
 from simulation.helper.configuration.enums import VehicleState
-from simulation.operator.data_transfer_object.transportation_alternative import (
-    TransportationAlternative,
-)
 from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
@@ -21,8 +26,9 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
         "_vehicles_assigned_to_users",
     )
 
-    def __init__(self, env):  # noqa: ANN001, ANN204
-        self._env = env
+    def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim)
+        self._env = sim.env
         self._vehicles_assigned_to_users = self._env.event()
         self._env.process(self.run())
         self._vehicle_assignment_requests = []
@@ -62,11 +68,9 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
         try:
             self._add_request(user, selected_transportation_alternative)
         except Exception:
-            # TODO: Is this an error or expected behavior? Should we change the way we reserve vehicles?
-            logging.error(
-                "Vehicle %s already assigned to other user",
-                selected_transportation_alternative.vehicle.id,
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+            self.logger.error(
+                "Vehicle %s already assigned to a user",
+                selected_transportation_alternative.vehicle.uid,
             )
 
         yield self._vehicles_assigned_to_users
@@ -99,22 +103,8 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
         # self._env.process(self.test(vehicle_assignment, old_position))
 
     def _add_request(self, user, vehicle_assignment):  # noqa: ANN001, ANN202
-        if vehicle_assignment.vehicle.id not in self._vehicle_assignment_ids:
+        if vehicle_assignment.vehicle.uid not in self._vehicle_assignment_ids:
             self._vehicle_assignment_requests.append((user, vehicle_assignment))
-            self._vehicle_assignment_ids.add(vehicle_assignment.vehicle.id)
+            self._vehicle_assignment_ids.add(vehicle_assignment.vehicle.uid)
         else:
             raise Exception
-
-    def test(self, vehicle_assignment, old_position):  # noqa: ANN001, ANN201
-        # Notify operator that user has arrived at location
-
-        # self._env.process()
-        yield self._env.timeout(10)
-
-        from simulation.environment.geodesic_position import GeodesicPosition
-
-        vehicle_assignment.vehicle.position = GeodesicPosition(55.3, 13.3)
-
-        yield self._env.timeout(10)
-
-        vehicle_assignment.vehicle.position = old_position

@@ -33,7 +33,7 @@ def get_bid(  # noqa: ANN201
     relevant_distance_matrix = distance_matrix.loc[auctioned_capacity.keys()]
     for vehicle in vehicles_to_charge:
         hex = vehicle.position.get_region_id()
-        id = vehicle.id
+        id = vehicle.uid
 
         # Get nearest charging station (.loc -> destination, [[]] -> Origin)
         sorted_charging_station_list = (

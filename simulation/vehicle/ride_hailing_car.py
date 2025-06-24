@@ -1,31 +1,18 @@
-import logging
+from __future__ import annotations
 
-from simpy import Environment
+from typing import TYPE_CHECKING
 
-from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.configuration.enums import VehicleMode, VehicleState
+from simulation.helper.configuration.enums import VehicleState
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
-# class RideHailingCarState(Enum):
-#     INITIALIZED = 0
-#     PARKING = 1
-#     DRIVING = 2
-#     RELOCATING = 3
-#     CHARGING = 4
-#     PRE_SERVICE = 5
-#     SOME_STATE = 1002
-#     RESERVED = 1001
-#     MOVING_TO_PICK_UP_POS = 1003
-#     ONLINE = 6  # When the driver is online
-#     OFFLINE = 7  # When the driver is offline
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.position import Position
+    from simulation.helper.configuration.configuration import VehicleConfig
+    from simulation.operator.vehicle_fleet import VehicleFleet
 
 
 class RideHailingCar(RideHailingVehicle):
-    # Shared Care Counter
-    ride_hailing_car_id = 0
-    vehicle_type = "ridehailing_car"  # TODO: make explicit that it's a human-driven car
-
     __slots__ = (
         "_driver_payment_share",
         "_offline_duration",
@@ -36,21 +23,15 @@ class RideHailingCar(RideHailingVehicle):
         "_shift_end_time",
         "_shift_start_time",
         "_total_earn",
-        "car_id",
     )
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env: Environment,
-        fleet,  # noqa: ANN001
-        position: GeodesicPosition,
-        velocity,  # noqa: ANN001
-        max_available_seats=4,  # noqa: ANN001
-        max_state_of_charge=16.7,  # noqa: ANN001
-        energy_consumption=0.152,  # noqa: ANN001
-        price_per_min=0.26,  # noqa: ANN001
-        is_electric=True,  # noqa: ANN001
-    ):
+        sim: SimulationContext,
+        fleet: VehicleFleet,
+        position: Position,
+        vehicle_config: VehicleConfig,
+    ) -> None:
         """
 
         :param env:
@@ -61,22 +42,11 @@ class RideHailingCar(RideHailingVehicle):
         :param energy_consumption: 15.2 kWh/100km as per Smart EQ specification
         :param velocity:
         """
-        super(RideHailingCar, self).__init__(  # noqa: UP008
-            env,
-            fleet,
-            position,
-            velocity,
-            VehicleMode.Car,
-            max_available_seats,
-            max_state_of_charge,
-            energy_consumption,
-            price_per_min,
-            is_electric=is_electric,
+        super().__init__(
+            sim=sim, fleet=fleet, position=position, vehicle_config=vehicle_config
         )
 
-        # Increment Shared Car ID
-        self.car_id = RideHailingCar.ride_hailing_car_id
-        self._price_per_minute = price_per_min
+        self._price_per_minute = vehicle_config.PRICE_PER_MIN
         self._total_earn = 0
         self._shift_earn = 0
         self._shift_duration = 0
@@ -84,18 +54,15 @@ class RideHailingCar(RideHailingVehicle):
         self._shift_start_time = None
         self._shift_end_time = 0
         self._driver_payment_share = (
-            Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
+            self._sim.config.ride_hailing_global.DRIVER_PAYMENT_SHARE
         )
         self.state = VehicleState.OFFLINE
-        self._online_event = self._env.event()
-        self._offline_event = self._env.event()
-        RideHailingCar.ride_hailing_car_id += 1
+        self._online_event = self._sim.env.event()
+        self._offline_event = self._sim.env.event()
 
-        self._emergency_soc_buffer_percent = self._config.ride_hailing_vehicles[
-            "RideHailingCar"
-        ].EMERGENCY_SOC_BUFFER
+        self._emergency_soc_buffer_percent = vehicle_config.EMERGENCY_SOC_BUFFER
 
-        self._env.process(self.run_shift_check_process())
+        self._sim.env.process(self.run_shift_check_process())
 
     @property
     def total_earn(self):  # noqa: ANN201
@@ -125,23 +92,13 @@ class RideHailingCar(RideHailingVehicle):
         time = self._env.now
         self._shift_start_time = time
 
-        logging.debug(
-            "RideHailingCar %s started its shift at %s.",
-            self.car_id,
-            time,
-            extra={"clazz": self.__class__.__name__, "oid": self.car_id},
-        )
+        self.logger.debug("Shift has started.")
 
     def update_shift_end_time(self):  # noqa: ANN201
         time = self._env.now
         self._shift_end_time = time
 
-        logging.debug(
-            "RideHailingCar %s ended its shift at %s.",
-            self.car_id,
-            time,
-            extra={"clazz": self.__class__.__name__, "oid": self.car_id},
-        )
+        self.logger.debug("Shift has ended.")
 
     def update_shift_duration(self):  # noqa: ANN201
         self._shift_duration = self._env.now - self._shift_start_time
@@ -152,29 +109,27 @@ class RideHailingCar(RideHailingVehicle):
     def update_idle_time(self):  # TODO  # noqa: ANN201
         pass
 
-    def update_earned_money(self, payment):  # noqa: ANN001, ANN201
-        # Notify earned money for a human-driven car
-        earn = payment * self._driver_payment_share
-        self._total_earn += earn
-        self._shift_earn += earn
+    # TODO do we remove this? If we want this feature it should probably be implemented for all vehicles
+    # This can also be inferred from transaction logs
+    # def update_earned_money(self, payment):
+    #     # Notify earned money for a human-driven car
+    #     earn = payment * self._driver_payment_share
+    #     self._total_earn += earn
+    #     self._shift_earn += earn
 
-        logging.debug(
-            "RideHailingCar %s earned %s since he/she started the shift.",
-            self.car_id,
-            self.shift_earn,
-            extra={"clazz": self.__class__.__name__, "oid": self.car_id},
-        )
+    # self.logger.debug(
+    #     "RideHailingCar %s earned %s since he/she started the shift.",
+    #     self._id,
+    #     self.shift_earn,
+    #
+    # )
 
     def get_online(self):  # noqa: ANN201
         self.state = VehicleState.PARKING
         self.update_shift_start_time()
         self._online_event.succeed()
         self._online_event = self._env.event()
-        logging.debug(
-            "Driver %s gets online.",
-            self.car_id,
-            extra={"clazz": self.__class__.__name__, "oid": self.car_id},
-        )
+        self.logger.debug("Driver gets online.")
 
     def get_offline(self):  # noqa: ANN201
         self.state = VehicleState.OFFLINE
@@ -182,11 +137,7 @@ class RideHailingCar(RideHailingVehicle):
         self.update_shift_end_time()
         self._offline_event.succeed()
         self._offline_event = self._env.event()
-        logging.debug(
-            "Driver %s gets offline.",
-            self.car_id,
-            extra={"clazz": self.__class__.__name__, "oid": self.car_id},
-        )
+        self.logger.debug("Driver gets offline.")
 
     def decide_to_get_online(self):  # noqa: ANN201
         go_online = False
@@ -251,14 +202,9 @@ class RideHailingCar(RideHailingVehicle):
                         self.get_offline()
                     # if the driver has a task to do we yield until its completion
                     else:
-                        logging.debug(
-                            "Driver %s is %s and has a task to do before getting offline.",
-                            self._id,
+                        self.logger.debug(
+                            "Driver is %s and has a task to do before getting offline.",
                             self.state,
-                            extra={
-                                "clazz": self.__class__.__name__,
-                                "oid": self.car_id,
-                            },
                         )
                         yield (
                             self._driver_unmounted

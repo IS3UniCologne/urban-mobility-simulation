@@ -1,12 +1,17 @@
-from simpy import Environment
+from __future__ import annotations
 
-from simulation.helper.configuration.enums import VehicleMode
+from typing import TYPE_CHECKING
+
+from simulation.helper.configuration.enums import VehicleType
 from simulation.operator.vehicle_fleet import VehicleFleet
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
 
 
 class MixedSharedVehicleFleet(VehicleFleet):
-    def __init__(self, env: Environment):  # noqa: ANN204
-        super(MixedSharedVehicleFleet, self).__init__(env)  # noqa: UP008
+    def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim=sim)
 
     def vehicles_below_soc_threshold(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
@@ -28,9 +33,11 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
         below_soc_level_vehicles = []
-        vehicles_in_region = self.get_vehicles_in_region(region)
+        vehicles_in_region = self.vehicles_in_region(region)
+        # TODO: Check if this is necessary
+        vehicles_in_region_sorted = sorted(vehicles_in_region, key=lambda v: v.uid)
 
-        for vehicle in vehicles_in_region:
+        for vehicle in vehicles_in_region_sorted:
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
                 below_soc_level_vehicles.append(vehicle)
 
@@ -62,17 +69,17 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 continue
 
             # Initialize the region in our supply dictionary
-            supply[region_id] = {mode.name: 0 for mode in VehicleMode}
+            supply[region_id] = {mode: 0 for mode in VehicleType}
 
             # Count vehicles by mode in this region
-            for mode in VehicleMode:
+            for mode in VehicleType:
                 count = len(
                     vehicles_in_region.intersection(
-                        self._vehicles_by_mode.get(mode, set())
+                        self._vehicles_by_type.get(mode, set())
                     )
                 )
                 if count > 0:
-                    supply[region_id][mode.name] = count
+                    supply[region_id][mode] = count
 
         return supply
 
@@ -106,19 +113,19 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 continue
 
             # Initialize region entry
-            low_soc_supply[region_id] = {mode.name: 0 for mode in VehicleMode}
+            low_soc_supply[region_id] = {mode: 0 for mode in VehicleType}
 
             # Count vehicles by mode in this region that need charging
-            for mode in VehicleMode:
-                if mode not in self._vehicles_by_mode:
+            for mode in VehicleType:
+                if mode not in self._vehicles_by_type:
                     continue
 
                 count = len(
                     region_vehicles_needing_charge.intersection(
-                        self._vehicles_by_mode[mode]
+                        self._vehicles_by_type[mode]
                     )
                 )
                 if count > 0:
-                    low_soc_supply[region_id][mode.name] = count
+                    low_soc_supply[region_id][mode] = count
 
         return low_soc_supply

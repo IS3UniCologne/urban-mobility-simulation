@@ -1,8 +1,15 @@
-from simulation.agent.user import User
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.agent.user import User
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
+    )
+
 from simulation.helper.configuration.enums import VehicleState
-from simulation.operator.data_transfer_object.transportation_alternative import (
-    TransportationAlternative,
-)
 from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
@@ -12,10 +19,16 @@ from simulation.operator.interface.vehicle_allocation_engine_interface import (
 
 
 class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
-    __slots__ = ("_env", "_vehicle_assignment_requests", "_vehicles_assigned_to_users")
+    __slots__ = (
+        "_env",
+        "_sim",
+        "_vehicle_assignment_requests",
+        "_vehicles_assigned_to_users",
+    )
 
-    def __init__(self, env):  # noqa: ANN001, ANN204
-        self._env = env
+    def __init__(self, sim: SimulationContext) -> None:
+        self._sim = sim
+        self._env = sim.env
         self._vehicles_assigned_to_users = self._env.event()
         self._env.process(self.run())
         self._vehicle_assignment_requests = []
@@ -73,23 +86,9 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
         self, vehicle_assignment: VehicleAllocation
     ):
         pass
-
+        # TODO: What is this ?
         # For Autonomous Vehicles or Mass Transit (i.e., listen to position of vehicle)
         # old_position = vehicle_assignment.vehicle.position
         # from simulation.environment.geodesic_position import GeodesicPosition
         # vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
         # self._env.process(self.test(vehicle_assignment, old_position))
-
-    def test(self, vehicle_assignment, old_position):  # noqa: ANN001, ANN201
-        # Notify operator that user has arrived at location
-
-        # self._env.process()
-        yield self._env.timeout(10)
-
-        from simulation.environment.geodesic_position import GeodesicPosition
-
-        vehicle_assignment.vehicle.position = GeodesicPosition(55.3, 13.3)
-
-        yield self._env.timeout(10)
-
-        vehicle_assignment.vehicle.position = old_position

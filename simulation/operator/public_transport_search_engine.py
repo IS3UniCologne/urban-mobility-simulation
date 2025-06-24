@@ -1,10 +1,19 @@
-import logging
+from __future__ import annotations
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import Configuration
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.helper.configuration.configuration import TransitOperatorConfig
+    from simulation.infrastructure.transit_network.stop import Stop
+    from simulation.operator.public_transport_vehicle_fleet import (
+        PublicTransportVehicleFleet,
+    )
+    from simulation.tasks.transportation_search_task import TransportationSearchTask
+    from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
+
 from simulation.helper.time import SimulationTimeConverter
-from simulation.infrastructure.transit_network.stop import Stop
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
@@ -12,32 +21,30 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
     TransportationAlternativeBrowser,
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.public_transport_vehicle_fleet import (
-    PublicTransportVehicleFleet,
-)
-from simulation.tasks.transportation_search_task import TransportationSearchTask
-from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 
 
 class PublicTransportSearchEngine(SearchEngineInterface):
     __slots__ = (
-        "_config",
         "_env",
         "_fleet",
         "_geo_env",
         "_operator_config",
+        "_sim",
         "_user_config",
     )
 
-    def __init__(self, env, fleet: PublicTransportVehicleFleet):  # noqa: ANN001, ANN204
-        self._env = env
+    def __init__(
+        self,
+        sim: SimulationContext,
+        fleet: PublicTransportVehicleFleet,
+        operator_config: TransitOperatorConfig,
+    ) -> None:
+        self._sim = sim
+        self._env = sim.env
         self._fleet = fleet
-        self._config = Configuration()
-        self._operator_config = self._config.transit_operators[
-            0
-        ]  # TODO: multiple operators
-        self._user_config = self._config.user
-        self._geo_env = GeodesicEnvironment.getInstance()
+        self._operator_config = operator_config
+        self._user_config = self._sim.config.user
+        self._geo_env = sim.geo_env
 
     def find_viable_transit(  # noqa: ANN201
         self,
@@ -89,12 +96,11 @@ class PublicTransportSearchEngine(SearchEngineInterface):
                         )  # tuple of (Stop, walking distance to/from)
 
                 if reachable_stops:
-                    logging.debug(
+                    self.logger.debug(
                         "Bus %s is a viable transport alternative from %s to %s!",
-                        vehicle.id,
+                        vehicle.uid,
                         transportation_search_task.transport_task.origin,
                         transportation_search_task.transport_task.destination,
-                        extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
 
                     # build all possible combinations of viable subroutes

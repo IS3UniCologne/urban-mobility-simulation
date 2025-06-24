@@ -1,50 +1,59 @@
-from simpy import Environment
+from __future__ import annotations
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
+from typing import TYPE_CHECKING
+
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.configuration.enums import VehicleState, VehicleType
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
     ServiceTask,
 )
-from simulation.operator.vehicle_fleet import VehicleFleet
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.vehicle_fleet import VehicleFleet
 
 
 class RelocationTask(ServiceTask):
     __slots__ = (
+        "_config",
         "_destination",
         "_distance",
+        "_geo_env",
         "_number_of_vehicles_to_relocate",
         "_origin",
         "_vehicle_fleet",
-        "_vehicle_mode",
+        "_vehicle_type",
+        "destination",
     )
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env: Environment,
-        origin,  # noqa: ANN001
-        destination,  # noqa: ANN001
-        number_of_vehicles_to_relocate,  # noqa: ANN001
-        distance,  # noqa: ANN001
-        vehicle_mode,  # noqa: ANN001
+        sim: SimulationContext,
+        origin: GeodesicPosition,
+        destination: GeodesicPosition,
+        number_of_vehicles_to_relocate: int,
+        distance: float,
+        vehicle_type: VehicleType,
         vehicle_fleet: VehicleFleet,
-    ):
-        super(RelocationTask, self).__init__(env)  # noqa: UP008
+    ) -> None:
+        super().__init__(sim)
+
+        self._sim = sim
+        self._config = sim.config
+        self._geo_env = sim.geo_env
 
         self._origin = origin
         self._destination = destination
         self._number_of_vehicles_to_relocate = number_of_vehicles_to_relocate
-        self._vehicle_mode = vehicle_mode
+        self._vehicle_type = vehicle_type
 
         self._vehicle_fleet = vehicle_fleet
         self._distance = distance
 
     def execute(self, *args):  # noqa: ANN002, ANN201
         # Get Spatial Environment
-        geo_env = GeodesicEnvironment.getInstance()
 
         with self._vehicle_fleet.resource.request() as req:
             """Multiple Service Workers (within same hexagon) cannot access the vehicle list in parallel"""
@@ -52,17 +61,20 @@ class RelocationTask(ServiceTask):
             yield req
 
             # Identify vehicles to relocate
-            potential_vehicles_to_relocate = self._vehicle_fleet.get_vehicles_in_region(
+            potential_vehicles_to_relocate = self._vehicle_fleet.vehicles_in_region(
                 self._origin
+            )
+            # TODO: Make sure this is necessary
+            potential_vehicles_sorted = sorted(
+                potential_vehicles_to_relocate, key=lambda v: v.uid
             )
             selected_vehicles_to_relocate = []
 
             # Filter relevant vehicles
-            for vehicle in potential_vehicles_to_relocate:
-                # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
+            for vehicle in potential_vehicles_sorted:
+                # Filter by vehicle type and only parking vehicles (possibly some vehicles are driving around with low soc)
                 if (
-                    vehicle.mode.name
-                    == self._vehicle_mode  # TODO: This should not be based on the class name
+                    vehicle.type == self._vehicle_type
                     and vehicle.state == VehicleState.PARKING
                 ):
                     # Mark Vehicle => Change state su
@@ -81,8 +93,8 @@ class RelocationTask(ServiceTask):
         # Start Relocation Process
         for vehicle in selected_vehicles_to_relocate:
             # Random Destination at Dest Region
-            lat, lng = geo_env.get_random_position(self._destination)
-            vehicle_dest = GeodesicPosition(lat, lng, self._destination)
+            lat, lng = self._geo_env.get_random_position(self._destination)
+            vehicle_dest = GeodesicPosition(self._sim, lat, lng, self._destination)
 
             # Relocation Route
             relocation_route = Edge(
@@ -92,9 +104,9 @@ class RelocationTask(ServiceTask):
             # Calculate Relocation Cost based on distance, relocation velocity and number of vehicles to relocate.
             # As in the charging task, we linearize the relocation task if multiple vehicles need to be relocated.
             # Thus, we ensure that the total relocation cost corresponds to the parallel case.
-            vehicle_relocation_velocity = (
-                Configuration().shared_vehicle_operators[0].VEHICLE_RELOCATION_VELOCITY
-            )
+            vehicle_relocation_velocity = self._config.shared_vehicle_operators[
+                0
+            ].VEHICLE_RELOCATION_VELOCITY
             relocation_duration_per_vehicle = (
                 relocation_route.distance / vehicle_relocation_velocity
             ) / len(selected_vehicles_to_relocate)
@@ -113,8 +125,8 @@ class RelocationTask(ServiceTask):
         # Notify all
         self._task_finished = self._env.event()
 
-    def __str__(self):  # noqa: ANN204
-        return f"Relocating {self._number_of_vehicles_to_relocate} {self._vehicle_mode} from {self._origin} to {self._destination} (distance = {self._distance})"
+    def __str__(self) -> str:
+        return f"Relocating {self._number_of_vehicles_to_relocate} {self._vehicle_type} from {self._origin} to {self._destination} (distance = {self._distance})"
 
-    def __repr__(self):  # noqa: ANN204
+    def __repr__(self) -> str:
         return self.__str__()

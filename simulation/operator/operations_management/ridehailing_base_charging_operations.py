@@ -1,11 +1,12 @@
-import logging
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import h3
 import pandas as pd
 from beartype.door import is_bearable
 from simpy import AnyOf
 
-from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
@@ -17,7 +18,10 @@ from simulation.operator.operations_management.service_tasks.charging_task_rideh
     ChargingTaskRidehailing,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
-from simulation.world.world import World
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.world.world import World
 
 
 class RideHailingBaseChargingOperations(OperationsInterface):
@@ -33,6 +37,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         "_operation_duration",
         "_operations_started",
         "_scheduled_tasks",
+        "_sim",
         "_state_of_charge_threshold",
         "_task_executed",
         "_task_queue",
@@ -42,9 +47,9 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         "_world",
     )
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env,  # noqa: ANN001
+        sim: SimulationContext,
         distance_matrix,  # noqa: ANN001
         time_between_operations,  # noqa: ANN001
         operation_duration,  # noqa: ANN001
@@ -52,16 +57,17 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         available_modes_supply,  # noqa: ANN001
         state_of_charge_threshold,  # noqa: ANN001
         allow_queue,  # noqa: ANN001
-    ):
-        super(RideHailingBaseChargingOperations, self).__init__(env=env)  # noqa: UP008
-
-        self._world = None  # defer
-        self._config = Configuration()
+        world: World,
+    ) -> None:
+        super().__init__(sim)
+        self._world: World = world
+        self._config = sim.config
+        self._sim = sim
 
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
         self._base_buffer = h3.edge_length(
-            self._config.world.SPATIAL_RESOLUTION_VALUE - 1, unit="m"
+            self._config.world.SPATIAL_RESOLUTION - 1, unit="m"
         )  # use a buffer when calculating distances to charging stations of next coarser grid level edge length (radius)
 
         # To access vehicle transactions
@@ -72,15 +78,15 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         self._allow_queue = allow_queue
 
         # Task List
-        self._task_queue = TaskQueue(env)
+        self._task_queue = TaskQueue(sim)
         self._scheduled_tasks = []
 
         self._task_transactions = []
 
         # Events
-        self._charging_plan_updated = env.event()
-        self._operations_started = env.event()
-        self._task_executed = env.event()
+        self._charging_plan_updated = sim.env.event()
+        self._operations_started = sim.env.event()
+        self._task_executed = sim.env.event()
 
         # When to start operations
         self._time_between_operations = time_between_operations
@@ -97,8 +103,6 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         return self._task_executed
 
     def execute(self):  # noqa: ANN201
-        self._world = World.instance()
-
         "Below, we combine the old operational logic from operations_ridehailing.py and rebalancing_scheduler_ridehailing.py"
 
         while True:
@@ -134,14 +138,14 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                         scheduled_time = None
 
                 charging_task = ChargingTaskRidehailing(
-                    self._env,
-                    origin,
-                    destination,
-                    no_vehicle_to_charge,
-                    distance_to_base,
-                    self._state_of_charge_threshold,
-                    charging_station,
-                    vehicle,
+                    sim=self._sim,
+                    origin=origin,
+                    destination=destination,
+                    number_of_vehicles_to_charge=no_vehicle_to_charge,
+                    distance_to_fleet_base=distance_to_base,
+                    state_of_charge_threshold=self._state_of_charge_threshold,
+                    charging_station=charging_station,
+                    vehicle=vehicle,
                     scheduled_time=scheduled_time,
                 )
 
@@ -164,24 +168,16 @@ class RideHailingBaseChargingOperations(OperationsInterface):
             # Insert Tasks into Task Queue
             self._task_queue.bulk_append(self._scheduled_tasks)
 
-            logging.info(
+            self.logger.info(
                 "There are %s vehicles with low state of charge.",
                 self._operator_reference.fleet.count_vehicles_below_soc_level(
                     self._state_of_charge_threshold
                 ),
-                extra={
-                    "clazz": self.__class__.__name__,
-                    "oid": self._operator_reference.id,
-                },
             )
 
-            logging.info(
+            self.logger.info(
                 "Charging Tasks scheduled. In total %s charging tasks are generated.",
                 len(charging_plans),
-                extra={
-                    "clazz": self.__class__.__name__,
-                    "oid": self._operator_reference.id,
-                },
             )
             # Notify listeners
             self._charging_plan_updated.succeed()
@@ -189,14 +185,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
 
             while self._task_queue.count > 0:
                 next_task = self._task_queue.popleft()
-                logging.debug(
-                    "Processing following task: %s.",
-                    next_task,
-                    extra={
-                        "clazz": self.__class__.__name__,
-                        "oid": self._operator_reference.id,
-                    },
-                )
+                self.logger.debug("Processing following task: %s.", next_task)
                 self._env.process(next_task.execute())
                 self._task_executed.succeed(next_task)
                 self._task_executed = self._env.event()
@@ -239,12 +228,8 @@ class RideHailingBaseChargingOperations(OperationsInterface):
 
         # Account for the possibility that there is no charging station available (could happen in coordinated shared infrastructure, e.g.)
         if not self._operator_reference.charging_infrastructure.get_locations():
-            logging.info(
-                "No charging stations available. No charging plan generated.",
-                extra={
-                    "clazz": self.__class__.__name__,
-                    "oid": self._operator_reference.id,
-                },
+            self.logger.info(
+                "No charging stations available. No charging plan generated."
             )
             return charging_plan
 
@@ -279,13 +264,9 @@ class RideHailingBaseChargingOperations(OperationsInterface):
 
                 if sorted_base_list.empty:
                     # no charging stations available because capacity exhausted
-                    logging.debug(
+                    self.logger.debug(
                         "Reserved capacity at all charging stations exhausted, skipping creation of charging tasks after %s tasks were created.",
                         len(charging_plan),
-                        extra={
-                            "clazz": self.__class__.__name__,
-                            "oid": self._operator_reference.id,
-                        },
                     )
                     break
 
@@ -297,14 +278,10 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                 if not vehicle.has_enough_state_of_charge(
                     selected_base_distance, consider_buffer=False
                 ):
-                    logging.debug(
+                    self.logger.debug(
                         "Vehicle %s considered for charging at %s has not enough state of charge to relocate there, skipping.",
-                        vehicle.id,
+                        vehicle.uid,
                         selected_base,
-                        extra={
-                            "clazz": self.__class__.__name__,
-                            "oid": self._operator_reference.id,
-                        },
                     )
                     continue
                 selected_charging_station = [  # noqa: RUF015
@@ -373,14 +350,10 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                     if not vehicle.has_enough_state_of_charge(
                         selected_base_distance, consider_buffer=False
                     ):
-                        logging.debug(
+                        self.logger.debug(
                             "Vehicle %s considered for charging at %s has not enough state of charge to relocate there, skipping.",
-                            vehicle.id,
+                            vehicle.uid,
                             selected_charging_station,
-                            extra={
-                                "clazz": self.__class__.__name__,
-                                "oid": self._operator_reference.id,
-                            },
                         )
                         continue
 
@@ -433,28 +406,19 @@ class RideHailingBaseChargingOperations(OperationsInterface):
 
         return charging_plan
 
-    def get_max_capacity_per_unit(self, mode):  # noqa: ANN001, ANN201
-        # Mode Specific Collection Capacity per Service Worker (i.e., how many vehicles can one sw collect)
-        if mode == "RideHailingCar":
-            max_capacity_per_unit = 1
-        elif mode == "AutonomousCar":
-            max_capacity_per_unit = 1
-        else:
-            raise NotImplementedError("Not Implemented")
-        return max_capacity_per_unit
-
     def _track_task(self, task):  # noqa: ANN001, ANN202
         yield AnyOf(self._env, [task.task_finished, self._world.simulation_finished])
 
+        # TODO: This should use new transactions
         self._task_transactions.append(
             {
                 "start_time": task._start_time,  # noqa: SLF001
                 "estimated_arrival_time": task._estimated_arrival_time,  # noqa: SLF001
                 "scheduled_time": task._scheduled_time,  # noqa: SLF001
                 "end_time": self._env.now,
-                "vehicle": task._vehicle.id,  # noqa: SLF001
+                "vehicle": task._vehicle.uid,  # noqa: SLF001
                 "state": task.state,
-                "fleet": task._vehicle.fleet.id,  # noqa: SLF001
+                "fleet": task._vehicle.fleet.uid,  # noqa: SLF001
                 "charging_station": task._charging_station.location,  # noqa: SLF001
                 "waiting_time": task.waiting_time,
                 "charging_duration": task.charging_duration,

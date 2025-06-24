@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 from typing import TYPE_CHECKING
 
@@ -7,20 +9,19 @@ import numpy
 from shapely.geometry import Point, Polygon
 
 from simulation.environment.environment import Environment
-from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.random.random_manager import RandomManager
 
 if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
     from simulation.vehicle.vehicle import Vehicle
 
 
 class GeodesicEnvironment(Environment):
     __slots__ = ("_hex_geom_cache", "_rng")
 
-    def __init__(self, config: Configuration, random_manager: RandomManager) -> None:
+    def __init__(self, sim: SimulationContext) -> None:
         super().__init__()
 
-        self._rng: numpy.random.Generator = random_manager.get_rng(
+        self._rng: numpy.random.Generator = sim.random_manager.get_rng(
             component_name="GEOENV"
         )
 
@@ -28,18 +29,18 @@ class GeodesicEnvironment(Environment):
 
         # TODO Why are we reading all the files? One should be enough.
         # Read Environment Files
-        with open(config.path.PATH_ENV_BOUNDING_BOX, encoding="utf-8") as file:
+        with open(sim.config.path.PATH_ENV_BOUNDING_BOX, encoding="utf-8") as file:
             env_df = gpd.read_file(file)
 
-        with open(config.path.PATH_ENV_HEX_LAYER_RES_9, encoding="utf-8") as file:
+        with open(sim.config.path.PATH_ENV_HEX_LAYER_RES_9, encoding="utf-8") as file:
             env_df_hex_9 = gpd.read_file(file)
             env_df_hex_9.set_index("hex_id_9", inplace=True)
 
-        with open(config.path.PATH_ENV_HEX_LAYER_RES_8, encoding="utf-8") as file:
+        with open(sim.config.path.PATH_ENV_HEX_LAYER_RES_8, encoding="utf-8") as file:
             env_df_hex_8 = gpd.read_file(file)
             env_df_hex_8.set_index("hex_id_8", inplace=True)
 
-        with open(config.path.PATH_ENV_HEX_LAYER_RES_7, encoding="utf-8") as file:
+        with open(sim.config.path.PATH_ENV_HEX_LAYER_RES_7, encoding="utf-8") as file:
             env_df_hex_7 = gpd.read_file(file)
             env_df_hex_7.set_index("hex_id_7", inplace=True)
 
@@ -222,7 +223,7 @@ class GeodesicEnvironment(Environment):
 
         return filtered
 
-    def filter_demands_by_direction(self, demands, vehicle: "Vehicle"):  # noqa: ANN001, ANN201
+    def filter_demands_by_direction(self, demands, vehicle: Vehicle):  # noqa: ANN001, ANN201
         route_direction = self.get_bearing(
             *vehicle.position.getExactLocation(),
             *vehicle.route.destination.getExactLocation(),

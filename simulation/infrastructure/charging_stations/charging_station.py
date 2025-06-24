@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import h3
 import simpy
 from shapely.geometry import shape
@@ -5,6 +9,9 @@ from shapely.geometry import shape
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.simulation_base import SimulationBase
 from tracking.tracking_interface import TrackingInterface
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
 
 
 class ChargingStation(TrackingInterface, SimulationBase):
@@ -20,19 +27,22 @@ class ChargingStation(TrackingInterface, SimulationBase):
         "_power",
         "_queue",
         "_queue_size",
+        "_sim",
     )
 
     exposes = ["_location", "_plugs", "_current_queue_time"]  # noqa: RUF012
 
     def __init__(  # noqa: ANN204
         self,
-        env: simpy.Environment,
+        sim: SimulationContext,
         location: str,
         power: float,
         capacity: int,
         queue_size: int,
     ):
-        self._env = env
+        super().__init__(sim)
+        self._sim = sim
+        self._env = sim.env
         self._capacity = int(capacity)
         self._polygon = shape(
             {
@@ -42,7 +52,7 @@ class ChargingStation(TrackingInterface, SimulationBase):
             }
         )
         self._centre = GeodesicPosition(
-            self._polygon.centroid.y, self._polygon.centroid.x
+            self._sim, self._polygon.centroid.y, self._polygon.centroid.x
         )
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
         self._id = id

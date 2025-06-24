@@ -34,13 +34,12 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         available_modes_supply,  # noqa: ANN001
         state_of_charge_threshold,  # noqa: ANN001
         allow_queue,  # noqa: ANN001
+        config: Configuration,
     ):
         super(RideHailingUncoordinatedChargingOperations, self).__init__(env=env)  # noqa: UP008
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
         self._charging_operations = None
-
-        self._config = Configuration()
-
+        self._config = config
         self._distance_matrix = distance_matrix
         self._time_between_operations = time_between_operations
         self._operation_duration = operation_duration
