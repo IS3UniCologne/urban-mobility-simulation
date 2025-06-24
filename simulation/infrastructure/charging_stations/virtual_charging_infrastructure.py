@@ -1,18 +1,22 @@
+from __future__ import annotations
+
 from types import SimpleNamespace
-from typing import Dict  # noqa: UP035
+from typing import TYPE_CHECKING
 
 from beartype.door import die_if_unbearable
 from beartype.roar import BeartypeDoorHintViolation
 from simpy import AnyOf
 
-from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.simulation_base import SimulationBase
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
-)
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
+
+if TYPE_CHECKING:
+    from simulation.infrastructure.charging_stations.charging_infastructure import (
+        ChargingInfrastructure,
+    )
+    from simulation.context.simulation_context import SimulationContext
 
 
 class VirtualChargingInfrastructure(SimulationBase):
@@ -36,13 +40,14 @@ class VirtualChargingInfrastructure(SimulationBase):
 
     def __init__(  # noqa: ANN204
         self,
-        env,  # noqa: ANN001
+        sim: SimulationContext,
         charging_infrastructure: ChargingInfrastructure,
         lookahead: int | None = None,
         use_virtual_cs=True,  # noqa: ANN001
     ):
-        self._env = env
-        self._config = Configuration()
+        super().__init__(sim)
+        self._env = sim.env
+        self._config = sim.config
 
         # if virtual charging infra is used to create a completely artificial plan of infrastructure, including future timeslots, use lookahead
         # otherwise, (if lookahead is None) be a mirror of the real underlying infrastructure, that can be updated from outside as needed
@@ -51,12 +56,12 @@ class VirtualChargingInfrastructure(SimulationBase):
         self._use_virtual_cs = use_virtual_cs
 
         if self._lookahead is None:
-            self._availability: Dict[str, int] = {  # noqa: UP006
+            self._availability: dict[str, int] = {
                 station.location: station.capacity
                 for station in charging_infrastructure.charging_stations
             }
         else:
-            self._availability: Dict[int, Dict[str, int]] = {}  # noqa: UP006
+            self._availability: dict[int, dict[str, int]] = {}
 
         self._charging_infrastructure = charging_infrastructure
         if use_virtual_cs:
@@ -147,9 +152,9 @@ class VirtualChargingInfrastructure(SimulationBase):
                 else None,
             )
 
-    def update(self, availability: Dict[str, int], timeslot: int | None = None):  # noqa: ANN201, UP006
+    def update(self, availability: dict[str, int], timeslot: int | None = None) -> None:
         try:
-            die_if_unbearable(availability, Dict[str, int])  # noqa: UP006
+            die_if_unbearable(availability, dict[str, int])
             if self._lookahead is None:
                 self._availability = availability
             else:

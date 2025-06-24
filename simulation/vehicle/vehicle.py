@@ -1,46 +1,51 @@
-import logging
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from simpy import Environment, Event
-
-from simulation.environment.position import Position
-from simulation.helper.configuration.enums import VehicleMode, VehicleState
-from simulation.infrastructure.network.edge import Edge
-from simulation.tasks.transport_task import TransportTask
-from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
+from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.helper.simulation_base import SimulationBase
 from tracking.tracking_interface import TrackingInterface
 
 if TYPE_CHECKING:
+    from simpy import Event
+
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.position import Position
+    from simulation.helper.configuration.configuration import (
+        Configuration,
+        VehicleConfig,
+    )
+    from simulation.infrastructure.network.edge import Edge
     from simulation.operator.vehicle_fleet import VehicleFleet
+    from simulation.tasks.transport_task import TransportTask
+    from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 
 
 class VehicleError(Exception):
     """Base class for all vehicle-related exceptions."""
 
 
-class Vehicle(TrackingInterface, ABC):
+class Vehicle(TrackingInterface, SimulationBase, ABC):
     """Base class for all vehicles.
 
     Contains common properties and methods used by all vehicles.
     """
 
-    vehicle_id = 0
-    vehicle_type: str
-
     __slots__ = (
         "__position",
         "__state",
+        "_config",
         "_convenience",
         "_current_region",
         "_current_task",
         "_distance_travelled",
-        "_env",
         "_id",
         "_max_available_seats",
         "_mode",
         "_position_changed",
         "_seats",
+        "_sim",
         "_velocity",
     )
 
@@ -49,46 +54,44 @@ class Vehicle(TrackingInterface, ABC):
     # We need to override __eq__ and __hash__ to use Vehicles in sets
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Vehicle):
-            return self._id == other._id
+            return self.uid == other.uid
         return False
 
     def __hash__(self) -> int:
-        return hash(self._id)
+        return hash(self.uid)
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env: Environment,
-        fleet: "VehicleFleet",
+        sim: SimulationContext,
+        fleet: VehicleFleet,
         position: Position,
-        velocity: float,
-        max_available_seats: int,
-        vehicle_mode: VehicleMode,
-        convenience: int = 1,
-    ):
-        self._id: int = Vehicle.vehicle_id
-        Vehicle.vehicle_id += 1  # Increment Vehicle Id
+        vehicle_config: VehicleConfig,
+    ) -> None:
+        super().__init__(sim)
 
-        self._env: Environment = env
+        self._sim = sim
+        self._config: Configuration = sim.config
+
         self._fleet: VehicleFleet = fleet
 
         # Vehicle Position, name is intentionally mangled. Do not set directly.
         self.__position: Position = position
         self._current_region: str = position.get_region_id()
-        self._velocity: float = velocity
-        self._mode: VehicleMode = vehicle_mode
+        self._velocity: float = vehicle_config.VELOCITY
+        self._type: VehicleType = vehicle_config.VEHICLE_TYPE
 
         # Seating information
-        self._max_available_seats: int = max_available_seats
-        self._convenience: int = convenience
+        self._max_available_seats: int = vehicle_config.MAX_AVAILABLE_SEATS
+        self._convenience: int = vehicle_config.CONVENIENCE
         self._passengers: list[PassengerInterface] = []
 
         # Vehicle Distance Travelled
         self._distance_travelled: float = 0
 
         # Common Events
-        self._position_changed: Event = self._env.event()
-        self._user_mounted: Event = self._env.event()
-        self._user_unmounted: Event = self._env.event()
+        self._position_changed: Event = sim.env.event()
+        self._user_mounted: Event = sim.env.event()
+        self._user_unmounted: Event = sim.env.event()
 
         # Initial State, name is intentionally mangled. Do not set directly.
         self.__state: VehicleState = VehicleState.INITIALIZED
@@ -97,17 +100,11 @@ class Vehicle(TrackingInterface, ABC):
         # TODO: Make this a generic task interface
         self._current_task: None | TransportTask = None
 
-        # For logging
-        self._logging_extra: dict[str, str | int] = {
-            "clazz": self.__class__.__name__,
-            "oid": self._id,
-        }
-
         # Add self to fleet
         self._fleet.register_vehicle(self)
 
     @property
-    def mode(self) -> VehicleMode:
+    def type(self) -> VehicleType:
         """Get the mode of the vehicle.
 
         Returns
@@ -115,18 +112,7 @@ class Vehicle(TrackingInterface, ABC):
         VehicleMode
             The mode of the vehicle.
         """
-        return self._mode
-
-    @property
-    def id(self) -> int:
-        """Get the unique identifier of the vehicle.
-
-        Returns
-        -------
-        int
-            The unique identifier of the vehicle.
-        """
-        return self._id
+        return self._type
 
     @property
     def velocity(self) -> float:
@@ -230,13 +216,12 @@ class Vehicle(TrackingInterface, ABC):
         self.__position = position
 
         self._position_changed.succeed(self.__position)
-        self._position_changed = self._env.event()
+        self._position_changed = self._sim.env.event()
 
-        logging.debug(
+        self.logger.debug(
             "Position updated %s. Total distance travelled: %s.",
             self.__position,
             self._distance_travelled,
-            extra=self._logging_extra,
         )
 
     @property
@@ -251,7 +236,7 @@ class Vehicle(TrackingInterface, ABC):
         return self._current_task
 
     @property
-    def fleet(self) -> "VehicleFleet":
+    def fleet(self) -> VehicleFleet:
         """Get the fleet to which the vehicle belongs.
 
         Returns
@@ -296,10 +281,8 @@ class Vehicle(TrackingInterface, ABC):
             self._user_mounted.succeed()
             self._user_mounted = self._env.event()
 
-            logging.debug(
-                "Passenger: %s mounted vehicle.",
-                passenger.identify_passenger(),
-                extra=self._logging_extra,
+            self.logger.debug(
+                "Passenger: %s mounted vehicle.", passenger.identify_passenger()
             )
         else:
             raise VehicleError(
@@ -326,10 +309,8 @@ class Vehicle(TrackingInterface, ABC):
 
             self._user_unmounted.succeed()
             self._user_unmounted = self._env.event()
-            logging.debug(
-                "Passenger: %s unmounted vehicle.",
-                passenger.identify_passenger(),
-                extra=self._logging_extra,
+            self.logger.debug(
+                "Passenger: %s unmounted vehicle.", passenger.identify_passenger()
             )
 
         else:
@@ -337,7 +318,7 @@ class Vehicle(TrackingInterface, ABC):
                 f"Trying to unmount passenger {passenger} not in vehicle {self}."
             )
 
-        logging.debug("Driving stopped.", extra=self._logging_extra)
+        self.logger.debug("Driving stopped.")
 
     def park(self) -> None:
         """Park the vehicle.
@@ -346,7 +327,7 @@ class Vehicle(TrackingInterface, ABC):
         """
         self.state = VehicleState.PARKING
 
-        logging.debug("Parked.", extra=self._logging_extra)
+        self.logger.debug("Parked.")
 
     def dump(self, exposed_only: bool = True) -> dict[str, object]:
         if exposed_only:
@@ -378,9 +359,7 @@ class Vehicle(TrackingInterface, ABC):
         self._current_task = task
 
     def __str__(self) -> str:
-        """Return string representation of the vehicle."""
-        return f"Vehicle {self._id} ({self.__class__.__name__})"
+        return self.uid
 
     def __repr__(self) -> str:
-        """Return string representation of the vehicle."""
         return self.__str__()

@@ -1,6 +1,3 @@
-import logging
-from typing import Dict, List  # noqa: UP035
-
 import numpy as np
 import pandas as pd
 from docplex.mp.model import Model
@@ -26,7 +23,7 @@ class DowntimeMinWithoutLookahead:
         self,
         vehicles,  # noqa: ANN001
         CSs,  # noqa: ANN001
-    ) -> List[Dict[RideHailingVehicle, VirtualChargingStation]]:  # noqa: UP006
+    ) -> list[dict[RideHailingVehicle, VirtualChargingStation]]:
         """
         This is a function of allocating charging vehicles to stations, using minimum downtime, only looking at the current situation, without pre-planning the future
 
@@ -199,11 +196,10 @@ class DowntimeMinWithoutLookahead:
                 for j in vehicles:
                     if x[i.id, j.id].solution_value != 0:
                         pairs.append(dict(vehicle=j, charging_station=i))
-            logging.info(
+            self.logger.info(
                 "Number of vehicles with low SOC = %s, Number of allocations = %s",
                 len(vehicles),
                 len(pairs),
-                extra={"clazz": self.__class__.__name__, "oid": ""},
             )
             T_d_sum = mdl.sum(
                 T_d[i.id, j.id] for i in CSs for j in vehicles
@@ -215,14 +211,8 @@ class DowntimeMinWithoutLookahead:
                 T_q[i.id, j.id] for i in CSs for j in vehicles
             ).solution_value
 
-            logging.debug(
-                "T_d = %s, T_c = %s, T_q = %s",
-                T_d_sum,
-                T_c_sum,
-                T_q_sum,
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
-            logging.debug(
+            self.logger.debug("T_d = %s, T_c = %s, T_q = %s", T_d_sum, T_c_sum, T_q_sum)
+            self.logger.debug(
                 "Penalty for not charging vehicles = %s",
                 mdl.sum(
                     mdl.sum(d[i.id, j.id] for i in CSs)
@@ -230,7 +220,6 @@ class DowntimeMinWithoutLookahead:
                     * (1 - mdl.sum(x[i.id, j.id] for i in CSs))
                     for j in vehicles
                 ).solution_value,
-                extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
             stats_allocations = (
@@ -246,20 +235,12 @@ class DowntimeMinWithoutLookahead:
                 .__str__()
                 .split("\n")
             )
-            logging.debug(
-                "Stats of allocations: %s",
-                stats_allocations,
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
+            self.logger.debug("Stats of allocations: %s", stats_allocations)
             stats_candidates = (
                 pd.Series([v.current_relative_state_of_charge for v in vehicles])
                 .describe()
                 .__str__()
                 .split("\n")
             )
-            logging.debug(
-                "Stats of candidates: %s",
-                stats_candidates,
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
+            self.logger.debug("Stats of candidates: %s", stats_candidates)
         return pairs

@@ -1,12 +1,16 @@
-from typing import List  # noqa: UP035
+from __future__ import annotations
 
-from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.environment.position import Position
+from typing import TYPE_CHECKING
+
 from simulation.helper.time import SimulationTimeConverter
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
-from simulation.infrastructure.transit_network.route_segment import RouteSegment
-from simulation.infrastructure.transit_network.stop import Stop
+
+if TYPE_CHECKING:
+    from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.environment.position import Position
+    from simulation.infrastructure.transit_network.route_segment import RouteSegment
+    from simulation.infrastructure.transit_network.stop import Stop
 
 
 class Route:
@@ -15,7 +19,7 @@ class Route:
     def __init__(self, origin: Position, destination: Position):  # noqa: ANN204
         self._origin = origin
         self._destination = destination
-        self._route_segments: List[Edge] = []  # noqa: UP006
+        self._route_segments: list[Edge] = []
 
         distance = origin >> destination  # euclidean distance
         self._route_segments.append(
@@ -71,8 +75,8 @@ class PublicTransitRoute(Route):
         destination: GeodesicPosition,
         route_id: str,
         trip_id: str,
-        stops: List[Stop] = None,  # noqa: UP006, RUF013
-        segments: List[RouteSegment] = None,  # noqa: UP006, RUF013
+        stops: list[Stop] | None = None,
+        segments: list[RouteSegment] | None = None,
     ):
         super(PublicTransitRoute, self).__init__(origin, destination)  # noqa: UP008
 
@@ -81,11 +85,11 @@ class PublicTransitRoute(Route):
         self._trips = None
 
         if stops is None:
-            self._route_stops: List[Stop] = []  # noqa: UP006
+            self._route_stops: list[Stop] = []
         else:
             self._route_stops = stops
         if segments is None:
-            self._route_segments: List[RouteSegment] = []  # noqa: UP006
+            self._route_segments: list[RouteSegment] = []
         else:
             self._route_segments = segments
 

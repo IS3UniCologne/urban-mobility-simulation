@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-import logging
 from abc import ABC
 from typing import TYPE_CHECKING
 
-from simpy import Environment
-
-from simulation.environment.position import Position
-from simulation.helper.configuration.enums import VehicleMode, VehicleState
+from simulation.helper.configuration.enums import VehicleState, VehicleType
 from simulation.helper.time import SimulationTimeConverter
-from simulation.infrastructure.transit_network.stop import Stop
-from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.position import Position
     from simulation.infrastructure.route import PublicTransitRoute
+    from simulation.infrastructure.transit_network.stop import Stop
+    from simulation.operator.vehicle_fleet import VehicleFleet
 
 
 class PublicTransitVehicleException(Exception):
@@ -28,22 +26,22 @@ class PublicTransitVehicleFull(PublicTransitVehicleException):
 class PublicTransitVehicle(Vehicle, ABC):
     __slots__ = ("_current_stop", "_delay", "_route")
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env: Environment,
+        sim: SimulationContext,
         route: PublicTransitRoute,
         position: Position,
         fleet: VehicleFleet,
-        velocity,  # noqa: ANN001
-        vehicle_mode: VehicleMode,
-        max_available_seats,  # noqa: ANN001
-    ):
-        super(PublicTransitVehicle, self).__init__(  # noqa: UP008
-            env=env,
+        velocity: float,
+        vehicle_type: VehicleType,
+        max_available_seats: int,
+    ) -> None:
+        super().__init__(
+            sim=sim,
             fleet=fleet,
             position=position,
             velocity=velocity,
-            vehicle_mode=vehicle_mode,
+            vehicle_type=vehicle_type,
             max_available_seats=max_available_seats,
         )
 
@@ -54,9 +52,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         # Initialize state
         self.state = VehicleState.AT_TERMINAL_ORIGIN
 
-        logging.debug(
-            "Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
-        )
+        self.logger.debug("Initialized.")
 
     @property
     def route(self):  # noqa: ANN201

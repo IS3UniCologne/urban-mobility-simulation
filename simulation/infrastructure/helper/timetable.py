@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 import datetime
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import geopandas as gpd
 import pandas as pd
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from simulation.context.simulation_context import SimulationContext
 
 
 class AmbiguousTripException(Exception):
@@ -16,10 +22,11 @@ class AmbiguousTripException(Exception):
 class Timetable:
     __slots__ = ("_data_path", "_geo_env", "_trips")
 
-    def __init__(self, data_path: Path, geo_env: GeodesicEnvironment) -> None:
+    def __init__(self, data_path: Path, sim: SimulationContext) -> None:
         self._data_path = data_path
         self._trips = None
-        self._geo_env = geo_env
+        self._geo_env = sim.geo_env
+        self._sim = sim
 
     @property
     def trips(self):  # noqa: ANN201
@@ -123,7 +130,7 @@ class Timetable:
             # if stops in vicinity were found by hexagon, no distance has been calculated, use euclidean
             viable_trips["walk_dist"] = viable_trips.apply(
                 lambda x: transportation_search_task.transport_task.origin
-                >> GeodesicPosition(x["stop_lat"], x["stop_lon"]),
+                >> GeodesicPosition(self._sim, x["stop_lat"], x["stop_lon"]),
                 axis=1,
             )
         viable_trips["walk_duration"] = viable_trips["walk_dist"] / 83.33

@@ -1,7 +1,9 @@
-import logging
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pandas as pd
-from simpy import AnyOf, Environment
+from simpy import AnyOf
 
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
@@ -13,12 +15,16 @@ from simulation.operator.operations_management.service_tasks.charging_task_rideh
 from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.world.world import World
 
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+
 
 class RideHailingMPChargingOperations(OperationsInterface):
     """
     Ridehailing Operations for Charging with Mathematical Programming / Optimization
     """
 
+    # TODO: Do we want to keep this in its current form as part of the core simulation?
     __slots__ = (
         "_algo",
         "_state_of_charge_threshold",
@@ -31,19 +37,19 @@ class RideHailingMPChargingOperations(OperationsInterface):
 
     def __init__(  # noqa: ANN204
         self,
-        env: Environment,
+        sim: SimulationContext,
         time_between_operations: float,
         state_of_charge_threshold: float,
         algo=None,  # optimization problem  # noqa: ANN001
     ):
-        super(RideHailingMPChargingOperations, self).__init__(env=env)  # noqa: UP008
+        super().__init__(sim)
 
         self._world = None  # defer
         self._time_between_operations = time_between_operations
         self._state_of_charge_threshold = state_of_charge_threshold
         self._algo = algo
 
-        self._task_queue = TaskQueue(env)
+        self._task_queue = TaskQueue(sim.env)
         self._task_transactions = []
 
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
@@ -111,14 +117,7 @@ class RideHailingMPChargingOperations(OperationsInterface):
 
             while self._task_queue.count > 0:
                 next_task = self._task_queue.popleft()
-                logging.debug(
-                    "Processing following task: %s.",
-                    next_task,
-                    extra={
-                        "clazz": self.__class__.__name__,
-                        "oid": self._operator_reference.id,
-                    },
-                )
+                self.logger.debug("Processing following task: %s.", next_task)
                 self._env.process(next_task.execute())
 
                 # Update virtual capacity when sending out a vehicle
@@ -139,14 +138,13 @@ class RideHailingMPChargingOperations(OperationsInterface):
 
     def _track_task(self, task):  # noqa: ANN001, ANN202
         yield AnyOf(self._env, [task.task_finished, self._world.simulation_finished])
-
         self._task_transactions.append(
             {
                 "start_time": task._start_time,  # noqa: SLF001
                 "estimated_arrival_time": task._estimated_arrival_time,  # noqa: SLF001
                 "scheduled_time": task._scheduled_time,  # noqa: SLF001
                 "end_time": self._env.now,
-                "vehicle": task._vehicle.id,  # noqa: SLF001
+                "vehicle": task._vehicle.uid,  # noqa: SLF001
                 "state": task.state,
                 "fleet": task._vehicle.fleet.id,  # noqa: SLF001
                 "charging_station": task._charging_station.location,  # noqa: SLF001

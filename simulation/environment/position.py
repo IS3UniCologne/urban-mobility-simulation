@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import NewType
 
@@ -6,13 +8,6 @@ RegionId = NewType("RegionId", str)
 
 
 class Position(ABC):
-    __slots__ = ("_x", "_y")
-
-    @abstractmethod
-    def __init__(self):  # noqa: ANN204
-        self._x = "I have a x position"
-        self._y = "I have a y position"
-
     @abstractmethod
     def getExactLocation(self):  # noqa: ANN201
         pass
@@ -30,6 +25,6 @@ class Position(ABC):
         pass
 
     @abstractmethod
-    def __rshift__(self, other) -> float:  # noqa: ANN001
+    def __rshift__(self, other: Position) -> float:
         # Calculate distance between two positions
         pass

@@ -8,7 +8,7 @@ class TransportTask:
         "_max_wait_time",
         "_origin",
         "_time",
-        "_viable_vehicle_modes",
+        "_viable_vehicle_types",
     )
 
     def __init__(  # noqa: ANN204
@@ -16,14 +16,14 @@ class TransportTask:
         time,  # noqa: ANN001
         origin: Position,
         destination: Position,
-        viable_vehicle_modes,  # noqa: ANN001
+        viable_vehicle_types,  # noqa: ANN001
         max_wait_time=None,  # noqa: ANN001
         actual_wait_time=None,  # noqa: ANN001
     ):
         self._time = time
         self._origin = origin
         self._destination = destination
-        self._viable_vehicle_modes = viable_vehicle_modes
+        self._viable_vehicle_types = viable_vehicle_types
         self._max_wait_time = max_wait_time
         self._actual_wait_time = actual_wait_time
 
@@ -48,8 +48,8 @@ class TransportTask:
         self._destination = position
 
     @property
-    def viable_vehicle_modes(self):  # noqa: ANN201
-        return self._viable_vehicle_modes
+    def viable_vehicle_types(self):  # noqa: ANN201
+        return self._viable_vehicle_types
 
     @property
     def max_wait_time(self):  # noqa: ANN201

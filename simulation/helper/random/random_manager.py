@@ -5,13 +5,18 @@ generation throughout the simulation, ensuring reproducibility and component
 isolation.
 """
 
+from __future__ import annotations
+
 import random
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.random import PCG64, Generator
 
-from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.simulation_base import SimulationBase
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
 
 
 class RandomManager(SimulationBase):
@@ -42,9 +47,9 @@ class RandomManager(SimulationBase):
     ```
     """
 
-    def __init__(self, config: Configuration) -> None:
-        super().__init__()
-        self._config = config
+    def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim)
+        self._config = sim.config
         self._main_seed = None
         self._main_rng = None
         self._fixed_seed_components = None

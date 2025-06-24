@@ -1,73 +1,66 @@
-import logging
+from __future__ import annotations
 
-import pandas as pd
+from typing import TYPE_CHECKING
+
 import simpy
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.configuration.configuration import Configuration
+if TYPE_CHECKING:
+    import pandas as pd
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import TransitOperatorConfig
+    from simulation.operator.public_transport_vehicle_fleet import (
+        PublicTransportVehicleFleet,
+    )
+
 from simulation.helper.time import SimulationTime
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
 from simulation.infrastructure.transit_network.stop import Stop
 from simulation.operator.operations_management.operations import OperationsInterface
-from simulation.operator.public_transport_vehicle_fleet import (
-    PublicTransportVehicleFleet,
-)
-from simulation.world.world import World
-from tracking.tracking import Tracking
 
 
 class OperationsPublicTransport(OperationsInterface):
     __slots__ = (
         "_bus_velocity",
-        "_config",
         "_fleet",
-        "_geodesic_env",
+        "_geo_env",
         "_operator_config",
         "_time",
         "_timetable",
         "_tracking",
         "_walking_speed",
-        "_world",
     )
 
-    def __init__(self, env, timetable, fleet: PublicTransportVehicleFleet):  # noqa: ANN001, ANN204
-        super(OperationsPublicTransport, self).__init__(env=env)  # noqa: UP008
-        self._env = env
+    def __init__(
+        self,
+        sim: SimulationContext,
+        timetable: object,
+        fleet: PublicTransportVehicleFleet,
+        operator_config: TransitOperatorConfig,
+    ) -> None:
+        super().__init__(sim=sim)
         self._timetable = timetable
-        self._time = SimulationTime(env)
+        self._time = SimulationTime(self._sim.env)
         self._fleet = fleet
-
-        # Config
-        self._config = Configuration()
-        self._operator_config = self._config.transit_operators[
-            0
-        ]  # TODO: This should not be hardcoded, pass an operator object instead
+        self._operator_config = operator_config
         # Environment
-        self._geodesic_env = GeodesicEnvironment.getInstance()
-        self._world = (
-            None  # defer loading to run process, otherwise circular dependency
-        )
+        self._geo_env = sim.geo_env
         # Tracking
         self._tracking = (
             None  # defer loading to run process, otherwise circular dependency
         )
-        self._walking_speed = self._config.user.WALKING_SPEED
-        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY
+        self._walking_speed = self._sim.config.user.WALKING_SPEED
+        self._bus_velocity = self._sim.config.transit_vehicles["Bus"].VELOCITY
 
     def execute(self):  # noqa: ANN201
         """
         TransitOperator Lifecycle
         """
-        self._world = World.instance()
-        self._tracking = Tracking.instance()
 
         while True:
             try:
-                logging.debug(
-                    "TransitOperator is at time %s",
-                    self._time.now_as_str(),
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                self.logger.debug(
+                    "TransitOperator is at time %s", self._time.now_as_str()
                 )
 
                 if len(self._fleet._busses) < self._operator_config.MAX_BUSSES:  # noqa: SLF001

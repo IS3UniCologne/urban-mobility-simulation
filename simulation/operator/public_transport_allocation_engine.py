@@ -1,6 +1,13 @@
-from simulation.operator.data_transfer_object.transportation_alternative import (
-    TransportationAlternative,
-)
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
+    )
+
 from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
@@ -10,10 +17,11 @@ from simulation.operator.interface.vehicle_allocation_engine_interface import (
 
 
 class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
-    __slots__ = ("_env", "_vehicles_assigned_to_users")
+    __slots__ = ("_env", "_sim", "_vehicles_assigned_to_users")
 
-    def __init__(self, env):  # noqa: ANN001, ANN204
-        self._env = env
+    def __init__(self, sim: SimulationContext) -> None:
+        self._sim = sim
+        self._env = sim.env
         self._vehicles_assigned_to_users = self._env.event()
 
     def request_vehicle_allocation(

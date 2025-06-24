@@ -1,4 +1,12 @@
-from simulation.helper.configuration.configuration import Configuration
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
+    from simulation.tasks.transportation_search_task import TransportationSearchTask
+
 from simulation.helper.configuration.enums import VehicleState
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
@@ -8,8 +16,6 @@ from simulation.operator.data_transfer_object.transportation_alternative_ridehai
     TransportationAlternativeRideHailing,
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
-from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 
 class RideHailingSearchEngine(SearchEngineInterface):
@@ -21,20 +27,20 @@ class RideHailingSearchEngine(SearchEngineInterface):
         "_price_entering",
         "_price_per_km",
         "_price_per_minute",
+        "_sim",
     )
 
-    def __init__(self, env):  # noqa: ANN001, ANN204
-        self._env = env
+    def __init__(self, sim: SimulationContext) -> None:
+        self._sim = sim
+        self._env = sim.env
         self._fleet: MixedRideHailingFleet = None
-
-        config = Configuration()
-
-        self._AV_price_reduction = config.ride_hailing_global.AV_PRICE_REDUCTION
-
-        self._price_entering = config.ride_hailing_global.PRICE_ENTERING
-        self._price_per_minute = config.ride_hailing_global.PRICE_PER_MINUTE
-        self._price_per_km = config.ride_hailing_global.PRICE_PER_KM
-        self._min_price = config.ride_hailing_global.MINIMUM_PRICE
+        self._AV_price_reduction = (
+            self._sim.config.ride_hailing_global.AV_PRICE_REDUCTION
+        )
+        self._price_entering = self._sim.config.ride_hailing_global.PRICE_ENTERING
+        self._price_per_minute = self._sim.config.ride_hailing_global.PRICE_PER_MINUTE
+        self._price_per_km = self._sim.config.ride_hailing_global.PRICE_PER_KM
+        self._min_price = self._sim.config.ride_hailing_global.MINIMUM_PRICE
 
     def search_for_transportation_alternatives(
         self, vehicle_search_task: TransportationSearchTask

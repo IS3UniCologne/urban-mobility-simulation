@@ -1,19 +1,19 @@
-import logging
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from simpy import Environment
-
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.configuration.enums import VehicleMode, VehicleState
+from simulation.helper.configuration.enums import VehicleState, VehicleType
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
-from simulation.infrastructure.route import PublicTransitRoute
-from simulation.infrastructure.transit_network.route_segment import RouteSegment
-from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
-from simulation.world.world import World
 from tracking.tracking_interface import TrackingInterface
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.infrastructure.route import PublicTransitRoute
+    from simulation.infrastructure.transit_network.route_segment import RouteSegment
+    from simulation.operator.vehicle_fleet import VehicleFleet
 
 
 class Bus(PublicTransitVehicle, TrackingInterface):
@@ -23,7 +23,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         "_config",
         "_dist_traveled",
         "_dropoffs",
-        "_geodesic_env",
+        "_geo_env",
         "_has_reached_terminal",
         "_pickups",
         "_problem_config",
@@ -31,21 +31,20 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         "_spawned",
         "_time",
         "_use_learning_agent",
-        "_world",
     )
     # Tracking
     exposes = ["_position", "state", "_available_seats"]  # noqa: RUF012
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env: Environment,
+        sim: SimulationContext,
         route: PublicTransitRoute,
         position: GeodesicPosition,
         fleet: VehicleFleet,
         use_learning_agent: bool,
-        velocity,  # noqa: ANN001
-        max_available_seats=100,  # noqa: ANN001
-    ):
+        velocity: float,
+        max_available_seats: int = 100,
+    ) -> None:
         """
 
         :param env:
@@ -54,26 +53,25 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         :param velocity: e.g. 16.67 m/min * 30 (average in city)
         """
         super().__init__(
-            env, route, position, fleet, velocity, VehicleMode.Bus, max_available_seats
+            sim, route, position, fleet, velocity, VehicleType.BUS, max_available_seats
         )
 
         self._id = Bus.bus_id
-        self._time = SimulationTime(self._env)
-        self._spawned = float(SimulationTime(self._env).now())
+        self._time = SimulationTime(self._sim.env)
+        self._spawned = float(SimulationTime(self._sim.env).now())
         Bus.bus_id += 1
 
         # Events
-        self._has_reached_terminal = self._env.event()
+        self._has_reached_terminal = self._sim.env.event()
 
         # Config
-        self._config = Configuration()
+        self._config = sim.config
         self._problem_config = (
             None  # TODO: add back once dynamic problem configuration is re-implemented
         )
 
         # Environment / World state
-        self._geodesic_env = GeodesicEnvironment.getInstance()
-        self._world = World.instance()
+        self._geo_env = sim.geo_env
 
         self._dropoffs = 0
         self._pickups = 0
@@ -84,10 +82,12 @@ class Bus(PublicTransitVehicle, TrackingInterface):
 
         if not self._use_learning_agent:
             # use planned route logic
-            self._process = self._env.process(self._run())
+            self._process = self._sim.env.process(self._run())
         else:
             # use learning agent
-            self._process = self._env.process(self._problem_config.learning_agent.run())
+            self._process = self._sim.env.process(
+                self._problem_config.learning_agent.run()
+            )
 
     def _run(self):  # noqa: ANN202
         """
@@ -116,9 +116,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
                 wait = SimulationTimeConverter.duration_between(
                     self._time.now_as_str(strf), self._current_stop.departure, strf
                 )
-                logging.debug(
-                    "Bus waits for scheduled departure from terminal origin",
-                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                self.logger.debug(
+                    "Bus waits for scheduled departure from terminal origin"
                 )
                 yield self._env.timeout(wait)
 
@@ -130,9 +129,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
                     strf,
                     self._current_stop.departure_next_day,
                 )
-                logging.debug(
-                    "Bus is ahead of schedule and will wait for scheduled departure.",
-                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                self.logger.debug(
+                    "Bus is ahead of schedule and will wait for scheduled departure."
                 )
                 self._delay = 0  # reset delay
                 yield self._env.timeout(wait)
@@ -170,11 +168,10 @@ class Bus(PublicTransitVehicle, TrackingInterface):
 
         self.state = VehicleState.EN_ROUTE_PLANNED
 
-        logging.debug(
+        self.logger.debug(
             "Bus has started driving from stop %s to stop %s.",
             route_segment.start.stop_id,
             route_segment.end.stop_id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
         yield self._env.timeout(duration)
@@ -184,19 +181,17 @@ class Bus(PublicTransitVehicle, TrackingInterface):
 
         if self._current_stop == self._route.destination:
             self.state = VehicleState.AT_TERMINAL_DESTINATION
-            logging.debug(
+            self.logger.debug(
                 "Bus has arrived at its terminal destination - stop %s at time %s",
                 self._current_stop.stop_id,
                 self._time.now_as_str(),
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
         else:
             self.state = VehicleState.AT_STOP
-            logging.debug(
+            self.logger.debug(
                 "Bus has arrived at stop %s at time %s",
                 self._current_stop.stop_id,
                 self._time.now_as_str(),
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
     def _update_positions(self, new_position):  # noqa: ANN001, ANN202
@@ -240,7 +235,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #                     end = self._corridor_sorted.index(d.destination.get_region_id(self._action_res))
     #                     m[start][end] += 1
     #                 except ValueError as e:
-    #                     logging.debug(
+    #                     self.logger.debug(
     #                         'Bus update state: Encountered demand at edge of hexagon: %s', e,
     #                         extra={"clazz": self.__class__.__name__, "oid": self._id}
     #                     )
@@ -259,7 +254,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #                     # if a passenger is already in the bus, the edge case must be the destination
     #                     # because the passenger can never be dropped of at the destination (with vicinity=hexagon)
     #                     # this demand should be pruned before even becoming a passenger
-    #                     logging.debug(f'Bus update state: Encountered passenger demand at edge of hexagon: {e}',
+    #                     self.logger.debug(f'Bus update state: Encountered passenger demand at edge of hexagon: {e}',
     #                                   extra={"clazz": self.__class__.__name__, "oid": self._id})
     #                     # for now we are skipping it. I don't see a good way to solve the geometry inconsistency
     #                     continue
@@ -279,7 +274,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #             if region_id == \
     #                     self._route.destination.get_region_id(self._action_res):
     #                 self._state = VehicleState.AT_TERMINAL_DESTINATION
-    #                 logging.info(f'Bus has arrived at its terminal destination at time {self._time.now_as_str()}',
+    #                 self.logger.info(f'Bus has arrived at its terminal destination at time {self._time.now_as_str()}',
     #                              extra={"clazz": self.__class__.__name__, "oid": self._id})
     #         except simpy.Interrupt:
     #             # stop process loop
@@ -294,7 +289,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #                                                         self._state == VehicleState.AT_TERMINAL_DESTINATION)
     #     self._rl_agent.reward_sum = self._rl_agent.reward_sum + self._rl_agent.reward
     #
-    #     logging.debug(f'Current reward: {self._rl_agent.reward}, overall reward: {self._rl_agent.reward_sum}',
+    #     self.logger.debug(f'Current reward: {self._rl_agent.reward}, overall reward: {self._rl_agent.reward_sum}',
     #                   extra={"clazz": self.__class__.__name__, "oid": self._id})
     #
     #     self._agent_completed_step.succeed((before_state, action, self._rl_agent.reward, self._rl_agent.reward_sum))

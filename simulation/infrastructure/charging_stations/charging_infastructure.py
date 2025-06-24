@@ -1,7 +1,11 @@
-from typing import List  # noqa: UP035
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
 
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
-from tracking.tracking import Tracking
 
 
 class ChargingInfrastructure:
@@ -10,15 +14,15 @@ class ChargingInfrastructure:
     __slots__ = (
         "_capacity_list",
         "_charging_stations",
-        "_env",
         "_location_list",
         "_power_list",
         "_queue_size",
+        "_sim",
         "_tracking",
     )
 
     @staticmethod
-    def instance() -> "ChargingInfrastructure":
+    def instance() -> ChargingInfrastructure:
         """Static access method."""
         if ChargingInfrastructure.__instance is None:
             raise Exception("ChargingInfrastructure was not initialized")
@@ -26,28 +30,28 @@ class ChargingInfrastructure:
             return ChargingInfrastructure.__instance
 
     @staticmethod
-    def init(  # noqa: ANN205
-        env,  # noqa: ANN001
-        location_list: List[str],  # noqa: UP006
-        power_list: List[float],  # noqa: UP006
-        capacity_list: List[int],  # noqa: UP006
-        queue_size: List[int],  # noqa: UP006
-        reset=False,  # noqa: ANN001
-    ):
+    def init(
+        sim: SimulationContext,
+        location_list: list[str],
+        power_list: list[float],
+        capacity_list: list[int],
+        queue_size: list[int],
+        reset: bool = False,
+    ) -> None | ChargingInfrastructure:
         """Static access method."""
         if ChargingInfrastructure.__instance is None or reset is True:
             ChargingInfrastructure(
-                env, location_list, power_list, capacity_list, queue_size, reset
+                sim, location_list, power_list, capacity_list, queue_size, reset
             )
         return ChargingInfrastructure.__instance
 
     def __init__(  # noqa: ANN204
         self,
-        env,  # noqa: ANN001
-        location_list: List[str],  # noqa: UP006
-        power_list: List[float],  # noqa: UP006
-        capacity_list: List[int],  # noqa: UP006
-        queue_size: List[int],  # noqa: UP006
+        sim: SimulationContext,
+        location_list: list[str],
+        power_list: list[float],
+        capacity_list: list[int],
+        queue_size: list[int],
         reset: bool = False,
     ):
         """Virtually private constructor."""
@@ -56,8 +60,7 @@ class ChargingInfrastructure:
         else:
             ChargingInfrastructure.__instance = self
             super(ChargingInfrastructure, self).__init__()  # noqa: UP008
-        self._env = env
-        self._tracking = Tracking.instance()
+        self._sim = sim
         self._location_list = location_list
         self._power_list = power_list
         self._capacity_list = capacity_list
@@ -68,14 +71,13 @@ class ChargingInfrastructure:
     def _initialise_charging_stations(self):  # noqa: ANN202
         for i, location in enumerate(self._location_list):
             charging_station = ChargingStation(
-                env=self._env,
+                sim=self._sim,
                 location=location,
                 power=self._power_list[i],
                 capacity=self._capacity_list[i],
                 queue_size=self._queue_size[i],
             )
             self._charging_stations.append(charging_station)
-            self._tracking.register(charging_station)
 
     @property
     def charging_stations(self):  # noqa: ANN201

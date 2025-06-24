@@ -1,14 +1,18 @@
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from simulation.environment.position import Position
 from simulation.helper.simulation_base import SimulationBase
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
 
 
 class Agent(SimulationBase, ABC):
     __slots__ = ("_position", "_state")
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, sim: "SimulationContext") -> None:
+        super().__init__(sim)
 
     @property
     def state(self):  # noqa: ANN201

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 class Environment(ABC):
     __slots__ = ("_layer",)
 
-    def __init__(self):  # noqa: ANN204
+    def __init__(self) -> None:
         self._layer = {}  # name: layer frame
 
     @property
@@ -12,9 +12,9 @@ class Environment(ABC):
         return self._layer
 
     @abstractmethod
-    def getLayer(self, layer_name):  # noqa: ANN001, ANN201
+    def getLayer(self, layer_name) -> None:  # noqa: ANN001
         pass
 
     @abstractmethod
-    def addLayer(self, layer_name, layer):  # noqa: ANN001, ANN201
+    def addLayer(self, layer_name, layer) -> None:  # noqa: ANN001
         pass

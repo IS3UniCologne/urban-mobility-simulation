@@ -1,62 +1,79 @@
+from __future__ import annotations
+
 from abc import ABC
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import simpy
 
-from simulation.helper.configuration.enums import VehicleMode, VehicleState
-from simulation.vehicle.vehicle import Vehicle
-from tracking.tracking import Tracking
+from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.helper.simulation_base import SimulationBase
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.vehicle.vehicle import Vehicle
 
 
 class VehicleFleetError(Exception):
     """Base class for all vehicle fleet-related exceptions."""
 
 
-class VehicleFleet(ABC):
+class VehicleFleet(ABC, SimulationBase):
     """Class representing a fleet of vehicles.
 
     Contains methods to manage and track vehicles within the fleet.
     """
 
     __slots__ = (
-        "_env",
         "_id",
         "_resource",
+        "_sim",
         "_tracking",
         "_vehicles",
-        "_vehicles_by_mode",
         "_vehicles_by_region",
         "_vehicles_by_state",
+        "_vehicles_by_type",
+        "_world",
     )
 
     fleet_id: int = 0
 
-    def __init__(self, env: simpy.Environment):  # noqa: ANN204
-        self._id = VehicleFleet.fleet_id
-        VehicleFleet.fleet_id += 1
-        self._env: simpy.Environment = env
+    def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim)
+        self._sim = sim
         self._vehicles: list[Vehicle] = []
 
         # Vehicle collections for faster access. We use sets for faster removals and intersections
-        self._vehicles_by_mode: dict[VehicleMode, set[Vehicle]] = defaultdict(set)
+        self._vehicles_by_type: dict[VehicleType, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_region: dict[str, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
-        self._resource = simpy.Resource(env)  # Semaphore
-
-        # tracking
-        self._tracking: Tracking = Tracking.instance()
+        self._resource = simpy.Resource(sim.env)  # Semaphore
 
     @property
-    def id(self) -> int:
-        """Get the unique identifier of the vehicle fleet.
+    def vehicle_types(self) -> list[VehicleType]:
+        """Get all vehicle types in the fleet.
 
         Returns
         -------
-        int
-            The unique identifier of the vehicle fleet.
+        list[VehicleType]
+            A list of all VehicleType enums available in the fleet.
 
         """
-        return self._id
+        return list(self._vehicles_by_type.keys())
+
+    @property
+    def count_by_type(self) -> dict[VehicleType, int]:
+        """Get the count of vehicles by type.
+
+        Returns
+        -------
+        dict[VehicleType, int]
+            A dictionary mapping each VehicleType to the number of vehicles in that type.
+
+        """
+        return {
+            type_: len(vehicles) for type_, vehicles in self._vehicles_by_type.items()
+        }
 
     @property
     def resource(self) -> simpy.Resource:
@@ -111,6 +128,21 @@ class VehicleFleet(ABC):
         """
         return self._vehicles_by_region[region]
 
+    def vehicles_of_type(self, type: VehicleType) -> set[Vehicle]:
+        """Get all vehicles currently in a specific type.
+
+        Parameters
+        ----------
+        type : VehicleType
+            The type of the vehicle (e.g., CAR, SCOOTER, etc.).
+
+        Returns
+        -------
+        set[Vehicle]
+            Set of vehicles currently in the specified type.
+        """
+        return self._vehicles_by_type[type]
+
     def vehicles_in_region_with_state(
         self, region: str, state: VehicleState
     ) -> set[Vehicle]:
@@ -140,7 +172,7 @@ class VehicleFleet(ABC):
             self._add_vehicle(vehicle)
             self._vehicles_by_state[vehicle.state].add(vehicle)
             self._vehicles_by_region[vehicle.current_region].add(vehicle)
-            self._vehicles_by_mode[vehicle.mode].add(vehicle)
+            self._vehicles_by_type[vehicle.type].add(vehicle)
 
     def _add_vehicle(self, vehicle: Vehicle) -> None:
         """Add a vehicle to the fleet.
@@ -197,18 +229,3 @@ class VehicleFleet(ABC):
 
         # Add vehicle to new hexagon's set
         self._vehicles_by_region[new_region_id].add(vehicle)
-
-    def get_vehicles_in_region(self, region: str) -> list[Vehicle]:
-        """Return all vehicles in a passed region.
-
-        Parameters
-        ----------
-        region : str
-            Spatial Region identifier.
-
-        Returns
-        -------
-        list
-            List of all vehicles in the region.
-        """
-        return list(self._vehicles_by_region[region])

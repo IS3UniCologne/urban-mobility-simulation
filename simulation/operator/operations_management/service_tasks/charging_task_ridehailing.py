@@ -1,13 +1,11 @@
-import logging
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from beartype.door import is_bearable
-from simpy import Environment
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.configuration.enums import VehicleState
-from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
@@ -17,7 +15,13 @@ from simulation.operator.operations_management.service_tasks.service_task import
     ServiceTask,
     TaskState,
 )
-from simulation.vehicle.vehicle import Vehicle
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.infrastructure.charging_stations.charging_station import (
+        ChargingStation,
+    )
+    from simulation.vehicle.vehicle import Vehicle
 
 
 # TODO: refactor to not be a copy of ChargingTask that was used for SharedVehicles
@@ -26,7 +30,7 @@ class ChargingTaskRidehailing(ServiceTask):
         "_origin",
         "_destination",
         "_number_of_vehicles_to_charge",
-        "_vehicle_mode",
+        "_vehicle_type",
         "_distance_to_fleet_base",
         "_state_of_charge_threshold",
         "_charging_station",
@@ -41,29 +45,29 @@ class ChargingTaskRidehailing(ServiceTask):
         "_config",
     )
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env: Environment,
+        sim: SimulationContext,
         origin: str,
         destination: str,
-        number_of_vehicles_to_charge,  # noqa: ANN001
-        distance_to_fleet_base,  # noqa: ANN001
-        state_of_charge_threshold,  # noqa: ANN001
+        number_of_vehicles_to_charge: int,
+        distance_to_fleet_base: float,
+        state_of_charge_threshold: float,
         charging_station: ChargingStation = None,
         vehicle: Vehicle = None,
-        vehicle_mode=None,  # noqa: ANN001
+        vehicle_type=None,  # noqa: ANN001
         scheduled_time=None,  # noqa: ANN001
-    ):
-        super(ChargingTaskRidehailing, self).__init__(env)  # noqa: UP008
+    ) -> None:
+        super().__init__(sim)
 
-        _geo_env = GeodesicEnvironment.getInstance()
+        self._geo_env = sim.geo_env
         self._origin = origin
         self._destination = destination
         self._destination_position = GeodesicPosition(
-            *_geo_env.get_centroid(self._destination), self._destination
+            sim, *self._geo_env.get_centroid(self._destination), self._destination
         )
         self._number_of_vehicles_to_charge = number_of_vehicles_to_charge
-        self._vehicle_mode = vehicle_mode
+        self._vehicle_type = vehicle_type
         self._distance_to_fleet_base = distance_to_fleet_base
 
         self._state_of_charge_threshold = state_of_charge_threshold
@@ -92,7 +96,7 @@ class ChargingTaskRidehailing(ServiceTask):
         self._estimated_completion_time = None
         self._kWh_charged = None
         self._distance = vehicle.position >> self._destination_position
-        self._config = Configuration()
+        self._config = sim.config
 
         # Events
         self._arrived_at_charging_station = self._env.event()
@@ -149,23 +153,18 @@ class ChargingTaskRidehailing(ServiceTask):
                         )
                         self._waiting_time = self._scheduled_time - self._env.now
                         if self._waiting_time > 0:
-                            logging.debug(
+                            self.logger.debug(
                                 "Vehicle %s waits %s minutes for reserved slot.",
-                                self._vehicle.id,
+                                self._vehicle.uid,
                                 self._waiting_time,
-                                extra={"clazz": self.__class__.__name__},
                             )
                             self._state = TaskState.EXECUTING_WAITING
                             yield self._env.timeout(max(0, self._waiting_time))
                         elif scheduled_timeslot_end <= self._env.now:
-                            logging.warning(
+                            self.logger.warning(
                                 "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
-                                self._vehicle.id,
+                                self._vehicle.uid,
                                 self._env.now - scheduled_timeslot_end,
-                                extra={
-                                    "clazz": self.__class__.__name__,
-                                    "oid": self._vehicle.id,
-                                },
                             )
                             self._state = TaskState.MISSED_TIMESLOT
                             self._vehicle.state = VehicleState.PARKING
@@ -183,13 +182,9 @@ class ChargingTaskRidehailing(ServiceTask):
                     self._charging_station.plugs.queue
                 ):
                     # charging station is at capacity and the queue is also full
-                    logging.info(
+                    self.logger.info(
                         "Vehicle %s arrived charging station, but the queue is full. Cannot charge!",
-                        self._vehicle.id,
-                        extra={
-                            "clazz": self.__class__.__name__,
-                            "oid": self._vehicle.id,
-                        },
+                        self._vehicle.uid,
                     )
                     self._state = TaskState.MISSED_QUEUE_FULL
                     self._vehicle.state = VehicleState.PARKING
@@ -212,14 +207,10 @@ class ChargingTaskRidehailing(ServiceTask):
                         )
 
                     if self._charging_duration <= 0:
-                        logging.info(
+                        self.logger.info(
                             "Vehicle %s has a fishy charging time of %s minutes at. Cannot charge!",
-                            self._vehicle.id,
+                            self._vehicle.uid,
                             self._charging_duration,
-                            extra={
-                                "clazz": self.__class__.__name__,
-                                "oid": self._vehicle.id,
-                            },
                         )
                         self._state = TaskState.MISSED_TIMESLOT
                         self._vehicle.state = VehicleState.PARKING
@@ -267,7 +258,7 @@ class ChargingTaskRidehailing(ServiceTask):
         self._task_finished.succeed()
 
     def __str__(self):  # noqa: ANN204
-        return f"Charging Task for Vehicle {self._vehicle.id} from {self._origin} to {self._destination} (distance = {self._distance})"
+        return f"Charging Task for Vehicle {self._vehicle.uid} from {self._origin} to {self._destination} (distance = {self._distance})"
 
     def __repr__(self):  # noqa: ANN204
         return self.__str__()

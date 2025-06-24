@@ -1,12 +1,16 @@
-import logging
+from __future__ import annotations
+
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from simpy import Environment
+from simulation.helper.simulation_base import SimulationBase
 
-from simulation.operator.operations_management.service_tasks.service_task import (
-    ServiceTask,
-)
-from simulation.operator.operations_management.task_queue import TaskQueue
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.operations_management.service_tasks.service_task import (
+        ServiceTask,
+    )
+    from simulation.operator.operations_management.task_queue import TaskQueue
 
 
 class ServiceWorkerState(Enum):
@@ -15,15 +19,15 @@ class ServiceWorkerState(Enum):
     HIBERNATE = 3
 
 
-class ServiceWorker:
+class ServiceWorker(SimulationBase):
     service_worker_id = 0
 
     __slots__ = ("_env", "_id", "_state", "_task_finished", "_task_queue")
 
-    def __init__(self, env: Environment, task_queue: TaskQueue):  # noqa: ANN204
-        self._id = ServiceWorker.service_worker_id
+    def __init__(self, sim: SimulationContext, task_queue: TaskQueue) -> None:
+        super().__init__(sim)
 
-        self._env = env
+        self._env = sim.env
         self._state = ServiceWorkerState.HIBERNATE
 
         self._task_queue = task_queue
@@ -37,10 +41,7 @@ class ServiceWorker:
             # Wait until operation management engine puts tasks into queue
             yield self._task_queue.task_queue_updated
 
-            logging.debug(
-                "Waking up and searching for available jobs.",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
+            self.logger.debug("Waking up and searching for available jobs.")
 
             self._state = ServiceWorkerState.FREE
 
@@ -49,10 +50,7 @@ class ServiceWorker:
 
                 yield self._env.process(self.execute_task(next_task))
 
-            logging.debug(
-                "There are no more tasks for me. Going into hibernate.",
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
+            self.logger.debug("There are no more tasks for me. Going into hibernate.")
 
             # Go back to sleep
             self._state = ServiceWorkerState.HIBERNATE
@@ -65,13 +63,9 @@ class ServiceWorker:
         """
         self._state = ServiceWorkerState.WORKING
 
-        logging.debug(
-            "Processing following task: %s.",
-            service_task,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
-        )
+        self.logger.debug("Processing following task: %s.", service_task)
 
-        yield self._env.process(service_task.execute(self._id))
+        yield self._env.process(service_task.execute(self.uid))
 
         self._state = ServiceWorkerState.FREE
 

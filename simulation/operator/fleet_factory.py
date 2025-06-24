@@ -1,34 +1,44 @@
-import pandas as pd
-import simpy
+from __future__ import annotations
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
+from typing import TYPE_CHECKING
+
+import pandas as pd
+
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.configuration.enums import VehicleMode
-from simulation.helper.random.random_manager import RandomManager
+from simulation.helper.configuration.enums import VehicleType
 from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
-rng = RandomManager().get_rng(component_name="FLEETFACTORY")
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
 
 
-def generate_fleet_config(
-    distribution: pd.DataFrame,
-    n_cars: int = 1000,
-    n_scooter: int = 500,
-    n_kick_scooter: int = 500,
-    n_bikes: int = 500,
-) -> pd.DataFrame:
+def generate_fleet_config(sim: SimulationContext) -> pd.DataFrame:
     """
     Calculate vehicle distribution based on activity distribution per mode.
 
     Input Distribution generated using Script: Prepare_Vehicle_Supply_Data
-    :param distribution: DataFrame consisting of five columns ["hex_id", "cars_prob", "scooters_prob", "kick_scooters_prob", "bikes_prob"]
+    :param sim: SimulationContext containing config and random manager
     :return: Fleet Configuration (i.e., where are how many vehciles distributed)
     """
+    # TODO make this operator specific
+    config = sim.config
+    random_manager = sim.random_manager
+
+    n_cars = config.shared_vehicle_operators[0].N_VEHICLES[VehicleType.CAR]
+    n_scooter = config.shared_vehicle_operators[0].N_VEHICLES[VehicleType.SCOOTER]
+    n_kick_scooter = config.shared_vehicle_operators[0].N_VEHICLES[
+        VehicleType.KICK_SCOOTER
+    ]
+    n_bikes = config.shared_vehicle_operators[0].N_VEHICLES[VehicleType.BIKE]
+
+    supply_path = config.path.PATH_VEHICLE_SUPPLY
+    distribution = pd.read_csv(supply_path)
+
+    rng = random_manager.get_rng(component_name="FLEETFACTORY")
 
     # Sample Supply Distribution for Cars
     cars_prob_arr = distribution["cars_prob"].to_numpy()
@@ -66,7 +76,7 @@ def generate_fleet_config(
     bikes_cnt.index = distribution.index
     distribution["bikes"] = bikes_cnt["bikes_count"]
 
-    hex_column = Configuration().world.SPATIAL_RESOLUTION_COLUMN
+    hex_column = config.world.SPATIAL_RESOLUTION.column_name
 
     # Slice fleet config
     fleet_config = distribution[
@@ -76,20 +86,22 @@ def generate_fleet_config(
     return fleet_config
 
 
-def generate_ridehailing_fleet_config(
-    distribution: pd.DataFrame,
-    n_cars: int = 1000,
-    n_AVs: int = 500,  # TODO: This is completely ignored/overwritten. Either remov or change calculation below
-) -> pd.DataFrame:
+def generate_ridehailing_fleet_config(sim: SimulationContext) -> pd.DataFrame:
     """
     Calculate vehicle distribution based on activity distribution per mode.
 
     Input Distribution generated using Script: Prepare_Vehicle_Supply_Data
-    :param distribution: DataFrame consisting of five columns ["hex_id", "cars_prob", "scooters_prob", "kick_scooters_prob", "bikes_prob"]
-    :return: Fleet Configuration (i.e., where are how many vehciles distributed)
+    :param sim: SimulationContext containing config and random manager
+    :return: Fleet Configuration (i.e., where are how many vehicles distributed)
     """
+    config = sim.config
 
-    config = Configuration()
+    supply_path = config.path.PATH_VEHICLE_SUPPLY
+    distribution = pd.read_csv(supply_path)
+
+    rng = sim.random_manager.get_rng(component_name="FLEETFACTORY")
+
+    n_cars = config.ride_hailing_global.N_RIDE_HAILING_CARS
     EV_peneteration = config.ride_hailing_global.EV_PENETRATION
     AV_peneteration = config.ride_hailing_global.AV_PENETRATION
     n_AVs = int(AV_peneteration * n_cars)
@@ -122,7 +134,7 @@ def generate_ridehailing_fleet_config(
     distribution["AVs"] = car_cnt["car_count"]
 
     # Sample Supply Distribution for Cars
-    hex_column = Configuration().world.SPATIAL_RESOLUTION_COLUMN
+    hex_column = config.world.SPATIAL_RESOLUTION.column_name
 
     # Slice fleet config
     fleet_config = distribution[[hex_column, "cars", "EVs", "AVs"]]
@@ -131,10 +143,11 @@ def generate_ridehailing_fleet_config(
 
 
 def generate_AV_fleet(
-    env: simpy.Environment, distribution: pd.DataFrame, n: int = 500
+    sim: SimulationContext, distribution: pd.DataFrame, n: int
 ) -> MixedRideHailingFleet:
-    config = Configuration()
-    av_config = config.ride_hailing_vehicles["AutonomousCar"]
+    rng = sim.random_manager.get_rng(component_name="FLEETFACTORY")
+
+    av_config = sim.config.ride_hailing_vehicles["AutonomousCar"]
 
     # Sample Supply Distribution for Cars
     prob_arr = distribution["cars_prob"].to_numpy()
@@ -144,16 +157,13 @@ def generate_AV_fleet(
     car_cnt.index = distribution.index
     distribution["AVs"] = car_cnt["car_count"]
 
-    hex_column = Configuration().world.SPATIAL_RESOLUTION_COLUMN
+    hex_column = sim.config.world.SPATIAL_RESOLUTION.column_name
 
     # Slice fleet config
     fleet_config = distribution[[hex_column, "AVs"]]
 
     # New Fleet Object
-    fleet = MixedRideHailingFleet(env)
-
-    # Access to underlying geodesic environment
-    geo_env = GeodesicEnvironment.getInstance()
+    fleet = MixedRideHailingFleet(sim=sim)
 
     for _index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
@@ -162,46 +172,31 @@ def generate_AV_fleet(
 
         # Add AVs
         for _current_AV in range(count):
-            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            RideHailingAV(
-                env=env,
-                position=pos,
-                fleet=fleet,
-                velocity=av_config.VELOCITY,
-                max_available_seats=av_config.MAX_AVAILABLE_SEATS,
-                max_state_of_charge=av_config.MAX_STATE_OF_CHARGE,
-                energy_consumption=av_config.ENERGY_CONSUMPTION,
-                price_per_min=av_config.PRICE_PER_MIN,
-            )
+            rdm_lat, rdm_lng = sim.geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(sim, rdm_lat, rdm_lng, hex_id)
+            RideHailingAV(sim=sim, position=pos, fleet=fleet, vehicle_config=av_config)
 
     return fleet
 
 
-def generate_mixed_ride_hailing_fleet(
-    env: simpy.Environment, fleet_config: pd.DataFrame
-) -> MixedRideHailingFleet:
+def generate_mixed_ride_hailing_fleet(sim: SimulationContext) -> MixedRideHailingFleet:
     """
-    Generate a mixed shared vehicle fleet based on given fleet config.
-    :param env: SimPy Environment (passed to vehicles)
-    :param fleet_config: DataFrame with following 5 columns hex_id, cars, scooters, kick_scooters, bikes
-    :return: MixedSharedVehicleFleet Object
+    Generate a mixed ride hailing fleet based on fleet config.
+    :param sim: SimulationContext containing all necessary components
+    :return: MixedRideHailingFleet Object
     """
-    # New Fleet Object
-    fleet = MixedRideHailingFleet(env)
 
-    # Access to underlying geodesic environment
-    geo_env = GeodesicEnvironment.getInstance()
+    fleet_config = generate_ridehailing_fleet_config(sim=sim)
+
+    # New Fleet Object
+    fleet = MixedRideHailingFleet(sim=sim)
 
     # Get Column Identifier for current resolution (e.g., hex_id_7)
-    hex_column = Configuration().world.SPATIAL_RESOLUTION_COLUMN
-
-    # Global Config File (values from config ini files)
-    config = Configuration()
+    hex_column = sim.config.world.SPATIAL_RESOLUTION.column_name
 
     # Load Vehicle Configurations
-    rh_config = config.ride_hailing_vehicles["RideHailingCar"]
-    av_config = config.ride_hailing_vehicles["AutonomousCar"]
+    rh_config = sim.config.ride_hailing_vehicles["RideHailingCar"]
+    av_config = sim.config.ride_hailing_vehicles["AutonomousCar"]
 
     for _index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
@@ -214,80 +209,46 @@ def generate_mixed_ride_hailing_fleet(
 
         # Add EV Ridehailing
         for _current_car in range(EV_count):
-            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            RideHailingCar(
-                env=env,
-                position=pos,
-                fleet=fleet,
-                velocity=rh_config.VELOCITY,
-                max_available_seats=rh_config.MAX_AVAILABLE_SEATS,
-                max_state_of_charge=rh_config.MAX_STATE_OF_CHARGE,
-                energy_consumption=rh_config.ENERGY_CONSUMPTION,
-                price_per_min=rh_config.PRICE_PER_MIN,
-            )
+            rdm_lat, rdm_lng = sim.geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(sim, rdm_lat, rdm_lng, hex_id)
+            RideHailingCar(sim=sim, position=pos, fleet=fleet, vehicle_config=rh_config)
 
         # Add Regular Ridehailing
         for _current_car in range(car_count):
-            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            RideHailingCar(
-                env=env,
-                fleet=fleet,
-                position=pos,
-                velocity=rh_config.VELOCITY,
-                max_available_seats=rh_config.MAX_AVAILABLE_SEATS,
-                max_state_of_charge=rh_config.MAX_STATE_OF_CHARGE,
-                energy_consumption=rh_config.ENERGY_CONSUMPTION,
-                price_per_min=rh_config.PRICE_PER_MIN,
-                is_electric=False,
-            )
+            rdm_lat, rdm_lng = sim.geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(sim, rdm_lat, rdm_lng, hex_id)
+            RideHailingCar(sim=sim, fleet=fleet, position=pos, vehicle_config=rh_config)
 
         # Add AVs
         for _current_AV in range(AVs_count):
-            rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
-            RideHailingAV(
-                env=env,
-                fleet=fleet,
-                position=pos,
-                velocity=av_config.VELOCITY,
-                max_available_seats=av_config.MAX_AVAILABLE_SEATS,
-                max_state_of_charge=av_config.MAX_STATE_OF_CHARGE,
-                energy_consumption=av_config.ENERGY_CONSUMPTION,
-                price_per_min=av_config.PRICE_PER_MIN,
-            )
+            rdm_lat, rdm_lng = sim.geo_env.get_random_position(hex_id)
+            pos = GeodesicPosition(sim, rdm_lat, rdm_lng, hex_id)
+            RideHailingAV(sim=sim, fleet=fleet, position=pos, vehicle_config=av_config)
 
     return fleet
 
 
-def generate_mixed_fleet(
-    env: simpy.Environment, fleet_config: pd.DataFrame
-) -> MixedSharedVehicleFleet:
+def generate_mixed_fleet(sim: SimulationContext) -> MixedSharedVehicleFleet:
     """
     Generate a mixed shared vehicle fleet based on given fleet config.
-    :param env: SimPy Environment (passed to vehicles)
-    :param fleet_config: DataFrame with following 5 columns hex_id, cars, scooters, kick_scooters, bikes
+    :param sim: SimulationContext containing all necessary components
     :return: MixedSharedVehicleFleet Object
     """
-    # New Fleet Object
-    fleet = MixedSharedVehicleFleet(env)
 
-    # Access to underlying geodesic environment
-    geo_env = GeodesicEnvironment.getInstance()
+    fleet_config = generate_fleet_config(sim=sim)
+    # New Fleet Object
+    fleet = MixedSharedVehicleFleet(sim=sim)
 
     # Get Column Identifier for current resolution (e.g., hex_id_7)
-    hex_column = Configuration().world.SPATIAL_RESOLUTION_COLUMN
+    hex_column = sim.config.world.SPATIAL_RESOLUTION.column_name
 
-    # Global Config File (values from config ini files)
-    config = Configuration()
-
+    # TODO: This should not be hardcoded
     # Define vehicle types and their configuration
     vehicle_types = {
-        "cars": VehicleMode.Car,
-        "scooters": VehicleMode.Scooter,
-        "kick_scooters": VehicleMode.KickScooter,
-        "bikes": VehicleMode.Bike,
+        "cars": VehicleType.CAR,
+        "scooters": VehicleType.SCOOTER,
+        "kick_scooters": VehicleType.KICK_SCOOTER,
+        "bikes": VehicleType.BIKE,
     }
 
     # Process each hexagon in the fleet config
@@ -298,27 +259,17 @@ def generate_mixed_fleet(
         # Create vehicles for each type
         for count_column, vehicle_mode in vehicle_types.items():
             vehicle_count = row[count_column]
-            vehicle_config = config.shared_vehicles[vehicle_mode]
+            vehicle_config = sim.config.shared_vehicles[vehicle_mode]
 
             # Create the specified number of vehicles
             for _ in range(vehicle_count):
                 # Get random position within hexagon
-                rdm_lat, rdm_lng = geo_env.get_random_position(hex_id)
-                pos = GeodesicPosition(rdm_lat, rdm_lng, hex_id)
+                rdm_lat, rdm_lng = sim.geo_env.get_random_position(hex_id)
+                pos = GeodesicPosition(sim, rdm_lat, rdm_lng, hex_id)
 
                 # Create vehicle
                 SharedVehicle(
-                    env=env,
-                    fleet=fleet,
-                    position=pos,
-                    velocity=vehicle_config.VELOCITY,
-                    vehicle_mode=vehicle_mode,
-                    max_available_seats=vehicle_config.MAX_AVAILABLE_SEATS,
-                    convenience=vehicle_config.CONVENIENCE,
-                    max_state_of_charge=vehicle_config.MAX_STATE_OF_CHARGE,
-                    energy_consumption=vehicle_config.ENERGY_CONSUMPTION,
-                    price_per_min=vehicle_config.PRICE_PER_MIN,
-                    price_per_trip=vehicle_config.PRICE_PER_TRIP,
+                    sim=sim, fleet=fleet, position=pos, vehicle_config=vehicle_config
                 )
 
     return fleet
