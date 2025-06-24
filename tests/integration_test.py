@@ -39,11 +39,7 @@ def run_template_script(
     return result
 
 
-TEMPLATES = [
-    "ridehailing_template.py",
-    "shared_vehicle_fleet_template.py",
-    "public_transport_template.py",
-]
+TEMPLATES = ["test_template.py"]
 
 # Get all *.toml files in the tests/configurations directory
 CONFIG_FILES_PATTERN = os.path.join("tests", "configurations", "*.toml")
@@ -115,18 +111,18 @@ def test_templates(script: str, config: str) -> None:
     log_path = log_dir / log_file
 
     # Validate log content
-    _validate_simulation_log(log_path, script)
+    _validate_simulation_log(log_path, config)
 
 
-def _validate_simulation_log(log_path: Path, script: str) -> None:
+def _validate_simulation_log(log_path: Path, config: str) -> None:
     """Validate the content of a simulation log file.
 
     Parameters
     ----------
     log_path : Path
         Path to the log file to validate.
-    script : str
-        Name of the template script that generated the log.
+    config : str
+        Path to the configuration file used for the simulation.
     """
     with open(log_path, encoding="utf-8") as f:
         log_content = f.read()
@@ -138,34 +134,100 @@ def _validate_simulation_log(log_path: Path, script: str) -> None:
         )
 
     # Template-specific validations
-    if script == "ridehailing_template.py":
-        expected_entry = (
-            "Missed trip of User 531. Current Total Revenue: 840.7610090811684 - "
-            "Total Trips: 65 - Missed Trips 184."
-        )
-        if expected_entry not in log_content:
-            pytest.fail("Total revenue not as expected in ridehailing template")
-
-    elif script == "public_transport_template.py":
-        expected_entry = (
-            "Missed trip of User 561. Current Total Revenue: 0 - "
-            "Total Trips: 0 - Missed Trips 1124."
-        )
-        if expected_entry not in log_content:
-            pytest.fail("Total revenue not as expected in public transport template")
-
-    if script == "shared_vehicle_fleet_template.py":
-        expected_entry = (
-            " Missed trip of User 555. Current Total Revenue: 499.3177950308087 - "
-            "Total Trips: 55 - Missed Trips 491."
-        )
-        if expected_entry not in log_content:
-            pytest.fail(
-                "Total revenue not as expected in shared vehicle fleet template"
+    if config == "tests/configurations/rh_test.toml":
+        # Check for new metrics table entries in the log
+        expected_metrics = [
+            "|              total_revenue | 883.64     |",
+            "|      total_fulfilled_trips | 65         |",
+            "|         total_missed_trips | 0          |",
+            "|       total_missed_revenue | 0.00       |",
+            "|        total_trip_duration | 1,506.11   |",
+            "|      average_trip_duration | 23.17      |",
+            "|        total_trip_distance | 239,472.13 |",
+            "|      average_trip_distance | 3,684.19   |",
+            "|         average_trip_price | 13.59      |",
+            "|      trip_fulfillment_rate | 0.26       |",
+            "|   total_energy_consumption | 76.85      |",
+            "| average_energy_consumption | 1.18       |",
+            "|              total_revenue | 883.89     |",
+            "|      total_fulfilled_trips | 73         |",
+            "|         total_missed_trips | 0          |",
+            "|       total_missed_revenue | 0.00       |",
+            "|        total_trip_duration | 1,457.33   |",
+            "|      average_trip_duration | 19.96      |",
+            "|        total_trip_distance | 231,715.81 |",
+            "|      average_trip_distance | 3,174.19   |",
+            "|         average_trip_price | 12.11      |",
+            "|      trip_fulfillment_rate | 0.29       |",
+            "|   total_energy_consumption | 81.13      |",
+            "| average_energy_consumption | 1.11       |",
+            "|            total_revenue | 1,767.53   |",
+            "|    total_fulfilled_trips | 138        |",
+            "|       total_missed_trips | 0          |",
+            "|     total_missed_revenue | 0.00       |",
+            "|      total_trip_duration | 2,963.45   |",
+            "|      total_trip_distance | 471,187.94 |",
+            "| total_energy_consumption | 157.98     |",
+        ]
+        for expected in expected_metrics:
+            assert expected in log_content, (
+                f"Expected metric '{expected}' not found in ridehailing template log"
             )
+
+    elif config == "tests/configurations/public_transport_test.toml":
+        expected_revenue = "Total Revenue: 0.0"
+        assert expected_revenue in log_content, (
+            "Total revenue not as expected in public transport template"
+        )
+        expected_total_trips = "Total Fulfilled Trips: 0"
+        assert expected_total_trips in log_content, (
+            "Total fulfilled trips not as expected in public transport template"
+        )
+        expected_total_missed_trips = "Total Missed Trips: 562"
+        assert expected_total_missed_trips in log_content, (
+            "Total missed trips not as expected in public transport template"
+        )
+        # extra check
+        assert (
+            "[Time     143.93] [                   TransitUser 561]: Transport request of user 561 has been withdrawn due to lack of vehicles."
+            in log_content
+        ), (
+            "Expected withdrawal message for user 561 not found in public transport template log"
+        )
+
+    if config == "tests/configurations/sv_test.toml":
+        # Check for new metrics table entries in the log
+        expected_metrics = [
+            "|              total_revenue | 418.80     |",
+            "|    total_transaction_count | 569        |",
+            "|      total_fulfilled_trips | 63         |",
+            "|         total_missed_trips | 506        |",
+            "|       total_missed_revenue | 0.00       |",
+            "|        total_trip_duration | 1,572.37   |",
+            "|      average_trip_duration | 24.96      |",
+            "|        total_trip_distance | 198,128.36 |",
+            "|      average_trip_distance | 3,144.89   |",
+            "|         average_trip_price | 6.65       |",
+            "|      trip_fulfillment_rate | 0.11       |",
+            "|   total_energy_consumption | 26.59      |",
+            "| average_energy_consumption | 0.42       |",
+            "|            total_revenue | 418.80     |",
+            "|  total_transaction_count | 569        |",
+            "|    total_fulfilled_trips | 63         |",
+            "|       total_missed_trips | 506        |",
+            "|     total_missed_revenue | 0.00       |",
+            "|      total_trip_duration | 1,572.37   |",
+            "|      total_trip_distance | 198,128.36 |",
+            "| total_energy_consumption | 26.59      |",
+        ]
+        for expected in expected_metrics:
+            assert expected in log_content, (
+                f"Expected metric '{expected}' not found in shared vehicle template log"
+            )
+
     logging.info(
-        "Successfully validated log file %s for template %s",
+        "Successfully validated log file %s for configuration %s",
         log_path.name,
-        script,
+        config,
         extra={"clazz": "integration_test", "oid": ""},
     )
