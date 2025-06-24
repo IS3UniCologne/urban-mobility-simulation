@@ -82,8 +82,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         self._scheduled_tasks = []  # TODO: move to workforce? or internal schedule?
 
         # Events
-        self._charging_plan_updated = self._sim.env.event()
-        self._operations_started = self._sim.env.event()
+        self._charging_plan_updated = self._env.event()
+        self._operations_started = self._env.event()
 
         # When to start operations (every 1440 min)
         self._time_between_operations = time_between_operations

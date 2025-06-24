@@ -57,12 +57,12 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         )
 
         self._id = Bus.bus_id
-        self._time = SimulationTime(self._sim.env)
-        self._spawned = float(SimulationTime(self._sim.env).now())
+        self._time = SimulationTime(self._env)
+        self._spawned = float(SimulationTime(self._env).now())
         Bus.bus_id += 1
 
         # Events
-        self._has_reached_terminal = self._sim.env.event()
+        self._has_reached_terminal = self._env.event()
 
         # Config
         self._config = sim.config
@@ -82,12 +82,10 @@ class Bus(PublicTransitVehicle, TrackingInterface):
 
         if not self._use_learning_agent:
             # use planned route logic
-            self._process = self._sim.env.process(self._run())
+            self._process = self._env.process(self._run())
         else:
             # use learning agent
-            self._process = self._sim.env.process(
-                self._problem_config.learning_agent.run()
-            )
+            self._process = self._env.process(self._problem_config.learning_agent.run())
 
     def _run(self):  # noqa: ANN202
         """

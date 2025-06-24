@@ -20,6 +20,7 @@ class MixedRideHailingFleet(VehicleFleet):
         "_config",
         "_distance_threshold_to_user",
         "_driver_availability_vector",
+        "_env",
         "_recharging_threshold",
         "_ridehailing_cars",
     )
@@ -27,6 +28,7 @@ class MixedRideHailingFleet(VehicleFleet):
     def __init__(self, sim: SimulationContext) -> None:
         super().__init__(sim=sim)
         self._config = sim.config
+        self._env = sim.env
         self._ridehailing_cars = []
         self._autonomous_cars = []
         self._distance_threshold_to_user = (
@@ -38,7 +40,7 @@ class MixedRideHailingFleet(VehicleFleet):
         self._recharging_threshold = self._config.ride_hailing_operators[
             0
         ].RECHARGE_THRESHOLD
-        self._sim.env.process(self.fleet_size_monitor())
+        self._env.process(self.fleet_size_monitor())
 
     def _add_vehicle(self, vehicle: RideHailingVehicle):  # noqa: ANN202
         if vehicle not in self._vehicles:
@@ -97,7 +99,7 @@ class MixedRideHailingFleet(VehicleFleet):
 
         serving_state = VehicleState.DRIVING
         serving_vehicles = self._vehicles_by_state[serving_state]
-        hour = int((self._sim.env.now % 1440 - self._sim.env.now % 60) / 60)
+        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = self._recharging_threshold[hour]
         # TODO: Check if this is necessary
         serving_vehicles_sorted = sorted(serving_vehicles, key=lambda v: v.uid)
@@ -111,7 +113,7 @@ class MixedRideHailingFleet(VehicleFleet):
         serving_cars_in_area = []
         for car in serving_cars:
             distance_to_current_destination = (
-                car.estimated_completion_time - self._sim.env.now
+                car.estimated_completion_time - self._env.now
             ) * car.velocity
             if (
                 car.destination.position << origin
@@ -126,7 +128,7 @@ class MixedRideHailingFleet(VehicleFleet):
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
-        hour = int((self._sim.env.now % 1440 - self._sim.env.now % 60) / 60)
+        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
         return sum(
             1
@@ -250,7 +252,7 @@ class MixedRideHailingFleet(VehicleFleet):
         # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = []
-        hour = int((self._sim.env.now % 1440 - self._sim.env.now % 60) / 60)
+        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
         state_of_charge_threshold = state_of_charge_threshold[hour]
 
         parking_vehicles = self._vehicles_by_state[VehicleState.PARKING]
@@ -305,4 +307,4 @@ class MixedRideHailingFleet(VehicleFleet):
         while True:
             number_of_online_vehicles = len(self.get_online_vehicles())
             self.logger.info("Fleet has %s online vehicles", number_of_online_vehicles)
-            yield self._sim.env.timeout(60)
+            yield self._env.timeout(60)

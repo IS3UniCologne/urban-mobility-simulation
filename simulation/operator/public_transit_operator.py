@@ -58,7 +58,7 @@ class PublicTransitOperator(Operator):
         self._tracked_demands = set()
 
         self._timetable = timetable
-        self._time = SimulationTime(self._sim.env)
+        self._time = SimulationTime(self._env)
         self._busses = []
 
     def pay_for_fulfilled_transportation_task(
