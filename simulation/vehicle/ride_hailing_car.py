@@ -57,12 +57,12 @@ class RideHailingCar(RideHailingVehicle):
             self._sim.config.ride_hailing_global.DRIVER_PAYMENT_SHARE
         )
         self.state = VehicleState.OFFLINE
-        self._online_event = self._sim.env.event()
-        self._offline_event = self._sim.env.event()
+        self._online_event = self._env.event()
+        self._offline_event = self._env.event()
 
         self._emergency_soc_buffer_percent = vehicle_config.EMERGENCY_SOC_BUFFER
 
-        self._sim.env.process(self.run_shift_check_process())
+        self._env.process(self.run_shift_check_process())
 
     @property
     def total_earn(self):  # noqa: ANN201

@@ -69,24 +69,24 @@ class SharedVehicle(Vehicle, ABC):
 
         #### Vehicle Events
         # Driving Events
-        self._vehicle_parked = self._sim.env.event()
-        self._user_mounted = self._sim.env.event()
-        self._driving_started = self._sim.env.event()
-        self._driving_finished = self._sim.env.event()
-        self._user_unmounted = self._sim.env.event()
+        self._vehicle_parked = self._env.event()
+        self._user_mounted = self._env.event()
+        self._driving_started = self._env.event()
+        self._driving_finished = self._env.event()
+        self._user_unmounted = self._env.event()
 
-        self._driver_mounted = self._sim.env.event()
-        self._driver_unmounted = self._sim.env.event()
+        self._driver_mounted = self._env.event()
+        self._driver_unmounted = self._env.event()
 
         # Relocation Events
-        self._vehicle_relocation_started = self._sim.env.event()
-        self._vehicle_relocation_finished = self._sim.env.event()
+        self._vehicle_relocation_started = self._env.event()
+        self._vehicle_relocation_finished = self._env.event()
 
         # Charging Events
-        self._charging_station_plugged_in = self._sim.env.event()
-        self._charging_station_charging_started = self._sim.env.event()
-        self._charging_station_charging_finished = self._sim.env.event()
-        self._charging_station_plugged_out = self._sim.env.event()
+        self._charging_station_plugged_in = self._env.event()
+        self._charging_station_charging_started = self._env.event()
+        self._charging_station_charging_finished = self._env.event()
+        self._charging_station_plugged_out = self._env.event()
 
         # Initial State
         self.state: VehicleState = VehicleState.PARKING
@@ -150,7 +150,7 @@ class SharedVehicle(Vehicle, ABC):
                 f"{self.__class__.__name__!s} {self.uid} has been tried to move but has not enough state of charge."
             )
 
-        yield self._sim.env.timeout(time)
+        yield self._env.timeout(time)
 
         self._update_positions(route_segment.destination.position)
         self._update_state_of_charge(distance)
@@ -238,7 +238,7 @@ class SharedVehicle(Vehicle, ABC):
 
         self._driver = driver
         self._driver_mounted.succeed()
-        self._driver_mounted = self._sim.env.event()
+        self._driver_mounted = self._env.event()
 
         self.state = VehicleState.DRIVING
 
@@ -251,7 +251,7 @@ class SharedVehicle(Vehicle, ABC):
         tmp_driver_id = self._driver.identify_driver()
         self._driver = None
         self._driver_unmounted.succeed()
-        self._driver_unmounted = self._sim.env.event()
+        self._driver_unmounted = self._env.event()
 
         self.state = VehicleState.PARKING
 
@@ -278,7 +278,7 @@ class SharedVehicle(Vehicle, ABC):
                 "Vehicle %s has a driver. Revoke relocation task.", self.uid
             )
             # TODO: Whey are we yielding here?
-            yield self._sim.env.timeout(1)
+            yield self._env.timeout(1)
 
             return
 
@@ -286,11 +286,11 @@ class SharedVehicle(Vehicle, ABC):
 
         # Invoke event to notify listeners that relocation started
         self._vehicle_relocation_started.succeed()
-        self._vehicle_relocation_started = self._sim.env.event()
+        self._vehicle_relocation_started = self._env.event()
 
         self.state = VehicleState.RELOCATING
 
-        yield self._sim.env.timeout(time)
+        yield self._env.timeout(time)
 
         # Save old position for logging purposes
         old_position = self.position
@@ -300,7 +300,7 @@ class SharedVehicle(Vehicle, ABC):
 
         # Invoke event to notify listeners that relocation ended
         self._vehicle_relocation_finished.succeed()
-        self._vehicle_relocation_finished = self._sim.env.event()
+        self._vehicle_relocation_finished = self._env.event()
 
         self.state = VehicleState.PARKING
 
@@ -316,7 +316,7 @@ class SharedVehicle(Vehicle, ABC):
         self.state = VehicleState.CHARGING
 
         self._charging_station_plugged_in.succeed()
-        self._charging_station_plugged_in = self._sim.env.event()
+        self._charging_station_plugged_in = self._env.event()
 
         self.logger.debug("Vehicle plugged in to charging station.")
 
@@ -324,14 +324,14 @@ class SharedVehicle(Vehicle, ABC):
         self.state = VehicleState.PARKING
 
         self._charging_station_plugged_out.succeed()
-        self._charging_station_plugged_out = self._sim.env.event()
+        self._charging_station_plugged_out = self._env.event()
 
         self.logger.debug("Vehicle plugged out from charging station.")
 
     def charge(self, charging_time, amount=0):  # noqa: ANN001, ANN201
         # Notify charging
         self._charging_station_charging_started.succeed()
-        self._charging_station_charging_started = self._sim.env.event()
+        self._charging_station_charging_started = self._env.event()
 
         if amount == 0:
             amount = self._max_state_of_charge - self._current_state_of_charge
@@ -340,11 +340,11 @@ class SharedVehicle(Vehicle, ABC):
         self._current_state_of_charge += amount
 
         # Charge
-        yield self._sim.env.timeout(charging_time)
+        yield self._env.timeout(charging_time)
 
         # Notify charging ended
         self._charging_station_charging_finished.succeed()
-        self._charging_station_charging_finished = self._sim.env.event()
+        self._charging_station_charging_finished = self._env.event()
 
         self.logger.debug(
             "Vehicle charged %s kWh and has now %s kWh out of %s.",

@@ -6,6 +6,7 @@ import simpy
 
 if TYPE_CHECKING:
     import pandas as pd
+
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import TransitOperatorConfig
     from simulation.operator.public_transport_vehicle_fleet import (
@@ -40,7 +41,7 @@ class OperationsPublicTransport(OperationsInterface):
     ) -> None:
         super().__init__(sim=sim)
         self._timetable = timetable
-        self._time = SimulationTime(self._sim.env)
+        self._time = SimulationTime(self._env)
         self._fleet = fleet
         self._operator_config = operator_config
         # Environment

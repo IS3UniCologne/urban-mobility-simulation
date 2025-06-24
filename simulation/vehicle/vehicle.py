@@ -40,6 +40,7 @@ class Vehicle(TrackingInterface, SimulationBase, ABC):
         "_current_region",
         "_current_task",
         "_distance_travelled",
+        "_env",
         "_id",
         "_max_available_seats",
         "_mode",
@@ -71,6 +72,7 @@ class Vehicle(TrackingInterface, SimulationBase, ABC):
 
         self._sim = sim
         self._config: Configuration = sim.config
+        self._env = sim.env
 
         self._fleet: VehicleFleet = fleet
 
@@ -216,7 +218,7 @@ class Vehicle(TrackingInterface, SimulationBase, ABC):
         self.__position = position
 
         self._position_changed.succeed(self.__position)
-        self._position_changed = self._sim.env.event()
+        self._position_changed = self._env.event()
 
         self.logger.debug(
             "Position updated %s. Total distance travelled: %s.",
