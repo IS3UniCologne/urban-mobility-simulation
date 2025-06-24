@@ -193,12 +193,19 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             )
 
             logging.info(
-                f"There are {len(self._operator_reference.fleet.vehicles_below_soc_threshold(self._state_of_charge_threshold))} vehicles with low state of charge.",  # noqa: G004
+                "There are %s vehicles with low state of charge.",
+                len(
+                    self._operator_reference.fleet.vehicles_below_soc_threshold(
+                        self._state_of_charge_threshold
+                    )
+                ),
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
             logging.info(
-                f"Charging Tasks scheduled. In total {len(charging_events)} charging tasks are generated. Count: {no_vehicles_scheduled_to_charge}",  # noqa: G004
+                "Charging Tasks scheduled. In total %s charging tasks are generated. Count: %s",
+                len(charging_events),
+                no_vehicles_scheduled_to_charge,
                 extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
@@ -409,7 +416,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         for i, mode in enumerate(self._available_vehicle_modes):
             # Sort State by Regions with highest number of SoC (per vehicle)
-            state = state.sort_values(by=[f"{mode}_Low_SoC"], ascending=False)
+            state = state.sort_values(
+                by=[f"{mode}_Low_SoC", "hex_id"], ascending=[False, True]
+            )
 
             # Get Max Charging Capacity per Service Worker Unit
             # e.g., 40 Kick Scooters by one SW, 1 Car by one SW
@@ -719,7 +728,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             already_relocated = dict(zip(hexagons, [0] * len(hexagons)))
 
             # Sort Ascending
-            state = state.sort_values(by=[f"Residual_Supply_{mode}"])
+            state = state.sort_values(by=[f"Residual_Supply_{mode}", "hex_id"])
 
             for index, next_hex in state[
                 state[f"Residual_Supply_{mode}"] < 0
@@ -751,7 +760,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
                 # Sort by distance (in meter) (i.e., prefer neighbours first)
                 distance_to_other_hexagons = distance_to_other_hexagons.sort_values(
-                    by=[next_hex_id]
+                    by=[next_hex_id, "hex_id"]
                 )
 
                 # Only consider regions having additional supply
@@ -800,7 +809,8 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 # Break loop if there is no "excess" supply
                 if len(local_relocation_schedule) == 0:
                     logging.info(
-                        f"Cannot calculate relocation plan for {mode} as there are no regions with excess supply.",  # noqa: G004
+                        "Cannot calculate relocation plan for %s as there are no regions with excess supply.",
+                        mode,
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
                     break

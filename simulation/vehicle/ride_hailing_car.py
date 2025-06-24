@@ -126,7 +126,9 @@ class RideHailingCar(RideHailingVehicle):
         self._shift_start_time = time
 
         logging.debug(
-            f"RideHailingCar {self.car_id} started its shift at {time}.",  # noqa: G004
+            "RideHailingCar %s started its shift at %s.",
+            self.car_id,
+            time,
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
@@ -135,7 +137,9 @@ class RideHailingCar(RideHailingVehicle):
         self._shift_end_time = time
 
         logging.debug(
-            f"RideHailingCar {self.car_id} ended its shift at {time}.",  # noqa: G004
+            "RideHailingCar %s ended its shift at %s.",
+            self.car_id,
+            time,
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
@@ -155,7 +159,9 @@ class RideHailingCar(RideHailingVehicle):
         self._shift_earn += earn
 
         logging.debug(
-            f"RideHailingCar {self.car_id} earned {self.shift_earn} since he/she started the shift.",  # noqa: G004
+            "RideHailingCar %s earned %s since he/she started the shift.",
+            self.car_id,
+            self.shift_earn,
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
@@ -165,7 +171,8 @@ class RideHailingCar(RideHailingVehicle):
         self._online_event.succeed()
         self._online_event = self._env.event()
         logging.debug(
-            f"Driver {self.car_id} gets online.",  # noqa: G004
+            "Driver %s gets online.",
+            self.car_id,
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
@@ -176,7 +183,8 @@ class RideHailingCar(RideHailingVehicle):
         self._offline_event.succeed()
         self._offline_event = self._env.event()
         logging.debug(
-            f"Driver {self.car_id} gets offline.",  # noqa: G004
+            "Driver %s gets offline.",
+            self.car_id,
             extra={"clazz": self.__class__.__name__, "oid": self.car_id},
         )
 
@@ -244,7 +252,9 @@ class RideHailingCar(RideHailingVehicle):
                     # if the driver has a task to do we yield until its completion
                     else:
                         logging.debug(
-                            f"Driver {self._id} is {self.state} and has a task to do before getting offline.",  # noqa: G004
+                            "Driver %s is %s and has a task to do before getting offline.",
+                            self._id,
+                            self.state,
                             extra={
                                 "clazz": self.__class__.__name__,
                                 "oid": self.car_id,
