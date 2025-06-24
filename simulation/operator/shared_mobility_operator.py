@@ -107,6 +107,10 @@ class SharedMobilityOperator(Operator):
         )
 
         logging.info(
-            f"Missed trip of User {user.id}. Current Total Revenue: {self.total_revenue} - Total Trips: {self.total_fulfilled_trips} - Missed Trips {self.total_missed_trips}.",  # noqa: G004
+            "Missed trip of User %s. Current Total Revenue: %s - Total Trips: %s - Missed Trips %s.",
+            user.id,
+            self.total_revenue,
+            self.total_fulfilled_trips,
+            self.total_missed_trips,
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )

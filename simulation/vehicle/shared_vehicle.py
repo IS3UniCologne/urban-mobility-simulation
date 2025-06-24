@@ -205,7 +205,8 @@ class SharedVehicle(Vehicle, ABC):
         self._reserved_for_user = user
 
         logging.debug(
-            f"Reserved to {user.id}.",  # noqa: G004
+            "Reserved to %s.",
+            user.id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -236,7 +237,10 @@ class SharedVehicle(Vehicle, ABC):
             self._current_state_of_charge = 0.0
 
         logging.debug(
-            f"Current state of charge {round(self.current_state_of_charge, 2)}/{self.max_state_of_charge} ({round(self.current_state_of_charge / self.max_state_of_charge * 100, 2)}%).",  # noqa: G004
+            "Current state of charge %s/%s (%s%%).",
+            round(self.current_state_of_charge, 2),
+            self.max_state_of_charge,
+            round(self.current_state_of_charge / self.max_state_of_charge * 100, 2),
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -255,7 +259,9 @@ class SharedVehicle(Vehicle, ABC):
         region_id = self.position.get_region_id()
 
         logging.debug(
-            f"Current position {self.position} in region {region_id}.",  # noqa: G004
+            "Current position %s in region %s.",
+            self.position,
+            region_id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -272,7 +278,8 @@ class SharedVehicle(Vehicle, ABC):
         self.state = VehicleState.DRIVING
 
         logging.debug(
-            f"Driver: {driver.identify_driver()} mounted vehicle.",  # noqa: G004
+            "Driver: %s mounted vehicle.",
+            driver.identify_driver(),
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -288,14 +295,17 @@ class SharedVehicle(Vehicle, ABC):
         self.state = VehicleState.PARKING
 
         logging.debug(
-            f"Driver: {tmp_driver_id} unmounted vehicle.",  # noqa: G004
+            "Driver: %s unmounted vehicle.",
+            tmp_driver_id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
     def prepare_for_service_task(self, caller, task):  # noqa: ANN001, ANN201
         self.state = VehicleState.PRE_SERVICE
         logging.debug(
-            f"Marked for Service Task [{task}] by {caller}.",  # noqa: G004
+            "Marked for Service Task [%s] by %s.",
+            task,
+            caller,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -313,7 +323,8 @@ class SharedVehicle(Vehicle, ABC):
             or len(self._passengers) > 0
         ):
             logging.debug(
-                f"Vehicle {self._id} has a driver. Revoke relocation task.",  # noqa: G004
+                "Vehicle %s has a driver. Revoke relocation task.",
+                self._id,
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
@@ -344,7 +355,11 @@ class SharedVehicle(Vehicle, ABC):
         self.state = VehicleState.PARKING
 
         logging.debug(
-            f"Vehicle relocated by {relocator} from {old_position} to {self.position} in {time} minutes.",  # noqa: G004
+            "Vehicle relocated by %s from %s to %s in %s minutes.",
+            relocator,
+            old_position,
+            self.position,
+            time,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -389,7 +404,10 @@ class SharedVehicle(Vehicle, ABC):
         self._charging_station_charging_finished = self._env.event()
 
         logging.debug(
-            f"Vehicle charged {amount} kWh and has now {self._current_state_of_charge} kWh out of {self._max_state_of_charge}.",  # noqa: G004
+            "Vehicle charged %s kWh and has now %s kWh out of %s.",
+            amount,
+            self._current_state_of_charge,
+            self._max_state_of_charge,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 

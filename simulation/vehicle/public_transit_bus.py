@@ -171,7 +171,9 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         self.state = VehicleState.EN_ROUTE_PLANNED
 
         logging.debug(
-            f"Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.",  # noqa: G004
+            "Bus has started driving from stop %s to stop %s.",
+            route_segment.start.stop_id,
+            route_segment.end.stop_id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -183,14 +185,17 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         if self._current_stop == self._route.destination:
             self.state = VehicleState.AT_TERMINAL_DESTINATION
             logging.debug(
-                f"Bus has arrived at its terminal destination - stop {self._current_stop.stop_id} "  # noqa: G004
-                f"at time {self._time.now_as_str()}",
+                "Bus has arrived at its terminal destination - stop %s at time %s",
+                self._current_stop.stop_id,
+                self._time.now_as_str(),
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
         else:
             self.state = VehicleState.AT_STOP
             logging.debug(
-                f"Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}",  # noqa: G004
+                "Bus has arrived at stop %s at time %s",
+                self._current_stop.stop_id,
+                self._time.now_as_str(),
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
@@ -235,8 +240,10 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #                     end = self._corridor_sorted.index(d.destination.get_region_id(self._action_res))
     #                     m[start][end] += 1
     #                 except ValueError as e:
-    #                     logging.debug(f'Bus update state: Encountered demand at edge of hexagon: {e}',
-    #                                   extra={"clazz": self.__class__.__name__, "oid": self._id})
+    #                     logging.debug(
+    #                         'Bus update state: Encountered demand at edge of hexagon: %s', e,
+    #                         extra={"clazz": self.__class__.__name__, "oid": self._id}
+    #                     )
     #                     # for now we are skipping it. I don't see a good way to solve the geometry inconsistency
     #                     continue
     #

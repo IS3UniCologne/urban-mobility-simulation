@@ -112,7 +112,8 @@ class RideHailingMPChargingOperations(OperationsInterface):
             while self._task_queue.count > 0:
                 next_task = self._task_queue.popleft()
                 logging.debug(
-                    f"Processing following task: {next_task}.",  # noqa: G004
+                    "Processing following task: %s.",
+                    next_task,
                     extra={
                         "clazz": self.__class__.__name__,
                         "oid": self._operator_reference.id,

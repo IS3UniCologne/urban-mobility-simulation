@@ -68,7 +68,8 @@ class PublicTransportVehicleFleet(VehicleFleet):
         # Check this again, what happens when the trip time is over but there are still passengers in the bus?
         # TODO: unmount all remaining passengers - is there a need for this?
         logging.debug(
-            f"There are still {len(bus._passengers)!s} passengers onboard the bus",  # noqa: G004, SLF001
+            "There are still %s passengers onboard the bus",
+            len(bus._passengers),  # noqa: SLF001
             extra={"clazz": self.__class__.__name__, "oid": ""},
         )
         self._unserved_passengers = len(bus._passengers)  # noqa: SLF001
