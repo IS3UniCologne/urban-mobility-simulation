@@ -7,11 +7,12 @@ from simulation.operator.vehicle_fleet import VehicleFleet
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.world.world import World
 
 
 class MixedSharedVehicleFleet(VehicleFleet):
-    def __init__(self, sim: SimulationContext) -> None:
-        super().__init__(sim=sim)
+    def __init__(self, sim: SimulationContext, world: World) -> None:
+        super().__init__(sim=sim, world=world)
 
     def vehicles_below_soc_threshold(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
