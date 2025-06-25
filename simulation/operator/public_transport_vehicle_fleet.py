@@ -20,10 +20,6 @@ class PublicTransportVehicleFleet(VehicleFleet):
         self._config = sim.config
         self._sim = sim
         self._busses = []
-
-        self._tracking = (
-            None  # defer loading to run process, otherwise circular dependency
-        )
         self._unserved_passengers = 0
 
     # Add the bus
