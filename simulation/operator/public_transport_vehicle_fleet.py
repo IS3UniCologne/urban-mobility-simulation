@@ -5,22 +5,21 @@ from typing import TYPE_CHECKING
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.public_transit_bus import Bus
-from simulation.world.world import World
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.infrastructure.route import PublicTransitRoute
+    from simulation.world.world import World
 
 
 class PublicTransportVehicleFleet(VehicleFleet):
-    __slots__ = ("_bus_velocity", "_busses", "_config", "_unserved_passengers")
+    __slots__ = ("_busses", "_config", "_unserved_passengers")
 
-    def __init__(self, sim: SimulationContext) -> None:
-        super().__init__(sim=sim)
+    def __init__(self, sim: SimulationContext, world: World) -> None:
+        super().__init__(sim=sim, world=world)
         self._config = sim.config
         self._sim = sim
         self._busses = []
-        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY
 
         self._tracking = (
             None  # defer loading to run process, otherwise circular dependency
@@ -30,7 +29,6 @@ class PublicTransportVehicleFleet(VehicleFleet):
     # Add the bus
     def spawn_bus(self, route: PublicTransitRoute) -> Bus:
         init_position = GeodesicPosition(self._sim, *route.origin.getExactLocation())
-        self._world = World.instance()
 
         bus = Bus(
             sim=self._sim,
@@ -38,7 +36,9 @@ class PublicTransportVehicleFleet(VehicleFleet):
             position=init_position,
             fleet=self,
             use_learning_agent=False,
-            velocity=self._bus_velocity,
+            vehicle_config=self._config.transit_vehicles[
+                "Bus"
+            ],  # TODO: This should not be hardcoded
         )
 
         # TODO: Why is this not in the vehicle constructor ?
@@ -53,8 +53,6 @@ class PublicTransportVehicleFleet(VehicleFleet):
         # TODO: Why is this not in the vehicle destructor?
         self._busses.remove(bus)
         self._world.remove_vehicle(bus)
-        self._tracking.unregister_by_obj(bus)
-
         # Check this again, what happens when the trip time is over but there are still passengers in the bus?
         # TODO: unmount all remaining passengers - is there a need for this?
         self.logger.debug(

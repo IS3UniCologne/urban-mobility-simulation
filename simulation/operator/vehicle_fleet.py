@@ -12,6 +12,7 @@ from simulation.helper.simulation_base import SimulationBase
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.vehicle.vehicle import Vehicle
+    from simulation.world.world import World
 
 
 class VehicleFleetError(Exception):
@@ -38,7 +39,7 @@ class VehicleFleet(ABC, SimulationBase):
 
     fleet_id: int = 0
 
-    def __init__(self, sim: SimulationContext) -> None:
+    def __init__(self, sim: SimulationContext, world: World) -> None:
         super().__init__(sim)
         self._sim = sim
         self._vehicles: list[Vehicle] = []
@@ -48,16 +49,16 @@ class VehicleFleet(ABC, SimulationBase):
         self._vehicles_by_region: dict[str, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
         self._resource = simpy.Resource(sim.env)  # Semaphore
+        self._world = world
 
     @property
     def vehicle_types(self) -> list[VehicleType]:
-        """Get all vehicle types in the fleet.
+        """Get all unique vehicle types in the fleet.
 
         Returns
         -------
         list[VehicleType]
-            A list of all VehicleType enums available in the fleet.
-
+            A list of all unique VehicleType enums available in the fleet.
         """
         return list(self._vehicles_by_type.keys())
 

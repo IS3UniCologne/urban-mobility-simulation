@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from simulation.environment.position import Position
     from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
     from simulation.vehicle.vehicle import Vehicle
+    from simulation.world.world import World
 
 
 class MixedRideHailingFleet(VehicleFleet):
@@ -25,8 +26,8 @@ class MixedRideHailingFleet(VehicleFleet):
         "_ridehailing_cars",
     )
 
-    def __init__(self, sim: SimulationContext) -> None:
-        super().__init__(sim=sim)
+    def __init__(self, sim: SimulationContext, world: World) -> None:
+        super().__init__(sim=sim, world=world)
         self._config = sim.config
         self._env = sim.env
         self._ridehailing_cars = []

@@ -14,6 +14,7 @@ from simulation.vehicle.shared_vehicle import SharedVehicle
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.world.world import World
 
 
 def generate_fleet_config(sim: SimulationContext) -> pd.DataFrame:
@@ -143,7 +144,7 @@ def generate_ridehailing_fleet_config(sim: SimulationContext) -> pd.DataFrame:
 
 
 def generate_AV_fleet(
-    sim: SimulationContext, distribution: pd.DataFrame, n: int
+    sim: SimulationContext, world: World, distribution: pd.DataFrame, n: int
 ) -> MixedRideHailingFleet:
     rng = sim.random_manager.get_rng(component_name="FLEETFACTORY")
 
@@ -163,7 +164,7 @@ def generate_AV_fleet(
     fleet_config = distribution[[hex_column, "AVs"]]
 
     # New Fleet Object
-    fleet = MixedRideHailingFleet(sim=sim)
+    fleet = MixedRideHailingFleet(sim=sim, world=world)
 
     for _index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
@@ -179,7 +180,9 @@ def generate_AV_fleet(
     return fleet
 
 
-def generate_mixed_ride_hailing_fleet(sim: SimulationContext) -> MixedRideHailingFleet:
+def generate_mixed_ride_hailing_fleet(
+    sim: SimulationContext, world: World
+) -> MixedRideHailingFleet:
     """
     Generate a mixed ride hailing fleet based on fleet config.
     :param sim: SimulationContext containing all necessary components
@@ -189,7 +192,7 @@ def generate_mixed_ride_hailing_fleet(sim: SimulationContext) -> MixedRideHailin
     fleet_config = generate_ridehailing_fleet_config(sim=sim)
 
     # New Fleet Object
-    fleet = MixedRideHailingFleet(sim=sim)
+    fleet = MixedRideHailingFleet(sim=sim, world=world)
 
     # Get Column Identifier for current resolution (e.g., hex_id_7)
     hex_column = sim.config.world.SPATIAL_RESOLUTION.column_name
@@ -228,7 +231,9 @@ def generate_mixed_ride_hailing_fleet(sim: SimulationContext) -> MixedRideHailin
     return fleet
 
 
-def generate_mixed_fleet(sim: SimulationContext) -> MixedSharedVehicleFleet:
+def generate_mixed_fleet(
+    sim: SimulationContext, world: World
+) -> MixedSharedVehicleFleet:
     """
     Generate a mixed shared vehicle fleet based on given fleet config.
     :param sim: SimulationContext containing all necessary components
@@ -237,7 +242,7 @@ def generate_mixed_fleet(sim: SimulationContext) -> MixedSharedVehicleFleet:
 
     fleet_config = generate_fleet_config(sim=sim)
     # New Fleet Object
-    fleet = MixedSharedVehicleFleet(sim=sim)
+    fleet = MixedSharedVehicleFleet(sim=sim, world=world)
 
     # Get Column Identifier for current resolution (e.g., hex_id_7)
     hex_column = sim.config.world.SPATIAL_RESOLUTION.column_name
