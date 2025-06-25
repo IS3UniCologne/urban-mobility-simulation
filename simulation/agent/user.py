@@ -866,7 +866,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                 # Ensure this always gets called, even if there are unhandled exceptions
                 if not self.process_finished.triggered:
                     self.process_finished.succeed()
-        self.process_finished.succeed()
+        if not self.process_finished.triggered:
+            self.process_finished.succeed()
 
     def search_for_alternatives(self):  # noqa: ANN201
         # Update current state
