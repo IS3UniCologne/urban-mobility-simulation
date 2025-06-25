@@ -8,7 +8,7 @@ from collections import defaultdict
 from typing import TypedDict
 
 from simulation.environment.position import RegionId
-from simulation.helper.configuration.enums import TransactionState
+from simulation.helper.configuration.enums import TransactionState, VehicleType
 
 from .transaction import Transaction
 from .transaction_listener import TransactionListener
@@ -42,7 +42,7 @@ class DemandMonitor(TransactionListener):
         Vehicle mode preference order.
     """
 
-    def __init__(self, ordered_available_vehicles: list[str]) -> None:
+    def __init__(self, ordered_available_vehicles: list[VehicleType]) -> None:
         self.hexagons: set[RegionId] = set()
         self.vehicle_data: VehicleDemandByRegion = defaultdict(
             lambda: defaultdict(
@@ -67,16 +67,17 @@ class DemandMonitor(TransactionListener):
         origin: RegionId = transaction.origin
         destination: RegionId = transaction.destination
         state: TransactionState = transaction.state
-        viable_vehicle_modes: dict[str, int] = transaction.viable_vehicle_modes
+        # TODO: Why are we using integers for this ?
+        viable_vehicle_types: dict[VehicleType, int] = transaction.viable_vehicle_types
 
         self.hexagons.add(origin)
         self.hexagons.add(destination)
 
-        preferred_vehicle: str | None = next(
+        preferred_vehicle: VehicleType | None = next(
             (
                 vehicle
                 for vehicle in self.ordered_available_vehicles
-                if viable_vehicle_modes.get(vehicle, 0) == 1
+                if viable_vehicle_types.get(vehicle, 0) == 1
             ),
             None,
         )
