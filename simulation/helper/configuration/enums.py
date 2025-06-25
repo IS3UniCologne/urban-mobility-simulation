@@ -93,12 +93,29 @@ class PopulationType(Enum):
     CONVENIENCE_SEEKER = 5
 
 
-class VehicleMode(Enum):
-    Car = 0
-    Scooter = 1
-    KickScooter = 2
-    Bike = 3
-    Bus = 4
+class VehicleType(StrEnum):
+    """Vehicle types, e.g. car, bike, scooter."""
+
+    CAR = "Car"
+    SCOOTER = "Scooter"
+    KICK_SCOOTER = "KickScooter"
+    BIKE = "Bike"
+    BUS = "Bus"
+
+
+class AutonomyType(StrEnum):
+    """Vehicle autonomy, e.g. human-driven or autonomous."""
+
+    HUMAN_DRIVEN = "HumanDriven"
+    AUTONOMOUS = "Autonomous"
+
+
+class PropulsionType(StrEnum):
+    """Vehicle propulsion types."""
+
+    BATTERY_ELECTRIC = "BatteryElectric"
+    INTERNAL_COMBUSTION = "InternalCombustion"
+    HUMAN_POWERED = "HumanPowered"  # E.g. bike
 
 
 class UserState(Enum):
