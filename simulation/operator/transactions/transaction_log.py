@@ -120,14 +120,15 @@ class TransactionLog:
         pd.DataFrame
             DataFrame containing all transactions.
         """
+        # TODO: Can we use a more efficient caching mechanism?
         if self._df_cache is not None:
             return self._df_cache
         df = pd.DataFrame([t._asdict() for t in self._transactions])
-        # Expand viable_vehicle_modes dict into columns
-        if not df.empty and "viable_vehicle_modes" in df.columns:
-            modes_df = pd.json_normalize(df["viable_vehicle_modes"].tolist())
+        # Expand viable_vehicle_types dict into columns
+        if not df.empty and "viable_vehicle_types" in df.columns:
+            types_df = pd.json_normalize(df["viable_vehicle_types"].tolist())
             df = pd.concat(
-                [df.drop(columns=["viable_vehicle_modes"]), modes_df], axis=1
+                [df.drop(columns=["viable_vehicle_types"]), types_df], axis=1
             )
         self._df_cache = df
         self._cache_size = len(self._transactions)
