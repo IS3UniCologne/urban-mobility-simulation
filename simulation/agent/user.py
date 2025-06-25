@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 import numpy as np
 import simpy
 
-import simulation.world.world as world
 from simulation.helper.configuration.enums import (
     PopulationType,
     UserState,
@@ -14,30 +12,13 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.operator.data_transfer_object.trip_record import TripRecord
-from simulation.operator.interface.payment_interface import PaymentInterface
-from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.vehicle.walking import Walking
 from tracking.tracking_interface import TrackingInterface
 
-from ..environment.geodesic_environment import GeodesicEnvironment
-from ..environment.geodesic_position import GeodesicPosition
-from ..environment.position import Position
-from ..helper.configuration.configuration import Configuration
 from ..infrastructure.route import PublicTransitRoute
 from ..operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
-from ..operator.data_transfer_object.transportation_alternative_browser import (
-    TransportationAlternativeBrowser,
-)
-from ..operator.data_transfer_object.transportation_alternative_ridehailing import (
-    TransportationAlternativeRideHailing,
-)
-from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
-from ..operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
-)
-from ..tasks.transport_task import TransportTask
 from ..tasks.transportation_search_task import TransportationSearchTask
 from ..vehicle.interfaces.driver_interface import DriverInterface
 from ..vehicle.interfaces.passenger_interface import PassengerInterface
@@ -45,14 +26,34 @@ from ..vehicle.public_transit_vehicle import (
     PublicTransitVehicle,
     PublicTransitVehicleFull,
 )
-from ..vehicle.vehicle import Vehicle
-from ..vehicle_choice_model.vehicle_choice_behavior_interface import (
-    VehicleChoiceBehaviorInterface,
-)
 from .agent import Agent
 
 if TYPE_CHECKING:
+    import simulation.world.world as world
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.interface.payment_interface import PaymentInterface
+    from simulation.operator.interface.search_engine_interface import (
+        SearchEngineInterface,
+    )
+
+    from ..environment.geodesic_position import GeodesicPosition
+    from ..environment.position import Position
+    from ..operator.data_transfer_object.transportation_alternative_browser import (
+        TransportationAlternativeBrowser,
+    )
+    from ..operator.data_transfer_object.transportation_alternative_ridehailing import (
+        TransportationAlternativeRideHailing,
+    )
+    from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
+    from ..operator.interface.vehicle_allocation_engine_interface import (
+        VehicleAllocationEngineInterface,
+    )
+    from ..tasks.transport_task import TransportTask
     from ..vehicle.public_transit_bus import Bus
+    from ..vehicle.vehicle import Vehicle
+    from ..vehicle_choice_model.vehicle_choice_behavior_interface import (
+        VehicleChoiceBehaviorInterface,
+    )
 
 
 class User(Agent, DriverInterface, TrackingInterface):
@@ -63,7 +64,6 @@ class User(Agent, DriverInterface, TrackingInterface):
         "_arrived_at_destination",
         "_arrived_at_pick_up_position",
         "_assigned_vehicle_arrived",
-        "_env",
         "_fleet",
         "_id",
         "_payment_service",
@@ -80,8 +80,9 @@ class User(Agent, DriverInterface, TrackingInterface):
         "process_finished",
     )
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
+        sim: SimulationContext,
         fleet,  # noqa: ANN001
         position,  # noqa: ANN001
         transport_task: TransportTask,
@@ -90,14 +91,12 @@ class User(Agent, DriverInterface, TrackingInterface):
         vehicle_assignment_service: VehicleAllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_type: PopulationType,
-        env: simpy.Environment,
-    ):
-        self._id = User.user_id  # User ID
-        User.user_id += 1  # Increment User Id
-
+    ) -> None:
+        super().__init__(sim)
         self._position = position  # Initial Position of Agent
         self._transport_task = transport_task  # Objective of generated agent
         self._fleet = fleet  # The target fleet of user
+        self._sim = sim
 
         self._trip_record: None | TripRecord = None
 
@@ -114,7 +113,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         self._population_type = population_type
 
         # Simpy Environment
-        self._env = env  # Simulation Environment
+        self._env = sim.env  # Simulation Environment
 
         # Vehicle Choice Model
         self._vehicle_choice_behavior = vehicle_choice_behavior
@@ -634,6 +633,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
     def __init__(  # noqa: ANN204
         self,
+        sim: SimulationContext,
         position: GeodesicPosition,
         transport_task: TransportTask,
         transportation_search_service: SearchEngineInterface,
@@ -641,10 +641,11 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         vehicle_assignment_service: VehicleAllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_type: PopulationType,
-        env: simpy.Environment,
+        world: world.World,
         passive=False,  # noqa: ANN001
     ):
-        super(TransitUser, self).__init__(  # noqa: UP008
+        super().__init__(
+            sim,
             fleet=None,
             position=position,
             transport_task=transport_task,
@@ -653,7 +654,6 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             vehicle_assignment_service=vehicle_assignment_service,
             vehicle_choice_behavior=vehicle_choice_behavior,
             population_type=population_type,
-            env=env,
         )
 
         self._waiting_time = 0  # TODO: this is just to avoid null pointer exception
@@ -662,10 +662,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         # boards transit that happens to move through the same hexagon. Another word for passive could be dumb.
         self._passive = passive
 
-        # Config
-        self._config = Configuration()
         # TODO: somehow this must be decoupled - by making the user unaware of problems
-        # self._problem_config = self._config.dynamic_checkpoint_routing_config
+        # self._problem_config = self._sim.config.dynamic_checkpoint_routing_config
         # Comment out for now to run a bus without RL Agent
         # self._bus_res = self._problem_config.action_resolution
         self._bus_res = 8
@@ -676,8 +674,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         )  # max available walk / wait time, can change by e.g. waiting
 
         # World / Environment Instance
-        self._world = world.World.instance()
-        self._geodesic_env = GeodesicEnvironment.getInstance()
+        self._world = world
+        self._geodesic_env = self._world.geo_env
 
         # Events
         self._arrived_at_last_stop = self._env.event()
@@ -817,7 +815,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                                 vehicle.route.trip_id,
                             ),
                             price=0,
-                            duration=numpy.inf,
+                            duration=np.inf,
                             distance=self._transport_task.origin
                             >> self._transport_task.destination,
                             convenience=0,  # TODO: only a placeholder
@@ -1108,6 +1106,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
     __slots__ = (
         "_AV_truster",
+        "_config",
         "_env",
         "_fleet",
         "_id",
@@ -1122,9 +1121,10 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
     exposes = ["_position", "_state", "_transport_task"]  # noqa: RUF012
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        fleet,  # noqa: ANN001
+        sim: SimulationContext,
+        fleet_index: int,
         position,  # noqa: ANN001
         transport_task: TransportTask,
         transportation_search_service: SearchEngineInterface,
@@ -1132,14 +1132,16 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         vehicle_assignment_service: VehicleAllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_type: PopulationType,
-        env: simpy.Environment,
-    ):
-        self._id = RideHailingUser.user_id  # User ID
-        RideHailingUser.user_id += 1  # Increment User Id
+    ) -> None:
+        super().__init__(sim)
+
+        self._sim = sim
+        self._config = sim.config
+        self._rng = sim.random_manager.get_rng("MODE_CHOICE_MODEL")
 
         self._position = position  # Initial Position of Agent
         self._transport_task = transport_task  # Objective of generated agent
-        self._fleet = fleet  # The target fleet of user
+        self._fleet = fleet_index  # The target fleet of user
 
         # Operator Interfaces
         self._transportation_search_service = (
@@ -1154,7 +1156,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         self._population_type = population_type
 
         # Simpy Environment
-        self._env = env  # Simulation Environment
+        self._env = sim.env  # Simulation Environment
 
         # Vehicle Choice Model
         self._vehicle_choice_behavior = vehicle_choice_behavior
@@ -1371,20 +1373,6 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
                 break
         self._transportation_alternatives_received.succeed()
         return available_transportation_alternatives
-
-    def complete_available_transportation_alternatives(self, alternatives):  # noqa: ANN001, ANN201
-        """
-        This function ensures that there are always either two alternatives or zero
-        :return:
-        """
-
-        if len(alternatives) == 1:
-            alternative = alternatives[0]
-            # mutual_alternative = alternative.copy()
-            if alternative.vehicle_type == "AutonomousCar":
-                pass
-
-        return alternatives
 
     def transportation_alternative_utility_function(  # noqa: ANN201
         self, alternative: TransportationAlternativeRideHailing
