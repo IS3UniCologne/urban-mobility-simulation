@@ -133,9 +133,7 @@ class User(Agent, DriverInterface, TrackingInterface):
 
         # Initial State and Runtime
         self._state = UserState.INITIALIZED  # Initial State of agent
-        logging.debug(
-            "Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
-        )
+        self.logger.debug("Initialized.")
 
     @property
     def position(self) -> Position:
@@ -185,11 +183,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                 break
 
             if isinstance(selected_transportation_alternative.vehicle, Walking):
-                logging.debug(
-                    "User %s chooses to walk to destination",
-                    self.id,
-                    extra={"clazz": self.__class__.__name__, "oid": self._id},
-                )
+                self.logger.debug("Selected transportation alternative is walking.")
                 yield self._env.process(
                     self.walk(
                         self.position,
@@ -197,11 +191,8 @@ class User(Agent, DriverInterface, TrackingInterface):
                     )
                 )
 
-                logging.debug(
-                    "User %s has reached walking destination",
-                    self.id,
-                    extra={"clazz": self.__class__.__name__, "oid": self._id},
-                )
+                self.logger.debug("User has reached walking destination")
+
             else:
                 # Vehicle Found and allocated?
                 vehicle_allocation = yield self._env.process(
@@ -210,9 +201,8 @@ class User(Agent, DriverInterface, TrackingInterface):
 
                 # If not allocated, retry.
                 if not vehicle_allocation:
-                    logging.debug(
-                        " Vehicle allocation was not successful. Retrying with another vehicle.",
-                        extra={"clazz": self.__class__.__name__, "oid": self._id},
+                    self.logger.debug(
+                        " Vehicle allocation was not successful. Retrying with another vehicle."
                     )
 
                     # Reset Events (so far) and try again
@@ -378,10 +368,9 @@ class User(Agent, DriverInterface, TrackingInterface):
         self._waiting_time += 1
         # Trigger next event
         self._transportation_alternatives_received.succeed()
-        logging.debug(
+        self.logger.debug(
             "Received transportation alternatives: %s.",
             available_transportation_alternatives,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
         return available_transportation_alternatives
@@ -416,10 +405,9 @@ class User(Agent, DriverInterface, TrackingInterface):
         self._transportation_alternatives_selected.succeed(
             selected_transportation_alternative
         )
-        logging.debug(
+        self.logger.debug(
             "Selected transportation alternative: %s.",
             selected_transportation_alternative,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
         # selected_transportation_alternative.waiting_time = self._waiting_time
@@ -446,11 +434,10 @@ class User(Agent, DriverInterface, TrackingInterface):
         # Vehicle was successfully allocated to request
         if vehicle_allocation:
             # Trigger next event
-            logging.debug(
+            self.logger.debug(
                 "Vehicle %s has been allocated to user %s.",
-                vehicle_allocation.vehicle.id,
-                self._id,
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
+                vehicle_allocation.vehicle.uid,
+                self.uid,
             )
 
             # Return vehicle allocation
@@ -472,11 +459,8 @@ class User(Agent, DriverInterface, TrackingInterface):
 
         # Trigger next event
         self._arrived_at_pick_up_position.succeed()
-        logging.debug(
-            "Arrived at pick up position %s at time %s.",
-            self.position,
-            self._env.now,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
+        self.logger.debug(
+            "Arrived at pick up position %s at time %s.", self.position, self._env.now
         )
 
     def wait_for_vehicle(self, vehicle_assignment: VehicleAllocation):  # noqa: ANN201
@@ -499,12 +483,11 @@ class User(Agent, DriverInterface, TrackingInterface):
 
         # Trigger next event
         self._assigned_vehicle_arrived.succeed()
-        logging.debug(
+        self.logger.debug(
             "Vehicle %s has arrived after %s time units at pick up position to pick up user %s",
-            vehicle_assignment.vehicle.id,
+            vehicle_assignment.vehicle.uid,
             self._env.now - start_waiting,
-            self._id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
+            self.uid,
         )
 
     def start_driving(self, vehicle_allocation: VehicleAllocation):  # noqa: ANN201
@@ -529,10 +512,7 @@ class User(Agent, DriverInterface, TrackingInterface):
 
         # Trigger next event
         self._arrived_at_destination.succeed()
-        logging.debug(
-            "Arrived at destination.",
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
-        )
+        self.logger.debug("Arrived at destination.")
         return energy_consumed
 
     def stop(self):  # noqa: ANN201
@@ -541,10 +521,8 @@ class User(Agent, DriverInterface, TrackingInterface):
 
         # Update current state
         self._state = UserState.FULFILLED
-        logging.debug(
-            "Transport request of user %s has been successfully fulfilled.",
-            self._id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
+        self.logger.debug(
+            "Transport request of user %s has been successfully fulfilled.", self.uid
         )
 
     def withdraw_request(self):  # noqa: ANN201
@@ -561,10 +539,9 @@ class User(Agent, DriverInterface, TrackingInterface):
 
         self._payment_service.withdraw_transportation_task(self, self._transport_task)
 
-        logging.debug(
+        self.logger.debug(
             "Transport request of user %s has been withdrawn due to lack of vehicles.",
-            self._id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
+            self.uid,
         )
 
     def walk(self, origin: GeodesicPosition, destination: GeodesicPosition):  # noqa: ANN201
@@ -613,7 +590,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         vehicle.unmount_driver()
 
     def identify_driver(self):  # noqa: ANN201
-        return f"User {self._id}"
+        return f"User {self.uid}"
 
     """
         Auxiliary Functions
@@ -621,10 +598,10 @@ class User(Agent, DriverInterface, TrackingInterface):
 
     @property
     def id(self):  # noqa: ANN201
-        return self._id
+        return self.uid
 
     def __str__(self):  # noqa: ANN204
-        return f"User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"
+        return f"User with id {self.uid} is in state {self._state} and has transportation task {self._transport_task}"
 
     def dump(self, exposed_only: bool = True) -> dict:
         if exposed_only:
@@ -678,8 +655,6 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             population_type=population_type,
             env=env,
         )
-        self._id = TransitUser.transit_user_id  # User ID
-        TransitUser.transit_user_id += 1  # Increment User Id
 
         self._waiting_time = 0  # TODO: this is just to avoid null pointer exception
 
@@ -739,9 +714,8 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
                     # If not allocated, retry.
                     if not vehicle_allocation:
-                        logging.debug(
-                            " Vehicle allocation was not successful. Retrying with another vehicle.",
-                            extra={"clazz": self.__class__.__name__, "oid": self._id},
+                        self.logger.debug(
+                            " Vehicle allocation was not successful. Retrying with another vehicle."
                         )
 
                         # Reset Events (so far) and try again
@@ -782,10 +756,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                     if not self._demand_aligns(vehicle):
                         self._state = UserState.MISSED
                         # self._payment_service.withdraw_transportation_task(self, self._transport_task)
-                        logging.debug(
+                        self.logger.debug(
                             "User demand is not aligned with routing corridor of bus %s, ",
-                            vehicle.id,
-                            extra={"clazz": self.__class__.__name__, "oid": self._id},
+                            vehicle.uid,
                         )
                         break
                     else:
@@ -884,14 +857,12 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
                     )
                     if isinstance(e, simpy.Interrupt):
                         # can also be interrupt from vehicle full
-                        logging.debug(
-                            "User was not serviced before bus reached terminal destination.",
-                            extra={"clazz": self.__class__.__name__, "oid": self._id},
+                        self.logger.debug(
+                            "User was not serviced before bus reached terminal destination."
                         )
                     elif isinstance(e, PublicTransitVehicleFull):
-                        logging.debug(
-                            "User was not able to board vehicle, vehicle is full.",
-                            extra={"clazz": self.__class__.__name__, "oid": self._id},
+                        self.logger.debug(
+                            "User was not able to board vehicle, vehicle is full."
                         )
             finally:
                 # Ensure this always gets called, even if there are unhandled exceptions
@@ -927,10 +898,9 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
         # Trigger next event
         self._transportation_alternatives_received.succeed()
-        logging.debug(
+        self.logger.debug(
             "Received transportation alternatives: %s.",
             available_transportation_alternatives,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
         return available_transportation_alternatives
@@ -1004,7 +974,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
         if not vehicle.available_seats > 0:
             # Interrupt this user's process
-            proc = self._world.user_process_by_id(self._id)["proc"]
+            proc = self._world.user_process_by_id(self.uid)["proc"]
             proc.interrupt()
             return
         else:
@@ -1033,7 +1003,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
 
         if not vehicle.available_seats > 0:
             # Interrupt this user's process
-            proc = self._world.user_process_by_id(self._id)["proc"]
+            proc = self._world.user_process_by_id(self.uid)["proc"]
             proc.interrupt()
             return
         else:
@@ -1110,7 +1080,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         vehicle.unmount_passenger(self)
 
     def identify_passenger(self):  # noqa: ANN201
-        return f"TransitUser {self._id}"
+        return f"TransitUser {self.uid}"
 
     @property
     def available_time(self):  # noqa: ANN201
@@ -1130,7 +1100,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
             return {x: self.get(x) for x in dump_attr}
 
     def __str__(self):  # noqa: ANN204
-        return f"TransitUser with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"
+        return f"TransitUser with id {self.uid} is in state {self._state} and has transportation task {self._transport_task}"
 
 
 class RideHailingUser(Agent, DriverInterface, TrackingInterface):
@@ -1191,17 +1161,39 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         # # use it if you want to consider deterministic coefficients
         # self._mode_choice_coefficients = Configuration().MoD_coefficients[population_type.value]
 
+        coeffs_lower = np.array(
+            self._sim.config.mode_choice_model.MOD_COEFFICIENTS_CI_LOWER[
+                population_type.value
+            ]
+        )
+        coeffs_upper = np.array(
+            self._sim.config.mode_choice_model.MOD_COEFFICIENTS_CI_UPPER[
+                population_type.value
+            ]
+        )
+
+        # Apply interval adjustment
+        interval_adjuster = (
+            self._sim.config.mode_choice_model.MOD_COEFFICIENT_INTERVAL_ADJUSTER
+        )
+        adjuster = (coeffs_upper - coeffs_lower) / 2 * interval_adjuster
+
+        adjusted_lower = coeffs_lower + adjuster
+        adjusted_upper = coeffs_upper - adjuster
+
         # # use it if you want to consider a random coefficient between the lower and the upper bounds
-        self._mode_choice_coefficients = (
-            Configuration().mode_choice_model.generate_mode_choice_coefficients(
-                population_type
-            )
+        self._mode_choice_coefficients = self._rng.uniform(
+            adjusted_lower, adjusted_upper
         )
         # # use it if you want to consider deterministic trust values
         # self._AV_truster = Configuration().AV_trust[population_type.value]
-        self._AV_truster = Configuration().mode_choice_model.generate_AV_trust(
-            population_type
-        )
+
+        # TODO: AV trust should be part of ChoiceBahavior
+        base_trust = self._sim.config.mode_choice_model.AV_TRUST[population_type.value]
+        trust_lower = base_trust - 0.5
+        trust_upper = base_trust + 0.5
+
+        self._AV_truster = self._rng.uniform(trust_lower, trust_upper)
 
         # Events
         self._transportation_alternatives_received = self._env.event()
@@ -1218,9 +1210,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
         # Initial State and Runtime
         self._state = UserState.INITIALIZED  # Initial State of agent
-        logging.debug(
-            "Initialized.", extra={"clazz": self.__class__.__name__, "oid": self._id}
-        )
+        self.logger.debug("Initialized.")
 
     @property
     def position(self) -> Position:
@@ -1268,9 +1258,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             )
             # If not allocated, retry.
             if not vehicle_allocation:
-                logging.debug(
-                    " Vehicle allocation was not successful. Retrying with another vehicle.",
-                    extra={"clazz": self.__class__.__name__, "oid": self._id},
+                self.logger.debug(
+                    " Vehicle allocation was not successful. Retrying with another vehicle."
                 )
 
                 # Reset Events (so far) and try again
@@ -1364,10 +1353,9 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
             # Trigger next event
 
-            logging.debug(
+            self.logger.debug(
                 "Received transportation alternatives: %s.",
                 available_transportation_alternatives,
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
             # Break the loop if there is an available vehicle for the user
             self._waiting_time += 1
@@ -1517,10 +1505,9 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         self._transportation_alternatives_selected.succeed(
             selected_transportation_alternative
         )
-        logging.debug(
+        self.logger.debug(
             "Selected transportation alternative: %s.",
             selected_transportation_alternative,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
         return selected_transportation_alternative
 
@@ -1547,11 +1534,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         # Vehicle was successfully allocated to request
         if vehicle_allocation:
             # Trigger next event
-            logging.debug(
-                "Vehicle %s has been allocated to user %s.",
-                vehicle_allocation.vehicle.id,
-                self._id,
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
+            self.logger.debug(
+                "Vehicle %s has been allocated to user.", vehicle_allocation.vehicle.uid
             )
 
             # notify vehicle of its current task
@@ -1580,12 +1564,10 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             yield vehicle_assignment.vehicle._arrived_at_pick_up_position  # noqa: SLF001
         # Trigger next event
         self._assigned_vehicle_arrived.succeed()
-        logging.debug(
-            "Vehicle %s has arrived after %s time units at pick up position to pick up user %s",
-            vehicle_assignment.vehicle.id,
+        self.logger.debug(
+            "Vehicle %s has arrived after %s time units at pick up position to pick up user.",
+            vehicle_assignment.vehicle.uid,
             self._env.now - start_waiting,
-            self._id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
     def start_driving(self, vehicle_allocation: VehicleAllocation):  # noqa: ANN201
@@ -1612,10 +1594,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         )
         # Trigger next event
         self._arrived_at_destination.succeed()
-        logging.debug(
-            "Arrived at destination.",
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
-        )
+        self.logger.debug("Arrived at destination.")
 
     def stop(self):  # noqa: ANN201
         # Wait for next event
@@ -1623,10 +1602,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
         # Update current state
         self._state = UserState.FULFILLED
-        logging.debug(
-            "Transport request of user %s has been successfully fulfilled.",
-            self._id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
+        self.logger.debug(
+            "Transport request of user %s has been successfully fulfilled.", self.uid
         )
 
     def withdraw_request(self):  # noqa: ANN201
@@ -1649,10 +1626,9 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
                 self, self._transport_task, state="MISSED"
             )
 
-            logging.debug(
+            self.logger.debug(
                 "Transport request of user %s has been withdrawn due to lack of vehicles.",
-                self._id,
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
+                self.uid,
             )
         elif self._transportation_alternatives_refused:
             self._state = UserState.REFUSED
@@ -1661,11 +1637,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
                 self, self._transport_task, state="REFUSED"
             )
 
-            logging.debug(
-                "Transport request of user %s has been refused.",
-                self._id,
-                extra={"clazz": self.__class__.__name__, "oid": self._id},
-            )
+            self.logger.debug("Transport request of user has been refused.")
 
     def walk(self, origin: GeodesicPosition, destination: GeodesicPosition):  # noqa: ANN201
         # duration = RoutePlanner.calculateDuration(user.position, vehicle_assignment.pick_up_position, Strategy.Walking)
@@ -1713,7 +1685,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         vehicle.unmount_driver()
 
     def identify_driver(self):  # noqa: ANN201
-        return f"User {self._id}"
+        return f"User {self.uid}"
 
     def dump(self, exposed_only: bool = True) -> dict:
         if exposed_only:
@@ -1725,9 +1697,8 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         Auxiliary Functions
     """
 
-    @property
-    def id(self):  # noqa: ANN201
-        return self._id
+    def __str__(self) -> str:
+        return self.uid
 
-    def __str__(self):  # noqa: ANN204
-        return f"User with id {self._id} is in state {self._state} and has transportation task {self._transport_task}"
+    def __repr__(self) -> str:
+        return self.__str__()
