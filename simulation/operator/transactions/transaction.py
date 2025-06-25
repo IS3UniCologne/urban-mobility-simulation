@@ -7,7 +7,7 @@ Defines the Transaction NamedTuple used to represent a single transaction record
 from typing import NamedTuple
 
 from simulation.environment.position import RegionId
-from simulation.helper.configuration.enums import TransactionState
+from simulation.helper.configuration.enums import TransactionState, VehicleType
 
 
 class Transaction(NamedTuple):
@@ -32,12 +32,12 @@ class Transaction(NamedTuple):
         Distance traveled during the trip.
     duration : float
         Duration of the trip.
-    selected_vehicle_mode : str
-        Name of the selected vehicle mode.
+    selected_vehicle_type : str
+        Name of the selected vehicle type.
     state : TransactionState
         State of the transaction (e.g., "Fulfilled", "Missed").
-    viable_vehicle_modes : dict[str, int]
-        Dictionary mapping vehicle mode names to 1 (available) or 0 (not available).
+    viable_vehicle_types : dict[VehicleType, int]
+        Dictionary mapping vehicle type names to 1 (available) or 0 (not available).
     wait_time : float or None, optional
         Waiting time before the trip started (if available).
     waiting_time : float or None, optional
@@ -58,9 +58,9 @@ class Transaction(NamedTuple):
     price: float
     distance: float
     duration: float
-    selected_vehicle_mode: str
+    selected_vehicle_type: str
     state: TransactionState
-    viable_vehicle_modes: dict[str, int]
+    viable_vehicle_types: dict[VehicleType, int]
     wait_time: float | None = None
     waiting_time: float | None = None
     pick_up_time: float | None = None
