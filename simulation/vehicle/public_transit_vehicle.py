@@ -3,13 +3,15 @@ from __future__ import annotations
 from abc import ABC
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.time import SimulationTimeConverter
+from simulation.infrastructure.route import PublicTransitRoute
 from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.position import Position
+    from simulation.helper.configuration.configuration import VehicleConfig
     from simulation.infrastructure.route import PublicTransitRoute
     from simulation.infrastructure.transit_network.stop import Stop
     from simulation.operator.vehicle_fleet import VehicleFleet
@@ -32,17 +34,10 @@ class PublicTransitVehicle(Vehicle, ABC):
         route: PublicTransitRoute,
         position: Position,
         fleet: VehicleFleet,
-        velocity: float,
-        vehicle_type: VehicleType,
-        max_available_seats: int,
+        vehicle_config: VehicleConfig,
     ) -> None:
         super().__init__(
-            sim=sim,
-            fleet=fleet,
-            position=position,
-            velocity=velocity,
-            vehicle_type=vehicle_type,
-            max_available_seats=max_available_seats,
+            sim=sim, fleet=fleet, position=position, vehicle_config=vehicle_config
         )
 
         self._route = route
@@ -55,7 +50,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         self.logger.debug("Initialized.")
 
     @property
-    def route(self):  # noqa: ANN201
+    def route(self) -> PublicTransitRoute:
         return self._route
 
     @property
@@ -63,14 +58,14 @@ class PublicTransitVehicle(Vehicle, ABC):
         return self._current_stop
 
     @current_stop.setter
-    def current_stop(self, stop: Stop):  # noqa: ANN202
+    def current_stop(self, stop: Stop) -> None:
         self._current_stop = stop
 
     @property
     def delay(self):  # noqa: ANN201
         return self._delay
 
-    def prognose_arrival(self, stop: Stop):  # noqa: ANN201
+    def prognose_arrival(self, stop: Stop) -> str:
         # TODO: this is pretty optimistic: What if the vehicle waits at intermediate stops
 
         distance = self._route.subroute(self._current_stop, stop).total_distance()
