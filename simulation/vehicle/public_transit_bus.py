@@ -3,12 +3,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 from tracking.tracking_interface import TrackingInterface
 
 if TYPE_CHECKING:
+    from simulation.helper.configuration.configuration import VehicleConfig
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.infrastructure.route import PublicTransitRoute
@@ -42,8 +43,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         position: GeodesicPosition,
         fleet: VehicleFleet,
         use_learning_agent: bool,
-        velocity: float,
-        max_available_seats: int = 100,
+        vehicle_config: VehicleConfig,
     ) -> None:
         """
 
@@ -52,9 +52,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         :param max_available_seats: depends on type of bus
         :param velocity: e.g. 16.67 m/min * 30 (average in city)
         """
-        super().__init__(
-            sim, route, position, fleet, velocity, VehicleType.BUS, max_available_seats
-        )
+        super().__init__(sim, route, position, fleet, vehicle_config)
 
         self._id = Bus.bus_id
         self._time = SimulationTime(self._env)
