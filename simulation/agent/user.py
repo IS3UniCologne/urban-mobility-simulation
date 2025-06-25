@@ -10,8 +10,8 @@ import simulation.world.world as world
 from simulation.helper.configuration.enums import (
     PopulationType,
     UserState,
-    VehicleMode,
     VehicleState,
+    VehicleType,
 )
 from simulation.operator.data_transfer_object.trip_record import TripRecord
 from simulation.operator.interface.payment_interface import PaymentInterface
@@ -278,9 +278,6 @@ class User(Agent, DriverInterface, TrackingInterface):
         # tc = TripCharacteristics(distance)
         # viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
 
-        # Load Config File
-        config = Configuration()
-
         # Filter Transportation Alternatives based on Mode Choice and Walking Distances
         filtered_list = []
         for (
@@ -288,20 +285,20 @@ class User(Agent, DriverInterface, TrackingInterface):
         ) in available_transportation_alternatives.transportation_alternatives:
             if (
                 isinstance(alternative.vehicle, Walking)
-                and self._transport_task.viable_vehicle_modes[
-                    alternative.vehicle.mode.name
-                ]
+                and self._transport_task.viable_vehicle_types[alternative.vehicle.type]
             ):
                 filtered_list.append(
                     (0, alternative.price, alternative.convenience, alternative)
                 )
                 continue
             distance_to_vehicle = self.position >> alternative.vehicle.position
-            if self._transport_task.viable_vehicle_modes[alternative.vehicle.mode.name]:
+            if self._transport_task.viable_vehicle_types[alternative.vehicle.type]:
                 if (
-                    alternative.vehicle.mode == VehicleMode.Car
+                    alternative.vehicle.type == VehicleType.CAR
                     and distance_to_vehicle
-                    < config.shared_vehicles.get(VehicleMode.Car).WALKING_DISTANCE
+                    < self._sim.config.shared_vehicles.get(
+                        VehicleType.CAR
+                    ).WALKING_DISTANCE
                 ):  # See own paper
                     filtered_list.append(
                         (
@@ -312,10 +309,10 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    alternative.vehicle.mode == VehicleMode.KickScooter
+                    alternative.vehicle.type == VehicleType.KICK_SCOOTER
                     and distance_to_vehicle
-                    < config.shared_vehicles.get(
-                        VehicleMode.KickScooter
+                    < self._sim.config.shared_vehicles.get(
+                        VehicleType.KICK_SCOOTER
                     ).WALKING_DISTANCE
                 ):  # See Reck
                     filtered_list.append(
@@ -327,9 +324,11 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    alternative.vehicle.mode == VehicleMode.Scooter
+                    alternative.vehicle.type == VehicleType.SCOOTER
                     and distance_to_vehicle
-                    < config.shared_vehicles.get(VehicleMode.Scooter).WALKING_DISTANCE
+                    < self._sim.config.shared_vehicles.get(
+                        VehicleType.SCOOTER
+                    ).WALKING_DISTANCE
                 ):  # See Nothing..
                     filtered_list.append(
                         (
@@ -340,9 +339,11 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    alternative.vehicle.mode == VehicleMode.Bike
+                    alternative.vehicle.type == VehicleType.BIKE
                     and distance_to_vehicle
-                    < config.shared_vehicles.get(VehicleMode.Bike).WALKING_DISTANCE
+                    < self._sim.config.shared_vehicles.get(
+                        VehicleType.BIKE
+                    ).WALKING_DISTANCE
                 ):  # See Nothing..
                     filtered_list.append(
                         (
