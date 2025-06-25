@@ -1,5 +1,6 @@
 from statsmodels.iolib.smpickle import load_pickle
 
+from simulation.helper.configuration.enums import VehicleType
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
     VehicleChoiceBehaviorInterface,
@@ -16,12 +17,18 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
 
     def __init__(self, path_to_choice_model, substitution_boundary, available_vehicles):  # noqa: ANN001, ANN204
         # Load Choice Model
+        # TODO: What is this and where does it come from ?
         self._choice_model = load_pickle(path_to_choice_model)
 
         self._substitution_boundary = substitution_boundary
 
         # derived order through: sm.MNLogit(Y, X)._ynames_map
-        self._class_mapping = {0: "Bike", 1: "Car", 2: "KickScooter", 3: "Scooter"}
+        self._class_mapping = {
+            0: VehicleType.BIKE,
+            1: VehicleType.CAR,
+            2: VehicleType.KICK_SCOOTER,
+            3: VehicleType.SCOOTER,
+        }
 
         self._available_vehicles = available_vehicles
 
