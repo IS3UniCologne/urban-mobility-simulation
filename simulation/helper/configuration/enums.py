@@ -1,3 +1,7 @@
+"""Module containing various enums used in the simulation."""
+
+from __future__ import annotations
+
 from enum import Enum, IntEnum
 
 try:
@@ -73,18 +77,27 @@ class SpatialResolution(IntEnum):
         return f"h3_end_{self.value}"
 
     @property
-    def column_names(self) -> tuple[str, str]:
+    def origin_destination_columns(self) -> tuple[str, str]:
         """Get both origin and destination column names for this spatial resolution."""
         return self.origin_column_name, self.destination_column_name
 
+    @property
+    def column_name(self) -> str:
+        """Returns the column name for the spatial resolution. E.g. 'hex_id_7'."""
+        return f"hex_id_{self.value}"
 
-class ModeChoiceStrategy(Enum):
-    RANDOM = 0
-    SUBSTITUTION_AWARE = 1
-    NO_SUBSTITUTION = 2
+
+class ModeChoiceStrategy(StrEnum):
+    """Mode choice strategies for selecting transport alternatives."""
+
+    RANDOM = "Random"
+    SUBSTITUTION_AWARE = "SubstitutionAware"
+    NO_SUBSTITUTION = "NoSubstitution"
 
 
 class PopulationType(Enum):
+    """Population types for grouping users."""
+
     CLUSTER_0 = 0
     CLUSTER_1 = 1
     CLUSTER_2 = 2
@@ -119,6 +132,8 @@ class PropulsionType(StrEnum):
 
 
 class UserState(Enum):
+    """User states."""
+
     INITIALIZED = 0
     SEARCHING_TRANSPORT_ALTERNATIVES = 1
     SELECTING_TRANSPORT_ALTERNATIVES = 2
@@ -138,6 +153,8 @@ class UserState(Enum):
 
 
 class VehicleState(Enum):
+    """Vehicle states."""
+
     ### Generic vehicle states ###
     INITIALIZED = 0
     PARKING = 1
@@ -163,6 +180,19 @@ class VehicleState(Enum):
     UNKNOWN = 2999
 
 
+# TODO: Do we need both withdrawn and missed? If so we should clarify the difference.
 class TransactionState(StrEnum):
+    """Transaction states."""
+
     FULFILLED = "Fulfilled"
     MISSED = "Missed"
+    WITHDRAWN = "Withdrawn"
+
+
+class OperatorMode(StrEnum):
+    """Operator modes for different types of services."""
+
+    # TODO: We probably should standardize these names across the codebase.
+    RIDE_HAILING = "RideHailing"
+    SHARED_MOBILITY = "SharedMobility"
+    PUBLIC_TRANSIT = "PublicTransit"
