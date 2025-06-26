@@ -5,7 +5,6 @@ import logging
 import os
 import time
 from datetime import datetime
-from pathlib import Path
 
 import pandas as pd
 
@@ -21,8 +20,7 @@ from simulation.helper.configuration.configuration import (
     Configuration,
     ModeChoiceStrategy,
 )
-from simulation.helper.logging.extra_default_filter import ExtraDefaultFilter
-from simulation.helper.logging.simulation_context_filter import SimulationContextFilter
+from simulation.helper.logging.log_manager import LogManager
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -48,7 +46,6 @@ from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
     OnlyCarVehicleChoiceBehavior,
 )
 from simulation.world.demand.demand_factory import DemandFactory
-from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 from tracking.tracking import Tracking
@@ -64,44 +61,18 @@ from utils import load_geodesic_environment
 # Initialize Configuration Object
 config = Configuration()
 
-
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
-# Logging                                 #
+# Init. Simulation Environment            #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
 
-# Log Level
-log_level = config.settings.LOG_LEVEL
-file_log_level = config.settings.FILE_LOG_LEVEL
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-logging.getLogger("docplex.util.environment.logger").setLevel(logging.WARNING)
-
-logger = logging.getLogger()
-
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+env = simpy.Environment(initial_time=0)
+LogManager.setup_logging(config, env)
 # Record the start time
 real_start_time = time.time()
+output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
 
-# Make it beautiful
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-    filename=f"data/output/logs/{output_timestamp}.log",
-    encoding="utf-8",
-    level=file_log_level,  # set it to lowest so the handlers can decide
-)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf)
-
-consolehandler = logging.StreamHandler()
-consolehandler.setLevel(log_level)
-consolehandler.addFilter(cf)
-logger.addHandler(consolehandler)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -138,21 +109,6 @@ bidding_parameters = {"bid_default": bid_default, "bid_decay": bid_decay}
 
 ###### End RideHailing Fleet Configuration ######
 
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Init. Simulation Environment            #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-env = simpy.Environment(initial_time=0)
-
-# Inject Simulation Environment to Logger (such that we can log the env time)
-cf = SimulationContextFilter(filter_name="add_env", extra=env)
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-
-logger.addFilter(cf)
-logger.addFilter(edf)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -236,22 +192,6 @@ env.process(
 #### End Charging Infrastructure Configuration #####
 
 # # # # # # # # # # # # # # # # # # # # # #
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Load Demand Data (once).                #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-p = Path(config.path.PATH_TRIP_DEMAND)
-di = DemandImporter(
-    spatial_resolution=config.world.SPATIAL_RESOLUTION,
-    temporal_resolution=config.world.TEMPORAL_RESOLUTION,
-    daily_resolution=config.world.DAILY_RESOLUTION,
-    city=config.world.CITY,
-)
-
-demand_profile = di.extract_spatio_temporal_demand_estimates(p)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -438,12 +378,7 @@ world = World.init(
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env,
-    demand_profile,
-    di,
-    world,
-    config.path.PATH_DEMAND_MODIFIERS,
-    mode="ride_hailing",
+    env, world, config.path.PATH_DEMAND_MODIFIERS, mode="ride_hailing"
 )
 env.process(demand_factory.generate_demand())
 
@@ -466,6 +401,7 @@ logging.warning("Simulation Finished.", extra={"clazz": "main", "oid": ""})
 # Save Tracking Data                      #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
+
 
 pd.DataFrame.from_records(vehicles_track).to_csv(
     f"data/output/tracking/{output_timestamp}_vehicles.csv", index=False

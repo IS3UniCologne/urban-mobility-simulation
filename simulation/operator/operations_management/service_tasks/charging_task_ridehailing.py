@@ -150,7 +150,9 @@ class ChargingTaskRidehailing(ServiceTask):
                         self._waiting_time = self._scheduled_time - self._env.now
                         if self._waiting_time > 0:
                             logging.debug(
-                                f"Vehicle {self._vehicle.id} waits {self._waiting_time} minutes for reserved slot.",  # noqa: G004
+                                "Vehicle %s waits %s minutes for reserved slot.",
+                                self._vehicle.id,
+                                self._waiting_time,
                                 extra={"clazz": self.__class__.__name__},
                             )
                             self._state = TaskState.EXECUTING_WAITING

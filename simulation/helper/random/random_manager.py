@@ -83,7 +83,8 @@ class RandomManager(metaclass=Singleton):
         random.seed(main_seed)
 
         logging.info(
-            f"Random seed set to {main_seed}",  # noqa: G004
+            "Random seed set to %s",
+            main_seed,
             extra={"clazz": "RandomManager", "oid": ""},
         )
 
@@ -116,7 +117,9 @@ class RandomManager(metaclass=Singleton):
             PCG64(component_seed)
         )
         logging.info(
-            f"New RNG created for component {component_name} with seed {component_seed} ",  # noqa: G004
+            "New RNG created for component %s with seed %s ",
+            component_name,
+            component_seed,
             extra={"clazz": "RandomManager", "oid": ""},
         )
         return
