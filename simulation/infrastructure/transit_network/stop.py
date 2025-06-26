@@ -1,19 +1,21 @@
+from simulation.context.simulation_context import SimulationContext
 from simulation.environment.geodesic_position import GeodesicPosition
 
 
 class Stop(GeodesicPosition):
     __slots__ = ("_departure", "_departure_next_day", "_gtfs_id", "_stop_id")
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        stop_id,  # noqa: ANN001
-        gtfs_id,  # noqa: ANN001
-        latitude,  # noqa: ANN001
-        longitude,  # noqa: ANN001
-        departure,  # noqa: ANN001
+        sim: SimulationContext,
+        stop_id: str,
+        gtfs_id: str,
+        latitude: float,
+        longitude: float,
+        departure: float,
         departure_next_day: bool,
-    ):
-        super(Stop, self).__init__(latitude, longitude)  # noqa: UP008
+    ) -> None:
+        super(Stop, self).__init__(sim, latitude, longitude)  # noqa: UP008
 
         self._stop_id = stop_id
         self._gtfs_id = gtfs_id
