@@ -7,6 +7,7 @@ import geopandas as gpd
 import pandas as pd
 
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 
 if TYPE_CHECKING:
@@ -19,10 +20,11 @@ class AmbiguousTripException(Exception):
     pass
 
 
-class Timetable:
-    __slots__ = ("_data_path", "_geo_env", "_trips")
+class Timetable(SimulationBase):
+    __slots__ = ("_data_path", "_geo_env", "_sim", "_trips")
 
     def __init__(self, data_path: Path, sim: SimulationContext) -> None:
+        super().__init__(sim)
         self._data_path = data_path
         self._trips = None
         self._geo_env = sim.geo_env
