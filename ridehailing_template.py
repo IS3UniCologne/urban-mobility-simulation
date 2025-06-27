@@ -62,6 +62,9 @@ from tracking.tracking import Tracking
 # Custom module imports
 from utils import load_geodesic_environment
 
+# Core metric visualization
+from visualization.Data_plots import DataPlots
+
 # Change working directory to path of this file
 working_dir = Path(__file__).parent
 os.chdir(working_dir)
@@ -434,13 +437,15 @@ urban_mobility_simulation = threading.Thread(target=run_simulation, args=(1440,)
 
 urban_mobility_simulation.start()
 
+dataplot = DataPlots(env, world, [], [], [], [], [], [], [])
+
 ani = FuncAnimation(
     plt.gcf(),
-    animate,
+    dataplot.animate,
     frames=100,
     interval=1000,
     cache_frame_data=False,
-    fargs=(get_n_users,),
+    fargs=(dataplot.get_n_users(ridehailing_operator_0, ridehailing_operator_1, charging_infrastructure, world, env),),
 )
 plt.show()
 
