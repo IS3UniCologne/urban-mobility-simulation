@@ -63,7 +63,7 @@ from tracking.tracking import Tracking
 from utils import load_geodesic_environment
 
 # Core metric visualization
-from visualization.Data_plots import DataPlots
+from visualization.Data_plots import get_n_users, animate
 
 # Change working directory to path of this file
 working_dir = Path(__file__).parent
@@ -437,15 +437,21 @@ urban_mobility_simulation = threading.Thread(target=run_simulation, args=(1440,)
 
 urban_mobility_simulation.start()
 
-dataplot = DataPlots(env, world, [], [], [], [], [], [], [])
+# lists for data
+timestamp = []
+y1, y2, y3, y4, y5, y6 = [], [], [], [], [], []
+
+# wrap callback function with its arguments
+get_data = get_n_users(ridehailing_operator_0, ridehailing_operator_1, charging_infrastructure, world, env, timestamp, y1, y2, y3, y4, y5, y6)
 
 ani = FuncAnimation(
     plt.gcf(),
-    dataplot.animate,
+    animate,
     frames=100,
     interval=1000,
     cache_frame_data=False,
-    fargs=(dataplot.get_n_users(ridehailing_operator_0, ridehailing_operator_1, charging_infrastructure, world, env),),
+    fargs=(get_data,)
+
 )
 plt.show()
 
