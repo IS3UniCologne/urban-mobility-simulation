@@ -362,7 +362,6 @@ ani = FuncAnimation(
     interval=1000,
     cache_frame_data=False,
     fargs=(get_metrics,)
-
 )
 plt.show()
 
