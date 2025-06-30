@@ -89,7 +89,7 @@ env = simpy.Environment(initial_time=0)
 
 # Logging
 LogManager.setup_logging(config, env)
-
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #

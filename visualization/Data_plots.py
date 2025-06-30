@@ -22,7 +22,9 @@ def get_core_metrics(
         y3: list,
         y4: list,
         y5: list,
-        y6: list) -> list:
+        y6: list
+    ) -> list:
+    
     # fulfilled trips vs. total trips
     fleet_0_transactions = ridehailing_operator_0.transaction_df
     fleet_1_transactions = ridehailing_operator_1.transaction_df
