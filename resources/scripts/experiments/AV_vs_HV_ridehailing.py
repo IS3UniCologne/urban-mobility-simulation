@@ -133,7 +133,6 @@ def run_single_simulation(  # noqa: ANN201
     :param pop_prob: 1.0 means only price sensitive users, 0.0 means only sustainable users
     :return:
     """
-
     # Before each simulation run, reset counter and random number generators
     RideHailingCar.ride_hailing_car_id = 0
     RideHailingAV.ride_hailing_av_id = 0

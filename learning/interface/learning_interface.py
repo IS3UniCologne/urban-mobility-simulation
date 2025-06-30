@@ -42,7 +42,6 @@ class LearningInterface(ABC):
         :param evaluation: if set to true, test action is more lenient with raising ActionForbidden, problem-dependent
         :return: S, R, T
         """
-
         bad_action_penalty = 0
 
         try:

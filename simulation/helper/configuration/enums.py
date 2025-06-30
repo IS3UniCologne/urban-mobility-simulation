@@ -11,6 +11,7 @@ except ImportError:
         We can remove this once we drop support for Python 3.11.
         """
 
+
 try:
     from enum import StrEnum  # Python 3.11+
 except ImportError:

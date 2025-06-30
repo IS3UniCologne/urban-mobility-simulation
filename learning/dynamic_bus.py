@@ -62,7 +62,6 @@ class DynamicBusProblem(LearningInterface):
         Then, and only then, variables like corridor and state dimensionality can be set
         :return:
         """
-
         # set timelimit to multiplier specified in config * planned route total time
         route_duration = SimulationTimeConverter.duration_between(
             self.bus.route.origin.departure, self.bus.route.destination.departure
@@ -193,7 +192,6 @@ class DynamicBusProblem(LearningInterface):
                     down
 
         """
-
         if action == "STAY":
             # even though the bus does not move, timeout for the average movement duration
             # otherwise the action does have no consequence, when another action immediately follows
