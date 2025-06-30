@@ -4,17 +4,11 @@ import logging
 import os
 import shutil
 import sys
-
-# Live Visualization
-import threading
 from datetime import datetime
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-
 # Third-party library imports
 import simpy
-from matplotlib.animation import FuncAnimation
 
 # Imports world related modules
 from simulation.agent.user import User
@@ -82,54 +76,6 @@ output_config_dir = os.path.normpath(os.path.join("data", "output", "configs"))
 if not os.path.exists(output_config_dir):
     os.makedirs(output_config_dir)
 shutil.copy(sys.argv[1], os.path.join(output_config_dir, f"{output_timestamp}.toml"))
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
-# Logging                                 #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-# Disable the default handler of the root logger
-logging.getLogger().handlers.clear()
-
-logger = logging.getLogger()
-# Set to logging.DEBUG to see all logs
-logger.setLevel(logging.DEBUG)
-
-# Block Logger of third party software
-logging.getLogger("fiona").setLevel(logging.WARNING)
-logging.getLogger("matplotlib").setLevel(logging.WARNING)
-
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] [Time %(env_time)10s] [%(clazz)30s %(oid)3s]: %(message)s"
-)
-
-# Create a console handler with its own level (LOG_LEVEL)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(config.settings.LOG_LEVEL)
-console_handler.setFormatter(formatter)
-
-
-output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
-logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
-# Create directory for logs if not exists
-if not os.path.exists(logs_dir):
-    os.makedirs(logs_dir)
-log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
-file_handler = logging.FileHandler(log_file)
-file_handler.setFormatter(formatter)
-file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
-
-
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
-
-edf = ExtraDefaultFilter(filter_name="add_default_value")
-logger.addFilter(edf)
-
-# Add Custom Init Filters (which work without the ENV obj)
-cf = SimulationContextFilter(filter_name="add_env", extra=[])
-logger.addFilter(cf)
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -263,55 +209,6 @@ demand_factory = DemandFactory(
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
-# Live Visualization                      #
-#                                         #
-# # # # # # # # # # # # # # # # # # # # # #
-
-timestamp = []
-y1 = []
-y2 = []
-
-
-# callback function to get data from world
-def get_n_users() -> list:
-    timestamp.append(env.now)
-    # y1.append(len(world._users))
-    # y2.append(len(world._user_processes))
-    # temporary placeholders
-    y1.append(1)
-    y2.append(2)
-
-    return timestamp, y1, y2
-
-
-def animate(i: int, callback: list) -> None:
-    if callback is not None:
-        timestamp, n_users, n_active_users = callback()
-
-        # clear whole figure
-        plt.clf()
-
-        # plot 1
-        plt.subplot(3, 1, 1)
-        plt.plot(timestamp, n_users, n_active_users)
-        plt.title("n users in world")
-        plt.legend(["n_users", "n_user_processes"], loc="upper right")
-
-        # plot 2
-        plt.subplot(3, 1, 2)
-        plt.plot(timestamp, n_users)
-        plt.title("n users in world")
-
-        # plot 3
-        plt.subplot(3, 1, 3)
-        plt.plot(timestamp, n_users)
-        plt.title("n users in world")
-
-        plt.tight_layout()
-
-
-# # # # # # # # # # # # # # # # # # # # # #
-#                                         #
 # Run the Simulation                      #
 #                                         #
 # # # # # # # # # # # # # # # # # # # # # #
@@ -353,20 +250,6 @@ def run_simulation(end_time, env=env):  # noqa: ANN001, ANN201
 
 sum_iterations = 1  # throws Exception if value > 1: ValueError until (1440) must be greater than the current simulation time
 for i in range(sum_iterations):
-    # env = simpy.Environment(initial_time=600)
-
-    urban_mobility_simulation = threading.Thread(target=run_simulation, args=(1440,))
-
-    urban_mobility_simulation.start()
-
-    ani = FuncAnimation(
-        plt.gcf(),
-        animate,
-        frames=100,
-        interval=1000,
-        cache_frame_data=False,
-        fargs=(get_n_users,),
-    )
-    plt.show()
+    env = simpy.Environment(initial_time=600)
 
     run_simulation(end_time=config.experiment_management.END_TIME)
