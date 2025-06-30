@@ -1,11 +1,7 @@
 import matplotlib.pyplot as plt
 
-import simpy
-
-from simulation.world.world import World
-
 # callback function
-def get_n_users(ridehailing_operator_0, ridehailing_operator_1, charging_infrastructure, world, env, timestamp, y1, y2, y3, y4, y5, y6) -> list:
+def get_core_metrics(ridehailing_operator_0, ridehailing_operator_1, charging_infrastructure, world, env, timestamp, y1, y2, y3, y4, y5, y6) -> list:
     # fulfilled trips vs. total trips
     fleet_0_transactions = ridehailing_operator_0.transaction_df
     fleet_1_transactions = ridehailing_operator_1.transaction_df
