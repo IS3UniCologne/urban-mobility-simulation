@@ -351,8 +351,9 @@ urban_mobility_simulation.start()
 timestamp = []
 y1, y2, y3, y4, y5, y6 = [], [], [], [], [], []
 
-# function wrapper so arguments can be passed
-get_metrics = lambda: get_core_metrics(ridehailing_operator_0, ridehailing_operator_1, charging_infrastructure, world, env, timestamp, y1, y2, y3, y4, y5, y6)
+# function wrapper to pass arguments
+def get_metrics() -> list:
+    return get_core_metrics(ridehailing_operator_0, ridehailing_operator_1, charging_infrastructure, world, env, timestamp, y1, y2, y3, y4, y5, y6)
 
 ani = FuncAnimation(
     plt.gcf(),

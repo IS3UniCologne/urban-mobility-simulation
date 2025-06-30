@@ -1,7 +1,28 @@
+import simpy
+
+# simulation objects
+from simulation.world.world import World
+from simulation.operator.ride_hailing_operator import RideHailingOperator
+from simulation.infrastructure.charging_stations.charging_infastructure import ChargingInfrastructure
+
+# third party imports
 import matplotlib.pyplot as plt
 
+
 # callback function
-def get_core_metrics(ridehailing_operator_0, ridehailing_operator_1, charging_infrastructure, world, env, timestamp, y1, y2, y3, y4, y5, y6) -> list:
+def get_core_metrics(
+        ridehailing_operator_0: RideHailingOperator,
+        ridehailing_operator_1: RideHailingOperator,
+        charging_infrastructure: ChargingInfrastructure,
+        world: World,
+        env: simpy.Environment,
+        timestamp: list,
+        y1: list,
+        y2: list,
+        y3: list,
+        y4: list,
+        y5: list,
+        y6: list) -> list:
     # fulfilled trips vs. total trips
     fleet_0_transactions = ridehailing_operator_0.transaction_df
     fleet_1_transactions = ridehailing_operator_1.transaction_df
