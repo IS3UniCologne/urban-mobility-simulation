@@ -1,5 +1,6 @@
 import h3 as h3
 from haversine import Unit, haversine
+from shapely import Geometry
 from shapely.geometry import Point
 
 try:
@@ -26,8 +27,10 @@ class GeodesicPosition(Position):
         "_lng",
     )
 
-    def __init__(self, latitude, longitude, default_hexagon=None) -> object:  # noqa: ANN001
-        super(GeodesicPosition, self).__init__()  # noqa: UP008
+    def __init__(
+        self, latitude: float, longitude: float, default_hexagon: RegionId | None = None
+    ) -> None:
+        super().__init__()
         self._lat = latitude
         self._lng = longitude
 
@@ -43,21 +46,21 @@ class GeodesicPosition(Position):
 
         self._geo_env = GeodesicEnvironment.getInstance()
 
-    def getExactLocation(self, geojson=False):  # noqa: ANN001, ANN201
+    def getExactLocation(self, geojson: bool = False) -> tuple[float, float]:
         if geojson:
             return (self._lng, self._lat)
         else:
             return (self._lat, self._lng)
 
     @property
-    def geometry(self):  # noqa: ANN201
+    def geometry(self) -> Geometry:
         return self._geometry
 
-    def __str__(self):  # noqa: ANN204
+    def __str__(self) -> str:
         return f"Latitude {self._lat} : Longitude {self._lng}"
 
     # ==
-    def __eq__(self, other):  # noqa: ANN001, ANN204
+    def __eq__(self, other: object) -> bool:
         """
         Test equality of two GeodesicPositions
         :param other: GeodesicPosition
@@ -69,7 +72,7 @@ class GeodesicPosition(Position):
             return self._lat == other._lat and self._lng == other._lng
 
     # >>
-    def __rshift__(self, other) -> float:  # noqa: ANN001
+    def __rshift__(self, other: "GeodesicPosition") -> float:
         """
         Calculate haversine distance between two positions
         :param other: GeodesicPosition
@@ -113,18 +116,18 @@ class GeodesicPosition(Position):
         try:
             hex = self._default_hexagon[resolution]
         except KeyError:
-            hex = h3.geo_to_h3(self._lat, self._lng, resolution)
+            hex = h3.latlng_to_cell(self._lat, self._lng, resolution)
             self._default_hexagon[resolution] = hex
 
         return RegionId(hex)
 
-    def is_in_geometry(self, geometry):  # noqa: ANN001, ANN201
+    def is_in_geometry(self, geometry: Geometry) -> bool:
         if self._geometry.intersects(geometry):
             return True
         else:
             return False
 
-    def difference(self, other: "GeodesicPosition"):  # noqa: ANN201
+    def difference(self, other: "GeodesicPosition") -> tuple[float, float]:
         """
         This function is meant for getting the full distance vector of the (lat, lng) coordinate system
         of two GeodesicPositions. This might not be vastly intelligent in terms of what the result means geographically

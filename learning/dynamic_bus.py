@@ -3,7 +3,8 @@ import logging
 
 import h3
 import numpy as np
-from simpy import Environment
+from simpy import Environment, events
+from collections.abc import Generator
 
 from learning.interface.learning_interface import LearningInterface
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -181,7 +182,9 @@ class DynamicBusProblem(LearningInterface):
             dtype=int,
         )
 
-    def _take_action(self, action=None):  # noqa: ANN001, ANN202
+    def _take_action(
+        self, action: str | None = None
+    ) -> Generator[events.Event, None, None]:
         """
         Actions in hexagonal grid, stay is also allowed.
 
@@ -196,16 +199,15 @@ class DynamicBusProblem(LearningInterface):
             # even though the bus does not move, timeout for the average movement duration
             # otherwise the action does have no consequence, when another action immediately follows
             yield self.env.timeout(
-                h3.edge_length(
-                    resolution=self._config.dynamic_routing_config.action_resolution,
-                    unit="m",
+                h3.average_hexagon_edge_length(
+                    self._config.dynamic_routing_config.action_resolution, unit="m"
                 )
                 / self.bus._velocity  # noqa: SLF001
             )
         else:
-            hex_id = h3.geo_to_h3(
+            hex_id = h3.latlng_to_cell(
                 *self.bus.position.getExactLocation(),
-                resolution=self._config.dynamic_routing_config.action_resolution,
+                self._config.dynamic_routing_config.action_resolution,
             )
             new_hex = self.bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
             new_centroid = self.bus._geodesic_env.get_centroid(  # noqa: SLF001
@@ -254,10 +256,10 @@ class DynamicBusProblem(LearningInterface):
         # rather this halts the simulation such that a new run can be started from the outer routine
         self._world.stop_all_processes()  # this stops demand generation
 
-    def _test_action(self, action: str, evaluation):  # noqa: ANN001, ANN202
-        hex_id = h3.geo_to_h3(
+    def _test_action(self, action: str, evaluation: bool) -> bool:
+        hex_id = h3.latlng_to_cell(
             *self.bus._position.getExactLocation(),  # noqa: SLF001
-            resolution=self._action_res,
+            self._action_res,
         )
 
         if action == "STAY":
