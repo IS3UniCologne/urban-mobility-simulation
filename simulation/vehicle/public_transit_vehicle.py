@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING
 
 from simpy import Environment
 
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.environment.position import Position
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.helper.time import SimulationTimeConverter
+from simulation.infrastructure.route import Route
 from simulation.infrastructure.transit_network.stop import Stop
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.vehicle import Vehicle
@@ -32,11 +34,11 @@ class PublicTransitVehicle(Vehicle, ABC):
         self,
         env: Environment,
         route: PublicTransitRoute,
-        position: Position,
+        position: GeodesicPosition,
         fleet: VehicleFleet,
-        velocity,  # noqa: ANN001
+        velocity: float,
         vehicle_mode: VehicleMode,
-        max_available_seats,  # noqa: ANN001
+        max_available_seats: int,
     ):
         super(PublicTransitVehicle, self).__init__(  # noqa: UP008
             env=env,
@@ -47,9 +49,9 @@ class PublicTransitVehicle(Vehicle, ABC):
             max_available_seats=max_available_seats,
         )
 
-        self._route = route
-        self._current_stop = route.origin
-        self._delay = 0  # in seconds from planned route timetable
+        self._route: Route = route
+        self._current_stop: Position = route.origin
+        self._delay: int = 0  # in seconds from planned route timetable
 
         # Initialize state
         self.state = VehicleState.AT_TERMINAL_ORIGIN
@@ -59,22 +61,22 @@ class PublicTransitVehicle(Vehicle, ABC):
         )
 
     @property
-    def route(self):  # noqa: ANN201
+    def route(self) -> Route:
         return self._route
 
     @property
-    def current_stop(self):  # noqa: ANN201
+    def current_stop(self) -> Stop:
         return self._current_stop
 
     @current_stop.setter
-    def current_stop(self, stop: Stop):  # noqa: ANN202
+    def current_stop(self, stop: Stop) -> None:
         self._current_stop = stop
 
     @property
-    def delay(self):  # noqa: ANN201
+    def delay(self) -> int:
         return self._delay
 
-    def prognose_arrival(self, stop: Stop):  # noqa: ANN201
+    def prognose_arrival(self, stop: Stop) -> float:
         # TODO: this is pretty optimistic: What if the vehicle waits at intermediate stops
 
         distance = self._route.subroute(self._current_stop, stop).total_distance()
