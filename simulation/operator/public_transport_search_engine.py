@@ -90,9 +90,10 @@ class PublicTransportSearchEngine(SearchEngineInterface):
 
                 if reachable_stops:
                     logging.debug(
-                        f"Bus {vehicle.id} is a viable transport alternative from "  # noqa: G004
-                        f"{transportation_search_task.transport_task.origin} to "
-                        f"{transportation_search_task.transport_task.destination}!",
+                        "Bus %s is a viable transport alternative from %s to %s!",
+                        vehicle.id,
+                        transportation_search_task.transport_task.origin,
+                        transportation_search_task.transport_task.destination,
                         extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
 

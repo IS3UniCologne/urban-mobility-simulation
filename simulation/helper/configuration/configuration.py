@@ -12,7 +12,7 @@ from simulation.helper.configuration.enums import (
     ModeChoiceStrategy,
     PopulationType,
     SpatialResolution,
-    TemporalBucket,
+    TemporalResolution,
     VehicleMode,
 )
 from simulation.helper.singleton import Singleton
@@ -100,6 +100,7 @@ def beartype_after_post_init(cls: T) -> T:
 class SettingsConfig:
     LOG_LEVEL: str
     FILE_LOG_LEVEL: str
+    LOG_TIMESTAMPS: bool
 
     PERSIST_RESULTS: bool
     TRACK_AGENT: bool
@@ -123,7 +124,7 @@ class RandomManagerConfig:
 @dataclass(slots=True, frozen=True)
 class WorldConfig:
     SPATIAL_RESOLUTION: SpatialResolution
-    TEMPORAL_RESOLUTION: TemporalBucket
+    TEMPORAL_RESOLUTION: TemporalResolution
     DAILY_RESOLUTION: DailyResolution
     CITY: str
 
@@ -133,16 +134,18 @@ class WorldConfig:
             self, "SPATIAL_RESOLUTION", SpatialResolution(self.SPATIAL_RESOLUTION)
         )
         object.__setattr__(
-            self, "TEMPORAL_RESOLUTION", TemporalBucket(self.TEMPORAL_RESOLUTION)
+            self, "TEMPORAL_RESOLUTION", TemporalResolution(self.TEMPORAL_RESOLUTION)
         )
         object.__setattr__(
             self, "DAILY_RESOLUTION", DailyResolution(self.DAILY_RESOLUTION)
         )
 
+    # TODO: get rid of these
     @property
     def SPATIAL_RESOLUTION_VALUE(self) -> int:
         return self.SPATIAL_RESOLUTION.value
 
+    # TODO: get rid of these
     @property
     def SPATIAL_RESOLUTION_COLUMN(self) -> str:
         """Returns the column name for the spatial resolution. E.g. 'hex_id_7'
@@ -180,14 +183,18 @@ class PathConfig:
         for field_obj in fields(self):
             field_name = field_obj.name
             value = getattr(self, field_name)
+            # Format city placeholder if present
             if isinstance(value, str) and "{city}" in value:
-                # Use object.__setattr__ to bypass dataclass immutability with frozen
                 object.__setattr__(self, field_name, value.format(city=city))
-
-        # Format demand modifiers if present
+                value = getattr(self, field_name)
+            # Normalize all string paths
+            if isinstance(value, str):
+                object.__setattr__(self, field_name, os.path.normpath(value))
+        # Format and normalize demand modifiers if present
         if self.PATH_DEMAND_MODIFIERS:
             formatted_modifiers = [
-                value.format(city=city) for value in self.PATH_DEMAND_MODIFIERS
+                os.path.normpath(value.format(city=city))
+                for value in self.PATH_DEMAND_MODIFIERS
             ]
             object.__setattr__(self, "PATH_DEMAND_MODIFIERS", formatted_modifiers)
 
@@ -261,6 +268,8 @@ class ModeChoiceModelConfig:
     MOD_P_VALUES: list[list[float]]
     MOD_COEFFICIENT_INTERVAL_ADJUSTER: float
 
+    rng: np.random.Generator | None = None
+
     def __post_init__(self) -> None:
         # convert from str to enum
         object.__setattr__(
@@ -268,12 +277,15 @@ class ModeChoiceModelConfig:
             "MODE_CHOICE_STRATEGY",
             ModeChoiceStrategy[str(self.MODE_CHOICE_STRATEGY)],
         )
+        # Import here to avoid circular dependency
+        from simulation.helper.random.random_manager import RandomManager
+
+        # Use object.__setattr__ to bypass frozen dataclass restriction
+        object.__setattr__(self, "rng", RandomManager().get_rng("MODE_CHOICE_MODEL"))
 
     def generate_mode_choice_coefficients(
         self, population_type: PopulationType
     ) -> np.ndarray:
-        # TODO: This shouldn't be in here, can't use random manager because of circular import, fix once it's moved
-        rng = np.random.default_rng(seed=Configuration().random_manager.SEED)
         mode_choice_coefficients_ci_lower = self.MOD_COEFFICIENTS_CI_LOWER[
             population_type.value
         ]
@@ -293,17 +305,15 @@ class ModeChoiceModelConfig:
         )
         mode_choice_coefficients_ci_lower = mode_choice_coefficients_ci_lower + adjuster
         mode_choice_coefficients_ci_upper = mode_choice_coefficients_ci_upper - adjuster
-        mode_choice_coefficients = rng.uniform(
+        mode_choice_coefficients = self.rng.uniform(
             mode_choice_coefficients_ci_lower, mode_choice_coefficients_ci_upper
         )
         return mode_choice_coefficients
 
     def generate_AV_trust(self, population_type: PopulationType) -> float:
-        # TODO: This shouldn't be in here, can't use random manager because of circular import, fix once it's moved
-        rng = np.random.default_rng(seed=Configuration().random_manager.SEED)
         trust_value_lower = self.AV_TRUST[population_type.value] - 0.5
         trust_value_upper = self.AV_TRUST[population_type.value] + 0.5
-        trust_value = rng.uniform(trust_value_lower, trust_value_upper)
+        trust_value = self.rng.uniform(trust_value_lower, trust_value_upper)
         return trust_value
 
 

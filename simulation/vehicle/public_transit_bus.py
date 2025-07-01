@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
+from collections.abc import Generator
 
-from simpy import Environment
+from simpy import Environment, Event
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
@@ -17,7 +18,7 @@ from tracking.tracking_interface import TrackingInterface
 
 
 class Bus(PublicTransitVehicle, TrackingInterface):
-    bus_id = 0
+    bus_id: int = 0
 
     __slots__ = (
         "_config",
@@ -43,8 +44,8 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         position: GeodesicPosition,
         fleet: VehicleFleet,
         use_learning_agent: bool,
-        velocity,  # noqa: ANN001
-        max_available_seats=100,  # noqa: ANN001
+        velocity: float,
+        max_available_seats: int = 100,
     ):
         """
 
@@ -63,33 +64,35 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         Bus.bus_id += 1
 
         # Events
-        self._has_reached_terminal = self._env.event()
+        self._has_reached_terminal: Event = self._env.event()
 
         # Config
-        self._config = Configuration()
+        self._config: Configuration = Configuration()
         self._problem_config = (
             None  # TODO: add back once dynamic problem configuration is re-implemented
         )
 
         # Environment / World state
-        self._geodesic_env = GeodesicEnvironment.getInstance()
-        self._world = World.instance()
+        self._geodesic_env: GeodesicEnvironment = GeodesicEnvironment.getInstance()
+        self._world: World = World.instance()
 
-        self._dropoffs = 0
-        self._pickups = 0
-        self._dist_traveled = 0
+        self._dropoffs: int = 0
+        self._pickups: int = 0
+        self._dist_traveled: int = 0
 
         # optionally, inject the run routine of a RL agent
-        self._use_learning_agent = use_learning_agent
+        self._use_learning_agent: bool = use_learning_agent
 
         if not self._use_learning_agent:
             # use planned route logic
-            self._process = self._env.process(self._run())
+            self._process: Event = self._env.process(self._run())
         else:
             # use learning agent
-            self._process = self._env.process(self._problem_config.learning_agent.run())
+            self._process: Event = self._env.process(
+                self._problem_config.learning_agent.run()
+            )
 
-    def _run(self):  # noqa: ANN202
+    def _run(self) -> Generator[Event, None, None]:
         """
         Bus Lifecycle (with planned stops, not RL agent)
 
@@ -158,11 +161,11 @@ class Bus(PublicTransitVehicle, TrackingInterface):
 
         self._has_reached_terminal.succeed()
 
-    def _move_to_next_stop(self):  # noqa: ANN202
+    def _move_to_next_stop(self) -> Generator[Event, None, None]:
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
         yield self._env.process(self.move(route_segment))
 
-    def move(self, route_segment: RouteSegment):  # noqa: ANN201
+    def move(self, route_segment: RouteSegment) -> Generator[Event, None, None]:
         # TODO: use road network speed limits?
 
         distance = route_segment.distance  # in meter
@@ -171,7 +174,9 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         self.state = VehicleState.EN_ROUTE_PLANNED
 
         logging.debug(
-            f"Bus has started driving from stop {route_segment.start.stop_id} to stop {route_segment.end.stop_id}.",  # noqa: G004
+            "Bus has started driving from stop %s to stop %s.",
+            route_segment.start.stop_id,
+            route_segment.end.stop_id,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
 
@@ -183,18 +188,21 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         if self._current_stop == self._route.destination:
             self.state = VehicleState.AT_TERMINAL_DESTINATION
             logging.debug(
-                f"Bus has arrived at its terminal destination - stop {self._current_stop.stop_id} "  # noqa: G004
-                f"at time {self._time.now_as_str()}",
+                "Bus has arrived at its terminal destination - stop %s at time %s",
+                self._current_stop.stop_id,
+                self._time.now_as_str(),
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
         else:
             self.state = VehicleState.AT_STOP
             logging.debug(
-                f"Bus has arrived at stop {self._current_stop.stop_id} at time {self._time.now_as_str()}",  # noqa: G004
+                "Bus has arrived at stop %s at time %s",
+                self._current_stop.stop_id,
+                self._time.now_as_str(),
                 extra={"clazz": self.__class__.__name__, "oid": self._id},
             )
 
-    def _update_positions(self, new_position):  # noqa: ANN001, ANN202
+    def _update_positions(self, new_position) -> None:  # noqa: ANN001
         # Update Vehicle Position
         self.position = new_position
 
@@ -235,8 +243,10 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #                     end = self._corridor_sorted.index(d.destination.get_region_id(self._action_res))
     #                     m[start][end] += 1
     #                 except ValueError as e:
-    #                     logging.debug(f'Bus update state: Encountered demand at edge of hexagon: {e}',
-    #                                   extra={"clazz": self.__class__.__name__, "oid": self._id})
+    #                     logging.debug(
+    #                         'Bus update state: Encountered demand at edge of hexagon: %s', e,
+    #                         extra={"clazz": self.__class__.__name__, "oid": self._id}
+    #                     )
     #                     # for now we are skipping it. I don't see a good way to solve the geometry inconsistency
     #                     continue
     #
@@ -293,7 +303,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #     self._agent_completed_step.succeed((before_state, action, self._rl_agent.reward, self._rl_agent.reward_sum))
     #     self._agent_completed_step = self._env.event()
 
-    def __str__(self):  # noqa: ANN204
+    def __str__(self) -> str:
         return f"I have {len(self._passengers)} passengers on boards"
 
     def dump(self, exposed_only: bool = True) -> dict:

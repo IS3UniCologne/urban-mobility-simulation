@@ -28,10 +28,10 @@ class TransportationAlternativeRideHailing:
         self,
         vehicle: RideHailingVehicle,
         route: Route,
-        price,  # noqa: ANN001
-        duration,  # noqa: ANN001
-        distance,  # noqa: ANN001
-        convenience,  # noqa: ANN001
+        price: float,
+        duration: float,
+        distance: float,
+        convenience: float,
         route_to_pickup: Route,
     ):
         self._vehicle = vehicle
@@ -53,7 +53,7 @@ class TransportationAlternativeRideHailing:
         self._waiting_time = 0.0  # Is set after successful allocation
         self._energy_consumed = 0.0  # Is set after successful trip
 
-    def set_pick_up_time(self):  # noqa: ANN201
+    def set_pick_up_time(self) -> float:
         if self.vehicle.state == VehicleState.PARKING:
             return self._distance_to_pickup / self.vehicle.velocity
 
@@ -64,101 +64,100 @@ class TransportationAlternativeRideHailing:
                 - self.vehicle._env.now  # noqa: SLF001
             )
 
-    def set_environment(self):  # noqa: ANN201
+    def set_environment(self) -> int:
         if self._vehicle.is_electric:
             return 1
         else:
             return 0
 
-    def set_technology_skeptical(self):  # noqa: ANN201
+    def set_technology_skeptical(self) -> int:
         if self._vehicle_type == "AutonomousCar":
             return 0
         else:
             return 1
 
-    def set_autonomous_vehicle(self):  # noqa: ANN201
+    def set_autonomous_vehicle(self) -> int:
         if self._vehicle_type == "AutonomousCar":
             return 1
         else:
             return 0
 
     @property
-    def environment(self):  # noqa: ANN201
+    def environment(self) -> int:
         return self._environment
 
     @property
-    def electric_vehicle(self):  # noqa: ANN201
+    def electric_vehicle(self) -> int:
         return self._electric_vehicle
 
     @property
-    def autonomous_vehicle(self):  # noqa: ANN201
+    def autonomous_vehicle(self) -> int:
         return self._autonomous_vehicle
 
     @property
-    def utility(self):  # noqa: ANN201
+    def utility(self) -> float:
         return self._utility
 
     @property
-    def technology_skeptical(self):  # noqa: ANN201
+    def technology_skeptical(self) -> int:
         return self._technology_skeptical
 
     @property
-    def vehicle(self):  # noqa: ANN201
+    def vehicle(self) -> RideHailingVehicle:
         return self._vehicle
 
     @property
-    def vehicle_type(self):  # noqa: ANN201
+    def vehicle_type(self) -> str:
         return self._vehicle_type
 
     @property
-    def price(self):  # noqa: ANN201
+    def price(self) -> float:
         return self._price
 
     @property
-    def duration(self):  # noqa: ANN201
+    def duration(self) -> float:
         return self._duration
 
     @property
-    def distance(self):  # noqa: ANN201
+    def distance(self) -> float:
         return self._distance
 
     @property
-    def route(self):  # noqa: ANN201
+    def route(self) -> Route:
         return self._route
 
     @property
-    def convenience(self):  # noqa: ANN201
+    def convenience(self) -> float:
         return self._convenience
 
     @property
-    def route_to_pickup(self):  # noqa: ANN201
+    def route_to_pickup(self) -> Route:
         return self._route_to_pickup
 
     @property
-    def distance_to_pickup(self):  # noqa: ANN201
+    def distance_to_pickup(self) -> float:
         return self._distance_to_pickup
 
     @property
-    def pick_up_time(self):  # noqa: ANN201
+    def pick_up_time(self) -> float:
         return self._pick_up_time
 
     # Perhaps it makes sense to encapsulate TransportationAlternative
     #  around a "SuccessfulTrip" where we store this object along with
     #  variables pertaining the to trip (as energy consumed, (real) travelled distance)
     @property
-    def energy_consumed(self):  # noqa: ANN201
+    def energy_consumed(self) -> float:
         return self._energy_consumed
 
-    def set_energy_consumed(self, energy_consumption):  # noqa: ANN001, ANN201
+    def set_energy_consumed(self, energy_consumption: float) -> None:
         # energy_consumption: in kWh
         self._energy_consumed += energy_consumption
 
     @property
-    def waiting_time(self):  # noqa: ANN201
+    def waiting_time(self) -> float:
         return self._waiting_time
 
-    def set_waiting_time(self, waiting_time):  # noqa: ANN001, ANN201
-        # energy_consumption: in kWh
+    def set_waiting_time(self, waiting_time: float) -> None:
         self._waiting_time += waiting_time
 
     def __str__(self) -> str:

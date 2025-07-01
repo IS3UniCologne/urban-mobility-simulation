@@ -1,7 +1,20 @@
-from enum import Enum
+from enum import Enum, IntEnum
+
+try:
+    from enum import StrEnum  # Python 3.11+
+except ImportError:
+
+    class StrEnum(str, Enum):  # type: ignore[no-redef]
+        """
+        StrEnum replacement for Python < 3.11.
+
+        We can remove this once we drop support for Python 3.11.
+        """
 
 
-class TemporalBucket(Enum):
+class TemporalResolution(IntEnum):
+    """Temporal resolution buckets in hours."""
+
     HOURLY_BUCKETS = 1
     TWO_HOURLY_BUCKETS = 2
     FOUR_HOURLY_BUCKETS = 4
@@ -9,17 +22,60 @@ class TemporalBucket(Enum):
     EIGHT_HOURLY_BUCKETS = 8
     TWELVE_HOURLY_BUCKETS = 12
 
+    @property
+    def column_name(self) -> str:
+        """Get the column name for this temporal resolution."""
+        if self == TemporalResolution.HOURLY_BUCKETS:
+            return "hour_of_day"
+        return f"time_bucket_{self.value}h"
 
-class DailyResolution(Enum):
-    DAILY = 0
-    WEEKDAY_WEEKEND = 1
-    NONE = 2
+
+class DailyResolution(StrEnum):
+    """Daily resolution for demand data."""
+
+    DAILY = "daily"
+    WEEKDAY_WEEKEND = "weekday_weekend"
+    NONE = "none"
+
+    @property
+    def day_of_week_column_name(self) -> str:
+        """
+        Get the day classification column name.
+
+        Returns
+        -------
+        str
+            Column name for day classification in the data
+        """
+        # TODO: Is this correct ? Seems a bit odd.
+        return "is_holiday"
 
 
-class SpatialResolution(Enum):
+class SpatialResolution(IntEnum):
+    """
+    H3 spatial resolution levels.
+
+    Higher values mean smaller hexagons.
+    """
+
     HEX_7 = 7
     HEX_8 = 8
     HEX_9 = 9
+
+    @property
+    def origin_column_name(self) -> str:
+        """Get the origin column name for this spatial resolution."""
+        return f"h3_start_{self.value}"
+
+    @property
+    def destination_column_name(self) -> str:
+        """Get the destination column name for this spatial resolution."""
+        return f"h3_end_{self.value}"
+
+    @property
+    def column_names(self) -> tuple[str, str]:
+        """Get both origin and destination column names for this spatial resolution."""
+        return self.origin_column_name, self.destination_column_name
 
 
 class ModeChoiceStrategy(Enum):
@@ -90,6 +146,6 @@ class VehicleState(Enum):
     UNKNOWN = 2999
 
 
-class TransactionState(Enum):
+class TransactionState(StrEnum):
     FULFILLED = "Fulfilled"
     MISSED = "Missed"

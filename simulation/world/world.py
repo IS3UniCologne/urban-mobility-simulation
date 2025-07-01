@@ -8,6 +8,11 @@ from simulation.agent import user
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.enums import (
+    DailyResolution,
+    SpatialResolution,
+    TemporalResolution,
+)
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
     VehicleAllocationEngineInterface,
@@ -29,12 +34,15 @@ class World:
         "_changed",
         "_charging_infrastructure",
         "_config",
+        "_daily_resolution",
         "_demand_processes",
         "_env",
         "_payment_engine",
         "_population_factory",
         "_search_engine",
         "_simulation_finished",
+        "_spatial_resolution",
+        "_temporal_resolution",
         "_tracking",
         "_user_limit",
         "_user_processes",
@@ -96,6 +104,17 @@ class World:
             World.__instance = self
             super(World, self).__init__()  # noqa: UP008
 
+        self._config = Configuration()
+
+        self._spatial_resolution: SpatialResolution = (
+            self._config.world.SPATIAL_RESOLUTION
+        )
+        self._temporal_resolution: TemporalResolution = (
+            self._config.world.TEMPORAL_RESOLUTION
+        )
+
+        self._daily_resolution: DailyResolution = self._config.world.DAILY_RESOLUTION
+
         self._env = env
         self._search_engine = search_engine  # Allows users to search for vehicles
         self._payment_engine = payment_engine  # Allows users to pay
@@ -134,6 +153,26 @@ class World:
         self._simulation_finished = self._env.event()
 
         self._user_limit = 10_000_000
+
+    @property
+    def spatial_resolution(self) -> SpatialResolution:
+        """
+        Get the spatial resolution of the world.
+
+        Returns
+        -------
+        SpatialResolution
+            The spatial resolution of the world, which is an instance of SpatialResolution.
+        """
+        return self._spatial_resolution
+
+    @property
+    def temporal_resolution(self) -> TemporalResolution:
+        return self._temporal_resolution
+
+    @property
+    def daily_resolution(self) -> DailyResolution:
+        return self._daily_resolution
 
     @property
     def user_processes(self):  # noqa: ANN201
@@ -236,7 +275,10 @@ class World:
                     self._env,
                 )
                 logging.debug(
-                    f" Shared-vehicle user {new_user.user_id} starts searching for fleet {fleet} at {self._env.now}.",  # noqa: G004
+                    " Shared-vehicle user %s starts searching for fleet %s at %s.",
+                    new_user.user_id,
+                    fleet,
+                    self._env.now,
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
             elif mode == "ride_hailing":
@@ -264,7 +306,10 @@ class World:
                     self._env,
                 )
                 logging.debug(
-                    f"Ride-hailing user {new_user.user_id, population_type} request a vehicle at {self._env.now}.",  # noqa: G004
+                    "Ride-hailing user %s, %s request a vehicle at %s.",
+                    new_user.user_id,
+                    population_type,
+                    self._env.now,
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
             elif mode == "walking":
@@ -306,7 +351,8 @@ class World:
 
             if len(self._users) == self._user_limit:
                 logging.info(
-                    f"Reached User Limit of {self._user_limit}. Not adding more users to world.",  # noqa: G004
+                    "Reached User Limit of %s. Not adding more users to world.",
+                    self._user_limit,
                     extra={"clazz": self.__class__.__name__, "oid": " "},
                 )
 

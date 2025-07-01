@@ -297,7 +297,8 @@ class MixedRideHailingFleet(VehicleFleet):
         while True:
             number_of_online_vehicles = len(self.get_online_vehicles())
             logging.info(
-                f"Fleet has {number_of_online_vehicles} online vehicles",  # noqa: G004
+                "Fleet has %s online vehicles",
+                number_of_online_vehicles,
                 extra={"clazz": self.__class__.__name__},
             )
             yield self._env.timeout(60)
