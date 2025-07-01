@@ -761,7 +761,7 @@ env.process(public_operator._run())  # noqa: SLF001
 # TODO: we need to have a look at https://github.com/IS3UniCologne/urban-mobility-simulation/issues/32
 # for now, we spawn by chance
 demand_factory = DemandFactory(
-    env, demand_profile, di, world, [], seed, mode="ride_hailing"
+    env, demand_profile, world, [], seed, mode="ride_hailing"
 )
 # env.process(demand_factory.generate_demand())
 

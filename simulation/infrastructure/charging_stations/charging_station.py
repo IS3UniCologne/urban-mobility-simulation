@@ -40,7 +40,9 @@ class ChargingStation(TrackingInterface):
         self._polygon = shape(
             {
                 "type": "Polygon",
-                "coordinates": [h3.h3_to_geo_boundary(location, geo_json=True)],
+                "coordinates": [
+                    [[lon, lat] for lat, lon in h3.cell_to_boundary(location)]
+                ],
                 "properties": "",
             }
         )

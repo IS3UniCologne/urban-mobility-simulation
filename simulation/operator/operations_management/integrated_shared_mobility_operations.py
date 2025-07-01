@@ -1,7 +1,7 @@
 import logging
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-from collections.abc import Generator
 
 import h3
 import pandas as pd
@@ -118,7 +118,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 continue
 
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-            charging_plans, used_capacity = self.generate_charging_plan()
+            charging_plans = self.generate_charging_plan()
 
             # We track the charging events
             charging_events = []
@@ -356,13 +356,12 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
     def generate_charging_plan(
         self,
-    ) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:
+    ) -> dict[str, list[tuple[Position, Position, int, float]]]:
         """
         Generate a rule based charging plan based on given service worker capacity
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
         :return: **charging_plan**: Dictionary with keys for vehicle modes and values with lists of multiple
                 charging tasks
-                **used_capacity**: How many service workers are planned to cope with charging needs
         """
         # Get Current Fleet State
         state = self.calculate_residual_supply(
@@ -376,9 +375,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 index=False,
             )
 
-        charging_plans, used_capacity = self.calculate_charging_plan(state)
+        charging_plans = self.calculate_charging_plan(state)
 
-        return charging_plans, used_capacity
+        return charging_plans
 
     #############################################
     #############################################
@@ -388,7 +387,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
     def calculate_charging_plan(
         self, fleet_state: pd.DataFrame
-    ) -> tuple[dict[str, list[tuple[Position, Position, int, float]]], int]:
+    ) -> dict[str, dict[list[tuple[str, str, float, float]]]]:
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
@@ -401,7 +400,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         :return: all_charging_plans and used capacity per mode
                 all_charging_plans {"SharedKickScooter":[[(origin, destination, number of vehicles to pick up, destination to base), ()], [()],
                                     "SharedScooter": [], "SharedCar":[]}
-                used_capacity = [1, 3, 5] => per available vehicle mode returns number of service workers assigned to charge these vehicles
+                [UNUSED] used_capacity = [1, 3, 5] => per available vehicle mode returns number of service workers assigned to charge these vehicles
                                           => 1 SW for Kick Scooter, 3 for Shared Scooter, 5 for Shared Cars
         """
 
@@ -519,7 +518,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         pick_up_vehicles < max_capacity_per_unit
                         and pick_up_vehicles > 0
                     ):
-                        neighbours = h3.hex_range(next_hex_id, 1)
+                        neighbours = h3.grid_disk(next_hex_id, 1)
                         neighbours.remove(
                             next_hex_id
                         )  # Consider only neighbours (not current region)
@@ -584,7 +583,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         for key in all_charging_plans:
             used_resources += len(all_charging_plans[key])
 
-        return all_charging_plans, used_resources
+        return all_charging_plans
 
     def calculate_resource_capacity_split_for_charging(
         self,
