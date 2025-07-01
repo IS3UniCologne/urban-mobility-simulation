@@ -20,7 +20,7 @@ class DistanceMatrixImporter:
         self._data_path = data_path
         self._city = city
 
-    def load_distance_matrix(self):  # noqa: ANN201
+    def load_distance_matrix(self) -> pd.DataFrame:
         """
         Load or calculate distance matrix between hexagon elements
         :return:
@@ -33,7 +33,7 @@ class DistanceMatrixImporter:
         if p.exists():
             distance_matrix = pd.read_csv(p, index_col=0)
         else:
-            hexagon_centers = [h3.h3_to_geo(x) for x in hexagons]
+            hexagon_centers = [h3.cell_to_latlng(x) for x in hexagons]
             distance_matrix = pd.DataFrame(
                 haversine_vector(
                     hexagon_centers, hexagon_centers, comb=True, unit=Unit.METERS
