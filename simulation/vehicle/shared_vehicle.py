@@ -61,7 +61,7 @@ class SharedVehicle(Vehicle, ABC):
         energy_consumption: float = 0.01,
         price_per_min: int = 1.0,
         price_per_trip: float = 0.0,
-        driver: DriverInterface = None,
+        driver: DriverInterface | None = None,
     ):
         super().__init__(
             env,

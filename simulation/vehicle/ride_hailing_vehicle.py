@@ -87,7 +87,7 @@ class RideHailingVehicle(Vehicle):
         max_state_of_charge: int = 1,
         energy_consumption: float = 0.01,
         price_per_min: int = 1,
-        driver: DriverInterface = None,
+        driver: DriverInterface | None = None,
         is_electric: bool = True,
     ):
         super().__init__(

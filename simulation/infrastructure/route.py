@@ -66,8 +66,8 @@ class PublicTransitRoute(Route):
         destination: GeodesicPosition,
         route_id: str,
         trip_id: str,
-        stops: List[Stop] = None,  # noqa: UP006, RUF013
-        segments: List[RouteSegment] = None,  # noqa: UP006, RUF013
+        stops: List[Stop] | None = None,  # noqa: UP006
+        segments: List[RouteSegment] | None = None,  # noqa: UP006
     ):
         super(PublicTransitRoute, self).__init__(origin, destination)  # noqa: UP008
 

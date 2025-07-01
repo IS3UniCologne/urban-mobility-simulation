@@ -30,6 +30,6 @@ class Position(ABC):
         pass
 
     @abstractmethod
-    def __rshift__(self, other) -> float:  # noqa: ANN001
+    def __rshift__(self, other: object) -> float:
         # Calculate distance between two positions
         pass
