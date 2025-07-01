@@ -14,7 +14,9 @@ class DistanceMatrixImporter:
 
     __slots__ = ("_city", "_data_path", "_hexagons", "_resolution")
 
-    def __init__(self, hexagons, resolution, data_path, city):  # noqa: ANN001, ANN204
+    def __init__(
+        self, hexagons: list[str], resolution: int, data_path: str | Path, city: str
+    ) -> None:
         self._hexagons = hexagons
         self._resolution = resolution
         self._data_path = data_path

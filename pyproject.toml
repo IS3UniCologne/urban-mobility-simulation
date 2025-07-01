@@ -44,7 +44,11 @@ pre-commit = ["pre-commit>=4.2.0", "ruff>=0.11.0"]
 
 testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=8.3.5"]
 
-typing = ["mypy>=1.15.0", "pandas-stubs>=2.2.2.240807"]
+typing = [
+  "mypy>=1.15.0",
+  "pandas-stubs>=2.2.2.240807",
+  "types-shapely>=2.1.0.20250512",
+]
 
 
 [project.optional-dependencies]
@@ -177,7 +181,6 @@ module = [
   "simulation.environment.environment",
   "simulation.environment.geodesic_environment",
   "simulation.environment.geodesic_position",
-  "simulation.environment.position",
   "simulation.helper.configuration.configuration",
   "simulation.helper.logging.extra_default_filter",
   "simulation.helper.logging.simulation_context_filter",
@@ -190,16 +193,13 @@ module = [
   "simulation.infrastructure.charging_stations.virtual_charging_station",
   "simulation.infrastructure.helper.distance_matrix_importer",
   "simulation.infrastructure.helper.timetable",
-  "simulation.infrastructure.network.edge",
   "simulation.infrastructure.route",
   "simulation.infrastructure.transit_network.route_segment",
   "simulation.infrastructure.transit_network.stop",
-  "simulation.metrics.metrics_factory",
   "simulation.metrics.modules.customer_metrics",
   "simulation.metrics.modules.general_metrics",
   "simulation.metrics.modules.service_provider_metrics",
   "simulation.metrics.modules.society_metrics",
-  "simulation.operator",
   "simulation.operator.data_transfer_object.transportation_alternative",
   "simulation.operator.data_transfer_object.transportation_alternative_browser",
   "simulation.operator.data_transfer_object.transportation_alternative_ridehailing",

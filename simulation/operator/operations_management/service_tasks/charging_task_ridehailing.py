@@ -49,8 +49,8 @@ class ChargingTaskRidehailing(ServiceTask):
         number_of_vehicles_to_charge,  # noqa: ANN001
         distance_to_fleet_base,  # noqa: ANN001
         state_of_charge_threshold,  # noqa: ANN001
-        charging_station: ChargingStation = None,
-        vehicle: Vehicle = None,
+        charging_station: ChargingStation | None = None,
+        vehicle: Vehicle | None = None,
         vehicle_mode=None,  # noqa: ANN001
         scheduled_time=None,  # noqa: ANN001
     ):
