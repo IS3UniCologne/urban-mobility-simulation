@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from simpy import Environment, Event
-
 from simulation.environment.position import Position
 from simulation.helper.configuration.enums import VehicleMode, VehicleState
 from simulation.infrastructure.network.edge import Edge
@@ -25,7 +24,7 @@ class Vehicle(TrackingInterface, ABC):
     Contains common properties and methods used by all vehicles.
     """
 
-    vehicle_id = 0
+    vehicle_id: int = 0
     vehicle_type: str
 
     __slots__ = (
@@ -55,7 +54,7 @@ class Vehicle(TrackingInterface, ABC):
     def __hash__(self) -> int:
         return hash(self._id)
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
         env: Environment,
         fleet: "VehicleFleet",
@@ -64,7 +63,7 @@ class Vehicle(TrackingInterface, ABC):
         max_available_seats: int,
         vehicle_mode: VehicleMode,
         convenience: int = 1,
-    ):
+    ) -> None:
         self._id: int = Vehicle.vehicle_id
         Vehicle.vehicle_id += 1  # Increment Vehicle Id
 

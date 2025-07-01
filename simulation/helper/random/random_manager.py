@@ -88,7 +88,7 @@ class RandomManager(metaclass=Singleton):
             extra={"clazz": "RandomManager", "oid": ""},
         )
 
-    def get_rng(self, component_name: str = None) -> Generator:  # noqa: RUF013
+    def get_rng(self, component_name: str | None = None) -> Generator:
         """
         Get a random number generator for a specific component.
         If no component name is provided, returns the main RNG.
@@ -106,9 +106,7 @@ class RandomManager(metaclass=Singleton):
         return self._component_rngs[component_name]
 
     def _create_component_rng(
-        self,
-        component_name: str,
-        component_seed: int = None,  # noqa: RUF013
+        self, component_name: str, component_seed: int | None = None
     ) -> None:
         """Create a new random number generator for a specific component."""
         if component_seed is None:
