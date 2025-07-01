@@ -768,12 +768,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fd/b0/2fb42bd02f5d11baba3e81ed524ec1c4ab92ca73050316f2d2955ecf9c1d/h3-4.2.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e83d7484441f42a6bcd0ffc9626387e4ff8a7563ae659667f5b59b814fe198b7", size = 1014727, upload-time = "2025-03-10T18:49:16.79Z" },
     { url = "https://files.pythonhosted.org/packages/5c/10/4a29b577f27e94f087733f3ebffa918e1e66ef22e0d1862ef52f4c9aa040/h3-4.2.2-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:737d7cf3aeebc60b0e091220a1bdf94608f16457589cf67acc288444ee5f5dc8", size = 1061560, upload-time = "2025-03-10T18:49:17.88Z" },
     { url = "https://files.pythonhosted.org/packages/25/15/717815d4b34d2776241de2815ab415aa86a097abf6c76c6b5b67f5954927/h3-4.2.2-cp312-cp312-win_amd64.whl", hash = "sha256:bc61382bceff776f0d6278e6ba54d94c9e15137d527adbd50914c7591f9c4460", size = 813445, upload-time = "2025-03-10T18:49:19.417Z" },
-    { url = "https://files.pythonhosted.org/packages/4a/f5/ce5aa3f4348520b591337d2fa3000963e8d4d69f41b95d93ced2f794d4ca/h3-4.2.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:8794ee6f88c6af206bc74d18cac0c3b57aeea8eb697a884e6aa7ad9c8c132d26", size = 891068, upload-time = "2025-03-10T18:49:37.475Z" },
-    { url = "https://files.pythonhosted.org/packages/1b/b2/4e02d12e5461967517e9db3f60982871eaa9e2ec5ef00ee985217f1dfd92/h3-4.2.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:6006c28b9d1fbf993c916983ed497add8a0be73a2bf9fb684324624cc69097c1", size = 835961, upload-time = "2025-03-10T18:49:38.589Z" },
-    { url = "https://files.pythonhosted.org/packages/48/3c/d57a884d1800fb3430199403f5ce088b4a87b32b01414c989bf3d9d5ff31/h3-4.2.2-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:529ae90ac230561cc9150038d629d396772f272bef95af870d281cb14145d6f3", size = 980209, upload-time = "2025-03-10T18:49:39.845Z" },
-    { url = "https://files.pythonhosted.org/packages/cb/d4/23e678348a2c6a4cbffa66c7d24245cc212de42d00d2c280e60960159895/h3-4.2.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a7bcdc503332b7087f083a699c1434084cad38dd15d60e4390da54019628a813", size = 1033284, upload-time = "2025-03-10T18:49:41.206Z" },
-    { url = "https://files.pythonhosted.org/packages/75/41/39574058ab1e06db95787490c102271b72a03e0e3f8cf1ff468c44ec0e10/h3-4.2.2-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:0b48d8b1efe07e13aecb279c8154962d05b13cb7056d5ed133f66ddd71a490a5", size = 1081846, upload-time = "2025-03-10T18:49:42.337Z" },
-    { url = "https://files.pythonhosted.org/packages/92/1d/7442e0a2403e452aa909219abcb9b35767e44b219c973c86df26efa082bf/h3-4.2.2-cp39-cp39-win_amd64.whl", hash = "sha256:b91698ec93973dfbc8926d49a2aca00f7ec23f34e354744ec2db24185954b188", size = 810650, upload-time = "2025-03-10T18:49:44.01Z" },
 ]
 
 [[package]]
@@ -3014,6 +3008,18 @@ wheels = [
 ]
 
 [[package]]
+name = "types-shapely"
+version = "2.1.0.20250512"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8b/56/286d7ce3459bb764ee6860c1a313147726f69a58abb507adc5e5cf21e47e/types_shapely-2.1.0.20250512.tar.gz", hash = "sha256:15f08bdb7fa937dca0039510c6d8fda72e8464bfd43bd9ac59127a61a38ce7c8", size = 25735, upload-time = "2025-05-12T03:08:05.791Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/16/0f/a07e652433c0df2fcf5407a785368d37a19397579289adec8c1258682d89/types_shapely-2.1.0.20250512-py3-none-any.whl", hash = "sha256:e57b6d30758d717a218e682bc4e32c5a46e3c948008c79f0a653216ca93b65fb", size = 36888, upload-time = "2025-05-12T03:08:04.625Z" },
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.12.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3091,6 +3097,7 @@ dev = [
     { name = "pytest-xdist" },
     { name = "ruff" },
     { name = "scalene" },
+    { name = "types-shapely" },
 ]
 performance = [
     { name = "py-spy" },
@@ -3109,6 +3116,7 @@ testing = [
 typing = [
     { name = "mypy" },
     { name = "pandas-stubs" },
+    { name = "types-shapely" },
 ]
 
 [package.metadata]
@@ -3150,6 +3158,7 @@ dev = [
     { name = "pytest-xdist", specifier = "~=3.6" },
     { name = "ruff", specifier = ">=0.11.0" },
     { name = "scalene", specifier = ">=1.5.51" },
+    { name = "types-shapely", specifier = ">=2.1.0.20250512" },
 ]
 performance = [
     { name = "py-spy", specifier = ">=0.3.11" },
@@ -3168,6 +3177,7 @@ testing = [
 typing = [
     { name = "mypy", specifier = ">=1.15.0" },
     { name = "pandas-stubs", specifier = ">=2.2.2.240807" },
+    { name = "types-shapely", specifier = ">=2.1.0.20250512" },
 ]
 
 [[package]]
