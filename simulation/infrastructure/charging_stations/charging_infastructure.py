@@ -1,5 +1,6 @@
 from typing import List  # noqa: UP035
 
+from simulation.environment.environment import Environment
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from tracking.tracking import Tracking
 
@@ -26,14 +27,14 @@ class ChargingInfrastructure:
             return ChargingInfrastructure.__instance
 
     @staticmethod
-    def init(  # noqa: ANN205
-        env,  # noqa: ANN001
+    def init(
+        env: Environment,
         location_list: List[str],  # noqa: UP006
         power_list: List[float],  # noqa: UP006
         capacity_list: List[int],  # noqa: UP006
         queue_size: List[int],  # noqa: UP006
-        reset=False,  # noqa: ANN001
-    ):
+        reset: bool = False,
+    ) -> "ChargingInfrastructure":
         """Static access method."""
         if ChargingInfrastructure.__instance is None or reset is True:
             ChargingInfrastructure(
@@ -41,15 +42,15 @@ class ChargingInfrastructure:
             )
         return ChargingInfrastructure.__instance
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env,  # noqa: ANN001
+        env: Environment,
         location_list: List[str],  # noqa: UP006
         power_list: List[float],  # noqa: UP006
         capacity_list: List[int],  # noqa: UP006
         queue_size: List[int],  # noqa: UP006
         reset: bool = False,
-    ):
+    ) -> None:
         """Virtually private constructor."""
         if ChargingInfrastructure.__instance is not None and not reset:
             raise Exception("This class is a singleton!")
@@ -65,7 +66,7 @@ class ChargingInfrastructure:
         self._charging_stations = []  # a list of charger objects
         self._initialise_charging_stations()
 
-    def _initialise_charging_stations(self):  # noqa: ANN202
+    def _initialise_charging_stations(self) -> None:
         for i, location in enumerate(self._location_list):
             charging_station = ChargingStation(
                 id=i,
@@ -79,8 +80,8 @@ class ChargingInfrastructure:
             self._tracking.register(charging_station)
 
     @property
-    def charging_stations(self):  # noqa: ANN201
+    def charging_stations(self) -> list[ChargingStation]:
         return self._charging_stations
 
-    def get_locations(self):  # noqa: ANN201
+    def get_locations(self) -> list[str]:
         return self._location_list

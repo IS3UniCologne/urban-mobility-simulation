@@ -1,8 +1,9 @@
 import logging
+from typing import Any
 
 import h3
 import simpy
-from shapely.geometry import shape
+from shapely.geometry import shape, Polygon
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from tracking.tracking_interface import TrackingInterface
@@ -70,53 +71,53 @@ class ChargingStation(TrackingInterface):
         self._env.process(self.calc_current_queue_time())
 
     @property
-    def capacity(self):  # noqa: ANN201
+    def capacity(self) -> int:
         return self._capacity
 
     @property
-    def plugs(self):  # noqa: ANN201
+    def plugs(self) -> simpy.PriorityResource:
         return self._plugs
 
     @property
-    def power(self):  # noqa: ANN201
+    def power(self) -> float:
         return self._power
 
     @property
-    def centre(self):  # noqa: ANN201
+    def centre(self) -> GeodesicPosition:
         return self._centre
 
     @property
-    def id(self):  # noqa: ANN201
+    def id(self) -> int:
         return self._id
 
     @property
-    def location(self):  # noqa: ANN201
+    def location(self) -> str:
         return self._location
 
     @property
-    def polygon(self):  # noqa: ANN201
+    def polygon(self) -> Polygon:
         return self._polygon
 
     @property
-    def queue_size(self):  # noqa: ANN201
+    def queue_size(self) -> int:
         return self._queue_size
 
     @property
-    def current_queue_time(self):  # noqa: ANN201
+    def current_queue_time(self) -> float:
         return self._current_queue_time
 
     @property
-    def vehicle_plugged_in(self):  # noqa: ANN201
+    def vehicle_plugged_in(self) -> simpy.Event:
         return self._vehicle_plugged_in
 
     @property
-    def vehicle_unplugged(self):  # noqa: ANN201
+    def vehicle_unplugged(self) -> simpy.Event:
         return self._vehicle_unplugged
 
-    def register_event_subscriber(self, subscriber):  # noqa: ANN001, ANN201
+    def register_event_subscriber(self, subscriber: Any) -> None:  # noqa: ANN401
         self._event_subscribers.append(subscriber)
 
-    def plug_in_notify(self):  # noqa: ANN201
+    def plug_in_notify(self) -> simpy.events.Generator:
         with self._plug_in_lock.request() as req:
             yield req
             self._vehicle_plugged_in.succeed()
@@ -133,7 +134,7 @@ class ChargingStation(TrackingInterface):
                     x.processed_plug_in_event = self._env.event()
             self._vehicle_plugged_in = self._env.event()
 
-    def plug_out_notify(self):  # noqa: ANN201
+    def plug_out_notify(self) -> simpy.events.Generator:
         with self._plug_out_lock.request() as req:
             yield req
             self._vehicle_unplugged.succeed()
@@ -151,7 +152,7 @@ class ChargingStation(TrackingInterface):
 
             self._vehicle_unplugged = self._env.event()
 
-    def calc_current_queue_time(self):  # noqa: ANN201
+    def calc_current_queue_time(self) -> simpy.events.Generator:
         # a charging station could expose the current expected queue time (if a vehicle would request charging right now) from the remaining charging times of vehicles in it and requests in the queue
         while True:
             yield self._env.timeout(1)
@@ -201,11 +202,11 @@ class ChargingStation(TrackingInterface):
             # the current queue time for a new vehicle is then the difference between the earliest possible finish time and the current time
             self._current_queue_time = min(finish_times) - self._env.now
 
-    def dump(self, exposed_only: bool = True) -> dict:
+    def dump(self, exposed_only: bool = True) -> dict[str, Any]:
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}
         else:
             return {x: self.get(x) for x in self.__slots__}
 
-    def __str__(self):  # noqa: ANN204
+    def __str__(self) -> str:
         return f"ID: {self._id}, Location: {self._location}, Current Users: {len(self._plugs.users)}, Current Queue Size: {len(self._queue)}"
