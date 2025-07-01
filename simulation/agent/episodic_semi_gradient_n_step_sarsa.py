@@ -5,6 +5,7 @@ from math import sqrt
 import h3
 import numpy as np
 import simpy
+from simpy import Event
 
 from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproximator
 from simulation.agent.policy import Policy
@@ -99,20 +100,22 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
             except NotImplementedError:
                 # hexagon is out of layer bounding box - action is forbidden
                 logging.debug(
-                    f"Action {a} is forbidden, sampling again",  # noqa: G004
+                    "Action %s is forbidden, sampling again",
+                    a,
                     extra={"clazz": self.__class__.__name__, "oid": bus.id},
                 )
                 continue
             break
 
         logging.debug(
-            f"Bus takes action {a}",  # noqa: G004
+            "Bus takes action %s",
+            a,
             extra={"clazz": self.__class__.__name__, "oid": bus.id},
         )
 
         self._actions.append(a)
 
-    def _take_action(self, bus, action=None):  # noqa: ANN001, ANN202
+    def _take_action(self, bus, action: str | None = None) -> Event:  # noqa: ANN001
         """
         Actions in hexagonal grid, stay is also allowed.
 
@@ -127,9 +130,9 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
         if action == "STAY":
             yield self._env.timeout(0.01)
         else:
-            hex_id = h3.geo_to_h3(
+            hex_id = h3.latlng_to_cell(
                 *bus.position.getExactLocation(),
-                resolution=self._config.transit_agent_config.action_resolution,
+                self._config.transit_agent_config.action_resolution,
             )
             new_hex = bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
             new_centroid = bus._geodesic_env.get_centroid(  # noqa: SLF001

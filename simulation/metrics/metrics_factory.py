@@ -1,6 +1,8 @@
+from pandas import DataFrame
+
+from .modules.customer_metrics import CustomerMetrics
 from .modules.general_metrics import GeneralMetrics
 from .modules.service_provider_metrics import ServiceProviderMetrics
-from .modules.customer_metrics import CustomerMetrics
 from .modules.society_metrics import SocietyMetrics
 
 
@@ -13,7 +15,7 @@ class MetricsFactory:
         "_transactions",
     )
 
-    def __init__(self, transactions):  # noqa: ANN001, ANN204
+    def __init__(self, transactions: DataFrame) -> None:
         self._general_metrics = GeneralMetrics(transactions)
         self._service_provider = ServiceProviderMetrics(transactions)
         self._customer_metrics = CustomerMetrics(transactions)
@@ -36,12 +38,12 @@ class MetricsFactory:
     def society_metrics(self) -> SocietyMetrics:
         return self._society_metrics
 
-    def print_simulation_summary(  # noqa: ANN201
+    def print_simulation_summary(
         self,
-        number_of_vehicles: dict,
-        cost_per_vehicle_km: dict,
-        co2_per_km_per_vehicle: dict,
-    ):
+        number_of_vehicles: dict[str, int],
+        cost_per_vehicle_km: dict[str, float],
+        co2_per_km_per_vehicle: dict[str, float],
+    ) -> None:
         print("############ Simulation Summary ############")  # noqa: T201
         print(" ")  # noqa: T201
         self._general_metrics.print_summary()

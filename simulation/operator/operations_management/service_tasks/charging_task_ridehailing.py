@@ -49,8 +49,8 @@ class ChargingTaskRidehailing(ServiceTask):
         number_of_vehicles_to_charge,  # noqa: ANN001
         distance_to_fleet_base,  # noqa: ANN001
         state_of_charge_threshold,  # noqa: ANN001
-        charging_station: ChargingStation = None,
-        vehicle: Vehicle = None,
+        charging_station: ChargingStation | None = None,
+        vehicle: Vehicle | None = None,
         vehicle_mode=None,  # noqa: ANN001
         scheduled_time=None,  # noqa: ANN001
     ):
@@ -150,7 +150,9 @@ class ChargingTaskRidehailing(ServiceTask):
                         self._waiting_time = self._scheduled_time - self._env.now
                         if self._waiting_time > 0:
                             logging.debug(
-                                f"Vehicle {self._vehicle.id} waits {self._waiting_time} minutes for reserved slot.",  # noqa: G004
+                                "Vehicle %s waits %s minutes for reserved slot.",
+                                self._vehicle.id,
+                                self._waiting_time,
                                 extra={"clazz": self.__class__.__name__},
                             )
                             self._state = TaskState.EXECUTING_WAITING
