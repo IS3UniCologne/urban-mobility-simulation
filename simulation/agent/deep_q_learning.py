@@ -482,7 +482,7 @@ class DQN(RLAgent):
 
         return a
 
-    def _take_action(self, bus: Bus, action=None):  # noqa: ANN001, ANN202
+    def _take_action(self, bus: Bus, action: str | None = None) -> simpy.events.Event:
         """
         Actions in hexagonal grid, stay is also allowed.
 
@@ -498,16 +498,15 @@ class DQN(RLAgent):
             # even though the bus does not move, timeout for the average movement duration
             # otherwise the action does have no consequence, when another action immediately follows
             yield self._env.timeout(
-                h3.edge_length(
-                    resolution=self._config.transit_agent_config.action_resolution,
-                    unit="m",
+                h3.average_hexagon_edge_length(
+                    self._config.transit_agent_config.action_resolution, unit="m"
                 )
                 / bus._velocity  # noqa: SLF001
             )
         else:
-            hex_id = h3.geo_to_h3(
+            hex_id = h3.latlng_to_cell(
                 *bus.position.getExactLocation(),
-                resolution=self._config.transit_agent_config.action_resolution,
+                self._config.transit_agent_config.action_resolution,
             )
             new_hex = bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
             new_centroid = bus._geodesic_env.get_centroid(  # noqa: SLF001

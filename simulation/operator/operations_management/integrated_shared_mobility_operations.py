@@ -375,7 +375,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def calculate_charging_plan(self, fleet_state):  # noqa: ANN001, ANN201
+    def calculate_charging_plan(
+        self, fleet_state: pd.DataFrame
+    ) -> tuple[dict[str, dict[list[tuple[str, str, float, float]]]], int]:
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
@@ -506,7 +508,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         pick_up_vehicles < max_capacity_per_unit
                         and pick_up_vehicles > 0
                     ):
-                        neighbours = h3.hex_range(next_hex_id, 1)
+                        neighbours = h3.grid_disk(next_hex_id, 1)
                         neighbours.remove(
                             next_hex_id
                         )  # Consider only neighbours (not current region)
