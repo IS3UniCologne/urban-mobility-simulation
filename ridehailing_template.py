@@ -380,4 +380,4 @@ ani = FuncAnimation(
 )
 plt.show()
 
-run_simulation(end_time=config.experiment_management.END_TIME)
+# run_simulation(end_time=config.experiment_management.END_TIME)
