@@ -79,6 +79,19 @@ This file is used to set various parameters in the following blocks that are req
   - Start spawning demand processes with the **demand factory**.
   - Run the simulation until _end_time_.
 
+- **Data Visualization**:
+  - An exemplary initialization can be found in `ridehailing_template.py`
+  - To run real-time metric visualization during simulation runtime, the simulation is run on a thread:
+    - main thread: visualization animation **ani** (FuncAnimation)
+    - child thread: **run_simulation** simulation function call
+  - The **FuncAnimation** is using two methods from `visualization/Data_plots.py`
+    - get_core_metrics: a callback function to get the data
+      - this callback function is wrapped around a wrapper function **get_metrics** to allow passing the relevant simulation objects into the **get_core_metrics** function
+    - animate: a function that defines the plots using the data from **get_core_metrics**
+  - To add or replace data for visualization, adjust the both the **get_core_metrics** and the **animate** function:
+    - Please keep in mind that the relevant simulation objects are passed through the wrapper to **get_core_metrics** (in `ridehailing_template.py`)
+    - Additionally, update the function header and return statement of **get_core_metrics**, as well as the call of the callback function inside **animate** (in `visualization/Data_plots.py`)
+
 ## Development
 
 We mostly try to adhere to [trunk-based development](https://trunkbaseddevelopment.com/) with `develop` being our "trunk".
