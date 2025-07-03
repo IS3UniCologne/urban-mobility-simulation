@@ -86,11 +86,11 @@ This file is used to set various parameters in the following blocks that are req
     - child thread: **run_simulation** simulation function call
   - The **FuncAnimation** is using two methods from `visualization/Data_plots.py`
     - get_core_metrics: a callback function to get the data
-      - this callback function is wrapped around a wrapper function **get_metrics** to allow passing the relevant simulation objects into the **get_core_metrics** function
-    - animate: a function that defines the plots using the data from **get_core_metrics**
-  - To add or replace data for visualization, adjust the **get_core_metrics** and the **animate** function:
-    - Please keep in mind that the relevant simulation objects are passed through the wrapper (**get_metrics**) to **get_core_metrics** (in `ridehailing_template.py`)
-    - Depending on the number of variables needed for the visualization, add or remove the number or variables **y1, y2, ..., y6** in `ridehailing_template`. Make sure to reflect these changes both in the wrapper function **get_metrics** (`ridehailing_template.py`) and the corresponding function (`visualization/Data_plots.py`)
+      - this callback function is wrapped around a wrapper function **get_metrics_wrapper** to allow passing the relevant simulation objects into the **get_core_metrics** function
+    - animate: a function that creates the plots using the data from **get_core_metrics**
+  - To change data for visualization, adjust the **get_core_metrics** and the **animate** function:
+    - Please keep in mind that the relevant simulation objects are passed through the wrapper (**get_metrics_wrapper**) to **get_core_metrics** (in `ridehailing_template.py`)
+    - Depending on the number of variables needed for the visualization, add or remove the number of variables **y1, y2, ..., y6** in `ridehailing_template`. Make sure to reflect these changes both in the wrapper function **get_metrics_wrapper** (`ridehailing_template.py`) and the corresponding function **get_core_metrics** (`visualization/Data_plots.py`)
     - Additionally, update the function header and return statement of **get_core_metrics**, as well as the call of the callback function inside **animate** (in `visualization/Data_plots.py`)
 
 ## Development

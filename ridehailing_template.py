@@ -353,7 +353,7 @@ y1, y2, y3, y4, y5, y6 = [], [], [], [], [], []
 
 
 # function wrapper to pass arguments
-def get_metrics() -> list:
+def get_metrics_wrapper() -> list:
     return get_core_metrics(
         ridehailing_operator_0,
         ridehailing_operator_1,
@@ -376,7 +376,7 @@ ani = FuncAnimation(
     frames=100,
     interval=1000,
     cache_frame_data=False,
-    fargs=(get_metrics,),
+    fargs=(get_metrics_wrapper,),
 )
 plt.show()
 
