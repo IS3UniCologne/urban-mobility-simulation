@@ -305,6 +305,7 @@ def run_single_simulation(  # noqa: ANN201
     :param price_sensitive_pop_prob: 1.0 means only price sensitive users, 0.0 means only sustainable users
     :return:
     """
+
     # TODO: modify configuration attributes to reflect function params
 
     # # # # # # # # # # # # # # # # # # # # # #

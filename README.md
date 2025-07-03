@@ -137,6 +137,9 @@ If you are modifying an existing class or function containing `#noqa`  statement
 #### Available Nox Sessions:
 
 ```bash
+# Run everything below
+nox -rs
+
 # Run type checking with mypy
 nox -rs mypy
 

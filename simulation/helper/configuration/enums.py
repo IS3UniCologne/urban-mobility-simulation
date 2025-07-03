@@ -12,17 +12,6 @@ except ImportError:
         """
 
 
-try:
-    from enum import StrEnum  # Python 3.11+
-except ImportError:
-
-    class StrEnum(str, Enum):
-        """
-        StrEnum replacement for Python < 3.11.
-        We can remove this once we drop support for Python 3.11.
-        """
-
-
 class TemporalResolution(IntEnum):
     """Temporal resolution buckets in hours."""
 
