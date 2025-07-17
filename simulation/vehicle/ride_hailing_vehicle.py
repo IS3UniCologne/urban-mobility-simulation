@@ -397,13 +397,13 @@ class RideHailingVehicle(Vehicle):
 
         region_id = self.position.get_region_id()
 
-        logging.debug(
-            "Old position %s > Current position %s in region %s.",
-            old_position,
-            self.position,
-            region_id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
-        )
+        # logging.debug(
+        #     "Old position %s > Current position %s in region %s.",
+        #     old_position,
+        #     self.position,
+        #     region_id,
+        #     extra={"clazz": self.__class__.__name__, "oid": self._id},
+        # )
 
     def mount_driver(self, driver: DriverInterface) -> None:
         if self._driver is not None:
