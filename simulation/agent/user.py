@@ -534,18 +534,6 @@ class User(Agent, DriverInterface, TrackingInterface):
         )
         return energy_consumed
 
-    def stop(self):  # noqa: ANN201
-        # Wait for next event
-        yield self._arrived_at_destination
-
-        # Update current state
-        self._state = UserState.FULFILLED
-        logging.debug(
-            "Transport request of user %s has been successfully fulfilled.",
-            self._id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
-        )
-
     def withdraw_request(self):  # noqa: ANN201
         """
 
