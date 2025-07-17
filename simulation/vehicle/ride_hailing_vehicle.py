@@ -287,7 +287,7 @@ class RideHailingVehicle(Vehicle):
         # Trigger next event
         self._arrived_at_pick_up_position.succeed()
         logging.debug(
-            "rh: Arrived at pick up position %s after %s time units to pick up user %s.",
+            "Arrived at pick up position %s after %s time units to pick up user %s.",
             self.position,
             self._env.now - start_waiting,
             self._reserved_for_user,
