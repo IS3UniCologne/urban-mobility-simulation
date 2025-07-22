@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from simulation.helper.simulation_base import SimulationBase
+
 from .metrics_dict import MetricsDict
 from .metrics_tracker import MetricsTracker
 from .operator_metrics import OperatorMetrics
@@ -17,7 +19,7 @@ if TYPE_CHECKING:
     from .metrics_base import MetricsBase
 
 
-class Metrics:
+class Metrics(SimulationBase):
     """
     Central metrics class for accessing and managing simulation metrics.
 
@@ -26,19 +28,14 @@ class Metrics:
     """
 
     def __init__(self, simulation: Simulation) -> None:
-        self._simulation = simulation
-
+        super().__init__(simulation.sim)
+        self._sim = simulation.sim
         # Initialize individual metrics classes
         self.world_metrics = WorldMetrics(simulation)
         self.operator_metrics = OperatorMetrics(simulation)
 
         # Initialize metrics tracker
         self._tracker = MetricsTracker(simulation)
-
-        # Setup logging
-        self._logger = simulation.sim.log_manager.get_class_logger(
-            self.__class__.__name__
-        )
 
     @property
     def tracker(self) -> MetricsTracker:
@@ -160,7 +157,7 @@ class Metrics:
             Logger to use. If None, uses the default metrics output logger.
         """
         if logger is None:
-            logger = self._simulation.sim.log_manager.get_metrics_output_logger()
+            logger = self._sim.log_manager.get_metrics_output_logger()
 
         try:
             all_metrics = self.all_metrics()
