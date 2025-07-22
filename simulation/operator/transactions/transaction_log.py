@@ -4,12 +4,20 @@ Transaction log management for the simulation.
 Implements the TransactionLog class for recording and querying transactions.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pandas as pd
 
 from simulation.helper.configuration.enums import TransactionState
+from simulation.metrics.helper.transaction_metrics_helper import (
+    TransactionMetricsHelper,
+)
 
-from .transaction import Transaction
-from .transaction_listener import TransactionListener
+if TYPE_CHECKING:
+    from .transaction import Transaction
+    from .transaction_listener import TransactionListener
 
 
 class TransactionLog:
@@ -36,6 +44,7 @@ class TransactionLog:
         self._df_cache: pd.DataFrame | None = None
         self._listeners: list[TransactionListener] = listeners or []
         self._has_successful_transaction: bool = False
+        self._metrics = TransactionMetricsHelper(self)
 
     def add_transaction(self, transaction: Transaction) -> None:
         """
@@ -69,6 +78,11 @@ class TransactionLog:
         None
         """
         self._listeners.append(listener)
+
+    @property
+    def metrics(self) -> TransactionMetricsHelper:
+        """Get the metrics calculator for this transaction log."""
+        return self._metrics
 
     @property
     def transactions(self) -> list[Transaction]:
