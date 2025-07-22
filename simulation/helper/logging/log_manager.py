@@ -136,6 +136,55 @@ class LogManager:
         base_logger = self.get_class_logger(class_name)
         return UidLoggerAdapter(base_logger, uid)
 
+    def get_metrics_output_logger(self) -> logging.Logger:
+        """
+        Get a specialized logger for metrics output with simplified formatting.
+
+        Metrics output does not require extra context like log level or UIDs, so
+        we use a separate logger for this.
+
+        Returns
+        -------
+        logging.Logger
+            The metrics output logger with simplified formatting.
+        """
+        logger_name = "metrics.output"
+
+        if logger_name not in self._loggers:
+            logger = logging.getLogger(logger_name)
+            logger.propagate = False
+
+            metrics_formatter = logging.Formatter("%(message)s")
+
+            # Create console handler for metrics
+            metrics_console_handler = logging.StreamHandler()
+            metrics_console_handler.setLevel(self._config.settings.LOG_LEVEL)
+            metrics_console_handler.setFormatter(metrics_formatter)
+
+            # Create file handler for metrics
+            output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+            logs_dir = os.path.normpath(
+                os.path.join(self._config.path.OUTPUT_FOLDER, "metrics_logs")
+            )
+            if not os.path.exists(logs_dir):
+                os.makedirs(logs_dir)
+
+            metrics_log_file = os.path.join(logs_dir, f"{output_timestamp}_metrics.log")
+            metrics_file_handler = logging.FileHandler(metrics_log_file)
+            metrics_file_handler.setFormatter(metrics_formatter)
+            metrics_file_handler.setLevel(self._config.settings.FILE_LOG_LEVEL)
+
+            logger.addHandler(metrics_console_handler)
+            logger.addHandler(metrics_file_handler)
+
+            console_level = getattr(logging, self._config.settings.LOG_LEVEL)
+            file_level = getattr(logging, self._config.settings.FILE_LOG_LEVEL)
+            logger.setLevel(min(console_level, file_level))
+
+            self._loggers[logger_name] = logger
+
+        return self._loggers[logger_name]
+
     def _create_shared_handlers(self, config: Configuration) -> None:
         # Console handler
         self._shared_console_handler = logging.StreamHandler()
