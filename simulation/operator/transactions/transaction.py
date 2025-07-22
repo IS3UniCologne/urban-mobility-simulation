@@ -50,7 +50,7 @@ class Transaction(NamedTuple):
         Whether the selected vehicle is electric (if available).
     """
 
-    vehicle_id: int | None
+    vehicle_uid: str | None
     origin: RegionId
     destination: RegionId
     time_start: float
