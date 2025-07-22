@@ -16,7 +16,7 @@ class WorldMetrics(MetricsBase):
     """Metrics class for the simulation world."""
 
     def __init__(self, simulation: Simulation) -> None:
-        self._simulation = simulation
+        super().__init__(simulation)
         self._world = simulation.world
 
     @property
