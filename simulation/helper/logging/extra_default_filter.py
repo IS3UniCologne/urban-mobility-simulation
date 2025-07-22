@@ -39,5 +39,5 @@ class UidInjector(logging.Filter):
             Always returns True to allow the record to be logged.
         """
         if not hasattr(record, "uid"):
-            record.uid = "Unknown"
+            record.uid = record.name
         return True
