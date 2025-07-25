@@ -5,24 +5,30 @@ This module provides the DemandFactory class, which generates and manages demand
 based on spatio-temporal demand profiles and configurable modifiers.
 """
 
+from __future__ import annotations
+
 import json
-import logging
-from collections.abc import Generator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import geojson
 import h3
 import simpy
-from pandas import DataFrame
 
-from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.random.random_manager import RandomManager
+from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.world.demand.demand_importer import DemandImporter
-from simulation.world.world import World
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from pandas import DataFrame
+
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.world.world import World
 
 
-class DemandFactory:
+class DemandFactory(SimulationBase):
     """
     Factory for generating and managing demand based on spatio-temporal demand profiles and configurable modifiers.
 
@@ -51,7 +57,7 @@ class DemandFactory:
         Name of the day-of-week column in the demand profile.
     _maximal_demand : int
         Maximum number of demand events to generate.
-    _modifier_paths : list of str
+    _modifiers : list of str
         Paths to GeoJSON files containing demand modifiers.
     _modifiers : dict
         Mapping of spatial unit IDs to demand multipliers.
@@ -74,19 +80,20 @@ class DemandFactory:
 
     __slots__ = (
         "_config",
+        "_daily_resolution",
         "_day_of_week_column",
         "_demand_profile",
         "_destination_column",
         "_env",
         "_maximal_demand",
         "_mode",
-        "_modifier_paths",
         "_modifiers",
         "_origin_column",
-        "_random",
         "_rng",
+        "_spatial_resolution",
         "_spatial_units",
         "_temporal_column",
+        "_temporal_resolution",
         "_time",
         "_world",
     )
@@ -94,42 +101,45 @@ class DemandFactory:
 
     def __init__(
         self,
-        env: simpy.Environment,
+        sim: SimulationContext,
         world: World,
-        modifiers: list[str],
         mode: str,
-        maximal_demand: int = 3_000_000,
+        maximal_demand=3_000_000,  # noqa: ANN001
     ) -> None:
-        self._config = Configuration()
-        self._env = env
-        self._time = SimulationTime(env)
+        super().__init__(sim)
+
+        self._config = sim.config
+        self._env = sim.env
+        self._time = SimulationTime(sim.env)
         self._world: World = world
         self._mode = mode
 
-        self._origin_column = world.spatial_resolution.origin_column_name
-        self._destination_column = world.spatial_resolution.destination_column_name
-        self._temporal_column = world.temporal_resolution.column_name
-        self._day_of_week_column = world.daily_resolution.day_of_week_column_name
+        self._temporal_resolution = self._config.world.TEMPORAL_RESOLUTION
+        self._spatial_resolution = self._config.world.SPATIAL_RESOLUTION
+        self._daily_resolution = self._config.world.DAILY_RESOLUTION
+
+        self._origin_column = self._spatial_resolution.origin_column_name
+        self._destination_column = self._spatial_resolution.destination_column_name
+        self._temporal_column = self._temporal_resolution.column_name
+        self._day_of_week_column = self._daily_resolution.day_of_week_column_name
 
         self._maximal_demand = maximal_demand
-
-        self._modifier_paths = modifiers
         self._modifiers = {}
 
         self._demand_profile = self._load_demand_profile()
         self._spatial_units = list(self._demand_profile[self._origin_column].unique())
 
         # Random Number Generators
-        self._rng = RandomManager().get_rng("DEMANDFACTORY")
+        self._rng = sim.random_manager.get_rng("DEMANDFACTORY")
 
         self._load_modifiers()
 
     def _load_demand_profile(self) -> DataFrame:
         """Load the demand profile from the configured path using the DemandImporter."""
         demand_importer: DemandImporter = DemandImporter(
-            temporal_resolution=self._world.temporal_resolution,
-            spatial_resolution=self._world.spatial_resolution,
-            daily_resolution=self._world.daily_resolution,
+            temporal_resolution=self._temporal_resolution,
+            spatial_resolution=self._spatial_resolution,
+            daily_resolution=self._config.world.DAILY_RESOLUTION,
             city=self._config.world.CITY,
         )
 
@@ -141,7 +151,7 @@ class DemandFactory:
         multiplier = geomodifier["properties"]["demandMultiplier"]
         hex_ids = h3.polyfill(
             geomodifier["geometry"],
-            res=self._config.world.SPATIAL_RESOLUTION_VALUE,
+            res=self._spatial_resolution,
             geo_json_conformant=True,
         )
 
@@ -149,29 +159,36 @@ class DemandFactory:
 
     def _load_modifiers(self) -> None:
         """Load and register per-hexagon demand modifiers (floating number multiplier) from GeoJSON."""
-        for modifier in self._modifier_paths:
+        if not self._config.path.PATH_DEMAND_MODIFIERS:
+            self.logger.info(
+                "No demand modifiers configured, skipping loading of demand modifiers."
+            )
+            return
+
+        modifier_paths = [
+            self._config.path.PATH_DEMAND_MODIFIERS[i]
+            for i in range(len(self._config.path.PATH_DEMAND_MODIFIERS))
+        ]
+
+        for modifier in modifier_paths:
             try:
                 with open(modifier) as f:
                     if not geojson.load(f).is_valid:
-                        logging.warning(
+                        self.logger.warning(
                             'Demand modifier provided at "%s" is not valid GeoJSON, skipping.',
                             modifier,
-                            extra={"clazz": self.__class__.__name__, "oid": ""},
                         )
                         continue
             except (FileNotFoundError, ValueError) as e:
                 if isinstance(e, FileNotFoundError):
-                    logging.warning(
-                        'Demand modifier at "%s" doesn\'t exist, skipping.',
-                        modifier,
-                        extra={"clazz": self.__class__.__name__, "oid": ""},
+                    self.logger.warning(
+                        'Demand modifier at "%s" doesn\'t exist, skipping.', modifier
                     )
                     continue
                 elif isinstance(e, ValueError):
-                    logging.warning(
+                    self.logger.warning(
                         'Demand modifier at "%s" is not valid GeoJSON, skipping.',
                         modifier,
-                        extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
                     continue
 
@@ -219,7 +236,7 @@ class DemandFactory:
             try:
                 # Transform current time to temporal buckets as defined in the demand profile
                 time_bucket = SimulationTimeConverter.convert_to_temporal_bucket(
-                    self._time.now(), self._world.temporal_resolution
+                    self._time.now(), self._temporal_resolution
                 )
                 non_working_day = SimulationTimeConverter.convert_to_day_of_week_bucket(
                     self._time.now()
@@ -234,13 +251,12 @@ class DemandFactory:
                     )
                 ]
                 if demand_slice.shape[0] == 0:
-                    logging.debug(
+                    self.logger.debug(
                         "Hex: %s  Time: %s  Date:%s  Env Time: %s",
                         spatial_unit,
                         time_bucket,
                         non_working_day,
                         self._time.now(),
-                        extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
                     # no lambda for given demand slice means there were no arrivals in the sample (lambda was zero)
                     poisson_lambda = 0
@@ -248,12 +264,16 @@ class DemandFactory:
                     # Extract Poisson Estimate for given spatio-temporal cell
                     poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
 
-                # TODO: to define the target fleet
-                random_number = self._rng.random(1)
-                if random_number < 0.5:
-                    fleet = 0
+                # Fleet assignment based on mode TODO: this is a hack
+                if self._mode == "ride_hailing":
+                    random_number = self._rng.random(1)
+                    if random_number < 0.5:
+                        fleet = 0
+                    else:
+                        fleet = 1
                 else:
-                    fleet = 1
+                    # For other modes, use fleet 0
+                    fleet = 0
 
                 # Based on Poisson Estimate sample next arrival time (in minutes)
                 # inter_arrival_time = numpy.random.exponential(
@@ -261,7 +281,7 @@ class DemandFactory:
 
                 if poisson_lambda == 0:
                     # lambda is zero, waiting until next timebucket is reached
-                    bucket_in_minutes = self._world.temporal_resolution * 60
+                    bucket_in_minutes = self._temporal_resolution * 60
                     time_to_next_bucket = bucket_in_minutes - (
                         self._time.now() % bucket_in_minutes
                     )
@@ -270,10 +290,9 @@ class DemandFactory:
                 else:
                     try:
                         if self._modifiers[spatial_unit] == 0:
-                            logging.debug(
+                            self.logger.debug(
                                 "Spatial unit %s is removed from demand generation process",
                                 spatial_unit,
-                                extra={"clazz": self.__class__.__name__, "oid": ""},
                             )
                             break
 
@@ -281,12 +300,12 @@ class DemandFactory:
                         # TODO: if we wait for longer than the timebucket is long, we should probably consider no demand (otherwise we spawn this in the next timebucket and skew the real demand distribution)
                         inter_arrival_time = self._rng.exponential(
                             1.0 / poisson_lambda / self._modifiers[spatial_unit]
-                        ) * float(self._world.temporal_resolution * 60)
+                        ) * float(self._temporal_resolution * 60)
                     except KeyError:
                         # no modifier is registered for that spatial unit
                         inter_arrival_time = self._rng.exponential(
                             1.0 / poisson_lambda
-                        ) * float(self._world.temporal_resolution * 60)
+                        ) * float(self._temporal_resolution * 60)
 
                     # await next arrival
                     yield self._env.timeout(inter_arrival_time)
@@ -305,12 +324,11 @@ class DemandFactory:
 
                     # Append Arrival to World
                     # create agent or similar consumers
-                    logging.debug(
+                    self.logger.debug(
                         "Demand generated from hexagon %s to %s. Fleet %s",
                         spatial_unit,
                         destination,
                         fleet,
-                        extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
 
                 self._world.add_user(self._mode, fleet, spatial_unit, destination)
