@@ -14,7 +14,7 @@ def main() -> None:
 
     simulation.run_simulation()
 
-    simulation.metrics.all_operator_metrics().to_log()
+    simulation.metrics.operator_metrics.to_log()
 
 
 if __name__ == "__main__":
