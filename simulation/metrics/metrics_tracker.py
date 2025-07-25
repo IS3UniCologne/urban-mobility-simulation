@@ -19,8 +19,6 @@ if TYPE_CHECKING:
 
     from simulation.simulation import Simulation
 
-    from .metrics_dict import MetricsDict
-
 
 class MetricsSnapshot:
     """A snapshot of metrics at a specific simulation time."""

@@ -149,10 +149,8 @@ class DemandFactory(SimulationBase):
 
     def _register_modifier(self, geomodifier) -> None:  # noqa: ANN001
         multiplier = geomodifier["properties"]["demandMultiplier"]
-        hex_ids = h3.polyfill(
-            geomodifier["geometry"],
-            res=self._spatial_resolution,
-            geo_json_conformant=True,
+        hex_ids = h3.polygon_to_cells(
+            h3.geo_to_h3shape(geomodifier["geometry"]), res=self._spatial_resolution
         )
 
         self._modifiers.update({x: multiplier for x in hex_ids})

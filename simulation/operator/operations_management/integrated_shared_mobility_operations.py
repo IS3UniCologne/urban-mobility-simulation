@@ -1,16 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import h3
 import pandas as pd
-
-if TYPE_CHECKING:
-    from simulation.context.simulation_context import SimulationContext
-    from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
-    from simulation.operator.transactions import DemandMonitor
-    from simulation.operator.transactions.demand_monitor import VehicleDemandByRegion
 
 from simulation.helper.configuration.enums import VehicleType
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
@@ -24,6 +18,17 @@ from simulation.operator.operations_management.service_tasks.multi_service_task 
 from simulation.operator.operations_management.service_tasks.relocation_task import (
     RelocationTask,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    import simpy
+
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.position import Position
+    from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+    from simulation.operator.transactions import DemandMonitor
+    from simulation.operator.transactions.demand_monitor import VehicleDemandByRegion
 
 
 class IntegratedSharedMobilityOperations(OperationsInterface):
@@ -49,14 +54,14 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     def __init__(
         self,
         sim: SimulationContext,
-        time_between_operations,  # noqa: ANN001
-        operation_duration,  # noqa: ANN001
-        distance_matrix,  # noqa: ANN001
-        ordered_available_vehicle_types,  # noqa: ANN001
-        ordered_max_vehicle_supply,  # noqa: ANN001
-        state_of_charge_threshold,  # noqa: ANN001
-        base_regions,  # noqa: ANN001
-        base_capacity,  # noqa: ANN001
+        time_between_operations: float,
+        operation_duration: float,
+        distance_matrix: pd.DataFrame,
+        ordered_available_vehicle_types: list[str],
+        ordered_max_vehicle_supply: list[int],
+        state_of_charge_threshold: float,
+        base_regions: list[str],
+        base_capacity: int,
     ) -> None:
         super().__init__(sim=sim)
 
@@ -73,23 +78,25 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         self._available_vehicle_types: list[VehicleType] = (
             ordered_available_vehicle_types  # TODO: get from fleet
         )
-        self._max_vehicle_supply = ordered_max_vehicle_supply  # TODO: get from fleet
+        self._max_vehicle_supply: list[int] = (
+            ordered_max_vehicle_supply  # TODO: get from fleet
+        )
         self._base_regions = base_regions
         self._base_capacity = base_capacity
 
-        self._state_of_charge_threshold = state_of_charge_threshold
+        self._state_of_charge_threshold: float = state_of_charge_threshold
 
-        self._scheduled_tasks = []  # TODO: move to workforce? or internal schedule?
+        self._scheduled_tasks: list = []  # TODO: move to workforce? or internal schedule?
 
         # Events
-        self._charging_plan_updated = self._env.event()
-        self._operations_started = self._env.event()
+        self._charging_plan_updated: simpy.Event = self._env.event()
+        self._operations_started: simpy.Event = self._env.event()
 
         # When to start operations (every 1440 min)
         self._time_between_operations = time_between_operations
 
         # Shift Duration (OM shift duration)
-        self._duration_of_operations = operation_duration  # mins
+        self._duration_of_operations: int = operation_duration  # mins
 
     @property
     def available_vehicle_types(self) -> list[VehicleType]:
@@ -102,7 +109,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         """
         return self._available_vehicle_types
 
-    def execute(self):  # noqa: ANN201
+    def execute(self) -> Generator[Any, Any, Any]:
         """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
         """
@@ -120,7 +127,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 continue
 
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
-            charging_plans, used_capacity = self.generate_charging_plan()
+            charging_plans = self.generate_charging_plan()
 
             # We track the charging events
             charging_events = []
@@ -332,7 +339,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     "Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan."
                 )
 
-    def generate_relocation_plan(self):  # noqa: ANN201
+    def generate_relocation_plan(
+        self,
+    ) -> dict[str, list[tuple[Position, Position, int, float]]]:
         """
 
         Return relocation plan
@@ -347,13 +356,14 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
 
         return relocation_plans
 
-    def generate_charging_plan(self):  # noqa: ANN201
+    def generate_charging_plan(
+        self,
+    ) -> dict[str, list[tuple[Position, Position, int, float]]]:
         """
         Generate a rule based charging plan based on given service worker capacity
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
         :return: **charging_plan**: Dictionary with keys for vehicle modes and values with lists of multiple
                 charging tasks
-                **used_capacity**: How many service workers are planned to cope with charging needs
         """
         # Get Current Fleet State
         state = self.calculate_residual_supply(
@@ -370,9 +380,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 index=False,
             )
 
-        charging_plans, used_capacity = self.calculate_charging_plan(state)
+        charging_plans = self.calculate_charging_plan(state)
 
-        return charging_plans, used_capacity
+        return charging_plans
 
     #############################################
     #############################################
@@ -380,7 +390,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def calculate_charging_plan(self, fleet_state):  # noqa: ANN001, ANN201
+    def calculate_charging_plan(
+        self, fleet_state: pd.DataFrame
+    ) -> dict[str, dict[list[tuple[str, str, float, float]]]]:
         """
         :param fleet_state: Represent current fleet state (output from function calculate_residual_supply)
         :param distance_matrix: Distance between Regions
@@ -393,7 +405,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         :return: all_charging_plans and used capacity per mode
                 all_charging_plans {"SharedKickScooter":[[(origin, destination, number of vehicles to pick up, destination to base), ()], [()],
                                     "SharedScooter": [], "SharedCar":[]}
-                used_capacity = [1, 3, 5] => per available vehicle mode returns number of service workers assigned to charge these vehicles
+                [UNUSED] used_capacity = [1, 3, 5] => per available vehicle mode returns number of service workers assigned to charge these vehicles
                                           => 1 SW for Kick Scooter, 3 for Shared Scooter, 5 for Shared Cars
         """
 
@@ -510,7 +522,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         pick_up_vehicles < max_capacity_per_unit
                         and pick_up_vehicles > 0
                     ):
-                        neighbours = h3.hex_range(next_hex_id, 1)
+                        neighbours = h3.grid_disk(next_hex_id, 1)
                         neighbours.remove(
                             next_hex_id
                         )  # Consider only neighbours (not current region)
@@ -577,14 +589,14 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         for key in all_charging_plans:
             used_resources += len(all_charging_plans[key])
 
-        return all_charging_plans, used_resources
+        return all_charging_plans
 
-    def calculate_resource_capacity_split_for_charging(  # noqa: ANN201
+    def calculate_resource_capacity_split_for_charging(
         self,
-        fleet_state,  # noqa: ANN001
-        max_vehicle_supply,  # noqa: ANN001
-        number_service_workers_per_mode,  # noqa: ANN001
-    ):
+        fleet_state: pd.DataFrame,
+        max_vehicle_supply: list[int],
+        number_service_workers_per_mode: list[int],
+    ) -> list[int]:
         """
             Determine Service Worker Split Between Modes (How many workers should be assigned to charge how many vehicles)
 
@@ -676,7 +688,9 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     #############################################
     #############################################
 
-    def identify_potential_relocations(self, state):  # noqa: ANN001, ANN201
+    def identify_potential_relocations(
+        self, state: pd.DataFrame
+    ) -> dict[str, list[tuple[Position, Position, int, float]]]:
         """
         Calculate how many vehicles need to be moved (or can be) from origin to destination
 

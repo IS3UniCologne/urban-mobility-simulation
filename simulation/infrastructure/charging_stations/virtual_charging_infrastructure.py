@@ -13,10 +13,12 @@ from simulation.infrastructure.charging_stations.virtual_charging_station import
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simulation.context.simulation_context import SimulationContext
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
-    from simulation.context.simulation_context import SimulationContext
 
 
 class VirtualChargingInfrastructure(SimulationBase):
@@ -38,13 +40,13 @@ class VirtualChargingInfrastructure(SimulationBase):
         "_virtual_charging_stations",
     )
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
         sim: SimulationContext,
         charging_infrastructure: ChargingInfrastructure,
         lookahead: int | None = None,
-        use_virtual_cs=True,  # noqa: ANN001
-    ):
+        use_virtual_cs: bool = True,
+    ) -> None:
         super().__init__(sim)
         self._env = sim.env
         self._config = sim.config
@@ -82,10 +84,10 @@ class VirtualChargingInfrastructure(SimulationBase):
             self._listeners = None
 
     @property
-    def charging_stations(self):  # noqa: ANN201
+    def charging_stations(self) -> list[VirtualChargingStation]:
         return self._charging_stations()
 
-    def _charging_stations(self):  # noqa: ANN202
+    def _charging_stations(self) -> list[VirtualChargingStation]:
         if self._virtual_charging_stations is None:
             raise NotImplementedError(
                 "This virtual charging infrastructure was initialized without virtual charging stations!"
@@ -118,14 +120,14 @@ class VirtualChargingInfrastructure(SimulationBase):
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_locations(self):  # noqa: ANN201
+    def get_locations(self) -> list[str]:
         """
         Defaults to `get_available_locations() at self._default_lookahead`
         which is the next timeslot that was already auctioned, or None
         """
         return self.get_available_locations(self._lookahead)
 
-    def _update_virtual_cs(self, init=False):  # noqa: ANN001, ANN202
+    def _update_virtual_cs(self, init: bool = False) -> None:
         for cs in self._virtual_charging_stations:
             # availability might be negative if we account for some vehicle on the way and in the meantime another vehicle arrives at the already full station
             bounded_capa = (
@@ -176,7 +178,9 @@ class VirtualChargingInfrastructure(SimulationBase):
         if self._virtual_charging_stations is not None:
             self._update_virtual_cs()
 
-    def _sync_with_real(self, charging_station: VirtualChargingStation):  # noqa: ANN202
+    def _sync_with_real(
+        self, charging_station: VirtualChargingStation
+    ) -> Generator[None, None, None]:
         cs = charging_station._physical_charging_station  # noqa: SLF001
         # Listener = namedtuple(
         #     "Listener", ["processed_plug_in_event", "processed_plug_out_event"]
@@ -220,4 +224,5 @@ class VirtualChargingInfrastructure(SimulationBase):
                 self.logger.debug(
                     "Plugged out registered at %s.", charging_station.location
                 )
+                self._listeners[cs.id].processed_plug_out_event.succeed()
                 self._listeners[cs.id].processed_plug_out_event.succeed()

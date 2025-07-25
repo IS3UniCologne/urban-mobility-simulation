@@ -9,7 +9,7 @@ RegionId = NewType("RegionId", str)
 
 class Position(ABC):
     @abstractmethod
-    def getExactLocation(self):  # noqa: ANN201
+    def getExactLocation(self) -> tuple[float, float]:
         pass
 
     @abstractmethod

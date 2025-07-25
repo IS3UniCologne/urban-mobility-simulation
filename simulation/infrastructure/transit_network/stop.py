@@ -23,17 +23,17 @@ class Stop(GeodesicPosition):
         self._departure_next_day = departure_next_day
 
     @property
-    def stop_id(self):  # noqa: ANN201
+    def stop_id(self) -> str:
         return self._stop_id
 
     @property
-    def gtfs_id(self):  # noqa: ANN201
+    def gtfs_id(self) -> str:
         return self._gtfs_id
 
     @property
-    def departure(self):  # noqa: ANN201
+    def departure(self) -> float:
         return self._departure
 
     @property
-    def departure_next_day(self):  # noqa: ANN201
+    def departure_next_day(self) -> bool:
         return self._departure_next_day

@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
 class RideHailingAV(RideHailingVehicle):
     # Autonomous Ride Hailing Car Counter
-    ride_hailing_av_id = 0
-    vehicle_type = "ridehailing_AV"
+    ride_hailing_av_id: int = 0
+    vehicle_type: str = "ridehailing_AV"
 
     __slots__ = ("_emergency_soc_buffer_percent", "_price_per_min", "car_id")
 
@@ -40,9 +40,9 @@ class RideHailingAV(RideHailingVehicle):
         )
 
         # Increment Shared Car ID
-        self.car_id = RideHailingAV.ride_hailing_av_id
-        self._price_per_min = vehicle_config.PRICE_PER_MIN
-        self._emergency_soc_buffer_percent = self._sim.config.ride_hailing_vehicles[
-            "AutonomousCar"
-        ].EMERGENCY_SOC_BUFFER
+        self.car_id: int = RideHailingAV.ride_hailing_av_id
+        self._price_per_min: float = vehicle_config.PRICE_PER_MIN
+        self._emergency_soc_buffer_percent: float = (
+            self._sim.config.ride_hailing_vehicles["AutonomousCar"].EMERGENCY_SOC_BUFFER
+        )
         RideHailingAV.ride_hailing_av_id += 1

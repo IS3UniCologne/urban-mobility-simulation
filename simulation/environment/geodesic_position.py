@@ -19,6 +19,8 @@ from simulation.environment.position import RegionId
 from .position import Position
 
 if TYPE_CHECKING:
+    from shapely import Geometry
+
     from simulation.context.simulation_context import SimulationContext
 
 
@@ -30,7 +32,7 @@ class GeodesicPosition(Position):
         sim: SimulationContext,
         latitude: float,
         longitude: float,
-        default_res_hex_id: str | None = None,
+        default_res_hex_id: RegionId | None = None,
     ) -> None:
         super().__init__()
         self._lat = latitude
@@ -42,7 +44,7 @@ class GeodesicPosition(Position):
         self._hex_id_by_resolution[self._default_resolution] = default_res_hex_id
         self._geometry = Point(self._lng, self._lat)
 
-    def getExactLocation(self, geojson=False):  # noqa: ANN001, ANN201
+    def getExactLocation(self, geojson: bool = False) -> tuple[float, float]:
         if geojson:
             return (self._lng, self._lat)
         else:
@@ -56,7 +58,7 @@ class GeodesicPosition(Position):
         return f"Latitude {self._lat} : Longitude {self._lng}"
 
     # ==
-    def __eq__(self, other):  # noqa: ANN001, ANN204
+    def __eq__(self, other: object) -> bool:
         """
         Test equality of two GeodesicPositions
         :param other: GeodesicPosition
@@ -101,7 +103,7 @@ class GeodesicPosition(Position):
 
     def _compute_hex_id(self, resolution: int) -> str:
         """Compute H3 hex ID for given resolution."""
-        return h3.geo_to_h3(self._lat, self._lng, resolution)
+        return h3.latlng_to_cell(self._lat, self._lng, resolution)
 
     def get_region_id(self, resolution: int | None = None) -> RegionId:
         """
@@ -125,8 +127,21 @@ class GeodesicPosition(Position):
 
         return RegionId(self._hex_id_by_resolution[resolution])
 
-    def is_in_geometry(self, geometry):  # noqa: ANN001, ANN201
+    def is_in_geometry(self, geometry: Geometry) -> bool:
         if self._geometry.intersects(geometry):
             return True
         else:
             return False
+
+    def difference(self, other: GeodesicPosition):  # noqa: ANN201
+        """
+        This function is meant for getting the full distance vector of the (lat, lng) coordinate system
+        of two GeodesicPositions. This might not be vastly intelligent in terms of what the result means geographically
+        but it is needed for constructing states for public vehicle agents.
+
+        :param other: GeodesicPosition
+        :return: returns a tuple of (self.lat - other.lat, self.lon - other.lon)
+        """
+        return tuple(
+            x - y for x, y in zip(self.getExactLocation(), other.getExactLocation())
+        )

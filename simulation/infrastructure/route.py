@@ -94,44 +94,44 @@ class PublicTransitRoute(Route):
             self._route_segments = segments
 
     @property
-    def trip_id(self):  # noqa: ANN201
+    def trip_id(self) -> str:
         return self._trip_id
 
     @property
-    def origin(self):  # noqa: ANN201
+    def origin(self) -> GeodesicPosition:
         return self._origin
 
     @property
-    def destination(self):  # noqa: ANN201
+    def destination(self) -> GeodesicPosition:
         return self._destination
 
     @property
-    def route_segments(self):  # noqa: ANN201
+    def route_segments(self) -> list[RouteSegment]:
         return self._route_segments
 
-    def add_route_segment(self, segment: RouteSegment):  # noqa: ANN201
+    def add_route_segment(self, segment: RouteSegment) -> None:
         self._route_segments.append(segment)
 
-    def route_segment_by_id(self, id):  # noqa: ANN001, ANN201
+    def route_segment_by_id(self, id: int) -> RouteSegment:
         return self._route_segments[id]
 
     @property
-    def route_stops(self):  # noqa: ANN201
+    def route_stops(self) -> list[Stop]:
         return self._route_stops
 
-    def route_stop_by_id(self, id):  # noqa: ANN001, ANN201
+    def route_stop_by_id(self, id: int) -> Stop:
         return self._route_stops[id]
 
-    def route_stop_by_gtfs_id(self, gtfs_id):  # noqa: ANN001, ANN201
+    def route_stop_by_gtfs_id(self, gtfs_id: str) -> Stop:
         # TODO: this is stupid
         for s in self._route_stops:
             if s.gtfs_id == gtfs_id:
                 return s
 
-    def add_route_stop(self, stop: Stop):  # noqa: ANN201
+    def add_route_stop(self, stop: Stop) -> None:
         self._route_stops.append(stop)
 
-    def subroute(self, start: Stop, end: Stop):  # noqa: ANN201
+    def subroute(self, start: Stop, end: Stop) -> PublicTransitRoute:
         """
         Attention: The PublicTransitRoute that is returned does not adhere to index = stop ID!
         This is marked by the route_id being prefixed with SUB
@@ -148,10 +148,10 @@ class PublicTransitRoute(Route):
             self._route_segments[start.stop_id : end.stop_id],
         )
 
-    def total_distance(self):  # noqa: ANN201
+    def total_distance(self) -> float:
         return sum(self._route_segments)
 
-    def planned_duration(self):  # noqa: ANN201
+    def planned_duration(self) -> float:
         return SimulationTimeConverter.duration_between(
             self.route_stop_by_id(0).departure,
             self.route_stop_by_id(-1).departure,
@@ -161,5 +161,5 @@ class PublicTransitRoute(Route):
             else False,
         )
 
-    def __str__(self):  # noqa: ANN204
+    def __str__(self) -> str:
         return f"PublicTransitRoute with id/name {self._id} and trip id {self._trip_id}"
