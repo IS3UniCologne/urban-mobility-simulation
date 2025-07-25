@@ -5,18 +5,16 @@ from simulation.operator.data_transfer_object.transportation_alternative import 
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
 )
-from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.tasks.transport_task import TransportTask
 from simulation.tasks.transportation_search_task import TransportationSearchTask
 from simulation.vehicle.walking import Walking
 
 
-class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
+class WalkingSearchEngine(SearchEngineInterface):
     __slots__ = ("_env", "_walking")
 
     def __init__(self, env):  # noqa: ANN001, ANN204
-        PaymentInterface.__init__(self)
         self._env = env
         self._walking = Walking(env)
 
