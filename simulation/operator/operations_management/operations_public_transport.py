@@ -23,12 +23,13 @@ from simulation.operator.operations_management.operations import OperationsInter
 class OperationsPublicTransport(OperationsInterface):
     __slots__ = (
         "_bus_velocity",
+        "_config",
         "_fleet",
         "_geo_env",
         "_operator_config",
+        "_sim",
         "_time",
         "_timetable",
-        "_tracking",
         "_walking_speed",
     )
 
@@ -40,18 +41,16 @@ class OperationsPublicTransport(OperationsInterface):
         operator_config: TransitOperatorConfig,
     ) -> None:
         super().__init__(sim=sim)
+
+        self._geo_env = sim.geo_env
+        self._sim = sim
+        self._config = sim.config
         self._timetable = timetable
         self._time = SimulationTime(self._env)
         self._fleet = fleet
         self._operator_config = operator_config
-        # Environment
-        self._geo_env = sim.geo_env
-        # Tracking
-        self._tracking = (
-            None  # defer loading to run process, otherwise circular dependency
-        )
-        self._walking_speed = self._sim.config.user.WALKING_SPEED
-        self._bus_velocity = self._sim.config.transit_vehicles["Bus"].VELOCITY
+        self._walking_speed = self._config.user.WALKING_SPEED
+        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY
 
     def execute(self):  # noqa: ANN201
         """
@@ -100,6 +99,7 @@ class OperationsPublicTransport(OperationsInterface):
         destination_row = trip.iloc[-1]
 
         origin = Stop(
+            self._sim,
             0,
             origin_row["stop_id"],
             origin_row["stop_lat"],
@@ -108,6 +108,7 @@ class OperationsPublicTransport(OperationsInterface):
             origin_row["dep_next_day"],
         )
         destination = Stop(
+            self._sim,
             len(trip.index) - 1,
             destination_row["stop_id"],
             destination_row["stop_lat"],
@@ -129,6 +130,7 @@ class OperationsPublicTransport(OperationsInterface):
         # skip origin as it is already added
         for stop_id, row in enumerate(trip[1:].itertuples(index=False), start=1):
             stop = Stop(
+                self._sim,
                 stop_id,
                 row.stop_id,
                 row.stop_lat,
