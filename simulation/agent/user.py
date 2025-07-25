@@ -12,6 +12,7 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.operator.data_transfer_object.trip_record import TripRecord
+from simulation.operator.interface.operator_interface import OperatorInterface
 from simulation.vehicle.walking import Walking
 from tracking.tracking_interface import TrackingInterface
 
@@ -31,7 +32,6 @@ from .agent import Agent
 if TYPE_CHECKING:
     import simulation.world.world as world
     from simulation.context.simulation_context import SimulationContext
-    from simulation.operator.interface.payment_interface import PaymentInterface
     from simulation.operator.interface.search_engine_interface import (
         SearchEngineInterface,
     )
@@ -87,7 +87,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         position,  # noqa: ANN001
         transport_task: TransportTask,
         transportation_search_service: SearchEngineInterface,
-        payment_service: PaymentInterface,
+        payment_service: OperatorInterface,
         vehicle_assignment_service: VehicleAllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_type: PopulationType,
@@ -637,7 +637,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         position: GeodesicPosition,
         transport_task: TransportTask,
         transportation_search_service: SearchEngineInterface,
-        payment_service: PaymentInterface,
+        payment_service: OperatorInterface,
         vehicle_assignment_service: VehicleAllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_type: PopulationType,
@@ -1129,7 +1129,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         position,  # noqa: ANN001
         transport_task: TransportTask,
         transportation_search_service: SearchEngineInterface,
-        payment_service: PaymentInterface,
+        payment_service: OperatorInterface,
         vehicle_assignment_service: VehicleAllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_type: PopulationType,
