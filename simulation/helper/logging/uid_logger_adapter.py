@@ -1,11 +1,15 @@
 """Logger adapter that automatically adds UID context to log records."""
 
+from __future__ import annotations
+
 import logging
-from collections.abc import MutableMapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
 
 
-class UidLoggerAdapter(logging.LoggerAdapter[logging.Logger]):
+class UidLoggerAdapter(logging.LoggerAdapter):  # type: ignore[type-arg]
     """
     Logger adapter that automatically adds UID to log records.
 
