@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING
 from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
-    import simpy
-
     from simulation.agent.user import User
     from simulation.helper.configuration.enums import OperatorMode
     from simulation.operator.data_transfer_object.transportation_alternative import (
@@ -39,11 +37,6 @@ class OperatorInterface(ABC, SimulationBase):
         """Return the operator mode."""
         pass
 
-    @abstractmethod
-    def initialize(self, env: simpy.Environment) -> None:
-        """Initialize the operator with simulation environment."""
-        pass
-
     @property
     @abstractmethod
     def search_engine(self) -> SearchEngineInterface:
@@ -54,11 +47,6 @@ class OperatorInterface(ABC, SimulationBase):
     @abstractmethod
     def assignment_engine(self) -> VehicleAllocationEngineInterface:
         """Return the vehicle assignment engine for this operator."""
-        pass
-
-    @abstractmethod
-    def start_operations(self) -> None:
-        """Start operator-specific processes."""
         pass
 
     @property
