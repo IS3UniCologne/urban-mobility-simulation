@@ -15,16 +15,20 @@ classifiers = [
 
 
 dependencies = [
-  "beartype>=0.20.0",
+  "beartype>=0.21.0",
   "cython>=3.1.0",
   "geojson>=3.2.0",
   "geopandas>=1.0.1",
   "h3>=3.7.1, <4",
   "haversine>=2.9.0",
   "matplotlib>=3.9.4",
+  "pandas>=2.2.3",
   "pip>=25.0.1",
   "pqdm>=0.2.0",
+  "prettytable>=3.16.0",
   "pyarrow>=19.0.1",
+  "pydantic>=2.11.4",
+  "pyinstrument>=5.0.2",
   "shapely>=2.0.7",
   "simpy>=4.1.1",
   "statsmodels>=0.14.4",
@@ -105,6 +109,7 @@ select = [
   "SLF",
   "T20",
   "UP",
+  "TC",
 ]
 # Skip unused variable rules (`F841`).
 ignore = ["E721"]
@@ -126,9 +131,8 @@ convention = "numpy"
 "simulation/__init__.py"            = ["D"]
 "simulation/agent/*"                = ["D"]
 "simulation/environment/*"          = ["D"]
-"simulation/helper/*"               = ["D"]
+"simulation/helper/time.py"         = ["D"]
 "simulation/infrastructure/*"       = ["D"]
-"simulation/metrics/*"              = ["D"]
 "simulation/operator/*"             = ["D"]
 "simulation/tasks/*"                = ["D"]
 "simulation/vehicle/*"              = ["D"]
