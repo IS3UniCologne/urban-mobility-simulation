@@ -47,9 +47,11 @@ class MixedRideHailingFleet(VehicleFleet):
         if vehicle not in self._vehicles:
             if isinstance(vehicle, RideHailingCar):
                 self._vehicles.append(vehicle)
+                self._world.add_vehicle(vehicle)
                 self._ridehailing_cars.append(vehicle)
             elif isinstance(vehicle, RideHailingAV):
                 self._vehicles.append(vehicle)
+                self._world.add_vehicle(vehicle)
                 self._autonomous_cars.append(vehicle)
 
         else:
