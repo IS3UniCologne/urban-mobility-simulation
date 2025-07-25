@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from simulation.tasks.transportation_search_task import TransportationSearchTask
     from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 
+from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTimeConverter
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
@@ -23,7 +24,7 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 
 
-class PublicTransportSearchEngine(SearchEngineInterface):
+class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):
     __slots__ = (
         "_env",
         "_fleet",
@@ -39,6 +40,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         fleet: PublicTransportVehicleFleet,
         operator_config: TransitOperatorConfig,
     ) -> None:
+        super().__init__(sim=sim)
         self._sim = sim
         self._env = sim.env
         self._fleet = fleet
