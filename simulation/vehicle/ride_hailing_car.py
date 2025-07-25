@@ -6,6 +6,10 @@ from simulation.helper.configuration.enums import VehicleState
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.position import Position
     from simulation.helper.configuration.configuration import VehicleConfig
@@ -65,45 +69,45 @@ class RideHailingCar(RideHailingVehicle):
         self._env.process(self.run_shift_check_process())
 
     @property
-    def total_earn(self):  # noqa: ANN201
+    def total_earn(self) -> float:
         return self._total_earn
 
     @property
-    def shift_earn(self):  # noqa: ANN201
+    def shift_earn(self) -> float:
         return self._shift_earn
 
     @property
-    def shift_duration(self):  # noqa: ANN201
+    def shift_duration(self) -> float:
         return self._shift_duration
 
     @property
-    def offline_duration(self):  # noqa: ANN201
+    def offline_duration(self) -> float:
         return self._offline_duration
 
     @property
-    def shift_start_time(self):  # noqa: ANN201
+    def shift_start_time(self) -> float:
         return self._shift_start_time
 
     @property
-    def shift_end_time(self):  # noqa: ANN201
+    def shift_end_time(self) -> float:
         return self._shift_end_time
 
-    def update_shift_start_time(self):  # noqa: ANN201
+    def update_shift_start_time(self) -> None:
         time = self._env.now
         self._shift_start_time = time
 
         self.logger.debug("Shift has started.")
 
-    def update_shift_end_time(self):  # noqa: ANN201
+    def update_shift_end_time(self) -> None:
         time = self._env.now
         self._shift_end_time = time
 
         self.logger.debug("Shift has ended.")
 
-    def update_shift_duration(self):  # noqa: ANN201
+    def update_shift_duration(self) -> None:
         self._shift_duration = self._env.now - self._shift_start_time
 
-    def update_offline_duration(self):  # noqa: ANN201
+    def update_offline_duration(self) -> None:
         self._offline_duration = self._env.now - self._shift_end_time
 
     def update_idle_time(self):  # TODO  # noqa: ANN201
@@ -124,14 +128,14 @@ class RideHailingCar(RideHailingVehicle):
     #
     # )
 
-    def get_online(self):  # noqa: ANN201
+    def get_online(self) -> None:
         self.state = VehicleState.PARKING
         self.update_shift_start_time()
         self._online_event.succeed()
         self._online_event = self._env.event()
         self.logger.debug("Driver gets online.")
 
-    def get_offline(self):  # noqa: ANN201
+    def get_offline(self) -> None:
         self.state = VehicleState.OFFLINE
         self._shift_earn = 0
         self.update_shift_end_time()
@@ -139,7 +143,7 @@ class RideHailingCar(RideHailingVehicle):
         self._offline_event = self._env.event()
         self.logger.debug("Driver gets offline.")
 
-    def decide_to_get_online(self):  # noqa: ANN201
+    def decide_to_get_online(self) -> bool:
         go_online = False
         ### comment off when we have mode chioce variables
         # self.update_offline_duration()
@@ -159,7 +163,7 @@ class RideHailingCar(RideHailingVehicle):
             go_online = True
         return go_online
 
-    def decide_to_get_offline(self):  # noqa: ANN201
+    def decide_to_get_offline(self) -> bool:
         go_offline = False
         ### comment off when we have mode chioce variables
         # self.update_shift_duration()
@@ -180,7 +184,7 @@ class RideHailingCar(RideHailingVehicle):
 
         return go_offline
 
-    def run_shift_check_process(self):  # noqa: ANN201
+    def run_shift_check_process(self) -> Generator[Event, None, None]:
         """
         Run availability decision-making process of drivers
         :return:
@@ -213,4 +217,5 @@ class RideHailingCar(RideHailingVehicle):
                         )
                         self.get_offline()
             # we check driver decisions every one hour
+            yield self._env.timeout(15)
             yield self._env.timeout(15)

@@ -1,17 +1,25 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from simulation.helper.configuration.enums import VehicleState, VehicleType
 
 from .vehicle import Vehicle
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
+    from simulation.agent.user import User
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.position import Position
     from simulation.helper.configuration.configuration import VehicleConfig
     from simulation.infrastructure.network.edge import Edge
+    from simulation.operator.operations_management.service_tasks.service_task import (
+        ServiceTask,
+    )
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.vehicle.interfaces.driver_interface import DriverInterface
 
@@ -69,26 +77,27 @@ class SharedVehicle(Vehicle, ABC):
 
         #### Vehicle Events
         # Driving Events
-        self._vehicle_parked = self._env.event()
-        self._user_mounted = self._env.event()
-        self._driving_started = self._env.event()
-        self._driving_finished = self._env.event()
-        self._user_unmounted = self._env.event()
+        self._vehicle_parked: Event = self._env.event()
+        self._user_mounted: Event = self._env.event()
+        self._driving_started: Event = self._env.event()
+        self._driving_finished: Event = self._env.event()
+        self._user_unmounted: Event = self._env.event()
 
-        self._driver_mounted = self._env.event()
-        self._driver_unmounted = self._env.event()
+        self._driver_mounted: Event = self._env.event()
+        self._driver_unmounted: Event = self._env.event()
 
         # Relocation Events
-        self._vehicle_relocation_started = self._env.event()
-        self._vehicle_relocation_finished = self._env.event()
+        self._vehicle_relocation_started: Event = self._env.event()
+        self._vehicle_relocation_finished: Event = self._env.event()
 
         # Charging Events
-        self._charging_station_plugged_in = self._env.event()
-        self._charging_station_charging_started = self._env.event()
-        self._charging_station_charging_finished = self._env.event()
-        self._charging_station_plugged_out = self._env.event()
+        self._charging_station_plugged_in: Event = self._env.event()
+        self._charging_station_charging_started: Event = self._env.event()
+        self._charging_station_charging_finished: Event = self._env.event()
+        self._charging_station_plugged_out: Event = self._env.event()
 
         # Initial State
+        self.state: VehicleState = VehicleState.PARKING
         self.state: VehicleState = VehicleState.PARKING
 
         # Vehicle Reservation
@@ -103,7 +112,7 @@ class SharedVehicle(Vehicle, ABC):
         return self._price_per_trip
 
     @property
-    def reserved_for_user(self):  # noqa: ANN201
+    def reserved_for_user(self) -> User:
         return self._reserved_for_user
 
     # TODO: remove redundant properties
@@ -113,7 +122,7 @@ class SharedVehicle(Vehicle, ABC):
         return self._max_available_seats
 
     @max_available_seats.setter
-    def max_available_seats(self, max_available_seats):  # noqa: ANN001, ANN202
+    def max_available_seats(self, max_available_seats: int) -> None:
         self._max_available_seats = max_available_seats
 
     @property
@@ -125,7 +134,7 @@ class SharedVehicle(Vehicle, ABC):
         return self._current_state_of_charge
 
     @property
-    def current_relative_state_of_charge(self):  # noqa: ANN201
+    def current_relative_state_of_charge(self) -> float:
         return (
             self.current_state_of_charge / self.max_state_of_charge
             if self.max_state_of_charge != 0
@@ -140,7 +149,7 @@ class SharedVehicle(Vehicle, ABC):
     def velocity(self) -> float:
         return self._velocity
 
-    def move(self, route_segment: Edge):  # noqa: ANN201
+    def move(self, route_segment: Edge) -> Generator[Any, Any, Any]:
         distance = route_segment.distance
         velocity = self._velocity
         time = distance / velocity
@@ -155,17 +164,17 @@ class SharedVehicle(Vehicle, ABC):
         self._update_positions(route_segment.destination.position)
         self._update_state_of_charge(distance)
 
-    def start_driving(self):  # noqa: ANN201
+    def start_driving(self) -> None:
         self.state = VehicleState.DRIVING
 
         self.logger.debug("Driving started.")
 
-    def stop_driving(self):  # noqa: ANN201
+    def stop_driving(self) -> None:
         self.state = VehicleState.PARKING
         self.set_current_task(None)
         self.logger.debug("Driving stopped.")
 
-    def park(self):  # noqa: ANN201
+    def park(self) -> None:
         # Lift reservation
         self._reserved_for_user = None
 
@@ -174,14 +183,14 @@ class SharedVehicle(Vehicle, ABC):
 
         self.logger.debug("Parked.")
 
-    def reserve(self, user):  # noqa: ANN001, ANN201
+    def reserve(self, user: User) -> None:
         self.state = VehicleState.RESERVED
 
         self._reserved_for_user = user
 
         self.logger.debug("Reserved to %s.", user.uid)
 
-    def has_enough_state_of_charge(self, distance):  # noqa: ANN001, ANN201
+    def has_enough_state_of_charge(self, distance: float) -> bool:
         """
         Check if vehicle has enough SoC left for trip
         :param distance: in meter
@@ -195,7 +204,7 @@ class SharedVehicle(Vehicle, ABC):
             return False
         return True
 
-    def _update_state_of_charge(self, distance):  # noqa: ANN001, ANN202
+    def _update_state_of_charge(self, distance: float) -> None:
         """
         Update state of charge of vehicles based on driven distance.
         SoC = SoC_old - EnergyConsumption (kWh/km) * km
@@ -214,7 +223,7 @@ class SharedVehicle(Vehicle, ABC):
             round(self.current_state_of_charge / self.max_state_of_charge * 100, 2),
         )
 
-    def _update_positions(self, new_position: Position):  # noqa: ANN202
+    def _update_positions(self, new_position: Position) -> None:
         # Update Vehicle Position
         self.position = new_position
 
@@ -230,7 +239,7 @@ class SharedVehicle(Vehicle, ABC):
 
         self.logger.debug("Current position %s in region %s.", self.position, region_id)
 
-    def mount_driver(self, driver: DriverInterface):  # noqa: ANN201
+    def mount_driver(self, driver: DriverInterface) -> None:
         if self._driver is not None:
             raise Exception(
                 f"Vehicle {self.uid} has already a driver {self._driver.identify_driver()}. Unable to mount driver."
@@ -244,7 +253,7 @@ class SharedVehicle(Vehicle, ABC):
 
         self.logger.debug("Driver: %s mounted vehicle.", driver.identify_driver())
 
-    def unmount_driver(self):  # noqa: ANN201
+    def unmount_driver(self) -> None:
         if self._driver is None:
             raise Exception("Vehicle has no driver to unmount.")
 
@@ -257,11 +266,13 @@ class SharedVehicle(Vehicle, ABC):
 
         self.logger.debug("Driver: %s unmounted vehicle.", tmp_driver_id)
 
-    def prepare_for_service_task(self, caller, task):  # noqa: ANN001, ANN201
+    def prepare_for_service_task(self, caller: User, task: ServiceTask) -> None:
         self.state = VehicleState.PRE_SERVICE
         self.logger.debug("Marked for Service Task [%s] by %s.", task, caller)
 
-    def relocate(self, route_segment: Edge, time, relocator):  # noqa: ANN001, ANN201
+    def relocate(
+        self, route_segment: Edge, time: float, relocator: str
+    ) -> Generator[Any, Any, Any]:
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
@@ -312,7 +323,7 @@ class SharedVehicle(Vehicle, ABC):
             time,
         )
 
-    def plug_to_charging_station(self):  # noqa: ANN201
+    def plug_to_charging_station(self) -> None:
         self.state = VehicleState.CHARGING
 
         self._charging_station_plugged_in.succeed()
@@ -328,7 +339,7 @@ class SharedVehicle(Vehicle, ABC):
 
         self.logger.debug("Vehicle plugged out from charging station.")
 
-    def charge(self, charging_time, amount=0):  # noqa: ANN001, ANN201
+    def charge(self, charging_time: float, amount: int = 0) -> Generator[Any, Any, Any]:
         # Notify charging
         self._charging_station_charging_started.succeed()
         self._charging_station_charging_started = self._env.event()
@@ -352,3 +363,11 @@ class SharedVehicle(Vehicle, ABC):
             self._current_state_of_charge,
             self._max_state_of_charge,
         )
+
+    def __str__(self):  # noqa: ANN204
+        return f"I have {self.available_seats} passengers on boards"
+        return f"I have {self.available_seats} passengers on boards"
+        return f"I have {self.available_seats} passengers on boards"
+        return f"I have {self.available_seats} passengers on boards"
+        return f"I have {self.available_seats} passengers on boards"
+        return f"I have {self.available_seats} passengers on boards"

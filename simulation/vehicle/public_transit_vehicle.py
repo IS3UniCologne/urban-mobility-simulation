@@ -10,9 +10,10 @@ from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.environment.position import Position
     from simulation.helper.configuration.configuration import VehicleConfig
-    from simulation.infrastructure.route import PublicTransitRoute
+    from simulation.infrastructure.route import PublicTransitRoute, Route
     from simulation.infrastructure.transit_network.stop import Stop
     from simulation.operator.vehicle_fleet import VehicleFleet
 
@@ -32,7 +33,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         self,
         sim: SimulationContext,
         route: PublicTransitRoute,
-        position: Position,
+        position: GeodesicPosition,
         fleet: VehicleFleet,
         vehicle_config: VehicleConfig,
     ) -> None:
@@ -40,9 +41,9 @@ class PublicTransitVehicle(Vehicle, ABC):
             sim=sim, fleet=fleet, position=position, vehicle_config=vehicle_config
         )
 
-        self._route = route
-        self._current_stop = route.origin
-        self._delay = 0  # in seconds from planned route timetable
+        self._route: Route = route
+        self._current_stop: Position = route.origin
+        self._delay: int = 0  # in seconds from planned route timetable
 
         # Initialize state
         self.state = VehicleState.AT_TERMINAL_ORIGIN
@@ -54,7 +55,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         return self._route
 
     @property
-    def current_stop(self):  # noqa: ANN201
+    def current_stop(self) -> Stop:
         return self._current_stop
 
     @current_stop.setter
@@ -62,7 +63,7 @@ class PublicTransitVehicle(Vehicle, ABC):
         self._current_stop = stop
 
     @property
-    def delay(self):  # noqa: ANN201
+    def delay(self) -> int:
         return self._delay
 
     def prognose_arrival(self, stop: Stop) -> str:

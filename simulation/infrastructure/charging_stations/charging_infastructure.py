@@ -45,7 +45,7 @@ class ChargingInfrastructure:
             )
         return ChargingInfrastructure.__instance
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
         sim: SimulationContext,
         location_list: list[str],
@@ -53,7 +53,7 @@ class ChargingInfrastructure:
         capacity_list: list[int],
         queue_size: list[int],
         reset: bool = False,
-    ):
+    ) -> None:
         """Virtually private constructor."""
         if ChargingInfrastructure.__instance is not None and not reset:
             raise Exception("This class is a singleton!")
@@ -68,7 +68,7 @@ class ChargingInfrastructure:
         self._charging_stations = []  # a list of charger objects
         self._initialise_charging_stations()
 
-    def _initialise_charging_stations(self):  # noqa: ANN202
+    def _initialise_charging_stations(self) -> None:
         for i, location in enumerate(self._location_list):
             charging_station = ChargingStation(
                 sim=self._sim,
@@ -80,8 +80,9 @@ class ChargingInfrastructure:
             self._charging_stations.append(charging_station)
 
     @property
-    def charging_stations(self):  # noqa: ANN201
+    def charging_stations(self) -> list[ChargingStation]:
         return self._charging_stations
 
-    def get_locations(self):  # noqa: ANN201
+    def get_locations(self) -> list[str]:
+        return self._location_list
         return self._location_list
