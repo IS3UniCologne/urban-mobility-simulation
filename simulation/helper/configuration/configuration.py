@@ -46,6 +46,11 @@ from simulation.helper.configuration.enums import (
 )
 from simulation.helper.time import SimulationVelocityConverter
 
+try:
+    import tomllib  # future proofing for python 3.11+
+except ModuleNotFoundError:
+    import pip._vendor.tomli as tomllib
+
 T = TypeVar("T", bound=BaseModel)
 
 
@@ -474,8 +479,6 @@ class Configuration:
     """
 
     def __init__(self, config_path: str | Path) -> None:
-        import tomllib
-
         with open(config_path, "rb") as f:
             data = tomllib.load(f)
         self._data = {k.lower(): v for k, v in data.items()}
