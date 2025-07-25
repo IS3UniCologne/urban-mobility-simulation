@@ -34,8 +34,10 @@ class Metrics(SimulationBase):
         self.world_metrics = WorldMetrics(simulation)
         self.operator_metrics = OperatorMetrics(simulation)
 
-        # Initialize metrics tracker
+        # Initialize metrics tracker TODO: Is there a case where we want multiple trackers?
         self._tracker = MetricsTracker(simulation)
+
+        self._metrics_classes_cache: dict[str, MetricsBase] | None = None
 
     @property
     def tracker(self) -> MetricsTracker:
@@ -62,6 +64,9 @@ class Metrics(SimulationBase):
         dict[str, MetricsBase]
             Dictionary mapping class names to metrics instances.
         """
+        if self._metrics_classes_cache is not None:
+            return self._metrics_classes_cache
+
         metrics_classes = {}
 
         # Use introspection to find all metrics attributes
@@ -77,6 +82,7 @@ class Metrics(SimulationBase):
                 ):
                     metrics_classes[class_name] = metrics_instance
 
+        self._metrics_classes_cache = metrics_classes
         return metrics_classes
 
     def get_available_class_names(self) -> list[str]:
@@ -108,21 +114,11 @@ class Metrics(SimulationBase):
         available_classes = self.get_metrics_classes()
 
         for class_name in class_names:
-            if class_name in available_classes:
-                try:
-                    metrics_instance = available_classes[class_name]
-                    result[class_name] = metrics_instance.to_dict()
-                except Exception as e:
-                    # Log warning but continue with other classes
-                    self._logger.warning(
-                        "Failed to get metrics for %s: %s", class_name, e
-                    )
-            else:
-                available = list(available_classes.keys())
-                self._logger.warning(
-                    "Unknown metrics class '%s'. Available: %s", class_name, available
-                )
-
+            try:
+                metrics_instance = available_classes[class_name]
+                result[class_name] = metrics_instance.to_dict()
+            except Exception as e:
+                self._logger.warning("Failed to get metrics for %s: %s", class_name, e)
         return result
 
     def all_metrics(self) -> MetricsDict:
