@@ -130,6 +130,7 @@ CHARGING_STATION_QUEUE_SIZE = [99]
 
 [[SHARED_VEHICLE_OPERATOR]]
 # When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
+# Optimal Deployment of Charging Stations for Electric Vehicular Networks https://dl.acm.org/doi/pdf/10.1145/2413236.2413238 -> SOC threshold: 0.05
 RECHARGE_THRESHOLD = 0.1
 # Installed Charging Station Power
 # kW (slow charger), or 7 kW or 22 kW (fast charger)
@@ -144,7 +145,7 @@ OPERATIONS_START = 15
 # Operations Duration (e.g., 8 working hours => 8*60 => 480)
 OPERATIONS_DURATION = 50
 # Velocity of Relocation Vehicle (i.e., car/van velocity) in kilometer/hour
-# Free-floating carsharing vehicle placement and relocation -> Takes 40 km/h but says that this is probably too fast for city center.
+# Free-floating carsharing vehicle placement and relocation -> Takes 40 km/h but says that this is probably too fast for the city center.
 VEHICLE_RELOCATION_VELOCITY = 9.54
 # berlin
 BASE_REGIONS = ["871f18869ffffff", "871f18b0dffffff", "871f18b23ffffff", "871f18b26ffffff", "871f18b35ffffff", "871f1d483ffffff", "871f1d489ffffff", "871f1d48bffffff", "871f1d48effffff", "871f1d49cffffff", "871f1d4aaffffff", "871f1d4b3ffffff", "871f1d4d2ffffff", "871f1d4d3ffffff", "871f1d4f3ffffff", "871f1d4f6ffffff"]
@@ -230,6 +231,7 @@ MAX_AVAILABLE_SEATS = 4
 
 # Energy parameters
 MAX_STATE_OF_CHARGE            = 50.0
+# Average range for energy consumption: 16.2-23.6kWh/100km https://www.drive.com.au/caradvice/what-is-a-good-energy-consumption-figure-for-electric-vehicles/
 ENERGY_CONSUMPTION             = 0.20
 EV_RELATIVE_ENERGY_CONSUMPTION = 0.3
 INITIAL_SOC                    = 0.50
@@ -248,6 +250,7 @@ KG_CO2_PER_KM         = 0.105
 
 #Other parameters
 # Maximum distance a user is willing to walk to get to a vehicle
+# Shared Mobility Simulations for Helsinki: https://www.itf-oecd.org/node/21473  -> 400m
 WALKING_DISTANCE = 500
 # How convenient is the vehicle for the user, lower is better
 CONVENIENCE = 1
@@ -285,6 +288,7 @@ PRICE_PER_MIN         = 0.35
 DAILY_TOTAL_COST      = 29.0
 COST_PER_KM           = 0.45
 PRICE_PER_KM          = 1.3
+# Fast charging (50kW) in Germany costs 0.40-0.60€ per kWh https://www.cardino.de/en/blog-posts/charging-stations-evs-price#:~:text=Standard%20Charging%20(11%2D22%20kW,just%2015%20to%2030%20minutes.
 CHARGING_COST_PER_KWH = 0.43
 
 
@@ -306,9 +310,11 @@ CONVENIENCE                    = 3
 
 
 [SHARED_VEHICLES.Scooter]
+# 0.15-0.25€ per min according to https://emobility-magazin.com/e-scooter/e-scooter-sharing/
 PRICE_PER_MIN                  = 0.23
 MAX_STATE_OF_CHARGE            = 4.8
 ENERGY_CONSUMPTION             = 0.048
+# Max 20 km/h is allowed in Germany: https://www.evz.de/en/travelling-motor-vehicles/e-mobility/two-wheelers/e-scooter-regulations.html
 VELOCITY                       = 8.04
 MAX_AVAILABLE_SEATS            = 1
 DAILY_TOTAL_COST               = 7.66
