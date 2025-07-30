@@ -80,10 +80,12 @@ TRANSIT_POPULATION_PROBABILITIES        = [0.0]
 [USER]
 # how many minutes is the TransitUser willing to wait (incl. time to get there) before boarding a transit alternative
 # this also includes the required time of getting from drop-off to real destination
+# Acceptable waiting time -> Simulating the Impact of Shared Mobility on Demand: a Study of Future Transportation Systems (https://link.springer.com/article/10.1007/s13177-023-00345-5)
 TRANSIT_MAX_WAIT = 10
 # how are vehicles / transit stops considered in vicinity / reachable? valid: 'hexagon', 'euclidean', 'walk'
 SPATIAL_STRATEGY = "hexagon"
 # walking speed in kilometers per hour (kph)
+# Outdoor Walking Speeds of Apparently Healthy Adults: A Systematic Review and Meta-analysis: https://pmc.ncbi.nlm.nih.gov/articles/PMC7806575/#:~:text=Results,/kg/min%2C%20respectively.
 WALKING_SPEED = 5.0
 
 
@@ -113,6 +115,8 @@ NUMBER_OF_CHARGING_STATIONS = 16
 ##### berlin
 LOCATIONS = ["871f18869ffffff", "871f18b0dffffff", "871f18b23ffffff", "871f18b26ffffff", "871f18b35ffffff", "871f1d483ffffff", "871f1d489ffffff", "871f1d48bffffff", "871f1d48effffff", "871f1d49cffffff", "871f1d4aaffffff", "871f1d4b3ffffff", "871f1d4d2ffffff", "871f1d4d3ffffff", "871f1d4f3ffffff", "871f1d4f6ffffff"]
 #If single value, all stations have the same power
+# Analysis of electric vehicle charging station usage and profitability in Germany based on empirical data -> Analysis of electric vehicle charging station usage and profitability in Germany based on empirical data / https://www.iea.org/reports/global-ev-outlook-2025/electric-vehicle-charging
+# Representative empirical, real-world charging station usage characteristics and data in Germany -> https://www.sciencedirect.com/science/article/pii/S2590116820300369
 CHARGING_STATION_POWER = [50.0]
 # How many plugs / slots a charging station has. If single value, all stations have the same capacity
 CHARGING_STATION_CAPACITY = [20]
@@ -140,6 +144,7 @@ OPERATIONS_START = 15
 # Operations Duration (e.g., 8 working hours => 8*60 => 480)
 OPERATIONS_DURATION = 50
 # Velocity of Relocation Vehicle (i.e., car/van velocity) in kilometer/hour
+# Free-floating carsharing vehicle placement and relocation -> Takes 40 km/h but says that this is probably too fast for city center.
 VEHICLE_RELOCATION_VELOCITY = 9.54
 # berlin
 BASE_REGIONS = ["871f18869ffffff", "871f18b0dffffff", "871f18b23ffffff", "871f18b26ffffff", "871f18b35ffffff", "871f1d483ffffff", "871f1d489ffffff", "871f1d48bffffff", "871f1d48effffff", "871f1d49cffffff", "871f1d4aaffffff", "871f1d4b3ffffff", "871f1d4d2ffffff", "871f1d4d3ffffff", "871f1d4f3ffffff", "871f1d4f6ffffff"]
@@ -170,10 +175,14 @@ MAX_BUSSES = 3
 
 [RIDE_HAILING_GLOBAL]
 # Driver payment share for ride-hailing
+# An analysis of the individual economics of ride-hailing drivers -> https://www.sciencedirect.com/science/article/pii/S0965856419300333
 DRIVER_PAYMENT_SHARE = 0.75
 AV_PRICE_REDUCTION   = 0.90
+# Is this for service workers or customers?
 MAX_PICKUP_DISTANCE  = 10000
 
+# An analysis of the individual economics of ride-hailing drivers -> https://www.sciencedirect.com/science/article/pii/S0965856419300333
+Lyft-Uber: Base fare: 0.50-0.75$, minimum price: 6.95-7.10$
 PRICE_ENTERING   = 2
 PRICE_PER_MINUTE = 0.35
 PRICE_PER_KM     = 1.3
