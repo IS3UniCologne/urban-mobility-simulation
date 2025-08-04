@@ -239,7 +239,7 @@ class Vehicle(TrackingInterface, ABC):
             "Position updated from %s to %s in region %s. Total distance travelled: %s.",
             old_position,
             self.__position,
-            self.position.get_region_id(),
+            region_id,
             self._distance_travelled,
             extra=self._logging_extra,
         )
