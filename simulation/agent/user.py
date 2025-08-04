@@ -482,9 +482,6 @@ class User(Agent, DriverInterface, TrackingInterface):
         # Wait for event
         yield self._arrived_at_pick_up_position
 
-        # Waiting time (after arrival)
-        start_waiting = self._env.now
-
         # Update current state
         self._state = UserState.WAITING_FOR_VEHICLE
 
@@ -1555,9 +1552,6 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
     def wait_for_vehicle(self, vehicle_assignment: VehicleAllocation):  # noqa: ANN201
         # Wait for event
         # yield self._arrived_at_pick_up_position
-
-        # Waiting time (after arrival)
-        start_waiting = self._env.now
 
         # Update current state
         self._state = UserState.WAITING_FOR_VEHICLE
