@@ -384,7 +384,6 @@ class RideHailingVehicle(Vehicle):
 
     def _update_positions(self, new_position: GeodesicPosition) -> None:
         # Update Vehicle Position
-        old_position = self.position
         self.position = new_position
 
         # Update Position of Driver
@@ -394,8 +393,6 @@ class RideHailingVehicle(Vehicle):
         # Update Position of Passengers
         for passenger in self._passengers:
             passenger.position = new_position
-
-        region_id = self.position.get_region_id()
 
     def mount_driver(self, driver: DriverInterface) -> None:
         if self._driver is not None:
