@@ -585,12 +585,12 @@ wheels = [
 
 [[package]]
 name = "docplex"
-version = "2.30.251"
+version = "2.29.245"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/e0/249705babebfe5bad4beb865f6b439a718b0376bf45287e6bbf62aa93763/docplex-2.30.251.tar.gz", hash = "sha256:6503219f5b51275a7e4e77ca4332903b0f80925d205030a48d3f6aa7ca0dbf2a", size = 646515, upload-time = "2025-07-02T09:08:26.684Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/b1/44817f69ebe0e00f90834b9c4bb58be419c046e042c3b6561ebd50f3039f/docplex-2.29.245.tar.gz", hash = "sha256:a426fe3fa59050f5fe77315f7ba1dc7daa357c7d8d0ed066a58356471d853e4a", size = 645894, upload-time = "2025-04-29T15:13:14.812Z" }
 
 [[package]]
 name = "exceptiongroup"
