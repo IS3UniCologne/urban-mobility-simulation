@@ -523,7 +523,7 @@ class User(Agent, DriverInterface, TrackingInterface):
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
         return energy_consumed
-    
+
     def stop(self):  # noqa: ANN201
         # Wait for next event
         yield self._arrived_at_destination
