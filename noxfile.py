@@ -9,7 +9,7 @@ UV_SYNC_COMMAND = ("uv", "sync", "--locked", "--no-dev")
 python_versions = nox.project.python_versions(nox.project.load_toml())
 
 
-@nox.session
+@nox.session(name="mypy", python=python_versions)
 def mypy(session: nox.Session) -> None:
     """Run mypy type checking.
 
@@ -21,6 +21,8 @@ def mypy(session: nox.Session) -> None:
     session.run_install(
         *UV_SYNC_COMMAND,
         "--group=typing",
+        "--python",
+        session.python,
         env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
     )
     session.run("mypy", *session.posargs)
