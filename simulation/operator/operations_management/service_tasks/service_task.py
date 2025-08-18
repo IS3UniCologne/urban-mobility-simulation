@@ -4,9 +4,11 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
     from simpy import Event
+
     from simulation.context.simulation_context import SimulationContext
 
 
@@ -22,10 +24,11 @@ class TaskState(Enum):
     MISSED_QUEUE_FULL = 32
 
 
-class ServiceTask(ABC):
+class ServiceTask(ABC, SimulationBase):
     __slots__ = ("_env", "_sim", "_start_time", "_state", "_task_finished")
 
     def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim)
         self._sim = sim
         self._env = sim.env
         self._start_time = self._env.now
