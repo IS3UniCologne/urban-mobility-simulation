@@ -26,7 +26,6 @@ class VehicleFleet(ABC, SimulationBase):
     """
 
     __slots__ = (
-        "_id",
         "_resource",
         "_sim",
         "_tracking",
@@ -36,8 +35,6 @@ class VehicleFleet(ABC, SimulationBase):
         "_vehicles_by_type",
         "_world",
     )
-
-    fleet_id: int = 0
 
     def __init__(self, sim: SimulationContext, world: World) -> None:
         super().__init__(sim)
