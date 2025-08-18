@@ -21,7 +21,7 @@ jobs:
 
     steps:
     - name: Check out the repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install the latest version of uv
       uses:  astral-sh/setup-uv@v6
@@ -46,7 +46,7 @@ jobs:
           version: "latest"
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Nox
         run: |
@@ -68,7 +68,7 @@ jobs:
           version: "latest"
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Copy local files to workspace
         run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/data
