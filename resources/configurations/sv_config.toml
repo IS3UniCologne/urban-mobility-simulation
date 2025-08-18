@@ -78,10 +78,12 @@ TRANSIT_POPULATION_PROBABILITIES        = [0.0]
 [USER]
 # how many minutes is the TransitUser willing to wait (incl. time to get there) before boarding a transit alternative
 # this also includes the required time of getting from drop-off to real destination
+# Acceptable waiting time -> Simulating the Impact of Shared Mobility on Demand: a Study of Future Transportation Systems (https://link.springer.com/article/10.1007/s13177-023-00345-5)
 TRANSIT_MAX_WAIT = 10
 # how are vehicles / transit stops considered in vicinity / reachable? valid: 'hexagon', 'euclidean', 'walk'
 SPATIAL_STRATEGY = "hexagon"
 # walking speed in kilometers per hour (kph)
+# Outdoor Walking Speeds of Apparently Healthy Adults: A Systematic Review and Meta-analysis: https://pmc.ncbi.nlm.nih.gov/articles/PMC7806575/#:~:text=Results,/kg/min%2C%20respectively.
 WALKING_SPEED = 5.0
 
 
@@ -110,6 +112,8 @@ NUMBER_OF_CHARGING_STATIONS = 16
 ##### berlin
 LOCATIONS = ["871f18869ffffff", "871f18b0dffffff", "871f18b23ffffff", "871f18b26ffffff", "871f18b35ffffff", "871f1d483ffffff", "871f1d489ffffff", "871f1d48bffffff", "871f1d48effffff", "871f1d49cffffff", "871f1d4aaffffff", "871f1d4b3ffffff", "871f1d4d2ffffff", "871f1d4d3ffffff", "871f1d4f3ffffff", "871f1d4f6ffffff"]
 #If single value, all stations have the same power
+# Analysis of electric vehicle charging station usage and profitability in Germany based on empirical data -> Analysis of electric vehicle charging station usage and profitability in Germany based on empirical data / https://www.iea.org/reports/global-ev-outlook-2025/electric-vehicle-charging
+# Representative empirical, real-world charging station usage characteristics and data in Germany -> https://www.sciencedirect.com/science/article/pii/S2590116820300369
 CHARGING_STATION_POWER = [50.0]
 # How many plugs / slots a charging station has. If single value, all stations have the same capacity
 CHARGING_STATION_CAPACITY = [20]
@@ -123,9 +127,11 @@ CHARGING_STATION_QUEUE_SIZE = [99]
 
 [[SHARED_VEHICLE_OPERATOR]]
 # When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
+# Optimal Deployment of Charging Stations for Electric Vehicular Networks https://dl.acm.org/doi/pdf/10.1145/2413236.2413238 -> SOC threshold: 0.05
 RECHARGE_THRESHOLD = 0.1
 # Installed Charging Station Power
 # kW (slow charger), or 7 kW or 22 kW (fast charger)
+# Representative empirical, real-world charging station usage characteristics and data in Germany -> https://www.sciencedirect.com/science/article/pii/S2590116820300369
 CHARGING_STATION_POWER = 50.0
 NUMBER_OF_BASE_REGIONS = 10
 # Number of Service Worker
@@ -137,6 +143,8 @@ OPERATIONS_START = 15
 # Operations Duration (e.g., 8 working hours => 8*60 => 480)
 OPERATIONS_DURATION = 50
 # Velocity of Relocation Vehicle (i.e., car/van velocity) in kilometer/hour
+# Free-floating carsharing vehicle placement and relocation -> Takes 40 km/h but says that this is probably too fast for the city center.
+# Feature-based selection of carsharing relocation modes: 15-20 km/h for Munich, Milan and Toronto https://www.sciencedirect.com/science/article/pii/S1366554521000466
 VEHICLE_RELOCATION_VELOCITY = 9.54
 # berlin
 BASE_REGIONS = ["871f18869ffffff", "871f18b0dffffff", "871f18b23ffffff", "871f18b26ffffff", "871f18b35ffffff", "871f1d483ffffff", "871f1d489ffffff", "871f1d48bffffff", "871f1d48effffff", "871f1d49cffffff", "871f1d4aaffffff", "871f1d4b3ffffff", "871f1d4d2ffffff", "871f1d4d3ffffff", "871f1d4f3ffffff", "871f1d4f6ffffff"]
@@ -191,6 +199,7 @@ CONVENIENCE = 1
 AUTONOMY_TYPE                  = "HumanDriven"
 CHARGING_COST_PER_KWH          = 0.23
 CONVENIENCE                    = 3
+# Germany: Cost of travel per kilometer by mode 2023: https://www.statista.com/statistics/1447039/cost-per-kilometer-travelled-in-germany-by-mode/
 COST_PER_KM                    = 0.53
 DAILY_TOTAL_COST               = 29.86
 ENERGY_CONSUMPTION             = 0.20
@@ -233,15 +242,22 @@ CHARGING_COST_PER_KWH          = 0.23
 CONVENIENCE                    = 1
 COST_PER_KM                    = 0.53
 DAILY_TOTAL_COST               = 11.51
+# According to https://publica.fraunhofer.de/entities/publication/abe4bac9-e528-4dc7-abfa-594138cdb71c --> energy consumption of about 0.02 kWh/km in Karlsruhe
 ENERGY_CONSUMPTION             = 0.0072
 EV_RELATIVE_ENERGY_CONSUMPTION = 0.8
+# According to https://suchdichgruen.de/wissen-und-technologie/innovation-und-technologie/a713/sind-e-scooter-umweltschaedlich/ 0.088-0.126 per passenger
+# The median distance with shared e-scooters is about 1,4 km across all days and hours of day: https://publica.fraunhofer.de/entities/publication/abe4bac9-e528-4dc7-abfa-594138cdb71c
+# That would mean around 0.062-0.090 kg CO2/km (1,4 km)
 KG_CO2_PER_KM                  = 0.105
 MAX_AVAILABLE_SEATS            = 1
 MAX_STATE_OF_CHARGE            = 0.288
+# 0.15-0.25€ per min according to https://emobility-magazin.com/e-scooter/e-scooter-sharing/
 PRICE_PER_MIN                  = 0.19
 PRICE_PER_TRIP                 = 1.0
 PROPULSION_TYPE                = "BatteryElectric"
 VEHICLE_TYPE                   = "KickScooter"
+# Max 20 km/h is allowed in Germany: https://www.evz.de/en/travelling-motor-vehicles/e-mobility/two-wheelers/e-scooter-regulations.html
+# We use euclidean approximation of travel speeds
 VELOCITY                       = 2.82
 WALKING_DISTANCE               = 200
 
@@ -250,6 +266,7 @@ WALKING_DISTANCE               = 200
 
 AUTONOMY_TYPE       = "HumanDriven"
 CONVENIENCE         = 1
+# Germany: Cost of travel per kilometer by mode 2023: https://www.statista.com/statistics/1447039/cost-per-kilometer-travelled-in-germany-by-mode/
 COST_PER_KM         = 0.1
 DAILY_TOTAL_COST    = 11.51
 ENERGY_CONSUMPTION  = 0.0
@@ -260,14 +277,9 @@ MAX_STATE_OF_CHARGE = 1.0
 PRICE_PER_MIN       = 0.08
 PROPULSION_TYPE     = "HumanPowered"
 VEHICLE_TYPE        = "Bike"
+# Feature-based selection of carsharing relocation modes: 15-18 km/h for Milan, Munich and Toronto https://www.sciencedirect.com/science/article/pii/S1366554521000466
 VELOCITY            = 2.82
 WALKING_DISTANCE    = 200
-
-
-[TRANSIT_VEHICLES.Bus]
-MAX_AVAILABLE_SEATS = 100
-# average velocity in european cities is no more than 30 km/h
-VELOCITY = 30.0
 
 [AUCTION]
 AUCTION_END   = 1440
