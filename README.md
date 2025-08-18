@@ -11,12 +11,8 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 
 - To create a virtual environment and install all dependencies simply run `uv sync`
 - Optional notebook specific dependencies can be installed using `uv sync --extra notebooks`
-- Optional machine learning dependencies can be installed using `uv sync --extra ml`
+- Optional machine learning and optimization dependencies can be installed using `uv sync --extra ml`
 - Use `uv sync --all-extras` to install all optional dependencies simultaneously
-
-> Some optimization algorithms might require working CPLEX binaries. These have to be installed separately.
-- Community Edition CPLEX binaries are installed by `uv sync --extra ml`
-- If you want to upgrade you will need to add the path to your local installation of ILOG Optimization Studio to your `PYTHONPATH` and execute `uv run docplex config --upgrade YOURPATH` and check if everything worked with `uv run python -m docplex.mp.check_list`
 
 ## Running an experiment
 

@@ -50,7 +50,7 @@ class LogManager:
 
         # Block third-party loggers
         logging.getLogger("fiona").setLevel(logging.WARNING)
-        logging.getLogger("docplex.util.environment.logger").setLevel(logging.WARNING)
+        logging.getLogger("pyomo").setLevel(logging.WARNING)
 
         formatter = LogManager._create_formatter(config)
 
