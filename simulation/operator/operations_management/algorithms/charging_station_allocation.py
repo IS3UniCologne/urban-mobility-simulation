@@ -1,22 +1,32 @@
 import numpy as np
 import pandas as pd
-from docplex.mp.model import Model
+from pyomo.environ import (
+    Binary,
+    ConcreteModel,
+    Constraint,
+    NonNegativeReals,
+    Objective,
+    Set,
+    SolverFactory,
+    Var,
+    minimize,
+    value,
+)
 
-from simulation.helper.configuration.configuration import Configuration
+from simulation.context.simulation_context import SimulationContext
+from simulation.helper.simulation_base import SimulationBase
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
-# from Fleet_sim.location import closest_facility
-# from Fleet_sim.log import lg
 
-
-class DowntimeMinWithoutLookahead:
+class DowntimeMinWithoutLookahead(SimulationBase):
     __slots__ = ("_av_config", "_config")
 
-    def __init__(self) -> None:
-        self._config = Configuration()
+    def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim)
+        self._config = sim.config
         self._av_config = self._config.ride_hailing_vehicles["AutonomousCar"]
 
     def generate_charging_allocation(
@@ -31,216 +41,193 @@ class DowntimeMinWithoutLookahead:
         :param CSs: a list of charging stations
         :return: pair of matched CSs and vehicles
         """
-        with Model("charging_station_allocation") as mdl:
-            vehicle_range = []
+        mdl = ConcreteModel()
+        vehicle_range = []
+        for j in vehicles:
+            vehicle_range.append(j.id)
+        CSs_range = []
+
+        for i in CSs:
+            if i.capacity < 0:
+                raise ValueError("Capacity of CS must be positive")
+            CSs_range.append(i.id)
+
+        d = {}  # distance matrix
+        # TODO: use haversive vector or distance matrix
+        for j in vehicles:
+            for i in CSs:
+                d[i.id, j.id] = i.centre >> j.position
+                # if isinstance(d[i.id, j.id], list):
+                #     d[i.id, j.id] = float([i.id, j.id][0])
+
+        Q = {}  # queueing time of the CS
+        N = {}  # available capacity (excl queue)
+        M = {}  # available capacity (incl queue)
+        C = {}  # total capacity of the CS
+        for i in CSs:
+            Q[i.id] = i.current_queue_time
+            N[i.id] = i.capacity  # this only works with VirtualChargingStations !!
+            # TODO: M should incorporate overflow of capa
+            M[i.id] = i.capacity + (i.queue_size - len(i.plugs.queue))
+            C[i.id] = i.plugs.capacity
+
+        SoC = {}  # state of charge for vehicles that need to charge
+        for j in vehicles:
+            SoC[j.id] = j.current_relative_state_of_charge
+            # if isinstance(SoC[j.id], list):
+            #     SoC[j.id] = float(SoC[j.id][0])
+
+        S = {}  # charging speed of stations in kW
+        for i in CSs:
+            S[i.id] = i.power
+            # if isinstance(S[i.id], list):
+            #     S[i.id] = float(S[i.id][0])
+        alpha = (
+            self._av_config.ENERGY_CONSUMPTION
+        )  # charging consumption per distance in kWh/km
+        beta = self._av_config.MAX_STATE_OF_CHARGE  # max state of charge in kWh
+        rho = (
+            self._config.ride_hailing_global.LOW_SOC_PENALTY
+        )  # penalty for not allocating vehicles to CSs, scaled by 1 - SOC
+
+        mdl.CSs = Set(initialize=CSs_range)
+        mdl.vehicles = Set(initialize=vehicle_range)
+
+        # x : main allocation variable; x_ij: if CS i is assigned to vehicle j
+        mdl.x = Var(mdl.CSs, mdl.vehicles, within=Binary, name="x")
+
+        # energy feasibility constraint
+        def energy_feasibility_rule(model, i, j):  # noqa: ANN001, ANN202
+            return model.x[i, j] * d[i, j] / 1000 * alpha <= SoC[j] * beta
+
+        mdl.energy_feasibility = Constraint(
+            mdl.CSs, mdl.vehicles, rule=energy_feasibility_rule
+        )
+
+        # capacity contraint
+        def capacity_constraint_rule(model, i):  # noqa: ANN001, ANN202
+            return sum(model.x[i, j] for j in model.vehicles) <= M[i]
+
+        mdl.capacity_constraint = Constraint(mdl.CSs, rule=capacity_constraint_rule)
+
+        id_reverse_map = {v.id: i for i, v in enumerate(vehicles)}
+
+        d_matrix = np.zeros((len(CSs), len(vehicles)))
+        for i in CSs:
             for j in vehicles:
-                vehicle_range.append(j.id)
-            CSs_range = []
+                d_matrix[i.id][id_reverse_map[j.id]] = d[i.id, j.id]
 
-            for i in CSs:
-                if i.capacity < 0:
-                    raise ValueError("Capacity of CS must be positive")
-                CSs_range.append(i.id)
+        # this is a matrix of dim [CSs, vehicles] sorted by ascending distance of vehicles to CS, the values being the vehicles indices
+        d_matrix_asc_sorted = np.argsort(d_matrix, axis=1)
 
-            d = {}  # distance matrix
-            # TODO: use haversine vector or distance matrix
+        vehicle_index_in_sorted_dist_matrix = {}
+        for i in CSs:
             for j in vehicles:
-                for i in CSs:
-                    d[i.id, j.id] = i.centre >> j.position
-                    # if isinstance(d[i.id, j.id], list):
-                    #     d[i.id, j.id] = float([i.id, j.id][0])
+                vehicle_index_in_sorted_dist_matrix[i.id, j.id] = np.where(
+                    d_matrix_asc_sorted[i.id] == id_reverse_map[j.id]
+                )[0][0]
 
-            Q = {}  # queueing time of the CS
-            N = {}  # available capacity (excl queue)
-            M = {}  # available capacity (incl queue)
-            C = {}  # total capacity of the CS
-            for i in CSs:
-                Q[i.id] = i.current_queue_time
-                N[i.id] = i.capacity  # this only works with VirtualChargingStations !!
-                # TODO: M should incorporate overflow of capa
-                M[i.id] = i.capacity + (i.queue_size - len(i.plugs.queue))
-                C[i.id] = i.plugs.capacity
+        # assign each vehicle at max to one CS
+        def max_one_cs_per_vehicle_rule(model, j):  # noqa: ANN001, ANN202
+            return sum(model.x[i, j] for i in model.CSs) <= 1
 
-            SoC = {}  # state of charge for vehicles that need to charge
-            for j in vehicles:
-                SoC[j.id] = j.current_relative_state_of_charge
-                # if isinstance(SoC[j.id], list):
-                #     SoC[j.id] = float(SoC[j.id][0])
+        mdl.max_one_cs_per_vehicle = Constraint(
+            mdl.vehicles, rule=max_one_cs_per_vehicle_rule
+        )
 
-            S = {}  # charging speed of stations in kW
-            for i in CSs:
-                S[i.id] = i.power
-                # if isinstance(S[i.id], list):
-                #     S[i.id] = float(S[i.id][0])
-            alpha = (
-                self._av_config.ENERGY_CONSUMPTION
-            )  # charging consumption per distance in kWh/km
-            beta = self._av_config.MAX_STATE_OF_CHARGE  # max state of charge in kWh
-            rho = (
-                self._config.ride_hailing_global.LOW_SOC_PENALTY
-            )  # penalty for not allocating vehicles to CSs, scaled by 1 - SOC
+        mdl.queueing_time_aux = Var(mdl.CSs, mdl.vehicles, within=NonNegativeReals)
 
-            # x : main allocation variable; x_ij: if CS i is assigned to vehicle j
-            x = mdl.binary_var_matrix(CSs_range, vehicle_range, name="x")
+        def driving_time(model: ConcreteModel, i: int, j: int) -> float:
+            return d[i, j] / self._av_config.VELOCITY * model.x[i, j]
 
-            # energy feasibility constraint
-            for j in vehicles:
-                for i in CSs:
-                    mdl.add_constraint(
-                        x[i.id, j.id] * d[i.id, j.id] / 1000 * alpha
-                        <= SoC[j.id] * beta,
-                        "C1",
-                    )
+        def charging_time(model: ConcreteModel, i: int, j: int) -> float:
+            A = 1 - SoC[j]
+            B = d[i, j] / 1000 * alpha / beta
+            C = beta / S[i] * 60
+            return (A * C + B * C) * model.x[i, j]
 
-            # capacity contraint
-            for i in CSs:
-                mdl.add_constraint(
-                    mdl.sum(x[i.id, j.id] for j in vehicles) <= M[i.id], "C2"
-                )
-            T_d = {}  # driving time in min
-            T_c = {}  # charging time in min
-            T_q = {}  # queueing time in min
-
-            # id_map = {i: v.id for i, v in enumerate(vehicles)}
-            id_reverse_map = {v.id: i for i, v in enumerate(vehicles)}
-
-            d_matrix = np.zeros((len(CSs), len(vehicles)))
-            for i in CSs:
-                for j in vehicles:
-                    d_matrix[i.id][id_reverse_map[j.id]] = d[i.id, j.id]
-
-            # this is a matrix of dim [CSs, vehicles] sorted by ascending distance of vehicles to CS, the values being the vehicles indices
-            d_matrix_asc_sorted = np.argsort(d_matrix, axis=1)
-
-            # # we can get the number of vehicles arriving before every vehicle at each charging station
-            # vehicles_arriving_before = {}
-            # for i in CSs:
-            #     for j in vehicles:
-            #         vehicles_arriving_before[i.id, j.id] = np.where(
-            #             d_matrix_asc_sorted[i.id] == id_reverse_map[j.id]
-            #         )[0][0]
-
-            for i in CSs:
-                for j in vehicles:
-                    # for charging time we need to connsider the amount of SOC depleted while going to a station
-                    T_c[i.id, j.id] = (
-                        (
-                            1
-                            - SoC[j.id]
-                            + (x[i.id, j.id] * d[i.id, j.id] / 1000 * alpha / beta)
-                        )
-                        * beta
-                        / S[i.id]
-                        * 60
-                        * x[i.id, j.id]
-                    )
-
-            # charging time of vehicles arriving before every vehicle at each charging station
-            # this divided by the number of plugs at a CS is our best guess for additional queue time due to the allocation x
-            # if capacity is free, then we need to exclude the first N[i.id] vehicles from that calculation as they will immediately charge without going to queue
-            charging_time_faster_vehicles = {}
-            for i in CSs:
-                for j in vehicles:
-                    charging_time_faster_vehicles[i.id, j.id] = mdl.sum(
-                        T_c[i.id, v.id]
-                        for v in vehicles
-                        if id_reverse_map[v.id]
-                        in d_matrix_asc_sorted[i.id][
-                            N[i.id] : np.where(
-                                d_matrix_asc_sorted[i.id] == id_reverse_map[j.id]
-                            )[0][0]
-                        ]
-                    )
-
-            for j in vehicles:
-                for i in CSs:
-                    T_d[i.id, j.id] = (
-                        d[i.id, j.id] / self._av_config.VELOCITY * x[i.id, j.id]
-                    )
-
-                    # the queueing time will vary based on how many vehicles are send there, we need to take this into account
-                    # because exact solution approaches are intractible in realtime scenarios, we use approximation for how long one other assignment would potentially increase our queueing time
-                    T_q[i.id, j.id] = mdl.max(0, Q[i.id] - T_d[i.id, j.id]) + (
-                        charging_time_faster_vehicles[i.id, j.id] / i.plugs.capacity
-                    )
-
-            # assign each vehicle at max to one CS
-            for j in vehicles:
-                mdl.add_constraint(mdl.sum(x[i.id, j.id] for i in CSs) <= 1)
-
-            # minimizing sum of (driving_time + queue_time + charging_time) for all vehicles + a high penalty to missed demands
-            # we enforce priority of low SOC vehicles by scaling a penalty of cumulated distance sum
-
-            mdl.minimize(
-                mdl.sum(
-                    T_d[i.id, j.id]  # driving time
-                    + T_c[i.id, j.id]  # charging time
-                    + T_q[i.id, j.id]  # queuing time
-                    for i in CSs
-                    for j in vehicles
-                )
-                + mdl.sum(
-                    (1 - SoC[j.id])  # 1-SOC of vehicle j
-                    * rho  # large number O_O
-                    * (
-                        1 - mdl.sum(x[i.id, j.id] for i in CSs)
-                    )  # allocation (0) or not (1) of vehicle j to any charging station i
-                    for j in vehicles
-                )
-            )
-
-            mdl.solve()
-
-            pairs = []
-            for i in CSs:
-                for j in vehicles:
-                    if x[i.id, j.id].solution_value != 0:
-                        pairs.append(dict(vehicle=j, charging_station=i))
-            self.logger.info(
-                "Number of vehicles with low SOC = %s, Number of allocations = %s",
-                len(vehicles),
-                len(pairs),
-            )
-            T_d_sum = mdl.sum(
-                T_d[i.id, j.id] for i in CSs for j in vehicles
-            ).solution_value
-            T_c_sum = mdl.sum(
-                T_c[i.id, j.id] for i in CSs for j in vehicles
-            ).solution_value
-            T_q_sum = mdl.sum(
-                T_q[i.id, j.id] for i in CSs for j in vehicles
-            ).solution_value
-
-            self.logger.debug("T_d = %s, T_c = %s, T_q = %s", T_d_sum, T_c_sum, T_q_sum)
-            self.logger.debug(
-                "Penalty for not charging vehicles = %s",
-                mdl.sum(
-                    mdl.sum(d[i.id, j.id] for i in CSs)
-                    * (1 - SoC[j.id])
-                    * (1 - mdl.sum(x[i.id, j.id] for i in CSs))
-                    for j in vehicles
-                ).solution_value,
-            )
-
-            stats_allocations = (
-                pd.Series(
-                    [
-                        v.current_relative_state_of_charge
-                        for i in pairs
-                        for k, v in i.items()
-                        if k == "vehicle"
+        def queueing_time(model: ConcreteModel, i: int, j: int) -> float:
+            return model.queueing_time_aux[i, j] + (
+                sum(
+                    charging_time(model, i, v.id)
+                    for v in vehicles
+                    if id_reverse_map[v.id]
+                    in d_matrix_asc_sorted[
+                        i, N[i] : vehicle_index_in_sorted_dist_matrix[i, j]
                     ]
                 )
-                .describe()
-                .__str__()
-                .split("\n")
+                / C[i]
             )
-            self.logger.debug("Stats of allocations: %s", stats_allocations)
-            stats_candidates = (
-                pd.Series([v.current_relative_state_of_charge for v in vehicles])
-                .describe()
-                .__str__()
-                .split("\n")
+
+        def queueing_time_aux_rule1(model, i, j):  # noqa: ANN001, ANN202
+            return model.queueing_time_aux[i, j] >= 0
+
+        mdl.queueing_time_aux_constraint1 = Constraint(
+            mdl.CSs, mdl.vehicles, rule=queueing_time_aux_rule1
+        )
+
+        def queueing_time_aux_rule2(model, i, j):  # noqa: ANN001, ANN202
+            return model.queueing_time_aux[i, j] >= Q[i] - driving_time(model, i, j)
+
+        mdl.queueing_time_aux_constraint2 = Constraint(
+            mdl.CSs, mdl.vehicles, rule=queueing_time_aux_rule2
+        )
+
+        # minimizing sum of (driving_time + queue_time + charging_time) for all vehicles + a high penalty to missed demands
+        # we enforce priority of low SOC vehicles by scaling a penalty of cumulated distance sum
+        def objective_rule(model):  # noqa: ANN001, ANN202
+            return sum(
+                driving_time(model, i, j)
+                + charging_time(model, i, j)
+                + queueing_time(model, i, j)
+                for i in model.CSs
+                for j in model.vehicles
+            ) + sum(
+                (1 - SoC[j])  # 1-SOC of vehicle j
+                * rho  # large number O_O
+                * (
+                    1 - sum(model.x[i, j] for i in model.CSs)
+                )  # allocation (0) or not (1) of vehicle j to any charging station i
+                for j in model.vehicles
             )
-            self.logger.debug("Stats of candidates: %s", stats_candidates)
+
+        mdl.objective = Objective(rule=objective_rule, sense=minimize)
+
+        opt = SolverFactory("highs")
+        opt.solve(mdl)
+
+        pairs = []
+        for i in CSs:
+            for j in vehicles:
+                if value(mdl.x[i.id, j.id]) != 0:
+                    pairs.append(dict(vehicle=j, charging_station=i))
+        self.logger.info(
+            "Number of vehicles with low SOC = %d, Number of allocations = %d",
+            len(vehicles),
+            len(pairs),
+        )
+        self.logger.debug("Objective value = %f", value(mdl.objective))
+
+        stats_allocations = (
+            pd.Series(
+                [
+                    v.current_relative_state_of_charge
+                    for i in pairs
+                    for k, v in i.items()
+                    if k == "vehicle"
+                ]
+            )
+            .describe()
+            .__str__()
+            .split("\n")
+        )
+        self.logger.debug("Stats of allocations: %s", stats_allocations)
+        stats_candidates = (
+            pd.Series([v.current_relative_state_of_charge for v in vehicles])
+            .describe()
+            .__str__()
+            .split("\n")
+        )
+        self.logger.debug("Stats of candidates: %s", stats_candidates)
+
         return pairs

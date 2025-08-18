@@ -137,6 +137,7 @@ PROPULSION_TYPE     = "InternalCombustion"
 VEHICLE_TYPE        = "Bus"
 MAX_AVAILABLE_SEATS = 100
 # average velocity in european cities is no more than 30 km/h
+# Feature-based selection of carsharing relocation modes: 30-40 km/h for Milan, Munich and Toronto https://www.sciencedirect.com/science/article/pii/S1366554521000466
 VELOCITY = 30.0
 
 

@@ -60,7 +60,7 @@ class LogManager:
 
         # Suppress verbose third-party loggers
         logging.getLogger("fiona").setLevel(logging.WARNING)
-        logging.getLogger("docplex.util.environment.logger").setLevel(logging.WARNING)
+        logging.getLogger("pyomo").setLevel(logging.WARNING)
 
         logger.addHandler(self._shared_console_handler)
         logger.addHandler(self._shared_memory_handler)
