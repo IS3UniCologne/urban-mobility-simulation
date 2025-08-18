@@ -146,7 +146,7 @@ class RideHailingMPChargingOperations(OperationsInterface):
                 "end_time": self._env.now,
                 "vehicle": task._vehicle.uid,  # noqa: SLF001
                 "state": task.state,
-                "fleet": task._vehicle.fleet.id,  # noqa: SLF001
+                "fleet": task._vehicle.fleet.uid,  # noqa: SLF001
                 "charging_station": task._charging_station.location,  # noqa: SLF001
                 "waiting_time": task.waiting_time,
                 "charging_duration": task.charging_duration,
