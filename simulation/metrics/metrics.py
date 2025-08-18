@@ -130,18 +130,7 @@ class Metrics(SimulationBase):
         MetricsDict
             Dictionary containing all simulation metrics.
         """
-        result = MetricsDict()
-        available_classes = self.get_metrics_classes()
-
-        for class_name, metrics_instance in available_classes.items():
-            try:
-                result[class_name] = metrics_instance.to_dict()
-            except Exception as e:
-                self._logger.error(
-                    "Failed to collect metrics from %s: %s", class_name, e
-                )
-
-        return result
+        return self.get_metrics_for_classes(self.get_available_class_names())
 
     def to_log(self, logger: logging.Logger | None = None) -> None:
         """
