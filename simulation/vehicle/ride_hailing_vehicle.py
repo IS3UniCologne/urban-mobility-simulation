@@ -268,6 +268,9 @@ class RideHailingVehicle(Vehicle):
             vehicle_assignment.associated_transportation_alternative.route_to_pickup
         )
 
+        # User waiting time (after arrival)
+        start_waiting = self._env.now
+
         # Calculate route to pick up position, and update user's position
         yield self._env.process(self.move(route_segment))
 
@@ -284,9 +287,10 @@ class RideHailingVehicle(Vehicle):
         # Trigger next event
         self._arrived_at_pick_up_position.succeed()
         logging.debug(
-            "Arrived at pick up position %s at time %s.",
+            "Arrived at pick up position %s after %s time units to pick up user %s.",
             self.position,
-            self._env.now,
+            self._env.now - start_waiting,
+            self._reserved_for_user,
             extra={"clazz": self.__class__.__name__, "oid": self._id},
         )
         self._arrived_at_pick_up_position = self._env.event()
@@ -380,7 +384,6 @@ class RideHailingVehicle(Vehicle):
 
     def _update_positions(self, new_position: GeodesicPosition) -> None:
         # Update Vehicle Position
-        old_position = self.position
         self.position = new_position
 
         # Update Position of Driver
@@ -390,16 +393,6 @@ class RideHailingVehicle(Vehicle):
         # Update Position of Passengers
         for passenger in self._passengers:
             passenger.position = new_position
-
-        region_id = self.position.get_region_id()
-
-        logging.debug(
-            "Old position %s > Current position %s in region %s.",
-            old_position,
-            self.position,
-            region_id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
-        )
 
     def mount_driver(self, driver: DriverInterface) -> None:
         if self._driver is not None:
