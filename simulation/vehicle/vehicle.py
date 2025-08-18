@@ -217,6 +217,8 @@ class Vehicle(TrackingInterface, ABC):
 
     @position.setter
     def position(self, position: Position) -> None:
+        old_position = self.__position
+
         self._distance_travelled += self.__position >> position
 
         new_region = position.get_region_id()
@@ -231,9 +233,13 @@ class Vehicle(TrackingInterface, ABC):
         self._position_changed.succeed(self.__position)
         self._position_changed = self._env.event()
 
+        region_id = self.position.get_region_id()
+
         logging.debug(
-            "Position updated %s. Total distance travelled: %s.",
+            "Position updated from %s to %s in region %s. Total distance travelled: %s.",
+            old_position,
             self.__position,
+            region_id,
             self._distance_travelled,
             extra=self._logging_extra,
         )

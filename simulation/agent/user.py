@@ -482,9 +482,6 @@ class User(Agent, DriverInterface, TrackingInterface):
         # Wait for event
         yield self._arrived_at_pick_up_position
 
-        # Waiting time (after arrival)
-        start_waiting = self._env.now
-
         # Update current state
         self._state = UserState.WAITING_FOR_VEHICLE
 
@@ -498,13 +495,6 @@ class User(Agent, DriverInterface, TrackingInterface):
 
         # Trigger next event
         self._assigned_vehicle_arrived.succeed()
-        logging.debug(
-            "Vehicle %s has arrived after %s time units at pick up position to pick up user %s",
-            vehicle_assignment.vehicle.id,
-            self._env.now - start_waiting,
-            self._id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
-        )
 
     def start_driving(self, vehicle_allocation: VehicleAllocation):  # noqa: ANN201
         # Wait for event
@@ -1563,9 +1553,6 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         # Wait for event
         # yield self._arrived_at_pick_up_position
 
-        # Waiting time (after arrival)
-        start_waiting = self._env.now
-
         # Update current state
         self._state = UserState.WAITING_FOR_VEHICLE
 
@@ -1578,13 +1565,6 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
             yield vehicle_assignment.vehicle._arrived_at_pick_up_position  # noqa: SLF001
         # Trigger next event
         self._assigned_vehicle_arrived.succeed()
-        logging.debug(
-            "Vehicle %s has arrived after %s time units at pick up position to pick up user %s",
-            vehicle_assignment.vehicle.id,
-            self._env.now - start_waiting,
-            self._id,
-            extra={"clazz": self.__class__.__name__, "oid": self._id},
-        )
 
     def start_driving(self, vehicle_allocation: VehicleAllocation):  # noqa: ANN201
         # Wait for event
