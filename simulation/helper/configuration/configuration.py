@@ -136,6 +136,7 @@ class PathConfig(ConfigBaseModel):
     PATH_DEMAND_MODIFIERS: list[Path] | None = None
 
     @field_validator("*", mode="after")
+    @classmethod
     def normalize_paths(cls, v: str | Path | list[Path]) -> Path | list[Path]:
         """Normalize and expand paths."""
         if isinstance(v, list):
@@ -183,6 +184,7 @@ class UserConfig(ConfigBaseModel):
     WALKING_SPEED: float = Field(gt=0)
 
     @field_validator("WALKING_SPEED", mode="after")
+    @classmethod
     def convert_walking_speed(cls, v: float) -> float:
         """Convert walking speed from km/h to m/s."""
         return SimulationVelocityConverter().convert_kmh(v)
@@ -212,6 +214,7 @@ class VehicleConfig(ConfigBaseModel):
     KG_CO2_PER_KM: float | None = Field(default=None, gt=0)
 
     @field_validator("VELOCITY", mode="after")
+    @classmethod
     def convert_velocity(cls, v: float) -> float:
         """Convert vehicle velocity from km/h to m/s."""
         return SimulationVelocityConverter().convert_kmh(v)
@@ -295,6 +298,7 @@ class SharedVehicleOperatorConfig(ConfigBaseModel):
     N_VEHICLES: dict[VehicleType, int]
 
     @field_validator("VEHICLE_RELOCATION_VELOCITY", mode="after")
+    @classmethod
     def convert_velocity(cls, v: float) -> float:
         """Convert vehicle relocation velocity from km/h to m/s."""
         return SimulationVelocityConverter().convert_kmh(v)
@@ -325,6 +329,7 @@ class RideHailingOperatorConfig(ConfigBaseModel):
     VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0)
 
     @field_validator("VEHICLE_RELOCATION_VELOCITY", mode="after")
+    @classmethod
     def convert_velocity(cls, v: float) -> float:
         """Convert vehicle relocation velocity from km/h to m/s."""
         return SimulationVelocityConverter().convert_kmh(v)
