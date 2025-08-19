@@ -22,6 +22,7 @@ from simulation.operator.fleet_factory import (
 from simulation.operator.operations_management.integrated_shared_mobility_operations import (
     IntegratedSharedMobilityOperations,
 )
+from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.operator.public_transport_allocation_engine import (
     PublicTransportAllocationEngine,
 )
@@ -61,7 +62,6 @@ if TYPE_CHECKING:
         OperationsPublicTransport,
     )
     from simulation.operator.operator import Operator
-    from simulation.operator.public_transit_operator import PublicTransitOperator
     from simulation.operator.public_transport_search_engine import (
         PublicTransportSearchEngine,
     )
@@ -182,11 +182,11 @@ class World(SimulationBase):
         return self._fleets
 
     def _setup_vehicle_choice_behavior(self) -> None:
-        if self._config.ride_hailing_operators:
+        if self._config.operators[0].OPERATOR_TYPE == RideHailingOperator:
             rh_modes: list[str] = [AutonomyType.AUTONOMOUS, AutonomyType.HUMAN_DRIVEN]
             self._vehicle_choice_behavior = OnlyCarVehicleChoiceBehavior(rh_modes)
 
-        elif self._config.shared_vehicle_operators:
+        elif self._config.operators[0].OPERATOR_TYPE == SharedMobilityOperator:
             shared_modes: list[VehicleType] = list(self._config.shared_vehicles.keys())
 
             self._vehicle_choice_behavior = DistanceBasedSharedVehicleVehicleChoiceBehavior(
@@ -195,7 +195,7 @@ class World(SimulationBase):
                 available_vehicles=shared_modes,
             )
 
-        elif self._config.transit_operators:
+        elif self._config.operators[0].OPERATOR_TYPE == PublicTransitOperator:
             from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import (
                 PublicTransitVehicleChoiceBehavior,
             )
@@ -249,12 +249,13 @@ class World(SimulationBase):
         self._setup_transit_operators()
 
     def _setup_transit_operators(self) -> None:
-        if not self._config.transit_operators:
-            return
-
         timetable: Timetable = self._load_timetable()
-
-        for i, operator_cfg in enumerate(self._config.transit_operators):
+        for i, operator_cfg in enumerate(
+            filter(
+                lambda o: o.OPERATOR_TYPE == PublicTransitOperator,
+                self._config.operators,
+            )
+        ):
             operator_id = f"public_transport_{i}"
             self.logger.info("Setting up public transport operator %s", operator_id)
 
@@ -279,7 +280,12 @@ class World(SimulationBase):
             self._operators.append(operator)
 
     def _setup_shared_vehicle_operators(self) -> None:
-        for i, operator_cfg in enumerate(self._config.shared_vehicle_operators):
+        for i, operator_cfg in enumerate(
+            filter(
+                lambda o: o.OPERATOR_TYPE == SharedMobilityOperator,
+                self._config.operators,
+            )
+        ):
             operator_id = f"shared_vehicle_{i}"
 
             self._search_engine[operator_id] = SharedVehicleSearchEngine(sim=self._sim)
@@ -342,7 +348,7 @@ class World(SimulationBase):
             self._initialize_charging_infrastructure()
         )
 
-        rh_ops = self._config.ride_hailing_operators
+        rh_ops = self._config.operators
         num_rh_ops = max(2, len(rh_ops)) if rh_ops else 0
         for i in range(num_rh_ops):
             operator_cfg = rh_ops[min(i, len(rh_ops) - 1)]
@@ -355,29 +361,26 @@ class World(SimulationBase):
             fleet = generate_mixed_ride_hailing_fleet(sim=self._sim, world=self)
             self._fleets.append(fleet)
             self._search_engine[operator_id].register_fleet(fleet)
-            allow_queue = (
-                sum(self._config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE)
-                > 0
-            )
-            # TODO
-            available_vehicle_modes = [
-                AutonomyType.AUTONOMOUS,
-                AutonomyType.HUMAN_DRIVEN,
-            ]
-            available_vehicle_modes_supply = [
-                self._config.ride_hailing_global.N_RIDE_HAILING_CARS,
-                self._config.ride_hailing_global.N_AUTONOMOUS_CARS,
-            ]
+            # TODO: Maybe move this to operations ?
+            # allow_queue = (
+            #     sum(self._config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE)
+            #     > 0
+            # )
+            # # TODO: this is a
+            # available_vehicle_modes = [
+            #     AutonomyType.AUTONOMOUS,
+            #     AutonomyType.HUMAN_DRIVEN,
+            # ]
+            # available_vehicle_modes_supply = [
+            #     self._config.ride_hailing_global.N_RIDE_HAILING_CARS,
+            #     self._config.ride_hailing_global.N_AUTONOMOUS_CARS,
+            # ]
+
             # TODO: make sure this is a single config parameter
             operations = operator_cfg.OPERATIONS_TYPE(
                 sim=self._sim,
                 distance_matrix=self._distance_matrix,
-                time_between_operations=operator_cfg.OPERATIONS_START,
-                operation_duration=operator_cfg.OPERATIONS_DURATION,
-                available_modes=available_vehicle_modes,
-                available_modes_supply=available_vehicle_modes_supply,
-                state_of_charge_threshold=operator_cfg.RECHARGE_THRESHOLD,
-                allow_queue=allow_queue,
+                operations_config=operator_cfg.OPERATIONS_CONFIG,
                 world=self,
             )
             operator = RideHailingOperator(

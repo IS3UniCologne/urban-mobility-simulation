@@ -21,6 +21,7 @@ from simulation.operator.operations_management.task_queue import TaskQueue
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import OperationsConfig
     from simulation.world.world import World
 
 
@@ -28,7 +29,6 @@ class RideHailingBaseChargingOperations(OperationsInterface):
     __slots__ = (
         "_allow_queue",
         "_available_modes",
-        "_available_modes_supply",
         "_base_buffer",
         "_charging_plan_updated",
         "_config",
@@ -36,9 +36,9 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         "_duration_of_operations",
         "_operation_duration",
         "_operations_started",
+        "_recharge_theshold",
         "_scheduled_tasks",
         "_sim",
-        "_state_of_charge_threshold",
         "_task_executed",
         "_task_queue",
         "_task_transactions",
@@ -50,13 +50,8 @@ class RideHailingBaseChargingOperations(OperationsInterface):
     def __init__(
         self,
         sim: SimulationContext,
-        distance_matrix,  # noqa: ANN001
-        time_between_operations,  # noqa: ANN001
-        operation_duration,  # noqa: ANN001
-        available_modes,  # noqa: ANN001
-        available_modes_supply,  # noqa: ANN001
-        state_of_charge_threshold,  # noqa: ANN001
-        allow_queue,  # noqa: ANN001
+        operations_config: OperationsConfig,
+        distance_matrix: pd.DataFrame,
         world: World,
     ) -> None:
         super().__init__(sim)
@@ -71,11 +66,14 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         )  # use a buffer when calculating distances to charging stations of next coarser grid level edge length (radius)
 
         # To access vehicle transactions
-        self._available_modes = available_modes  # Modes in Fleet
-        self._available_modes_supply = available_modes_supply  # Number of Vehicles in Fleet per Mode e.g., [100, 100, 50]
+        # TODO: Are these even used?? Can we get rid of them ?
+        # self._available_modes = operations_config.AVAILABLE_MODES  # Modes in Fleet
+        # self._available_modes_supply = (
+        #     operations_config.AVAILABLE_MODES_SUPPLY
+        # )  # Number of Vehicles in Fleet per Mode e.g., [100, 100, 50]
 
-        self._state_of_charge_threshold = state_of_charge_threshold
-        self._allow_queue = allow_queue
+        self._recharge_theshold = operations_config.RECHARGE_THRESHOLD
+        self._allow_queue = operations_config.ALLOW_QUEUE
 
         # Task List
         self._task_queue = TaskQueue(sim)
@@ -89,10 +87,10 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         self._task_executed = sim.env.event()
 
         # When to start operations
-        self._time_between_operations = time_between_operations
+        self._time_between_operations = operations_config.TIME_BETWEEN_OPERATIONS
 
         # Shift Duration
-        self._duration_of_operations = operation_duration  # mins
+        self._duration_of_operations = operations_config.OPERATIONS_DURATION
 
     @property
     def charging_plan_updated(self):  # noqa: ANN201
@@ -143,7 +141,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                     destination=destination,
                     number_of_vehicles_to_charge=no_vehicle_to_charge,
                     distance_to_fleet_base=distance_to_base,
-                    state_of_charge_threshold=self._state_of_charge_threshold,
+                    state_of_charge_threshold=self._recharge_theshold,
                     charging_station=charging_station,
                     vehicle=vehicle,
                     scheduled_time=scheduled_time,
@@ -171,7 +169,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
             self.logger.info(
                 "There are %s vehicles with low state of charge.",
                 self._operator_reference.fleet.count_vehicles_below_soc_level(
-                    self._state_of_charge_threshold
+                    self._recharge_theshold
                 ),
             )
 
@@ -201,7 +199,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         """
         # Get Current Fleet State
         vehicles_to_charge = self._operator_reference.fleet.mark_vehicles_to_be_charged(
-            self._state_of_charge_threshold
+            self._recharge_theshold
         )
         # if config.settings.PERSIST_RESULTS:
         #     state.to_csv(os.path.join(config.output_path, config.fleet_state_file), index = False)

@@ -10,6 +10,8 @@ from pandas import DataFrame
 
 from simulation.context.simulation_context import SimulationContext
 from simulation.metrics.metrics import Metrics
+from simulation.operator.ride_hailing_operator import RideHailingOperator
+from simulation.operator.shared_mobility_operator import SharedMobilityOperator
 from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.world import World
 
@@ -74,19 +76,11 @@ class Simulation:
         """Create demand factory for the simulation."""
         # TODO: Change this to support multiple operator types simultaneously
         # for now set mode to whatever operator is present, check in config
-        if (
-            hasattr(self.config, "ride_hailing_operators")
-            and self.config.ride_hailing_operators
-        ):
+        if self.config.operators[0].OPERATOR_TYPE == RideHailingOperator:
             mode = "ride_hailing"
-        elif (
-            hasattr(self.config, "shared_vehicle_operators")
-            and self.config.shared_vehicle_operators
-        ):
+        elif self.config.operators[0].OPERATOR_TYPE == SharedMobilityOperator:
             mode = "shared_vehicle"
-        elif (
-            hasattr(self.config, "transit_operators") and self.config.transit_operators
-        ):
+        else:
             mode = "public_transport"
 
         return DemandFactory(sim=self.sim, world=self.world, mode=mode)
