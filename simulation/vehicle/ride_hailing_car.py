@@ -157,7 +157,9 @@ class RideHailingCar(RideHailingVehicle):
         #     go_online = True
         fleet_size_threshold = self.fleet.driver_availability_vector()
         time = self._env.now
-        hour = int((time % 1440) / 60)
+        hour = int(
+            (time % 1440) / 60
+        )  # TODO: This rounds to the nearest hour, should we use SimulationTimeConverter.hour_of_day instead?
         number_of_online_vehicles = len(self.fleet.get_online_vehicles())
         if number_of_online_vehicles <= fleet_size_threshold[hour]:
             go_online = True
@@ -177,7 +179,9 @@ class RideHailingCar(RideHailingVehicle):
         #     go_offline = True
         fleet_size_threshold = self.fleet.driver_availability_vector()
         time = self._env.now
-        hour = int((time % 1440) / 60)
+        hour = int(
+            (time % 1440) / 60
+        )  # TODO: This rounds to the nearest hour, should we use SimulationTimeConverter.hour_of_day instead?
         number_of_online_vehicles = len(self.fleet.get_online_vehicles())
         if number_of_online_vehicles >= fleet_size_threshold[hour]:
             go_offline = True
