@@ -56,17 +56,13 @@ typing = [
 
 
 [project.optional-dependencies]
+ml = ["torch>=2.6.0", "highspy>=1.10.0", "pyomo>=6.9.2"]
 notebooks = [
-    "contextily>=1.6.2",
-    "ipython>=8.18.1",
-    "notebook>=7.3.2",
-    "seaborn>=0.13.2",
-    "sidetable>=0.9.1",
-]
-ml = [
-    "torch>=2.6.0",
-    "highspy>=1.10.0",
-    "pyomo>=6.9.2",
+  "contextily>=1.6.2",
+  "ipython>=8.18.1",
+  "notebook>=7.3.2",
+  "seaborn>=0.13.2",
+  "sidetable>=0.9.1",
 ]
 
 [build-system]
@@ -156,6 +152,7 @@ convention = "numpy"
 # Enable type checking for all simulation modules
 exclude = []
 files   = ["simulation/"]
+plugins = ["pydantic.mypy"]
 
 # General type checking options
 check_untyped_defs  = true

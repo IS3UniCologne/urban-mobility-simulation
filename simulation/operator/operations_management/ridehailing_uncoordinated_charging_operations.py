@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from simulation.helper.configuration.configuration import Configuration
+from simulation.context.simulation_context import SimulationContext
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
@@ -8,6 +8,7 @@ from simulation.operator.operations_management.operations import OperationsInter
 from simulation.operator.operations_management.ridehailing_base_charging_operations import (
     RideHailingBaseChargingOperations,
 )
+from simulation.world.world import World
 
 
 class RideHailingUncoordinatedChargingOperations(OperationsInterface):
@@ -19,14 +20,16 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         "_config",
         "_distance_matrix",
         "_operation_duration",
+        "_sim",
         "_state_of_charge_threshold",
         "_time_between_operations",
         "_virtual_charging_infrastructure",
+        "_world",
     )
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env,  # noqa: ANN001
+        sim: SimulationContext,
         distance_matrix,  # noqa: ANN001
         time_between_operations,  # noqa: ANN001
         operation_duration,  # noqa: ANN001
@@ -34,12 +37,13 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         available_modes_supply,  # noqa: ANN001
         state_of_charge_threshold,  # noqa: ANN001
         allow_queue,  # noqa: ANN001
-        config: Configuration,
-    ):
-        super(RideHailingUncoordinatedChargingOperations, self).__init__(env=env)  # noqa: UP008
+        world: World,
+    ) -> None:
+        super().__init__(sim)
+        self._sim = sim
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
         self._charging_operations = None
-        self._config = config
+        self._config = sim.config
         self._distance_matrix = distance_matrix
         self._time_between_operations = time_between_operations
         self._operation_duration = operation_duration
@@ -47,17 +51,18 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         self._available_modes_supply = available_modes_supply
         self._state_of_charge_threshold = state_of_charge_threshold
         self._allow_queue = allow_queue
+        self._world = world
 
     def execute(self):  # noqa: ANN201
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
-            env=self._env,
+            sim=self._sim,
             charging_infrastructure=self._operator_reference.charging_infrastructure,
             use_virtual_cs=True,
         )
 
         self._charging_operations = RideHailingBaseChargingOperations(
-            env=self._env,
+            sim=self._sim,
             distance_matrix=self._distance_matrix,
             time_between_operations=self._time_between_operations,
             operation_duration=self._operation_duration,
@@ -65,15 +70,18 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
             available_modes_supply=self._available_modes_supply,
             state_of_charge_threshold=self._state_of_charge_threshold,
             allow_queue=self._allow_queue,
+            world=self._world,
         )
 
         # hack a virtual operator reference into it?
         VirtualOperator = namedtuple(
             "VirtualOperator", ["id", "fleet", "charging_infrastructure"]
         )
+        # TODO can we just use uid instead ?
+        id = self._operator_reference.uid.split("_")[1]
         self._charging_operations.register_operator_reference(
             VirtualOperator(
-                id=self._operator_reference.id,
+                id=id,
                 fleet=self._operator_reference.fleet,
                 charging_infrastructure=self._virtual_charging_infrastructure,
             )

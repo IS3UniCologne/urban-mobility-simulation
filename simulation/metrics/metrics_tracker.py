@@ -107,7 +107,7 @@ class MetricsTracker(SimulationBase):
         name: str,
         interval: float | None,
         tracked_classes: list[str] | None = None,
-        start_now: bool = True,
+        start_now: bool = False,
         replace: bool = False,
     ) -> TrackingJob:
         """

@@ -129,17 +129,6 @@ CHARGING_STATION_QUEUE_SIZE = [99]
 # Operator Configurations #
 ###########################
 
-[[RIDE_HAILING_OPERATOR]]
-# When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
-RECHARGE_THRESHOLD = [0.40, 0.45, 0.50, 0.55, 0.52, 0.50, 0.48, 0.45, 0.45, 0.42, 0.40, 0.40, 0.40, 0.40, 0.40, 0.38, 0.35, 0.32, 0.30, 0.30, 0.27, 0.30, 0.32, 0.35]
-# Operations Start Time (e.g., 1440 => 00:00am) !!! 20.000 --> quasi no operations !!!
-OPERATIONS_START = 15
-# Operations Duration (e.g., 8 working hours => 8*60 => 480)
-OPERATIONS_DURATION = 50
-# Velocity of Relocation Vehicle (i.e., car/van velocity) in km/h
-# Feature-based selection of carsharing relocation modes: 15-20 km/h for Munich, Milan and Toronto https://www.sciencedirect.com/science/article/pii/S1366554521000466
-VEHICLE_RELOCATION_VELOCITY = 9.54
-
 
 [RIDE_HAILING_GLOBAL]
 # Driver payment share for ride-hailing
@@ -147,7 +136,7 @@ VEHICLE_RELOCATION_VELOCITY = 9.54
 DRIVER_PAYMENT_SHARE = 0.75
 AV_PRICE_REDUCTION   = 0.90
 # Is this for service workers or customers?
-MAX_PICKUP_DISTANCE  = 10000
+MAX_PICKUP_DISTANCE = 10000
 
 # An analysis of the individual economics of ride-hailing drivers -> https://www.sciencedirect.com/science/article/pii/S0965856419300333
 # Lyft-Uber: Base fare: 0.50-0.75$, minimum price: 6.95-7.10$
@@ -192,7 +181,7 @@ VELOCITY            = 9.54
 MAX_AVAILABLE_SEATS = 4
 
 # Energy parameters
-MAX_STATE_OF_CHARGE            = 50.0
+MAX_STATE_OF_CHARGE = 50.0
 # Average range for energy consumption: 16.2-23.6kWh/100km https://www.drive.com.au/caradvice/what-is-a-good-energy-consumption-figure-for-electric-vehicles/
 ENERGY_CONSUMPTION             = 0.20
 EV_RELATIVE_ENERGY_CONSUMPTION = 0.3
@@ -203,15 +192,15 @@ EMERGENCY_SOC_BUFFER = 0.05
 # Economic parameters
 PRICE_PER_MIN = 0.35
 #Flat price per trip started (e.g. unlock fee)
-PRICE_PER_TRIP        = 0.0
-DAILY_TOTAL_COST      = 29.0
-COST_PER_KM           = 0.45
-PRICE_PER_KM          = 1.3
+PRICE_PER_TRIP   = 0.0
+DAILY_TOTAL_COST = 29.0
+COST_PER_KM      = 0.45
+PRICE_PER_KM     = 1.3
 # Representative, empirical, real-world charging station usage characteristics and data in Germany: public CS cost between 30-50 €ct/kWh https://www.sciencedirect.com/science/article/pii/S2590116820300369
 CHARGING_COST_PER_KWH = 0.43
 # 63 g CO2/km according to: https://www.bayern-innovativ.de/en/emagazine/energy-construction/detail/electric-cars-beat-combustion-engines-in-terms-of-co2-emissions/#:~:text=Compared%20to%20petrol%2Dpowered%20vehicles,is%20produced%20using%20renewable%20electricity.
 # https://theicct.org/publication/electric-cars-life-cycle-analysis-emissions-europe-jul25/ has a very detailed report with emissions of different EVs
-KG_CO2_PER_KM         = 0.105
+KG_CO2_PER_KM = 0.105
 
 #Other parameters
 # Maximum distance a user is willing to walk to get to a vehicle
@@ -250,26 +239,26 @@ VEHICLE_TYPE    = "Car"
 AUTONOMY_TYPE   = "HumanDriven"
 PROPULSION_TYPE = "BatteryElectric"
 
-MAX_STATE_OF_CHARGE            = 50.0
+MAX_STATE_OF_CHARGE = 50.0
 # Page 472: 22 kWh/100 km https://www.sciencedirect.com/science/article/pii/S2352146517309419#:~:text=Abstract,areas%20than%20are%20conventional%20vehicles.
 ENERGY_CONSUMPTION             = 0.20
 EV_RELATIVE_ENERGY_CONSUMPTION = 0.3
 INITIAL_SOC                    = 0.50
 # percentage (State of Charge) that a vehicle should not drop below
-EMERGENCY_SOC_BUFFER = 0.05 
+EMERGENCY_SOC_BUFFER = 0.05
 
-PRICE_PER_MIN         = 0.35
-DAILY_TOTAL_COST      = 29.0
-COST_PER_KM           = 0.45
-PRICE_PER_KM          = 1.3
+PRICE_PER_MIN    = 0.35
+DAILY_TOTAL_COST = 29.0
+COST_PER_KM      = 0.45
+PRICE_PER_KM     = 1.3
 # Fast charging (50kW) in Germany costs 0.40-0.60€ per kWh https://www.cardino.de/en/blog-posts/charging-stations-evs-price#:~:text=Standard%20Charging%20(11%2D22%20kW,just%2015%20to%2030%20minutes.
 CHARGING_COST_PER_KWH = 0.43
 
 
 [SHARED_VEHICLES.Car]
-PRICE_PER_MIN                  = 0.35
-MAX_STATE_OF_CHARGE            = 50.0
-ENERGY_CONSUMPTION             = 0.20
+PRICE_PER_MIN       = 0.35
+MAX_STATE_OF_CHARGE = 50.0
+ENERGY_CONSUMPTION  = 0.20
 # Feature-based selection of carsharing relocation modes: 20-25 km/h for Milan, Munich and Toronto https://www.sciencedirect.com/science/article/pii/S1366554521000466
 VELOCITY                       = 9.54
 MAX_AVAILABLE_SEATS            = 4
@@ -277,12 +266,12 @@ DAILY_TOTAL_COST               = 29.86
 INITIAL_SOC                    = 0.50
 EV_RELATIVE_ENERGY_CONSUMPTION = 0.8
 # Germany: Cost of travel per kilometer by mode 2023: https://www.statista.com/statistics/1447039/cost-per-kilometer-travelled-in-germany-by-mode/
-COST_PER_KM                    = 0.53
-CHARGING_COST_PER_KWH          = 0.23
-PRICE_PER_KM                   = 1.3   #TODOO: Not needed? I forgot why I wrote this
-WALKING_DISTANCE               = 500
-KG_CO2_PER_KM                  = 0.236
-CONVENIENCE                    = 3
+COST_PER_KM           = 0.53
+CHARGING_COST_PER_KWH = 0.23
+PRICE_PER_KM          = 1.3   #TODOO: Not needed? I forgot why I wrote this
+WALKING_DISTANCE      = 500
+KG_CO2_PER_KM         = 0.236
+CONVENIENCE           = 3
 
 
 [SHARED_VEHICLES.Scooter]
@@ -302,14 +291,14 @@ CONVENIENCE                    = 2
 
 
 [SHARED_VEHICLES.KickScooter]
-PRICE_PER_MIN                  = 0.19
-PRICE_PER_TRIP                 = 1.0
-MAX_STATE_OF_CHARGE            = 0.288
-ENERGY_CONSUMPTION             = 0.0072
+PRICE_PER_MIN       = 0.19
+PRICE_PER_TRIP      = 1.0
+MAX_STATE_OF_CHARGE = 0.288
+ENERGY_CONSUMPTION  = 0.0072
 # Max 20 km/h is allowed in Germany: https://www.evz.de/en/travelling-motor-vehicles/e-mobility/two-wheelers/e-scooter-regulations.html
-VELOCITY                       = 2.82
-MAX_AVAILABLE_SEATS            = 1
-DAILY_TOTAL_COST               = 11.51
+VELOCITY            = 2.82
+MAX_AVAILABLE_SEATS = 1
+DAILY_TOTAL_COST    = 11.51
 # According to https://publica.fraunhofer.de/entities/publication/abe4bac9-e528-4dc7-abfa-594138cdb71c --> energy consumption of about 0.02 kWh/km in Karlsruhe
 EV_RELATIVE_ENERGY_CONSUMPTION = 0.8
 COST_PER_KM                    = 0.53
@@ -318,8 +307,8 @@ WALKING_DISTANCE               = 200
 # According to https://suchdichgruen.de/wissen-und-technologie/innovation-und-technologie/a713/sind-e-scooter-umweltschaedlich/ 0.088-0.126 per passenger
 # The median distance with shared e-scooters is about 1,4 km across all days and hours of day: https://publica.fraunhofer.de/entities/publication/abe4bac9-e528-4dc7-abfa-594138cdb71c
 # That would mean around 0.062-0.090 kg CO2/km (1,4 km)
-KG_CO2_PER_KM                  = 0.105
-CONVENIENCE                    = 1
+KG_CO2_PER_KM = 0.105
+CONVENIENCE   = 1
 
 
 [SHARED_VEHICLES.Bike]
@@ -332,10 +321,10 @@ MAX_AVAILABLE_SEATS = 1
 DAILY_TOTAL_COST    = 11.51
 INITIAL_SOC         = 1.0
 # Germany: Cost of travel per kilometer by mode 2023: https://www.statista.com/statistics/1447039/cost-per-kilometer-travelled-in-germany-by-mode/
-COST_PER_KM         = 0.1
-WALKING_DISTANCE    = 200
-KG_CO2_PER_KM       = 0.046
-CONVENIENCE         = 1
+COST_PER_KM      = 0.1
+WALKING_DISTANCE = 200
+KG_CO2_PER_KM    = 0.046
+CONVENIENCE      = 1
 
 [AUCTION]
 AUCTION_START = 0

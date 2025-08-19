@@ -15,20 +15,20 @@ def main() -> None:
 
     # Set up time-series metrics tracking
     # Periodic tracking of World Metrics every 60 simulation time units
-    simulation.metrics.tracker.start_tracking(
-        interval=60.0, tracked_classes=["WorldMetrics"]
+    simulation.metrics.tracker.create_job(
+        name="world_metrics",
+        interval=60.0,
+        tracked_classes=["WorldMetrics"],
+        start_now=True,
     )
 
     # Run the simulation
     simulation.run_simulation()
 
     # Stop periodic tracking
-    simulation.metrics.tracker.stop_tracking()
+    simulation.metrics.tracker.stop_job("world_metrics")
 
     # Save tracked metrics to file
-    simulation.metrics.tracker.to_file(
-        file_name="tracked_metrics", file_format="parquet"
-    )
 
     # Log final metrics example
     # This will log all operator metrics
