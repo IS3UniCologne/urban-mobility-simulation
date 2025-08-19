@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.time import SimulationTimeConverter
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.vehicle.ride_hailing_AV import RideHailingAV
 from simulation.vehicle.ride_hailing_car import RideHailingCar
@@ -102,7 +103,7 @@ class MixedRideHailingFleet(VehicleFleet):
 
         serving_state = VehicleState.DRIVING
         serving_vehicles = self._vehicles_by_state[serving_state]
-        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+        hour = SimulationTimeConverter.hour_of_day(self._env.now)
         state_of_charge_threshold = self._recharging_threshold[hour]
         # TODO: Check if this is necessary
         serving_vehicles_sorted = sorted(serving_vehicles, key=lambda v: v.uid)
@@ -131,7 +132,7 @@ class MixedRideHailingFleet(VehicleFleet):
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
-        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+        hour = SimulationTimeConverter.hour_of_day(self._env.now)
         state_of_charge_threshold = state_of_charge_threshold[hour]
         return sum(
             1
@@ -255,7 +256,7 @@ class MixedRideHailingFleet(VehicleFleet):
         # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = []
-        hour = int((self._env.now % 1440 - self._env.now % 60) / 60)
+        hour = SimulationTimeConverter.hour_of_day(self._env.now)
         state_of_charge_threshold = state_of_charge_threshold[hour]
 
         parking_vehicles = self._vehicles_by_state[VehicleState.PARKING]

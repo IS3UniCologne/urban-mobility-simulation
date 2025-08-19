@@ -60,24 +60,28 @@ class SimulationTime:
 
 class SimulationTimeConverter:
     @staticmethod
-    def seconds(time: float):  # noqa: ANN205
+    def seconds(time: float) -> int:
         # seconds are not well defined, but it may happen that a time step is < 1 (minutes)
         return int((time - int(time)) * 60)
 
     @staticmethod
-    def minutes(time: float):  # noqa: ANN205
+    def minutes(time: float) -> int:
         return int(time % 60)
 
     @staticmethod
-    def hours(time: float):  # noqa: ANN205
+    def hours(time: float) -> int:
         return int((time / 60) % 24)
 
     @staticmethod
-    def days(time: float):  # noqa: ANN205
+    def hour_of_day(time: float) -> int:
+        return int((time % 1440 - time % 60) / 60)
+
+    @staticmethod
+    def days(time: float) -> int:
         return int(time / (24 * 60)) + 1
 
     @staticmethod
-    def dayofweek(time: float):  # noqa: ANN205
+    def dayofweek(time: float) -> int:
         return int((time % (24 * 60 * 7)) / (24 * 60))
 
     @classmethod
