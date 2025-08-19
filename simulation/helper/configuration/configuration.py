@@ -46,14 +46,15 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.time import SimulationVelocityConverter
+from simulation.operator.operations_management.operations import (
+    OperationsInterface,  # noqa: TC001
+)
 from simulation.operator.operations_management.ridehailing_base_charging_operations import (
     RideHailingBaseChargingOperations,
 )
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-    from simulation.operator.operations_management.operations import OperationsInterface
 
 try:
     import tomllib  # future proofing for python 3.11+
