@@ -22,9 +22,10 @@ All validation, type conversion, and defaults should be handled using Pydantic f
 
 from __future__ import annotations
 
+import importlib.util
 import os
 from pathlib import Path
-from typing import TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from pydantic import (
     BaseModel,
@@ -45,6 +46,14 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.time import SimulationVelocityConverter
+from simulation.operator.operations_management.ridehailing_base_charging_operations import (
+    RideHailingBaseChargingOperations,
+)
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+    from simulation.operator.operations_management.operations import OperationsInterface
 
 try:
     import tomllib  # future proofing for python 3.11+
@@ -324,9 +333,14 @@ class RideHailingOperatorConfig(ConfigBaseModel):
     """Configuration for ride-hailing operator parameters."""
 
     RECHARGE_THRESHOLD: list[float]
-    OPERATIONS_START: int = Field(ge=0)
+    OPERATIONS_START: int = Field(
+        ge=0, description="Start time of operations in minutes"
+    )
     OPERATIONS_DURATION: int = Field(gt=0)
     VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0)
+    OPERATIONS_TYPE: type[OperationsInterface] = Field(
+        default=RideHailingBaseChargingOperations
+    )
 
     @field_validator("VEHICLE_RELOCATION_VELOCITY", mode="after")
     @classmethod
@@ -483,9 +497,18 @@ class Configuration:
     Preserves type checking and IDE auto-completion for each section property.
     """
 
-    def __init__(self, config_path: str | Path) -> None:
-        with open(config_path, "rb") as f:
+    def __init__(self, experiment_dir: str | Path) -> None:
+        base = Path(experiment_dir)
+        if not base.is_dir():
+            raise NotADirectoryError(f"Expected a directory: {base}")
+
+        config_file = base / "config.toml"
+        if not config_file.exists():
+            raise FileNotFoundError(f'Could not find "config.toml" in {base}')
+
+        with open(config_file, "rb") as f:
             data = tomllib.load(f)
+
         self._data = {k.lower(): v for k, v in data.items()}
         self._cache: dict[str, object] = {}
 
@@ -495,6 +518,9 @@ class Configuration:
         city = world_config.CITY
         patched_path = _patch_path_city_fields(self._data["path"], city)
         self._cache["path"] = PathConfig.model_validate(patched_path)
+
+        # Load components that are configured as Python modules
+        self._load_operators_from_py(base)
 
     def _get_section(self, section: str, model: type[T]) -> T:
         if section in self._cache:
@@ -812,3 +838,57 @@ class Configuration:
             The DQN configuration section.
         """
         return self._get_section("dqn", DQNConfig)
+
+    def _load_operators_from_py(self, base_path: Path) -> None:
+        op_file = base_path / "operators.py"
+        if not op_file.exists():
+            raise FileNotFoundError(f'Could not find "operators.py" in {base_path}')
+
+        module = self._import_module_file(op_file)
+
+        buckets: dict[str, list[Any]] = {
+            "ride_hailing_operator": [],
+            "shared_vehicle_operator": [],
+            "transit_operator": [],
+        }
+
+        type_to_key: dict[type[BaseModel], str] = {
+            RideHailingOperatorConfig: "ride_hailing_operator",
+            SharedVehicleOperatorConfig: "shared_vehicle_operator",
+            TransitOperatorConfig: "transit_operator",
+        }
+
+        def add_one(x: object) -> None:
+            for model_type, key in type_to_key.items():
+                if isinstance(x, model_type):
+                    buckets[key].append(x)
+                    break
+
+        for name, value in vars(module).items():
+            if name.startswith("_"):
+                continue
+            if isinstance(value, list | tuple):
+                for elem in value:
+                    add_one(elem)
+            else:
+                add_one(value)
+
+        any_found = any(len(v) > 0 for v in buckets.values())
+        for key, items in buckets.items():
+            self._cache[key] = items
+
+        if not any_found:
+            raise ImportError(
+                f"No operator configs found in {op_file}. "
+                "Define one or more instances of RideHailingOperatorConfig, "
+                "SharedVehicleOperatorConfig, or TransitOperatorConfig."
+            )
+
+    def _import_module_file(self, file_path: Path) -> ModuleType:
+        """Import a module from a filesystem .py file path."""
+        spec = importlib.util.spec_from_file_location("ums_py_config", file_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not load spec for {file_path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module

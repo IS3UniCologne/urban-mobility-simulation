@@ -22,9 +22,6 @@ from simulation.operator.fleet_factory import (
 from simulation.operator.operations_management.integrated_shared_mobility_operations import (
     IntegratedSharedMobilityOperations,
 )
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
-)
 from simulation.operator.public_transport_allocation_engine import (
     PublicTransportAllocationEngine,
 )
@@ -71,6 +68,7 @@ if TYPE_CHECKING:
     from simulation.operator.public_transport_vehicle_fleet import (
         PublicTransportVehicleFleet,
     )
+    from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.vehicle.vehicle import Vehicle
 
 
@@ -85,6 +83,7 @@ class World(SimulationBase):
         "_demand_processes",
         "_distance_matrix",
         "_env",
+        "_fleets",
         "_geo_env",
         "_operators",
         "_payment_engine",
@@ -132,11 +131,11 @@ class World(SimulationBase):
         self._user_processes: dict[int, simpy.Process] = {}
 
         # Store all current vehicles
-        # TODO: This is not being set correctly. Do we even want this here ?
+        # TODO: Probably redundant
         self._vehicles: set[Vehicle] = set()
         self._vehicle_processes: dict[int, simpy.Process] = {}
 
-        # TODO: keep track of fleets here as well
+        self._fleets: list[VehicleFleet] = []
 
         # Add Population Factory
         self._population_factory: PopulationFactory | None = (
@@ -176,6 +175,11 @@ class World(SimulationBase):
     def operators(self) -> list[Operator]:
         """Get a list of operators in the world."""
         return self._operators
+
+    @property
+    def fleets(self) -> list[VehicleFleet]:
+        """Get a list of all vehicle fleets in the world."""
+        return self._fleets
 
     def _setup_vehicle_choice_behavior(self) -> None:
         if self._config.ride_hailing_operators:
@@ -255,6 +259,7 @@ class World(SimulationBase):
             self.logger.info("Setting up public transport operator %s", operator_id)
 
             fleet = self._initialize_public_transport_fleet()
+            self._fleets.append(fleet)
             search_engine = self._create_public_transport_search_engine(
                 operator_cfg, fleet
             )
@@ -283,6 +288,7 @@ class World(SimulationBase):
             )
 
             fleet = generate_mixed_fleet(sim=self._sim, world=self)
+            self._fleets.append(fleet)
             self._search_engine[operator_id].register_fleet(fleet)
 
             ordered_available_vehicle_types = fleet.vehicle_types
@@ -347,6 +353,7 @@ class World(SimulationBase):
                 sim=self._sim
             )
             fleet = generate_mixed_ride_hailing_fleet(sim=self._sim, world=self)
+            self._fleets.append(fleet)
             self._search_engine[operator_id].register_fleet(fleet)
             allow_queue = (
                 sum(self._config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE)
@@ -361,7 +368,8 @@ class World(SimulationBase):
                 self._config.ride_hailing_global.N_RIDE_HAILING_CARS,
                 self._config.ride_hailing_global.N_AUTONOMOUS_CARS,
             ]
-            operations = RideHailingBaseChargingOperations(
+            # TODO: make sure this is a single config parameter
+            operations = operator_cfg.OPERATIONS_TYPE(
                 sim=self._sim,
                 distance_matrix=self._distance_matrix,
                 time_between_operations=operator_cfg.OPERATIONS_START,
@@ -605,7 +613,7 @@ class World(SimulationBase):
         return self._vehicles
 
     @property
-    def charging_infrastructure(self):  # noqa: ANN201
+    def charging_infrastructure(self) -> ChargingInfrastructure | None:
         return self._charging_infrastructure
 
     @property

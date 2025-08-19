@@ -145,6 +145,7 @@ class VirtualChargingInfrastructure(SimulationBase):
             )
             cs.update_capacity(
                 capacity=bounded_capa,
+                # TODO: move all shared_charging_auction to charging infrastructure config?
                 valid_timeframe=(
                     self._lookahead,
                     self._lookahead
@@ -168,6 +169,7 @@ class VirtualChargingInfrastructure(SimulationBase):
         if self._lookahead is not None:
             # update the default lookahead to be the next auctioned slot
             self._lookahead = self._env.now + (
+                # TODO: move all shared_charging_auction to charging infrastructure config?
                 self._config.shared_charging_auction.AUCTION_LOOKAHEAD
                 - (
                     self._env.now
@@ -185,7 +187,7 @@ class VirtualChargingInfrastructure(SimulationBase):
         # Listener = namedtuple(
         #     "Listener", ["processed_plug_in_event", "processed_plug_out_event"]
         # )
-        self._listeners[cs.id] = SimpleNamespace(
+        self._listeners[cs.uid] = SimpleNamespace(
             processed_plug_in_event=self._env.event(),
             processed_plug_out_event=self._env.event(),
         )
@@ -193,12 +195,12 @@ class VirtualChargingInfrastructure(SimulationBase):
         #     "processed_plug_in_event": self._env.event(),
         #     "processed_plug_out_event": self._env.event(),
         # }
-        cs.register_event_subscriber(self._listeners[cs.id])
+        cs.register_event_subscriber(self._listeners[cs.uid])
 
         while True:
             if (
-                self._listeners[cs.id].processed_plug_in_event.triggered
-                or self._listeners[cs.id].processed_plug_out_event.triggered
+                self._listeners[cs.uid].processed_plug_in_event.triggered
+                or self._listeners[cs.uid].processed_plug_out_event.triggered
             ):
                 # another listener has not processed the event, so the charging station hasn't reset ours yet
                 yield self._env.timeout(1e-6)
@@ -216,7 +218,7 @@ class VirtualChargingInfrastructure(SimulationBase):
                 self.logger.debug(
                     "Plugged in registered at %s.", charging_station.location
                 )
-                self._listeners[cs.id].processed_plug_in_event.succeed()
+                self._listeners[cs.uid].processed_plug_in_event.succeed()
             elif cs.vehicle_unplugged in event:
                 self._availability[charging_station.location] += 1
                 if self._use_virtual_cs:
@@ -224,5 +226,4 @@ class VirtualChargingInfrastructure(SimulationBase):
                 self.logger.debug(
                     "Plugged out registered at %s.", charging_station.location
                 )
-                self._listeners[cs.id].processed_plug_out_event.succeed()
-                self._listeners[cs.id].processed_plug_out_event.succeed()
+                self._listeners[cs.uid].processed_plug_out_event.succeed()
