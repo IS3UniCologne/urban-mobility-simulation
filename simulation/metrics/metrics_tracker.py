@@ -41,221 +41,238 @@ class MetricsSnapshot:
         return result
 
 
-class MetricsTracker(SimulationBase):
+class TrackingJob:
     """
-    Tracks simulation metrics over time with (periodic) collection.
+    Represents a single tracking job.
 
-    This class captures metrics snapshots at selected intervals and stores them
-    for later analysis. It can track specific metrics classes or all available metrics.
+    Parameters
+    ----------
+    name : str
+        Job name.
+    interval : float or None
+        Periodic capture interval. None disables automatic periodic captures.
+    tracked_classes : list[str] or None
+        Metrics classes to track. None means all available.
+    """
+
+    def __init__(
+        self, name: str, interval: float | None, tracked_classes: list[str] | None
+    ) -> None:
+        self.name = name
+        self.interval = interval
+        self.tracked_classes = tracked_classes
+        self.process: simpy.Process | None = None
+        self.snapshots: list[MetricsSnapshot] = []
+        self.last_snapshot_time: float | None = None
+        self.active = False
+
+    def add_snapshot(self, snapshot: MetricsSnapshot) -> MetricsSnapshot:
+        """
+        Add a snapshot to this job.
+
+        Parameters
+        ----------
+        snapshot : MetricsSnapshot
+            Snapshot to add.
+
+        Returns
+        -------
+        MetricsSnapshot
+            Added snapshot (or existing latest one if duplicate).
+        """
+        if (
+            self.last_snapshot_time is not None
+            and self.last_snapshot_time == snapshot.timestamp
+            and self.snapshots
+        ):
+            return self.snapshots[-1]
+        self.snapshots.append(snapshot)
+        self.last_snapshot_time = snapshot.timestamp
+        return snapshot
+
+
+class MetricsTracker(SimulationBase):
+    """Metrics tracking manager for periodic and manual snapshots.
+
+    Can run multiple tracking jobs in parallel, each with its own configuration.
     """
 
     def __init__(self, simulation: Simulation) -> None:
         super().__init__(simulation.sim)
         self._simulation = simulation
+        self._jobs: dict[str, TrackingJob] = {}
 
-        self._snapshots: list[MetricsSnapshot] = []
-
-        self._tracking_interval: float | None = None
-        self._tracking_process: simpy.Process | None = None
-        self._is_tracking = False
-
-        self._last_snapshot_time: float | None = None
-
-        self._tracked_classes: list[str] | None = None
-
-    @property
-    def is_tracking(self) -> bool:
+    def create_job(
+        self,
+        name: str,
+        interval: float | None,
+        tracked_classes: list[str] | None = None,
+        start_now: bool = True,
+        replace: bool = False,
+    ) -> TrackingJob:
         """
-        Check if tracking is currently active.
-
-        Returns
-        -------
-        bool
-            True if tracking is active, False otherwise.
-        """
-        return self._is_tracking
-
-    @property
-    def tracked_classes(self) -> list[str] | None:
-        """
-        Get the currently tracked metrics classes.
-
-        This will always return the classes that are currently set for tracking,
-        regardless of whether tracking is active or not.
-
-        Returns
-        -------
-        list[str] or None
-            List of tracked class names.
-        """
-        if self._tracked_classes is None:
-            return list(self._simulation.metrics.get_metrics_classes().keys())
-        return self._tracked_classes
-
-    def start_tracking(
-        self, interval: float, tracked_classes: list[str] | None = None
-    ) -> None:
-        """
-        Start tracking metrics.
+        Create a tracking job.
 
         Parameters
         ----------
-        interval : float
-            Time interval between snapshots (in simulation time units).
+        name : str
+            Job name.
+        interval : float or None
+            Periodic capture interval. None for manual-only.
         tracked_classes : list[str] or None
-            Override the tracked classes for this tracking session.
-            If None, uses the currently set tracked classes. (all by default)
+            Metrics classes to track (None means all).
+        start_now : bool
+            Start the job immediately if True and interval is not None.
+        replace : bool
+            Replace existing job of the same name.
+
+        Returns
+        -------
+        TrackingJob
+            Created (or replaced) job.
 
         Raises
         ------
         ValueError
-            If any of the specified classes don't exist in the available metrics classes.
+            If job exists and replace is False.
         """
-        if self._is_tracking:
-            self._logger.warning("Periodic tracking is already active")
-            return
-
-        if tracked_classes is not None:
-            self.set_tracked_classes(tracked_classes)
-
-        self._tracking_interval = interval
-        self._is_tracking = True
-
-        self._tracking_process = self._simulation.sim.env.process(
-            self._periodic_tracking_process()
+        if name in self._jobs and not replace:
+            raise ValueError(f"Tracking job '{name}' already exists")
+        resolved_classes = (
+            None
+            if tracked_classes is None
+            else self._resolve_tracked_classes(tracked_classes)
         )
-
-        tracked = (
-            f"for classes {self._tracked_classes}"
-            if self._tracked_classes
-            else "for all classes"
-        )
+        job = TrackingJob(name, interval, resolved_classes)
+        self._jobs[name] = job
+        if start_now:
+            self.start_job(name)
         self._logger.info(
-            "Started periodic metrics tracking with interval %s %s", interval, tracked
+            "Created tracking job %s (interval=%s, classes=%s, start=%s)",
+            name,
+            interval,
+            resolved_classes if resolved_classes is not None else "ALL",
+            start_now,
+        )
+        return job
+
+    def start_job(self, name: str) -> None:
+        """
+        Start periodic tracking for a job (no effect if already active).
+
+        Parameters
+        ----------
+        name : str
+            Job name.
+        """
+        job = self._require_job(name)
+        if job.interval is None:
+            self._logger.warning(
+                "Job %s has no interval; cannot start periodic process", name
+            )
+            return
+        if job.active:
+            self._logger.warning("Job %s already active", name)
+            return
+        job.active = True
+        job.process = self._simulation.sim.env.process(self._job_process(name))
+        self._logger.info(
+            "Started tracking job %s with interval %s and classes %s",
+            name,
+            job.interval,
+            job.tracked_classes if job.tracked_classes is not None else "ALL",
         )
 
-    def stop_tracking(self) -> None:
-        """Stop periodic metrics tracking."""
-        if not self._is_tracking:
-            self._logger.warning("Periodic tracking is not active")
-            return
+    def start_all_jobs(self) -> None:
+        """Start all tracking jobs that have an interval defined."""
+        for name in self._jobs.keys():
+            job = self._jobs[name]
+            if job.interval is not None and not job.active:
+                self.start_job(name)
+            else:
+                self._logger.warning("Job %s already active or has no interval", name)
 
-        self._is_tracking = False
-
-        if self._tracking_process is not None:
-            try:
-                if not self._tracking_process.processed:
-                    self._tracking_process.interrupt()
-            except RuntimeError as e:
-                self._logger.debug("Tracking process not found: %s", e)
-            finally:
-                self._tracking_process = None
-
-        self._logger.info("Stopped periodic metrics tracking")
-
-    def capture_snapshot(self) -> MetricsSnapshot:
+    def stop_job(self, name: str) -> None:
         """
-        Capture a metrics snapshot at the current simulation time.
+        Stop a tracking job's periodic process.
 
-        This method is used for periodic tracking, but can also be called manually
-        to capture a snapshot at any time.
+        Parameters
+        ----------
+        name : str
+            Job name.
+        """
+        job = self._require_job(name)
+        if not job.active:
+            self._logger.warning("Job %s not active", name)
+            return
+        job.active = False
+        if job.process is not None:
+            try:
+                if not job.process.processed:
+                    job.process.interrupt()
+            except RuntimeError as e:
+                self._logger.debug("Process interruption issue for job %s: %s", name, e)
+            finally:
+                job.process = None
+        self._logger.info("Stopped tracking job %s", name)
+
+    def stop_all_jobs(self) -> None:
+        """Stop all active tracking jobs."""
+        for name in self._jobs.keys():
+            self.stop_job(name)
+
+    def capture(self, name: str) -> MetricsSnapshot:
+        """
+        Manually capture a snapshot for a job.
+
+        Parameters
+        ----------
+        name : str
+            Job name.
 
         Returns
         -------
         MetricsSnapshot
             The captured metrics snapshot.
         """
+        job = self._require_job(name)
         current_time = self._simulation.sim.time
-
-        # Avoid duplicate snapshots
-        if (
-            self._last_snapshot_time is not None
-            and current_time == self._last_snapshot_time
-        ):
-            self._logger.debug("Skipping duplicate snapshot at time %s", current_time)
-            return self._snapshots[-1]
-
+        metrics = self._collect_metrics(job.tracked_classes)
         try:
-            if self._tracked_classes:
-                metrics = self._simulation.metrics.get_metrics_for_classes(
-                    self._tracked_classes
-                )
-            else:
-                metrics = self._simulation.metrics.all_metrics()
-
             snapshot = MetricsSnapshot(current_time, metrics)
-
-            self._snapshots.append(snapshot)
-            self._last_snapshot_time = current_time
-
-            self._logger.debug("Captured metrics snapshot at time %s", current_time)
-
+            job.add_snapshot(snapshot)
+            self._logger.debug("Captured snapshot for job %s at %s", name, current_time)
             return snapshot
-
         except Exception as e:
-            self._logger.error(
-                "Failed to capture metrics snapshot at time %s: %s", current_time, e
-            )
-            # Create an empty snapshot to maintain consistency
-            empty_snapshot = MetricsSnapshot(current_time, MetricsDict())
-            return empty_snapshot
+            self._logger.error("Failed capturing snapshot for job %s: %s", name, e)
+            empty = MetricsSnapshot(current_time, MetricsDict())
+            job.add_snapshot(empty)
+            return empty
 
-    def set_tracked_classes(self, tracked_classes: list[str] | None) -> None:
+    def capture_all(self) -> dict[str, MetricsSnapshot]:
         """
-        Set the list of tracked metrics classes.
+        Capture snapshots for all jobs.
 
-        This also validates that the specified classes exist in the available metrics classes.
-
-        Parameters
-        ----------
-        tracked_classes : list[str] or None
-            List of classes to track. If None, tracks all classes.
-
-        Raises
-        ------
-        ValueError
-            If any of the specified classes don't exist in the available metrics classes.
+        Returns
+        -------
+        dict[str, MetricsSnapshot]
+            Mapping job name to snapshot.
         """
-
-        # normalize names for more flexible matching (e.g. "WorldMetrics" vs "world" or "world_metrics")
-        def normalize(name: str) -> str:
-            name = name.lower().replace("_", "")
-            if name.endswith("metrics"):
-                name = name[:-7]
-            return name
-
-        available_classes = self._simulation.metrics.get_metrics_classes()
-        normalized_available = {normalize(k): k for k in available_classes.keys()}
-
-        if tracked_classes:
-            resolved = []
-            invalid = []
-            for cls in tracked_classes:
-                norm = normalize(cls)
-                if norm in normalized_available:
-                    resolved.append(normalized_available[norm])
-                else:
-                    invalid.append(cls)
-            if invalid:
-                available = list(available_classes.keys())
-                raise ValueError(
-                    f"Unknown metrics class(es) '{', '.join(invalid)}'. "
-                    f"Available: {available}"
-                )
-            self._tracked_classes = resolved
-            self._logger.info("Set tracked classes to: %s", ", ".join(resolved))
-        else:
-            self._tracked_classes = None
-            self._logger.info("Set to track all metrics classes")
+        result: dict[str, MetricsSnapshot] = {}
+        for name in self._jobs.keys():
+            result[name] = self.capture(name)
+        return result
 
     def get_snapshots(
-        self, start_time: float | None = None, end_time: float | None = None
+        self, name: str, start_time: float | None = None, end_time: float | None = None
     ) -> list[MetricsSnapshot]:
         """
-        Get snapshots within a time range.
+        Retrieve snapshots for a job within a time range.
 
         Parameters
         ----------
+        name : str
+            Job name.
         start_time : float or None
             Start time for filtering snapshots. If None, includes from beginning.
         end_time : float or None
@@ -266,50 +283,131 @@ class MetricsTracker(SimulationBase):
         list[MetricsSnapshot]
             List of snapshots within the specified time range.
         """
-        filtered_snapshots = []
-
-        for snapshot in self._snapshots:
-            if start_time is not None and snapshot.timestamp < start_time:
+        job = self._require_job(name)
+        out: list[MetricsSnapshot] = []
+        for s in job.snapshots:
+            if start_time is not None and s.timestamp < start_time:
                 continue
-            if end_time is not None and snapshot.timestamp > end_time:
+            if end_time is not None and s.timestamp > end_time:
                 continue
-            filtered_snapshots.append(snapshot)
+            out.append(s)
+        return out
 
-        return filtered_snapshots
-
-    def to_dataframe(
-        self, start_time: float | None = None, end_time: float | None = None
+    def dataframe(
+        self, name: str, start_time: float | None = None, end_time: float | None = None
     ) -> pd.DataFrame:
         """
-        Convert snapshots to a pandas DataFrame.
-
-        This is also used as an intermediate step for exporting to files.
+        Convert a job's snapshots to a DataFrame.
 
         Parameters
         ----------
+        name : str
+            Job name.
         start_time : float or None
-            Start time for filtering snapshots. If None, includes from beginning.
+            Start filter.
         end_time : float or None
-            End time for filtering snapshots. If None, includes until end.
+            End filter.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with timestamps as index and metrics as columns.
+            DataFrame indexed by timestamp.
         """
-        snapshots = self.get_snapshots(start_time, end_time)
-
-        if not snapshots:
+        snaps = self.get_snapshots(name, start_time, end_time)
+        if not snaps:
             return pd.DataFrame()
-
-        data = [snapshot.to_dict() for snapshot in snapshots]
-
+        data = [s.to_dict() for s in snaps]
         df = pd.DataFrame(data)
         df.set_index("timestamp", inplace=True)
-
         return df
 
-    def to_file(
+    def dataframe_all(
+        self,
+        start_time: float | None = None,
+        end_time: float | None = None,
+        long: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Combine all jobs into a single DataFrame.
+
+        Parameters
+        ----------
+        start_time : float or None
+            Start filter.
+        end_time : float or None
+            End filter.
+        long : bool
+            If True, returns long format with 'job' column.
+            If False, returns a multi-index (job, timestamp) wide format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Combined DataFrame.
+        """
+        frames: list[pd.DataFrame] = []
+        for name in self._jobs.keys():
+            df = self.dataframe(name, start_time, end_time)
+            if df.empty:
+                continue
+            df.insert(0, "job", name)
+            frames.append(df.reset_index())
+        if not frames:
+            return pd.DataFrame()
+        combined = pd.concat(frames, ignore_index=True)
+        if long:
+            return combined
+        combined.set_index(["job", "timestamp"], inplace=True)
+        return combined
+
+    def export_job(
+        self,
+        name: str,
+        file_name: str,
+        start_time: float | None = None,
+        end_time: float | None = None,
+        file_format: str = "csv",
+    ) -> None:
+        """
+        Export a single job's snapshots.
+
+        Parameters
+        ----------
+        name : str
+            Job name.
+        file_name : str
+            Base file name.
+        start_time : float or None
+            Start time filter.
+        end_time : float or None
+            End time filter.
+        file_format : str
+            Format of the output file (e.g., "csv", "parquet").
+        """
+        df = self.dataframe(name, start_time, end_time)
+        if df.empty:
+            self._logger.warning("No snapshots to export for job %s", name)
+            return
+        if not file_name.endswith(f".{file_format}"):
+            file_name = f"{file_name}.{file_format}"
+        timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
+        base, ext = os.path.splitext(file_name)
+        final_name = f"{base}_{name}_{timestamp}{ext}"
+        dir_path = os.path.dirname("data/output/" + "metrics_tracking/")
+        os.makedirs(dir_path, exist_ok=True)
+        full_path = os.path.join(dir_path, final_name)
+        if file_format == "csv":
+            df.to_csv(full_path)
+        elif file_format == "parquet":
+            df.to_parquet(full_path)
+        else:
+            self._logger.error("Unsupported file format: %s", file_format)
+            return
+        self._logger.info(
+            "Exported %d snapshots for job %s to %s", len(df), name, full_path
+        )
+
+    def export_all(
         self,
         file_name: str,
         start_time: float | None = None,
@@ -317,65 +415,100 @@ class MetricsTracker(SimulationBase):
         file_format: str = "csv",
     ) -> None:
         """
-        Export metrics time series to a file. Defaults to CSV format, but can also export to Parquet.
+        Export all jobs individually.
 
         Parameters
         ----------
-        filepath : str
-            Path to save the file.
-        start_time : float | None
-            Start time for filtering snapshots. If None, includes from beginning.
-        end_time : float | None
-            End time for filtering snapshots. If None, includes until end.
+        file_name : str
+            Base file name used for each job.
+        start_time : float or None
+            Start filter.
+        end_time : float or None
+            End filter.
         file_format : str
-            Format of the output file (e.g., "csv", "parquet").
+            Export format.
         """
-        try:
-            if not file_name.endswith(f".{file_format}"):
-                file_name += f".{file_format}"
+        for name in self._jobs.keys():
+            self.export_job(name, file_name, start_time, end_time, file_format)
 
-            output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
-            name_without_ext, ext = os.path.splitext(file_name)
-            file_name = f"{name_without_ext}_{output_timestamp}{ext}"
+    def clear_snapshots(self, name: str | None = None) -> None:
+        """
+        Clear snapshots for one or all jobs.
 
-            file_path = os.path.dirname("data/output/" + "metrics_tracking/")
-            os.makedirs(file_path, exist_ok=True)
+        Parameters
+        ----------
+        name : str or None
+            Job name or None for all.
+        """
+        if name is None:
+            total = sum(len(j.snapshots) for j in self._jobs.values())
+            for j in self._jobs.values():
+                j.snapshots.clear()
+                j.last_snapshot_time = None
+            self._logger.info("Cleared %d snapshots across all jobs", total)
+            return
+        job = self._require_job(name)
+        count = len(job.snapshots)
+        job.snapshots.clear()
+        job.last_snapshot_time = None
+        self._logger.info("Cleared %d snapshots for job %s", count, name)
 
-            full_path = os.path.join(file_path, file_name)
+    def _require_job(self, name: str) -> TrackingJob:
+        job = self._jobs.get(name)
+        if job is None:
+            raise ValueError(f"Unknown tracking job '{name}'")
+        return job
 
-            df = self.to_dataframe(start_time, end_time)
+    def _resolve_tracked_classes(self, classes: list[str]) -> list[str]:
+        def normalize(n: str) -> str:
+            n = n.lower().replace("_", "")
+            if n.endswith("metrics"):
+                n = n[:-7]
+            return n
 
-            if file_format == "csv":
-                df.to_csv(full_path)
-            elif file_format == "parquet":
-                df.to_parquet(full_path)
+        available = self._simulation.metrics.get_metrics_classes()
+        normalized = {normalize(k): k for k in available.keys()}
+        resolved: list[str] = []
+        invalid: list[str] = []
+        for c in classes:
+            n = normalize(c)
+            if n in normalized:
+                resolved.append(normalized[n])
             else:
-                self._logger.error("Unsupported file format: %s", file_format)
-                return
+                invalid.append(c)
+        if invalid:
+            raise ValueError(
+                f"Unknown metrics class(es) {invalid}. Available: {list(available.keys())}"
+            )
+        return resolved
 
-            self._logger.info("Exported %d snapshots to %s", len(df), full_path)
-        except Exception as e:
-            self._logger.error("Failed to export metrics to file %s: %s", file_name, e)
+    def _collect_metrics(self, classes: list[str] | None) -> MetricsDict:
+        """
+        Collect metrics for the given classes without caching.
 
-    def clear_snapshots(self) -> None:
-        """Clear all stored snapshots."""
-        snapshot_count = len(self._snapshots)
-        self._snapshots.clear()
-        self._last_snapshot_time = None
-        self._logger.info("Cleared %d snapshots", snapshot_count)
+        Parameters
+        ----------
+        classes : list[str] or None
+            Metrics class names to include; None means all classes.
 
-    def _periodic_tracking_process(self) -> Generator[Any, None, None]:
-        """Provide internal SimPy process for periodic tracking."""
+        Returns
+        -------
+        MetricsDict
+            Collected metrics.
+        """
+        if classes is None:
+            return self._simulation.metrics.all_metrics()
+        return self._simulation.metrics.get_metrics_for_classes(list(classes))
+
+    def _job_process(self, name: str) -> Generator[Any, None, None]:
+        job = self._require_job(name)
         try:
-            # Skip the first interval to allow simulation to start
-            if self._tracking_interval is not None:
-                yield self._simulation.sim.env.timeout(self._tracking_interval)
-
-            # Start the periodic loop with snapshots
-            while self._is_tracking and self._tracking_interval is not None:
-                self.capture_snapshot()
-                yield self._simulation.sim.env.timeout(self._tracking_interval)
-
+            if job.interval is not None:
+                yield self._simulation.sim.env.timeout(job.interval)
+            while job.active and job.interval is not None:
+                self.capture(name)
+                yield self._simulation.sim.env.timeout(job.interval)
         except Exception as e:
-            if self._is_tracking:
-                self._logger.error("Error in periodic tracking process: %s", e)
+            if job.active:
+                self._logger.error("Error in tracking job %s process: %s", name, e)
+                job.active = False
