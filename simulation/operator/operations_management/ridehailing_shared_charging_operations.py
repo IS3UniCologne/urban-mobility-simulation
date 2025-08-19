@@ -1,7 +1,6 @@
 from collections import namedtuple
 
-from simpy import Environment
-
+from simulation.context.simulation_context import SimulationContext
 from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
@@ -30,7 +29,7 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
     def __init__(  # noqa: ANN204
         self,
-        env: Environment,
+        sim: SimulationContext,
         auction: Auction,
         # bidding_strategy,
         bidding_parameters: dict,
@@ -38,8 +37,9 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         config: Configuration,
         distance_matrix=None,  # noqa: ANN001
     ):
-        OperationsInterface.__init__(self, env)
-        BidderInterface.__init__(self, env, auction)
+        self._env = sim.env
+        OperationsInterface.__init__(self, sim)
+        BidderInterface.__init__(self, sim.env, auction)
 
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
         # self._bidding_strategy = bidding_strategy

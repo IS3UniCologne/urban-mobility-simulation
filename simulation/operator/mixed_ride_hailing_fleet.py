@@ -39,9 +39,9 @@ class MixedRideHailingFleet(VehicleFleet):
         self._driver_availability_vector = (
             self._config.ride_hailing_global.DRIVER_AVAILABILITY_VECTOR
         )
-        self._recharging_threshold = self._config.ride_hailing_operators[
+        self._recharging_threshold = self._config.operators[
             0
-        ].RECHARGE_THRESHOLD
+        ].OPERATIONS_CONFIG.RECHARGE_THRESHOLD  # TODO: Get this from somewhere else
         self._env.process(self.fleet_size_monitor())
 
     def _add_vehicle(self, vehicle: RideHailingVehicle):  # noqa: ANN202

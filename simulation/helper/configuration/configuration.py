@@ -49,12 +49,11 @@ from simulation.helper.time import SimulationVelocityConverter
 from simulation.operator.operations_management.operations import (
     OperationsInterface,  # noqa: TC001
 )
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
-)
 
 if TYPE_CHECKING:
     from types import ModuleType
+
+    from simulation.operator.operator import Operator
 
 try:
     import tomllib  # future proofing for python 3.11+
@@ -293,6 +292,38 @@ class ChargingInfrastructureConfig(ConfigBaseModel):
         return self.model_copy(update=update)
 
 
+class OperationsConfig(ConfigBaseModel):
+    """Configuration for operations parameters."""
+
+    OPERATIONS_START: int = Field(ge=0)
+    OPERATIONS_DURATION: int = Field(gt=0)
+    TIME_BETWEEN_OPERATIONS: int = Field(gt=0)
+
+    RECHARGE_THRESHOLD: list[float]
+    VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0)
+
+    ALLOW_QUEUE: bool | None = Field(default=False)
+
+    @field_validator("VEHICLE_RELOCATION_VELOCITY", mode="after")
+    @classmethod
+    def convert_velocity(cls, v: float) -> float:
+        """Convert vehicle relocation velocity from km/h to m/s."""
+        return SimulationVelocityConverter().convert_kmh(v)
+
+
+class OperatorConfig(ConfigBaseModel):
+    """Configuration for operator parameters."""
+
+    # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/211 should go here
+
+    # AVAILABLE_MODES: list[AutonomyType]
+    # AVAILABLE_MODES_SUPPLY: list[int]
+    OPERATOR_TYPE: type[Operator]
+
+    OPERATIONS_TYPE: type[OperationsInterface]
+    OPERATIONS_CONFIG: OperationsConfig
+
+
 class SharedVehicleOperatorConfig(ConfigBaseModel):
     """Configuration for shared vehicle operator parameters."""
 
@@ -328,26 +359,6 @@ class SharedVehicleOperatorConfig(ConfigBaseModel):
         return self.model_copy(
             update={"BASE_REGIONS": self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]}
         )
-
-
-class RideHailingOperatorConfig(ConfigBaseModel):
-    """Configuration for ride-hailing operator parameters."""
-
-    RECHARGE_THRESHOLD: list[float]
-    OPERATIONS_START: int = Field(
-        ge=0, description="Start time of operations in minutes"
-    )
-    OPERATIONS_DURATION: int = Field(gt=0)
-    VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0)
-    OPERATIONS_TYPE: type[OperationsInterface] = Field(
-        default=RideHailingBaseChargingOperations
-    )
-
-    @field_validator("VEHICLE_RELOCATION_VELOCITY", mode="after")
-    @classmethod
-    def convert_velocity(cls, v: float) -> float:
-        """Convert vehicle relocation velocity from km/h to m/s."""
-        return SimulationVelocityConverter().convert_kmh(v)
 
 
 class TransitOperatorConfig(ConfigBaseModel):
@@ -682,32 +693,16 @@ class Configuration:
         )
 
     @property
-    def shared_vehicle_operators(self) -> list[SharedVehicleOperatorConfig]:
+    def operators(self) -> list[OperatorConfig]:
         """
-        Get the shared vehicle operators configuration section.
+        Get the operators configuration section.
 
         Returns
         -------
-        list[SharedVehicleOperatorConfig]
-            The shared vehicle operators configuration section.
+        list[OperatorConfig]
+            The operators configuration section.
         """
-        return self._get_section_list(
-            "shared_vehicle_operator", SharedVehicleOperatorConfig
-        )
-
-    @property
-    def ride_hailing_operators(self) -> list[RideHailingOperatorConfig]:
-        """
-        Get the ride hailing operators configuration section.
-
-        Returns
-        -------
-        list[RideHailingOperatorConfig]
-            The ride hailing operators configuration section.
-        """
-        return self._get_section_list(
-            "ride_hailing_operator", RideHailingOperatorConfig
-        )
+        return self._get_section_list("operator", OperatorConfig)
 
     @property
     def transit_operators(self) -> list[TransitOperatorConfig]:
@@ -847,17 +842,9 @@ class Configuration:
 
         module = self._import_module_file(op_file)
 
-        buckets: dict[str, list[Any]] = {
-            "ride_hailing_operator": [],
-            "shared_vehicle_operator": [],
-            "transit_operator": [],
-        }
+        buckets: dict[str, list[Any]] = {"operator": []}
 
-        type_to_key: dict[type[BaseModel], str] = {
-            RideHailingOperatorConfig: "ride_hailing_operator",
-            SharedVehicleOperatorConfig: "shared_vehicle_operator",
-            TransitOperatorConfig: "transit_operator",
-        }
+        type_to_key: dict[type[BaseModel], str] = {OperatorConfig: "operator"}
 
         def add_one(x: object) -> None:
             for model_type, key in type_to_key.items():
@@ -881,8 +868,7 @@ class Configuration:
         if not any_found:
             raise ImportError(
                 f"No operator configs found in {op_file}. "
-                "Define one or more instances of RideHailingOperatorConfig, "
-                "SharedVehicleOperatorConfig, or TransitOperatorConfig."
+                "Define one or more instances  of OperatorConfig."
             )
 
     def _import_module_file(self, file_path: Path) -> ModuleType:

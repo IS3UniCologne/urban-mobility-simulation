@@ -97,6 +97,10 @@ class VehicleFleet(ABC, SimulationBase):
         """
         return self._vehicles
 
+    @property
+    def vehicles_by_state(self) -> dict[VehicleState, set[Vehicle]]:
+        return self._vehicles_by_state
+
     def parking_vehicles_in_region(self, region: str) -> set[Vehicle]:
         """Retrieve all vehicles currently in the PARKING state within the specified region.
 

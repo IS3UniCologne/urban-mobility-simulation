@@ -29,12 +29,10 @@ def generate_fleet_config(sim: SimulationContext) -> pd.DataFrame:
     config = sim.config
     random_manager = sim.random_manager
 
-    n_cars = config.shared_vehicle_operators[0].N_VEHICLES[VehicleType.CAR]
-    n_scooter = config.shared_vehicle_operators[0].N_VEHICLES[VehicleType.SCOOTER]
-    n_kick_scooter = config.shared_vehicle_operators[0].N_VEHICLES[
-        VehicleType.KICK_SCOOTER
-    ]
-    n_bikes = config.shared_vehicle_operators[0].N_VEHICLES[VehicleType.BIKE]
+    n_cars = config.operators[0].N_VEHICLES[VehicleType.CAR]
+    n_scooter = config.operators[0].N_VEHICLES[VehicleType.SCOOTER]
+    n_kick_scooter = config.operators[0].N_VEHICLES[VehicleType.KICK_SCOOTER]
+    n_bikes = config.operators[0].N_VEHICLES[VehicleType.BIKE]
 
     supply_path = config.path.PATH_VEHICLE_SUPPLY
     distribution = pd.read_csv(supply_path)
