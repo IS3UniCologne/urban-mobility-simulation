@@ -27,18 +27,23 @@ if TYPE_CHECKING:
 # TODO: refactor to not be a copy of ChargingTask that was used for SharedVehicles
 class ChargingTaskRidehailing(ServiceTask):
     __slots__ = (
+        "_arrived_at_charging_station",
         "_charging_duration",
         "_charging_station",
         "_config",
         "_destination",
+        "_destination_position",
         "_distance",
         "_distance_to_fleet_base",
         "_estimated_arrival_time",
         "_estimated_completion_time",
+        "_geo_env",
         "_kWh_charged",
         "_number_of_vehicles_to_charge",
         "_origin",
         "_scheduled_time",
+        "_started_charging",
+        "_state",
         "_state_of_charge_threshold",
         "_vehicle",
         "_vehicle_type",
