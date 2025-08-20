@@ -1,7 +1,11 @@
-from simulation.helper.configuration.configuration import RideHailingOperatorConfig
+from simulation.helper.configuration.configuration import (
+    OperationsConfig,
+    OperatorConfig,
+)
 from simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations import (
     RideHailingUncoordinatedChargingOperations,
 )
+from simulation.operator.ride_hailing_operator import RideHailingOperator
 
 DEFAULT_RECHARGE_THRESHOLD = [
     0.32,
@@ -30,18 +34,28 @@ DEFAULT_RECHARGE_THRESHOLD = [
     0.28,
 ]
 
-ridehailing_operator_1 = RideHailingOperatorConfig(
-    RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
-    OPERATIONS_START=10,
-    OPERATIONS_DURATION=50,
-    VEHICLE_RELOCATION_VELOCITY=32.16,
+operator_1 = OperatorConfig(
+    OPERATOR_TYPE=RideHailingOperator,
     OPERATIONS_TYPE=RideHailingUncoordinatedChargingOperations,
+    OPERATIONS_CONFIG=OperationsConfig(
+        OPERATIONS_START=10,
+        OPERATIONS_DURATION=50,
+        TIME_BETWEEN_OPERATIONS=10,
+        RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
+        VEHICLE_RELOCATION_VELOCITY=32.16,
+        ALLOW_QUEUE=True,
+    ),
 )
 
-ridehailing_operator_2 = RideHailingOperatorConfig(
-    RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
-    OPERATIONS_START=10,
-    OPERATIONS_DURATION=50,
-    VEHICLE_RELOCATION_VELOCITY=32.16,
+operator_2 = OperatorConfig(
+    OPERATOR_TYPE=RideHailingOperator,
     OPERATIONS_TYPE=RideHailingUncoordinatedChargingOperations,
+    OPERATIONS_CONFIG=OperationsConfig(
+        OPERATIONS_START=10,
+        OPERATIONS_DURATION=50,
+        TIME_BETWEEN_OPERATIONS=10,
+        RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
+        VEHICLE_RELOCATION_VELOCITY=32.16,
+        ALLOW_QUEUE=True,
+    ),
 )
