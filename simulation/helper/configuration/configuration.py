@@ -25,7 +25,7 @@ from __future__ import annotations
 import importlib.util
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, TypeVar, cast
 
 from pydantic import (
     BaseModel,
@@ -46,7 +46,9 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.time import SimulationVelocityConverter
-from simulation.operator.operations_management.operations import OperationsInterface  # noqa: TC001 for pydantic
+from simulation.operator.operations_management.operations import (
+    OperationsInterface,  # noqa: TC001 for pydantic
+)
 from simulation.operator.operator import Operator  # noqa: TC001 for pydantic
 
 if TYPE_CHECKING:
@@ -841,34 +843,22 @@ class Configuration:
 
         module = self._import_module_file(op_file)
 
-        buckets: dict[str, list[Any]] = {"operator": []}
+        operators: list[OperatorConfig] = []
 
-        type_to_key: dict[type[BaseModel], str] = {OperatorConfig: "operator"}
-
-        def add_one(x: object) -> None:
-            for model_type, key in type_to_key.items():
-                if isinstance(x, model_type):
-                    buckets[key].append(x)
-                    break
+        def maybe_add(value: object) -> None:
+            if isinstance(value, OperatorConfig):
+                operators.append(value)
 
         for name, value in vars(module).items():
-            if name.startswith("_"):
-                continue
-            if isinstance(value, list | tuple):
-                for elem in value:
-                    add_one(elem)
-            else:
-                add_one(value)
+            maybe_add(value)
 
-        any_found = any(len(v) > 0 for v in buckets.values())
-        for key, items in buckets.items():
-            self._cache[key] = items
-
-        if not any_found:
+        if not operators:
             raise ImportError(
                 f"No operator configs found in {op_file}. "
-                "Define one or more instances  of OperatorConfig."
+                "Define one or more instances of OperatorConfig."
             )
+
+        self._cache["operator"] = operators
 
     def _import_module_file(self, file_path: Path) -> ModuleType:
         """Import a module from a filesystem .py file path."""
@@ -876,9 +866,5 @@ class Configuration:
         if spec is None or spec.loader is None:
             raise ImportError(f"Could not load spec for {file_path}")
         module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
-        spec.loader.exec_module(module)
-        return module
         spec.loader.exec_module(module)
         return module
