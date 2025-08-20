@@ -8,34 +8,6 @@ from simulation.operator.operations_management.integrated_shared_mobility_operat
 )
 from simulation.operator.shared_mobility_operator import SharedMobilityOperator
 
-# When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
-DEFAULT_RECHARGE_THRESHOLD = [
-    0.40,
-    0.45,
-    0.50,
-    0.55,
-    0.52,
-    0.50,
-    0.48,
-    0.45,
-    0.45,
-    0.42,
-    0.40,
-    0.40,
-    0.40,
-    0.40,
-    0.40,
-    0.38,
-    0.35,
-    0.32,
-    0.30,
-    0.30,
-    0.27,
-    0.30,
-    0.32,
-    0.35,
-]
-
 operator_1 = OperatorConfig(
     OPERATOR_TYPE=SharedMobilityOperator,
     OPERATIONS_TYPE=IntegratedSharedMobilityOperations,

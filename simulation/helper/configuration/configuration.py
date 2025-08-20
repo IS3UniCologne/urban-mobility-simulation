@@ -294,15 +294,19 @@ class ChargingInfrastructureConfig(ConfigBaseModel):
 class OperationsConfig(ConfigBaseModel):
     """Configuration for operations parameters."""
 
-    OPERATIONS_START: int = Field(ge=0)
-    OPERATIONS_DURATION: int = Field(gt=0)
-    TIME_BETWEEN_OPERATIONS: int = Field(gt=0)
+    OPERATIONS_START: int | None = Field(ge=0, default=None)
+    OPERATIONS_DURATION: int | None = Field(gt=0, default=None)
+    TIME_BETWEEN_OPERATIONS: int | None = Field(gt=0, default=None)
 
-    RECHARGE_THRESHOLD: list[float] | float  # TODO: unify this between sv and rh
-    VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0)
+    RECHARGE_THRESHOLD: list[float] | float | None = Field(
+        default=None
+    )  # TODO: unify this between sv and rh
+    VEHICLE_RELOCATION_VELOCITY: float | None = Field(gt=0, default=None)
 
     ALLOW_QUEUE: bool | None = Field(default=False)
-    NUMBER_OF_SERVICE_WORKERS: int | None
+    NUMBER_OF_SERVICE_WORKERS: int | None = Field(default=None, gt=0)
+
+    PLANNING_LOOKAHEAD: int | None = Field(default=None, gt=0)
 
     @field_validator("VEHICLE_RELOCATION_VELOCITY", mode="after")
     @classmethod
@@ -324,12 +328,15 @@ class OperatorConfig(ConfigBaseModel):
     OPERATIONS_CONFIG: OperationsConfig
 
     # TODO: Shared vehicle stuff, this should be changed once we move to the same charging infrastructure as ridehailing
-    CHARGING_STATION_POWER: int | None
-    NUMBER_OF_BASE_REGIONS: int | None
-    BASE_CAPACITY: int | None
-    BASE_REGIONS: list[str] | None
+    CHARGING_STATION_POWER: int | None = Field(default=None)
+    NUMBER_OF_BASE_REGIONS: int | None = Field(default=None)
+    BASE_CAPACITY: int | None = Field(default=None)
+    BASE_REGIONS: list[str] | None = Field(default=None)
 
-    N_VEHICLES: dict[VehicleType, int] | None
+    N_VEHICLES: dict[VehicleType, int] | None = Field(default=None)
+
+    # Public transit stuff
+    MAX_BUSSES: int | None = Field(default=None, gt=0)
 
 
 class SharedVehicleOperatorConfig(ConfigBaseModel):
@@ -367,13 +374,6 @@ class SharedVehicleOperatorConfig(ConfigBaseModel):
         return self.model_copy(
             update={"BASE_REGIONS": self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]}
         )
-
-
-class TransitOperatorConfig(ConfigBaseModel):
-    """Configuration for transit operator parameters."""
-
-    PLANNING_LOOKAHEAD: int = Field(gt=0)
-    MAX_BUSSES: int = Field(gt=0)
 
 
 class RideHailingGlobalConfig(ConfigBaseModel):
@@ -711,18 +711,6 @@ class Configuration:
             The operators configuration section.
         """
         return self._get_section_list("operator", OperatorConfig)
-
-    @property
-    def transit_operators(self) -> list[TransitOperatorConfig]:
-        """
-        Get the transit operators configuration section.
-
-        Returns
-        -------
-        list[TransitOperatorConfig]
-            The transit operators configuration section.
-        """
-        return self._get_section_list("transit_operator", TransitOperatorConfig)
 
     @property
     def ride_hailing_vehicles(self) -> dict[str, VehicleConfig]:
