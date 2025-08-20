@@ -46,7 +46,7 @@ operator_1 = OperatorConfig(
         VEHICLE_RELOCATION_VELOCITY=9.54,
     ),
 )
-ride_hailing_operator_2 = OperatorConfig(
+operator_2 = OperatorConfig(
     OPERATOR_TYPE=RideHailingOperator,
     OPERATIONS_TYPE=RideHailingBaseChargingOperations,
     OPERATIONS_CONFIG=OperationsConfig(
