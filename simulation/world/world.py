@@ -149,7 +149,7 @@ class World(SimulationBase):
             self._initialize_charging_infrastructure()
         )
 
-        self._setup_market()
+        self._market: Auction | None = self._setup_market()
 
         self._setup_operators()
 
@@ -733,9 +733,9 @@ class World(SimulationBase):
             allocation_engine=allocation_engine,
         )
 
-    def _setup_market(self) -> None:
+    def _setup_market(self) -> Auction | None:
         if self._config.shared_charging_auction is None:
-            return
-        self._market = SharedChargingAuction(
+            return None
+        return SharedChargingAuction(
             sim=self._sim, charging_infrastructure=self._charging_infrastructure
         )
