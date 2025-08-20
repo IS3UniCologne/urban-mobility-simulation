@@ -7,7 +7,7 @@ from tracking.tracking_interface import TrackingInterface
 class BidderInterface(TrackingInterface):
     exposes = ["auction_participant_id", "_bids", "_result"]  # noqa: RUF012
 
-    def __init__(self, env: Environment, auction: Auction):  # noqa: ANN204
+    def __init__(self, env: Environment, auction: Auction) -> None:
         self._env = env
         self._auction = auction
         self._auction_participant_id = self._auction.register_participant(self)

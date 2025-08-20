@@ -44,6 +44,7 @@ from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
     OnlyCarVehicleChoiceBehavior,
 )
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
+from simulation.world.markets.shared_charging_auction import SharedChargingAuction
 from simulation.world.population.PopulationFactory import PopulationFactory
 
 if TYPE_CHECKING:
@@ -70,6 +71,7 @@ if TYPE_CHECKING:
     )
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.vehicle.vehicle import Vehicle
+    from simulation.world.markets.auction import Auction
 
 
 class World(SimulationBase):
@@ -85,6 +87,7 @@ class World(SimulationBase):
         "_env",
         "_fleets",
         "_geo_env",
+        "_market",
         "_operators",
         "_payment_engine",
         "_population_factory",
@@ -142,6 +145,12 @@ class World(SimulationBase):
             self._initialize_population_factory()
         )
 
+        self._charging_infrastructure: ChargingInfrastructure | None = (
+            self._initialize_charging_infrastructure()
+        )
+
+        self._setup_market()
+
         self._setup_operators()
 
         # Events
@@ -175,6 +184,11 @@ class World(SimulationBase):
     def operators(self) -> list[Operator]:
         """Get a list of operators in the world."""
         return self._operators
+
+    @property
+    def market(self) -> Auction | None:
+        """Get the market for shared charging."""
+        return self._market
 
     @property
     def fleets(self) -> list[VehicleFleet]:
@@ -349,10 +363,6 @@ class World(SimulationBase):
             and self._config.operators[0].OPERATOR_TYPE != RideHailingOperator
         ):
             return
-
-        self._charging_infrastructure: ChargingInfrastructure | None = (
-            self._initialize_charging_infrastructure()
-        )
 
         rh_ops = self._config.operators
         num_rh_ops = max(2, len(rh_ops)) if rh_ops else 0
@@ -721,4 +731,11 @@ class World(SimulationBase):
             operations=operations,
             search_engine=search_engine,
             allocation_engine=allocation_engine,
+        )
+
+    def _setup_market(self) -> None:
+        if self._config.shared_charging_auction is None:
+            return
+        self._market = SharedChargingAuction(
+            sim=self._sim, charging_infrastructure=self._charging_infrastructure
         )

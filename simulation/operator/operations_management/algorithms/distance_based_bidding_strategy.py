@@ -3,10 +3,13 @@ import pandas as pd
 
 
 def get_bid(  # noqa: ANN201
-    operator_referece,  # noqa: ANN001
+    operator_reference,  # noqa: ANN001
     auctioned_timeslot,  # noqa: ANN001
     auctioned_capacity,  # noqa: ANN001
-    bidding_parameters,  # noqa: ANN001
+    bid_default: float,
+    bid_decay: float,
+    random_overbidding: bool,
+    overbid_prob: float,
     participant_id,  # noqa: ANN001
     state_of_charge_threshold,  # noqa: ANN001
     distance_matrix,  # noqa: ANN001
@@ -14,19 +17,14 @@ def get_bid(  # noqa: ANN201
 ):
     auctioned_capacity = auctioned_capacity
     auctioned_timeslot = auctioned_timeslot
-    operator_referece = operator_referece
+    operator_reference = operator_reference
     participant_id = participant_id
-    vehicles_to_charge = operator_referece.fleet.mark_vehicles_to_be_charged(
+    vehicles_to_charge = operator_reference.fleet.mark_vehicles_to_be_charged(
         state_of_charge_threshold
     )
 
     if len(vehicles_to_charge) == 0:
         return None
-
-    bid_default = bidding_parameters["bid_default"]
-    bid_decay = bidding_parameters["bid_decay"]
-    random_overbidding = bidding_parameters["random_overbidding"]
-    overbid_prob = bidding_parameters["overbid_prob"]
 
     distances = []
 
