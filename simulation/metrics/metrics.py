@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 from simulation.helper.simulation_base import SimulationBase
 
+from .charging_station_metrics import ChargingStationMetrics
+from .fleet_metrics import FleetMetrics
 from .metrics_dict import MetricsDict
 from .metrics_tracker import MetricsTracker
 from .operator_metrics import OperatorMetrics
@@ -33,6 +35,8 @@ class Metrics(SimulationBase):
         # Initialize individual metrics classes
         self.world_metrics = WorldMetrics(simulation)
         self.operator_metrics = OperatorMetrics(simulation)
+        self.charging_station_metrics = ChargingStationMetrics(simulation)
+        self.fleet_metrics = FleetMetrics(simulation)
 
         # Initialize metrics tracker TODO: Is there a case where we want multiple trackers?
         self._tracker = MetricsTracker(simulation)
