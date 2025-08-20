@@ -46,14 +46,13 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.time import SimulationVelocityConverter
-from simulation.operator.operations_management.operations import (
-    OperationsInterface,  # noqa: TC001
-)
+from simulation.operator.operations_management.operations import OperationsInterface  # noqa: TC001 for pydantic
+from simulation.operator.operator import Operator  # noqa: TC001 for pydantic
 
 if TYPE_CHECKING:
+    # Careful moving stuff here, pydantic needs to check type hints at runtime!
     from types import ModuleType
 
-    from simulation.operator.operator import Operator
 
 try:
     import tomllib  # future proofing for python 3.11+
@@ -877,5 +876,9 @@ class Configuration:
         if spec is None or spec.loader is None:
             raise ImportError(f"Could not load spec for {file_path}")
         module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+        spec.loader.exec_module(module)
+        return module
         spec.loader.exec_module(module)
         return module
