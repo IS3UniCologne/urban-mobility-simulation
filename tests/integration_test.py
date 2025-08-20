@@ -1,6 +1,5 @@
 """Integration tests for simulation templates."""
 
-import glob
 import itertools
 import logging
 import os
@@ -41,13 +40,14 @@ def run_template_script(
 
 TEMPLATES = ["test_template.py"]
 
-# Get all *.toml files in the tests/configurations directory
-CONFIG_FILES_PATTERN = os.path.join("tests", "configurations", "*.toml")
-CONFIGS = sorted(glob.glob(CONFIG_FILES_PATTERN))
+# Discover all configuration directories under tests/configurations
+CONFIG_DIRS = sorted(
+    str(p) for p in Path("tests", "configurations").iterdir() if p.is_dir()
+)
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("script,config", itertools.product(TEMPLATES, CONFIGS))
+@pytest.mark.parametrize("script,config", itertools.product(TEMPLATES, CONFIG_DIRS))
 def test_templates(script: str, config: str) -> None:
     """Test each template in combination with each configuration file.
 

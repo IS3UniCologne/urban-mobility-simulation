@@ -124,17 +124,6 @@ CHARGING_STATION_QUEUE_SIZE = [99]
 # Operator Configurations #
 ###########################
 
-[[RIDE_HAILING_OPERATOR]]
-# When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
-RECHARGE_THRESHOLD = [0.40, 0.45, 0.50, 0.55, 0.52, 0.50, 0.48, 0.45, 0.45, 0.42, 0.40, 0.40, 0.40, 0.40, 0.40, 0.38, 0.35, 0.32, 0.30, 0.30, 0.27, 0.30, 0.32, 0.35]
-# Operations Start Time (e.g., 1440 => 00:00am) !!! 20.000 --> quasi no operations !!!
-OPERATIONS_START = 15
-# Operations Duration (e.g., 8 working hours => 8*60 => 480)
-OPERATIONS_DURATION = 50
-# Velocity of Relocation Vehicle (i.e., car/van velocity) in km/h
-VEHICLE_RELOCATION_VELOCITY = 9.54
-
-
 [RIDE_HAILING_GLOBAL]
 # Driver payment share for ride-hailing
 DRIVER_PAYMENT_SHARE = 0.75
