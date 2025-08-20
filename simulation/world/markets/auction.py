@@ -3,9 +3,9 @@ from typing import Any
 
 from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
 from beartype.roar import BeartypeDoorHintViolation
-from simpy import Environment
 
-from simulation.helper.configuration.configuration import Configuration
+from simulation.context.simulation_context import SimulationContext
+from simulation.helper.simulation_base import SimulationBase
 
 
 class BidMalformedException(Exception):
@@ -16,27 +16,24 @@ class AuctionClosedException(Exception):
     pass
 
 
-class Auction(ABC):
+class Auction(SimulationBase, ABC):
     __slots__ = (
         "_bid_syntax",
         "_bids",
         "_config",
-        "_end_condition",
         "_env",
         "_is_open",
         "_process",
         "_result",
         "_result_syntax",
-        "_start_condition",
         "cleared",
         "open_for_bidding",
     )
 
-    def __init__(self, env: Environment, start_condition, end_condition) -> None:  # noqa: ANN001
-        self._env = env
-        self._config = Configuration()
-        self._start_condition = start_condition
-        self._end_condition = end_condition
+    def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim)
+        self._config = sim.config
+        self._env = sim.env
         self._is_open = False
         self._bid_syntax: type = Any
         self._bids: self._bid_syntax = None

@@ -308,6 +308,12 @@ class OperationsConfig(ConfigBaseModel):
 
     PLANNING_LOOKAHEAD: int | None = Field(default=None, gt=0)
 
+    BID_DEFAULT: float | None = Field(gt=0, default=None)
+    BID_DECAY: float | None = Field(gt=0, default=None)
+    RANDOM_OVERBIDDING: bool | None = Field(default=None)
+    OVERBID_PROB: float | None = Field(gt=0, default=None)
+    LOW_SOC_PENALTY: int | None = Field(gt=0, default=None)
+
     @field_validator("VEHICLE_RELOCATION_VELOCITY", mode="after")
     @classmethod
     def convert_velocity(cls, v: float) -> float:
@@ -393,11 +399,6 @@ class RideHailingGlobalConfig(ConfigBaseModel):
     EV_PENETRATION: float = Field(gt=0)
     AV_PENETRATION: float = Field(gt=0)
     RH_AVAILABILITY: list[float]
-    BID_DEFAULT: float = Field(gt=0)
-    BID_DECAY: float = Field(gt=0)
-    RANDOM_OVERBIDDING: bool
-    OVERBID_PROB: float = Field(gt=0)
-    LOW_SOC_PENALTY: int = Field(gt=0)
     DRIVER_AVAILABILITY_VECTOR: list[int] | None = None
 
     @model_validator(mode="after")
@@ -786,15 +787,21 @@ class Configuration:
         return self._get_section("auction", AuctionConfig)
 
     @property
-    def shared_charging_auction(self) -> SharedChargingAuctionConfig:
+    def shared_charging_auction(self) -> SharedChargingAuctionConfig | None:
         """Get the shared charging auction configuration section.
 
         Returns
         -------
-        SharedChargingAuctionConfig
-            The shared charging auction configuration section.
+        SharedChargingAuctionConfig | None
+            The shared charging auction configuration section, or None if not defined.
         """
-        return self._get_section("shared_charging_auction", SharedChargingAuctionConfig)
+        section = "shared_charging_auction"
+        if section in self._cache:
+            return cast("SharedChargingAuctionConfig | None", self._cache[section])
+        if section not in self._data:
+            self._cache[section] = None
+            return None
+        return self._get_section(section, SharedChargingAuctionConfig)
 
     @property
     def dynamic_routing(self) -> DynamicRoutingConfig:

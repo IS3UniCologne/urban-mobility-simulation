@@ -150,15 +150,6 @@ EV_PENETRATION  = 1
 AV_PENETRATION  = 1
 RH_AVAILABILITY = [0.084238, 0.058132, 0.035717, 0.024728, 0.027128, 0.043823, 0.078576, 0.128257, 0.176352, 0.214981, 0.241122, 0.255754, 0.275117, 0.293370, 0.306846, 0.318127, 0.323715, 0.326972, 0.318448, 0.290888, 0.242649, 0.187925, 0.142973, 0.111224]
 
-# bidding behavior
-BID_DEFAULT        = 1
-BID_DECAY          = 0.0001
-RANDOM_OVERBIDDING = true
-OVERBID_PROB       = 0.3
-## private infrastructure optimization strategy
-# penalty multiplicator for non-allocated vehicles based on 1-SOC, distance-based minimization
-LOW_SOC_PENALTY = 500_000
-
 
 ##########################
 # Vehicle Configurations #
