@@ -1,0 +1,138 @@
+##############################################################################################
+### This is the default configuration file template                                        ###
+### for instructions on adding new configuration parameters, check the Configuration class ###
+##############################################################################################
+
+
+[SETTINGS]
+# Logging
+FILE_LOG_LEVEL = "DEBUG"
+LOG_LEVEL      = "WARNING"
+LOG_TIMESTAMPS = false
+
+# Output
+PERSIST_RESULTS = true
+
+
+[EXPERIMENT_MANAGEMENT]
+END_TIME   = 144
+START_TIME = 0
+
+
+[RANDOM_MANAGER]
+# Main seed, set to 0 to generate a new seed on every run
+SEED = 43
+# Component seeds. If commented out, they will be generated from the main seed. (default for reproducibility)
+# Set to 0 to generate a new seed for the component on every run, independent of the main seed.
+# Set to any other value to use that value as the seed for the component.
+[RANDOM_MANAGER.COMPONENT_SEEDS]
+# POPULATIONFACTORY = 0
+# FLEETFACTORY =0
+# DEMANDFACTORY     = 0
+# INITIALSOC        = 0
+# GEOENV            = 0
+
+
+[WORLD]
+CITY                = "berlin"
+DAILY_RESOLUTION    = "weekday_weekend"
+SPATIAL_RESOLUTION  = 7
+TEMPORAL_RESOLUTION = 4
+
+
+[PATH]
+# Environment paths
+PATH_ENV_BOUNDING_BOX    = "./data/environment/geodesic/{city}/env_bounding_box.geojson"
+PATH_ENV_HEX_LAYER_RES_7 = "./data/environment/geodesic/{city}/env_hex_7.geojson"
+PATH_ENV_HEX_LAYER_RES_8 = "./data/environment/geodesic/{city}/env_hex_8.geojson"
+PATH_ENV_HEX_LAYER_RES_9 = "./data/environment/geodesic/{city}/env_hex_9.geojson"
+
+# Public transit paths
+PATH_TRANSIT_SHAPES    = "./data/infrastructure/transit_shapes.csv"
+PATH_TRANSIT_TIMETABLE = "./data/infrastructure/transit_timetable.csv"
+
+# Supply paths
+PATH_VEHICLE_SUPPLY = "./data/supply/{city}_vehicle_supply_distribution_hex_7.csv"
+
+# Mode Choice Model paths
+PATH_TO_MODE_CHOICE_MODEL = "./data/choice_model/distance_based_shared_vehicles.pickle"
+
+# Output paths
+FLEET_STATE_FILE = "fleet_state.csv"
+OUTPUT_FOLDER    = "./data/test_output"
+TRANSACTION_FILE = "transactions.csv"
+
+
+# Demand Paths
+PATH_DEMAND_MODIFIERS = ["./data/demand/{city}__zero_demand.geojson", "./data/demand/{city}_line200bufferROUTE.geojson"]
+PATH_TRIP_DEMAND      = "./data/demand/{city}_shared_vehicle_trips.csv"
+
+
+[POPULATION]
+POPULATION_PROBABILITIES = [0.2, 0.3, 0.5]
+
+#TODO: These should probably be phased out or become part of user config
+# RIDE_HAILING_POPULATION_PROBABILITIES   = [0.247, 0.237, 0.19, 0.325]
+SHARED_VEHICLE_POPULATION_PROBABILITIES = [0.0]
+TRANSIT_POPULATION_PROBABILITIES        = [0.0]
+
+
+[USER]
+# how many minutes is the TransitUser willing to wait (incl. time to get there) before boarding a transit alternative
+# this also includes the required time of getting from drop-off to real destination
+TRANSIT_MAX_WAIT = 10
+# how are vehicles / transit stops considered in vicinity / reachable? valid: 'hexagon', 'euclidean', 'walk'
+SPATIAL_STRATEGY = "hexagon"
+# walking speed in kilometers per hour (kph)
+WALKING_SPEED = 5.0
+
+
+[MODE_CHOICE_MODEL]
+# random (Random Vehicle Selection), substitution (Substitution Aware), no_sub (No Substitution Effect)
+MODE_CHOICE_STRATEGY = "SubstitutionAware"
+# Only Relevant for substitution strategy (default)
+AV_TRUST              = [4.689116343, 4.681377435, 3.925968992, 4.442471303]
+SUBSTITUTION_BOUNDARY = 0.1
+
+# Mode Choice Coefficients
+# [cst, price, waiting_time, EV, trip_duration, cst_AV, cst_HV, trust_AV, trust_HV]
+# TODO: Better description of what these are and do, maybe put in different file ?
+MOD_COEFFICIENTS                  = [[-0.273671504, -0.353911557, -0.103573505, -1.128132785, 0.150429623, -0.576113819, 7.297866296, 0.631438368, -1.011643365], [-0.318885388, -1.281672341, -0.454985255, 0.123860882, 1.060810562, 5.74223911, 12.76153448, 0.579730247, -0.746119133], [-0.529871517, -0.176603082, -0.624049182, -0.094335042, -0.07608058, 6.357501057, 3.73756425, 1.017193094, 1.048363966], [0.00, -0.228709544, -0.161649449, -0.069096605, 0.133775179, -0.802892154, 7.325820705, 0.729678667, -0.735175789]]
+MOD_COEFFICIENTS_CI_LOWER         = [[-0.670, -0.463, -0.198, -1.721, 0.083, -1.960, 5.347, 0.409, -1.415], [-0.695, -1.702, -0.601, -0.588, 0.278, -0.573, 6.894, -0.175, -1.747], [-0.941, -0.320, -0.805, -0.917, -0.205, 3.597, 0.648, 0.498, 0.447], [0.000, -0.307, -0.237, -0.425, 0.068, -2.626, 5.734, 0.330, -1.036]]
+MOD_COEFFICIENTS_CI_UPPER         = [[0.122, -0.245, -0.009, -0.535, 0.218, 0.808, 9.248, 0.853, -0.608], [0.057, -0.862, -0.309, 0.835, 1.844, 12.057, 18.629, 1.335, 0.254], [-0.119, -0.033, -0.443, 0.729, 0.053, 9.118, 6.827, 1.537, 1.650], [0.000, -0.150, -0.086, 0.286, 0.199, 1.019, 8.917, 1.129, -0.434]]
+MOD_COEFFICIENT_INTERVAL_ADJUSTER = 0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      #what is this?
+MOD_P_VALUES                      = [[0.00, 0.03, 0.00, 0.00, 0.42, 0.00, 0.00, 0.00, 0.18], [0.00, 0.00, 0.73, 0.01, 0.08, 0.00, 0.13, 0.14, 0.10], [0.02, 0.00, 0.82, 0.25, 0.00, 0.02, 0.00, 0.00, 0.01], [0.00, 0.00, 0.70, 0.00, 0.39, 0.00, 0.00, 0.00, 0.00]]
+
+
+[CHARGING_INFRASTRUCTURE]
+# If lists are provided, heterogeneous charging stations are possible
+# If single value lists are provided, we assume the same values for all locations
+# Number of charging stations can be used to cut down on the number of charging stations without modifying the locations
+
+NUMBER_OF_CHARGING_STATIONS = 16
+##### berlin
+LOCATIONS = ["871f18869ffffff", "871f18b0dffffff", "871f18b23ffffff", "871f18b26ffffff", "871f18b35ffffff", "871f1d483ffffff", "871f1d489ffffff", "871f1d48bffffff", "871f1d48effffff", "871f1d49cffffff", "871f1d4aaffffff", "871f1d4b3ffffff", "871f1d4d2ffffff", "871f1d4d3ffffff", "871f1d4f3ffffff", "871f1d4f6ffffff"]
+#If single value, all stations have the same power
+CHARGING_STATION_POWER = [50.0]
+# How many plugs / slots a charging station has. If single value, all stations have the same capacity
+CHARGING_STATION_CAPACITY = [20]
+# How many spaces without plugs (queue for plugs) a charging station has, if single value, all stations have the same capacity
+CHARGING_STATION_QUEUE_SIZE = [99]
+
+
+###########################
+# Operator Configurations #
+###########################
+
+[TRANSIT_VEHICLES.Bus]
+AUTONOMY_TYPE       = "HumanDriven"
+PROPULSION_TYPE     = "InternalCombustion"
+VEHICLE_TYPE        = "Bus"
+MAX_AVAILABLE_SEATS = 100
+# average velocity in european cities is no more than 30 km/h
+VELOCITY = 30.0
+
+
+##############################
+# Experiment Configurations #
+##############################

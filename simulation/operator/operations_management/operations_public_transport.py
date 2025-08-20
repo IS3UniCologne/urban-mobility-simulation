@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from simulation.context.simulation_context import SimulationContext
-    from simulation.helper.configuration.configuration import TransitOperatorConfig
+    from simulation.helper.configuration.configuration import OperatorConfig
     from simulation.operator.public_transport_vehicle_fleet import (
         PublicTransportVehicleFleet,
     )
@@ -20,6 +20,7 @@ from simulation.infrastructure.transit_network.stop import Stop
 from simulation.operator.operations_management.operations import OperationsInterface
 
 
+# TODO: rename this to ____Operations like the others ?
 class OperationsPublicTransport(OperationsInterface):
     __slots__ = (
         "_bus_velocity",
@@ -38,7 +39,7 @@ class OperationsPublicTransport(OperationsInterface):
         sim: SimulationContext,
         timetable: object,
         fleet: PublicTransportVehicleFleet,
-        operator_config: TransitOperatorConfig,
+        operator_config: OperatorConfig,
     ) -> None:
         super().__init__(sim=sim)
 
@@ -65,7 +66,8 @@ class OperationsPublicTransport(OperationsInterface):
 
                 if len(self._fleet._busses) < self._operator_config.MAX_BUSSES:  # noqa: SLF001
                     trips = self._timetable.next_trips(
-                        self._time, self._operator_config.PLANNING_LOOKAHEAD
+                        self._time,
+                        self._operator_config.OPERATIONS_CONFIG.PLANNING_LOOKAHEAD,
                     )
 
                     if trips:  # non-empty list is True
