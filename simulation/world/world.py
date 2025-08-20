@@ -307,12 +307,12 @@ class World(SimulationBase):
             # TODO: Ordered vehicle modes are silly, it should not work like that. Maybe enums ?Why do we need these mode lists at all ?
             operations = IntegratedSharedMobilityOperations(
                 sim=self._sim,
-                time_between_operations=operator_cfg.OPERATIONS_START,
-                operation_duration=operator_cfg.OPERATIONS_DURATION,
+                time_between_operations=operator_cfg.OPERATIONS_CONFIG.TIME_BETWEEN_OPERATIONS,
+                operation_duration=operator_cfg.OPERATIONS_CONFIG.OPERATIONS_DURATION,
                 distance_matrix=self._distance_matrix,
                 ordered_available_vehicle_types=ordered_available_vehicle_types,
                 ordered_max_vehicle_supply=ordered_max_vehicle_supply,
-                state_of_charge_threshold=operator_cfg.RECHARGE_THRESHOLD,
+                state_of_charge_threshold=operator_cfg.OPERATIONS_CONFIG.RECHARGE_THRESHOLD,
                 base_regions=operator_cfg.BASE_REGIONS,
                 base_capacity=operator_cfg.BASE_CAPACITY,
             )
@@ -324,7 +324,7 @@ class World(SimulationBase):
                 operations=operations,
                 search_engine=self._search_engine[operator_id],
                 allocation_engine=self._vehicle_assignment_engine[operator_id],
-                number_service_workers=operator_cfg.NUMBER_OF_SERVICE_WORKERS,
+                number_service_workers=operator_cfg.OPERATIONS_CONFIG.NUMBER_OF_SERVICE_WORKERS,
             )
             self.operators.append(operator)
             self._payment_engine[operator_id] = operator
@@ -344,6 +344,12 @@ class World(SimulationBase):
         return dmi.load_distance_matrix()
 
     def _setup_ride_hailing_operators(self) -> None:
+        if (
+            self._config.operators
+            and self._config.operators[0].OPERATOR_TYPE != RideHailingOperator
+        ):
+            return
+
         self._charging_infrastructure: ChargingInfrastructure | None = (
             self._initialize_charging_infrastructure()
         )
