@@ -128,6 +128,10 @@ convention = "numpy"
 "resources/*"     = ["D"]
 "tests/*"         = ["D", "SLF001"]
 "visualization/*" = ["D"]
+
+# Pydantic needs type annotations at runtime, so we ignore TC001 in the configuration
+"simulation/helper/configuration/configuration.py" = ["TC001"]
+
 #TODO: These should be gradually removed once properly annotated.
 "public_transport_template.py"      = ["D"]
 "ridehailing_template.py"           = ["D"]

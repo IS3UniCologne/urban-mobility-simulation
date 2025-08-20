@@ -46,10 +46,8 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.time import SimulationVelocityConverter
-from simulation.operator.operations_management.operations import (
-    OperationsInterface,  # noqa: TC001 for pydantic
-)
-from simulation.operator.operator import Operator  # noqa: TC001 for pydantic
+from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.operator import Operator
 
 if TYPE_CHECKING:
     # Careful moving stuff here, pydantic needs to check type hints at runtime!
@@ -300,10 +298,11 @@ class OperationsConfig(ConfigBaseModel):
     OPERATIONS_DURATION: int = Field(gt=0)
     TIME_BETWEEN_OPERATIONS: int = Field(gt=0)
 
-    RECHARGE_THRESHOLD: list[float]
+    RECHARGE_THRESHOLD: list[float] | float  # TODO: unify this between sv and rh
     VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0)
 
     ALLOW_QUEUE: bool | None = Field(default=False)
+    NUMBER_OF_SERVICE_WORKERS: int | None
 
     @field_validator("VEHICLE_RELOCATION_VELOCITY", mode="after")
     @classmethod
@@ -323,6 +322,14 @@ class OperatorConfig(ConfigBaseModel):
 
     OPERATIONS_TYPE: type[OperationsInterface]
     OPERATIONS_CONFIG: OperationsConfig
+
+    # TODO: Shared vehicle stuff, this should be changed once we move to the same charging infrastructure as ridehailing
+    CHARGING_STATION_POWER: int | None
+    NUMBER_OF_BASE_REGIONS: int | None
+    BASE_CAPACITY: int | None
+    BASE_REGIONS: list[str] | None
+
+    N_VEHICLES: dict[VehicleType, int] | None
 
 
 class SharedVehicleOperatorConfig(ConfigBaseModel):
