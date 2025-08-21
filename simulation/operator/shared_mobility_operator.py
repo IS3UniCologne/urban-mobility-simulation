@@ -5,9 +5,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.context.simulation_context import SimulationContext
-    from simulation.infrastructure.charging_stations.charging_infastructure import (
-        ChargingInfrastructure,
-    )
     from simulation.operator.interface.search_engine_interface import (
         SearchEngineInterface,
     )
@@ -33,7 +30,6 @@ class SharedMobilityOperator(Operator):
         self,
         sim: SimulationContext,
         fleet: VehicleFleet,
-        charging_infrastructure: ChargingInfrastructure,
         operations: IntegratedSharedMobilityOperations,
         search_engine: SearchEngineInterface,
         allocation_engine: VehicleAllocationEngineInterface,
@@ -42,7 +38,6 @@ class SharedMobilityOperator(Operator):
         super().__init__(
             sim=sim,
             fleet=fleet,
-            charging_infrastructure=charging_infrastructure,
             operations=operations,
             search_engine=search_engine,
             allocation_engine=allocation_engine,

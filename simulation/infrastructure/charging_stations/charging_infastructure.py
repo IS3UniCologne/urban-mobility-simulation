@@ -86,5 +86,9 @@ class ChargingInfrastructure:
     def charging_stations(self) -> list[ChargingStation]:
         return self._charging_stations
 
+    @property
+    def auction(self) -> Auction | None:
+        return self._auction
+
     def get_locations(self) -> list[str]:
         return self._location_list

@@ -1,9 +1,8 @@
+from __future__ import annotations
+
 from collections import namedtuple
+from typing import TYPE_CHECKING
 
-import pandas as pd
-
-from simulation.context.simulation_context import SimulationContext
-from simulation.helper.configuration.configuration import OperationsConfig
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
@@ -15,7 +14,14 @@ from simulation.operator.operations_management.ridehailing_base_charging_operati
     RideHailingBaseChargingOperations,
 )
 from simulation.world.markets.interfaces.bidder_interface import BidderInterface
-from simulation.world.world import World
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import OperationsConfig
+    from simulation.operator.ride_hailing_operator import RideHailingOperator
+    from simulation.world.world import World
 
 
 class RideHailingSharedChargingOperations(BidderInterface, OperationsInterface):
@@ -37,14 +43,16 @@ class RideHailingSharedChargingOperations(BidderInterface, OperationsInterface):
         distance_matrix: pd.DataFrame,
         operations_config: OperationsConfig,
         world: World,
+        operator: RideHailingOperator,
     ):
         self._env = sim.env
         self._sim = sim
         self._operations_config = operations_config
         self._world = world
+        self._auction = operator.charging_infrastructure.auction
 
         OperationsInterface.__init__(self, sim)
-        BidderInterface.__init__(self, env=sim.env, auction=operations_config)
+        BidderInterface.__init__(self, env=sim.env, auction=self._auction)
 
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
         # self._bidding_strategy = bidding_strategy
@@ -58,8 +66,7 @@ class RideHailingSharedChargingOperations(BidderInterface, OperationsInterface):
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             sim=self._sim,
             charging_infrastructure=self._operator_reference.charging_infrastructure,
-            lookahead=self._config.auction.AUCTION_START
-            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD,
+            lookahead=self._auction._shared_charging_config.AUCTION_LOOKAHEAD,  # noqa: SLF001
         )
 
         self._charging_operations = RideHailingBaseChargingOperations(
