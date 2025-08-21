@@ -69,7 +69,10 @@ class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):
         if not busses:
             # No busses are en-route, report no viable alternative
             # TODO: fallback to timetable if temporal_lookahead > transit operator planning window?
-            if temporal_lookahead > self._operator_config.PLANNING_LOOKAHEAD:
+            if (
+                temporal_lookahead
+                > self._operator_config.OPERATIONS_CONFIG.PLANNING_LOOKAHEAD
+            ):
                 raise NotImplementedError(
                     "temporal lookahead of user > planning lookahead of operator currently not supported"
                 )

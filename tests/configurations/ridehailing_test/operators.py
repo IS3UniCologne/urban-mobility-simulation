@@ -1,4 +1,5 @@
 from simulation.helper.configuration.configuration import (
+    ChargingInfrastructureConfig,
     OperationsConfig,
     OperatorConfig,
 )
@@ -7,9 +8,36 @@ from simulation.operator.operations_management.ridehailing_base_charging_operati
 )
 from simulation.operator.ride_hailing_operator import RideHailingOperator
 
+charging_infrastructure_1 = ChargingInfrastructureConfig(
+    NUMBER_OF_CHARGING_STATIONS=16,
+    LOCATIONS=[
+        "871f18869ffffff",
+        "871f18b0dffffff",
+        "871f18b23ffffff",
+        "871f18b26ffffff",
+        "871f18b35ffffff",
+        "871f1d483ffffff",
+        "871f1d489ffffff",
+        "871f1d48bffffff",
+        "871f1d48effffff",
+        "871f1d49cffffff",
+        "871f1d4aaffffff",
+        "871f1d4b3ffffff",
+        "871f1d4d2ffffff",
+        "871f1d4d3ffffff",
+        "871f1d4f3ffffff",
+        "871f1d4f6ffffff",
+    ],
+    CHARGING_STATION_POWER=[50.0],
+    CHARGING_STATION_CAPACITY=[20],
+    CHARGING_STATION_QUEUE_SIZE=[99],
+)
+
+
 operator_1 = OperatorConfig(
     OPERATOR_TYPE=RideHailingOperator,
     OPERATIONS_TYPE=RideHailingBaseChargingOperations,
+    CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
     OPERATIONS_CONFIG=OperationsConfig(
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,

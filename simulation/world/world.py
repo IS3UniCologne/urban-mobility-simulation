@@ -44,6 +44,7 @@ from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
     OnlyCarVehicleChoiceBehavior,
 )
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
+from simulation.world.markets.shared_charging_auction import SharedChargingAuction
 from simulation.world.population.PopulationFactory import PopulationFactory
 
 if TYPE_CHECKING:
@@ -70,6 +71,7 @@ if TYPE_CHECKING:
     )
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.vehicle.vehicle import Vehicle
+    from simulation.world.markets.auction import Auction
 
 
 class World(SimulationBase):
@@ -77,7 +79,7 @@ class World(SimulationBase):
     __instance = None
     __slots__ = (
         "_changed",
-        "_charging_infrastructure",
+        "_charging_infrastructures",
         "_config",
         "_daily_resolution",
         "_demand_processes",
@@ -85,6 +87,7 @@ class World(SimulationBase):
         "_env",
         "_fleets",
         "_geo_env",
+        "_market",
         "_operators",
         "_payment_engine",
         "_population_factory",
@@ -142,6 +145,12 @@ class World(SimulationBase):
             self._initialize_population_factory()
         )
 
+        self._charging_infrastructures: list[ChargingInfrastructure] | None = (
+            self._initialize_charging_infrastructures()
+        )
+
+        self._market: Auction | None = self._setup_market()
+
         self._setup_operators()
 
         # Events
@@ -177,6 +186,11 @@ class World(SimulationBase):
         return self._operators
 
     @property
+    def market(self) -> Auction | None:
+        """Get the market for shared charging."""
+        return self._market
+
+    @property
     def fleets(self) -> list[VehicleFleet]:
         """Get a list of all vehicle fleets in the world."""
         return self._fleets
@@ -202,19 +216,28 @@ class World(SimulationBase):
 
             self._vehicle_choice_behavior = PublicTransitVehicleChoiceBehavior(["Bus"])
 
-    def _initialize_charging_infrastructure(self) -> ChargingInfrastructure | None:
+    def _initialize_charging_infrastructures(
+        self,
+    ) -> list[ChargingInfrastructure] | None:
         # TODO: This is currently completely ignored by shared vehicle operators, while ridehailing operators all use the same charging infrastructure.
         # This probably needs some refactoring depending on what we want to do with charging infrastructure in the future.
 
-        if hasattr(self._config, "charging_infrastructure"):
-            return ChargingInfrastructure.init(
-                sim=self._sim,
-                location_list=self._config.charging_infrastructure.LOCATIONS,
-                power_list=self._config.charging_infrastructure.CHARGING_STATION_POWER,
-                capacity_list=self._config.charging_infrastructure.CHARGING_STATION_CAPACITY,
-                queue_size=self._config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE,
-                reset=True,
-            )
+        if len(self._config.charging_infrastructures) > 0:
+            charging_infrastructures = []
+
+            for ci_conf in self._config.charging_infrastructures:
+                charging_infrastructure = ChargingInfrastructure(
+                    sim=self._sim,
+                    location_list=ci_conf.LOCATIONS,
+                    power_list=ci_conf.CHARGING_STATION_POWER,
+                    capacity_list=ci_conf.CHARGING_STATION_CAPACITY,
+                    queue_size=ci_conf.CHARGING_STATION_QUEUE_SIZE,
+                    reset=True,
+                )
+                # Assign the charging infrastructure object to the config so operators can access it
+                ci_conf.instance = charging_infrastructure
+                charging_infrastructures.append(charging_infrastructure)
+            return charging_infrastructures
         else:
             return None
 
@@ -307,12 +330,12 @@ class World(SimulationBase):
             # TODO: Ordered vehicle modes are silly, it should not work like that. Maybe enums ?Why do we need these mode lists at all ?
             operations = IntegratedSharedMobilityOperations(
                 sim=self._sim,
-                time_between_operations=operator_cfg.OPERATIONS_START,
-                operation_duration=operator_cfg.OPERATIONS_DURATION,
+                time_between_operations=operator_cfg.OPERATIONS_CONFIG.TIME_BETWEEN_OPERATIONS,
+                operation_duration=operator_cfg.OPERATIONS_CONFIG.OPERATIONS_DURATION,
                 distance_matrix=self._distance_matrix,
                 ordered_available_vehicle_types=ordered_available_vehicle_types,
                 ordered_max_vehicle_supply=ordered_max_vehicle_supply,
-                state_of_charge_threshold=operator_cfg.RECHARGE_THRESHOLD,
+                state_of_charge_threshold=operator_cfg.OPERATIONS_CONFIG.RECHARGE_THRESHOLD,
                 base_regions=operator_cfg.BASE_REGIONS,
                 base_capacity=operator_cfg.BASE_CAPACITY,
             )
@@ -324,7 +347,7 @@ class World(SimulationBase):
                 operations=operations,
                 search_engine=self._search_engine[operator_id],
                 allocation_engine=self._vehicle_assignment_engine[operator_id],
-                number_service_workers=operator_cfg.NUMBER_OF_SERVICE_WORKERS,
+                number_service_workers=operator_cfg.OPERATIONS_CONFIG.NUMBER_OF_SERVICE_WORKERS,
             )
             self.operators.append(operator)
             self._payment_engine[operator_id] = operator
@@ -344,9 +367,11 @@ class World(SimulationBase):
         return dmi.load_distance_matrix()
 
     def _setup_ride_hailing_operators(self) -> None:
-        self._charging_infrastructure: ChargingInfrastructure | None = (
-            self._initialize_charging_infrastructure()
-        )
+        if (
+            self._config.operators
+            and self._config.operators[0].OPERATOR_TYPE != RideHailingOperator
+        ):
+            return
 
         rh_ops = self._config.operators
         num_rh_ops = max(2, len(rh_ops)) if rh_ops else 0
@@ -386,7 +411,7 @@ class World(SimulationBase):
             operator = RideHailingOperator(
                 sim=self._sim,
                 fleet=fleet,
-                charging_infrastructure=self.charging_infrastructure,
+                charging_infrastructure=operator_cfg.CHARGING_INFRASTRUCTURE.instance,
                 operations=operations,
                 search_engine=self._search_engine[operator_id],
                 allocation_engine=self._vehicle_assignment_engine[operator_id],
@@ -617,7 +642,7 @@ class World(SimulationBase):
 
     @property
     def charging_infrastructure(self) -> ChargingInfrastructure | None:
-        return self._charging_infrastructure
+        return self._charging_infrastructures
 
     @property
     def simulation_finished(self):  # noqa: ANN201
@@ -715,4 +740,11 @@ class World(SimulationBase):
             operations=operations,
             search_engine=search_engine,
             allocation_engine=allocation_engine,
+        )
+
+    def _setup_market(self) -> Auction | None:
+        if self._config.shared_charging_auction is None:
+            return None
+        return SharedChargingAuction(
+            sim=self._sim, charging_infrastructure=self._charging_infrastructures
         )

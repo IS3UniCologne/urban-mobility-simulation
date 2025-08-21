@@ -4,9 +4,9 @@ from collections import Counter
 import pandas as pd
 from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
 from beartype.roar import BeartypeDoorHintViolation
-from simpy import AllOf, Environment
+from simpy import AllOf
 
-from simulation.helper.simulation_base import SimulationBase
+from simulation.context.simulation_context import SimulationContext
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -15,11 +15,11 @@ from simulation.infrastructure.charging_stations.virtual_charging_infrastructure
 )
 from simulation.world.markets.auction import Auction
 from simulation.world.markets.interfaces.bidder_interface import BidderInterface
-from tracking.tracking_interface import TrackingInterface
 
 
-class SharedChargingAuction(Auction, TrackingInterface, SimulationBase):
+class SharedChargingAuction(Auction):
     __slots__ = (
+        "_charging_infrastructure",
         "_charging_locations",
         "_location_results",
         "_next_timeslot",
@@ -29,14 +29,11 @@ class SharedChargingAuction(Auction, TrackingInterface, SimulationBase):
     exposes = ["_next_timeslot", "_bids", "_location_results"]  # noqa: RUF012
 
     def __init__(
-        self,
-        env: Environment,
-        start_condition,  # noqa: ANN001
-        end_condition,  # noqa: ANN001
-        charging_infrastructure: ChargingInfrastructure,
+        self, sim: SimulationContext, charging_infrastructure: ChargingInfrastructure
     ) -> None:
-        super().__init__(env, start_condition, end_condition)
+        super().__init__(sim)
 
+        self._env = sim.env
         # bids are a list of n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
         self._bid_syntax = dict[str, list[tuple[int, int | float, int]]]
 
@@ -54,7 +51,7 @@ class SharedChargingAuction(Auction, TrackingInterface, SimulationBase):
         # init auction view on charging infrastructure
         # this is a view that tells the auctioneer how much capacity is up for auction
         self._charging_infrastructure = VirtualChargingInfrastructure(
-            env=self._env,
+            sim=sim,
             charging_infrastructure=charging_infrastructure,
             lookahead=self._config.auction.AUCTION_START
             + self._config.shared_charging_auction.AUCTION_LOOKAHEAD,
