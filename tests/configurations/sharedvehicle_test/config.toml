@@ -104,22 +104,6 @@ MOD_COEFFICIENT_INTERVAL_ADJUSTER = 0                                           
 MOD_P_VALUES                      = [[0.00, 0.03, 0.00, 0.00, 0.42, 0.00, 0.00, 0.00, 0.18], [0.00, 0.00, 0.73, 0.01, 0.08, 0.00, 0.13, 0.14, 0.10], [0.02, 0.00, 0.82, 0.25, 0.00, 0.02, 0.00, 0.00, 0.01], [0.00, 0.00, 0.70, 0.00, 0.39, 0.00, 0.00, 0.00, 0.00]]
 
 
-[CHARGING_INFRASTRUCTURE]
-# If lists are provided, heterogeneous charging stations are possible
-# If single value lists are provided, we assume the same values for all locations
-# Number of charging stations can be used to cut down on the number of charging stations without modifying the locations
-
-NUMBER_OF_CHARGING_STATIONS = 16
-##### berlin
-LOCATIONS = ["871f18869ffffff", "871f18b0dffffff", "871f18b23ffffff", "871f18b26ffffff", "871f18b35ffffff", "871f1d483ffffff", "871f1d489ffffff", "871f1d48bffffff", "871f1d48effffff", "871f1d49cffffff", "871f1d4aaffffff", "871f1d4b3ffffff", "871f1d4d2ffffff", "871f1d4d3ffffff", "871f1d4f3ffffff", "871f1d4f6ffffff"]
-#If single value, all stations have the same power
-CHARGING_STATION_POWER = [50.0]
-# How many plugs / slots a charging station has. If single value, all stations have the same capacity
-CHARGING_STATION_CAPACITY = [20]
-# How many spaces without plugs (queue for plugs) a charging station has, if single value, all stations have the same capacity
-CHARGING_STATION_QUEUE_SIZE = [99]
-
-
 ###########################
 # Operator Configurations #
 ###########################
@@ -214,17 +198,3 @@ WALKING_DISTANCE    = 200
 MAX_AVAILABLE_SEATS = 100
 # average velocity in european cities is no more than 30 km/h
 VELOCITY = 30.0
-
-[AUCTION]
-AUCTION_END   = 1440
-AUCTION_START = 0
-
-[SHARED_CHARGING_AUCTION]
-AUCTION_INTERVAL  = 15
-AUCTION_LOOKAHEAD = 1
-TIMESLOT_DURATION = 60
-
-
-##############################
-# Experiment Configurations #
-##############################
