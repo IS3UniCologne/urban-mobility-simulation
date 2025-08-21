@@ -4,6 +4,10 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import (
+        ChargingInfrastructureConfig,
+    )
+    from simulation.world.markets.auction import Auction
 
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 
@@ -12,7 +16,9 @@ class ChargingInfrastructure:
     __instance = None
 
     __slots__ = (
+        "_auction",
         "_capacity_list",
+        "_charging_infra_config",
         "_charging_stations",
         "_location_list",
         "_power_list",
@@ -21,52 +27,49 @@ class ChargingInfrastructure:
         "_tracking",
     )
 
-    @staticmethod
-    def instance() -> ChargingInfrastructure:
-        """Static access method."""
-        if ChargingInfrastructure.__instance is None:
-            raise Exception("ChargingInfrastructure was not initialized")
-        else:
-            return ChargingInfrastructure.__instance
-
-    @staticmethod
-    def init(
-        sim: SimulationContext,
-        location_list: list[str],
-        power_list: list[float],
-        capacity_list: list[int],
-        queue_size: list[int],
-        reset: bool = False,
-    ) -> None | ChargingInfrastructure:
-        """Static access method."""
-        if ChargingInfrastructure.__instance is None or reset is True:
-            ChargingInfrastructure(
-                sim, location_list, power_list, capacity_list, queue_size, reset
-            )
-        return ChargingInfrastructure.__instance
-
     def __init__(
         self,
         sim: SimulationContext,
-        location_list: list[str],
-        power_list: list[float],
-        capacity_list: list[int],
-        queue_size: list[int],
-        reset: bool = False,
+        charging_infrastructure_config: ChargingInfrastructureConfig,
     ) -> None:
-        """Virtually private constructor."""
-        if ChargingInfrastructure.__instance is not None and not reset:
-            raise Exception("This class is a singleton!")
-        else:
-            ChargingInfrastructure.__instance = self
-            super(ChargingInfrastructure, self).__init__()  # noqa: UP008
         self._sim = sim
-        self._location_list = location_list
-        self._power_list = power_list
-        self._capacity_list = capacity_list
-        self._queue_size = queue_size
+        self._location_list = charging_infrastructure_config.LOCATIONS
+        self._power_list = charging_infrastructure_config.CHARGING_STATION_POWER
+        self._capacity_list = charging_infrastructure_config.CHARGING_STATION_CAPACITY
+        self._queue_size = charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
+
+        if charging_infrastructure_config.AUCTION_CONFIG:
+            charging_infrastructure_config.COORDINATION_LOOKAHEAD = (
+                charging_infrastructure_config.AUCTION_CONFIG.AUCTION_LOOKAHEAD
+            )
+            charging_infrastructure_config.COORDINATION_INTERVAL = (
+                charging_infrastructure_config.AUCTION_CONFIG.AUCTION_INTERVAL
+            )
+            charging_infrastructure_config.COORDINATION_TIMESLOT_DURATION = (
+                charging_infrastructure_config.AUCTION_CONFIG.TIMESLOT_DURATION
+            )
+
+        self._charging_infra_config = charging_infrastructure_config
+
         self._charging_stations = []  # a list of charger objects
         self._initialise_charging_stations()
+
+        self._auction = self._initialize_auction()
+
+    def _initialize_auction(self) -> Auction | None:
+        # TODO: @janikmu decouple VCI and auction - go for "coordination" or something
+
+        if self._charging_infra_config.AUCTION_CONFIG:
+            auction = self._charging_infra_config.AUCTION_CONFIG.AUCTION_TYPE(
+                sim=self._sim,
+                charging_infrastructure=self,
+                shared_charging_config=self._charging_infra_config.AUCTION_CONFIG,
+            )
+
+            return auction
+
+        else:
+            return None
 
     def _initialise_charging_stations(self) -> None:
         for i, location in enumerate(self._location_list):
@@ -84,5 +87,4 @@ class ChargingInfrastructure:
         return self._charging_stations
 
     def get_locations(self) -> list[str]:
-        return self._location_list
         return self._location_list

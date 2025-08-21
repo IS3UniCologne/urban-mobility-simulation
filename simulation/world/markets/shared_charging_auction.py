@@ -1,20 +1,28 @@
+from __future__ import annotations
+
 import random
 from collections import Counter
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
 from beartype.roar import BeartypeDoorHintViolation
 from simpy import AllOf
 
-from simulation.context.simulation_context import SimulationContext
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
-)
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
 from simulation.world.markets.auction import Auction
-from simulation.world.markets.interfaces.bidder_interface import BidderInterface
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import (
+        SharedChargingAuctionConfig,
+    )
+    from simulation.infrastructure.charging_stations.charging_infastructure import (
+        ChargingInfrastructure,
+    )
+    from simulation.world.markets.interfaces.bidder_interface import BidderInterface
 
 
 class SharedChargingAuction(Auction):
@@ -24,17 +32,23 @@ class SharedChargingAuction(Auction):
         "_location_results",
         "_next_timeslot",
         "_participants",
+        "_shared_charging_config",
     )
 
     exposes = ["_next_timeslot", "_bids", "_location_results"]  # noqa: RUF012
 
     def __init__(
-        self, sim: SimulationContext, charging_infrastructure: ChargingInfrastructure
+        self,
+        sim: SimulationContext,
+        charging_infrastructure: ChargingInfrastructure,
+        shared_charging_config: SharedChargingAuctionConfig,
     ) -> None:
         super().__init__(sim)
 
         self._env = sim.env
         # bids are a list of n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
+
+        self._shared_charging_config = shared_charging_config
         self._bid_syntax = dict[str, list[tuple[int, int | float, int]]]
 
         # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
@@ -44,8 +58,8 @@ class SharedChargingAuction(Auction):
         self._bids = {}
         self._location_results = {}
         self._next_timeslot = (
-            self._config.auction.AUCTION_START
-            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD
+            self._shared_charging_config.AUCTION_START
+            + self._shared_charging_config.AUCTION_LOOKAHEAD
         )
 
         # init auction view on charging infrastructure
@@ -53,16 +67,16 @@ class SharedChargingAuction(Auction):
         self._charging_infrastructure = VirtualChargingInfrastructure(
             sim=sim,
             charging_infrastructure=charging_infrastructure,
-            lookahead=self._config.auction.AUCTION_START
-            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD,
+            lookahead=self._shared_charging_config.AUCTION_START
+            + self._shared_charging_config.AUCTION_LOOKAHEAD,
             use_virtual_cs=False,
         )
         for timeslot in range(
-            self._config.auction.AUCTION_START
-            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD,
-            self._config.auction.AUCTION_END
-            + self._config.shared_charging_auction.AUCTION_INTERVAL,
-            self._config.shared_charging_auction.AUCTION_INTERVAL,
+            self._shared_charging_config.AUCTION_START
+            + self._shared_charging_config.AUCTION_LOOKAHEAD,
+            self._shared_charging_config.AUCTION_END
+            + self._shared_charging_config.AUCTION_INTERVAL,
+            self._shared_charging_config.AUCTION_INTERVAL,
         ):
             self._charging_infrastructure.update(
                 availability={
@@ -76,15 +90,14 @@ class SharedChargingAuction(Auction):
         while True:
             if (
                 self._next_timeslot
-                > self._config.auction.AUCTION_END
-                - self._config.shared_charging_auction.TIMESLOT_DURATION
+                > self._shared_charging_config.AUCTION_END
+                - self._shared_charging_config.TIMESLOT_DURATION
             ):
                 self.logger.info("Auction stops, last timeslot reached.")
                 break
 
             open_at = (
-                self._next_timeslot
-                - self._config.shared_charging_auction.AUCTION_LOOKAHEAD
+                self._next_timeslot - self._shared_charging_config.AUCTION_LOOKAHEAD
             )
 
             if self._env.now <= open_at:
@@ -117,8 +130,7 @@ class SharedChargingAuction(Auction):
             self._update_auctionable_capacity()
 
             self._next_timeslot = (
-                self._next_timeslot
-                + self._config.shared_charging_auction.AUCTION_INTERVAL
+                self._next_timeslot + self._shared_charging_config.AUCTION_INTERVAL
             )
             self.logger.debug(
                 "Results announced. Closing auction until %s", self._next_timeslot
@@ -266,9 +278,8 @@ class SharedChargingAuction(Auction):
 
         for timeslot in range(
             self._next_timeslot,
-            self._next_timeslot
-            + self._config.shared_charging_auction.TIMESLOT_DURATION,
-            self._config.shared_charging_auction.AUCTION_INTERVAL,
+            self._next_timeslot + self._shared_charging_config.TIMESLOT_DURATION,
+            self._shared_charging_config.AUCTION_INTERVAL,
         ):
             remaining_capacity = {
                 k: v - auctioned_capacity[k]
