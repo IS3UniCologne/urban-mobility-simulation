@@ -178,6 +178,9 @@ def generate_AV_fleet(
     return fleet
 
 
+# TODO : fleet config from python
+
+
 def generate_mixed_ride_hailing_fleet(
     sim: SimulationContext, world: World
 ) -> MixedRideHailingFleet:
