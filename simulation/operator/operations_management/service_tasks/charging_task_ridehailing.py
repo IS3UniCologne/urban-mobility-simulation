@@ -30,7 +30,6 @@ class ChargingTaskRidehailing(ServiceTask):
         "_arrived_at_charging_station",
         "_charging_duration",
         "_charging_station",
-        "_config",
         "_destination",
         "_destination_position",
         "_distance",
@@ -101,7 +100,6 @@ class ChargingTaskRidehailing(ServiceTask):
         self._estimated_completion_time = None
         self._kWh_charged = None
         self._distance = vehicle.position >> self._destination_position
-        self._config = sim.config
 
         # Events
         self._arrived_at_charging_station = self._env.event()
@@ -154,7 +152,7 @@ class ChargingTaskRidehailing(ServiceTask):
 
                         scheduled_timeslot_end = (
                             self._scheduled_time
-                            + self._config.shared_charging_auction.TIMESLOT_DURATION
+                            + self._charging_station.virtual_charging_infrastructure._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION  # noqa: SLF001
                         )
                         self._waiting_time = self._scheduled_time - self._env.now
                         if self._waiting_time > 0:
@@ -206,7 +204,7 @@ class ChargingTaskRidehailing(ServiceTask):
                             self._charging_duration,
                             (
                                 self._scheduled_time
-                                + self._config.shared_charging_auction.TIMESLOT_DURATION
+                                + self._charging_station.virtual_charging_infrastructure._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION  # noqa: SLF001
                             )
                             - self._env.now,
                         )

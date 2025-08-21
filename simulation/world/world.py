@@ -165,6 +165,11 @@ class World(SimulationBase):
         return self._geo_env
 
     @property
+    def distance_matrix(self) -> DataFrame:
+        """Get the distance matrix."""
+        return self._distance_matrix
+
+    @property
     def user_processes(self):  # noqa: ANN201
         return self._user_processes
 
@@ -329,7 +334,6 @@ class World(SimulationBase):
             operator = SharedMobilityOperator(
                 sim=self._sim,
                 fleet=fleet,
-                charging_infrastructure=None,
                 operations=operations,
                 search_engine=self._search_engine[operator_id],
                 allocation_engine=self._vehicle_assignment_engine[operator_id],
@@ -388,19 +392,14 @@ class World(SimulationBase):
             # ]
 
             # TODO: make sure this is a single config parameter
-            operations = operator_cfg.OPERATIONS_TYPE(
-                sim=self._sim,
-                distance_matrix=self._distance_matrix,
-                operations_config=operator_cfg.OPERATIONS_CONFIG,
-                world=self,
-            )
             operator = RideHailingOperator(
                 sim=self._sim,
+                operator_config=operator_cfg,
                 fleet=fleet,
                 charging_infrastructure=operator_cfg.CHARGING_INFRASTRUCTURE.instance,
-                operations=operations,
                 search_engine=self._search_engine[operator_id],
                 allocation_engine=self._vehicle_assignment_engine[operator_id],
+                world=self,
             )
             self._operators.append(operator)
             self._payment_engine[operator_id] = operator
@@ -722,7 +721,6 @@ class World(SimulationBase):
         return PublicTransitOperator(
             sim=self._sim,
             fleet=fleet,
-            charging_infrastructure=None,
             operations=operations,
             search_engine=search_engine,
             allocation_engine=allocation_engine,

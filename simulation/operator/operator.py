@@ -10,9 +10,6 @@ if TYPE_CHECKING:
         TransactionState,
         VehicleType,
     )
-    from simulation.infrastructure.charging_stations.charging_infastructure import (
-        ChargingInfrastructure,
-    )
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -54,7 +51,6 @@ class Operator(OperatorInterface):
         self,
         sim: SimulationContext,
         fleet: VehicleFleet,
-        charging_infrastructure: ChargingInfrastructure,
         operations: OperationsInterface,
         search_engine: SearchEngineInterface,
         allocation_engine: VehicleAllocationEngineInterface,
@@ -64,7 +60,6 @@ class Operator(OperatorInterface):
         self._sim = sim
         self._env = sim.env
         self._fleet = fleet
-        self._charging_infrastructure = charging_infrastructure
         self._operations = operations
 
         self._search_engine = search_engine
@@ -97,10 +92,6 @@ class Operator(OperatorInterface):
     @property
     def fleet(self) -> VehicleFleet:
         return self._fleet
-
-    @property
-    def charging_infrastructure(self) -> ChargingInfrastructure:
-        return self._charging_infrastructure
 
     @property
     def vehicle_types(self) -> list[VehicleType]:

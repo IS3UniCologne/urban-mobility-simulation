@@ -1,8 +1,18 @@
-import simpy
-from shapely.geometry import Polygon
+from __future__ import annotations
 
-from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.infrastructure.charging_stations.charging_station import ChargingStation
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import simpy
+    from shapely.geometry import Polygon
+
+    from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.infrastructure.charging_stations.charging_station import (
+        ChargingStation,
+    )
+    from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
+        VirtualChargingInfrastructure,
+    )
 
 
 class VirtualChargingStation:
@@ -19,9 +29,14 @@ class VirtualChargingStation:
         "_queue",
         "_queue_size",
         "_current_queue_time",
+        "_virtual_charging_infrastructure",
     )
 
-    def __init__(self, charging_station: ChargingStation) -> None:
+    def __init__(
+        self,
+        charging_station: ChargingStation,
+        virtual_charging_infrastructure: VirtualChargingInfrastructure,
+    ) -> None:
         self._env = charging_station._env  # noqa: SLF001
         self._physical_charging_station = charging_station
         self._valid_timeframe = None
@@ -35,6 +50,7 @@ class VirtualChargingStation:
         self._queue = charging_station._queue  # noqa: SLF001
         self._queue_size = charging_station._queue_size  # noqa: SLF001
         self._current_queue_time = charging_station._current_queue_time  # noqa: SLF001
+        self._virtual_charging_infrastructure = virtual_charging_infrastructure
 
     def plug_in_notify(self) -> simpy.events.Generator:
         yield self._env.process(self._physical_charging_station.plug_in_notify())
@@ -49,6 +65,10 @@ class VirtualChargingStation:
     ) -> None:
         self._capacity = capacity
         self._valid_timeframe = valid_timeframe
+
+    @property
+    def virtual_charging_infrastructure(self) -> VirtualChargingInfrastructure:
+        return self._virtual_charging_infrastructure
 
     @property
     def valid_timeframe(self) -> tuple[float, float] | None:

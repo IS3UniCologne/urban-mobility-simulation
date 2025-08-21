@@ -66,7 +66,9 @@ class VirtualChargingInfrastructure(SimulationBase):
         self._charging_infrastructure = charging_infrastructure
         if use_virtual_cs:
             self._virtual_charging_stations = [
-                VirtualChargingStation(cs)
+                VirtualChargingStation(
+                    charging_station=cs, virtual_charging_infrastructure=self
+                )
                 for cs in self._charging_infrastructure.charging_stations
             ]
             if self._current_lookahead is not None:

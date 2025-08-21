@@ -22,6 +22,7 @@ from simulation.operator.operations_management.task_queue import TaskQueue
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import OperationsConfig
+    from simulation.operator.ride_hailing_operator import RideHailingOperator
     from simulation.world.world import World
 
 
@@ -36,6 +37,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         "_duration_of_operations",
         "_operation_duration",
         "_operations_started",
+        "_operator",
         "_recharge_theshold",
         "_scheduled_tasks",
         "_sim",
@@ -53,11 +55,13 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         operations_config: OperationsConfig,
         distance_matrix: pd.DataFrame,
         world: World,
+        operator: RideHailingOperator,
     ) -> None:
         super().__init__(sim)
         self._world: World = world
         self._config = sim.config
         self._sim = sim
+        self._operator = operator
 
         # Distance Matrix between Regions
         self._distance_matrix = distance_matrix
