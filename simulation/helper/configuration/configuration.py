@@ -46,12 +46,17 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.time import SimulationVelocityConverter
+from simulation.infrastructure.charging_stations.charging_infastructure import (
+    ChargingInfrastructure,
+)
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operator import Operator
 
 if TYPE_CHECKING:
     # Careful moving stuff here, pydantic needs to check type hints at runtime!
     from types import ModuleType
+
+    from pyparsing import Any
 
 
 try:
@@ -254,14 +259,20 @@ class ModeChoiceModelConfig(ConfigBaseModel):
     MOD_COEFFICIENT_INTERVAL_ADJUSTER: float
 
 
-class ChargingInfrastructureConfig(ConfigBaseModel):
+class ChargingInfrastructureConfig(BaseModel):
     """Configuration for charging infrastructure parameters."""
+
+    model_config = ConfigDict(
+        extra="forbid", validate_assignment=False, arbitrary_types_allowed=True
+    )
 
     NUMBER_OF_CHARGING_STATIONS: int
     LOCATIONS: list[str]
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
+
+    instance: ChargingInfrastructure | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def clamp_and_expand(self) -> ChargingInfrastructureConfig:
@@ -278,17 +289,20 @@ class ChargingInfrastructureConfig(ConfigBaseModel):
         Returns
         -------
         ChargingInfrastructureConfig
-            A new instance with updated fields.
+            The same instance with updated fields.
         """
         n = self.NUMBER_OF_CHARGING_STATIONS
-        update: dict[str, object] = {"LOCATIONS": self.LOCATIONS[:n]}
+
+        self.LOCATIONS = self.LOCATIONS[:n]
+
         if len(self.CHARGING_STATION_POWER) == 1:
-            update["CHARGING_STATION_POWER"] = self.CHARGING_STATION_POWER * n
+            self.CHARGING_STATION_POWER = self.CHARGING_STATION_POWER * n
         if len(self.CHARGING_STATION_CAPACITY) == 1:
-            update["CHARGING_STATION_CAPACITY"] = self.CHARGING_STATION_CAPACITY * n
+            self.CHARGING_STATION_CAPACITY = self.CHARGING_STATION_CAPACITY * n
         if len(self.CHARGING_STATION_QUEUE_SIZE) == 1:
-            update["CHARGING_STATION_QUEUE_SIZE"] = self.CHARGING_STATION_QUEUE_SIZE * n
-        return self.model_copy(update=update)
+            self.CHARGING_STATION_QUEUE_SIZE = self.CHARGING_STATION_QUEUE_SIZE * n
+
+        return self
 
 
 class OperationsConfig(ConfigBaseModel):
@@ -333,6 +347,8 @@ class OperatorConfig(ConfigBaseModel):
     OPERATIONS_TYPE: type[OperationsInterface]
     OPERATIONS_CONFIG: OperationsConfig
 
+    CHARGING_INFRASTRUCTURE: ChargingInfrastructureConfig | None = Field(default=None)
+
     # TODO: Shared vehicle stuff, this should be changed once we move to the same charging infrastructure as ridehailing
     CHARGING_STATION_POWER: int | None = Field(default=None)
     NUMBER_OF_BASE_REGIONS: int | None = Field(default=None)
@@ -344,29 +360,8 @@ class OperatorConfig(ConfigBaseModel):
     # Public transit stuff
     MAX_BUSSES: int | None = Field(default=None, gt=0)
 
-
-class SharedVehicleOperatorConfig(ConfigBaseModel):
-    """Configuration for shared vehicle operator parameters."""
-
-    RECHARGE_THRESHOLD: float = Field(gt=0, le=1)
-    CHARGING_STATION_POWER: float = Field(gt=0)
-    NUMBER_OF_BASE_REGIONS: int = Field(gt=0)
-    NUMBER_OF_SERVICE_WORKERS: int = Field(gt=0)
-    BASE_CAPACITY: int = Field(ge=0)
-    OPERATIONS_START: int = Field(ge=0)
-    OPERATIONS_DURATION: int = Field(gt=0)
-    VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0)
-    BASE_REGIONS: list[str] = Field(min_items=1)
-    N_VEHICLES: dict[VehicleType, int]
-
-    @field_validator("VEHICLE_RELOCATION_VELOCITY", mode="after")
-    @classmethod
-    def convert_velocity(cls, v: float) -> float:
-        """Convert vehicle relocation velocity from km/h to m/s."""
-        return SimulationVelocityConverter().convert_kmh(v)
-
     @model_validator(mode="after")
-    def clamp_base_regions(self) -> SharedVehicleOperatorConfig:
+    def clamp_base_regions(self) -> OperatorConfig:
         """
         Clamp base regions list to match the number of base regions.
 
@@ -374,9 +369,11 @@ class SharedVehicleOperatorConfig(ConfigBaseModel):
 
         Returns
         -------
-        SharedVehicleOperatorConfig
+        OperatorConfig
             A new instance with updated BASE_REGIONS.
         """
+        if self.BASE_REGIONS is None or self.NUMBER_OF_BASE_REGIONS is None:
+            return self
         return self.model_copy(
             update={"BASE_REGIONS": self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]}
         )
@@ -541,7 +538,7 @@ class Configuration:
         self._cache["path"] = PathConfig.model_validate(patched_path)
 
         # Load components that are configured as Python modules
-        self._load_operators_from_py(base)
+        self._load_config_from_py(base)
 
     def _get_section(self, section: str, model: type[T]) -> T:
         if section in self._cache:
@@ -688,7 +685,7 @@ class Configuration:
         return self._get_section("mode_choice_model", ModeChoiceModelConfig)
 
     @property
-    def charging_infrastructure(self) -> ChargingInfrastructureConfig:
+    def charging_infrastructures(self) -> list[ChargingInfrastructureConfig]:
         """
         Get the charging infrastructure configuration section.
 
@@ -697,7 +694,7 @@ class Configuration:
         ChargingInfrastructureConfig
             The charging infrastructure configuration section.
         """
-        return self._get_section(
+        return self._get_section_list(
             "charging_infrastructure", ChargingInfrastructureConfig
         )
 
@@ -838,29 +835,43 @@ class Configuration:
         """
         return self._get_section("dqn", DQNConfig)
 
-    def _load_operators_from_py(self, base_path: Path) -> None:
+    def _load_config_from_py(self, base_path: Path) -> None:
         op_file = base_path / "operators.py"
         if not op_file.exists():
             raise FileNotFoundError(f'Could not find "operators.py" in {base_path}')
 
         module = self._import_module_file(op_file)
 
-        operators: list[OperatorConfig] = []
+        section_buckets: dict[str, list[Any]] = {
+            "operator": [],
+            "charging_infrastructure": [],
+        }
 
-        def maybe_add(value: object) -> None:
-            if isinstance(value, OperatorConfig):
-                operators.append(value)
+        model_to_section: dict[type[BaseModel], str] = {
+            OperatorConfig: "operator",
+            ChargingInfrastructureConfig: "charging_infrastructure",
+        }
+        model_classes = tuple(model_to_section.keys())
+
+        def collect(obj: object) -> None:
+            if isinstance(obj, model_classes):
+                for cls in model_to_section:
+                    if isinstance(obj, cls):
+                        section_buckets[model_to_section[cls]].append(obj)
+                        return
+            if isinstance(obj, list | tuple):
+                for elem in obj:
+                    collect(elem)
+                return
+            # nothing matches, ignore
 
         for name, value in vars(module).items():
-            maybe_add(value)
+            if name.startswith("_"):
+                continue
+            collect(value)
 
-        if not operators:
-            raise ImportError(
-                f"No operator configs found in {op_file}. "
-                "Define one or more instances of OperatorConfig."
-            )
-
-        self._cache["operator"] = operators
+        for section_name, items in section_buckets.items():
+            self._cache[section_name] = items
 
     def _import_module_file(self, file_path: Path) -> ModuleType:
         """Import a module from a filesystem .py file path."""

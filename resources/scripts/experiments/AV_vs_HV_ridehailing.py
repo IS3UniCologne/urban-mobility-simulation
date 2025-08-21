@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 import simpy
-
 import utils
+
 from simulation.agent.user import (
     User,  # must come before DemandFactory, otherwise circular imports
 )
@@ -162,10 +162,10 @@ def run_single_simulation(  # noqa: ANN201
 
     charging_infrastructure = ChargingInfrastructure(
         env,
-        config.charging_infrastructure.LOCATIONS,
-        config.charging_infrastructure.CHARGING_STATION_POWER,
-        config.charging_infrastructure.CHARGING_STATION_CAPACITY,
-        config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE,
+        config.charging_infrastructures.LOCATIONS,
+        config.charging_infrastructures.CHARGING_STATION_POWER,
+        config.charging_infrastructures.CHARGING_STATION_CAPACITY,
+        config.charging_infrastructures.CHARGING_STATION_QUEUE_SIZE,
         reset=True,
     )
 
@@ -201,7 +201,7 @@ def run_single_simulation(  # noqa: ANN201
 
     # if queue sizes at charging stations are all zero, we should account for that in the operations
     # there can be more clever and nuanced approaches, but as a rule of thumb, we should not allow operations to send vehicles to charging stations that are full if we don't allow queueing
-    allow_queue = sum(config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE) > 0
+    allow_queue = sum(config.charging_infrastructures.CHARGING_STATION_QUEUE_SIZE) > 0
 
     # Initialize Rule Based Relocation Scheduler
     # For RideHailing Fleets
@@ -503,8 +503,8 @@ result = run_single_simulation(
     phase=phase,
     pop_prob=USER_SHARES,
     EV_penetration=TECH_SHARE[phase],
-    charging_power=config.charging_infrastructure.CHARGING_STATION_POWER,
-    charging_capacity=config.charging_infrastructure.CHARGING_STATION_CAPACITY,
+    charging_power=config.charging_infrastructures.CHARGING_STATION_POWER,
+    charging_capacity=config.charging_infrastructures.CHARGING_STATION_CAPACITY,
     AV_penetration=TECH_SHARE[phase],
     returnDataFrame=False,
 )

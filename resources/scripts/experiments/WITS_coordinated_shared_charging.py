@@ -13,6 +13,9 @@ import pandas as pd
 # Third-party library imports
 import simpy
 
+# Custom module imports
+from utils import load_geodesic_environment
+
 # Imports world related modules
 from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -52,9 +55,6 @@ from simulation.world.markets.shared_charging_auction import SharedChargingAucti
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 from tracking.tracking import Tracking
-
-# Custom module imports
-from utils import load_geodesic_environment
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -135,10 +135,10 @@ tracking = Tracking.init(env)
 
 charging_infrastructure = ChargingInfrastructure(
     env,
-    config.charging_infrastructure.LOCATIONS,
-    config.charging_infrastructure.CHARGING_STATION_POWER,
-    config.charging_infrastructure.CHARGING_STATION_CAPACITY,
-    config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE,
+    config.charging_infrastructures.LOCATIONS,
+    config.charging_infrastructures.CHARGING_STATION_POWER,
+    config.charging_infrastructures.CHARGING_STATION_CAPACITY,
+    config.charging_infrastructures.CHARGING_STATION_QUEUE_SIZE,
     reset=True,
 )
 
@@ -484,7 +484,7 @@ pd.DataFrame.from_records(charging_stations_track).to_csv(
 
 avg_infra_util = (
     pd.DataFrame.from_records(charging_stations_track)["_plugs.count"]
-    / config.charging_infrastructure.CHARGING_STATION_CAPACITY[0]
+    / config.charging_infrastructures.CHARGING_STATION_CAPACITY[0]
 ).mean()
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -540,14 +540,14 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             config.experiment_management.END_TIME,
             time.time() - real_start_time,
             config.ride_hailing_global.N_AUTONOMOUS_CARS,
-            config.charging_infrastructure.NUMBER_OF_CHARGING_STATIONS,
-            config.charging_infrastructure.CHARGING_STATION_CAPACITY[0],
-            config.charging_infrastructure.CHARGING_STATION_POWER[0],
+            config.charging_infrastructures.NUMBER_OF_CHARGING_STATIONS,
+            config.charging_infrastructures.CHARGING_STATION_CAPACITY[0],
+            config.charging_infrastructures.CHARGING_STATION_POWER[0],
             config.random_manager.SEED,
             service_rate_fleet_0,
             service_rate_fleet_1,
             avg_infra_util,
             None,
-            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''},queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, overbidding: ({random_overbidding!s}, {overbid_prob!s}), auction_interval: {config.shared_charging_auction.AUCTION_INTERVAL!s}, timeslot_duration: {config.shared_charging_auction.TIMESLOT_DURATION!s}, auction_lookahead: {config.shared_charging_auction.AUCTION_LOOKAHEAD!s}",
+            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''},queue_size: {config.charging_infrastructures.CHARGING_STATION_QUEUE_SIZE[0]}, overbidding: ({random_overbidding!s}, {overbid_prob!s}), auction_interval: {config.shared_charging_auction.AUCTION_INTERVAL!s}, timeslot_duration: {config.shared_charging_auction.TIMESLOT_DURATION!s}, auction_lookahead: {config.shared_charging_auction.AUCTION_LOOKAHEAD!s}",
         ]
     )
