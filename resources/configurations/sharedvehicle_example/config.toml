@@ -250,16 +250,6 @@ VEHICLE_TYPE        = "Bike"
 VELOCITY         = 2.82
 WALKING_DISTANCE = 200
 
-[AUCTION]
-AUCTION_END   = 1440
-AUCTION_START = 0
-
-[SHARED_CHARGING_AUCTION]
-AUCTION_INTERVAL  = 15
-AUCTION_LOOKAHEAD = 1
-TIMESLOT_DURATION = 60
-
-
 ##############################
 # Experiment Configurations #
 ##############################
