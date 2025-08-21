@@ -64,6 +64,9 @@ notebooks = [
   "seaborn>=0.13.2",
   "sidetable>=0.9.1",
 ]
+viz = [
+    "bokeh>=3.7.3",
+]
 
 [build-system]
 build-backend = "setuptools.build_meta"
