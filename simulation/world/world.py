@@ -79,7 +79,7 @@ class World(SimulationBase):
     __instance = None
     __slots__ = (
         "_changed",
-        "_charging_infrastructure",
+        "_charging_infrastructures",
         "_config",
         "_daily_resolution",
         "_demand_processes",
@@ -145,8 +145,8 @@ class World(SimulationBase):
             self._initialize_population_factory()
         )
 
-        self._charging_infrastructure: ChargingInfrastructure | None = (
-            self._initialize_charging_infrastructure()
+        self._charging_infrastructures: list[ChargingInfrastructure] | None = (
+            self._initialize_charging_infrastructures()
         )
 
         self._market: Auction | None = self._setup_market()
@@ -216,19 +216,28 @@ class World(SimulationBase):
 
             self._vehicle_choice_behavior = PublicTransitVehicleChoiceBehavior(["Bus"])
 
-    def _initialize_charging_infrastructure(self) -> ChargingInfrastructure | None:
+    def _initialize_charging_infrastructures(
+        self,
+    ) -> list[ChargingInfrastructure] | None:
         # TODO: This is currently completely ignored by shared vehicle operators, while ridehailing operators all use the same charging infrastructure.
         # This probably needs some refactoring depending on what we want to do with charging infrastructure in the future.
 
-        if hasattr(self._config, "charging_infrastructure"):
-            return ChargingInfrastructure.init(
-                sim=self._sim,
-                location_list=self._config.charging_infrastructure.LOCATIONS,
-                power_list=self._config.charging_infrastructure.CHARGING_STATION_POWER,
-                capacity_list=self._config.charging_infrastructure.CHARGING_STATION_CAPACITY,
-                queue_size=self._config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE,
-                reset=True,
-            )
+        if len(self._config.charging_infrastructures) > 0:
+            charging_infrastructures = []
+
+            for ci_conf in self._config.charging_infrastructures:
+                charging_infrastructure = ChargingInfrastructure(
+                    sim=self._sim,
+                    location_list=ci_conf.LOCATIONS,
+                    power_list=ci_conf.CHARGING_STATION_POWER,
+                    capacity_list=ci_conf.CHARGING_STATION_CAPACITY,
+                    queue_size=ci_conf.CHARGING_STATION_QUEUE_SIZE,
+                    reset=True,
+                )
+                # Assign the charging infrastructure object to the config so operators can access it
+                ci_conf.instance = charging_infrastructure
+                charging_infrastructures.append(charging_infrastructure)
+            return charging_infrastructures
         else:
             return None
 
@@ -402,7 +411,7 @@ class World(SimulationBase):
             operator = RideHailingOperator(
                 sim=self._sim,
                 fleet=fleet,
-                charging_infrastructure=self.charging_infrastructure,
+                charging_infrastructure=operator_cfg.CHARGING_INFRASTRUCTURE.instance,
                 operations=operations,
                 search_engine=self._search_engine[operator_id],
                 allocation_engine=self._vehicle_assignment_engine[operator_id],
@@ -633,7 +642,7 @@ class World(SimulationBase):
 
     @property
     def charging_infrastructure(self) -> ChargingInfrastructure | None:
-        return self._charging_infrastructure
+        return self._charging_infrastructures
 
     @property
     def simulation_finished(self):  # noqa: ANN201
@@ -737,5 +746,5 @@ class World(SimulationBase):
         if self._config.shared_charging_auction is None:
             return None
         return SharedChargingAuction(
-            sim=self._sim, charging_infrastructure=self._charging_infrastructure
+            sim=self._sim, charging_infrastructure=self._charging_infrastructures
         )
