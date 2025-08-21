@@ -1,6 +1,9 @@
 from collections import namedtuple
 
+import pandas as pd
+
 from simulation.context.simulation_context import SimulationContext
+from simulation.helper.configuration.configuration import OperationsConfig
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
@@ -19,7 +22,8 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         "_charging_operations",
         "_config",
         "_distance_matrix",
-        "_operation_duration",
+        "_operations_config",
+        "_operations_duration",
         "_sim",
         "_state_of_charge_threshold",
         "_time_between_operations",
@@ -30,27 +34,23 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
     def __init__(
         self,
         sim: SimulationContext,
-        distance_matrix,  # noqa: ANN001
-        time_between_operations,  # noqa: ANN001
-        operation_duration,  # noqa: ANN001
-        available_modes,  # noqa: ANN001
-        available_modes_supply,  # noqa: ANN001
-        state_of_charge_threshold,  # noqa: ANN001
-        allow_queue,  # noqa: ANN001
+        distance_matrix: pd.DataFrame,
+        operations_config: OperationsConfig,
         world: World,
     ) -> None:
         super().__init__(sim)
         self._sim = sim
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
+        self._operations_config = operations_config
         self._charging_operations = None
         self._config = sim.config
         self._distance_matrix = distance_matrix
-        self._time_between_operations = time_between_operations
-        self._operation_duration = operation_duration
-        self._available_modes = available_modes
-        self._available_modes_supply = available_modes_supply
-        self._state_of_charge_threshold = state_of_charge_threshold
-        self._allow_queue = allow_queue
+        self._time_between_operations = operations_config.TIME_BETWEEN_OPERATIONS
+        self._operations_duration = operations_config.OPERATIONS_DURATION
+        # self._available_modes = available_modes
+        # self._available_modes_supply = available_modes_supply
+        self._state_of_charge_threshold = operations_config.RECHARGE_THRESHOLD
+        self._allow_queue = operations_config.ALLOW_QUEUE
         self._world = world
 
     def execute(self):  # noqa: ANN201
@@ -64,12 +64,7 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         self._charging_operations = RideHailingBaseChargingOperations(
             sim=self._sim,
             distance_matrix=self._distance_matrix,
-            time_between_operations=self._time_between_operations,
-            operation_duration=self._operation_duration,
-            available_modes=self._available_modes,
-            available_modes_supply=self._available_modes_supply,
-            state_of_charge_threshold=self._state_of_charge_threshold,
-            allow_queue=self._allow_queue,
+            operations_config=self._operations_config,
             world=self._world,
         )
 

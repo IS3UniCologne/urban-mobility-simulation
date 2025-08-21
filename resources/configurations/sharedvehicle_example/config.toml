@@ -13,15 +13,14 @@ LOG_TIMESTAMPS = false
 # Output
 PERSIST_RESULTS = true
 
-
 [EXPERIMENT_MANAGEMENT]
-END_TIME   = 144
+END_TIME   = 1440
 START_TIME = 0
 
 
 [RANDOM_MANAGER]
 # Main seed, set to 0 to generate a new seed on every run
-SEED = 43
+SEED = 42
 # Component seeds. If commented out, they will be generated from the main seed. (default for reproducibility)
 # Set to 0 to generate a new seed for the component on every run, independent of the main seed.
 # Set to any other value to use that value as the seed for the component.
@@ -59,9 +58,8 @@ PATH_TO_MODE_CHOICE_MODEL = "./data/choice_model/distance_based_shared_vehicles.
 
 # Output paths
 FLEET_STATE_FILE = "fleet_state.csv"
-OUTPUT_FOLDER    = "./data/test_output"
+OUTPUT_FOLDER    = "./data/output"
 TRANSACTION_FILE = "transactions.csv"
-
 
 # Demand Paths
 PATH_DEMAND_MODIFIERS = ["./data/demand/{city}__zero_demand.geojson", "./data/demand/{city}_line200bufferROUTE.geojson"]
@@ -80,10 +78,12 @@ TRANSIT_POPULATION_PROBABILITIES        = [0.0]
 [USER]
 # how many minutes is the TransitUser willing to wait (incl. time to get there) before boarding a transit alternative
 # this also includes the required time of getting from drop-off to real destination
+# Acceptable waiting time -> Simulating the Impact of Shared Mobility on Demand: a Study of Future Transportation Systems (https://link.springer.com/article/10.1007/s13177-023-00345-5)
 TRANSIT_MAX_WAIT = 10
 # how are vehicles / transit stops considered in vicinity / reachable? valid: 'hexagon', 'euclidean', 'walk'
 SPATIAL_STRATEGY = "hexagon"
 # walking speed in kilometers per hour (kph)
+# Outdoor Walking Speeds of Apparently Healthy Adults: A Systematic Review and Meta-analysis: https://pmc.ncbi.nlm.nih.gov/articles/PMC7806575/#:~:text=Results,/kg/min%2C%20respectively.
 WALKING_SPEED = 5.0
 
 
@@ -100,9 +100,8 @@ SUBSTITUTION_BOUNDARY = 0.1
 MOD_COEFFICIENTS                  = [[-0.273671504, -0.353911557, -0.103573505, -1.128132785, 0.150429623, -0.576113819, 7.297866296, 0.631438368, -1.011643365], [-0.318885388, -1.281672341, -0.454985255, 0.123860882, 1.060810562, 5.74223911, 12.76153448, 0.579730247, -0.746119133], [-0.529871517, -0.176603082, -0.624049182, -0.094335042, -0.07608058, 6.357501057, 3.73756425, 1.017193094, 1.048363966], [0.00, -0.228709544, -0.161649449, -0.069096605, 0.133775179, -0.802892154, 7.325820705, 0.729678667, -0.735175789]]
 MOD_COEFFICIENTS_CI_LOWER         = [[-0.670, -0.463, -0.198, -1.721, 0.083, -1.960, 5.347, 0.409, -1.415], [-0.695, -1.702, -0.601, -0.588, 0.278, -0.573, 6.894, -0.175, -1.747], [-0.941, -0.320, -0.805, -0.917, -0.205, 3.597, 0.648, 0.498, 0.447], [0.000, -0.307, -0.237, -0.425, 0.068, -2.626, 5.734, 0.330, -1.036]]
 MOD_COEFFICIENTS_CI_UPPER         = [[0.122, -0.245, -0.009, -0.535, 0.218, 0.808, 9.248, 0.853, -0.608], [0.057, -0.862, -0.309, 0.835, 1.844, 12.057, 18.629, 1.335, 0.254], [-0.119, -0.033, -0.443, 0.729, 0.053, 9.118, 6.827, 1.537, 1.650], [0.000, -0.150, -0.086, 0.286, 0.199, 1.019, 8.917, 1.129, -0.434]]
-MOD_COEFFICIENT_INTERVAL_ADJUSTER = 0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      #what is this?
+MOD_COEFFICIENT_INTERVAL_ADJUSTER = 0
 MOD_P_VALUES                      = [[0.00, 0.03, 0.00, 0.00, 0.42, 0.00, 0.00, 0.00, 0.18], [0.00, 0.00, 0.73, 0.01, 0.08, 0.00, 0.13, 0.14, 0.10], [0.02, 0.00, 0.82, 0.25, 0.00, 0.02, 0.00, 0.00, 0.01], [0.00, 0.00, 0.70, 0.00, 0.39, 0.00, 0.00, 0.00, 0.00]]
-
 
 [CHARGING_INFRASTRUCTURE]
 # If lists are provided, heterogeneous charging stations are possible
@@ -113,6 +112,8 @@ NUMBER_OF_CHARGING_STATIONS = 16
 ##### berlin
 LOCATIONS = ["871f18869ffffff", "871f18b0dffffff", "871f18b23ffffff", "871f18b26ffffff", "871f18b35ffffff", "871f1d483ffffff", "871f1d489ffffff", "871f1d48bffffff", "871f1d48effffff", "871f1d49cffffff", "871f1d4aaffffff", "871f1d4b3ffffff", "871f1d4d2ffffff", "871f1d4d3ffffff", "871f1d4f3ffffff", "871f1d4f6ffffff"]
 #If single value, all stations have the same power
+# Analysis of electric vehicle charging station usage and profitability in Germany based on empirical data -> Analysis of electric vehicle charging station usage and profitability in Germany based on empirical data / https://www.iea.org/reports/global-ev-outlook-2025/electric-vehicle-charging
+# Representative empirical, real-world charging station usage characteristics and data in Germany -> https://www.sciencedirect.com/science/article/pii/S2590116820300369
 CHARGING_STATION_POWER = [50.0]
 # How many plugs / slots a charging station has. If single value, all stations have the same capacity
 CHARGING_STATION_CAPACITY = [20]
@@ -123,20 +124,131 @@ CHARGING_STATION_QUEUE_SIZE = [99]
 ###########################
 # Operator Configurations #
 ###########################
-[[TRANSIT_OPERATOR]]
-# how many minutes the PublicTransitOperator plans ahead ==
-PLANNING_LOOKAHEAD = 10
-# how many busses the transit operator is allowed to spawn
-MAX_BUSSES = 3
 
-[TRANSIT_VEHICLES.Bus]
-AUTONOMY_TYPE       = "HumanDriven"
-PROPULSION_TYPE     = "InternalCombustion"
-VEHICLE_TYPE        = "Bus"
-MAX_AVAILABLE_SEATS = 100
-# average velocity in european cities is no more than 30 km/h
-VELOCITY = 30.0
+[SHARED_VEHICLE_GLOBAL]
+# Nothing to see here, move along
 
+##########################
+# Vehicle Configurations #
+##########################
+
+[EXAMPLE_VEHICLES.ExampleCar]
+# This is an example vehicle with all possible parameters
+# General parameters
+MAX_AVAILABLE_SEATS = 4
+VELOCITY            = 9.54
+
+# Energy parameters
+ENERGY_CONSUMPTION             = 0.20
+EV_RELATIVE_ENERGY_CONSUMPTION = 0.3
+INITIAL_SOC                    = 0.50
+MAX_STATE_OF_CHARGE            = 50.0
+# percentage (State of Charge) that a vehicle should not drop below
+EMERGENCY_SOC_BUFFER = 0.05
+
+# Economic parameters
+PRICE_PER_MIN = 0.35
+#Flat price per trip started (e.g. unlock fee)
+CHARGING_COST_PER_KWH = 0.43
+COST_PER_KM           = 0.45
+DAILY_TOTAL_COST      = 29.0
+KG_CO2_PER_KM         = 0.105
+PRICE_PER_KM          = 1.3
+PRICE_PER_TRIP        = 0.0
+
+#Other parameters
+# Maximum distance a user is willing to walk to get to a vehicle
+WALKING_DISTANCE = 500
+# How convenient is the vehicle for the user, lower is better
+CONVENIENCE = 1
+
+
+[SHARED_VEHICLES.Car]
+
+AUTONOMY_TYPE         = "HumanDriven"
+CHARGING_COST_PER_KWH = 0.23
+CONVENIENCE           = 3
+# Germany: Cost of travel per kilometer by mode 2023: https://www.statista.com/statistics/1447039/cost-per-kilometer-travelled-in-germany-by-mode/
+COST_PER_KM                    = 0.53
+DAILY_TOTAL_COST               = 29.86
+ENERGY_CONSUMPTION             = 0.20
+EV_RELATIVE_ENERGY_CONSUMPTION = 0.8
+INITIAL_SOC                    = 0.50
+KG_CO2_PER_KM                  = 0.236
+MAX_AVAILABLE_SEATS            = 4
+MAX_STATE_OF_CHARGE            = 50.0
+PRICE_PER_KM                   = 1.3               #TODOO: Not needed? I forgot why I wrote this
+PRICE_PER_MIN                  = 0.35
+PROPULSION_TYPE                = "BatteryElectric"
+VEHICLE_TYPE                   = "Car"
+VELOCITY                       = 9.54
+WALKING_DISTANCE               = 500
+
+
+[SHARED_VEHICLES.Scooter]
+
+AUTONOMY_TYPE                  = "HumanDriven"
+CHARGING_COST_PER_KWH          = 0.23
+CONVENIENCE                    = 2
+COST_PER_KM                    = 0.53
+DAILY_TOTAL_COST               = 7.66
+ENERGY_CONSUMPTION             = 0.048
+EV_RELATIVE_ENERGY_CONSUMPTION = 0.8
+KG_CO2_PER_KM                  = 0.051
+MAX_AVAILABLE_SEATS            = 1
+MAX_STATE_OF_CHARGE            = 4.8
+PRICE_PER_MIN                  = 0.23
+PROPULSION_TYPE                = "BatteryElectric"
+VEHICLE_TYPE                   = "Scooter"
+VELOCITY                       = 8.04
+WALKING_DISTANCE               = 350
+
+
+[SHARED_VEHICLES.KickScooter]
+
+AUTONOMY_TYPE         = "HumanDriven"
+CHARGING_COST_PER_KWH = 0.23
+CONVENIENCE           = 1
+COST_PER_KM           = 0.53
+DAILY_TOTAL_COST      = 11.51
+# According to https://publica.fraunhofer.de/entities/publication/abe4bac9-e528-4dc7-abfa-594138cdb71c --> energy consumption of about 0.02 kWh/km in Karlsruhe
+ENERGY_CONSUMPTION             = 0.0072
+EV_RELATIVE_ENERGY_CONSUMPTION = 0.8
+# According to https://suchdichgruen.de/wissen-und-technologie/innovation-und-technologie/a713/sind-e-scooter-umweltschaedlich/ 0.088-0.126 per passenger
+# The median distance with shared e-scooters is about 1,4 km across all days and hours of day: https://publica.fraunhofer.de/entities/publication/abe4bac9-e528-4dc7-abfa-594138cdb71c
+# That would mean around 0.062-0.090 kg CO2/km (1,4 km)
+KG_CO2_PER_KM       = 0.105
+MAX_AVAILABLE_SEATS = 1
+MAX_STATE_OF_CHARGE = 0.288
+# 0.15-0.25€ per min according to https://emobility-magazin.com/e-scooter/e-scooter-sharing/
+PRICE_PER_MIN   = 0.19
+PRICE_PER_TRIP  = 1.0
+PROPULSION_TYPE = "BatteryElectric"
+VEHICLE_TYPE    = "KickScooter"
+# Max 20 km/h is allowed in Germany: https://www.evz.de/en/travelling-motor-vehicles/e-mobility/two-wheelers/e-scooter-regulations.html
+# We use euclidean approximation of travel speeds
+VELOCITY         = 2.82
+WALKING_DISTANCE = 200
+
+
+[SHARED_VEHICLES.Bike]
+
+AUTONOMY_TYPE = "HumanDriven"
+CONVENIENCE   = 1
+# Germany: Cost of travel per kilometer by mode 2023: https://www.statista.com/statistics/1447039/cost-per-kilometer-travelled-in-germany-by-mode/
+COST_PER_KM         = 0.1
+DAILY_TOTAL_COST    = 11.51
+ENERGY_CONSUMPTION  = 0.0
+INITIAL_SOC         = 1.0
+KG_CO2_PER_KM       = 0.046
+MAX_AVAILABLE_SEATS = 1
+MAX_STATE_OF_CHARGE = 1.0
+PRICE_PER_MIN       = 0.08
+PROPULSION_TYPE     = "HumanPowered"
+VEHICLE_TYPE        = "Bike"
+# Feature-based selection of carsharing relocation modes: 15-18 km/h for Milan, Munich and Toronto https://www.sciencedirect.com/science/article/pii/S1366554521000466
+VELOCITY         = 2.82
+WALKING_DISTANCE = 200
 
 ##############################
 # Experiment Configurations #
