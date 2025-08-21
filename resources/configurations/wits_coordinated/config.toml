@@ -104,22 +104,6 @@ MOD_P_VALUES                      = [[0.00, 0.03, 0.00, 0.00, 0.42, 0.00, 0.00, 
 MOD_COEFFICIENT_INTERVAL_ADJUSTER = 0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      #what is this?
 
 
-[CHARGING_INFRASTRUCTURE]
-# If lists are provided, heterogeneous charging stations are possible
-# If single value lists are provided, we assume the same values for all locations
-# Number of charging stations can be used to cut down on the number of charging stations without modifying the locations
-
-NUMBER_OF_CHARGING_STATIONS = 9
-##### chicago AAMAS
-LOCATIONS = ["872664c1effffff", "872664c1affffff", "87275934effffff", "872664ca9ffffff", "872664521ffffff", "872664cf5ffffff", "872664cacffffff", "872664c10ffffff", "872664d89ffffff"]
-#If single value, all stations have the same power
-CHARGING_STATION_POWER = [22.0]
-# How many plugs / slots a charging station has. If single value, all stations have the same capacity
-CHARGING_STATION_CAPACITY = [10]
-# How many spaces without plugs (queue for plugs) a charging station has, if single value, all stations have the same capacity
-CHARGING_STATION_QUEUE_SIZE = [0]
-
-
 ###########################
 # Operator Configurations #
 ###########################
@@ -232,17 +216,6 @@ CHARGING_COST_PER_KWH = 0.43
 ##############################
 # Experiment Configurations #
 ##############################
-
-# Coordination Configurations
-[AUCTION]
-AUCTION_START = 10
-AUCTION_END   = 20_160
-
-
-[SHARED_CHARGING_AUCTION]
-AUCTION_INTERVAL  = 10
-TIMESLOT_DURATION = 90
-AUCTION_LOOKAHEAD = 20
 
 # Problem Abstraction Configurations
 [DYNAMIC_ROUTING]

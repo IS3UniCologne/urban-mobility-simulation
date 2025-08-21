@@ -51,6 +51,8 @@ from simulation.infrastructure.charging_stations.charging_infastructure import (
 )
 from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operator import Operator
+from simulation.world.markets.auction import Auction
+from simulation.world.markets.shared_charging_auction import SharedChargingAuction
 
 if TYPE_CHECKING:
     # Careful moving stuff here, pydantic needs to check type hints at runtime!
@@ -272,6 +274,15 @@ class ChargingInfrastructureConfig(BaseModel):
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
 
+    # fallback if there is no auction
+    COORDINATION_INTERVAL: int | None = Field(gt=0, default=None)
+    COORDINATION_TIMESLOT_DURATION: int | None = Field(gt=0, default=None)
+    COORDINATION_LOOKAHEAD: int | None = Field(ge=0, default=None)
+
+    # market
+    AUCTION_CONFIG: AuctionConfig | None = Field(default=None)
+
+    # Instance is put here after creation, so the operator gets a reference
     instance: ChargingInfrastructure | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
@@ -344,6 +355,7 @@ class OperatorConfig(ConfigBaseModel):
     # AVAILABLE_MODES_SUPPLY: list[int]
     OPERATOR_TYPE: type[Operator]
 
+    # TODO: We should move operations type into the operations config.
     OPERATIONS_TYPE: type[OperationsInterface]
     OPERATIONS_CONFIG: OperationsConfig
 
@@ -431,12 +443,16 @@ class RideHailingGlobalConfig(ConfigBaseModel):
 class AuctionConfig(ConfigBaseModel):
     """Configuration for auction parameters."""
 
+    AUCTION_TYPE: type[Auction]
+
     AUCTION_START: int = Field(ge=0)
     AUCTION_END: int = Field(gt=0)
 
 
-class SharedChargingAuctionConfig(ConfigBaseModel):
+class SharedChargingAuctionConfig(AuctionConfig):
     """Configuration for shared charging auction parameters."""
+
+    AUCTION_TYPE: type[SharedChargingAuction] = SharedChargingAuction
 
     AUCTION_INTERVAL: int = Field(gt=0)
     TIMESLOT_DURATION: int = Field(gt=0)

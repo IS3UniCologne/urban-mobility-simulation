@@ -44,7 +44,7 @@ class RideHailingSharedChargingOperations(BidderInterface, OperationsInterface):
         self._world = world
 
         OperationsInterface.__init__(self, sim)
-        BidderInterface.__init__(self, env=sim.env, auction=world.market)
+        BidderInterface.__init__(self, env=sim.env, auction=operations_config)
 
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
         # self._bidding_strategy = bidding_strategy

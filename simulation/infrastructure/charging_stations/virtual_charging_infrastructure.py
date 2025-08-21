@@ -32,10 +32,9 @@ class VirtualChargingInfrastructure(SimulationBase):
     __slots__ = (
         "_availability",
         "_charging_infrastructure",
-        "_config",
+        "_current_lookahead",
         "_env",
         "_listeners",
-        "_lookahead",
         "_use_virtual_cs",
         "_virtual_charging_stations",
     )
@@ -49,15 +48,14 @@ class VirtualChargingInfrastructure(SimulationBase):
     ) -> None:
         super().__init__(sim)
         self._env = sim.env
-        self._config = sim.config
 
         # if virtual charging infra is used to create a completely artificial plan of infrastructure, including future timeslots, use lookahead
         # otherwise, (if lookahead is None) be a mirror of the real underlying infrastructure, that can be updated from outside as needed
 
-        self._lookahead = lookahead
+        self._current_lookahead = lookahead
         self._use_virtual_cs = use_virtual_cs
 
-        if self._lookahead is None:
+        if self._current_lookahead is None:
             self._availability: dict[str, int] = {
                 station.location: station.capacity
                 for station in charging_infrastructure.charging_stations
@@ -71,12 +69,12 @@ class VirtualChargingInfrastructure(SimulationBase):
                 VirtualChargingStation(cs)
                 for cs in self._charging_infrastructure.charging_stations
             ]
-            if self._lookahead is not None:
+            if self._current_lookahead is not None:
                 self._update_virtual_cs(init=True)
         else:
             self._virtual_charging_stations = None
 
-        if self._lookahead is None and self._use_virtual_cs:
+        if self._current_lookahead is None and self._use_virtual_cs:
             self._listeners = {}
             for cs in self._virtual_charging_stations:
                 self._env.process(self._sync_with_real(cs))
@@ -113,7 +111,7 @@ class VirtualChargingInfrastructure(SimulationBase):
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
     def get_available_capacity(self, at_timeslot: int | None = None):  # noqa: ANN201
-        if self._lookahead is None:
+        if self._current_lookahead is None:
             return self._availability
         try:
             return self._availability[at_timeslot]
@@ -125,7 +123,7 @@ class VirtualChargingInfrastructure(SimulationBase):
         Defaults to `get_available_locations() at self._default_lookahead`
         which is the next timeslot that was already auctioned, or None
         """
-        return self.get_available_locations(self._lookahead)
+        return self.get_available_locations(self._current_lookahead)
 
     def _update_virtual_cs(self, init: bool = False) -> None:
         for cs in self._virtual_charging_stations:
@@ -134,8 +132,8 @@ class VirtualChargingInfrastructure(SimulationBase):
                 max(
                     0,
                     min(
-                        self._availability[self._lookahead][cs.location]
-                        if self._lookahead is not None
+                        self._availability[self._current_lookahead][cs.location]
+                        if self._current_lookahead is not None
                         else self._availability[cs.location],
                         cs._physical_charging_station.capacity,  # noqa: SLF001
                     ),
@@ -147,18 +145,18 @@ class VirtualChargingInfrastructure(SimulationBase):
                 capacity=bounded_capa,
                 # TODO: move all shared_charging_auction to charging infrastructure config?
                 valid_timeframe=(
-                    self._lookahead,
-                    self._lookahead
-                    + self._config.shared_charging_auction.TIMESLOT_DURATION,
+                    self._current_lookahead,
+                    self._current_lookahead
+                    + self._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION,  # noqa: SLF001
                 )
-                if self._lookahead is not None
+                if self._current_lookahead is not None
                 else None,
             )
 
     def update(self, availability: dict[str, int], timeslot: int | None = None) -> None:
         try:
             die_if_unbearable(availability, dict[str, int])
-            if self._lookahead is None:
+            if self._current_lookahead is None:
                 self._availability = availability
             else:
                 self._availability[timeslot] = availability
@@ -166,14 +164,14 @@ class VirtualChargingInfrastructure(SimulationBase):
             raise ValueError(
                 "Availability must be a dict of (location, capacity)"
             ) from e
-        if self._lookahead is not None:
-            # update the default lookahead to be the next auctioned slot
-            self._lookahead = self._env.now + (
+        if self._current_lookahead is not None:
+            # update the current lookahead to be the next coordinated (e.g. auctioned) slot
+            self._current_lookahead = self._env.now + (
                 # TODO: move all shared_charging_auction to charging infrastructure config?
-                self._config.shared_charging_auction.AUCTION_LOOKAHEAD
+                self._charging_infrastructure._charging_infra_config.COORDINATION_LOOKAHEAD  # noqa: SLF001
                 - (
                     self._env.now
-                    % self._config.shared_charging_auction.AUCTION_INTERVAL
+                    % self._charging_infrastructure._charging_infra_config.COORDINATION_INTERVAL  # noqa: SLF001
                 )
             )
 

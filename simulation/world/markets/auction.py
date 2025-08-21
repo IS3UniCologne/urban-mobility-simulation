@@ -20,7 +20,6 @@ class Auction(SimulationBase, ABC):
     __slots__ = (
         "_bid_syntax",
         "_bids",
-        "_config",
         "_env",
         "_is_open",
         "_process",
@@ -32,7 +31,6 @@ class Auction(SimulationBase, ABC):
 
     def __init__(self, sim: SimulationContext) -> None:
         super().__init__(sim)
-        self._config = sim.config
         self._env = sim.env
         self._is_open = False
         self._bid_syntax: type = Any
