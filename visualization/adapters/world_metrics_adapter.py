@@ -26,10 +26,17 @@ class WorldMetricsPlotAdapter:
 
     @property
     def vehicle_state_distribution(self) -> dict:
-        """Configuration for plotting vehicle state distribution as a bar chart."""
+        def transform(snapshot):
+            return {
+                k: {"number": v}
+                for k, v in snapshot["vehicle_state_distribution"].items()
+            }
+
+        """Configuration for plotting vehicle state distribution as an indexed line chart."""
         return {
-            "title": "Vehicle State Distribution",
+            "title": "Vehicle State Distribution (Line)",
             "metric_group": "world",
-            "metric_key": "vehicle_state_distribution",
-            "plot_type": "vbar",  # Specify a vertical bar chart
+            "metric_key": "number",  # see above
+            "plot_type": "indexed_line",
+            "transform": transform,
         }

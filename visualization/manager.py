@@ -14,17 +14,18 @@ class VisualizationManager:
     """A high-level manager for the live visualization system."""
 
     def __init__(self, simulation: SimulationContext, interval: float = 10.0) -> None:
+        # TODO: make optional rollover configurable
         self._job = simulation.metrics.tracker.create_job(
             name="visualization", interval=interval, start_now=True, replace=True
         )
-        self._logger = simulation.sim.log_manager.get_class_logger("Visualization")
+        self._logger = simulation.sim.log_manager.get_system_logger("visualization")
 
         # Internal setup of the visualization pipeline
         self._queue = Queue()
         self._metrics_adapter = MetricsAdapter(
             self._job, self._queue, logger=self._logger
         )
-        self._plotter = LivePlotter(self._queue)
+        self._plotter = LivePlotter(self._queue, self._logger)
 
         # Expose the plot adapters to the user
         self.world = WorldMetricsPlotAdapter()
