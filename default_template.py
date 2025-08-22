@@ -1,17 +1,14 @@
 """
 Default template for running the simulation.
 
-Contains examples for some common tasks, including live web-based visualization.
+Contains examples for some common tasks, including metrics output and live web-based visualization.
 """
 
 import sys
-import threading
-import webbrowser
-from queue import Queue
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.simulation import Simulation
-from visualization.live_visualization import BokehPlotter, MetricsAdapter
+from visualization.manager import VisualizationManager
 
 
 def main() -> None:
@@ -21,62 +18,45 @@ def main() -> None:
 
     simulation = Simulation(config)
 
-    # Set up time-series metrics tracking. A shorter interval is better for live plotting.
+    # Periodic tracking of World Metrics every 60 simulation time units
     simulation.metrics.tracker.create_job(
-        name="live_metrics",
-        interval=10.0,
-        tracked_classes=["WorldMetrics", "OperatorMetrics"],
+        name="world_metrics",
+        interval=60.0,
+        tracked_classes=["WorldMetrics"],
         start_now=True,
     )
 
-    # --- Live Visualization Setup ---
-    # 1. Create the communication queue
-    data_queue = Queue()
-
-    # 2. Get a logger for the visualization components
-    logger = simulation.sim.log_manager.get_class_logger("visualization")
-
-    # 3. Start the adapter thread to listen for metrics
-    adapter = MetricsAdapter(
-        simulation.metrics.tracker, "live_metrics", data_queue, logger=logger
+    # Periodic tracking of Operator Metrics every 10 simulation time units
+    simulation.metrics.tracker.create_job(
+        name="operator_metrics",
+        interval=10.0,
+        tracked_classes=["OperatorMetrics"],
+        start_now=True,
     )
-    adapter.start()
 
-    # 4. Configure and start the Bokeh server using the builder pattern
-    plotter = BokehPlotter(data_queue)
-    plotter.plot_simple_metric(
-        "world", "active_user_processes", title="Active User Processes"
-    )
-    plotter.plot_indexed_metric("operator", "total_revenue", title="Operator Revenue")
-    server = plotter.start()
+    # Live Visualization
+    viz = VisualizationManager(simulation=simulation, interval=100)
 
-    # 4. Open a browser window to the plot
-    def open_browser() -> None:
-        webbrowser.open(f"http://localhost:{server.port}/")
+    # 2. Declaratively add the plots you want to see
+    viz.add_plot(viz.world.active_user_processes)
+    viz.add_plot(viz.operators.total_revenue)
+    viz.add_plot(viz.world.vehicle_state_distribution)
 
-    # Give the server a moment to start, then open the browser
-    threading.Timer(1.5, open_browser).start()
+    # Don't forget to start the visualization server, optionally set timeout and port
+    viz.start()
 
-    # --- Run Simulation ---
-    # Manually capture initial state at t=0
-    simulation.metrics.tracker.capture("live_metrics")
-
+    # Start simulation
     simulation.run_simulation()
 
-    # Manually capture final state
-    simulation.metrics.tracker.capture("live_metrics")
+    # Log and save final metrics example
+    simulation.metrics.operator_metrics.to_log()  # headline aggregate metrics
+    simulation.metrics.tracker.export_job(
+        name="operator_metrics", file_name="operator_metrics.csv"
+    )  # timestamped DataFrame
 
-    # --- Shutdown ---
-    simulation.metrics.tracker.stop_job("live_metrics")
-    adapter.stop()
-    adapter.join(timeout=2)  # Wait for the adapter to finish
-
-    # The Bokeh server thread is a daemon, so it will exit automatically.
-    # For a more robust application, you might add plotter.stop() and handle the IOLoop shutdown.
-
-    # Log final metrics example
-    simulation.metrics.operator_metrics.to_log()
-    simulation.metrics.world_metrics.to_log()
+    # Cleanup
+    simulation.metrics.tracker.stop_all_jobs()  # stop all metrics tracking jobs
+    viz.stop()  # Gracefully stop the visualization components
 
 
 if __name__ == "__main__":
