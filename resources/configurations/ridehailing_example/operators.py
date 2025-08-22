@@ -1,12 +1,8 @@
 from simulation.helper.configuration.configuration import (
     ChargingInfrastructureConfig,
-    OperationsConfig,
-    OperatorConfig,
+    RideHailingBaseChargingOperationsConfig,
+    RideHailingOperatorConfig,
 )
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
-)
-from simulation.operator.ride_hailing_operator import RideHailingOperator
 
 charging_infrastructure_1 = ChargingInfrastructureConfig(
     # If lists are provided, heterogeneous charging stations are possible
@@ -70,11 +66,12 @@ DEFAULT_RECHARGE_THRESHOLD = [
     0.35,
 ]
 
-operator_1 = OperatorConfig(
-    OPERATOR_TYPE=RideHailingOperator,
-    OPERATIONS_TYPE=RideHailingBaseChargingOperations,
+operator_1 = RideHailingOperatorConfig(
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    OPERATIONS_CONFIG=OperationsConfig(
+    # Driver payment share for ride-hailing
+    # An analysis of the individual economics of ride-hailing drivers -> https://www.sciencedirect.com/science/article/pii/S0965856419300333
+    DRIVER_PAYMENT_SHARE=0.75,
+    OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,
         TIME_BETWEEN_OPERATIONS=15,
@@ -82,11 +79,10 @@ operator_1 = OperatorConfig(
         VEHICLE_RELOCATION_VELOCITY=9.54,
     ),
 )
-operator_2 = OperatorConfig(
-    OPERATOR_TYPE=RideHailingOperator,
-    OPERATIONS_TYPE=RideHailingBaseChargingOperations,
+operator_2 = RideHailingOperatorConfig(
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    OPERATIONS_CONFIG=OperationsConfig(
+    DRIVER_PAYMENT_SHARE=0.75,
+    OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,
         TIME_BETWEEN_OPERATIONS=15,

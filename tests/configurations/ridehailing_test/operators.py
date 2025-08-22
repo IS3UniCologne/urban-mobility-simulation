@@ -1,12 +1,8 @@
 from simulation.helper.configuration.configuration import (
     ChargingInfrastructureConfig,
-    OperationsConfig,
-    OperatorConfig,
+    RideHailingBaseChargingOperationsConfig,
+    RideHailingOperatorConfig,
 )
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
-)
-from simulation.operator.ride_hailing_operator import RideHailingOperator
 
 charging_infrastructure_1 = ChargingInfrastructureConfig(
     NUMBER_OF_CHARGING_STATIONS=16,
@@ -34,11 +30,10 @@ charging_infrastructure_1 = ChargingInfrastructureConfig(
 )
 
 
-operator_1 = OperatorConfig(
-    OPERATOR_TYPE=RideHailingOperator,
-    OPERATIONS_TYPE=RideHailingBaseChargingOperations,
+operator_1 = RideHailingOperatorConfig(
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    OPERATIONS_CONFIG=OperationsConfig(
+    DRIVER_PAYMENT_SHARE=0.75,
+    OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,
         TIME_BETWEEN_OPERATIONS=15,

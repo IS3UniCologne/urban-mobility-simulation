@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.context.simulation_context import SimulationContext
-    from simulation.helper.configuration.configuration import OperatorConfig
+    from simulation.helper.configuration.configuration import RideHailingOperatorConfig
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
@@ -32,32 +32,24 @@ class RideHailingOperator(Operator):
     def __init__(  # noqa: ANN204
         self,
         sim: SimulationContext,
-        operator_config: OperatorConfig,
+        operator_config: RideHailingOperatorConfig,
         fleet: VehicleFleet,
         charging_infrastructure: ChargingInfrastructure,
         search_engine: SearchEngineInterface,
         allocation_engine: VehicleAllocationEngineInterface,
         world: World,
     ):
-        self._mode = OperatorMode.RIDE_HAILING
-        self._driver_payment_share = sim.config.ride_hailing_global.DRIVER_PAYMENT_SHARE
-        self._charging_infrastructure = charging_infrastructure
-
-        self._operations = operator_config.OPERATIONS_TYPE(
-            sim=sim,
-            distance_matrix=world.distance_matrix,
-            operations_config=operator_config.OPERATIONS_CONFIG,
-            world=world,
-            operator=self,
-        )
-
         super().__init__(
             sim=sim,
             fleet=fleet,
-            operations=self._operations,
+            operator_config=operator_config,
             search_engine=search_engine,
             allocation_engine=allocation_engine,
+            world=world,
         )
+        self._mode = OperatorMode.RIDE_HAILING
+        self._driver_payment_share = operator_config.DRIVER_PAYMENT_SHARE
+        self._charging_infrastructure = charging_infrastructure
 
     @property
     def charging_infrastructure(self) -> ChargingInfrastructure:
