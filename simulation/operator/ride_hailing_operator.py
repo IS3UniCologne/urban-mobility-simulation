@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import RideHailingOperatorConfig
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
@@ -17,38 +18,42 @@ if TYPE_CHECKING:
     from simulation.operator.interface.vehicle_allocation_engine_interface import (
         VehicleAllocationEngineInterface,
     )
-    from simulation.operator.operations_management.operations import OperationsInterface
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.tasks.transport_task import TransportTask
+    from simulation.world.world import World
 
 from simulation.helper.configuration.enums import OperatorMode
 from simulation.operator.operator import Operator
 
 
 class RideHailingOperator(Operator):
-    __slots__ = ("_driver_payment_share",)
+    __slots__ = ("_charging_infrastructure", "_driver_payment_share")
 
     def __init__(  # noqa: ANN204
         self,
         sim: SimulationContext,
+        operator_config: RideHailingOperatorConfig,
         fleet: VehicleFleet,
         charging_infrastructure: ChargingInfrastructure,
-        operations: OperationsInterface,
         search_engine: SearchEngineInterface,
         allocation_engine: VehicleAllocationEngineInterface,
+        world: World,
     ):
         super().__init__(
             sim=sim,
             fleet=fleet,
-            charging_infrastructure=charging_infrastructure,
-            operations=operations,
+            operator_config=operator_config,
             search_engine=search_engine,
             allocation_engine=allocation_engine,
+            world=world,
         )
         self._mode = OperatorMode.RIDE_HAILING
-        self._driver_payment_share = (
-            self._sim.config.ride_hailing_global.DRIVER_PAYMENT_SHARE
-        )
+        self._driver_payment_share = operator_config.DRIVER_PAYMENT_SHARE
+        self._charging_infrastructure = charging_infrastructure
+
+    @property
+    def charging_infrastructure(self) -> ChargingInfrastructure:
+        return self._charging_infrastructure
 
     def pay_for_fulfilled_transportation_task(  # noqa: ANN201
         self,

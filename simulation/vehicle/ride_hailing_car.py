@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 
 class RideHailingCar(RideHailingVehicle):
     __slots__ = (
-        "_driver_payment_share",
         "_offline_duration",
         "_offline_event",
         "_online_event",
@@ -57,9 +56,6 @@ class RideHailingCar(RideHailingVehicle):
         self._offline_duration = 0
         self._shift_start_time = None
         self._shift_end_time = 0
-        self._driver_payment_share = (
-            self._sim.config.ride_hailing_global.DRIVER_PAYMENT_SHARE
-        )
         self.state = VehicleState.OFFLINE
         self._online_event = self._env.event()
         self._offline_event = self._env.event()

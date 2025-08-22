@@ -5,13 +5,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import OperatorConfig
     from simulation.helper.configuration.enums import (
         OperatorMode,
         TransactionState,
         VehicleType,
-    )
-    from simulation.infrastructure.charging_stations.charging_infastructure import (
-        ChargingInfrastructure,
     )
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
@@ -23,9 +21,9 @@ if TYPE_CHECKING:
     from simulation.operator.interface.vehicle_allocation_engine_interface import (
         VehicleAllocationEngineInterface,
     )
-    from simulation.operator.operations_management.operations import OperationsInterface
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.tasks.transport_task import TransportTask
+    from simulation.world.world import World
 
 from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
     TransportationAlternativeRideHailing,
@@ -54,25 +52,28 @@ class Operator(OperatorInterface):
         self,
         sim: SimulationContext,
         fleet: VehicleFleet,
-        charging_infrastructure: ChargingInfrastructure,
-        operations: OperationsInterface,
+        operator_config: OperatorConfig,
         search_engine: SearchEngineInterface,
         allocation_engine: VehicleAllocationEngineInterface,
+        world: World,
     ) -> None:
         super().__init__(sim)
 
         self._sim = sim
         self._env = sim.env
         self._fleet = fleet
-        self._charging_infrastructure = charging_infrastructure
-        self._operations = operations
+        self._operations = operator_config.OPERATIONS_CONFIG.OPERATIONS_TYPE(
+            sim=sim,
+            distance_matrix=world.distance_matrix,
+            operations_config=operator_config.OPERATIONS_CONFIG,
+            world=world,
+            operator=self,
+        )
 
         self._search_engine = search_engine
         self._allocation_engine = allocation_engine
 
         self._transaction_log: TransactionLog = TransactionLog()
-
-        self._operations.register_operator_reference(self)
 
         self._search_engine.register_fleet(self._fleet)
 
@@ -97,10 +98,6 @@ class Operator(OperatorInterface):
     @property
     def fleet(self) -> VehicleFleet:
         return self._fleet
-
-    @property
-    def charging_infrastructure(self) -> ChargingInfrastructure:
-        return self._charging_infrastructure
 
     @property
     def vehicle_types(self) -> list[VehicleType]:

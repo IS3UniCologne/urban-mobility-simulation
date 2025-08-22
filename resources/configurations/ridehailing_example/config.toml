@@ -113,10 +113,7 @@ MOD_COEFFICIENT_INTERVAL_ADJUSTER = 0                                           
 
 
 [RIDE_HAILING_GLOBAL]
-# Driver payment share for ride-hailing
-# An analysis of the individual economics of ride-hailing drivers -> https://www.sciencedirect.com/science/article/pii/S0965856419300333
-DRIVER_PAYMENT_SHARE = 0.75
-AV_PRICE_REDUCTION   = 0.90
+AV_PRICE_REDUCTION = 0.90
 # Is this for service workers or customers?
 MAX_PICKUP_DISTANCE = 10000
 

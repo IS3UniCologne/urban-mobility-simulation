@@ -44,7 +44,6 @@ from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
     OnlyCarVehicleChoiceBehavior,
 )
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
-from simulation.world.markets.shared_charging_auction import SharedChargingAuction
 from simulation.world.population.PopulationFactory import PopulationFactory
 
 if TYPE_CHECKING:
@@ -71,7 +70,6 @@ if TYPE_CHECKING:
     )
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.vehicle.vehicle import Vehicle
-    from simulation.world.markets.auction import Auction
 
 
 class World(SimulationBase):
@@ -149,8 +147,6 @@ class World(SimulationBase):
             self._initialize_charging_infrastructures()
         )
 
-        self._market: Auction | None = self._setup_market()
-
         self._setup_operators()
 
         # Events
@@ -169,6 +165,11 @@ class World(SimulationBase):
         return self._geo_env
 
     @property
+    def distance_matrix(self) -> DataFrame:
+        """Get the distance matrix."""
+        return self._distance_matrix
+
+    @property
     def user_processes(self):  # noqa: ANN201
         return self._user_processes
 
@@ -184,11 +185,6 @@ class World(SimulationBase):
     def operators(self) -> list[Operator]:
         """Get a list of operators in the world."""
         return self._operators
-
-    @property
-    def market(self) -> Auction | None:
-        """Get the market for shared charging."""
-        return self._market
 
     @property
     def fleets(self) -> list[VehicleFleet]:
@@ -227,12 +223,7 @@ class World(SimulationBase):
 
             for ci_conf in self._config.charging_infrastructures:
                 charging_infrastructure = ChargingInfrastructure(
-                    sim=self._sim,
-                    location_list=ci_conf.LOCATIONS,
-                    power_list=ci_conf.CHARGING_STATION_POWER,
-                    capacity_list=ci_conf.CHARGING_STATION_CAPACITY,
-                    queue_size=ci_conf.CHARGING_STATION_QUEUE_SIZE,
-                    reset=True,
+                    sim=self._sim, charging_infrastructure_config=ci_conf
                 )
                 # Assign the charging infrastructure object to the config so operators can access it
                 ci_conf.instance = charging_infrastructure
@@ -343,7 +334,6 @@ class World(SimulationBase):
             operator = SharedMobilityOperator(
                 sim=self._sim,
                 fleet=fleet,
-                charging_infrastructure=None,
                 operations=operations,
                 search_engine=self._search_engine[operator_id],
                 allocation_engine=self._vehicle_assignment_engine[operator_id],
@@ -402,19 +392,14 @@ class World(SimulationBase):
             # ]
 
             # TODO: make sure this is a single config parameter
-            operations = operator_cfg.OPERATIONS_TYPE(
-                sim=self._sim,
-                distance_matrix=self._distance_matrix,
-                operations_config=operator_cfg.OPERATIONS_CONFIG,
-                world=self,
-            )
             operator = RideHailingOperator(
                 sim=self._sim,
+                operator_config=operator_cfg,
                 fleet=fleet,
                 charging_infrastructure=operator_cfg.CHARGING_INFRASTRUCTURE.instance,
-                operations=operations,
                 search_engine=self._search_engine[operator_id],
                 allocation_engine=self._vehicle_assignment_engine[operator_id],
+                world=self,
             )
             self._operators.append(operator)
             self._payment_engine[operator_id] = operator
@@ -736,15 +721,7 @@ class World(SimulationBase):
         return PublicTransitOperator(
             sim=self._sim,
             fleet=fleet,
-            charging_infrastructure=None,
             operations=operations,
             search_engine=search_engine,
             allocation_engine=allocation_engine,
-        )
-
-    def _setup_market(self) -> Auction | None:
-        if self._config.shared_charging_auction is None:
-            return None
-        return SharedChargingAuction(
-            sim=self._sim, charging_infrastructure=self._charging_infrastructures
         )
