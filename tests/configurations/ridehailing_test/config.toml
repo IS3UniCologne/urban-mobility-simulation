@@ -109,10 +109,8 @@ MOD_COEFFICIENT_INTERVAL_ADJUSTER = 0                                           
 ###########################
 
 [RIDE_HAILING_GLOBAL]
-# Driver payment share for ride-hailing
-DRIVER_PAYMENT_SHARE = 0.75
-AV_PRICE_REDUCTION   = 0.90
-MAX_PICKUP_DISTANCE  = 10000
+AV_PRICE_REDUCTION  = 0.90
+MAX_PICKUP_DISTANCE = 10000
 
 PRICE_ENTERING   = 2
 PRICE_PER_MINUTE = 0.35

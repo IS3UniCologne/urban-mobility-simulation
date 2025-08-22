@@ -13,10 +13,12 @@ from simulation.operator.operations_management.service_tasks.charging_task_rideh
     ChargingTaskRidehailing,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
-from simulation.world.world import World
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import OperationsConfig
+    from simulation.operator.ride_hailing_operator import RideHailingOperator
+    from simulation.world.world import World
 
 
 class RideHailingMPChargingOperations(OperationsInterface):
@@ -27,6 +29,7 @@ class RideHailingMPChargingOperations(OperationsInterface):
     # TODO: Do we want to keep this in its current form as part of the core simulation?
     __slots__ = (
         "_algo",
+        "_sim",
         "_state_of_charge_threshold",
         "_task_queue",
         "_task_transactions",
@@ -38,18 +41,21 @@ class RideHailingMPChargingOperations(OperationsInterface):
     def __init__(  # noqa: ANN204
         self,
         sim: SimulationContext,
-        time_between_operations: float,
-        state_of_charge_threshold: float,
+        operations_config: OperationsConfig,
+        distance_matrix: pd.DataFrame,
+        world: World,
+        operator: RideHailingOperator,
         algo=None,  # optimization problem  # noqa: ANN001
     ):
         super().__init__(sim)
 
-        self._world = None  # defer
-        self._time_between_operations = time_between_operations
-        self._state_of_charge_threshold = state_of_charge_threshold
+        self._sim = sim
+        self._world = world
+        self._time_between_operations = operations_config.TIME_BETWEEN_OPERATIONS
+        self._state_of_charge_threshold = operations_config.RECHARGE_THRESHOLD
         self._algo = algo
 
-        self._task_queue = TaskQueue(sim.env)
+        self._task_queue = TaskQueue(sim)
         self._task_transactions = []
 
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
@@ -57,7 +63,7 @@ class RideHailingMPChargingOperations(OperationsInterface):
     def execute(self) -> None:
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
-            env=self._env,
+            sim=self._sim,
             charging_infrastructure=self._operator_reference.charging_infrastructure,
             lookahead=None,
             use_virtual_cs=True,
@@ -70,8 +76,6 @@ class RideHailingMPChargingOperations(OperationsInterface):
         # option a) track incoming vehicles seperately and sum up with current status
         # option b) track expected capacity incl incoming and outgoing and specific timesteps (like VirtualChargingInfrastructure?)
         #
-
-        self._world = World.instance()
 
         while True:
             yield self._env.timeout(self._time_between_operations)
