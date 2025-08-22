@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from simulation.helper.configuration.enums import PropulsionType, VehicleState
+from simulation.helper.configuration.enums import (
+    AutonomyType,
+    PropulsionType,
+    VehicleState,
+)
 
 from .vehicle import Vehicle
 
@@ -48,10 +52,18 @@ class RideHailingVehicle(Vehicle):
         "_is_electric",
         "_max_available_seats",
         "_max_state_of_charge",
+        "_offline_duration",
+        "_offline_event",
+        "_online_event",
         "_price_per_minute",
         "_reserved_for_user",
         "_seats",
+        "_shift_duration",
+        "_shift_earn",
+        "_shift_end_time",
+        "_shift_start_time",
         "_suggested",
+        "_total_earn",
         "_user_mounted",
         "_user_unmounted",
         "_vehicle_parked",
@@ -154,6 +166,29 @@ class RideHailingVehicle(Vehicle):
         ].CHARGING_COST_PER_KWH
 
         self._emergency_soc_buffer_percent: float
+
+        if vehicle_config.AUTONOMY_TYPE == AutonomyType.HUMAN_DRIVEN:
+            self._price_per_minute = vehicle_config.PRICE_PER_MIN
+            self._total_earn = 0
+            self._shift_earn = 0
+            self._shift_duration = 0
+            self._offline_duration = 0
+            self._shift_start_time = None
+            self._shift_end_time = 0
+            self.state = VehicleState.OFFLINE
+            self._online_event = self._env.event()
+            self._offline_event = self._env.event()
+
+            self._emergency_soc_buffer_percent = vehicle_config.EMERGENCY_SOC_BUFFER
+
+            self._env.process(self.run_shift_check_process())
+
+        if vehicle_config.AUTONOMY_TYPE == AutonomyType.AUTONOMOUS:
+            self._emergency_soc_buffer_percent: float = (
+                self._sim.config.ride_hailing_vehicles[
+                    "AutonomousCar"
+                ].EMERGENCY_SOC_BUFFER
+            )
 
     @property
     def price_per_minute(self) -> float:
@@ -472,3 +507,160 @@ class RideHailingVehicle(Vehicle):
             self._current_state_of_charge,
             self._max_state_of_charge,
         )
+
+    ### stuff from RideHailingCar ###
+
+    @property
+    def total_earn(self) -> float:
+        return self._total_earn
+
+    @property
+    def shift_earn(self) -> float:
+        return self._shift_earn
+
+    @property
+    def shift_duration(self) -> float:
+        return self._shift_duration
+
+    @property
+    def offline_duration(self) -> float:
+        return self._offline_duration
+
+    @property
+    def shift_start_time(self) -> float:
+        return self._shift_start_time
+
+    @property
+    def shift_end_time(self) -> float:
+        return self._shift_end_time
+
+    def update_shift_start_time(self) -> None:
+        time = self._env.now
+        self._shift_start_time = time
+
+        self.logger.debug("Shift has started.")
+
+    def update_shift_end_time(self) -> None:
+        time = self._env.now
+        self._shift_end_time = time
+
+        self.logger.debug("Shift has ended.")
+
+    def update_shift_duration(self) -> None:
+        self._shift_duration = self._env.now - self._shift_start_time
+
+    def update_offline_duration(self) -> None:
+        self._offline_duration = self._env.now - self._shift_end_time
+
+    def update_idle_time(self):  # TODO  # noqa: ANN201
+        pass
+
+    # TODO do we remove this? If we want this feature it should probably be implemented for all vehicles
+    # This can also be inferred from transaction logs
+    # def update_earned_money(self, payment):
+    #     # Notify earned money for a human-driven car
+    #     earn = payment * self._driver_payment_share
+    #     self._total_earn += earn
+    #     self._shift_earn += earn
+
+    # self.logger.debug(
+    #     "RideHailingCar %s earned %s since he/she started the shift.",
+    #     self._id,
+    #     self.shift_earn,
+    #
+    # )
+
+    def get_online(self) -> None:
+        self.state = VehicleState.PARKING
+        self.update_shift_start_time()
+        self._online_event.succeed()
+        self._online_event = self._env.event()
+        self.logger.debug("Driver gets online.")
+
+    def get_offline(self) -> None:
+        self.state = VehicleState.OFFLINE
+        self._shift_earn = 0
+        self.update_shift_end_time()
+        self._offline_event.succeed()
+        self._offline_event = self._env.event()
+        self.logger.debug("Driver gets offline.")
+
+    def decide_to_get_online(self) -> bool:
+        go_online = False
+        ### comment off when we have mode chioce variables
+        # self.update_offline_duration()
+        # time = self._env.now
+        # week_day = int((time % (24 * 60 * 7)) / (24 * 60))
+        # hour = int((time / 60) % 60)
+        # offline_duration = self.offline_duration
+        # shift_earned = self.shift_earn
+        # driver_on_off_model.predict([[0, week_day, hour, offline_duration, shift_earned]])
+        # if driver_on_off_model == 1:  # TODO: calibrate the parameters
+        #     go_online = True
+        fleet_size_threshold = self.fleet.driver_availability_vector()
+        time = self._env.now
+        hour = int(
+            (time % 1440) / 60
+        )  # TODO: This rounds to the nearest hour, should we use SimulationTimeConverter.hour_of_day instead?
+        number_of_online_vehicles = len(self.fleet.get_online_vehicles())
+        if number_of_online_vehicles <= fleet_size_threshold[hour]:
+            go_online = True
+        return go_online
+
+    def decide_to_get_offline(self) -> bool:
+        go_offline = False
+        ### comment off when we have mode chioce variables
+        # self.update_shift_duration()
+        # time = self._env.now
+        # week_day = int((time % (24 * 60 * 7)) / (24 * 60))
+        # hour = int((time / 60) % 60)
+        # shift_duration = self.shift_duration
+        # shift_earned = self.shift_earn
+        # driver_on_off_model.predict([[0, week_day, hour, shift_duration, shift_earned]])
+        # if driver_on_off_model == 1:  # TODO: calibrate the parameters
+        #     go_offline = True
+        fleet_size_threshold = self.fleet.driver_availability_vector()
+        time = self._env.now
+        hour = int(
+            (time % 1440) / 60
+        )  # TODO: This rounds to the nearest hour, should we use SimulationTimeConverter.hour_of_day instead?
+        number_of_online_vehicles = len(self.fleet.get_online_vehicles())
+        if number_of_online_vehicles >= fleet_size_threshold[hour]:
+            go_offline = True
+
+        return go_offline
+
+    def run_shift_check_process(self) -> Generator[Event, None, None]:
+        """
+        Run availability decision-making process of drivers
+        :return:
+        """
+        while True:
+            # If the driver is offline we check the decision of getting online
+            if self.state == VehicleState.OFFLINE:
+                go_online = self.decide_to_get_online()
+                if go_online:
+                    self.get_online()
+            # If the driver is online we check the decision of getting offline
+            elif self.state in [VehicleState.PARKING]:
+                self.update_offline_duration()
+                go_offline = self.decide_to_get_offline()
+                if go_offline:
+                    if (
+                        self.state == VehicleState.PARKING
+                    ):  # TODO: Why are we checking for parking twice in a row?
+                        self.get_offline()
+                    # if the driver has a task to do we yield until its completion
+                    else:
+                        self.logger.debug(
+                            "Driver is %s and has a task to do before getting offline.",
+                            self.state,
+                        )
+                        yield (
+                            self._driver_unmounted
+                            | self._vehicle_relocation_finished
+                            | self._charging_station_plugged_out
+                        )
+                        self.get_offline()
+            # we check driver decisions every one hour
+            yield self._env.timeout(15)

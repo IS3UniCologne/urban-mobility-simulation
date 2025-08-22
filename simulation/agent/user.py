@@ -274,16 +274,20 @@ class User(Agent, DriverInterface, TrackingInterface):
         ) in available_transportation_alternatives.transportation_alternatives:
             if (
                 isinstance(alternative.vehicle, Walking)
-                and self._transport_task.viable_vehicle_types[alternative.vehicle.type]
+                and self._transport_task.viable_vehicle_types[
+                    alternative.vehicle.vehicle_type
+                ]
             ):
                 filtered_list.append(
                     (0, alternative.price, alternative.convenience, alternative)
                 )
                 continue
             distance_to_vehicle = self.position >> alternative.vehicle.position
-            if self._transport_task.viable_vehicle_types[alternative.vehicle.type]:
+            if self._transport_task.viable_vehicle_types[
+                alternative.vehicle.vehicle_type
+            ]:
                 if (
-                    alternative.vehicle.type == VehicleType.CAR
+                    alternative.vehicle.vehicle_type == VehicleType.CAR
                     and distance_to_vehicle
                     < self._sim.config.shared_vehicles.get(
                         VehicleType.CAR
@@ -298,7 +302,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    alternative.vehicle.type == VehicleType.KICK_SCOOTER
+                    alternative.vehicle.vehicle_type == VehicleType.KICK_SCOOTER
                     and distance_to_vehicle
                     < self._sim.config.shared_vehicles.get(
                         VehicleType.KICK_SCOOTER
@@ -313,7 +317,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    alternative.vehicle.type == VehicleType.SCOOTER
+                    alternative.vehicle.vehicle_type == VehicleType.SCOOTER
                     and distance_to_vehicle
                     < self._sim.config.shared_vehicles.get(
                         VehicleType.SCOOTER
@@ -328,7 +332,7 @@ class User(Agent, DriverInterface, TrackingInterface):
                         )
                     )
                 elif (
-                    alternative.vehicle.type == VehicleType.BIKE
+                    alternative.vehicle.vehicle_type == VehicleType.BIKE
                     and distance_to_vehicle
                     < self._sim.config.shared_vehicles.get(
                         VehicleType.BIKE

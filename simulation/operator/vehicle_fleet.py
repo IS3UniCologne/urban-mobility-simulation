@@ -174,7 +174,7 @@ class VehicleFleet(ABC, SimulationBase):
             self._add_vehicle(vehicle)
             self._vehicles_by_state[vehicle.state].add(vehicle)
             self._vehicles_by_region[vehicle.current_region].add(vehicle)
-            self._vehicles_by_type[vehicle.type].add(vehicle)
+            self._vehicles_by_type[vehicle.vehicle_type].add(vehicle)
 
     def _add_vehicle(self, vehicle: Vehicle) -> None:
         """Add a vehicle to the fleet.
@@ -198,7 +198,7 @@ class VehicleFleet(ABC, SimulationBase):
             # Remove from all tracking collections
             self._vehicles_by_state[vehicle.state].remove(vehicle)
             self._vehicles_by_region[vehicle.current_region].remove(vehicle)
-            self._vehicles_by_type[vehicle.type].remove(vehicle)
+            self._vehicles_by_type[vehicle.vehicle_type].remove(vehicle)
         else:
             raise VehicleFleetError(f"Vehicle {vehicle} is not registered in Fleet yet")
 
