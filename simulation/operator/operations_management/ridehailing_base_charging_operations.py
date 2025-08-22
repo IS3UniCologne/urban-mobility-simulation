@@ -155,7 +155,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                 self._scheduled_tasks.append(charging_task)
                 # update virtual charging infrastructure
                 # if is_bearable(
-                #     self._operator_reference.charging_infrastructure,
+                #     self._operator.charging_infrastructure,
                 #     VirtualChargingInfrastructure,
                 # ):
                 #     charging_station.update_capacity(
@@ -172,7 +172,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
 
             self.logger.info(
                 "There are %s vehicles with low state of charge.",
-                self._operator_reference.fleet.count_vehicles_below_soc_level(
+                self._operator.fleet.count_vehicles_below_soc_level(
                     self._recharge_theshold
                 ),
             )
@@ -202,7 +202,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                 **used_capacity**: How many service workers are planned to cope with charging needs
         """
         # Get Current Fleet State
-        vehicles_to_charge = self._operator_reference.fleet.mark_vehicles_to_be_charged(
+        vehicles_to_charge = self._operator.fleet.mark_vehicles_to_be_charged(
             self._recharge_theshold
         )
         # if config.settings.PERSIST_RESULTS:
@@ -229,7 +229,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         charging_plan = []
 
         # Account for the possibility that there is no charging station available (could happen in coordinated shared infrastructure, e.g.)
-        if not self._operator_reference.charging_infrastructure.get_locations():
+        if not self._operator.charging_infrastructure.get_locations():
             self.logger.info(
                 "No charging stations available. No charging plan generated."
             )
@@ -238,19 +238,18 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         if not self._allow_queue:
             # for virtual CS, we can use the capacity, as it gets updated
             if is_bearable(
-                self._operator_reference.charging_infrastructure,
-                VirtualChargingInfrastructure,
+                self._operator.charging_infrastructure, VirtualChargingInfrastructure
             ):
                 capacity_to_consider = {
                     x.location: x.capacity
-                    for x in self._operator_reference.charging_infrastructure.charging_stations
+                    for x in self._operator.charging_infrastructure.charging_stations
                     if x.capacity > 0
                 }
             else:
                 # otherwise we need to consider capacity minus current plugged in vehicles:
                 capacity_to_consider = {
                     x.location: x.capacity - len(x.plugs.users)
-                    for x in self._operator_reference.charging_infrastructure.charging_stations
+                    for x in self._operator.charging_infrastructure.charging_stations
                     if x.capacity - len(x.plugs.users) > 0
                 }
 
@@ -288,12 +287,12 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                     continue
                 selected_charging_station = [  # noqa: RUF015
                     x
-                    for x in self._operator_reference.charging_infrastructure.charging_stations
+                    for x in self._operator.charging_infrastructure.charging_stations
                     if x.location == selected_base
                 ][0]
             else:
                 sorted_base_list = self._distance_matrix.loc[
-                    self._operator_reference.charging_infrastructure.get_locations()
+                    self._operator.charging_infrastructure.get_locations()
                 ][[hex]].sort_values(by=hex, ascending=True)
 
                 selected_base_distance = None
@@ -305,7 +304,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                             selected_base = index_base
                             available_charging_stations = [
                                 x
-                                for x in self._operator_reference.charging_infrastructure.charging_stations
+                                for x in self._operator.charging_infrastructure.charging_stations
                                 if len(x.plugs.queue) <= queue
                             ]
                             if len(available_charging_stations) > 0:
@@ -333,7 +332,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                             selected_base = index_base
                             available_charging_stations = [
                                 x
-                                for x in self._operator_reference.charging_infrastructure.charging_stations
+                                for x in self._operator.charging_infrastructure.charging_stations
                             ]
                             if len(available_charging_stations) > 0:
                                 selected_charging_station = [
@@ -364,7 +363,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                         selected_base = index_base
                         available_charging_stations = [
                             x
-                            for x in self._operator_reference.charging_infrastructure.charging_stations
+                            for x in self._operator.charging_infrastructure.charging_stations
                         ]
                         if len(available_charging_stations) > 0:
                             selected_charging_station = [  # noqa: RUF015

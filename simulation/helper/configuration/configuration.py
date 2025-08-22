@@ -50,7 +50,11 @@ from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
 from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.operations_management.ridehailing_base_charging_operations import (
+    RideHailingBaseChargingOperations,
+)
 from simulation.operator.operator import Operator
+from simulation.operator.ride_hailing_operator import RideHailingOperator
 from simulation.world.markets.auction import Auction
 from simulation.world.markets.shared_charging_auction import SharedChargingAuction
 
@@ -319,6 +323,8 @@ class ChargingInfrastructureConfig(BaseModel):
 class OperationsConfig(ConfigBaseModel):
     """Configuration for operations parameters."""
 
+    OPERATIONS_TYPE: type[OperationsInterface]
+
     OPERATIONS_START: int | None = Field(ge=0, default=None)
     OPERATIONS_DURATION: int | None = Field(gt=0, default=None)
     TIME_BETWEEN_OPERATIONS: int | None = Field(gt=0, default=None)
@@ -346,6 +352,14 @@ class OperationsConfig(ConfigBaseModel):
         return SimulationVelocityConverter().convert_kmh(v)
 
 
+class RideHailingBaseChargingOperationsConfig(OperationsConfig):
+    """Configuration for ride-hailing base charging operations."""
+
+    OPERATIONS_TYPE: type[OperationsInterface] = Field(
+        default=RideHailingBaseChargingOperations
+    )
+
+
 class OperatorConfig(ConfigBaseModel):
     """Configuration for operator parameters."""
 
@@ -355,11 +369,7 @@ class OperatorConfig(ConfigBaseModel):
     # AVAILABLE_MODES_SUPPLY: list[int]
     OPERATOR_TYPE: type[Operator]
 
-    # TODO: We should move operations type into the operations config.
-    OPERATIONS_TYPE: type[OperationsInterface]
     OPERATIONS_CONFIG: OperationsConfig
-
-    CHARGING_INFRASTRUCTURE: ChargingInfrastructureConfig | None = Field(default=None)
 
     # TODO: Shared vehicle stuff, this should be changed once we move to the same charging infrastructure as ridehailing
     CHARGING_STATION_POWER: int | None = Field(default=None)
@@ -391,10 +401,19 @@ class OperatorConfig(ConfigBaseModel):
         )
 
 
+class RideHailingOperatorConfig(OperatorConfig):
+    """Configuration for ride-hailing operator parameters."""
+
+    OPERATOR_TYPE: type[Operator] = Field(RideHailingOperator)
+
+    CHARGING_INFRASTRUCTURE: ChargingInfrastructureConfig
+
+    DRIVER_PAYMENT_SHARE: float = Field(gt=0)
+
+
 class RideHailingGlobalConfig(ConfigBaseModel):
     """Global configuration for ride-hailing parameters."""
 
-    DRIVER_PAYMENT_SHARE: float = Field(gt=0)
     AV_PRICE_REDUCTION: float = Field(gt=0)
     MAX_PICKUP_DISTANCE: int = Field(gt=0)
     PRICE_ENTERING: float = Field(ge=0)
