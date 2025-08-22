@@ -8,8 +8,7 @@ from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.enums import VehicleType
 from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
-from simulation.vehicle.ride_hailing_AV import RideHailingAV
-from simulation.vehicle.ride_hailing_car import RideHailingCar
+from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
 if TYPE_CHECKING:
@@ -173,7 +172,9 @@ def generate_AV_fleet(
         for _current_AV in range(count):
             rdm_lat, rdm_lng = sim.geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(sim, rdm_lat, rdm_lng, hex_id)
-            RideHailingAV(sim=sim, position=pos, fleet=fleet, vehicle_config=av_config)
+            RideHailingVehicle(
+                sim=sim, position=pos, fleet=fleet, vehicle_config=av_config
+            )
 
     return fleet
 
@@ -215,19 +216,25 @@ def generate_mixed_ride_hailing_fleet(
         for _current_car in range(EV_count):
             rdm_lat, rdm_lng = sim.geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(sim, rdm_lat, rdm_lng, hex_id)
-            RideHailingCar(sim=sim, position=pos, fleet=fleet, vehicle_config=rh_config)
+            RideHailingVehicle(
+                sim=sim, position=pos, fleet=fleet, vehicle_config=rh_config
+            )
 
         # Add Regular Ridehailing
         for _current_car in range(car_count):
             rdm_lat, rdm_lng = sim.geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(sim, rdm_lat, rdm_lng, hex_id)
-            RideHailingCar(sim=sim, fleet=fleet, position=pos, vehicle_config=rh_config)
+            RideHailingVehicle(
+                sim=sim, fleet=fleet, position=pos, vehicle_config=rh_config
+            )
 
         # Add AVs
         for _current_AV in range(AVs_count):
             rdm_lat, rdm_lng = sim.geo_env.get_random_position(hex_id)
             pos = GeodesicPosition(sim, rdm_lat, rdm_lng, hex_id)
-            RideHailingAV(sim=sim, fleet=fleet, position=pos, vehicle_config=av_config)
+            RideHailingVehicle(
+                sim=sim, fleet=fleet, position=pos, vehicle_config=av_config
+            )
 
     return fleet
 
