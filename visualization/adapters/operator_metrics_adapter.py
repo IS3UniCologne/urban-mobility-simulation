@@ -17,6 +17,7 @@ class OperatorMetricsPlotAdapter:
     @property
     def total_fulfilled_trips(self) -> dict:
         """Configuration for plotting the fulfilled trips of each operator."""
+
         return {
             "title": "Fulfilled Trips by Operator",
             "metric_group": "operator",

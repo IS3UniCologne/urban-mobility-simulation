@@ -136,6 +136,42 @@ class LogManager:
         base_logger = self.get_class_logger(class_name)
         return UidLoggerAdapter(base_logger, uid)
 
+    def get_system_logger(self, name: str) -> logging.Logger:
+        """
+        Get a specialized logger for system messages with simplified formatting.
+
+        Parameters
+        ----------
+        name : str
+            The name of the logger.
+
+        Returns
+        -------
+        logging.Logger
+            The system logger with simplified formatting.
+        """
+        logger_name = f"system.{name}"
+
+        if logger_name not in self._loggers:
+            logger = logging.getLogger(logger_name)
+            logger.propagate = False
+
+            system_formatter = logging.Formatter("[%(levelname)s]: %(message)s")
+            if self._config.settings.LOG_TIMESTAMPS:
+                system_formatter = "%(asctime)s " + system_formatter
+
+            # Create console handler for system messages
+            system_console_handler = logging.StreamHandler()
+            system_console_handler.setLevel(self._config.settings.LOG_LEVEL)
+            system_console_handler.setFormatter(system_formatter)
+
+            logger.addHandler(system_console_handler)
+            logger.setLevel(self._config.settings.LOG_LEVEL)
+
+            self._loggers[logger_name] = logger
+
+        return self._loggers[logger_name]
+
     def get_metrics_output_logger(self) -> logging.Logger:
         """
         Get a specialized logger for metrics output with simplified formatting.

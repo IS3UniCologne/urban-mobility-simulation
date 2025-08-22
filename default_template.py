@@ -35,7 +35,7 @@ def main() -> None:
     )
 
     # Live Visualization
-    viz = VisualizationManager(simulation=simulation, interval=100)
+    viz = VisualizationManager(simulation=simulation, interval=10)
 
     # 2. Declaratively add the plots you want to see
     viz.add_plot(viz.world.active_user_processes)
