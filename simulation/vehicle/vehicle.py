@@ -3,7 +3,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.helper.configuration.enums import (
+    AutonomyType,
+    PropulsionType,
+    VehicleState,
+    VehicleType,
+)
 from simulation.helper.simulation_base import SimulationBase
 from tracking.tracking_interface import TrackingInterface
 
@@ -35,6 +40,7 @@ class Vehicle(TrackingInterface, SimulationBase, ABC):
     __slots__ = (
         "__position",
         "__state",
+        "_autonomy_type",
         "_config",
         "_convenience",
         "_current_region",
@@ -80,7 +86,9 @@ class Vehicle(TrackingInterface, SimulationBase, ABC):
         self.__position: Position = position
         self._current_region: str = position.get_region_id()
         self._velocity: float = vehicle_config.VELOCITY
-        self._type: VehicleType = vehicle_config.VEHICLE_TYPE
+        self._vehicle_type: VehicleType = vehicle_config.VEHICLE_TYPE
+        self._autonomy_type = vehicle_config.AUTONOMY_TYPE
+        self._propulsion_type = vehicle_config.PROPULSION_TYPE
 
         # Seating information
         self._max_available_seats: int = vehicle_config.MAX_AVAILABLE_SEATS
@@ -106,15 +114,37 @@ class Vehicle(TrackingInterface, SimulationBase, ABC):
         self._fleet.register_vehicle(self)
 
     @property
-    def type(self) -> VehicleType:
+    def vehicle_type(self) -> VehicleType:
         """Get the mode of the vehicle.
 
         Returns
         -------
         VehicleMode
-            The mode of the vehicle.
+            The type of the vehicle. E.g. CAR, BIKE
         """
-        return self._type
+        return self._vehicle_type
+
+    @property
+    def autonomy_type(self) -> AutonomyType:
+        """Get the autonomy type of the vehicle.
+
+        Returns
+        -------
+        AutonomyType
+            The autonomy type of the vehicle. E.g. HUMAN_DRIVEN, AUTONOMOUS
+        """
+        return self._autonomy_type
+
+    @property
+    def propulsion_type(self) -> PropulsionType:
+        """Get the propulsion type of the vehicle.
+
+        Returns
+        -------
+        PropulsionType
+            The propulsion type of the vehicle.  E.g. BATTERY_ELECTRIC, INTERNAL_COMBUSTION
+        """
+        return self._propulsion_type
 
     @property
     def velocity(self) -> float:

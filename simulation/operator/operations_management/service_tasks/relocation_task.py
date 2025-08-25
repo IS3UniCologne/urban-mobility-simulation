@@ -74,7 +74,7 @@ class RelocationTask(ServiceTask):
             for vehicle in potential_vehicles_sorted:
                 # Filter by vehicle type and only parking vehicles (possibly some vehicles are driving around with low soc)
                 if (
-                    vehicle.type == self._vehicle_type
+                    vehicle.vehicle_type == self._vehicle_type
                     and vehicle.state == VehicleState.PARKING
                 ):
                     # Mark Vehicle => Change state su

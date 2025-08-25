@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
     from simulation.tasks.transportation_search_task import TransportationSearchTask
 
-from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.configuration.enums import AutonomyType, VehicleState
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
@@ -67,12 +67,15 @@ class RideHailingSearchEngine(SearchEngineInterface):
         # Calc Distance
         distance = route.distance  # Euclidean Distance
 
+        # TODO: check for more efficient way of doing this
         # Add all available cars to alternative browser
         AVs_in_area = [
-            car for car in cars_in_area if car.__class__.__name__ == "RideHailingAV"
+            car for car in cars_in_area if car.autonomy_type == AutonomyType.AUTONOMOUS
         ]
         CVs_in_area = [
-            car for car in cars_in_area if car.__class__.__name__ == "RideHailingCar"
+            car
+            for car in cars_in_area
+            if car.autonomy_type == AutonomyType.HUMAN_DRIVEN
         ]
         # if vehicle_search_task.transport_task.viable_vehicle_modes['RideHailingCar'] == 1:
         for car in CVs_in_area:
