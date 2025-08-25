@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.configuration.enums import AutonomyType, VehicleState
 from simulation.helper.time import SimulationTimeConverter
 from simulation.operator.vehicle_fleet import VehicleFleet
-from simulation.vehicle.ride_hailing_AV import RideHailingAV
-from simulation.vehicle.ride_hailing_car import RideHailingCar
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
@@ -46,11 +44,11 @@ class MixedRideHailingFleet(VehicleFleet):
 
     def _add_vehicle(self, vehicle: RideHailingVehicle):  # noqa: ANN202
         if vehicle not in self._vehicles:
-            if isinstance(vehicle, RideHailingCar):
+            if vehicle.autonomy_type == AutonomyType.HUMAN_DRIVEN:
                 self._vehicles.append(vehicle)
                 self._world.add_vehicle(vehicle)
                 self._ridehailing_cars.append(vehicle)
-            elif isinstance(vehicle, RideHailingAV):
+            elif vehicle.autonomy_type == AutonomyType.AUTONOMOUS:
                 self._vehicles.append(vehicle)
                 self._world.add_vehicle(vehicle)
                 self._autonomous_cars.append(vehicle)
@@ -144,7 +142,7 @@ class MixedRideHailingFleet(VehicleFleet):
         operational_costs = 0
         all_vehicle_list = self._vehicles
         for vehicle in all_vehicle_list:
-            if isinstance(vehicle, RideHailingAV):
+            if vehicle.autonomy_type == AutonomyType.AUTONOMOUS:
                 operational_costs += vehicle.travel_costs + vehicle.charging_costs
         return operational_costs
 

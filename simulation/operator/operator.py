@@ -201,7 +201,7 @@ class Operator(OperatorInterface):
                 price=transportation_alternative.price,
                 distance=transportation_alternative.distance,
                 duration=transportation_alternative.duration,
-                selected_vehicle_type=transportation_alternative.vehicle.type,  # TODO: Check if this is correct
+                selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,  # TODO: Check if this is correct
                 state=state,
                 wait_time=transportation_task.actual_wait_time,
                 viable_vehicle_types=transportation_task.viable_vehicle_types,
@@ -220,7 +220,7 @@ class Operator(OperatorInterface):
                 price=transportation_alternative.price,
                 distance=transportation_alternative.distance,
                 duration=transportation_alternative.duration,
-                selected_vehicle_type=transportation_alternative.vehicle.type,  # TODO: Check if this is correct
+                selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,  # TODO: Check if this is correct
                 state=state,
                 wait_time=transportation_task.actual_wait_time,
                 energy_consumption=trip_record.energy_consumed
