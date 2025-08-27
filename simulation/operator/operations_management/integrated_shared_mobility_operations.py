@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from simulation.operator.transactions.demand_monitor import VehicleDemandByRegion
 
 
-class IntegratedSharedMobilityOperations(OperationsInterface):
+class IntegratedSharedMobilityOperations(OperationsInterface):  # noqa: D101
     # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
     __slots__ = (
         "_available_vehicle_types",
@@ -112,7 +112,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
     def execute(self) -> Generator[Any, Any, Any]:
         """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
-        """
+        """  # noqa: D200, D400
         while True:
             yield self._env.timeout(self._time_between_operations)
 
@@ -346,7 +346,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         Return relocation plan
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows (from PaymentEngine)
         :return: Dict of potential relocations {"SharedCar": [(origin, destination, no, distance)], ..}
-        """
+        """  # noqa: D205, D400
         fleet_state = self.calculate_residual_supply(
             self._operator_reference.fleet, self.operator.demand_monitor
         )
@@ -363,7 +363,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
         :return: **charging_plan**: Dictionary with keys for vehicle modes and values with lists of multiple
                 charging tasks
-        """
+        """  # noqa: D205, D400
         # Get Current Fleet State
         state = self.calculate_residual_supply(
             self._operator_reference.fleet, self._operator_reference.demand_monitor
@@ -406,7 +406,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                                     "SharedScooter": [], "SharedCar":[]}
                 [UNUSED] used_capacity = [1, 3, 5] => per available vehicle mode returns number of service workers assigned to charge these vehicles
                                           => 1 SW for Kick Scooter, 3 for Shared Scooter, 5 for Shared Cars
-        """
+        """  # noqa: D205
         # Fleet State
         state = fleet_state
 
@@ -613,7 +613,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         :return: List of assigned resource workers to vehicle modes (order is aligned with available_vehicle_modes)
                         for example: Input 25 Service Workers
                                     => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
-        """
+        """  # noqa: D400
         current_low_soc_supply = []
 
         for mode in self._available_vehicle_types:
@@ -665,7 +665,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         return capacity
 
     # TODO: This should not be hardcoded
-    def get_max_capacity_per_unit(self, vehicle_type: VehicleType) -> int:
+    def get_max_capacity_per_unit(self, vehicle_type: VehicleType) -> int:  # noqa: D102
         # Mode Specific Collection Capacity per Service Worker (i.e., how many vehicles can one sw collect)
         if vehicle_type == VehicleType.KICK_SCOOTER:
             max_capacity_per_unit = 40
@@ -714,7 +714,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
             [("origin", "destination", No_Vehicles_To_Move, Distance)],
             [("origin_x", "destination_z", No_Vehicles_To_Move, Distance), ("origin_y", "destination_z", No_Vehicles_To_Move, Distance)]
             ]
-        """
+        """  # noqa: D400
         relocations = {}
 
         # Split available service worker resources among vehicle types
@@ -1002,7 +1002,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         :return: List of assigned resource workers to vehicle modes (order is aligned with available_vehicle_modes)
                         for example: Input 25 Service Workers
                                     => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
-        """
+        """  # noqa: D400
         current_supply_mismatch = []
 
         max_unit_assignment = []

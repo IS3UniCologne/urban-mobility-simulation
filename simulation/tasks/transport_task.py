@@ -1,8 +1,8 @@
-from simulation.environment.position import Position
+from simulation.environment.position import Position  # noqa: D100
 from simulation.helper.types import SimTime
 
 
-class TransportTask:
+class TransportTask:  # noqa: D101
     __slots__ = (
         "_actual_wait_time",
         "_destination",
@@ -29,11 +29,11 @@ class TransportTask:
         self._actual_wait_time = actual_wait_time
 
     @property
-    def time(self):  # noqa: ANN201
+    def time(self):  # noqa: ANN201, D102
         return self._time
 
     @property
-    def origin(self):  # noqa: ANN201
+    def origin(self):  # noqa: ANN201, D102
         return self._origin
 
     @origin.setter
@@ -41,7 +41,7 @@ class TransportTask:
         self._origin = position
 
     @property
-    def destination(self):  # noqa: ANN201
+    def destination(self):  # noqa: ANN201, D102
         return self._destination
 
     @destination.setter
@@ -49,20 +49,20 @@ class TransportTask:
         self._destination = position
 
     @property
-    def viable_vehicle_types(self):  # noqa: ANN201
+    def viable_vehicle_types(self):  # noqa: ANN201, D102
         return self._viable_vehicle_types
 
     @property
-    def max_wait_time(self):  # noqa: ANN201
+    def max_wait_time(self):  # noqa: ANN201, D102
         return self._max_wait_time
 
     @property
-    def actual_wait_time(self):  # noqa: ANN201
+    def actual_wait_time(self):  # noqa: ANN201, D102
         return self._actual_wait_time
 
     @actual_wait_time.setter
     def actual_wait_time(self, value):  # noqa: ANN001, ANN202
         self._actual_wait_time = value
 
-    def __str__(self):  # noqa: ANN204
+    def __str__(self):  # noqa: ANN204, D105
         return f"From {self._origin} to {self._destination}"

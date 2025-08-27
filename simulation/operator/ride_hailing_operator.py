@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, cast
 
@@ -58,7 +58,7 @@ class RideHailingOperator(Operator):
         """Return the operations used by the ride-hailing operator."""
         return cast("RideHailingOperations", self._operations)
 
-    def pay_for_fulfilled_transportation_task(  # noqa: ANN201
+    def pay_for_fulfilled_transportation_task(  # noqa: ANN201, D102
         self,
         user,  # noqa: ANN001
         transportation_task: TransportTask,
@@ -80,7 +80,7 @@ class RideHailingOperator(Operator):
 
         self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
 
-    def withdraw_transportation_task(
+    def withdraw_transportation_task(  # noqa: D102
         self, user: User, transportation_task: TransportTask, state: str | None = None
     ) -> None:
         # distance = transportation_task.origin >> transportation_task.destination

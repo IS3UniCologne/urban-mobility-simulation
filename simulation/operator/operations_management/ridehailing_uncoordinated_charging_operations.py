@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple  # noqa: D100
 
 import pandas as pd
 
@@ -14,7 +14,7 @@ from simulation.operator.operations_management.ridehailing_base_charging_operati
 from simulation.world.world import World
 
 
-class RideHailingUncoordinatedChargingOperations(OperationsInterface):
+class RideHailingUncoordinatedChargingOperations(OperationsInterface):  # noqa: D101
     __slots__ = (
         "_allow_queue",
         "_available_modes",
@@ -53,7 +53,7 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         self._allow_queue = operations_config.ALLOW_QUEUE
         self._world = world
 
-    def execute(self):  # noqa: ANN201
+    def execute(self):  # noqa: ANN201, D102
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             sim=self._sim,
@@ -113,5 +113,5 @@ class RideHailingUncoordinatedChargingOperations(OperationsInterface):
         self._virtual_charging_infrastructure.update(availability=availability)
 
     @property
-    def task_transactions(self):  # noqa: ANN201
+    def task_transactions(self):  # noqa: ANN201, D102
         return self._charging_operations.task_transactions

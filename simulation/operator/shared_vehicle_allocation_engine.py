@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -18,7 +18,7 @@ from simulation.operator.interface.vehicle_allocation_engine_interface import (
 )
 
 
-class SharedVehicleAllocationEngine(AllocationEngineInterface):
+class SharedVehicleAllocationEngine(AllocationEngineInterface):  # noqa: D101
     __slots__ = (
         "_env",
         "_sim",
@@ -33,7 +33,7 @@ class SharedVehicleAllocationEngine(AllocationEngineInterface):
         self._env.process(self.run())
         self._vehicle_assignment_requests = []
 
-    def run(self):  # noqa: ANN201
+    def run(self):  # noqa: ANN201, D102
         while True:
             yield self._env.timeout(2)
 
@@ -59,7 +59,7 @@ class SharedVehicleAllocationEngine(AllocationEngineInterface):
         :param user:
         :param selected_transportation_alternative:
         :return:
-        """
+        """  # noqa: D205, D400
         self._vehicle_assignment_requests.append(
             (user, selected_transportation_alternative)
         )
@@ -81,7 +81,7 @@ class SharedVehicleAllocationEngine(AllocationEngineInterface):
             None,
         )
 
-    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201
+    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201, D102
         self, vehicle_assignment: VehicleAllocation
     ):
         pass

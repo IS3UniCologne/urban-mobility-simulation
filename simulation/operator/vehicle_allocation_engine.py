@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -21,11 +21,11 @@ class AllocationEngineDependencies:
     config: AllocationEngineConfig
 
 
-class AllocationEngine(SimulationBase, AllocationEngineInterface):
+class AllocationEngine(SimulationBase, AllocationEngineInterface):  # noqa: D101
     def __init__(self, deps: AllocationEngineDependencies) -> None:
         super().__init__(deps.sim)
 
     @classmethod
-    def from_deps(cls, deps: AllocationEngineDependencies) -> AllocationEngine:
+    def from_deps(cls, deps: AllocationEngineDependencies) -> AllocationEngine:  # noqa: D102
         search_engine_type = deps.config.VEHICLE_ALLOCATION_ENGINE_TYPE
         return search_engine_type(deps)

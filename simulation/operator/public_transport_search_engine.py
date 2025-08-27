@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -24,7 +24,7 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 
 
-class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):
+class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):  # noqa: D101
     __slots__ = (
         "_env",
         "_fleet",
@@ -48,7 +48,7 @@ class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):
         self._user_config = self._sim.config.user
         self._geo_env = sim.geo_env
 
-    def find_viable_transit(  # noqa: ANN201
+    def find_viable_transit(  # noqa: ANN201, D102
         self,
         transportation_search_task,  # noqa: ANN001
         spatial_strategy="hexagon",  # noqa: ANN001
@@ -145,7 +145,7 @@ class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):
 
         return viable_transit
 
-    def search_for_transportation_alternatives(
+    def search_for_transportation_alternatives(  # noqa: D102
         self, transportation_search_task: TransportationSearchTask
     ) -> TransportationAlternativeBrowser:
         browser = TransportationAlternativeBrowser()
@@ -197,7 +197,7 @@ class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):
         :param origin: GeodesicPosition
         :param destination: GeodesicPosition
         :return: dict
-        """
+        """  # noqa: D205, D400
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon as origin and destination
             origin_poly = self._geo_env.get_hexagon(origin.get_region_id())

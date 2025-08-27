@@ -27,5 +27,5 @@ class RideHailingOperations(Operations):
         super().__init__(deps)
 
     @property
-    def config(self) -> RideHailingOperationsConfig:
+    def config(self) -> RideHailingOperationsConfig:  # noqa: D102
         return cast("RideHailingOperationsConfig", self._config)

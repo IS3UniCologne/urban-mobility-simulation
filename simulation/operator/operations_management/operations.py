@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -40,7 +40,7 @@ class OperationsDependencies:
     distance_matrix: pd.DataFrame | None = None
 
 
-class Operations(SimulationBase, OperationsInterface):
+class Operations(SimulationBase, OperationsInterface):  # noqa: D101
     def __init__(self, deps: OperationsDependencies) -> None:
         super().__init__(deps.sim)
         # TODO: operations subclasses currently share a lot of logic. Move stuff here where possible.
@@ -52,14 +52,14 @@ class Operations(SimulationBase, OperationsInterface):
         self._distance_matrix = deps.distance_matrix
 
     @classmethod
-    def from_deps(cls, deps: OperationsDependencies) -> Operations:
+    def from_deps(cls, deps: OperationsDependencies) -> Operations:  # noqa: D102
         operations_type = deps.operations_config.OPERATIONS_TYPE
         return operations_type(deps)
 
     @property
-    def operator(self) -> Operator:
+    def operator(self) -> Operator:  # noqa: D102
         return self._operator
 
     @property
-    def config(self) -> OperationsConfig:
+    def config(self) -> OperationsConfig:  # noqa: D102
         return self._config

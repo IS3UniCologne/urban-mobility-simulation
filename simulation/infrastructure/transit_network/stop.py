@@ -1,8 +1,8 @@
-from simulation.context.simulation_context import SimulationContext
+from simulation.context.simulation_context import SimulationContext  # noqa: D100
 from simulation.environment.geodesic_position import GeodesicPosition
 
 
-class Stop(GeodesicPosition):
+class Stop(GeodesicPosition):  # noqa: D101
     __slots__ = ("_departure", "_departure_next_day", "_gtfs_id", "_stop_id")
 
     def __init__(
@@ -23,17 +23,17 @@ class Stop(GeodesicPosition):
         self._departure_next_day = departure_next_day
 
     @property
-    def stop_id(self) -> str:
+    def stop_id(self) -> str:  # noqa: D102
         return self._stop_id
 
     @property
-    def gtfs_id(self) -> str:
+    def gtfs_id(self) -> str:  # noqa: D102
         return self._gtfs_id
 
     @property
-    def departure(self) -> float:
+    def departure(self) -> float:  # noqa: D102
         return self._departure
 
     @property
-    def departure_next_day(self) -> bool:
+    def departure_next_day(self) -> bool:  # noqa: D102
         return self._departure_next_day

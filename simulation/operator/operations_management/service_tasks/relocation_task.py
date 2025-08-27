@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from simulation.operator.vehicle_fleet import VehicleFleet
 
 
-class RelocationTask(ServiceTask):
+class RelocationTask(ServiceTask):  # noqa: D101
     __slots__ = (
         "_config",
         "_destination",
@@ -52,7 +52,7 @@ class RelocationTask(ServiceTask):
         self._vehicle_fleet = vehicle_fleet
         self._distance = distance
 
-    def execute(self, *args):  # noqa: ANN002, ANN201
+    def execute(self, *args):  # noqa: ANN002, ANN201, D102
         # Get Spatial Environment
 
         with self._vehicle_fleet.resource.request() as req:
@@ -125,8 +125,8 @@ class RelocationTask(ServiceTask):
         # Notify all
         self._task_finished = self._env.event()
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return f"Relocating {self._number_of_vehicles_to_relocate} {self._vehicle_type} from {self._origin} to {self._destination} (distance = {self._distance})"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return self.__str__()

@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -140,7 +140,7 @@ def generate_ridehailing_fleet_config(sim: SimulationContext) -> pd.DataFrame:
     return fleet_config
 
 
-def generate_AV_fleet(
+def generate_AV_fleet(  # noqa: D103
     sim: SimulationContext, world: World, distribution: pd.DataFrame, n: int
 ) -> RideHailingFleet:
     rng = sim.random_manager.get_rng(component_name="FLEETFACTORY")
@@ -189,7 +189,7 @@ def generate_mixed_ride_hailing_fleet(
     Generate a mixed ride hailing fleet based on fleet config.
     :param sim: SimulationContext containing all necessary components
     :return: RideHailingFleet Object
-    """
+    """  # noqa: D205, D400
     fleet_config = generate_ridehailing_fleet_config(sim=sim)
 
     # New Fleet Object
@@ -247,7 +247,7 @@ def generate_mixed_fleet(
     Generate a mixed shared vehicle fleet based on given fleet config.
     :param sim: SimulationContext containing all necessary components
     :return: MixedSharedVehicleFleet Object
-    """
+    """  # noqa: D205, D400
     fleet_config = generate_fleet_config(sim=sim)
     # New Fleet Object
     fleet = MixedSharedVehicleFleet(sim=sim, world=world)

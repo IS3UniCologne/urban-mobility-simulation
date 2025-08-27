@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from collections import defaultdict
 from dataclasses import dataclass
@@ -80,7 +80,7 @@ class VehicleFleet(SimulationBase):
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
 
     @classmethod
-    def from_deps(cls, deps: VehicleFleetDependencies) -> VehicleFleet:
+    def from_deps(cls, deps: VehicleFleetDependencies) -> VehicleFleet:  # noqa: D102
         fleet_type = deps.config.FLEET_TYPE
         return fleet_type(deps)
 
@@ -158,7 +158,7 @@ class VehicleFleet(SimulationBase):
         return self._vehicles
 
     @property
-    def vehicles_by_state(self) -> dict[VehicleState, set[Vehicle]]:
+    def vehicles_by_state(self) -> dict[VehicleState, set[Vehicle]]:  # noqa: D102
         return self._vehicles_by_state
 
     def parking_vehicles_in_region(self, region: str) -> set[Vehicle]:

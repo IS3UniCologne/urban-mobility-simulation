@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -23,7 +23,7 @@ from simulation.infrastructure.helper import timetable
 from simulation.operator.operator import Operator
 
 
-class PublicTransitOperator(Operator):
+class PublicTransitOperator(Operator):  # noqa: D101
     __slots__ = (
         "_busses",
         "_time",
@@ -55,7 +55,7 @@ class PublicTransitOperator(Operator):
         self._time = SimulationTime(self._env)
         self._busses = []
 
-    def pay_for_fulfilled_transportation_task(
+    def pay_for_fulfilled_transportation_task(  # noqa: D102
         self,
         user,  # noqa: ANN001
         transportation_task: TransportTask,
@@ -72,7 +72,7 @@ class PublicTransitOperator(Operator):
 
         self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
 
-    def withdraw_transportation_task(
+    def withdraw_transportation_task(  # noqa: D102
         self,
         user,  # noqa: ANN001
         transportation_task: TransportTask,

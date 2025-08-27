@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
@@ -60,12 +60,12 @@ class Vehicle(SimulationBase, ABC):
     )
 
     # We need to override __eq__ and __hash__ to use Vehicles in sets
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:  # noqa: D105
         if isinstance(other, Vehicle):
             return self.uid == other.uid
         return False
 
-    def __hash__(self) -> int:
+    def __hash__(self) -> int:  # noqa: D105
         return hash(self.uid)
 
     def __init__(
@@ -368,7 +368,7 @@ class Vehicle(SimulationBase, ABC):
 
         self.logger.debug("Parked.")
 
-    def dump(self, exposed_only: bool = True) -> dict[str, object]:
+    def dump(self, exposed_only: bool = True) -> dict[str, object]:  # noqa: D102
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}
         else:
@@ -397,8 +397,8 @@ class Vehicle(SimulationBase, ABC):
         """
         self._current_task = task
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return self.uid
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return self.__str__()

@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -13,13 +13,13 @@ if TYPE_CHECKING:
     from simulation.operator.operations_management.task_queue import TaskQueue
 
 
-class ServiceWorkerState(Enum):
+class ServiceWorkerState(Enum):  # noqa: D101
     FREE = 0
     WORKING = 1
     HIBERNATE = 3
 
 
-class ServiceWorker(SimulationBase):
+class ServiceWorker(SimulationBase):  # noqa: D101
     service_worker_id = 0
 
     __slots__ = ("_env", "_id", "_state", "_task_finished", "_task_queue")
@@ -36,7 +36,7 @@ class ServiceWorker(SimulationBase):
 
         ServiceWorker.service_worker_id += 1
 
-    def run(self):  # noqa: ANN201
+    def run(self):  # noqa: ANN201, D102
         while True:
             # Wait until operation management engine puts tasks into queue
             yield self._task_queue.task_queue_updated
@@ -60,7 +60,7 @@ class ServiceWorker(SimulationBase):
         Execute assigned task
         :param service_task:
         :return:
-        """
+        """  # noqa: D205, D400
         self._state = ServiceWorkerState.WORKING
 
         self.logger.debug("Processing following task: %s.", service_task)
@@ -74,9 +74,9 @@ class ServiceWorker(SimulationBase):
         self._task_finished = self._env.event()
 
     @property
-    def task_finished(self):  # noqa: ANN201
+    def task_finished(self):  # noqa: ANN201, D102
         return self._task_finished
 
     @property
-    def state(self):  # noqa: ANN201
+    def state(self):  # noqa: ANN201, D102
         return self._state

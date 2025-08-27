@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import datetime
 from typing import TYPE_CHECKING
@@ -22,11 +22,11 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
 
 
-class AmbiguousTripException(Exception):
+class AmbiguousTripException(Exception):  # noqa: D101
     pass
 
 
-class Timetable(SimulationBase):
+class Timetable(SimulationBase):  # noqa: D101
     __slots__ = ("_data_path", "_geo_env", "_sim", "_trips")
 
     def __init__(self, data_path: Path, sim: SimulationContext) -> None:
@@ -37,10 +37,10 @@ class Timetable(SimulationBase):
         self._sim = sim
 
     @property
-    def trips(self) -> pd.DataFrame:
+    def trips(self) -> pd.DataFrame:  # noqa: D102
         return self._trips
 
-    def trip_by_id(self, trip_id: str) -> pd.DataFrame:
+    def trip_by_id(self, trip_id: str) -> pd.DataFrame:  # noqa: D102
         trip = self._trips[self._trips["trip_id"] == trip_id]
         trip = trip.sort_values(by="stop_sequence")
 
@@ -52,7 +52,7 @@ class Timetable(SimulationBase):
 
         return trip
 
-    def import_timetable(self) -> None:
+    def import_timetable(self) -> None:  # noqa: D102
         self.logger.debug("Importing GTFS data...")
 
         try:
@@ -71,7 +71,7 @@ class Timetable(SimulationBase):
         )
         self._trips.sort_values(by=["trip_id", "stop_sequence"], inplace=True)
 
-    def next_trips(self, time: SimulationTime, lookahead: int) -> list[str]:
+    def next_trips(self, time: SimulationTime, lookahead: int) -> list[str]:  # noqa: D102
         # look ahead 'lookahead' minutes, simulation time is in minutes
         # yield all trips that start (on this weekday) within the next lookahead minutes
         lookahead = int(lookahead)
@@ -116,7 +116,7 @@ class Timetable(SimulationBase):
         :param spatial_strategy:
         :param temporal_lookahead: How many minutes to look into the future for latest possible departure (currently this does not account for walking time)
         :return:
-        """
+        """  # noqa: D205, D400
         search_time = transportation_search_task.transport_task.time
         latest_departure = SimulationTimeConverter.as_str(
             search_time + temporal_lookahead

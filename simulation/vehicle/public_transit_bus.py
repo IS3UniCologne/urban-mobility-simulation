@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from simulation.operator.vehicle_fleet import VehicleFleet
 
 
-class Bus(PublicTransitVehicle, TrackingInterface):
+class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
     bus_id: int = 0
 
     __slots__ = (
@@ -58,7 +58,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         :param position: GeodesicPosition
         :param max_available_seats: depends on type of bus
         :param velocity: e.g. 16.67 m/min * 30 (average in city)
-        """
+        """  # noqa: D205
         super().__init__(sim, route, position, fleet, vehicle_config)
 
         self._id = Bus.bus_id
@@ -102,7 +102,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         Time 23:59:00 - Departure 00:06:00 - next_day = True - wait
         Time 00:03:00 - Departure 00:04:00 - next_day = False - wait
         Time 00:03:00 - Departure 00:04:00 - next_day = True - should not happen
-        """
+        """  # noqa: D400
         while self.state is not VehicleState.AT_TERMINAL_DESTINATION:
             strf = "%H:%M:%S"
             early_arrival = (
@@ -165,7 +165,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
         yield self._env.process(self.move(route_segment))
 
-    def move(self, route_segment: RouteSegment) -> Generator[Event, None, None]:
+    def move(self, route_segment: RouteSegment) -> Generator[Event, None, None]:  # noqa: D102
         # TODO: use road network speed limits?
 
         distance = route_segment.distance  # in meter
@@ -300,10 +300,10 @@ class Bus(PublicTransitVehicle, TrackingInterface):
     #     self._agent_completed_step.succeed((before_state, action, self._rl_agent.reward, self._rl_agent.reward_sum))
     #     self._agent_completed_step = self._env.event()
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return f"I have {len(self._passengers)} passengers on boards"
 
-    def dump(self, exposed_only: bool = True) -> dict:
+    def dump(self, exposed_only: bool = True) -> dict:  # noqa: D102
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}
         else:

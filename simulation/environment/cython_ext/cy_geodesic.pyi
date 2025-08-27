@@ -1,6 +1,6 @@
 """
 Type stub for Cython-accelerated geodesic functions.
-"""
+"""  # noqa: D200
 
 def cy_euclidean_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """
