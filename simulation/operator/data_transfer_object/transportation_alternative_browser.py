@@ -10,7 +10,7 @@ class TransportationAlternativeBrowser:  # noqa: D101
     __slots__ = ("_transportation_alternatives",)
 
     def __init__(self) -> None:
-        self._transportation_alternatives = []
+        self._transportation_alternatives: list[TransportationAlternative] = []
 
     def add_transportation_alternative(  # noqa: D102
         self,
@@ -20,11 +20,13 @@ class TransportationAlternativeBrowser:  # noqa: D101
         self._transportation_alternatives.append(transportation_alternative)
 
     @property
-    def transportation_alternatives(self) -> None:  # noqa: D102
+    def transportation_alternatives(self) -> list[TransportationAlternative]:  # noqa: D102
         return self._transportation_alternatives
 
     @transportation_alternatives.setter
-    def transportation_alternatives(self, transportation_alternatives: list) -> None:
+    def transportation_alternatives(
+        self, transportation_alternatives: list[TransportationAlternative]
+    ) -> None:
         self._transportation_alternatives = transportation_alternatives
 
     def __str__(self) -> str:  # noqa: D105

@@ -98,6 +98,8 @@ class Operator(SimulationBase, OperatorInterface):
 
         operator.start_operations()
 
+        deps.world.maas_provider.register_operator(operator)
+
         return operator
 
     def build_operator_subcomponents(self, deps: OperatorDependencies) -> None:

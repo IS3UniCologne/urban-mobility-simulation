@@ -15,6 +15,7 @@ from simulation.infrastructure.charging_stations.charging_infastructure import (
 from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
 )
+from simulation.maas.maas_provider import MaaSProvider
 from simulation.operator.operations_management.integrated_shared_mobility_operations import (
     IntegratedSharedMobilityOperations,
 )
@@ -74,6 +75,7 @@ class World(SimulationBase):  # noqa: D101
         "_env",
         "_fleets",
         "_geo_env",
+        "_maas_provider",
         "_market",
         "_operators",
         "_payment_engine",
@@ -129,6 +131,8 @@ class World(SimulationBase):  # noqa: D101
             self._initialize_population_factory()
         )
 
+        self._maas_provider: MaaSProvider = MaaSProvider(sim=self._sim)
+
         self._charging_infrastructures: list[ChargingInfrastructure] | None = (
             self._initialize_charging_infrastructures()
         )
@@ -140,6 +144,17 @@ class World(SimulationBase):  # noqa: D101
         self._simulation_finished = self._env.event()
 
         self._user_limit = 10_000_000
+
+    @property
+    def maas_provider(self) -> MaaSProvider:
+        """Get the MaaS (Mobility as a Service) provider.
+
+        Returns
+        -------
+        MaaSProvider
+            The MaaS provider instance.
+        """
+        return self._maas_provider
 
     @property
     def random_manager(self) -> RandomManager:
@@ -468,7 +483,7 @@ class World(SimulationBase):  # noqa: D101
                     fleet_index=fleet,
                     position=origin_position,
                     transport_task=task,
-                    transportation_search_service=operator.search_engine,
+                    transportation_search_service=self.maas_provider,
                     payment_service=operator,
                     vehicle_assignment_service=operator.allocation_engine,
                     vehicle_choice_behavior=self._vehicle_choice_behavior,
