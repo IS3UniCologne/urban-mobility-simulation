@@ -1,10 +1,11 @@
 from __future__ import annotations  # noqa: D100
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.configuration.configuration import RideHailingFleetConfig
 from simulation.helper.configuration.enums import (
     AutonomyType,
     VehicleState,
@@ -52,6 +53,10 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
                     vehicle_config.VEHICLE_TYPE,
                 )
 
+            if not isinstance(deps.config, RideHailingFleetConfig):
+                raise TypeError(
+                    "RideHailingFleet config must be an instance of RideHailingFleetConfig"
+                )
             if vehicle_config.AUTONOMY_TYPE == AutonomyType.HUMAN_DRIVEN:
                 driver_availability_vector = [
                     round(float(x) * total_count) for x in deps.config.RH_AVAILABILITY
@@ -84,9 +89,9 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
 
     @property
     def operator(self) -> RideHailingOperator:  # noqa: D102
-        return self._operator
+        return cast("RideHailingOperator", self._operator)
 
-    def _add_vehicle(self, vehicle: RideHailingVehicle):  # noqa: ANN202
+    def _add_vehicle(self, vehicle: RideHailingVehicle) -> None:
         if vehicle not in self._vehicles:
             self._vehicles.append(vehicle)
             self._world.add_vehicle(vehicle=vehicle)

@@ -55,6 +55,8 @@ class Vehicle(SimulationBase, ABC):
         "_propulsion_type",
         "_seats",
         "_sim",
+        "_user_mounted",
+        "_user_unmounted",
         "_vehicle_type",
         "_velocity",
     )
@@ -367,12 +369,6 @@ class Vehicle(SimulationBase, ABC):
         self.state = VehicleState.PARKING
 
         self.logger.debug("Parked.")
-
-    def dump(self, exposed_only: bool = True) -> dict[str, object]:  # noqa: D102
-        if exposed_only:
-            return {x: self.get(x) for x in self.exposes}
-        else:
-            return {x: self.get(x) for x in self.__slots__}
 
     # Methods
     @abstractmethod
