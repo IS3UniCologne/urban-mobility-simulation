@@ -1,7 +1,83 @@
 from simulation.helper.configuration.configuration import (
     ChargingInfrastructureConfig,
+    RideHailingAllocationEngineConfig,
     RideHailingBaseChargingOperationsConfig,
+    RideHailingFleetConfig,
     RideHailingOperatorConfig,
+    RideHailingSearchEngineConfig,
+    RideHailingVehicleConfig,
+)
+from simulation.helper.configuration.enums import (
+    AutonomyType,
+    PropulsionType,
+    VehicleType,
+)
+
+rh_car_autonomous = RideHailingVehicleConfig(
+    VELOCITY=9.54,
+    MAX_AVAILABLE_SEATS=4,
+    VEHICLE_TYPE=VehicleType.CAR,
+    AUTONOMY_TYPE=AutonomyType.AUTONOMOUS,
+    PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
+    MAX_STATE_OF_CHARGE=50.0,
+    ENERGY_CONSUMPTION=0.20,
+    EV_RELATIVE_ENERGY_CONSUMPTION=0.3,
+    CHARGING_COST_PER_KWH=0.43,
+    EMERGENCY_SOC_BUFFER=0.05,
+    PRICE_PER_MIN=0.35,
+    DAILY_TOTAL_COST=29.0,
+    COST_PER_KM=0.45,
+    PRICE_PER_KM=1.3,
+    INITIAL_SOC=0.50,
+)
+rh_car_human = RideHailingVehicleConfig(
+    VELOCITY=9.54,
+    MAX_AVAILABLE_SEATS=4,
+    VEHICLE_TYPE=VehicleType.CAR,
+    AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
+    PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
+    MAX_STATE_OF_CHARGE=50.0,
+    ENERGY_CONSUMPTION=0.20,
+    EV_RELATIVE_ENERGY_CONSUMPTION=0.3,
+    CHARGING_COST_PER_KWH=0.43,
+    EMERGENCY_SOC_BUFFER=0.05,
+    PRICE_PER_MIN=0.35,
+    DAILY_TOTAL_COST=29.0,
+    COST_PER_KM=0.45,
+    PRICE_PER_KM=1.3,
+    INITIAL_SOC=0.50,
+)
+
+RH_AVAILABILITY = [
+    0.084238,
+    0.058132,
+    0.035717,
+    0.024728,
+    0.027128,
+    0.043823,
+    0.078576,
+    0.128257,
+    0.176352,
+    0.214981,
+    0.241122,
+    0.255754,
+    0.275117,
+    0.293370,
+    0.306846,
+    0.318127,
+    0.323715,
+    0.326972,
+    0.318448,
+    0.290888,
+    0.242649,
+    0.187925,
+    0.142973,
+    0.111224,
+]
+
+fleet1 = RideHailingFleetConfig(
+    VEHICLES={rh_car_autonomous: 250, rh_car_human: 250},
+    RH_AVAILABILITY=RH_AVAILABILITY,
 )
 
 charging_infrastructure_1 = ChargingInfrastructureConfig(
@@ -67,26 +143,44 @@ DEFAULT_RECHARGE_THRESHOLD = [
 ]
 
 operator_1 = RideHailingOperatorConfig(
+    FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    # Driver payment share for ride-hailing
-    # An analysis of the individual economics of ride-hailing drivers -> https://www.sciencedirect.com/science/article/pii/S0965856419300333
-    DRIVER_PAYMENT_SHARE=0.75,
     OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,
         TIME_BETWEEN_OPERATIONS=15,
         RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
         VEHICLE_RELOCATION_VELOCITY=9.54,
+        AV_PRICE_REDUCTION=0.90,
+        MAX_PICKUP_DISTANCE=10000,
+        PRICE_ENTERING=2.0,
+        PRICE_PER_MINUTE=0.35,
+        PRICE_PER_KM=1.3,
+        MINIMUM_PRICE=5.0,
+        DISCOUNT_RATE=0.0,
+        DRIVER_PAYMENT_SHARE=0.75,
     ),
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(),
+    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(),
 )
 operator_2 = RideHailingOperatorConfig(
+    FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    DRIVER_PAYMENT_SHARE=0.75,
     OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,
         TIME_BETWEEN_OPERATIONS=15,
         RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
         VEHICLE_RELOCATION_VELOCITY=9.54,
+        AV_PRICE_REDUCTION=0.90,
+        MAX_PICKUP_DISTANCE=10000,
+        PRICE_ENTERING=2.0,
+        PRICE_PER_MINUTE=0.35,
+        PRICE_PER_KM=1.3,
+        MINIMUM_PRICE=5.0,
+        DISCOUNT_RATE=0.0,
+        DRIVER_PAYMENT_SHARE=0.75,
     ),
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(),
+    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(),
 )

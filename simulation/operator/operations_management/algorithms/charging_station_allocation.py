@@ -18,24 +18,23 @@ from simulation.helper.simulation_base import SimulationBase
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
+from simulation.operator.ride_hailing_operator import RideHailingOperator
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 
 class DowntimeMinWithoutLookahead(SimulationBase):
-    __slots__ = ("_av_config", "_config")
+    __slots__ = ("_operator",)
 
-    def __init__(self, sim: SimulationContext) -> None:
+    def __init__(self, sim: SimulationContext, operator: RideHailingOperator) -> None:
         super().__init__(sim)
-        self._config = sim.config
-        self._av_config = self._config.ride_hailing_vehicles["AutonomousCar"]
+        self._operator = operator
 
     def generate_charging_allocation(
-        self,
-        vehicles,  # noqa: ANN001
-        CSs,  # noqa: ANN001
+        self, vehicles: list[RideHailingVehicle], CSs: list[VirtualChargingStation]
     ) -> list[dict[RideHailingVehicle, VirtualChargingStation]]:
-        """
-        This is a function of allocating charging vehicles to stations, using minimum downtime, only looking at the current situation, without pre-planning the future
+        """Allocate vehicles to charging stations.
+
+        This is a function of allocating charging vehicles to stations, using minimum downtime, only looking at the current situation, without pre-planning the future.
 
         :param vehicles: a list of vehicle objects that need to charge
         :param CSs: a list of charging stations
@@ -50,13 +49,13 @@ class DowntimeMinWithoutLookahead(SimulationBase):
         for i in CSs:
             if i.capacity < 0:
                 raise ValueError("Capacity of CS must be positive")
-            CSs_range.append(i.id)
+            CSs_range.append(i.cs_id)
 
         d = {}  # distance matrix
         # TODO: use haversive vector or distance matrix
         for j in vehicles:
             for i in CSs:
-                d[i.id, j.id] = i.centre >> j.position
+                d[i.cs_id, j.id] = i.centre >> j.position
                 # if isinstance(d[i.id, j.id], list):
                 #     d[i.id, j.id] = float([i.id, j.id][0])
 
@@ -65,11 +64,11 @@ class DowntimeMinWithoutLookahead(SimulationBase):
         M = {}  # available capacity (incl queue)
         C = {}  # total capacity of the CS
         for i in CSs:
-            Q[i.id] = i.current_queue_time
-            N[i.id] = i.capacity  # this only works with VirtualChargingStations !!
+            Q[i.cs_id] = i.current_queue_time
+            N[i.cs_id] = i.capacity  # this only works with VirtualChargingStations !!
             # TODO: M should incorporate overflow of capa
-            M[i.id] = i.capacity + (i.queue_size - len(i.plugs.queue))
-            C[i.id] = i.plugs.capacity
+            M[i.cs_id] = i.capacity + (i.queue_size - len(i.plugs.queue))
+            C[i.cs_id] = i.plugs.capacity
 
         SoC = {}  # state of charge for vehicles that need to charge
         for j in vehicles:
@@ -79,16 +78,16 @@ class DowntimeMinWithoutLookahead(SimulationBase):
 
         S = {}  # charging speed of stations in kW
         for i in CSs:
-            S[i.id] = i.power
+            S[i.cs_id] = i.power
             # if isinstance(S[i.id], list):
             #     S[i.id] = float(S[i.id][0])
-        alpha = (
-            self._av_config.ENERGY_CONSUMPTION
-        )  # charging consumption per distance in kWh/km
-        beta = self._av_config.MAX_STATE_OF_CHARGE  # max state of charge in kWh
-        rho = (
-            self._config.ride_hailing_global.LOW_SOC_PENALTY
-        )  # penalty for not allocating vehicles to CSs, scaled by 1 - SOC
+
+        # TODO: This is under the assumption that all vehicles have the same consumption and battery capacity
+        # charging consumption per distance in kWh/km
+        alpha = vehicles[0].energy_consumption
+        # max state of charge in kWh
+        beta = vehicles[0].max_state_of_charge
+        rho = self._operator.operations.config.LOW_SOC_PENALTY
 
         mdl.CSs = Set(initialize=CSs_range)
         mdl.vehicles = Set(initialize=vehicle_range)
@@ -115,7 +114,7 @@ class DowntimeMinWithoutLookahead(SimulationBase):
         d_matrix = np.zeros((len(CSs), len(vehicles)))
         for i in CSs:
             for j in vehicles:
-                d_matrix[i.id][id_reverse_map[j.id]] = d[i.id, j.id]
+                d_matrix[i.cs_id][id_reverse_map[j.id]] = d[i.cs_id, j.id]
 
         # this is a matrix of dim [CSs, vehicles] sorted by ascending distance of vehicles to CS, the values being the vehicles indices
         d_matrix_asc_sorted = np.argsort(d_matrix, axis=1)
@@ -123,8 +122,8 @@ class DowntimeMinWithoutLookahead(SimulationBase):
         vehicle_index_in_sorted_dist_matrix = {}
         for i in CSs:
             for j in vehicles:
-                vehicle_index_in_sorted_dist_matrix[i.id, j.id] = np.where(
-                    d_matrix_asc_sorted[i.id] == id_reverse_map[j.id]
+                vehicle_index_in_sorted_dist_matrix[i.cs_id, j.id] = np.where(
+                    d_matrix_asc_sorted[i.cs_id] == id_reverse_map[j.id]
                 )[0][0]
 
         # assign each vehicle at max to one CS
@@ -138,7 +137,7 @@ class DowntimeMinWithoutLookahead(SimulationBase):
         mdl.queueing_time_aux = Var(mdl.CSs, mdl.vehicles, within=NonNegativeReals)
 
         def driving_time(model: ConcreteModel, i: int, j: int) -> float:
-            return d[i, j] / self._av_config.VELOCITY * model.x[i, j]
+            return d[i, j] / vehicles[0].velocity * model.x[i, j]
 
         def charging_time(model: ConcreteModel, i: int, j: int) -> float:
             A = 1 - SoC[j]
@@ -199,7 +198,7 @@ class DowntimeMinWithoutLookahead(SimulationBase):
         pairs = []
         for i in CSs:
             for j in vehicles:
-                if value(mdl.x[i.id, j.id]) != 0:
+                if value(mdl.x[i.cs_id, j.id]) != 0:
                     pairs.append(dict(vehicle=j, charging_station=i))
         self.logger.info(
             "Number of vehicles with low SOC = %d, Number of allocations = %d",

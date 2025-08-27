@@ -14,11 +14,11 @@ from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
+    AllocationEngineInterface,
 )
 
 
-class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
+class SharedVehicleAllocationEngine(AllocationEngineInterface):
     __slots__ = (
         "_env",
         "_sim",
@@ -60,7 +60,6 @@ class SharedVehicleAllocationEngine(VehicleAllocationEngineInterface):
         :param selected_transportation_alternative:
         :return:
         """
-
         self._vehicle_assignment_requests.append(
             (user, selected_transportation_alternative)
         )

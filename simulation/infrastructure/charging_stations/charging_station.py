@@ -18,9 +18,9 @@ class ChargingStation(TrackingInterface, SimulationBase):
     __slots__ = (
         "_capacity",
         "_centre",
+        "_cs_id",
         "_current_queue_time",
         "_env",
-        "_id",
         "_location",
         "_plugs",
         "_polygon",
@@ -35,6 +35,7 @@ class ChargingStation(TrackingInterface, SimulationBase):
     def __init__(
         self,
         sim: SimulationContext,
+        cs_id: int,  # ID of the charging station in relation to the charging infrastructure it belongs to
         location: str,
         power: float,
         capacity: int,
@@ -43,6 +44,7 @@ class ChargingStation(TrackingInterface, SimulationBase):
         super().__init__(sim)
         self._sim = sim
         self._env = sim.env
+        self._cs_id = cs_id
         self._capacity = int(capacity)
         self._polygon = shape(
             {
@@ -57,7 +59,6 @@ class ChargingStation(TrackingInterface, SimulationBase):
             self._sim, self._polygon.centroid.y, self._polygon.centroid.x
         )
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
-        self._id = id
         self._location = location
         self._power = float(power)  # kwh/hr
         self._queue = []
@@ -82,6 +83,11 @@ class ChargingStation(TrackingInterface, SimulationBase):
         return self._capacity
 
     @property
+    def cs_id(self) -> int:
+        """ID of the charging station in relation to the charging infrastructure it belongs to."""
+        return self._cs_id
+
+    @property
     def plugs(self) -> simpy.PriorityResource:
         return self._plugs
 
@@ -92,10 +98,6 @@ class ChargingStation(TrackingInterface, SimulationBase):
     @property
     def centre(self) -> GeodesicPosition:
         return self._centre
-
-    @property
-    def id(self) -> int:
-        return self._id
 
     @property
     def location(self) -> str:

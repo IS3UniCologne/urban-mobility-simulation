@@ -10,7 +10,6 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.simulation_base import SimulationBase
-from tracking.tracking_interface import TrackingInterface
 
 if TYPE_CHECKING:
     from simpy import Event
@@ -31,7 +30,7 @@ class VehicleError(Exception):
     """Base class for all vehicle-related exceptions."""
 
 
-class Vehicle(TrackingInterface, SimulationBase, ABC):
+class Vehicle(SimulationBase, ABC):
     """Base class for all vehicles.
 
     Contains common properties and methods used by all vehicles.
@@ -47,16 +46,18 @@ class Vehicle(TrackingInterface, SimulationBase, ABC):
         "_current_task",
         "_distance_travelled",
         "_env",
+        "_fleet",
         "_id",
         "_max_available_seats",
         "_mode",
+        "_passengers",
         "_position_changed",
+        "_propulsion_type",
         "_seats",
         "_sim",
+        "_vehicle_type",
         "_velocity",
     )
-
-    exposes = ["_id", "state", "position", "_distance_travelled"]  # noqa: RUF012
 
     # We need to override __eq__ and __hash__ to use Vehicles in sets
     def __eq__(self, other: object) -> bool:

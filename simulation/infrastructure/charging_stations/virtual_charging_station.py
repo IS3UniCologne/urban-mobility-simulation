@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from simulation.helper.simulation_base import SimulationBase
+
 if TYPE_CHECKING:
     import simpy
     from shapely.geometry import Polygon
@@ -15,7 +17,7 @@ if TYPE_CHECKING:
     )
 
 
-class VirtualChargingStation:
+class VirtualChargingStation(SimulationBase):
     __slots = (
         "_env",
         "_valid_timeframe",
@@ -23,7 +25,7 @@ class VirtualChargingStation:
         "_polygon",
         "_centre",
         "_plugs",
-        "_id",
+        "_cs_id",
         "_location",
         "_power",
         "_queue",
@@ -37,6 +39,8 @@ class VirtualChargingStation:
         charging_station: ChargingStation,
         virtual_charging_infrastructure: VirtualChargingInfrastructure,
     ) -> None:
+        super().__init__(charging_station._sim)  # noqa: SLF001
+        self._cs_id = charging_station.cs_id
         self._env = charging_station._env  # noqa: SLF001
         self._physical_charging_station = charging_station
         self._valid_timeframe = None
@@ -44,7 +48,6 @@ class VirtualChargingStation:
         self._polygon = charging_station.polygon
         self._centre = charging_station.centre
         self._plugs = charging_station.plugs  # reference, mutable object
-        self._id = charging_station._id  # noqa: SLF001
         self._location = charging_station.location
         self._power = charging_station.power
         self._queue = charging_station._queue  # noqa: SLF001
@@ -71,6 +74,13 @@ class VirtualChargingStation:
         return self._virtual_charging_infrastructure
 
     @property
+    def cs_id(self) -> int:
+        """ID of the charging station in relation to the charging infrastructure it belongs to.
+
+        Note: This ID is not globally unique across the entire simulation.
+        For a globally unique identifier, use the `uid` property inherited from SimulationBase."""
+        return self._cs_id
+
     def valid_timeframe(self) -> tuple[float, float] | None:
         return self._valid_timeframe
 
@@ -89,10 +99,6 @@ class VirtualChargingStation:
     @property
     def centre(self) -> GeodesicPosition:
         return self._centre
-
-    @property
-    def id(self) -> int:
-        return self._id
 
     @property
     def location(self) -> str:

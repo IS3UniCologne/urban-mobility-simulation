@@ -32,23 +32,28 @@ if TYPE_CHECKING:
 
 class RideHailingVehicle(Vehicle):
     __slots__ = (
+        "_arrived_at_pick_up_position",
         "_available_seats",
+        "_charging_cost_per_kWh",
         "_charging_station_charging_finished",
         "_charging_station_charging_started",
         "_charging_station_plugged_in",
         "_charging_station_plugged_out",
+        "_cost_km",
+        "_cost_km_seats",
         "_current_state_of_charge",
         "_destination",
         "_driver",
+        "_driver_availability_vector",
         "_driver_mounted",
         "_driver_unmounted",
         "_driving_finished",
         "_driving_started",
         "_emergency_soc_buffer_percent",
+        "_emergency_soc_buffer_percent",
         "_energy_consumption",
         "_env",
         "_estimated_completion_time",
-        "_fleet",
         "_is_electric",
         "_max_available_seats",
         "_max_state_of_charge",
@@ -57,7 +62,6 @@ class RideHailingVehicle(Vehicle):
         "_online_event",
         "_price_per_minute",
         "_reserved_for_user",
-        "_seats",
         "_shift_duration",
         "_shift_earn",
         "_shift_end_time",
@@ -66,6 +70,7 @@ class RideHailingVehicle(Vehicle):
         "_total_earn",
         "_user_mounted",
         "_user_unmounted",
+        "_vehicle_assignment",
         "_vehicle_parked",
         "_vehicle_relocation_finished",
         "_vehicle_relocation_started",
@@ -74,14 +79,13 @@ class RideHailingVehicle(Vehicle):
         "travel_costs",
     )
 
-    exposes = Vehicle.exposes + ["_fleet", "_current_state_of_charge", "_suggested"]  # noqa: RUF005
-
     def __init__(
         self,
         sim: SimulationContext,
         fleet: VehicleFleet,
         position: Position,
         vehicle_config: VehicleConfig,
+        driver_availability_vector: list[float] | None,
     ) -> None:
         super().__init__(
             sim=sim, fleet=fleet, position=position, vehicle_config=vehicle_config
@@ -94,6 +98,8 @@ class RideHailingVehicle(Vehicle):
         self._is_electric = (
             vehicle_config.PROPULSION_TYPE == PropulsionType.BATTERY_ELECTRIC
         )
+
+        self._driver_availability_vector = driver_availability_vector
         self.travel_costs = 0
         self.charging_costs = 0
 
@@ -101,14 +107,10 @@ class RideHailingVehicle(Vehicle):
         self._max_state_of_charge = vehicle_config.MAX_STATE_OF_CHARGE  # in kWh
 
         # TODO: move this to Vehicle or Fleet Factory class
-        initial_state_of_charge_percentage = self._sim.config.ride_hailing_vehicles[
-            "RideHailingCar"
-        ].INITIAL_SOC
+        initial_state_of_charge_percentage = vehicle_config.INITIAL_SOC
         if initial_state_of_charge_percentage == 0:
-            initial_state_of_charge_percentage = (
-                self.fleet.world.random_manager.uniform(
-                    low=0.2, high=0.8, component="INITIALSOC"
-                )
+            initial_state_of_charge_percentage = self._sim.random_manager.uniform(
+                low=0.2, high=0.8, component="INITIALSOC"
             )
         self._current_state_of_charge = (
             self._max_state_of_charge * initial_state_of_charge_percentage
@@ -119,9 +121,7 @@ class RideHailingVehicle(Vehicle):
         if not self._is_electric:
             self._energy_consumption = (
                 vehicle_config.ENERGY_CONSUMPTION
-                * self._config.ride_hailing_vehicles[
-                    "RideHailingCar"
-                ].EV_RELATIVE_ENERGY_CONSUMPTION
+                * vehicle_config.EV_RELATIVE_ENERGY_CONSUMPTION
             )
 
         #### Vehicle Events
@@ -158,14 +158,10 @@ class RideHailingVehicle(Vehicle):
         self._destination: Position = None
 
         # costs
-        self._cost_km: float = self._config.ride_hailing_vehicles[
-            "RideHailingCar"
-        ].COST_PER_KM
-        self._charging_cost_per_kWh: float = self._config.ride_hailing_vehicles[
-            "RideHailingCar"
-        ].CHARGING_COST_PER_KWH
+        self._cost_km: float = vehicle_config.COST_PER_KM
+        self._charging_cost_per_kWh: float = vehicle_config.CHARGING_COST_PER_KWH
 
-        self._emergency_soc_buffer_percent: float
+        self._emergency_soc_buffer_percent: float = vehicle_config.EMERGENCY_SOC_BUFFER
 
         if vehicle_config.AUTONOMY_TYPE == AutonomyType.HUMAN_DRIVEN:
             self._price_per_minute = vehicle_config.PRICE_PER_MIN
@@ -182,13 +178,6 @@ class RideHailingVehicle(Vehicle):
             self._emergency_soc_buffer_percent = vehicle_config.EMERGENCY_SOC_BUFFER
 
             self._env.process(self.run_shift_check_process())
-
-        if vehicle_config.AUTONOMY_TYPE == AutonomyType.AUTONOMOUS:
-            self._emergency_soc_buffer_percent: float = (
-                self._sim.config.ride_hailing_vehicles[
-                    "AutonomousCar"
-                ].EMERGENCY_SOC_BUFFER
-            )
 
     @property
     def price_per_minute(self) -> float:
@@ -555,21 +544,6 @@ class RideHailingVehicle(Vehicle):
     def update_idle_time(self):  # TODO  # noqa: ANN201
         pass
 
-    # TODO do we remove this? If we want this feature it should probably be implemented for all vehicles
-    # This can also be inferred from transaction logs
-    # def update_earned_money(self, payment):
-    #     # Notify earned money for a human-driven car
-    #     earn = payment * self._driver_payment_share
-    #     self._total_earn += earn
-    #     self._shift_earn += earn
-
-    # self.logger.debug(
-    #     "RideHailingCar %s earned %s since he/she started the shift.",
-    #     self._id,
-    #     self.shift_earn,
-    #
-    # )
-
     def get_online(self) -> None:
         self.state = VehicleState.PARKING
         self.update_shift_start_time()
@@ -585,6 +559,7 @@ class RideHailingVehicle(Vehicle):
         self._offline_event = self._env.event()
         self.logger.debug("Driver gets offline.")
 
+    # TODO: This whole logic should be decided by the operations, not the vehicle.
     def decide_to_get_online(self) -> bool:
         go_online = False
         ### comment off when we have mode chioce variables
@@ -597,12 +572,14 @@ class RideHailingVehicle(Vehicle):
         # driver_on_off_model.predict([[0, week_day, hour, offline_duration, shift_earned]])
         # if driver_on_off_model == 1:  # TODO: calibrate the parameters
         #     go_online = True
-        fleet_size_threshold = self.fleet.driver_availability_vector()
+        fleet_size_threshold = self._driver_availability_vector
         time = self._env.now
         hour = int(
             (time % 1440) / 60
         )  # TODO: This rounds to the nearest hour, should we use SimulationTimeConverter.hour_of_day instead?
-        number_of_online_vehicles = len(self.fleet.get_online_vehicles())
+        number_of_online_vehicles = len(
+            self.fleet.vehicles_by_state[VehicleState.ONLINE]
+        )
         if number_of_online_vehicles <= fleet_size_threshold[hour]:
             go_online = True
         return go_online
@@ -619,12 +596,14 @@ class RideHailingVehicle(Vehicle):
         # driver_on_off_model.predict([[0, week_day, hour, shift_duration, shift_earned]])
         # if driver_on_off_model == 1:  # TODO: calibrate the parameters
         #     go_offline = True
-        fleet_size_threshold = self.fleet.driver_availability_vector()
+        fleet_size_threshold = self._driver_availability_vector
         time = self._env.now
         hour = int(
             (time % 1440) / 60
         )  # TODO: This rounds to the nearest hour, should we use SimulationTimeConverter.hour_of_day instead?
-        number_of_online_vehicles = len(self.fleet.get_online_vehicles())
+        number_of_online_vehicles = len(
+            self.fleet.vehicles_by_state[VehicleState.ONLINE]
+        )
         if number_of_online_vehicles >= fleet_size_threshold[hour]:
             go_offline = True
 

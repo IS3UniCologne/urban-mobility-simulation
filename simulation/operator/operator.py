@@ -1,44 +1,72 @@
+"""Operator base class. Implements common operator functionality."""
+
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from simulation.helper.simulation_base import SimulationBase
+from simulation.operator.operations_management.operations import (
+    Operations,
+    OperationsDependencies,
+)
+from simulation.operator.search_engine import SearchEngine, SearchEngineDependencies
+from simulation.operator.vehicle_allocation_engine import (
+    AllocationEngine,
+    AllocationEngineDependencies,
+)
+
 if TYPE_CHECKING:
+    from pandas import DataFrame
+
     from simulation.agent.user import User
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import OperatorConfig
-    from simulation.helper.configuration.enums import (
-        OperatorMode,
-        TransactionState,
-        VehicleType,
+    from simulation.helper.configuration.enums import VehicleType
+    from simulation.infrastructure.charging_stations.charging_infastructure import (
+        ChargingInfrastructure,
     )
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
     from simulation.operator.data_transfer_object.trip_record import TripRecord
+    from simulation.operator.interface.operations_interface import OperationsInterface
     from simulation.operator.interface.search_engine_interface import (
         SearchEngineInterface,
     )
     from simulation.operator.interface.vehicle_allocation_engine_interface import (
-        VehicleAllocationEngineInterface,
+        AllocationEngineInterface,
     )
-    from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.tasks.transport_task import TransportTask
     from simulation.world.world import World
 
+from simulation.helper.configuration.enums import OperatorMode, TransactionState
 from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
     TransportationAlternativeRideHailing,
 )
 from simulation.operator.interface.operator_interface import OperatorInterface
 from simulation.operator.transactions import TransactionLog
 from simulation.operator.transactions.transaction import Transaction
+from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
 
 
-class Operator(OperatorInterface):
+@dataclass(frozen=True, slots=True)
+class OperatorDependencies:
+    """Dependencies required to instantiate an Operator."""
+
+    sim: SimulationContext
+    config: OperatorConfig
+    world: World
+    charging_infrastructure: ChargingInfrastructure | None = None
+
+
+class Operator(SimulationBase, OperatorInterface):
+    """Base class for all operators."""
+
     __slots__ = (
         "_allocation_engine",
         "_charging_infrastructure",
         "_context",
-        "_env",
         "_env",
         "_fleet",
         "_mode",
@@ -48,73 +76,124 @@ class Operator(OperatorInterface):
         "_transaction_log",
     )
 
-    def __init__(
-        self,
-        sim: SimulationContext,
-        fleet: VehicleFleet,
-        operator_config: OperatorConfig,
-        search_engine: SearchEngineInterface,
-        allocation_engine: VehicleAllocationEngineInterface,
-        world: World,
-    ) -> None:
-        super().__init__(sim)
+    def __init__(self, deps: OperatorDependencies) -> None:
+        super().__init__(sim=deps.sim)
 
-        self._sim = sim
-        self._env = sim.env
-        self._fleet = fleet
-        self._operations = operator_config.OPERATIONS_CONFIG.OPERATIONS_TYPE(
-            sim=sim,
-            distance_matrix=world.distance_matrix,
-            operations_config=operator_config.OPERATIONS_CONFIG,
-            world=world,
-            operator=self,
-        )
-
-        self._search_engine = search_engine
-        self._allocation_engine = allocation_engine
+        self._sim = deps.sim
+        self._env = deps.sim.env
+        self._config = deps.config
 
         self._transaction_log: TransactionLog = TransactionLog()
 
-        self._search_engine.register_fleet(self._fleet)
+    @classmethod
+    def from_deps(cls, deps: OperatorDependencies) -> Operator:
+        """Create an Operator instance from dependencies.
 
-        self._env.process(self._operations.execute())
+        Automatically selects the appropriate operator implementation based on the configuration.
+        """
+        operator_type = deps.config.OPERATOR_TYPE
+        operator = operator_type(deps=deps)
+
+        operator.build_operator_subcomponents(deps)
+
+        operator.start_operations()
+
+        return operator
+
+    def build_operator_subcomponents(self, deps: OperatorDependencies) -> None:
+        """Assemble components for the operator.
+
+        Subclasses can override this for different construction behavior.
+        """
+        self._fleet = VehicleFleet.from_deps(
+            VehicleFleetDependencies(
+                sim=deps.sim,
+                operator=self,
+                world=deps.world,
+                config=deps.config.FLEET_CONFIG,
+            )
+        )
+        self._operations = Operations.from_deps(
+            OperationsDependencies(
+                sim=deps.sim,
+                operator=self,
+                world=deps.world,
+                operations_config=deps.config.OPERATIONS_CONFIG,
+                distance_matrix=deps.world.distance_matrix,
+            )
+        )
+        self._search_engine = SearchEngine.from_deps(
+            SearchEngineDependencies(
+                sim=deps.sim, config=deps.config.SEARCH_ENGINE_CONFIG, operator=self
+            )
+        )
+        self._allocation_engine = AllocationEngine.from_deps(
+            AllocationEngineDependencies(
+                sim=deps.sim, config=deps.config.ALLOCATION_ENGINE_CONFIG
+            )
+        )
+
+    @property
+    def allocation_engine(self) -> AllocationEngineInterface:
+        """Get the allocation engine used by the operator."""
+        return self._allocation_engine
+
+    @property
+    def search_engine(self) -> SearchEngineInterface:
+        """Get the search engine used by the operator."""
+        return self._search_engine
+
+    @property
+    def operations(self) -> OperationsInterface:
+        """Get the operations used by the operator."""
+        return self._operations
 
     @property
     def total_revenue(self) -> float:
-        return self._transaction_log.total_revenue
+        """Get the total revenue of the operator."""
+        return self._transaction_log.metrics.total_revenue
 
     @property
     def total_fulfilled_trips(self) -> int:
-        return self._transaction_log.total_fulfilled_trips
+        """Get the total number of fulfilled trips by the operator."""
+        return self._transaction_log.metrics.total_fulfilled_trips
 
     @property
     def total_missed_trips(self) -> int:
-        return self._transaction_log.total_missed_trips
+        """Get the total number of missed trips by the operator."""
+        return self._transaction_log.metrics.total_missed_trips
 
     @property
     def total_missed_revenue(self) -> float:
-        return self._transaction_log.total_missed_revenue
+        """Get the total missed revenue by the operator."""
+        return self._transaction_log.metrics.total_missed_revenue
 
     @property
     def fleet(self) -> VehicleFleet:
+        """Get the vehicle fleet of the operator."""
         return self._fleet
+
+    @fleet.setter
+    def fleet(self, fleet: VehicleFleet) -> None:
+        """Set the vehicle fleet of the operator."""
+        self._fleet = fleet
 
     @property
     def vehicle_types(self) -> list[VehicleType]:
         """
-        Get the available vehicle modes for this operator.
+        Get the available vehicle types for this operator.
 
         Returns
         -------
-        list[VehicleMode]
-            List of available vehicle modes
+        list[VehicleType]
+            List of available vehicle types
         """
         return self._fleet.vehicle_types
 
     @property
     def transaction_log(self) -> TransactionLog:
         """
-        Return the transaction log of the operator
+        Return the transaction log of the operator.
 
         Returns
         -------
@@ -123,10 +202,11 @@ class Operator(OperatorInterface):
         """
         return self._transaction_log
 
+    # TODO: Remove in future versions in favor of transaction_log
     @property
-    def transaction_df(self):  # noqa: ANN201
+    def transaction_df(self) -> DataFrame:
         """
-        Return all transactions (fulfilled and missed) as a DataFrame
+        Return all transactions (fulfilled and missed) as a DataFrame.
 
         DataFrame has the following columns
         "origin": Origin of Request
@@ -147,13 +227,17 @@ class Operator(OperatorInterface):
         """
         return self._transaction_log.to_dataframe()
 
+    def start_operations(self) -> None:
+        """Start the operations process."""
+        self._env.process(self._operations.execute())
+
     def log_transaction(
         self,
         transportation_task: TransportTask,
         transportation_alternative: TransportationAlternative
         | TransportationAlternativeRideHailing
         | None,
-        state: TransactionState | None,
+        state: TransactionState,
         trip_record: None | TripRecord = None,
     ) -> None:
         """
@@ -171,8 +255,6 @@ class Operator(OperatorInterface):
             The trip record associated with the transaction. (If available)
         """
         # TODO:Check if wait times are correct once user refactoring is done
-        if state is None:
-            state = "Unknown"
         if transportation_alternative is None:
             transaction: Transaction = Transaction(
                 vehicle_uid=None,
@@ -241,7 +323,7 @@ class Operator(OperatorInterface):
         self.log_transaction(
             transportation_task=transportation_task,
             transportation_alternative=selected_transportation_alternative,
-            state="Fulfilled",
+            state=TransactionState.FULFILLED,
             trip_record=user.trip_record,
         )
 
@@ -266,27 +348,3 @@ class Operator(OperatorInterface):
             The operator mode
         """
         return self._mode
-
-    @property
-    def search_engine(self) -> SearchEngineInterface:
-        """
-        Get the search engine used by this operator.
-
-        Returns
-        -------
-        SearchEngineInterface
-            The search engine instance
-        """
-        return self._search_engine
-
-    @property
-    def assignment_engine(self) -> VehicleAllocationEngineInterface:
-        """
-        Get the vehicle allocation engine used by this operator.
-
-        Returns
-        -------
-        VehicleAllocationEngineInterface
-            The vehicle allocation engine instance
-        """
-        return self._allocation_engine

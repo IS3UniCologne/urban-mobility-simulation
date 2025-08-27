@@ -1,4 +1,5 @@
 from simulation.environment.position import Position
+from simulation.helper.types import SimTime
 
 
 class TransportTask:
@@ -13,7 +14,7 @@ class TransportTask:
 
     def __init__(  # noqa: ANN204
         self,
-        time,  # noqa: ANN001
+        time: SimTime,
         origin: Position,
         destination: Position,
         viable_vehicle_types,  # noqa: ANN001

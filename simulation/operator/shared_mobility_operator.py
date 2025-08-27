@@ -9,7 +9,7 @@ if TYPE_CHECKING:
         SearchEngineInterface,
     )
     from simulation.operator.interface.vehicle_allocation_engine_interface import (
-        VehicleAllocationEngineInterface,
+        AllocationEngineInterface,
     )
     from simulation.operator.operations_management.integrated_shared_mobility_operations import (
         IntegratedSharedMobilityOperations,
@@ -32,7 +32,7 @@ class SharedMobilityOperator(Operator):
         fleet: VehicleFleet,
         operations: IntegratedSharedMobilityOperations,
         search_engine: SearchEngineInterface,
-        allocation_engine: VehicleAllocationEngineInterface,
+        allocation_engine: AllocationEngineInterface,
         number_service_workers: int,
     ):
         super().__init__(

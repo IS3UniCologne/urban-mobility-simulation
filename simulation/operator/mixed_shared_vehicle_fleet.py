@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from simulation.world.world import World
 
 
+# TODO : rename SharedVehicleFleet, there are only mixed fleets
 class MixedSharedVehicleFleet(VehicleFleet):
     def __init__(self, sim: SimulationContext, world: World) -> None:
         super().__init__(sim=sim, world=world)
@@ -20,7 +21,6 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
         """
-
         return {
             vehicle
             for vehicle in self.vehicles
@@ -92,7 +92,6 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :return: Dictionary, where key = hex_id and value is a dictionary counting the vehicles to be charged
                  e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-
         low_soc_supply = {}
 
         # Create a set of vehicles needing charge for fast lookups
