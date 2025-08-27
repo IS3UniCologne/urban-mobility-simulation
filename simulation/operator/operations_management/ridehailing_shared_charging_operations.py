@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from collections import namedtuple
 from typing import TYPE_CHECKING
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from simulation.world.world import World
 
 
-class RideHailingSharedChargingOperations(BidderInterface, OperationsInterface):
+class RideHailingSharedChargingOperations(BidderInterface, OperationsInterface):  # noqa: D101
     __slots__ = (
         "_auction",
         "_bidding_parameters",
@@ -61,7 +61,7 @@ class RideHailingSharedChargingOperations(BidderInterface, OperationsInterface):
         self._config = sim.config
         self._charging_operations = None
 
-    def execute(self):  # noqa: ANN201
+    def execute(self):  # noqa: ANN201, D102
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             sim=self._sim,
@@ -147,5 +147,5 @@ class RideHailingSharedChargingOperations(BidderInterface, OperationsInterface):
         self._env.process(self._charging_operations.execute())
 
     @property
-    def task_transactions(self):  # noqa: ANN201
+    def task_transactions(self):  # noqa: ANN201, D102
         return self._charging_operations.task_transactions

@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, cast
 
@@ -47,11 +47,11 @@ class RideHailingSearchEngine(SearchEngine):
         self._min_price = self.operator.operations.config.MINIMUM_PRICE
 
     @property
-    def config(self) -> RideHailingSearchEngineConfig:
+    def config(self) -> RideHailingSearchEngineConfig:  # noqa: D102
         return cast("RideHailingSearchEngineConfig", self._config)
 
     @property
-    def operator(self) -> RideHailingOperator:
+    def operator(self) -> RideHailingOperator:  # noqa: D102
         return cast("RideHailingOperator", self._operator)
 
     def search_for_transportation_alternatives(

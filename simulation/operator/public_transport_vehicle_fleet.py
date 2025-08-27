@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from simulation.world.world import World
 
 
-class PublicTransportVehicleFleet(VehicleFleet):
+class PublicTransportVehicleFleet(VehicleFleet):  # noqa: D101
     __slots__ = ("_busses", "_config", "_unserved_passengers")
 
     def __init__(self, sim: SimulationContext, world: World) -> None:
@@ -23,7 +23,7 @@ class PublicTransportVehicleFleet(VehicleFleet):
         self._unserved_passengers = 0
 
     # Add the bus
-    def spawn_bus(self, route: PublicTransitRoute) -> Bus:
+    def spawn_bus(self, route: PublicTransitRoute) -> Bus:  # noqa: D102
         init_position = GeodesicPosition(self._sim, *route.origin.getExactLocation())
 
         bus = Bus(
@@ -43,7 +43,7 @@ class PublicTransportVehicleFleet(VehicleFleet):
 
         return bus
 
-    def clean_up_bus(self, bus: Bus):  # noqa: ANN201
+    def clean_up_bus(self, bus: Bus):  # noqa: ANN201, D102
         yield bus._has_reached_terminal  # noqa: SLF001
 
         # TODO: Why is this not in the vehicle destructor?
@@ -58,5 +58,5 @@ class PublicTransportVehicleFleet(VehicleFleet):
         self._unserved_passengers = len(bus._passengers)  # noqa: SLF001
 
     # Return current busses
-    def get_busses(self) -> list[Bus]:
+    def get_busses(self) -> list[Bus]:  # noqa: D102
         return self._busses

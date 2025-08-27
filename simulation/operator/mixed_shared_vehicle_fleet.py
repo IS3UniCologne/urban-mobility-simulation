@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 # TODO : rename SharedVehicleFleet, there are only mixed fleets
-class MixedSharedVehicleFleet(VehicleFleet):
+class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
     def __init__(self, sim: SimulationContext, world: World) -> None:
         super().__init__(sim=sim, world=world)
 
@@ -20,7 +20,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
         Return all vehicles that need to be refueled/recharged
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
-        """
+        """  # noqa: D205, D400
         return {
             vehicle
             for vehicle in self.vehicles
@@ -32,7 +32,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
         Return all vehicles that need to be refueled/recharged in a region
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
-        """
+        """  # noqa: D205, D400
         below_soc_level_vehicles = []
         vehicles_in_region = self.vehicles_in_region(region)
         # TODO: Check if this is necessary
@@ -61,7 +61,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 '871f1d4f3ffffff': {'CAR': 5, 'BIKE': 3},
                 '871f1d4f4ffffff': {'SCOOTER': 2}
             }
-        """
+        """  # noqa: D401
         supply = {}
 
         # For each region with vehicles

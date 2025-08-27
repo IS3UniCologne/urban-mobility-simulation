@@ -1,9 +1,9 @@
-import numpy as np
+import numpy as np  # noqa: D100
 
 from simulation.agent.action_space import ActionSpace
 
 
-class Policy:
+class Policy:  # noqa: D101
     # TODO: currently this class is tailored for action-value functions, generalize
     def __init__(self):  # noqa: ANN204
         pass
@@ -13,7 +13,7 @@ class Policy:
         """
         :param arr: Vector of (State-/Action-)Value Function Values
         :return: Index of max value in arr, with ties broken randomly
-        """
+        """  # noqa: D205
         # break ties randomly, np.argmax() always picks first max
         try:
             return np.random.choice(np.flatnonzero(arr == np.max(arr)))
@@ -28,7 +28,7 @@ class Policy:
         :param q_hat: ValueFunctionApproximator object that has a function and gradient that work with n-dim state vectors
         :param eps: epsilon for e-greedy action selection (0 = true on-policy, 1 = sample uniformly from action space)
         :return:
-        """
+        """  # noqa: D205
         actionspace = ActionSpace.instance()
 
         if np.random.rand() > eps:

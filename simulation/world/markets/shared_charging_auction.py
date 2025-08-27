@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import random
 from collections import Counter
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from simulation.world.markets.interfaces.bidder_interface import BidderInterface
 
 
-class SharedChargingAuction(Auction):
+class SharedChargingAuction(Auction):  # noqa: D101
     __slots__ = (
         "_charging_infrastructure",
         "_charging_locations",
@@ -86,7 +86,7 @@ class SharedChargingAuction(Auction):
                 timeslot=timeslot,
             )
 
-    def run(self):  # noqa: ANN201
+    def run(self):  # noqa: ANN201, D102
         while True:
             if (
                 self._next_timeslot
@@ -139,11 +139,11 @@ class SharedChargingAuction(Auction):
             self._is_open = False
             self.open_for_bidding = self._env.event()
 
-    def register_participant(self, participant: BidderInterface) -> int:
+    def register_participant(self, participant: BidderInterface) -> int:  # noqa: D102
         self._participants.append(participant)
         return len(self._participants) - 1
 
-    def clear(self) -> None:
+    def clear(self) -> None:  # noqa: D102
         self._location_results = {}
         for location, capacity in self._charging_infrastructure.get_available_capacity(
             self._next_timeslot
@@ -292,17 +292,17 @@ class SharedChargingAuction(Auction):
             )
 
     @property
-    def result(self):  # noqa: ANN201
+    def result(self):  # noqa: ANN201, D102
         # it is illegal for other participants to know the full results in this type of auction
         raise NotImplementedError(
             "Not implemented for FleetChargingAuction, results are distributed through events"
         )
 
     @property
-    def next_timeslot(self):  # noqa: ANN201
+    def next_timeslot(self):  # noqa: ANN201, D102
         return self._next_timeslot
 
-    def get_auctioned_capacity(self) -> dict[str, int]:
+    def get_auctioned_capacity(self) -> dict[str, int]:  # noqa: D102
         return self._charging_infrastructure.get_available_capacity(self._next_timeslot)
 
     def _update_bids(self, single_bid):  # noqa: ANN001, ANN202
@@ -330,7 +330,7 @@ class SharedChargingAuction(Auction):
             )
             return allocated_ids
 
-    def dump(self, exposed_only: bool = True) -> dict:
+    def dump(self, exposed_only: bool = True) -> dict:  # noqa: D102
         return {
             "_next_timeslot": self._next_timeslot,
             "_bids": self._bids,

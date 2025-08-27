@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from collections import deque
 from typing import TYPE_CHECKING
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     )
 
 
-class TaskQueue:
+class TaskQueue:  # noqa: D101
     __slots__ = ("_env", "_queue", "_sim", "_task_queue_updated")
 
     def __init__(self, sim: SimulationContext) -> None:
@@ -21,29 +21,29 @@ class TaskQueue:
         # Events
         self._task_queue_updated = self._env.event()
 
-    def append(self, service_task: ServiceTask) -> None:
+    def append(self, service_task: ServiceTask) -> None:  # noqa: D102
         self._queue.append(service_task)
 
         self._task_queue_updated.succeed()
         self._task_queue_updated = self._env.event()
 
-    def bulk_append(self, service_task_list) -> None:  # noqa: ANN001
+    def bulk_append(self, service_task_list) -> None:  # noqa: ANN001, D102
         for service_task in service_task_list:
             self._queue.append(service_task)
 
         self._task_queue_updated.succeed()
         self._task_queue_updated = self._env.event()
 
-    def popleft(self):  # noqa: ANN201
+    def popleft(self):  # noqa: ANN201, D102
         return self._queue.popleft()
 
-    def clear(self) -> None:
+    def clear(self) -> None:  # noqa: D102
         self._queue.clear()
 
     @property
-    def count(self) -> int:
+    def count(self) -> int:  # noqa: D102
         return len(self._queue)
 
     @property
-    def task_queue_updated(self):  # noqa: ANN201
+    def task_queue_updated(self):  # noqa: ANN201, D102
         return self._task_queue_updated

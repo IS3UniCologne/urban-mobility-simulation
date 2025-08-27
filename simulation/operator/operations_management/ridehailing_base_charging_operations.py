@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     )
 
 
-class RideHailingBaseChargingOperations(RideHailingOperations):
+class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
     __slots__ = (
         "_allow_queue",
         "_available_modes",
@@ -79,19 +79,19 @@ class RideHailingBaseChargingOperations(RideHailingOperations):
         self._duration_of_operations = self._config.OPERATIONS_DURATION
 
     @property
-    def charging_plan_updated(self):  # noqa: ANN201
+    def charging_plan_updated(self):  # noqa: ANN201, D102
         return self._charging_plan_updated
 
     @property
-    def task_executed(self):  # noqa: ANN201
+    def task_executed(self):  # noqa: ANN201, D102
         return self._task_executed
 
     @property
-    def task_transactions(self):  # noqa: ANN201
+    def task_transactions(self):  # noqa: ANN201, D102
         return pd.DataFrame(self._task_transactions)
 
     def execute(self):  # noqa: ANN201
-        """Below, we combine the old operational logic from operations_ridehailing.py and rebalancing_scheduler_ridehailing.py"""
+        """Below, we combine the old operational logic from operations_ridehailing.py and rebalancing_scheduler_ridehailing.py"""  # noqa: D400
         while True:
             # Operations begin after first day
             self._scheduled_tasks = []
@@ -185,7 +185,7 @@ class RideHailingBaseChargingOperations(RideHailingOperations):
         :return: **charging_plan**: Dictionary with keys for vehicle modes and values with lists of multiple
                 charging tasks
                 **used_capacity**: How many service workers are planned to cope with charging needs
-        """
+        """  # noqa: D205, D400
         # Get Current Fleet State
         vehicles_to_charge = self._operator.fleet.mark_vehicles_to_be_charged(
             self._recharge_threshold
@@ -205,7 +205,7 @@ class RideHailingBaseChargingOperations(RideHailingOperations):
                                     "SharedScooter": [], "SharedCar":[]}
                 used_capacity = [1, 3, 5] => per available vehicle mode returns number of service workers assigned to charge these vehicles
                                           => 1 SW for Kick Scooter, 3 for Shared Scooter, 5 for Shared Cars
-        """
+        """  # noqa: D205
         # Fleet State
 
         # We calculate for each vehicle mode dedicated charging plans based on the available resources

@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -10,7 +10,7 @@ from simulation.operator.operations_management.service_tasks.service_task import
 )
 
 
-class MultiServiceTask(ServiceTask):
+class MultiServiceTask(ServiceTask):  # noqa: D101
     __slots__ = ("_service_tasks",)
 
     def __init__(self, sim: SimulationContext) -> None:
@@ -18,7 +18,7 @@ class MultiServiceTask(ServiceTask):
 
         self._service_tasks = []
 
-    def execute(self, *args):  # noqa: ANN002, ANN201
+    def execute(self, *args):  # noqa: ANN002, ANN201, D102
         events = []
         for service_task in self._service_tasks:
             events.append(service_task.task_finished)
@@ -32,8 +32,8 @@ class MultiServiceTask(ServiceTask):
         # Notify all
         self._task_finished = self._env.event()
 
-    def append_task(self, service_task: ServiceTask) -> None:
+    def append_task(self, service_task: ServiceTask) -> None:  # noqa: D102
         self._service_tasks.append(service_task)
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return f"Multi Tasks with {len(self._service_tasks)} sub tasks:{self._service_tasks}"

@@ -312,7 +312,7 @@ class Operator(SimulationBase, OperatorInterface):
             )
         self._transaction_log.add_transaction(transaction)
 
-    def pay_for_fulfilled_transportation_task(
+    def pay_for_fulfilled_transportation_task(  # noqa: D102
         self,
         user: User,
         transportation_task: TransportTask,
@@ -329,7 +329,7 @@ class Operator(SimulationBase, OperatorInterface):
 
         self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
 
-    def withdraw_transportation_task(
+    def withdraw_transportation_task(  # noqa: D102
         self, user: User, transportation_task: TransportTask
     ) -> None:
         # Add Transaction to Log

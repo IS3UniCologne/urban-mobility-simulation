@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -21,7 +21,7 @@ from simulation.operator.interface.operations_interface import OperationsInterfa
 
 
 # TODO: rename this to ____Operations like the others ?
-class OperationsPublicTransport(OperationsInterface):
+class OperationsPublicTransport(OperationsInterface):  # noqa: D101
     __slots__ = (
         "_bus_velocity",
         "_config",
@@ -56,7 +56,7 @@ class OperationsPublicTransport(OperationsInterface):
     def execute(self):  # noqa: ANN201
         """
         TransitOperator Lifecycle
-        """
+        """  # noqa: D200, D400
         while True:
             try:
                 self.logger.debug(

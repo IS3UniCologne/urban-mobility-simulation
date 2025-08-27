@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -23,7 +23,7 @@ from simulation.operator.service_workforce import ServiceWorkforce
 from simulation.operator.transactions import DemandMonitor
 
 
-class SharedMobilityOperator(Operator):
+class SharedMobilityOperator(Operator):  # noqa: D101
     __slots__ = ("_demand_monitor", "_number_service_workers", "_workforce")
 
     def __init__(  # noqa: ANN204
@@ -66,7 +66,7 @@ class SharedMobilityOperator(Operator):
         """
         return self._demand_monitor
 
-    def withdraw_transportation_task(  # noqa: ANN201
+    def withdraw_transportation_task(  # noqa: ANN201, D102
         self, user: User, transportation_task: TransportTask
     ):
         # vehicle_types = [

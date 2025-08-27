@@ -1,4 +1,4 @@
-import os
+import os  # noqa: D100
 import random
 from collections import deque
 from copy import deepcopy
@@ -24,7 +24,7 @@ from simulation.helper.time import SimulationTimeConverter
 from simulation.vehicle.public_transit_bus import Bus
 
 
-class ModifiedTensorBoard(TensorBoard, SimulationBase):
+class ModifiedTensorBoard(TensorBoard, SimulationBase):  # noqa: D101
     __slots__ = ("_log_write_dir", "_step", "_writer")
 
     def __init__(self, **kwargs):  # noqa: ANN003, ANN204
@@ -33,7 +33,7 @@ class ModifiedTensorBoard(TensorBoard, SimulationBase):
         self.writer = tf.summary.create_file_writer(self.log_dir)
         self._log_write_dir = self.log_dir
 
-    def set_model(self, model):  # noqa: ANN001, ANN201
+    def set_model(self, model):  # noqa: ANN001, ANN201, D102
         self.model = model
 
         self._train_dir = os.path.join(self._log_write_dir, "train")
@@ -44,23 +44,23 @@ class ModifiedTensorBoard(TensorBoard, SimulationBase):
 
         self._should_write_train_graph = False
 
-    def on_epoch_end(self, epoch, logs=None):  # noqa: ANN001, ANN201
+    def on_epoch_end(self, epoch, logs=None):  # noqa: ANN001, ANN201, D102
         self.update_stats(**logs)
 
-    def on_batch_end(self, batch, logs=None):  # noqa: ANN001, ANN201
+    def on_batch_end(self, batch, logs=None):  # noqa: ANN001, ANN201, D102
         pass
 
-    def on_train_end(self, _):  # noqa: ANN001, ANN201
+    def on_train_end(self, _):  # noqa: ANN001, ANN201, D102
         pass
 
-    def update_stats(self, **stats):  # noqa: ANN003, ANN201
+    def update_stats(self, **stats):  # noqa: ANN003, ANN201, D102
         with self.writer.as_default():
             for key, value in stats.items():
                 tf.summary.scalar(key, value, step=self.step)
                 self.writer.flush()
 
 
-class DQN(RLAgent, SimulationBase):
+class DQN(RLAgent, SimulationBase):  # noqa: D101
     __slots__ = (
         "_action_space",
         "_alpha",
@@ -231,7 +231,7 @@ class DQN(RLAgent, SimulationBase):
 
         return model
 
-    def run(self, bus: Bus):  # noqa: ANN201
+    def run(self, bus: Bus):  # noqa: ANN201, D102
         # set timelimit to multiplier specified in config * planned route total time
         route_duration = SimulationTimeConverter.duration_between(
             bus.route.origin.departure, bus.route.destination.departure
@@ -474,7 +474,7 @@ class DQN(RLAgent, SimulationBase):
         down-left  \\ __ /  down-right
                     down
 
-        """
+        """  # noqa: D202, D301
 
         if action == "STAY":
             # even though the bus does not move, timeout for the average movement duration

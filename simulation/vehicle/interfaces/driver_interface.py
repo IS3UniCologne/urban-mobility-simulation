@@ -1,23 +1,23 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod  # noqa: D100
 
 
-class DriverInterface(ABC):
+class DriverInterface(ABC):  # noqa: D101
     @abstractmethod
-    def mount_vehicle_as_driver(self, vehicle):  # noqa: ANN001, ANN201
+    def mount_vehicle_as_driver(self, vehicle):  # noqa: ANN001, ANN201, D102
         pass
 
     @abstractmethod
-    def unmount_vehicle_as_driver(self, vehicle):  # noqa: ANN001, ANN201
+    def unmount_vehicle_as_driver(self, vehicle):  # noqa: ANN001, ANN201, D102
         pass
 
     @abstractmethod
-    def drive_vehicle(self, vehicle, route):  # noqa: ANN001, ANN201
+    def drive_vehicle(self, vehicle, route):  # noqa: ANN001, ANN201, D102
         pass
 
     @abstractmethod
-    def park_vehicle(self, vehicle, position=None):  # noqa: ANN001, ANN201
+    def park_vehicle(self, vehicle, position=None):  # noqa: ANN001, ANN201, D102
         pass
 
     @abstractmethod
-    def identify_driver(self):  # noqa: ANN201
+    def identify_driver(self):  # noqa: ANN201, D102
         pass

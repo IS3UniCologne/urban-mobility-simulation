@@ -1,8 +1,8 @@
-from simulation.helper.configuration.configuration import Configuration
+from simulation.helper.configuration.configuration import Configuration  # noqa: D100
 from tracking.tracking import Tracking
 
 
-class DynamicCheckpointRoutingTracker:
+class DynamicCheckpointRoutingTracker:  # noqa: D101
     __slots__ = (
         "_agent",
         "_config",
@@ -21,7 +21,7 @@ class DynamicCheckpointRoutingTracker:
         self._timestamped_bus_positions = {}
         self._timestamped_viable_demands = {}
 
-    def track(self):  # noqa: ANN201
+    def track(self):  # noqa: ANN201, D102
         # initialize
         self._log_bus()
 

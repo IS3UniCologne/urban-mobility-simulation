@@ -132,25 +132,6 @@ convention = "numpy"
 # Pydantic needs type annotations at runtime, so we ignore TC001 in the configuration
 "simulation/helper/configuration/configuration.py" = ["TC001"]
 
-#TODO: These should be gradually removed once properly annotated.
-"public_transport_template.py"      = ["D"]
-"ridehailing_template.py"           = ["D"]
-"shared_vehicle_fleet_template.py"  = ["D"]
-"simulation/__init__.py"            = ["D"]
-"simulation/agent/*"                = ["D"]
-"simulation/environment/*"          = ["D"]
-"simulation/helper/time.py"         = ["D"]
-"simulation/infrastructure/*"       = ["D"]
-"simulation/operator/*"             = ["D"]
-"simulation/tasks/*"                = ["D"]
-"simulation/vehicle/*"              = ["D"]
-"simulation/vehicle_choice_model/*" = ["D"]
-"simulation/world/markets/*"        = ["D"]
-"simulation/world/population/*"     = ["D"]
-"simulation/world/world.py"         = ["D"]
-"tracking/*"                        = ["D"]
-"utils.py"                          = ["D"]
-"walking_template.py"               = ["D"]
 
 [tool.mypy]
 # Enable type checking for all simulation modules

@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 # TODO: refactor to not be a copy of ChargingTask that was used for SharedVehicles
-class ChargingTaskRidehailing(ServiceTask):
+class ChargingTaskRidehailing(ServiceTask):  # noqa: D101
     __slots__ = (
         "_arrived_at_charging_station",
         "_charging_duration",
@@ -106,19 +106,19 @@ class ChargingTaskRidehailing(ServiceTask):
         self._started_charging = self._env.event()
 
     @property
-    def destination(self):  # noqa: ANN201
+    def destination(self):  # noqa: ANN201, D102
         return self._destination
 
     @property
-    def waiting_time(self):  # noqa: ANN201
+    def waiting_time(self):  # noqa: ANN201, D102
         return self._waiting_time
 
     @property
-    def charging_duration(self):  # noqa: ANN201
+    def charging_duration(self):  # noqa: ANN201, D102
         return self._charging_duration
 
     @property
-    def kWh_charged(self):  # noqa: ANN201
+    def kWh_charged(self):  # noqa: ANN201, D102
         return self._kWh_charged
 
     def execute(self):  # noqa: ANN201
@@ -126,7 +126,7 @@ class ChargingTaskRidehailing(ServiceTask):
         Execute charging tasks
         :param simpy_env: SimPy Environment
         :return:
-        """
+        """  # noqa: D202, D205, D400
 
         # Filter only parking vehicles (possibly some vehicles are driving around with low soc)
         if self._vehicle.state == VehicleState.PARKING:
@@ -260,11 +260,11 @@ class ChargingTaskRidehailing(ServiceTask):
         # Notify all
         self._task_finished.succeed()
 
-    def __str__(self):  # noqa: ANN204
+    def __str__(self):  # noqa: ANN204, D105
         return f"Charging Task for Vehicle {self._vehicle.uid} from {self._origin} to {self._destination} (distance = {self._distance})"
 
-    def __repr__(self):  # noqa: ANN204
+    def __repr__(self):  # noqa: ANN204, D105
         return self.__str__()
 
-    def get_charging_station(self):  # noqa: ANN201
+    def get_charging_station(self):  # noqa: ANN201, D102
         pass

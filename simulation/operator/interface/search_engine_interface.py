@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
@@ -17,7 +17,7 @@ class SearchEngineInterface(ABC):
     """
 
     @abstractmethod
-    def search_for_transportation_alternatives(
+    def search_for_transportation_alternatives(  # noqa: D102
         self, vehicle_search_task: TransportationSearchTask
     ) -> TransportationAlternativeBrowser:
         pass  # Implement filtering

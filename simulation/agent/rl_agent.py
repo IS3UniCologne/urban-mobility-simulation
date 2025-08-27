@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod  # noqa: D100
 
 import simpy
 
@@ -7,7 +7,7 @@ from simulation.agent.agent import Agent
 from simulation.helper.configuration.configuration import Configuration
 
 
-class RLAgent(ABC):
+class RLAgent(ABC):  # noqa: D101
     __slots___ = ("_env", "_config", "_action_space", "_reward", "_reward_sum")
 
     def __init__(self, env: simpy.Environment):  # noqa: ANN204
@@ -25,7 +25,7 @@ class RLAgent(ABC):
         self._reward_sum = 0
 
     @property
-    def reward(self):  # noqa: ANN201
+    def reward(self):  # noqa: ANN201, D102
         return self._reward
 
     @reward.setter
@@ -33,7 +33,7 @@ class RLAgent(ABC):
         self._reward = reward
 
     @property
-    def reward_sum(self):  # noqa: ANN201
+    def reward_sum(self):  # noqa: ANN201, D102
         return self._reward_sum
 
     @reward_sum.setter
@@ -41,5 +41,5 @@ class RLAgent(ABC):
         self._reward_sum = reward_sum
 
     @abstractmethod
-    def run(self, target: Agent):  # noqa: ANN201
+    def run(self, target: Agent):  # noqa: ANN201, D102
         pass

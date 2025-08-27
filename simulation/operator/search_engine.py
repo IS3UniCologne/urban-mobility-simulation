@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -32,7 +32,7 @@ class SearchEngineDependencies:
     operator: OperatorInterface
 
 
-class SearchEngine(SimulationBase, SearchEngineInterface):
+class SearchEngine(SimulationBase, SearchEngineInterface):  # noqa: D101
     def __init__(self, deps: SearchEngineDependencies) -> None:
         super().__init__(deps.sim)
         self._operator = deps.operator

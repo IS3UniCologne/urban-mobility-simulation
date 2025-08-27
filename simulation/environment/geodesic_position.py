@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import h3 as h3
 from haversine import Unit, haversine
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
 
 
-class GeodesicPosition(Position):
+class GeodesicPosition(Position):  # noqa: D101
     __slots__ = ("_geometry", "_hex_id_by_resolution", "_lat", "_lng")
 
     def __init__(
@@ -44,17 +44,17 @@ class GeodesicPosition(Position):
         self._hex_id_by_resolution[self._default_resolution] = default_res_hex_id
         self._geometry = Point(self._lng, self._lat)
 
-    def getExactLocation(self, geojson: bool = False) -> tuple[float, float]:
+    def getExactLocation(self, geojson: bool = False) -> tuple[float, float]:  # noqa: D102
         if geojson:
             return (self._lng, self._lat)
         else:
             return (self._lat, self._lng)
 
     @property
-    def geometry(self) -> Point:
+    def geometry(self) -> Point:  # noqa: D102
         return self._geometry
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return f"Latitude {self._lat} : Longitude {self._lng}"
 
     # ==
@@ -63,7 +63,7 @@ class GeodesicPosition(Position):
         Test equality of two GeodesicPositions
         :param other: GeodesicPosition
         :return: bool
-        """
+        """  # noqa: D205, D400
         if not isinstance(other, GeodesicPosition):
             return NotImplemented
         else:
@@ -75,7 +75,7 @@ class GeodesicPosition(Position):
         Calculate haversine distance between two positions
         :param other: GeodesicPosition
         :return: Haversine distance in meter.
-        """
+        """  # noqa: D205
         return haversine((self._lat, self._lng), (other._lat, other._lng), Unit.METERS)
 
     # <<
@@ -97,7 +97,7 @@ class GeodesicPosition(Position):
         -------
         float
             The euclidean distance in meters.
-        """
+        """  # noqa: D202, D410, D411
 
         return cy_euclidean_distance(self._lat, self._lng, other._lat, other._lng)
 
@@ -127,7 +127,7 @@ class GeodesicPosition(Position):
 
         return RegionId(self._hex_id_by_resolution[resolution])
 
-    def is_in_geometry(self, geometry: Geometry) -> bool:
+    def is_in_geometry(self, geometry: Geometry) -> bool:  # noqa: D102
         if self._geometry.intersects(geometry):
             return True
         else:
@@ -141,7 +141,7 @@ class GeodesicPosition(Position):
 
         :param other: GeodesicPosition
         :return: returns a tuple of (self.lat - other.lat, self.lon - other.lon)
-        """
+        """  # noqa: D205, D401, D404
         return tuple(
             x - y for x, y in zip(self.getExactLocation(), other.getExactLocation())
         )

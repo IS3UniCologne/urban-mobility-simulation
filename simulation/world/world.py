@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import os
 from typing import TYPE_CHECKING
@@ -61,7 +61,7 @@ if TYPE_CHECKING:
     from simulation.vehicle.vehicle import Vehicle
 
 
-class World(SimulationBase):
+class World(SimulationBase):  # noqa: D101
     # There is only one instance of this class.
     __instance = None
     __slots__ = (
@@ -147,7 +147,7 @@ class World(SimulationBase):
         return self._random_manager
 
     @property
-    def geo_env(self) -> GeodesicEnvironment:
+    def geo_env(self) -> GeodesicEnvironment:  # noqa: D102
         return self._geo_env
 
     @property
@@ -156,15 +156,15 @@ class World(SimulationBase):
         return self._distance_matrix
 
     @property
-    def user_processes(self):  # noqa: ANN201
+    def user_processes(self):  # noqa: ANN201, D102
         return self._user_processes
 
     @property
-    def demand_processes(self):  # noqa: ANN201
+    def demand_processes(self):  # noqa: ANN201, D102
         return self._demand_processes
 
     @property
-    def vehicle_processes(self):  # noqa: ANN201
+    def vehicle_processes(self):  # noqa: ANN201, D102
         return self._vehicle_processes
 
     @property
@@ -362,7 +362,7 @@ class World(SimulationBase):
         :param origin: Spatial Unit ID (e.g., hex_id)
         :param destination: Spatial Unit ID (e.g., hex_id)
         :return: None
-        """
+        """  # noqa: D202
 
         if len(self._users) < self._user_limit:
             operator = fleet.operator
@@ -546,42 +546,42 @@ class World(SimulationBase):
             "User %s removed from simulation after process finished.", user.uid
         )
 
-    def add_vehicle(self, vehicle: Vehicle):  # noqa: ANN201
+    def add_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
         self._vehicles.add(vehicle)
 
         # TODO: register vehicle with tracking
 
-    def remove_vehicle(self, vehicle: Vehicle):  # noqa: ANN201
+    def remove_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
         self._vehicles.discard(vehicle)
 
         # TODO: de-register vehicle with tracking
 
     @property
-    def users(self):  # noqa: ANN201
+    def users(self):  # noqa: ANN201, D102
         return self._users
 
     # TODO: get rid of this, only one user uses it and it should be dealt with differently
     @property
-    def vehicles(self):  # noqa: ANN201
+    def vehicles(self):  # noqa: ANN201, D102
         return self._vehicles
 
     @property
-    def charging_infrastructure(self) -> ChargingInfrastructure | None:
+    def charging_infrastructure(self) -> ChargingInfrastructure | None:  # noqa: D102
         return self._charging_infrastructures
 
     @property
-    def simulation_finished(self):  # noqa: ANN201
+    def simulation_finished(self):  # noqa: ANN201, D102
         return self._simulation_finished
 
     @property
-    def changed(self):  # noqa: ANN201
+    def changed(self):  # noqa: ANN201, D102
         return self._changed
 
     @changed.setter
     def changed(self, event):  # noqa: ANN001, ANN202
         self._changed = event
 
-    def stop_all_processes(self):  # noqa: ANN201
+    def stop_all_processes(self):  # noqa: ANN201, D102
         # stop demand generation
         for d in self.demand_processes:
             try:
@@ -598,7 +598,7 @@ class World(SimulationBase):
                 # already terminated
                 pass
 
-    def user_process_by_id(self, user_id):  # noqa: ANN001, ANN201
+    def user_process_by_id(self, user_id):  # noqa: ANN001, ANN201, D102
         return self._user_processes.get(user_id)  # returns the process or None
 
     def _load_timetable(self) -> Timetable | None:

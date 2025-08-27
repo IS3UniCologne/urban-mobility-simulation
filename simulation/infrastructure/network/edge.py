@@ -1,7 +1,7 @@
-from simulation.infrastructure.network.vertex import Vertex
+from simulation.infrastructure.network.vertex import Vertex  # noqa: D100
 
 
-class Edge:
+class Edge:  # noqa: D101
     __slots__ = ("_destination", "_distance", "_origin")
 
     def __init__(self, distance: float, origin: Vertex, destination: Vertex) -> None:
@@ -10,13 +10,13 @@ class Edge:
         self._destination = destination
 
     @property
-    def distance(self) -> float:
+    def distance(self) -> float:  # noqa: D102
         return self._distance
 
     @property
-    def origin(self) -> Vertex:
+    def origin(self) -> Vertex:  # noqa: D102
         return self._origin
 
     @property
-    def destination(self) -> Vertex:
+    def destination(self) -> Vertex:  # noqa: D102
         return self._destination

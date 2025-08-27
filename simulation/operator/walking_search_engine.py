@@ -1,4 +1,4 @@
-from simulation.infrastructure.route import Route
+from simulation.infrastructure.route import Route  # noqa: D100
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
@@ -11,7 +11,7 @@ from simulation.tasks.transportation_search_task import TransportationSearchTask
 from simulation.vehicle.walking import Walking
 
 
-class WalkingSearchEngine(SearchEngineInterface):
+class WalkingSearchEngine(SearchEngineInterface):  # noqa: D101
     __slots__ = ("_env", "_walking")
 
     def __init__(self, env):  # noqa: ANN001, ANN204
@@ -25,7 +25,7 @@ class WalkingSearchEngine(SearchEngineInterface):
         Spot all available vehicles to user
         :param vehicle_search_task:
         :return: Available Alternatives along with auxilary information regarding trip
-        """
+        """  # noqa: D205, D400
         browser = TransportationAlternativeBrowser()
 
         origin = vehicle_search_task.transport_task.origin
@@ -52,7 +52,7 @@ class WalkingSearchEngine(SearchEngineInterface):
 
         return browser
 
-    def pay_for_fulfilled_transportation_task(  # noqa: ANN201
+    def pay_for_fulfilled_transportation_task(  # noqa: ANN201, D102
         self,
         user,  # noqa: ANN001
         transportation_task: TransportTask,
@@ -60,5 +60,5 @@ class WalkingSearchEngine(SearchEngineInterface):
     ):
         pass
 
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask):  # noqa: ANN001, ANN201
+    def withdraw_transportation_task(self, user, transportation_task: TransportTask):  # noqa: ANN001, ANN201, D102
         pass

@@ -1,8 +1,8 @@
-import numpy as np
+import numpy as np  # noqa: D100
 import pandas as pd
 
 
-def get_bid(  # noqa: ANN201
+def get_bid(  # noqa: ANN201, D103
     operator_reference,  # noqa: ANN001
     auctioned_timeslot,  # noqa: ANN001
     auctioned_capacity,  # noqa: ANN001

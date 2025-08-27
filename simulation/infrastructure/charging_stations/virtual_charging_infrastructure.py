@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -27,7 +27,7 @@ class VirtualChargingInfrastructure(SimulationBase):
     This could e.g. be fleet operators that are only allowed to charge at locations where they buy capacity.
 
     This class replicates the public API of ChargingInfrastructure.
-    """
+    """  # noqa: D205, D404
 
     __slots__ = (
         "_availability",
@@ -84,7 +84,7 @@ class VirtualChargingInfrastructure(SimulationBase):
             self._listeners = None
 
     @property
-    def charging_stations(self) -> list[VirtualChargingStation]:
+    def charging_stations(self) -> list[VirtualChargingStation]:  # noqa: D102
         return self._charging_stations()
 
     def _charging_stations(self) -> list[VirtualChargingStation]:
@@ -95,7 +95,7 @@ class VirtualChargingInfrastructure(SimulationBase):
         else:
             return self._virtual_charging_stations
 
-    def get_available_locations(self, at_timeslot: int | None):  # noqa: ANN201
+    def get_available_locations(self, at_timeslot: int | None):  # noqa: ANN201, D102
         if at_timeslot is None:
             return [
                 location
@@ -112,7 +112,7 @@ class VirtualChargingInfrastructure(SimulationBase):
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_available_capacity(self, at_timeslot: int | None = None):  # noqa: ANN201
+    def get_available_capacity(self, at_timeslot: int | None = None):  # noqa: ANN201, D102
         if self._current_lookahead is None:
             return self._availability
         try:
@@ -124,7 +124,7 @@ class VirtualChargingInfrastructure(SimulationBase):
         """
         Defaults to `get_available_locations() at self._default_lookahead`
         which is the next timeslot that was already auctioned, or None
-        """
+        """  # noqa: D205, D400
         return self.get_available_locations(self._current_lookahead)
 
     def _update_virtual_cs(self, init: bool = False) -> None:
@@ -155,7 +155,7 @@ class VirtualChargingInfrastructure(SimulationBase):
                 else None,
             )
 
-    def update(self, availability: dict[str, int], timeslot: int | None = None) -> None:
+    def update(self, availability: dict[str, int], timeslot: int | None = None) -> None:  # noqa: D102
         try:
             die_if_unbearable(availability, dict[str, int])
             if self._current_lookahead is None:

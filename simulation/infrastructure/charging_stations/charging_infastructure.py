@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 
 
-class ChargingInfrastructure:
+class ChargingInfrastructure:  # noqa: D101
     __instance = None
 
     __slots__ = (
@@ -84,12 +84,12 @@ class ChargingInfrastructure:
             self._charging_stations.append(charging_station)
 
     @property
-    def charging_stations(self) -> list[ChargingStation]:
+    def charging_stations(self) -> list[ChargingStation]:  # noqa: D102
         return self._charging_stations
 
     @property
-    def auction(self) -> Auction | None:
+    def auction(self) -> Auction | None:  # noqa: D102
         return self._auction
 
-    def get_locations(self) -> list[str]:
+    def get_locations(self) -> list[str]:  # noqa: D102
         return self._location_list

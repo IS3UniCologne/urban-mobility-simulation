@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from copy import deepcopy
 from math import sqrt
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
 
 
-class ValueFunctionApproximator(SimulationBase):
+class ValueFunctionApproximator(SimulationBase):  # noqa: D101
     __slots__ = ("_weights",)
     # this function only looks at (d_terminal_x, d_terminal_y)
     function = (
@@ -64,20 +64,20 @@ class ValueFunctionApproximator(SimulationBase):
         else:
             self._weights = np.zeros(state_dim * action_dim)
 
-    def evaluate_value(self, state, action):  # noqa: ANN001, ANN201
+    def evaluate_value(self, state, action):  # noqa: ANN001, ANN201, D102
         s = state  # vector [d_terminal_x, d_terminal_y] # noqa: F841
         a = action  # binary vector [1, 2, 3, 4, 5, 6] # noqa: F841
         w = self._weights  # noqa: F841
         return eval(ValueFunctionApproximator.function)
 
     @staticmethod
-    def evaluate_gradient(state, action):  # noqa: ANN001, ANN205
+    def evaluate_gradient(state, action):  # noqa: ANN001, ANN205, D102
         s = state  # vector [d_terminal_x, d_terminal_y] # noqa: F841
         a = action  # binary vector [1, 2, 3, 4, 5, 6] # noqa: F841
         return eval(ValueFunctionApproximator.gradient)
 
     @property
-    def weights(self):  # noqa: ANN201
+    def weights(self):  # noqa: ANN201, D102
         return self._weights
 
     @weights.setter
@@ -85,7 +85,7 @@ class ValueFunctionApproximator(SimulationBase):
         self._weights = w
 
 
-class EpisodicSemiGradientSarsa(RLAgent, SimulationBase):
+class EpisodicSemiGradientSarsa(RLAgent, SimulationBase):  # noqa: D101
     def __init__(
         self, env: simpy.Environment, q_hat: ValueFunctionApproximator
     ) -> None:
@@ -99,7 +99,7 @@ class EpisodicSemiGradientSarsa(RLAgent, SimulationBase):
         # Value function
         self._q_hat = q_hat
 
-    def run(self, bus):  # noqa: ANN001, ANN201
+    def run(self, bus):  # noqa: ANN001, ANN201, D102
         while not bus.state == VehicleState.AT_TERMINAL_DESTINATION:
             # to get a value copy of a state we need to deepcopy, otherwise modifying self._env_state results in
             # modifying the "copy" which really is just a reference
@@ -139,7 +139,7 @@ class EpisodicSemiGradientSarsa(RLAgent, SimulationBase):
         down-left  \\ __ /  down-right
                     down
 
-        """
+        """  # noqa: D202, D301
 
         new_centroid = None
 
@@ -209,7 +209,7 @@ class EpisodicSemiGradientSarsa(RLAgent, SimulationBase):
         :param state: env state as given by the bus agent
         :param terminal: bool, is the state a terminal one?
         :return: numerical reward +/- or 0
-        """
+        """  # noqa: D202, D401, D404
 
         if terminal:
             return 10

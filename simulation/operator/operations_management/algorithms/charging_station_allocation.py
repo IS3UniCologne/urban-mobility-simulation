@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np  # noqa: D100
 import pandas as pd
 from pyomo.environ import (
     Binary,
@@ -22,7 +22,7 @@ from simulation.operator.ride_hailing_operator import RideHailingOperator
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 
-class DowntimeMinWithoutLookahead(SimulationBase):
+class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
     __slots__ = ("_operator",)
 
     def __init__(self, sim: SimulationContext, operator: RideHailingOperator) -> None:

@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     )
 
 
-class VirtualChargingStation(SimulationBase):
+class VirtualChargingStation(SimulationBase):  # noqa: D101
     __slots = (
         "_env",
         "_valid_timeframe",
@@ -55,22 +55,22 @@ class VirtualChargingStation(SimulationBase):
         self._current_queue_time = charging_station._current_queue_time  # noqa: SLF001
         self._virtual_charging_infrastructure = virtual_charging_infrastructure
 
-    def plug_in_notify(self) -> simpy.events.Generator:
+    def plug_in_notify(self) -> simpy.events.Generator:  # noqa: D102
         yield self._env.process(self._physical_charging_station.plug_in_notify())
         assert self._plugs.users == self._physical_charging_station.plugs.users
 
-    def plug_out_notify(self) -> simpy.events.Generator:
+    def plug_out_notify(self) -> simpy.events.Generator:  # noqa: D102
         yield self._env.process(self._physical_charging_station.plug_out_notify())
         assert self._plugs.users == self._physical_charging_station.plugs.users
 
-    def update_capacity(
+    def update_capacity(  # noqa: D102
         self, capacity: int, valid_timeframe: tuple[float, float] | None
     ) -> None:
         self._capacity = capacity
         self._valid_timeframe = valid_timeframe
 
     @property
-    def virtual_charging_infrastructure(self) -> VirtualChargingInfrastructure:
+    def virtual_charging_infrastructure(self) -> VirtualChargingInfrastructure:  # noqa: D102
         return self._virtual_charging_infrastructure
 
     @property
@@ -78,40 +78,40 @@ class VirtualChargingStation(SimulationBase):
         """ID of the charging station in relation to the charging infrastructure it belongs to.
 
         Note: This ID is not globally unique across the entire simulation.
-        For a globally unique identifier, use the `uid` property inherited from SimulationBase."""
+        For a globally unique identifier, use the `uid` property inherited from SimulationBase."""  # noqa: D209
         return self._cs_id
 
-    def valid_timeframe(self) -> tuple[float, float] | None:
+    def valid_timeframe(self) -> tuple[float, float] | None:  # noqa: D102
         return self._valid_timeframe
 
     @property
-    def capacity(self) -> int:
+    def capacity(self) -> int:  # noqa: D102
         return self._capacity
 
     @property
-    def plugs(self) -> simpy.PriorityResource:
+    def plugs(self) -> simpy.PriorityResource:  # noqa: D102
         return self._plugs
 
     @property
-    def power(self) -> float:
+    def power(self) -> float:  # noqa: D102
         return self._power
 
     @property
-    def centre(self) -> GeodesicPosition:
+    def centre(self) -> GeodesicPosition:  # noqa: D102
         return self._centre
 
     @property
-    def location(self) -> str:
+    def location(self) -> str:  # noqa: D102
         return self._location
 
     @property
-    def polygon(self) -> Polygon:
+    def polygon(self) -> Polygon:  # noqa: D102
         return self._polygon
 
     @property
-    def queue_size(self) -> int:
+    def queue_size(self) -> int:  # noqa: D102
         return self._queue_size
 
     @property
-    def current_queue_time(self) -> float:
+    def current_queue_time(self) -> float:  # noqa: D102
         return self._physical_charging_station.current_queue_time

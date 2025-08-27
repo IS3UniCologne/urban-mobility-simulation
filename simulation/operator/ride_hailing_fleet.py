@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from simulation.vehicle.vehicle import Vehicle
 
 
-class RideHailingFleet(VehicleFleet):
+class RideHailingFleet(VehicleFleet):  # noqa: D101
     __slots__ = ("_env", "_recharging_threshold")
 
     def __init__(self, deps: VehicleFleetDependencies) -> None:
@@ -83,7 +83,7 @@ class RideHailingFleet(VehicleFleet):
                     )
 
     @property
-    def operator(self) -> RideHailingOperator:
+    def operator(self) -> RideHailingOperator:  # noqa: D102
         return self._operator
 
     def _add_vehicle(self, vehicle: RideHailingVehicle):  # noqa: ANN202
@@ -169,7 +169,7 @@ class RideHailingFleet(VehicleFleet):
         Return all vehicles that need to be refueled/recharged
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
-        """
+        """  # noqa: D205, D400
         hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
         state_of_charge_threshold = state_of_charge_threshold[hour]
         return sum(
@@ -178,7 +178,7 @@ class RideHailingFleet(VehicleFleet):
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold
         )
 
-    def get_operational_costs(self):  # noqa: ANN201
+    def get_operational_costs(self):  # noqa: ANN201, D102
         operational_costs = 0
         all_vehicle_list = self._vehicles
         for vehicle in all_vehicle_list:
@@ -195,7 +195,7 @@ class RideHailingFleet(VehicleFleet):
         Return all vehicles that need to be refueled/recharged in a region
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
-        """
+        """  # noqa: D205, D400
         below_soc_level_vehicles = []
         cars_in_area = self.vehicles_in_region(region)
         # TODO: Check if this is necessary
@@ -207,10 +207,10 @@ class RideHailingFleet(VehicleFleet):
 
         return below_soc_level_vehicles
 
-    def count_cars(self):  # noqa: ANN201
+    def count_cars(self):  # noqa: ANN201, D102
         return len(self._vehicles)
 
-    def count_total(self):  # noqa: ANN201
+    def count_total(self):  # noqa: ANN201, D102
         return self.count_cars()
 
     def calc_supply_per_region(self):  # noqa: ANN201
@@ -218,7 +218,7 @@ class RideHailingFleet(VehicleFleet):
         Return a list of number of vehicles in each region
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
-        """
+        """  # noqa: D205, D400
         available_vehicles = ["RideHailingCar"]
         values = [0] * len(available_vehicles)
 

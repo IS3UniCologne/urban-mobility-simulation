@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, cast
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 class RideHailingMPChargingOperations(RideHailingOperations):
     """
     Ridehailing Operations for Charging with Mathematical Programming / Optimization
-    """
+    """  # noqa: D200, D400
 
     # TODO: Do we want to keep this in its current form as part of the core simulation?
     __slots__ = (
@@ -57,10 +57,10 @@ class RideHailingMPChargingOperations(RideHailingOperations):
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
 
     @property
-    def config(self) -> RideHailingMPChargingOperationsConfig:
+    def config(self) -> RideHailingMPChargingOperationsConfig:  # noqa: D102
         return cast("RideHailingMPChargingOperationsConfig", self._config)
 
-    def execute(self) -> None:
+    def execute(self) -> None:  # noqa: D102
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             sim=self._sim,
@@ -158,5 +158,5 @@ class RideHailingMPChargingOperations(RideHailingOperations):
         )
 
     @property
-    def task_transactions(self):  # noqa: ANN201
+    def task_transactions(self):  # noqa: ANN201, D102
         return pd.DataFrame(self._task_transactions)
