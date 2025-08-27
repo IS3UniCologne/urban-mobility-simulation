@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 from simpy import AnyOf
@@ -8,20 +8,24 @@ from simpy import AnyOf
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
-from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.operations_management.ride_hailing_operations import (
+    RideHailingOperations,
+)
 from simulation.operator.operations_management.service_tasks.charging_task_ridehailing import (
     ChargingTaskRidehailing,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
 
 if TYPE_CHECKING:
-    from simulation.context.simulation_context import SimulationContext
-    from simulation.helper.configuration.configuration import OperationsConfig
-    from simulation.operator.ride_hailing_operator import RideHailingOperator
-    from simulation.world.world import World
+    from simulation.helper.configuration.configuration import (
+        RideHailingMPChargingOperationsConfig,
+    )
+    from simulation.operator.operations_management.operations import (
+        OperationsDependencies,
+    )
 
 
-class RideHailingMPChargingOperations(OperationsInterface):
+class RideHailingMPChargingOperations(RideHailingOperations):
     """
     Ridehailing Operations for Charging with Mathematical Programming / Optimization
     """
@@ -38,33 +42,29 @@ class RideHailingMPChargingOperations(OperationsInterface):
         "_world",
     )
 
-    def __init__(  # noqa: ANN204
-        self,
-        sim: SimulationContext,
-        operations_config: OperationsConfig,
-        distance_matrix: pd.DataFrame,
-        world: World,
-        operator: RideHailingOperator,
-        algo=None,  # optimization problem  # noqa: ANN001
-    ):
-        super().__init__(sim)
+    def __init__(self, deps: OperationsDependencies) -> None:
+        super().__init__(deps)
 
-        self._sim = sim
-        self._world = world
-        self._time_between_operations = operations_config.TIME_BETWEEN_OPERATIONS
-        self._state_of_charge_threshold = operations_config.RECHARGE_THRESHOLD
-        self._algo = algo
+        self._sim = deps.sim
+        self._world = deps.world
+        self._time_between_operations = deps.operations_config.TIME_BETWEEN_OPERATIONS
+        self._state_of_charge_threshold = deps.operations_config.RECHARGE_THRESHOLD
+        self._algo = self.config.CHARGING_ALGORITHM_TYPE(deps.sim, deps.operator)
 
-        self._task_queue = TaskQueue(sim)
+        self._task_queue = TaskQueue(deps.sim)
         self._task_transactions = []
 
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
+
+    @property
+    def config(self) -> RideHailingMPChargingOperationsConfig:
+        return cast("RideHailingMPChargingOperationsConfig", self._config)
 
     def execute(self) -> None:
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             sim=self._sim,
-            charging_infrastructure=self._operator_reference.charging_infrastructure,
+            charging_infrastructure=self.operator.charging_infrastructure,
             lookahead=None,
             use_virtual_cs=True,
         )
@@ -81,10 +81,8 @@ class RideHailingMPChargingOperations(OperationsInterface):
             yield self._env.timeout(self._time_between_operations)
 
             # Retrieve low SOC vehicles
-            vehicles_to_charge = (
-                self._operator_reference.fleet.mark_vehicles_to_be_charged(
-                    self._state_of_charge_threshold
-                )
+            vehicles_to_charge = self.operator.fleet.mark_vehicles_to_be_charged(
+                self._state_of_charge_threshold
             )
             if not vehicles_to_charge:
                 continue
@@ -104,7 +102,7 @@ class RideHailingMPChargingOperations(OperationsInterface):
                 c = charging_allocation["charging_station"]
 
                 charging_task = ChargingTaskRidehailing(
-                    self._env,
+                    sim=self._sim,
                     origin=v.position.get_region_id(),
                     destination=c.location,
                     number_of_vehicles_to_charge=1,

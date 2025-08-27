@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from simulation.operator.vehicle_allocation_engine import (
+    AllocationEngine,
+    AllocationEngineDependencies,
+)
+
 if TYPE_CHECKING:
     from simulation.agent.user import RideHailingUser
-    from simulation.context.simulation_context import SimulationContext
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -13,12 +17,9 @@ from simulation.helper.configuration.enums import VehicleState
 from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
-from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
-)
 
 
-class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
+class RideHailingAllocationEngine(AllocationEngine):
     __slots__ = (
         "_env",
         "_vehicle_assignment_ids",
@@ -26,9 +27,9 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
         "_vehicles_assigned_to_users",
     )
 
-    def __init__(self, sim: SimulationContext) -> None:
-        super().__init__(sim)
-        self._env = sim.env
+    def __init__(self, deps: AllocationEngineDependencies) -> None:
+        super().__init__(deps)
+        self._env = deps.sim.env
         self._vehicles_assigned_to_users = self._env.event()
         self._env.process(self.run())
         self._vehicle_assignment_requests = []
@@ -64,7 +65,6 @@ class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
         :param selected_transportation_alternative:
         :return:
         """
-
         try:
             self._add_request(user, selected_transportation_alternative)
         except Exception:

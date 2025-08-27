@@ -7,7 +7,7 @@ from simulation.helper.configuration.configuration import OperationsConfig
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
-from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.interface.operations_interface import OperationsInterface
 from simulation.operator.operations_management.ridehailing_base_charging_operations import (
     RideHailingBaseChargingOperations,
 )

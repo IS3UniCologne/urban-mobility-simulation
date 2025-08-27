@@ -18,13 +18,22 @@ class SimulationBase:
     in all log records without needing to specify it manually.
     """
 
-    __slots__ = ("_logger", "_uid")
+    __slots__ = ("_id", "_logger", "_uid")
 
     def __init__(self, sim: SimulationContext) -> None:
         # Initialize the unique identifier for the instance.
         cls = self.__class__
-        self._uid = sim.uid_manager.generate_uid(cls)
+        self._id, self._uid = sim.uid_manager.generate_uid(cls)
         self._logger: UidLoggerAdapter = sim.log_manager.get_uid_logger(self._uid)
+
+    @property
+    def id(self) -> int:
+        """Return the integer ID for the instance.
+
+        Warning: This ID is not globally unique across different classes.
+        For a globally unique identifier, use the `uid` property instead.
+        """
+        return self._id
 
     @property
     def uid(self) -> str:

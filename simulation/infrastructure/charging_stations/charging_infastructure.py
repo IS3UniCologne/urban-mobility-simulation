@@ -75,6 +75,7 @@ class ChargingInfrastructure:
         for i, location in enumerate(self._location_list):
             charging_station = ChargingStation(
                 sim=self._sim,
+                cs_id=i,
                 location=location,
                 power=self._power_list[i],
                 capacity=self._capacity_list[i],

@@ -12,11 +12,11 @@ from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
+    AllocationEngineInterface,
 )
 
 
-class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
+class PublicTransportAllocationEngine(AllocationEngineInterface):
     __slots__ = ("_env", "_sim", "_vehicles_assigned_to_users")
 
     def __init__(self, sim: SimulationContext) -> None:

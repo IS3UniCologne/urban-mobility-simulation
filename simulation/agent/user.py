@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     )
     from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
     from ..operator.interface.vehicle_allocation_engine_interface import (
-        VehicleAllocationEngineInterface,
+        AllocationEngineInterface,
     )
     from ..tasks.transport_task import TransportTask
     from ..vehicle.public_transit_bus import Bus
@@ -88,7 +88,7 @@ class User(Agent, DriverInterface, TrackingInterface):
         transport_task: TransportTask,
         transportation_search_service: SearchEngineInterface,
         payment_service: OperatorInterface,
-        vehicle_assignment_service: VehicleAllocationEngineInterface,
+        vehicle_assignment_service: AllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_type: PopulationType,
     ) -> None:
@@ -633,7 +633,7 @@ class TransitUser(User, PassengerInterface, TrackingInterface):
         transport_task: TransportTask,
         transportation_search_service: SearchEngineInterface,
         payment_service: OperatorInterface,
-        vehicle_assignment_service: VehicleAllocationEngineInterface,
+        vehicle_assignment_service: AllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_type: PopulationType,
         world: world.World,
@@ -1125,7 +1125,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
         transport_task: TransportTask,
         transportation_search_service: SearchEngineInterface,
         payment_service: OperatorInterface,
-        vehicle_assignment_service: VehicleAllocationEngineInterface,
+        vehicle_assignment_service: AllocationEngineInterface,
         vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
         population_type: PopulationType,
     ) -> None:

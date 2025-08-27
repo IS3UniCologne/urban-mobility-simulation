@@ -58,6 +58,7 @@ class Transaction(NamedTuple):
     price: float
     distance: float
     duration: float
+    # TODO: Change to VehicleType Enum
     selected_vehicle_type: str
     state: TransactionState
     viable_vehicle_types: dict[VehicleType, int]

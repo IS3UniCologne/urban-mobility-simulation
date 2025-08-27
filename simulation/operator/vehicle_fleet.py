@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from abc import ABC
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import simpy
@@ -11,6 +11,8 @@ from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import FleetConfig
+    from simulation.operator.interface.operator_interface import OperatorInterface
     from simulation.vehicle.vehicle import Vehicle
     from simulation.world.world import World
 
@@ -19,16 +21,41 @@ class VehicleFleetError(Exception):
     """Base class for all vehicle fleet-related exceptions."""
 
 
-class VehicleFleet(ABC, SimulationBase):
+@dataclass(frozen=True, slots=True)
+class VehicleFleetDependencies:
+    """Dependencies required for the VehicleFleet.
+
+    This class ensures all subclasses maintain the same init signature.
+
+    Parameters
+    ----------
+    operator : OperatorInterface
+        The operator managing the vehicle fleet.
+    sim : SimulationContext
+        The simulation context.
+    world : World
+        The world instance.
+    config : FleetConfig
+        The fleet configuration.
+    """
+
+    operator: OperatorInterface
+    sim: SimulationContext
+    world: World
+    config: FleetConfig
+
+
+class VehicleFleet(SimulationBase):
     """Class representing a fleet of vehicles.
 
     Contains methods to manage and track vehicles within the fleet.
     """
 
     __slots__ = (
+        "_config",
+        "_operator",
         "_resource",
         "_sim",
-        "_tracking",
         "_vehicles",
         "_vehicles_by_region",
         "_vehicles_by_state",
@@ -36,17 +63,50 @@ class VehicleFleet(ABC, SimulationBase):
         "_world",
     )
 
-    def __init__(self, sim: SimulationContext, world: World) -> None:
-        super().__init__(sim)
-        self._sim = sim
+    def __init__(self, deps: VehicleFleetDependencies) -> None:
+        super().__init__(deps.sim)
+
+        self._sim = deps.sim
+        self._operator = deps.operator
+        self._world = deps.world
+        self._config = deps.config
+
         self._vehicles: list[Vehicle] = []
 
         # Vehicle collections for faster access. We use sets for faster removals and intersections
         self._vehicles_by_type: dict[VehicleType, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_region: dict[str, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
-        self._resource = simpy.Resource(sim.env)  # Semaphore
-        self._world = world
+        self._resource = simpy.Resource(deps.sim.env)  # Semaphore
+
+    @classmethod
+    def from_deps(cls, deps: VehicleFleetDependencies) -> VehicleFleet:
+        fleet_type = deps.config.FLEET_TYPE
+        return fleet_type(deps)
+
+    @property
+    def config(self) -> FleetConfig:
+        """Get the fleet configuration.
+
+        Returns
+        -------
+        FleetConfig
+            The fleet configuration.
+
+        """
+        return self._config
+
+    @property
+    def operator(self) -> OperatorInterface:
+        """Get the operator managing the vehicle fleet.
+
+        Returns
+        -------
+        OperatorInterface
+            The operator managing the vehicle fleet.
+
+        """
+        return self._operator
 
     @property
     def vehicle_types(self) -> list[VehicleType]:

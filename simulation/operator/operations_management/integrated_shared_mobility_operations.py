@@ -8,7 +8,7 @@ import pandas as pd
 
 from simulation.helper.configuration.enums import VehicleType
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
-from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.interface.operations_interface import OperationsInterface
 from simulation.operator.operations_management.service_tasks.charging_task import (
     ChargingTask,
 )
@@ -113,7 +113,6 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
         """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
         """
-
         while True:
             yield self._env.timeout(self._time_between_operations)
 
@@ -408,7 +407,6 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                 [UNUSED] used_capacity = [1, 3, 5] => per available vehicle mode returns number of service workers assigned to charge these vehicles
                                           => 1 SW for Kick Scooter, 3 for Shared Scooter, 5 for Shared Cars
         """
-
         # Fleet State
         state = fleet_state
 
@@ -616,7 +614,6 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         for example: Input 25 Service Workers
                                     => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
         """
-
         current_low_soc_supply = []
 
         for mode in self._available_vehicle_types:
@@ -1006,7 +1003,6 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                         for example: Input 25 Service Workers
                                     => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
         """
-
         current_supply_mismatch = []
 
         max_unit_assignment = []

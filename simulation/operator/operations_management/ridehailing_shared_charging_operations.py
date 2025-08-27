@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
+from simulation.operator.interface.operations_interface import OperationsInterface
 from simulation.operator.operations_management.algorithms.distance_based_bidding_strategy import (
     get_bid,
 )
-from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operations_management.ridehailing_base_charging_operations import (
     RideHailingBaseChargingOperations,
 )

@@ -7,17 +7,17 @@ if TYPE_CHECKING:
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
+    from simulation.operator.interface.operations_interface import OperationsInterface
     from simulation.operator.interface.search_engine_interface import (
         SearchEngineInterface,
     )
     from simulation.operator.interface.vehicle_allocation_engine_interface import (
-        VehicleAllocationEngineInterface,
+        AllocationEngineInterface,
     )
-    from simulation.operator.operations_management.operations import OperationsInterface
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.tasks.transport_task import TransportTask
 
-from simulation.helper.configuration.enums import OperatorMode, TransactionState
+from simulation.helper.configuration.enums import TransactionState
 from simulation.helper.time import SimulationTime
 from simulation.infrastructure.helper import timetable
 from simulation.operator.operator import Operator
@@ -38,7 +38,7 @@ class PublicTransitOperator(Operator):
         fleet: VehicleFleet,
         operations: OperationsInterface,
         search_engine: SearchEngineInterface,
-        allocation_engine: VehicleAllocationEngineInterface,
+        allocation_engine: AllocationEngineInterface,
     ) -> None:
         super().__init__(
             sim=sim,
@@ -47,7 +47,6 @@ class PublicTransitOperator(Operator):
             search_engine=search_engine,
             allocation_engine=allocation_engine,
         )
-        self._mode = OperatorMode.PUBLIC_TRANSIT
 
         # TODO: Do we need this? Isn't this already covered by the transaction log?
         self._tracked_demands = set()

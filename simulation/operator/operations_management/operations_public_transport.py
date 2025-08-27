@@ -17,7 +17,7 @@ from simulation.helper.time import SimulationTime
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
 from simulation.infrastructure.transit_network.stop import Stop
-from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.interface.operations_interface import OperationsInterface
 
 
 # TODO: rename this to ____Operations like the others ?
@@ -57,7 +57,6 @@ class OperationsPublicTransport(OperationsInterface):
         """
         TransitOperator Lifecycle
         """
-
         while True:
             try:
                 self.logger.debug(

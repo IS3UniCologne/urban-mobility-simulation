@@ -211,7 +211,6 @@ module = [
   "simulation.operator.data_transfer_object.vehicle_allocation",
   "simulation.operator.fleet_factory",
   "simulation.operator.interface.payment_interface",
-  "simulation.operator.interface.search_engine_interface",
   "simulation.operator.interface.vehicle_allocation_engine_interface",
   "simulation.operator.mixed_ride_hailing_fleet",
   "simulation.operator.mixed_shared_vehicle_fleet",
