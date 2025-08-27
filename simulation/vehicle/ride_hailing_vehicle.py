@@ -85,7 +85,7 @@ class RideHailingVehicle(Vehicle):  # noqa: D101
         fleet: VehicleFleet,
         position: Position,
         vehicle_config: VehicleConfig,
-        driver_availability_vector: list[float] | None,
+        driver_availability_vector: list[int] | None,
     ) -> None:
         super().__init__(
             sim=sim, fleet=fleet, position=position, vehicle_config=vehicle_config

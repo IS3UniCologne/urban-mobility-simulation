@@ -193,7 +193,7 @@ module = [
   "simulation.operator.fleet_factory",
   "simulation.operator.interface.payment_interface",
   "simulation.operator.interface.vehicle_allocation_engine_interface",
-  "simulation.operator.mixed_ride_hailing_fleet",
+  "simulation.operator.ride_hailing_fleet",
   "simulation.operator.mixed_shared_vehicle_fleet",
   "simulation.operator.operations_management.algorithms.charging_station_allocation",
   "simulation.operator.operations_management.algorithms.distance_based_bidding_strategy",

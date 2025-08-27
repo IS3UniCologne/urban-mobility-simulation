@@ -282,13 +282,13 @@ class FleetConfig(ConfigBaseModel):
 
     VEHICLES: dict[VehicleConfig, int]  # TODO: update this to use distributions
 
-    RH_AVAILABILITY: list[float] | None = Field(default=None)
-
 
 class RideHailingFleetConfig(FleetConfig):
     """Configuration for ride-hailing fleet parameters."""
 
     FLEET_TYPE: type[VehicleFleet] = RideHailingFleet
+
+    RH_AVAILABILITY: list[float]
 
 
 class SharedVehicleFleetConfig(FleetConfig):
