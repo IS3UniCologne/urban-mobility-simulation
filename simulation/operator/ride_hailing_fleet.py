@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, cast
 import pandas as pd
 
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import RideHailingFleetConfig
 from simulation.helper.configuration.enums import (
     AutonomyType,
     VehicleState,
@@ -53,10 +52,6 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
                     vehicle_config.VEHICLE_TYPE,
                 )
 
-            if not isinstance(deps.config, RideHailingFleetConfig):
-                raise TypeError(
-                    "RideHailingFleet config must be an instance of RideHailingFleetConfig"
-                )
             if vehicle_config.AUTONOMY_TYPE == AutonomyType.HUMAN_DRIVEN:
                 driver_availability_vector = [
                     round(float(x) * total_count) for x in deps.config.RH_AVAILABILITY
