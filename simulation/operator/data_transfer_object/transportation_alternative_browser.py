@@ -1,9 +1,6 @@
 from simulation.operator.data_transfer_object.transportation_alternative import (  # noqa: D100
     TransportationAlternative,
 )
-from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
-    TransportationAlternativeRideHailing,
-)
 
 
 class TransportationAlternativeBrowser:  # noqa: D101
@@ -13,9 +10,7 @@ class TransportationAlternativeBrowser:  # noqa: D101
         self._transportation_alternatives: list[TransportationAlternative] = []
 
     def add_transportation_alternative(  # noqa: D102
-        self,
-        transportation_alternative: TransportationAlternative
-        | TransportationAlternativeRideHailing,  # TODO: this should be a common interface
+        self, transportation_alternative: TransportationAlternative
     ) -> None:
         self._transportation_alternatives.append(transportation_alternative)
 

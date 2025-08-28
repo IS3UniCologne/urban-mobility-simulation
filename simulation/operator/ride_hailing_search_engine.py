@@ -2,6 +2,9 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, cast
 
+from simulation.operator.data_transfer_object.transportation_alternative import (
+    TransportationAlternative,
+)
 from simulation.operator.search_engine import SearchEngine, SearchEngineDependencies
 
 if TYPE_CHECKING:
@@ -10,14 +13,12 @@ if TYPE_CHECKING:
     )
     from simulation.operator.ride_hailing_operator import RideHailingOperator
     from simulation.tasks.transportation_search_task import TransportationSearchTask
+    from simulation.vehicle.vehicle import Vehicle
 
 from simulation.helper.configuration.enums import AutonomyType, VehicleState
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
-)
-from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
-    TransportationAlternativeRideHailing,
 )
 
 
@@ -110,9 +111,22 @@ class RideHailingSearchEngine(SearchEngine):
                 self._min_price,
             )
 
+            # calculate pick up time
+
+            pickup_time = self._calculate_pickup_time(
+                vehicle=car, route_to_pick_up=route_to_pick_up
+            )
+
             # Put together
-            transportation_alternative = TransportationAlternativeRideHailing(
-                car, route, price, trip_duration, distance, 3, route_to_pick_up
+            transportation_alternative = TransportationAlternative(
+                vehicle=car,
+                route=route,
+                price=price,
+                duration=trip_duration,
+                distance=distance,
+                convenience=3,
+                route_to_pickup=route_to_pick_up,
+                pick_up_time=pickup_time,
             )
 
             total_distance = distance + distance_to_pick_up
@@ -147,9 +161,20 @@ class RideHailingSearchEngine(SearchEngine):
                 * self._AV_price_reduction
             )
 
+            pickup_time = self._calculate_pickup_time(
+                vehicle=car, route_to_pick_up=route_to_pick_up
+            )
+
             # Put together
-            transportation_alternative = TransportationAlternativeRideHailing(
-                car, route, price, trip_duration, distance, 3, route_to_pick_up
+            transportation_alternative = TransportationAlternative(
+                vehicle=car,
+                route=route,
+                price=price,
+                duration=trip_duration,
+                distance=distance,
+                convenience=3,
+                route_to_pickup=route_to_pick_up,
+                pick_up_time=pickup_time,
             )
 
             total_distance = distance + distance_to_pick_up
@@ -160,3 +185,16 @@ class RideHailingSearchEngine(SearchEngine):
                 browser.add_transportation_alternative(transportation_alternative)
 
         return browser
+
+    def _calculate_pickup_time(
+        self, vehicle: Vehicle, route_to_pick_up: Route
+    ) -> float:
+        if vehicle.state == VehicleState.PARKING:
+            return route_to_pick_up.distance / vehicle.velocity
+
+        elif vehicle.state == VehicleState.DRIVING:
+            return (
+                route_to_pick_up.distance / vehicle.velocity
+                + vehicle.estimated_completion_time
+                - self._sim.env.now
+            )

@@ -41,9 +41,6 @@ if TYPE_CHECKING:
     from simulation.world.world import World
 
 from simulation.helper.configuration.enums import OperatorMode, TransactionState
-from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
-    TransportationAlternativeRideHailing,
-)
 from simulation.operator.interface.operator_interface import OperatorInterface
 from simulation.operator.transactions import TransactionLog
 from simulation.operator.transactions.transaction import Transaction
@@ -236,9 +233,7 @@ class Operator(SimulationBase, OperatorInterface):
     def log_transaction(
         self,
         transportation_task: TransportTask,
-        transportation_alternative: TransportationAlternative
-        | TransportationAlternativeRideHailing
-        | None,
+        transportation_alternative: TransportationAlternative | None,
         state: TransactionState,
         trip_record: None | TripRecord = None,
     ) -> None:
@@ -273,9 +268,7 @@ class Operator(SimulationBase, OperatorInterface):
                 energy_consumption=0.0,
                 viable_vehicle_types=transportation_task.viable_vehicle_types,
             )
-        elif isinstance(
-            transportation_alternative, TransportationAlternativeRideHailing
-        ):
+        elif transportation_alternative.pick_up_time is not None:
             transaction: Transaction = Transaction(
                 vehicle_uid=transportation_alternative.vehicle.uid,
                 origin=transportation_alternative.route.origin.get_region_id(),

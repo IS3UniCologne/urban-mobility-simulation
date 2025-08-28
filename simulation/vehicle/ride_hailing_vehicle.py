@@ -279,7 +279,7 @@ class RideHailingVehicle(Vehicle):  # noqa: D101
         # Consumed Energy (kWh)
         user_energy_consumption = vehicle_soc_before_driving - vehicle_soc_after_driving
 
-        vehicle_assignment.associated_transportation_alternative.set_energy_consumed(
+        vehicle_assignment.associated_transportation_alternative.increase_energy_consumed(
             user_energy_consumption
         )
 
