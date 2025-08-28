@@ -79,8 +79,8 @@ class VehicleFleet(SimulationBase):
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
 
-    @classmethod
-    def from_deps(cls, deps: VehicleFleetDependencies) -> VehicleFleet:  # noqa: D102
+    @staticmethod
+    def from_deps(deps: VehicleFleetDependencies) -> VehicleFleet:  # noqa: D102
         fleet_type = deps.config.FLEET_TYPE
         return fleet_type(deps)
 

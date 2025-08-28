@@ -85,8 +85,8 @@ class Operator(SimulationBase, OperatorInterface):
 
         self._transaction_log: TransactionLog = TransactionLog()
 
-    @classmethod
-    def from_deps(cls, deps: OperatorDependencies) -> Operator:
+    @staticmethod
+    def from_deps(deps: OperatorDependencies) -> Operator:
         """Create an Operator instance from dependencies.
 
         Automatically selects the appropriate operator implementation based on the configuration.
