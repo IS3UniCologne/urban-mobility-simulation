@@ -7,8 +7,8 @@ if TYPE_CHECKING:
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
-    from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
-        TransportationAlternativeRideHailing,
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
     )
     from simulation.operator.operations_management.ride_hailing_operations import (
         RideHailingOperations,
@@ -62,7 +62,7 @@ class RideHailingOperator(Operator):
         self,
         user,  # noqa: ANN001
         transportation_task: TransportTask,
-        selected_transportation_alternative: TransportationAlternativeRideHailing,
+        selected_transportation_alternative: TransportationAlternative,
     ):
         payment = selected_transportation_alternative.price
         # # we need to pay the driver costs
