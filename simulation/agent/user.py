@@ -6,7 +6,9 @@ import numpy as np
 import simpy
 
 from simulation.helper.configuration.enums import (
+    AutonomyType,
     PopulationType,
+    PropulsionType,
     UserState,
     VehicleState,
     VehicleType,
@@ -1315,8 +1317,9 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):  # noqa: D101
                         alternative.pick_up_time,
                         alternative.price,
                         alternative.convenience,
-                        alternative.environment,
-                        alternative.autonomous_vehicle,
+                        alternative.vehicle.propulsion_type
+                        == PropulsionType.BATTERY_ELECTRIC,
+                        alternative.vehicle.autonomy_type == AutonomyType.AUTONOMOUS,
                         alternative,
                     )
                 )
@@ -1384,12 +1387,17 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):  # noqa: D101
                 1,
                 alternative.price,
                 alternative.pick_up_time,
-                alternative.electric_vehicle,
+                int(
+                    alternative.vehicle.propulsion_type
+                    == PropulsionType.BATTERY_ELECTRIC
+                ),
                 alternative.duration,
-                alternative.autonomous_vehicle,
-                (1 - alternative.autonomous_vehicle),
-                alternative.autonomous_vehicle * self._AV_truster,
-                (1 - alternative.autonomous_vehicle) * self._AV_truster,
+                int(alternative.vehicle.autonomy_type == AutonomyType.AUTONOMOUS),
+                (1 - int(alternative.vehicle.autonomy_type == AutonomyType.AUTONOMOUS)),
+                int(alternative.vehicle.autonomy_type == AutonomyType.AUTONOMOUS)
+                * self._AV_truster,
+                (1 - int(alternative.vehicle.autonomy_type == AutonomyType.AUTONOMOUS))
+                * self._AV_truster,
             ]
         )
         utility = np.dot(coefficients, independent_variables)
@@ -1406,7 +1414,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):  # noqa: D101
         for (
             transportation_alternative
         ) in available_transportation_alternatives.transportation_alternatives:
-            transportation_alternative._utility = (  # noqa: SLF001
+            transportation_alternative.utility = (
                 self.transportation_alternative_utility_function(
                     transportation_alternative
                 )
@@ -1484,7 +1492,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):  # noqa: D101
         # Select first transportation alternative (transportation preferences are already in place see search_for_alt method)
         # selected_transportation_alternative = available_transportation_alternatives.transportation_alternatives[0]
 
-        selected_transportation_alternative.set_waiting_time(self._waiting_time)
+        selected_transportation_alternative.increase_waiting_time(self._waiting_time)
         # Trigger next event
         self._transportation_alternatives_selected.succeed(
             selected_transportation_alternative
@@ -1565,7 +1573,7 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):  # noqa: D101
         self.unmount_vehicle_as_driver(vehicle_allocation.vehicle)
 
         # Update Trip Information
-        vehicle_allocation.associated_transportation_alternative.set_energy_consumed(
+        vehicle_allocation.associated_transportation_alternative.increase_energy_consumed(
             energy_consumed
         )
         # Trigger next event

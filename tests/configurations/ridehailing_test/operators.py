@@ -76,8 +76,7 @@ RH_AVAILABILITY = [
 ]
 
 fleet1 = RideHailingFleetConfig(
-    VEHICLES={rh_car_autonomous: 250, rh_car_human: 250},
-    RH_AVAILABILITY=RH_AVAILABILITY,
+    VEHICLES={rh_car_autonomous: 25}, RH_AVAILABILITY=RH_AVAILABILITY
 )
 
 
@@ -108,6 +107,54 @@ charging_infrastructure_1 = ChargingInfrastructureConfig(
 
 
 operator_1 = RideHailingOperatorConfig(
+    FLEET_CONFIG=fleet1,
+    CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
+    OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
+        OPERATIONS_START=15,
+        OPERATIONS_DURATION=50,
+        TIME_BETWEEN_OPERATIONS=15,
+        RECHARGE_THRESHOLD=[
+            0.40,
+            0.45,
+            0.50,
+            0.55,
+            0.52,
+            0.50,
+            0.48,
+            0.45,
+            0.45,
+            0.42,
+            0.40,
+            0.40,
+            0.40,
+            0.40,
+            0.40,
+            0.38,
+            0.35,
+            0.32,
+            0.30,
+            0.30,
+            0.27,
+            0.30,
+            0.32,
+            0.35,
+        ],
+        VEHICLE_RELOCATION_VELOCITY=9.54,
+        AV_PRICE_REDUCTION=0.90,
+        MAX_PICKUP_DISTANCE=10000,
+        PRICE_ENTERING=2.0,
+        PRICE_PER_MINUTE=0.35,
+        PRICE_PER_KM=1.3,
+        MINIMUM_PRICE=5.0,
+        DISCOUNT_RATE=0.0,
+        DRIVER_PAYMENT_SHARE=0.75,
+    ),
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(),
+    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(),
+)
+
+
+operator_2 = RideHailingOperatorConfig(
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
     OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
