@@ -145,7 +145,7 @@ class TransportationAlternative:  # noqa: D101
         self._waiting_time += waiting_time
 
     def __str__(self) -> str:  # noqa: D105
-        return f"Vehicle {self._vehicle}, Price {self._price}, Duration {self._duration}, Distance {self._distance}, Convenience {self._convenience}, Distance to pickup {self._route_to_pickup.distance}, Pick up time {self._pick_up_time}"
+        return f"Vehicle {self._vehicle}, Price {self._price}, Duration {self._duration}, Distance {self._distance}, Convenience {self._convenience} {', Distance to pickup ' + str(self._route_to_pickup.distance) + ', Pick up time ' + str(self._pick_up_time) if self._route_to_pickup else ''},"
 
     def __repr__(self) -> str:  # noqa: D105
         return self.__str__()
