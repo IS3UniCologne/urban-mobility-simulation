@@ -85,7 +85,7 @@ class ChargingTask(ServiceTask):  # noqa: D101
             for vehicle in potential_vehicles_to_charge:
                 # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
                 if (
-                    vehicle.type == self._vehicle_type
+                    vehicle.vehicle_type == self._vehicle_type
                     and vehicle.state == VehicleState.PARKING
                     and len(selected_vehicles_to_charge)
                     < self._number_of_vehicles_to_charge
