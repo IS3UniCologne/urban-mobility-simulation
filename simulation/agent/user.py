@@ -367,7 +367,7 @@ class User(Agent, DriverInterface, TrackingInterface):
             filtered_list.sort(key=lambda vehicle: (vehicle[2], vehicle[0]))
 
         if filtered_list:
-            distance, price, convenience, filtered_list = zip(*filtered_list)
+            distance, price, convenience, filtered_list = zip(*filtered_list)  # noqa: RUF059
             filtered_list = list(filtered_list)
 
         # Only Consider Alternatives matching Customer needs
@@ -1336,11 +1336,11 @@ class RideHailingUser(Agent, DriverInterface, TrackingInterface):
 
             if final_filtered_list:
                 (
-                    distance,
-                    price,
-                    convenience_ranking,
-                    environment_ranking,
-                    technology_skeptical_ranking,
+                    distance,  # noqa: RUF059
+                    price,  # noqa: RUF059
+                    convenience_ranking,  # noqa: RUF059
+                    environment_ranking,  # noqa: RUF059
+                    technology_skeptical_ranking,  # noqa: RUF059
                     final_filtered_list,
                 ) = zip(*final_filtered_list)
                 filtered_list = list(final_filtered_list)

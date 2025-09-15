@@ -127,7 +127,7 @@ def profit_analysis(profit_data, service_level_data):  # noqa: ANN001, ANN201
         "Reoptimisation Benchmark"
     ] + np.random.uniform(0.003, 0.007)
     print(service_level_data["Reoptimisation Benchmark"])  # noqa: T201
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
+    _, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
     ax[0].plot(
         profit_data["Episode"],
         profit_data["Limited_HDQN"],
