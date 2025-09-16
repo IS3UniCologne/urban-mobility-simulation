@@ -3062,14 +3062,14 @@ wheels = [
 
 [[package]]
 name = "types-shapely"
-version = "2.1.0.20250822"
+version = "2.1.0.20250915"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/be/4a/fde686d8a9d0759ce2a22e97d617e7028e57f154c8ef3a3e3d94665c93ce/types_shapely-2.1.0.20250822.tar.gz", hash = "sha256:02ff9f1c149747e6cfd95607446cd5f300d88c0bd28270c2491e3418a1e39fe2", size = 26266, upload-time = "2025-08-22T03:03:50.545Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/11/48/d47d34e3ecc03226fee3b43fc3d8516c99b12ea52f32c7ccbc5aebe68559/types_shapely-2.1.0.20250915.tar.gz", hash = "sha256:3e7d52722414e65b5bd0be5a13f4ec98a2d80315f60f95fc540eb81d8553240f", size = 26352, upload-time = "2025-09-15T03:01:29.17Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/07/68f9a7be42e69bc8a4a08317d44824b3b5bb7dffd9cbf7f1b2ab85c6990b/types_shapely-2.1.0.20250822-py3-none-any.whl", hash = "sha256:d99ee4158ced475fc9ccfc24de8d59b618c45d66aaa4ccd011e66244abdc9f27", size = 37787, upload-time = "2025-08-22T03:03:49.51Z" },
+    { url = "https://files.pythonhosted.org/packages/da/28/639f134d226d52fe25e57f2b2c4cdb0dfdb92c571e48f030a091f5a38cb7/types_shapely-2.1.0.20250915-py3-none-any.whl", hash = "sha256:df703f9f0425ece678194f37fddb0552bf8a1d65d23c517f5b57ab519b339c07", size = 37808, upload-time = "2025-09-15T03:01:28.278Z" },
 ]
 
 [[package]]
