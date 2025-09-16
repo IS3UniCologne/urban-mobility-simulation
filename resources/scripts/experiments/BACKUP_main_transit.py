@@ -447,7 +447,7 @@ def benchmark_agent(nn_weights=None, runs=100, demand_res=7, seed=None):  # noqa
         # of making this one run comparable across all benchmarks
         run_seed = seed * i
 
-        operator, world, payment_engine, service_level = run_single_simulation(
+        operator, _, _, service_level = run_single_simulation(
             start_time=14 * 60,
             end_time=16 * 60,
             weights=w,
@@ -663,7 +663,7 @@ def learn_agent(experiment=None, prepare_benchmark=False, seed=None, **kwargs): 
 
     for i in tqdm(range(episodes), total=episodes):
         try:
-            operator, world, payment_engine, service_level = run_single_simulation(
+            operator, _, _, service_level = run_single_simulation(
                 start_time=14 * 60,
                 end_time=16 * 60,
                 weights=w,
