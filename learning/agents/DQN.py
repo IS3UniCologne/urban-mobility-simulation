@@ -179,7 +179,7 @@ class DQN(RLAgent):
             state = deepcopy(self.problem.state())  # S_t, as dict
             action = self.policy(state)  # A_t, string such as "DOWN"
             try:
-                _, reward, finished = yield self.problem.env.process(
+                _, _, finished = yield self.problem.env.process(
                     self.problem.step(action)
                 )
             except ForbiddenAction:
