@@ -20,15 +20,16 @@ def solve_tsp(hexagons: dict[str, int], distance_matrix: pd.DataFrame) -> TspRes
     """
 
     # Create a distance lookup dictionary for faster access
+    # TODO: remove the type: ignore statements with https://github.com/IS3UniCologne/urban-mobility-simulation/issues/109
     dist_lookup: dict[tuple[int, int], float] = {}
     for hex_i, value_i in hexagons.items():
         for hex_j, value_j in hexagons.items():
             if hex_i != hex_j:
                 dist_lookup[(value_i, value_j)] = float(
-                    distance_matrix.at[hex_j, hex_i]
+                    distance_matrix.at[hex_j, hex_i]  # type: ignore
                 )
                 dist_lookup[(value_j, value_i)] = float(
-                    distance_matrix.at[hex_j, hex_i]
+                    distance_matrix.at[hex_j, hex_i]  # type: ignore
                 )
 
     n = len(hexagons)

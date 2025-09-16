@@ -112,7 +112,7 @@ def plot_charge(dg1, dg2, dg3, dg4):  # noqa: ANN001, ANN201
     dg3 = dg3.groupby(["hour"]).agg({"vehicle_id": "mean"})
     dg4 = dg4.reset_index()
     dg4 = dg4.groupby(["hour"]).agg({"vehicle_id": "mean"})
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 8), constrained_layout=True)
+    _, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 8), constrained_layout=True)
     ax.plot(dg1.index, dg1["vehicle_id"], label="Central", linestyle="--", marker=".")
     ax.plot(dg2.index, dg2["vehicle_id"], label="DQN", linestyle="--", marker=".")
     ax.plot(dg3.index, dg3["vehicle_id"], label="sub", linestyle="--", marker=".")
@@ -144,7 +144,7 @@ def plot_costs_4(dg, mode):  # noqa: ANN001, ANN201
         "Tariff 2",
         "Tariff 3",
     ]
-    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4), constrained_layout=True)
+    _, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4), constrained_layout=True)
     if mode == "benchmark":
         k = 0
         for i in range(1):

@@ -914,7 +914,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):
                     hexagons = {}
 
                     for tuple_idx, tuple in enumerate(relocation):
-                        origin, destination, vehicle_count, distance = tuple
+                        origin, destination, vehicle_count, distance = tuple  # noqa: RUF059
 
                         # We relocate vehicles to this position => Index 0
                         if tuple_idx == 0:
