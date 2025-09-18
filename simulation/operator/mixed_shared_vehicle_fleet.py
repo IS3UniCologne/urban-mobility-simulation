@@ -1,19 +1,13 @@
 from __future__ import annotations  # noqa: D100
 
-from typing import TYPE_CHECKING
-
 from simulation.helper.configuration.enums import VehicleType
-from simulation.operator.vehicle_fleet import VehicleFleet
-
-if TYPE_CHECKING:
-    from simulation.context.simulation_context import SimulationContext
-    from simulation.world.world import World
+from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
 
 
 # TODO : rename SharedVehicleFleet, there are only mixed fleets
 class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
-    def __init__(self, sim: SimulationContext, world: World) -> None:
-        super().__init__(sim=sim, world=world)
+    def __init__(self, deps: VehicleFleetDependencies) -> None:
+        super().__init__(deps)
 
     def vehicles_below_soc_threshold(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """

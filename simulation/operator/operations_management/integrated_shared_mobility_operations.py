@@ -6,9 +6,15 @@ from typing import TYPE_CHECKING, Any
 import h3
 import pandas as pd
 
+from simulation.helper.configuration.configuration import (
+    IntegratedSharedMobilityOperationsConfig,
+)
 from simulation.helper.configuration.enums import VehicleType
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
-from simulation.operator.interface.operations_interface import OperationsInterface
+from simulation.operator.operations_management.operations import (
+    Operations,
+    OperationsDependencies,
+)
 from simulation.operator.operations_management.service_tasks.charging_task import (
     ChargingTask,
 )
@@ -18,20 +24,20 @@ from simulation.operator.operations_management.service_tasks.multi_service_task 
 from simulation.operator.operations_management.service_tasks.relocation_task import (
     RelocationTask,
 )
+from simulation.operator.service_workforce import ServiceWorkforce
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
     import simpy
 
-    from simulation.context.simulation_context import SimulationContext
     from simulation.environment.position import Position
     from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
     from simulation.operator.transactions import DemandMonitor
     from simulation.operator.transactions.demand_monitor import VehicleDemandByRegion
 
 
-class IntegratedSharedMobilityOperations(OperationsInterface):  # noqa: D101
+class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
     # TODO: refactor base_regions and capacity, such that it relates to the infrastructure of the operator. This also implies that we need to register the infrastructure after the opeartor is initialised
     __slots__ = (
         "_available_vehicle_types",
@@ -51,40 +57,35 @@ class IntegratedSharedMobilityOperations(OperationsInterface):  # noqa: D101
         "operation_duration",
     )
 
-    def __init__(
-        self,
-        sim: SimulationContext,
-        time_between_operations: float,
-        operation_duration: float,
-        distance_matrix: pd.DataFrame,
-        ordered_available_vehicle_types: list[str],
-        ordered_max_vehicle_supply: list[int],
-        state_of_charge_threshold: float,
-        base_regions: list[str],
-        base_capacity: int,
-    ) -> None:
-        super().__init__(sim=sim)
+    def __init__(self, deps: OperationsDependencies) -> None:
+        super().__init__(deps=deps)
 
-        self._sim = sim
-        self._geo_env = sim.geo_env
+        self._sim = deps.sim
+        self._geo_env = deps.sim.geo_env
         # Distance Matrix between Regions
-        self._distance_matrix = distance_matrix
+        self._distance_matrix = deps.distance_matrix
 
         # List needs to be ordered such that:
         # In case of neutral demand, we count the demand for the less expensive option
         # For example: If we observe a demand for KickScooter and Scooter, we count that
         # demand to KickScooter. This ordering is defined according to the following list
         # (from left to right)
-        self._available_vehicle_types: list[VehicleType] = (
-            ordered_available_vehicle_types  # TODO: get from fleet
-        )
-        self._max_vehicle_supply: list[int] = (
-            ordered_max_vehicle_supply  # TODO: get from fleet
-        )
-        self._base_regions = base_regions
-        self._base_capacity = base_capacity
+        self._available_vehicle_types: list[VehicleType] = list(
+            self.operator.fleet.count_by_type.keys()
+        )  # TODO: Remove dependency on ordering
+        self._max_vehicle_supply: list[int] = list(
+            self.operator.fleet.count_by_type.values()
+        )  # TODO: Remove dependency on ordering
 
-        self._state_of_charge_threshold: float = state_of_charge_threshold
+        ops_config = deps.operations_config
+        if not isinstance(ops_config, IntegratedSharedMobilityOperationsConfig):
+            raise TypeError(
+                "IntegratedSharedMobilityOperations requires a IntegratedSharedMobilityOperationsConfig."
+            )
+        self._base_regions = ops_config.BASE_REGIONS
+        self._base_capacity = ops_config.BASE_CAPACITY
+
+        self._state_of_charge_threshold = ops_config.RECHARGE_THRESHOLD
 
         self._scheduled_tasks: list = []  # TODO: move to workforce? or internal schedule?
 
@@ -93,10 +94,15 @@ class IntegratedSharedMobilityOperations(OperationsInterface):  # noqa: D101
         self._operations_started: simpy.Event = self._env.event()
 
         # When to start operations (every 1440 min)
-        self._time_between_operations = time_between_operations
+        self._time_between_operations = ops_config.TIME_BETWEEN_OPERATIONS
 
         # Shift Duration (OM shift duration)
-        self._duration_of_operations: int = operation_duration  # mins
+        self._duration_of_operations = ops_config.OPERATIONS_DURATION  # mins
+
+        # Shared Mobility specific: Service Workforce
+        self._workforce = ServiceWorkforce(
+            sim=self._sim, number_service_workers=ops_config.NUMBER_OF_SERVICE_WORKERS
+        )
 
     @property
     def available_vehicle_types(self) -> list[VehicleType]:
@@ -117,7 +123,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):  # noqa: D101
             yield self._env.timeout(self._time_between_operations)
 
             # Clean old jobs (if there are some left)
-            self.operator._workforce.task_queue.clear()  # noqa: SLF001
+            self._workforce.task_queue.clear()
 
             if not self.operator.transaction_log.has_successful_transaction:
                 self.logger.debug(
@@ -203,9 +209,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):  # noqa: D101
                         no_vehicles_scheduled_to_charge[type] += no_vehicle_to_charge
 
             # Insert Tasks into Task Queue
-            self._operator_reference._workforce.task_queue.bulk_append(  # noqa: SLF001
-                self._scheduled_tasks
-            )
+            self._workforce.task_queue.bulk_append(self._scheduled_tasks)
 
             self.logger.info(
                 "There are %s vehicles with low state of charge.",
@@ -319,9 +323,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):  # noqa: D101
                             )
 
                 # Insert Tasks into Task Queue
-                self._operator_reference._workforce.task_queue.bulk_append(  # noqa: SLF001
-                    self._scheduled_tasks
-                )
+                self._workforce.task_queue.bulk_append(self._scheduled_tasks)
 
                 if len(charging_events):
                     # Wait for Charging events
@@ -418,9 +420,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):  # noqa: D101
         # Split available service worker resources among vehicle types
         # (prioritize vehicles where most low soc vehicles are present)
         capacity_per_type = self.calculate_resource_capacity_split_for_charging(
-            state,
-            self._max_vehicle_supply,
-            self._operator_reference._workforce.number_service_workers,  # noqa: SLF001
+            state, self._max_vehicle_supply, self._workforce.number_service_workers
         )
 
         # We calculate for each vehicle mode dedicated charging plans based on the available resources
@@ -723,7 +723,7 @@ class IntegratedSharedMobilityOperations(OperationsInterface):  # noqa: D101
             state,
             self._available_vehicle_types,
             self._max_vehicle_supply,
-            self._operator_reference._workforce.number_service_workers,  # noqa: SLF001
+            self._workforce.number_service_workers,
         )
         for i, mode in enumerate(self._available_vehicle_types):
             # Relocation List containing tuples (origin, destination, number_of_vehicles_to_be_relocated, distance)
@@ -989,7 +989,6 @@ class IntegratedSharedMobilityOperations(OperationsInterface):  # noqa: D101
     def calculate_resource_capacity_split_for_relocation(  # noqa: ANN201
         self,
         fleet_state,  # noqa: ANN001
-        available_vehicle_modes,  # noqa: ANN001
         max_vehicle_supply,  # noqa: ANN001
         number_service_workers_per_mode,  # noqa: ANN001
     ):
