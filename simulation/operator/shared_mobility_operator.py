@@ -4,55 +4,33 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from simulation.agent.user import User
-    from simulation.context.simulation_context import SimulationContext
-    from simulation.operator.interface.search_engine_interface import (
-        SearchEngineInterface,
-    )
-    from simulation.operator.interface.vehicle_allocation_engine_interface import (
-        AllocationEngineInterface,
-    )
-    from simulation.operator.operations_management.integrated_shared_mobility_operations import (
-        IntegratedSharedMobilityOperations,
-    )
-    from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.tasks.transport_task import TransportTask
 
 from simulation.helper.configuration.enums import OperatorMode, TransactionState
-from simulation.operator.operator import Operator
-from simulation.operator.service_workforce import ServiceWorkforce
+from simulation.operator.operator import Operator, OperatorDependencies
 from simulation.operator.transactions import DemandMonitor
 
 
 class SharedMobilityOperator(Operator):  # noqa: D101
     __slots__ = ("_demand_monitor", "_number_service_workers", "_workforce")
 
-    def __init__(  # noqa: ANN204
-        self,
-        sim: SimulationContext,
-        fleet: VehicleFleet,
-        operations: IntegratedSharedMobilityOperations,
-        search_engine: SearchEngineInterface,
-        allocation_engine: AllocationEngineInterface,
-        number_service_workers: int,
-    ):
-        super().__init__(
-            sim=sim,
-            fleet=fleet,
-            operations=operations,
-            search_engine=search_engine,
-            allocation_engine=allocation_engine,
-        )
+    def __init__(self, deps: OperatorDependencies) -> None:
+        super().__init__(deps=deps)
         self._mode = OperatorMode.SHARED_MOBILITY
+
+    def build_operator_subcomponents(self, deps: OperatorDependencies) -> None:
+        """Build subcomponents specific to the shared mobility operator.
+
+        We override this method to add the demand monitor to the transaction log. This is required for
+        tracking regional demand for the operations.
+        """
+        super().build_operator_subcomponents(deps)
+
         # Register demand monitor to transaction log
         self._demand_monitor: DemandMonitor = DemandMonitor(
-            operations._available_vehicle_types  # noqa: SLF001
-        )
+            self._fleet.vehicle_types
+        )  # TODO: Check if order is correct
         self._transaction_log.add_listener(self._demand_monitor)
-
-        # Shared Mobility specific: Service Workforce
-        self._workforce = ServiceWorkforce(
-            sim=self._sim, number_service_workers=number_service_workers
-        )
 
     @property
     def demand_monitor(self) -> DemandMonitor:
