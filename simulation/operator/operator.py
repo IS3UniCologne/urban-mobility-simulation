@@ -40,7 +40,11 @@ if TYPE_CHECKING:
     from simulation.tasks.transport_task import TransportTask
     from simulation.world.world import World
 
-from simulation.helper.configuration.enums import OperatorMode, TransactionState
+from simulation.helper.configuration.enums import (
+    AutonomyType,
+    OperatorMode,
+    TransactionState,
+)
 from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
     TransportationAlternativeRideHailing,
 )
@@ -79,9 +83,14 @@ class Operator(SimulationBase, OperatorInterface):
     def __init__(self, deps: OperatorDependencies) -> None:
         super().__init__(sim=deps.sim)
 
-        self._sim = deps.sim
+        self._sim: SimulationContext = deps.sim
         self._env = deps.sim.env
-        self._config = deps.config
+        self._config: OperatorConfig = deps.config
+        self._charging_infrastructure: ChargingInfrastructure | None = (
+            self._config.CHARGING_INFRASTRUCTURE.instance
+            if self._config.CHARGING_INFRASTRUCTURE
+            else None
+        )
 
         self._transaction_log: TransactionLog = TransactionLog()
 
@@ -254,6 +263,7 @@ class Operator(SimulationBase, OperatorInterface):
         trip_record : None | TripRecord
             The trip record associated with the transaction. (If available)
         """
+        # TODO Move this to subclasses instead of checking types here
         # TODO:Check if wait times are correct once user refactoring is done
         if transportation_alternative is None:
             transaction: Transaction = Transaction(
@@ -263,6 +273,7 @@ class Operator(SimulationBase, OperatorInterface):
                 time_start=transportation_task.time,
                 time_end=self._env.now,
                 price=0.0,
+                revenue=0.0,
                 distance=transportation_task.origin >> transportation_task.destination,
                 duration=0.0,
                 selected_vehicle_type=None,
@@ -274,6 +285,15 @@ class Operator(SimulationBase, OperatorInterface):
         elif isinstance(
             transportation_alternative, TransportationAlternativeRideHailing
         ):
+            if (
+                transportation_alternative.vehicle.autonomy_type
+                == AutonomyType.HUMAN_DRIVEN
+            ):
+                revenue = transportation_alternative.price * (
+                    1 - self._config.OPERATIONS_CONFIG.DRIVER_PAYMENT_SHARE
+                )
+            else:
+                revenue = transportation_alternative.price
             transaction: Transaction = Transaction(
                 vehicle_uid=transportation_alternative.vehicle.uid,
                 origin=transportation_alternative.route.origin.get_region_id(),
@@ -281,6 +301,7 @@ class Operator(SimulationBase, OperatorInterface):
                 time_start=transportation_task.time,
                 time_end=self._env.now,
                 price=transportation_alternative.price,
+                revenue=revenue,
                 distance=transportation_alternative.distance,
                 duration=transportation_alternative.duration,
                 selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,  # TODO: Check if this is correct
@@ -300,6 +321,7 @@ class Operator(SimulationBase, OperatorInterface):
                 time_start=transportation_task.time,
                 time_end=self._env.now,
                 price=transportation_alternative.price,
+                revenue=transportation_alternative.price,
                 distance=transportation_alternative.distance,
                 duration=transportation_alternative.duration,
                 selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,  # TODO: Check if this is correct
