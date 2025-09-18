@@ -1,22 +1,15 @@
 from __future__ import annotations  # noqa: D100
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
-    from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
-        TransportationAlternativeRideHailing,
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
     )
-    from simulation.operator.operations_management.ride_hailing_operations import (
-        RideHailingOperations,
-    )
-    from simulation.operator.ride_hailing_allocation_engine import (
-        RideHailingAllocationEngine,
-    )
-    from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
     from simulation.tasks.transport_task import TransportTask
 
 
@@ -32,37 +25,21 @@ class RideHailingOperator(Operator):
     def __init__(self, deps: OperatorDependencies) -> None:
         super().__init__(deps=deps)
         self._mode = OperatorMode.RIDE_HAILING
-        if deps.charging_infrastructure is None:
-            raise ValueError(
-                "Charging infrastructure must be provided for RideHailingOperator"
-            )
-        self._charging_infrastructure = deps.charging_infrastructure
 
     @property
     def charging_infrastructure(self) -> ChargingInfrastructure:
         """Return the charging infrastructure for electric vehicles."""
+        if self._charging_infrastructure is None:
+            raise ValueError(
+                "Charging infrastructure must be provided for ride-hailing."
+            )
         return self._charging_infrastructure
-
-    @property
-    def allocation_engine(self) -> RideHailingAllocationEngine:
-        """Get the allocation engine used by the operator."""
-        return cast("RideHailingAllocationEngine", self._allocation_engine)
-
-    @property
-    def search_engine(self) -> RideHailingSearchEngine:
-        """Get the search engine used by the operator."""
-        return cast("RideHailingSearchEngine", self._search_engine)
-
-    @property
-    def operations(self) -> RideHailingOperations:
-        """Return the operations used by the ride-hailing operator."""
-        return cast("RideHailingOperations", self._operations)
 
     def pay_for_fulfilled_transportation_task(  # noqa: ANN201, D102
         self,
         user,  # noqa: ANN001
         transportation_task: TransportTask,
-        selected_transportation_alternative: TransportationAlternativeRideHailing,
+        selected_transportation_alternative: TransportationAlternative,
     ):
         payment = selected_transportation_alternative.price
         # # we need to pay the driver costs
@@ -81,7 +58,10 @@ class RideHailingOperator(Operator):
         self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
 
     def withdraw_transportation_task(  # noqa: D102
-        self, user: User, transportation_task: TransportTask, state: str | None = None
+        self,
+        user: User,
+        transportation_task: TransportTask,
+        state: TransactionState | None = None,
     ) -> None:
         # distance = transportation_task.origin >> transportation_task.destination
         # TODO: define price of the trip

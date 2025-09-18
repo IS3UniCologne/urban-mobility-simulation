@@ -1,6 +1,6 @@
 from __future__ import annotations  # noqa: D100
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
@@ -17,7 +17,6 @@ from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
     from simulation.environment.position import Position
-    from simulation.operator.ride_hailing_operator import RideHailingOperator
     from simulation.vehicle.vehicle import Vehicle
 
 
@@ -27,7 +26,7 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
     def __init__(self, deps: VehicleFleetDependencies) -> None:
         super().__init__(deps=deps)
 
-        rng = deps.sim.random_manager.get_rng(component_name="RIDEHAILINGFLEET")
+        rng = deps.sim.random_manager.get_rng(component_name="FLEETFACTORY")
         hex_columns = deps.sim.config.world.SPATIAL_RESOLUTION.column_name
 
         supply_path = deps.sim.config.path.PATH_VEHICLE_SUPPLY
@@ -82,11 +81,7 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
                         driver_availability_vector=driver_availability_vector,
                     )
 
-    @property
-    def operator(self) -> RideHailingOperator:  # noqa: D102
-        return cast("RideHailingOperator", self._operator)
-
-    def _add_vehicle(self, vehicle: RideHailingVehicle) -> None:
+    def _add_vehicle(self, vehicle: Vehicle) -> None:
         if vehicle not in self._vehicles:
             self._vehicles.append(vehicle)
             self._world.add_vehicle(vehicle=vehicle)
