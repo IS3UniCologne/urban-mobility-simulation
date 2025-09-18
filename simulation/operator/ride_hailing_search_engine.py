@@ -1,14 +1,11 @@
 from __future__ import annotations  # noqa: D100
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
+from simulation.helper.configuration.configuration import RideHailingOperationsConfig
 from simulation.operator.search_engine import SearchEngine, SearchEngineDependencies
 
 if TYPE_CHECKING:
-    from simulation.helper.configuration.configuration import (
-        RideHailingSearchEngineConfig,
-    )
-    from simulation.operator.ride_hailing_operator import RideHailingOperator
     from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 from simulation.helper.configuration.enums import AutonomyType, VehicleState
@@ -40,19 +37,16 @@ class RideHailingSearchEngine(SearchEngine):
         self._sim = deps.sim
         self._env = deps.sim.env
         self._fleet = deps.operator.fleet
-        self._AV_price_reduction = self.operator.operations.config.AV_PRICE_REDUCTION
-        self._price_entering = self.operator.operations.config.PRICE_ENTERING
-        self._price_per_minute = self.operator.operations.config.PRICE_PER_MINUTE
-        self._price_per_km = self.operator.operations.config.PRICE_PER_KM
-        self._min_price = self.operator.operations.config.MINIMUM_PRICE
-
-    @property
-    def config(self) -> RideHailingSearchEngineConfig:  # noqa: D102
-        return cast("RideHailingSearchEngineConfig", self._config)
-
-    @property
-    def operator(self) -> RideHailingOperator:  # noqa: D102
-        return cast("RideHailingOperator", self._operator)
+        ops_config = deps.operator.operations.config
+        if not isinstance(ops_config, RideHailingOperationsConfig):
+            raise TypeError(
+                "RideHailingSearchEngine requires a RideHailingOperationsConfig."
+            )
+        self._AV_price_reduction = ops_config.AV_PRICE_REDUCTION
+        self._price_entering = ops_config.PRICE_ENTERING
+        self._price_per_minute = ops_config.PRICE_PER_MINUTE
+        self._price_per_km = ops_config.PRICE_PER_KM
+        self._min_price = ops_config.MINIMUM_PRICE
 
     def search_for_transportation_alternatives(
         self, vehicle_search_task: TransportationSearchTask
@@ -74,7 +68,7 @@ class RideHailingSearchEngine(SearchEngine):
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
-        route = Route(origin, destination=destination)
+        route = Route(origin=origin, destination=destination)
 
         # Calc Distance
         distance = route.distance  # Euclidean Distance
