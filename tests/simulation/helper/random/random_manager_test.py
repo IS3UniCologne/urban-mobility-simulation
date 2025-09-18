@@ -25,6 +25,8 @@ class TestRandomManager:
 
         self.sim = Mock()
         self.sim.config = self.config
+        self.sim.uid_manager = Mock()
+        self.sim.uid_manager.generate_uid.return_value = (1, "RandomManager_1")
 
     def test_component_seed_generation(self) -> None:
         """Test that component seeds are generated consistently and uniquely."""
