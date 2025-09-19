@@ -12,6 +12,15 @@ from simulation.helper.configuration.enums import (
     PropulsionType,
     VehicleType,
 )
+from simulation.operator.operations_management.ridehailing_base_charging_operations import (
+    RideHailingBaseChargingOperations,
+)
+from simulation.operator.ride_hailing_allocation_engine import (
+    RideHailingAllocationEngine,
+)
+from simulation.operator.ride_hailing_fleet import RideHailingFleet
+from simulation.operator.ride_hailing_operator import RideHailingOperator
+from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 
 rh_car_autonomous = RideHailingVehicleConfig(
     VELOCITY=9.54,
@@ -76,6 +85,7 @@ RH_AVAILABILITY = [
 ]
 
 fleet1 = RideHailingFleetConfig(
+    FLEET_TYPE=RideHailingFleet,
     VEHICLES={rh_car_autonomous: 250, rh_car_human: 250},
     RH_AVAILABILITY=RH_AVAILABILITY,
 )
@@ -143,9 +153,11 @@ DEFAULT_RECHARGE_THRESHOLD = [
 ]
 
 operator_1 = RideHailingOperatorConfig(
+    OPERATOR_TYPE=RideHailingOperator,
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
     OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
+        OPERATIONS_TYPE=RideHailingBaseChargingOperations,
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,
         TIME_BETWEEN_OPERATIONS=15,
@@ -160,13 +172,19 @@ operator_1 = RideHailingOperatorConfig(
         DISCOUNT_RATE=0.0,
         DRIVER_PAYMENT_SHARE=0.75,
     ),
-    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(),
-    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(),
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
+        SEARCH_ENGINE_TYPE=RideHailingSearchEngine
+    ),
+    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(
+        VEHICLE_ALLOCATION_ENGINE_TYPE=RideHailingAllocationEngine
+    ),
 )
 operator_2 = RideHailingOperatorConfig(
+    OPERATOR_TYPE=RideHailingOperator,
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
     OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
+        OPERATIONS_TYPE=RideHailingBaseChargingOperations,
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,
         TIME_BETWEEN_OPERATIONS=15,
@@ -181,6 +199,10 @@ operator_2 = RideHailingOperatorConfig(
         DISCOUNT_RATE=0.0,
         DRIVER_PAYMENT_SHARE=0.75,
     ),
-    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(),
-    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(),
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
+        SEARCH_ENGINE_TYPE=RideHailingSearchEngine
+    ),
+    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(
+        VEHICLE_ALLOCATION_ENGINE_TYPE=RideHailingAllocationEngine
+    ),
 )
