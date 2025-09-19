@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING  # noqa: D100
-from simulation.environment.position import Position
+
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.time import SimulationTime
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
@@ -24,7 +25,7 @@ class VehicleAllocation:  # noqa: D101
         user: "User",
         vehicle: Vehicle,
         associated_transportation_alternative: TransportationAlternative,
-        pick_up_position: Position,
+        pick_up_position: GeodesicPosition,
         pick_up_time: SimulationTime,
     ):
         self._user = user  # User that got the assignment
@@ -50,7 +51,7 @@ class VehicleAllocation:  # noqa: D101
         return self._associated_alternative
 
     @property
-    def pick_up_position(self) -> Position:  # noqa: D102
+    def pick_up_position(self) -> GeodesicPosition:  # noqa: D102
         return self._pick_up_position
 
     @property
