@@ -51,24 +51,11 @@ from simulation.infrastructure.charging_stations.charging_infastructure import (
 )
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
 from simulation.operator.operations_management.operations import Operations
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
-)
-from simulation.operator.operations_management.ridehailing_MP_charging_operations import (
-    RideHailingMPChargingOperations,
-)
 from simulation.operator.operator import Operator
-from simulation.operator.ride_hailing_allocation_engine import (
-    RideHailingAllocationEngine,
-)
-from simulation.operator.ride_hailing_fleet import RideHailingFleet
-from simulation.operator.ride_hailing_operator import RideHailingOperator
-from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 from simulation.operator.search_engine import SearchEngine
 from simulation.operator.vehicle_allocation_engine import AllocationEngine
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.world.markets.auction import Auction
-from simulation.world.markets.shared_charging_auction import SharedChargingAuction
 
 if TYPE_CHECKING:
     # Careful moving stuff here, pydantic needs to check type hints at runtime!
@@ -286,8 +273,6 @@ class FleetConfig(ConfigBaseModel):
 class RideHailingFleetConfig(FleetConfig):
     """Configuration for ride-hailing fleet parameters."""
 
-    FLEET_TYPE: type[VehicleFleet] = RideHailingFleet
-
     RH_AVAILABILITY: list[float]
 
 
@@ -369,7 +354,6 @@ class OperationsConfig(ConfigBaseModel):
     """Configuration for operations parameters."""
 
     OPERATIONS_TYPE: type[Operations]
-    SEARCH_ENGINE_TYPE: type[SearchEngine]
 
     OPERATIONS_START: int | None = Field(ge=0, default=None)
     OPERATIONS_DURATION: int | None = Field(gt=0, default=None)
@@ -382,7 +366,6 @@ class OperationsConfig(ConfigBaseModel):
 
     # TODO: allow_queue was both explicitly defined in the config, but also derived from queue size > 0. How do we want to handle this?
     ALLOW_QUEUE: bool | None = Field(default=False)
-    NUMBER_OF_SERVICE_WORKERS: int | None = Field(default=None, gt=0)
 
     PLANNING_LOOKAHEAD: int | None = Field(default=None, gt=0)
 
@@ -401,8 +384,6 @@ class OperationsConfig(ConfigBaseModel):
 
 class RideHailingOperationsConfig(OperationsConfig):
     """Configuration for ride-hailing operations parameters."""
-
-    SEARCH_ENGINE_TYPE: type[SearchEngine] = Field(default=RideHailingSearchEngine)
 
     DRIVER_PAYMENT_SHARE: float = Field(gt=0)
     DISCOUNT_RATE: float = Field(ge=0)
@@ -439,16 +420,41 @@ class RideHailingOperationsConfig(OperationsConfig):
 class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for ride-hailing base charging operations."""
 
-    OPERATIONS_TYPE: type[Operations] = Field(default=RideHailingBaseChargingOperations)
-
 
 class RideHailingMPChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for ride-hailing multi-party charging operations."""
 
-    OPERATIONS_TYPE: type[Operations] = Field(default=RideHailingMPChargingOperations)
-
     # TODO add base type once we have one
     CHARGING_ALGORITHM_TYPE: type
+
+
+class IntegratedSharedMobilityOperationsConfig(OperationsConfig):
+    """Configuration for integrated shared mobility operations."""
+
+    NUMBER_OF_SERVICE_WORKERS: int = Field(gt=0)
+
+    CHARGING_STATION_POWER: float | None = Field(default=None)
+    NUMBER_OF_BASE_REGIONS: int | None = Field(default=None)
+    BASE_CAPACITY: int | None = Field(default=None)
+    BASE_REGIONS: list[str] | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def clamp_base_regions(self) -> IntegratedSharedMobilityOperationsConfig:
+        """
+        Clamp base regions list to match the number of base regions.
+
+        TODO: Same as above, not super intuitive.
+
+        Returns
+        -------
+        IntegratedSharedMobilityOperationsConfig
+            A new instance with updated BASE_REGIONS.
+        """
+        if self.BASE_REGIONS is None or self.NUMBER_OF_BASE_REGIONS is None:
+            return self
+        return self.model_copy(
+            update={"BASE_REGIONS": self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]}
+        )
 
 
 class OperatorConfig(ConfigBaseModel):
@@ -466,41 +472,18 @@ class OperatorConfig(ConfigBaseModel):
     SEARCH_ENGINE_CONFIG: SearchEngineConfig
     ALLOCATION_ENGINE_CONFIG: AllocationEngineConfig
 
-    # TODO: Shared vehicle stuff, this should be changed once we move to the same charging infrastructure as ridehailing
-    CHARGING_STATION_POWER: int | None = Field(default=None)
-    NUMBER_OF_BASE_REGIONS: int | None = Field(default=None)
-    BASE_CAPACITY: int | None = Field(default=None)
-    BASE_REGIONS: list[str] | None = Field(default=None)
-
-    N_VEHICLES: dict[VehicleType, int] | None = Field(default=None)
+    CHARGING_INFRASTRUCTURE: ChargingInfrastructureConfig | None = Field(default=None)
 
     # Public transit stuff
     MAX_BUSSES: int | None = Field(default=None, gt=0)
-
-    @model_validator(mode="after")
-    def clamp_base_regions(self) -> OperatorConfig:
-        """
-        Clamp base regions list to match the number of base regions.
-
-        TODO: Same as above, not super intuitive.
-
-        Returns
-        -------
-        OperatorConfig
-            A new instance with updated BASE_REGIONS.
-        """
-        if self.BASE_REGIONS is None or self.NUMBER_OF_BASE_REGIONS is None:
-            return self
-        return self.model_copy(
-            update={"BASE_REGIONS": self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]}
-        )
 
 
 class RideHailingOperatorConfig(OperatorConfig):
     """Configuration for ride-hailing operator parameters."""
 
-    OPERATOR_TYPE: type[Operator] = Field(RideHailingOperator)
-    CHARGING_INFRASTRUCTURE: ChargingInfrastructureConfig
+
+class SharedVehicleOperatorConfig(OperatorConfig):
+    """Configuration for shared vehicle operator parameters."""
 
 
 class SearchEngineConfig(ConfigBaseModel):
@@ -512,21 +495,23 @@ class SearchEngineConfig(ConfigBaseModel):
 class RideHailingSearchEngineConfig(SearchEngineConfig):
     """Configuration for ride-hailing search engine parameters."""
 
-    SEARCH_ENGINE_TYPE: type[SearchEngine] = Field(RideHailingSearchEngine)
+
+class SharedVehicleSearchEngineConfig(SearchEngineConfig):
+    """Configuration for shared vehicle search engine parameters."""
 
 
 class AllocationEngineConfig(ConfigBaseModel):
     """Configuration for vehicle allocation engine parameters."""
 
-    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine] = Field(AllocationEngine)
+    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine]
 
 
 class RideHailingAllocationEngineConfig(AllocationEngineConfig):
     """Configuration for ride-hailing vehicle allocation engine parameters."""
 
-    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine] = Field(
-        RideHailingAllocationEngine
-    )
+
+class SharedVehicleAllocationEngineConfig(AllocationEngineConfig):
+    """Configuration for shared vehicle allocation engine parameters."""
 
 
 class RideHailingGlobalConfig(ConfigBaseModel):
@@ -544,8 +529,6 @@ class AuctionConfig(ConfigBaseModel):
 
 class SharedChargingAuctionConfig(AuctionConfig):
     """Configuration for shared charging auction parameters."""
-
-    AUCTION_TYPE: type[SharedChargingAuction] = SharedChargingAuction
 
     AUCTION_INTERVAL: int = Field(gt=0)
     TIMESLOT_DURATION: int = Field(gt=0)

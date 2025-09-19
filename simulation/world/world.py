@@ -265,10 +265,7 @@ class World(SimulationBase):  # noqa: D101
         for operator_config in operators:
             operator = Operator.from_deps(
                 deps=OperatorDependencies(
-                    sim=self._sim,
-                    config=operator_config,
-                    charging_infrastructure=operator_config.CHARGING_INFRASTRUCTURE.instance,
-                    world=self,
+                    sim=self._sim, config=operator_config, world=self
                 )
             )
             self._operators.append(operator)
@@ -454,7 +451,7 @@ class World(SimulationBase):  # noqa: D101
                     position=origin_position,
                     transport_task=task,
                     transportation_search_service=operator.search_engine,
-                    payment_service=operator.payment_engine,
+                    payment_service=operator,
                     vehicle_assignment_service=operator.allocation_engine,
                     vehicle_choice_behavior=self._vehicle_choice_behavior,
                     population_type=population_type,

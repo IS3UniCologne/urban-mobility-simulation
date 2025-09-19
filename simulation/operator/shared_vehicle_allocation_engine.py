@@ -2,9 +2,13 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
+from simulation.operator.vehicle_allocation_engine import (
+    AllocationEngine,
+    AllocationEngineDependencies,
+)
+
 if TYPE_CHECKING:
     from simulation.agent.user import User
-    from simulation.context.simulation_context import SimulationContext
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -13,12 +17,9 @@ from simulation.helper.configuration.enums import VehicleState
 from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
-from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    AllocationEngineInterface,
-)
 
 
-class SharedVehicleAllocationEngine(AllocationEngineInterface):  # noqa: D101
+class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
     __slots__ = (
         "_env",
         "_sim",
@@ -26,9 +27,9 @@ class SharedVehicleAllocationEngine(AllocationEngineInterface):  # noqa: D101
         "_vehicles_assigned_to_users",
     )
 
-    def __init__(self, sim: SimulationContext) -> None:
-        self._sim = sim
-        self._env = sim.env
+    def __init__(self, deps: AllocationEngineDependencies) -> None:
+        self._sim = deps.sim
+        self._env = self._sim.env
         self._vehicles_assigned_to_users = self._env.event()
         self._env.process(self.run())
         self._vehicle_assignment_requests = []

@@ -12,6 +12,14 @@ from simulation.helper.configuration.enums import (
     PropulsionType,
     VehicleType,
 )
+from simulation.operator.operations_management.ridehailing_base_charging_operations import (
+    RideHailingBaseChargingOperations,
+)
+from simulation.operator.ride_hailing_allocation_engine import (
+    RideHailingAllocationEngine,
+)
+from simulation.operator.ride_hailing_fleet import RideHailingFleet
+from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 
 rh_car_autonomous = RideHailingVehicleConfig(
     VELOCITY=9.54,
@@ -47,6 +55,24 @@ rh_car_human = RideHailingVehicleConfig(
     PRICE_PER_KM=1.3,
     INITIAL_SOC=0.50,
 )
+rh_car_human_2 = RideHailingVehicleConfig(
+    VELOCITY=9.54,
+    MAX_AVAILABLE_SEATS=4,
+    VEHICLE_TYPE=VehicleType.CAR,
+    AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
+    PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
+    MAX_STATE_OF_CHARGE=50.0,
+    ENERGY_CONSUMPTION=0.20,
+    EV_RELATIVE_ENERGY_CONSUMPTION=0.3,
+    CHARGING_COST_PER_KWH=0.43,
+    EMERGENCY_SOC_BUFFER=0.05,
+    PRICE_PER_MIN=0.35,
+    DAILY_TOTAL_COST=29.0,
+    COST_PER_KM=0.45,
+    PRICE_PER_KM=1.3,
+    INITIAL_SOC=0.50,
+)
+
 
 RH_AVAILABILITY = [
     0.084238,
@@ -76,7 +102,9 @@ RH_AVAILABILITY = [
 ]
 
 fleet1 = RideHailingFleetConfig(
-    VEHICLES={rh_car_autonomous: 25}, RH_AVAILABILITY=RH_AVAILABILITY
+    FLEET_TYPE=RideHailingFleet,
+    VEHICLES={rh_car_human: 12, rh_car_human_2: 12, rh_car_autonomous: 25},
+    RH_AVAILABILITY=RH_AVAILABILITY,
 )
 
 
@@ -110,6 +138,7 @@ operator_1 = RideHailingOperatorConfig(
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
     OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
+        OPERATIONS_TYPE=RideHailingBaseChargingOperations,
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,
         TIME_BETWEEN_OPERATIONS=15,
@@ -149,54 +178,10 @@ operator_1 = RideHailingOperatorConfig(
         DISCOUNT_RATE=0.0,
         DRIVER_PAYMENT_SHARE=0.75,
     ),
-    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(),
-    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(),
-)
-
-
-operator_2 = RideHailingOperatorConfig(
-    FLEET_CONFIG=fleet1,
-    CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
-        OPERATIONS_START=15,
-        OPERATIONS_DURATION=50,
-        TIME_BETWEEN_OPERATIONS=15,
-        RECHARGE_THRESHOLD=[
-            0.40,
-            0.45,
-            0.50,
-            0.55,
-            0.52,
-            0.50,
-            0.48,
-            0.45,
-            0.45,
-            0.42,
-            0.40,
-            0.40,
-            0.40,
-            0.40,
-            0.40,
-            0.38,
-            0.35,
-            0.32,
-            0.30,
-            0.30,
-            0.27,
-            0.30,
-            0.32,
-            0.35,
-        ],
-        VEHICLE_RELOCATION_VELOCITY=9.54,
-        AV_PRICE_REDUCTION=0.90,
-        MAX_PICKUP_DISTANCE=10000,
-        PRICE_ENTERING=2.0,
-        PRICE_PER_MINUTE=0.35,
-        PRICE_PER_KM=1.3,
-        MINIMUM_PRICE=5.0,
-        DISCOUNT_RATE=0.0,
-        DRIVER_PAYMENT_SHARE=0.75,
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
+        SEARCH_ENGINE_TYPE=RideHailingSearchEngine
     ),
-    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(),
-    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(),
+    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(
+        VEHICLE_ALLOCATION_ENGINE_TYPE=RideHailingAllocationEngine
+    ),
 )

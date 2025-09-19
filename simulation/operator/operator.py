@@ -26,9 +26,6 @@ if TYPE_CHECKING:
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
-    from simulation.operator.data_transfer_object.transportation_alternative import (
-        TransportationAlternative,
-    )
     from simulation.operator.data_transfer_object.trip_record import TripRecord
     from simulation.operator.interface.operations_interface import OperationsInterface
     from simulation.operator.interface.search_engine_interface import (
@@ -40,7 +37,14 @@ if TYPE_CHECKING:
     from simulation.tasks.transport_task import TransportTask
     from simulation.world.world import World
 
-from simulation.helper.configuration.enums import OperatorMode, TransactionState
+from simulation.helper.configuration.enums import (
+    AutonomyType,
+    OperatorMode,
+    TransactionState,
+)
+from simulation.operator.data_transfer_object.transportation_alternative import (
+    TransportationAlternative,
+)
 from simulation.operator.interface.operator_interface import OperatorInterface
 from simulation.operator.transactions import TransactionLog
 from simulation.operator.transactions.transaction import Transaction
@@ -76,14 +80,19 @@ class Operator(SimulationBase, OperatorInterface):
     def __init__(self, deps: OperatorDependencies) -> None:
         super().__init__(sim=deps.sim)
 
-        self._sim = deps.sim
+        self._sim: SimulationContext = deps.sim
         self._env = deps.sim.env
-        self._config = deps.config
+        self._config: OperatorConfig = deps.config
+        self._charging_infrastructure: ChargingInfrastructure | None = (
+            self._config.CHARGING_INFRASTRUCTURE.instance
+            if self._config.CHARGING_INFRASTRUCTURE
+            else None
+        )
 
         self._transaction_log: TransactionLog = TransactionLog()
 
-    @classmethod
-    def from_deps(cls, deps: OperatorDependencies) -> Operator:
+    @staticmethod
+    def from_deps(deps: OperatorDependencies) -> Operator:
         """Create an Operator instance from dependencies.
 
         Automatically selects the appropriate operator implementation based on the configuration.
@@ -251,6 +260,7 @@ class Operator(SimulationBase, OperatorInterface):
         trip_record : None | TripRecord
             The trip record associated with the transaction. (If available)
         """
+        # TODO Move this to subclasses instead of checking types here
         # TODO:Check if wait times are correct once user refactoring is done
         if transportation_alternative is None:
             transaction: Transaction = Transaction(
@@ -260,6 +270,7 @@ class Operator(SimulationBase, OperatorInterface):
                 time_start=transportation_task.time,
                 time_end=self._env.now,
                 price=0.0,
+                revenue=0.0,
                 distance=transportation_task.origin >> transportation_task.destination,
                 duration=0.0,
                 selected_vehicle_type=None,
@@ -268,7 +279,16 @@ class Operator(SimulationBase, OperatorInterface):
                 energy_consumption=0.0,
                 viable_vehicle_types=transportation_task.viable_vehicle_types,
             )
-        elif transportation_alternative.pick_up_time is not None:
+        elif isinstance(transportation_alternative, TransportationAlternative):
+            if (
+                transportation_alternative.vehicle.autonomy_type
+                == AutonomyType.HUMAN_DRIVEN
+            ):
+                revenue = transportation_alternative.price * (
+                    1 - self._config.OPERATIONS_CONFIG.DRIVER_PAYMENT_SHARE
+                )
+            else:
+                revenue = transportation_alternative.price
             transaction: Transaction = Transaction(
                 vehicle_uid=transportation_alternative.vehicle.uid,
                 origin=transportation_alternative.route.origin.get_region_id(),
@@ -276,6 +296,7 @@ class Operator(SimulationBase, OperatorInterface):
                 time_start=transportation_task.time,
                 time_end=self._env.now,
                 price=transportation_alternative.price,
+                revenue=revenue,
                 distance=transportation_alternative.distance,
                 duration=transportation_alternative.duration,
                 selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,  # TODO: Check if this is correct
@@ -295,6 +316,7 @@ class Operator(SimulationBase, OperatorInterface):
                 time_start=transportation_task.time,
                 time_end=self._env.now,
                 price=transportation_alternative.price,
+                revenue=transportation_alternative.price,
                 distance=transportation_alternative.distance,
                 duration=transportation_alternative.duration,
                 selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,  # TODO: Check if this is correct

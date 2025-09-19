@@ -2,17 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
-
 from simulation.operator.operations_management.operations import (
     Operations,
     OperationsDependencies,
 )
-
-if TYPE_CHECKING:
-    from simulation.helper.configuration.configuration import (
-        RideHailingOperationsConfig,
-    )
 
 
 class RideHailingOperations(Operations):
@@ -25,7 +18,3 @@ class RideHailingOperations(Operations):
 
     def __init__(self, deps: OperationsDependencies) -> None:
         super().__init__(deps)
-
-    @property
-    def config(self) -> RideHailingOperationsConfig:  # noqa: D102
-        return cast("RideHailingOperationsConfig", self._config)

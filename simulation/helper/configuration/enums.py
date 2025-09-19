@@ -144,7 +144,7 @@ class UserState(Enum):
     DRIVING = 6
     PAYING = 7
     FULFILLED = 8
-    CANCELLED = 9
+    CANCELLED = 9  # TODO: This state seems unused
     MISSED = 10
     # ride hailing specifics
     REFUSED = 11
@@ -153,6 +153,7 @@ class UserState(Enum):
     MOVING_TO_DESTINATION = 102  # walk after last transit stop
 
 
+# TODO: Have a state setter with checks for valid transitions ?
 class VehicleState(Enum):
     """Vehicle states."""
 

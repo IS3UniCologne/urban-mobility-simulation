@@ -38,8 +38,8 @@ class SearchEngine(SimulationBase, SearchEngineInterface):  # noqa: D101
         self._operator = deps.operator
         self._config = deps.config
 
-    @classmethod
-    def from_deps(cls, deps: SearchEngineDependencies) -> SearchEngine:
+    @staticmethod
+    def from_deps(deps: SearchEngineDependencies) -> SearchEngine:
         """Create a SearchEngine instance from dependencies.
 
         Automatically selects the appropriate search engine implementation based on the configuration.

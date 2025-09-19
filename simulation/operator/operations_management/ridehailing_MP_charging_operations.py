@@ -1,10 +1,13 @@
 from __future__ import annotations  # noqa: D100
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from simpy import AnyOf
 
+from simulation.helper.configuration.configuration import (
+    RideHailingMPChargingOperationsConfig,
+)
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
@@ -17,9 +20,6 @@ from simulation.operator.operations_management.service_tasks.charging_task_rideh
 from simulation.operator.operations_management.task_queue import TaskQueue
 
 if TYPE_CHECKING:
-    from simulation.helper.configuration.configuration import (
-        RideHailingMPChargingOperationsConfig,
-    )
     from simulation.operator.operations_management.operations import (
         OperationsDependencies,
     )
@@ -49,16 +49,20 @@ class RideHailingMPChargingOperations(RideHailingOperations):
         self._world = deps.world
         self._time_between_operations = deps.operations_config.TIME_BETWEEN_OPERATIONS
         self._state_of_charge_threshold = deps.operations_config.RECHARGE_THRESHOLD
-        self._algo = self.config.CHARGING_ALGORITHM_TYPE(deps.sim, deps.operator)
+
+        ops_config = deps.operations_config
+        if not isinstance(ops_config, RideHailingMPChargingOperationsConfig):
+            raise TypeError(
+                "RideHailingMPChargingOperations requires a "
+                "RideHailingMPChargingOperationsConfig configuration."
+            )
+
+        self._algo = ops_config.CHARGING_ALGORITHM_TYPE(deps.sim, deps.operator)
 
         self._task_queue = TaskQueue(deps.sim)
         self._task_transactions = []
 
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
-
-    @property
-    def config(self) -> RideHailingMPChargingOperationsConfig:  # noqa: D102
-        return cast("RideHailingMPChargingOperationsConfig", self._config)
 
     def execute(self) -> None:  # noqa: D102
         # defer some of the initialization to after the operator has registered everything
