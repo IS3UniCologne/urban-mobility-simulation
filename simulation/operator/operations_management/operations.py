@@ -51,8 +51,8 @@ class Operations(SimulationBase, OperationsInterface):  # noqa: D101
         self._config = deps.operations_config
         self._distance_matrix = deps.distance_matrix
 
-    @classmethod
-    def from_deps(cls, deps: OperationsDependencies) -> Operations:  # noqa: D102
+    @staticmethod
+    def from_deps(deps: OperationsDependencies) -> Operations:  # noqa: D102
         operations_type = deps.operations_config.OPERATIONS_TYPE
         return operations_type(deps)
 

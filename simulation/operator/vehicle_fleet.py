@@ -6,7 +6,11 @@ from typing import TYPE_CHECKING
 
 import simpy
 
-from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.helper.configuration.enums import (
+    AutonomyType,
+    VehicleState,
+    VehicleType,
+)
 from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
@@ -57,6 +61,7 @@ class VehicleFleet(SimulationBase):
         "_resource",
         "_sim",
         "_vehicles",
+        "_vehicles_by_autonomy",
         "_vehicles_by_region",
         "_vehicles_by_state",
         "_vehicles_by_type",
@@ -77,10 +82,11 @@ class VehicleFleet(SimulationBase):
         self._vehicles_by_type: dict[VehicleType, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_region: dict[str, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
+        self._vehicles_by_autonomy: dict[AutonomyType, set[Vehicle]] = defaultdict(set)
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
 
-    @classmethod
-    def from_deps(cls, deps: VehicleFleetDependencies) -> VehicleFleet:  # noqa: D102
+    @staticmethod
+    def from_deps(deps: VehicleFleetDependencies) -> VehicleFleet:  # noqa: D102
         fleet_type = deps.config.FLEET_TYPE
         return fleet_type(deps)
 
@@ -161,6 +167,10 @@ class VehicleFleet(SimulationBase):
     def vehicles_by_state(self) -> dict[VehicleState, set[Vehicle]]:  # noqa: D102
         return self._vehicles_by_state
 
+    @property
+    def vehicles_by_autonomy(self) -> dict[AutonomyType, set[Vehicle]]:  # noqa: D102
+        return self._vehicles_by_autonomy
+
     def parking_vehicles_in_region(self, region: str) -> set[Vehicle]:
         """Retrieve all vehicles currently in the PARKING state within the specified region.
 
@@ -235,6 +245,7 @@ class VehicleFleet(SimulationBase):
             self._vehicles_by_state[vehicle.state].add(vehicle)
             self._vehicles_by_region[vehicle.current_region].add(vehicle)
             self._vehicles_by_type[vehicle.vehicle_type].add(vehicle)
+            self._vehicles_by_autonomy[vehicle.autonomy_type].add(vehicle)
 
     def _add_vehicle(self, vehicle: Vehicle) -> None:
         """Add a vehicle to the fleet.
@@ -259,6 +270,7 @@ class VehicleFleet(SimulationBase):
             self._vehicles_by_state[vehicle.state].remove(vehicle)
             self._vehicles_by_region[vehicle.current_region].remove(vehicle)
             self._vehicles_by_type[vehicle.vehicle_type].remove(vehicle)
+            self._vehicles_by_autonomy[vehicle.autonomy_type].remove(vehicle)
         else:
             raise VehicleFleetError(f"Vehicle {vehicle} is not registered in Fleet yet")
 

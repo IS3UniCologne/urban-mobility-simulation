@@ -135,20 +135,41 @@ def _validate_simulation_log(log_path: Path, config: str) -> None:
 
     # Template-specific validations
     if config == "tests/configurations/ridehailing_test":
-        # Check for new metrics table entries in the log
         expected_metrics = [
-            "|              total_revenue | 967.24     |",
-            "|    total_transaction_count | 253        |",
-            "|      total_fulfilled_trips | 68         |",
-            "|        total_trip_distance | 265,632.77 |",
-            #           |              total_revenue | 967.24     |
-            # |    total_transaction_count | 253        |
-            # |      total_fulfilled_trips | 68         |
-            # |         total_missed_trips | 0          |
-            # |       total_missed_revenue | 0.00       |
-            # |        total_trip_duration | 1,670.65   |
-            # |      average_trip_duration | 24.57      |
-            # |        total_trip_distance | 265,632.77 |
+            "|              total_revenue | 911.87     |",
+            "|    total_transaction_count | 258        |",
+            "|      total_fulfilled_trips | 72         |",
+            "|         total_missed_trips | 0          |",
+            "|       total_missed_revenue | 0.00       |",
+            "|        total_trip_duration | 1,529.73   |",
+            "|      average_trip_duration | 21.25      |",
+            "|        total_trip_distance | 243,226.44 |",
+            "|      average_trip_distance | 3,378.15   |",
+            "|         average_trip_price | 12.66      |",
+            "|      trip_fulfillment_rate | 0.28       |",
+            "|   total_energy_consumption | 81.42      |",
+            "| average_energy_consumption | 1.13       |",
+            "|              total_revenue | 728.16     |",
+            "|    total_transaction_count | 222        |",
+            "|      total_fulfilled_trips | 57         |",
+            "|         total_missed_trips | 0          |",
+            "|       total_missed_revenue | 0.00       |",
+            "|        total_trip_duration | 1,221.80   |",
+            "|      average_trip_duration | 21.44      |",
+            "|        total_trip_distance | 194,265.93 |",
+            "|      average_trip_distance | 3,408.17   |",
+            "|         average_trip_price | 12.77      |",
+            "|      trip_fulfillment_rate | 0.26       |",
+            "|   total_energy_consumption | 64.21      |",
+            "| average_energy_consumption | 1.13       |",
+            "|            total_revenue | 1,640.03   |",
+            "|  total_transaction_count | 480        |",
+            "|    total_fulfilled_trips | 129        |",
+            "|       total_missed_trips | 0          |",
+            "|     total_missed_revenue | 0.00       |",
+            "|      total_trip_duration | 2,751.52   |",
+            "|      total_trip_distance | 437,492.37 |",
+            "| total_energy_consumption | 145.63     |",
         ]
         for expected in expected_metrics:
             assert expected in log_content, (
