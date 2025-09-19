@@ -205,7 +205,7 @@ class UserConfig(ConfigBaseModel):
     @classmethod
     def convert_walking_speed(cls, v: float) -> float:
         """Convert walking speed from km/h to m/s."""
-        return SimulationVelocityConverter().convert_kmh(v)
+        return SimulationVelocityConverter.convert_kmh(v)
 
 
 class VehicleConfig(ConfigBaseModel):
@@ -238,7 +238,7 @@ class VehicleConfig(ConfigBaseModel):
     @classmethod
     def convert_velocity(cls, v: float) -> float:
         """Convert vehicle velocity from km/h to m/s."""
-        return SimulationVelocityConverter().convert_kmh(v)
+        return SimulationVelocityConverter.convert_kmh(v)
 
     # TODO: Add more validators for other vehicles etc. This is just an example of what we could be doing. Or don't :)
     @model_validator(mode="after")
@@ -379,7 +379,7 @@ class OperationsConfig(ConfigBaseModel):
     @classmethod
     def convert_velocity(cls, v: float) -> float:
         """Convert vehicle relocation velocity from km/h to m/s."""
-        return SimulationVelocityConverter().convert_kmh(v)
+        return SimulationVelocityConverter.convert_kmh(v)
 
 
 class RideHailingOperationsConfig(OperationsConfig):
