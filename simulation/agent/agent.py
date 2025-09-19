@@ -7,7 +7,7 @@ from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
-    from simulation.environment.position import Position
+    from simulation.environment.geodesic_position import GeodesicPosition
 
 
 class Agent(SimulationBase, ABC):  # noqa: D101
@@ -25,11 +25,11 @@ class Agent(SimulationBase, ABC):  # noqa: D101
         self._state = state
 
     @property
-    def position(self) -> Position:  # noqa: D102
+    def position(self) -> GeodesicPosition:  # noqa: D102
         return self._position
 
     @position.setter
-    def position(self, position: Position) -> None:
+    def position(self, position: GeodesicPosition) -> None:
         self._position = position
 
     @abstractmethod
