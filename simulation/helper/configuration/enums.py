@@ -138,8 +138,8 @@ class UserState(Enum):
     INITIALIZED = 0
     SEARCHING_TRANSPORT_ALTERNATIVES = 1
     SELECTING_TRANSPORT_ALTERNATIVES = 2
-    ALLOCATING_VEHICLE = 3
-    MOVING_TO_PICK_UP_POS = 4
+    AWAITING_ALLOCATION = 3
+    MOVING_TO_PICK_UP = 4
     WAITING_FOR_VEHICLE = 5
     DRIVING = 6
     PAYING = 7
@@ -195,6 +195,6 @@ class OperatorMode(StrEnum):
     """Operator modes for different types of services."""
 
     # TODO: We probably should standardize these names across the codebase.
-    RIDE_HAILING = "RideHailing"
+    RIDE_HAILING = "Ridehailing"
     SHARED_MOBILITY = "SharedMobility"
-    PUBLIC_TRANSIT = "PublicTransit"
+    PUBLIC_TRANSPORT = "PublicTransport"
