@@ -5,6 +5,9 @@ Represents a potential trip option with estimated properties.
 """
 
 from simulation.infrastructure.route import Route
+from simulation.operator.interface.vehicle_allocation_engine_interface import (
+    AllocationEngineInterface,
+)
 from simulation.vehicle.vehicle import Vehicle
 
 # Todo: turn this back into a dataclass once we do the user refactoring (and move waiting time and energy consumed into trip records)
@@ -48,6 +51,7 @@ from simulation.vehicle.vehicle import Vehicle
 
 class TransportationAlternative:  # noqa: D101
     __slots__ = (
+        "_allocation_engine",
         "_autonomous_vehicle",
         "_convenience",
         "_distance",
@@ -71,6 +75,7 @@ class TransportationAlternative:  # noqa: D101
         duration: float,
         distance: float,
         convenience: float,
+        allocation_engine: AllocationEngineInterface,
         route_to_pickup: Route | None = None,
         pick_up_time: float | None = None,
     ) -> None:
@@ -80,11 +85,16 @@ class TransportationAlternative:  # noqa: D101
         self._distance = distance
         self._route = route
         self._convenience = convenience  # the ranking (the lower, the better)
+        self._allocation_engine = allocation_engine
         self._route_to_pickup = route_to_pickup
         self._pick_up_time = pick_up_time
         self._utility = 0.0
         self._waiting_time = 0.0  # Is set after successful allocation
         self._energy_consumed = 0.0  # Is set after successful trip
+
+    @property
+    def allocation_engine(self) -> AllocationEngineInterface:  # noqa: D102
+        return self._allocation_engine
 
     @property
     def utility(self) -> float:  # noqa: D102
