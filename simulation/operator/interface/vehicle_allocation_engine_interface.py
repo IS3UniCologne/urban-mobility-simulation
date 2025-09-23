@@ -16,9 +16,3 @@ class AllocationEngineInterface(ABC):  # noqa: D101
         selected_transportation_alternative: TransportationAlternative,
     ) -> VehicleAllocation:
         pass  # Implement filtering
-
-    @abstractmethod
-    def notify_user_arrival_at_pick_up_position(  # noqa: D102
-        self, vehicle_assignment: VehicleAllocation
-    ) -> None:
-        pass  # Implement Notification
