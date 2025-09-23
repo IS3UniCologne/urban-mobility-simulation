@@ -81,14 +81,3 @@ class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
             selected_vehicle.position,
             None,
         )
-
-    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201, D102
-        self, vehicle_assignment: VehicleAllocation
-    ):
-        pass
-        # TODO: What is this ?
-        # For Autonomous Vehicles or Mass Transit (i.e., listen to position of vehicle)
-        # old_position = vehicle_assignment.vehicle.position
-        # from simulation.environment.geodesic_position import GeodesicPosition
-        # vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
-        # self._env.process(self.test(vehicle_assignment, old_position))
