@@ -27,5 +27,5 @@ class AllocationEngine(SimulationBase, AllocationEngineInterface):  # noqa: D101
 
     @staticmethod
     def from_deps(deps: AllocationEngineDependencies) -> AllocationEngine:  # noqa: D102
-        search_engine_type = deps.config.VEHICLE_ALLOCATION_ENGINE_TYPE
-        return search_engine_type(deps)
+        allocation_engine_type = deps.config.VEHICLE_ALLOCATION_ENGINE_TYPE
+        return allocation_engine_type(deps)
