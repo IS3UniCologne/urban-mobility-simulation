@@ -20,10 +20,6 @@ class Agent(SimulationBase, ABC):  # noqa: D101
     def state(self):  # noqa: ANN201, D102
         return self._state
 
-    @state.setter
-    def state(self, state) -> None:  # noqa: ANN001
-        self._state = state
-
     @property
     def position(self) -> GeodesicPosition:  # noqa: D102
         return self._position
