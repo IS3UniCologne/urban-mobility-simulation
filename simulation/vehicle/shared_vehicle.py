@@ -366,8 +366,3 @@ class SharedVehicle(Vehicle, ABC):  # noqa: D101
 
     def __str__(self):  # noqa: ANN204, D105
         return f"I have {self.available_seats} passengers on boards"
-        return f"I have {self.available_seats} passengers on boards"
-        return f"I have {self.available_seats} passengers on boards"
-        return f"I have {self.available_seats} passengers on boards"
-        return f"I have {self.available_seats} passengers on boards"
-        return f"I have {self.available_seats} passengers on boards"
