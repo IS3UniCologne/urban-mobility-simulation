@@ -1,5 +1,10 @@
-from simulation.environment.position import Position  # noqa: D100
-from simulation.helper.types import SimTime
+from __future__ import annotations  # noqa: D100
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.helper.types import SimTime
 
 
 class TransportTask:  # noqa: D101
@@ -15,8 +20,8 @@ class TransportTask:  # noqa: D101
     def __init__(  # noqa: ANN204
         self,
         time: SimTime,
-        origin: Position,
-        destination: Position,
+        origin: GeodesicPosition,
+        destination: GeodesicPosition,
         viable_vehicle_types,  # noqa: ANN001
         max_wait_time=None,  # noqa: ANN001
         actual_wait_time=None,  # noqa: ANN001
@@ -37,7 +42,7 @@ class TransportTask:  # noqa: D101
         return self._origin
 
     @origin.setter
-    def origin(self, position: Position):  # noqa: ANN202
+    def origin(self, position: GeodesicPosition):  # noqa: ANN202
         self._origin = position
 
     @property
@@ -45,7 +50,7 @@ class TransportTask:  # noqa: D101
         return self._destination
 
     @destination.setter
-    def destination(self, position: Position):  # noqa: ANN202
+    def destination(self, position: GeodesicPosition):  # noqa: ANN202
         self._destination = position
 
     @property
