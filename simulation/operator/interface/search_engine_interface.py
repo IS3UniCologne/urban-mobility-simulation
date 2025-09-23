@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from simulation.operator.data_transfer_object.transportation_alternative_browser import (
         TransportationAlternativeBrowser,
     )
-    from simulation.tasks.transportation_search_task import TransportationSearchTask
+    from simulation.tasks.transport_task import TransportTask
 
 
 class SearchEngineInterface(ABC):
@@ -18,6 +18,6 @@ class SearchEngineInterface(ABC):
 
     @abstractmethod
     def search_for_transportation_alternatives(  # noqa: D102
-        self, vehicle_search_task: TransportationSearchTask
+        self, transport_task: TransportTask
     ) -> TransportationAlternativeBrowser:
         pass  # Implement filtering
