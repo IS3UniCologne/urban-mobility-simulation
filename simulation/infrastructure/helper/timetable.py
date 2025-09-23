@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from simulation.context.simulation_context import SimulationContext
-    from simulation.tasks.transportation_search_task import TransportationSearchTask
+    from simulation.tasks.transport_task import TransportTask
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -106,7 +106,7 @@ class Timetable(SimulationBase):  # noqa: D101
 
     def find_viable_trips(
         self,
-        transportation_search_task: TransportationSearchTask,
+        transport_task: TransportTask,
         spatial_strategy: str = "hexagon",
         temporal_lookahead: int = 10,
     ) -> gpd.GeoDataFrame:
@@ -117,7 +117,7 @@ class Timetable(SimulationBase):  # noqa: D101
         :param temporal_lookahead: How many minutes to look into the future for latest possible departure (currently this does not account for walking time)
         :return:
         """  # noqa: D205, D400
-        search_time = transportation_search_task.transport_task.time
+        search_time = transport_task.time
         latest_departure = SimulationTimeConverter.as_str(
             search_time + temporal_lookahead
         )
@@ -128,16 +128,14 @@ class Timetable(SimulationBase):  # noqa: D101
 
         # find viable stops in vicinity given a strategy, e.g. hexagon, euclidean distance, walking distance (street network), ...
         viable_trips = self._find_viable_stops(
-            viable_trips,
-            spatial_strategy,
-            transportation_search_task.transport_task.origin,
+            viable_trips, spatial_strategy, transport_task.origin
         )
 
         # calc walk distance and duration
         if spatial_strategy not in ["euclidean", "walk"]:
             # if stops in vicinity were found by hexagon, no distance has been calculated, use euclidean
             viable_trips["walk_dist"] = viable_trips.apply(
-                lambda x: transportation_search_task.transport_task.origin
+                lambda x: transport_task.origin
                 >> GeodesicPosition(self._sim, x["stop_lat"], x["stop_lon"]),
                 axis=1,
             )
