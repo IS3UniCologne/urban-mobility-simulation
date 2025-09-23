@@ -1,6 +1,6 @@
 from __future__ import annotations  # noqa: D100
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from simulation.operator.vehicle_allocation_engine import (
     AllocationEngine,
@@ -8,6 +8,10 @@ from simulation.operator.vehicle_allocation_engine import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
     from simulation.agent.user import RideHailingUser
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
@@ -58,13 +62,18 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
         self,
         user: RideHailingUser,
         selected_transportation_alternative: TransportationAlternative,
-    ) -> VehicleAllocation:
+    ) -> Generator[Event, Any, None | VehicleAllocation]:
         """
             Assign vehicle in transportation alternative to user
         :param user:
         :param selected_transportation_alternative:
         :return:
         """  # noqa: D205, D400
+        # TODO: This was moved from the user class, not sure if this works
+        # if the selected vehicle is serving a user we need to wait until the service is over and then allocate it
+        if selected_transportation_alternative.vehicle.state == VehicleState.DRIVING:
+            yield selected_transportation_alternative.vehicle._driving_finished  # noqa: SLF001
+
         try:
             self._add_request(user, selected_transportation_alternative)
         except Exception:
@@ -81,6 +90,9 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
         if selected_vehicle.reserved_for_user != user:
             # print(selected_vehicle.reserved_for_user, user)
             return None
+
+        # Set vehicle task
+        selected_vehicle.set_current_task(user.transport_task)
 
         # Vehicle was successfully allocated
         return VehicleAllocation(
