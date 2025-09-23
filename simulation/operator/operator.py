@@ -104,7 +104,7 @@ class Operator(SimulationBase, OperatorInterface):
 
         operator.start_operations()
 
-        deps.world.maas_provider.register_operator(operator)
+        deps.world.mobility_search.register_operator(operator)
 
         return operator
 
