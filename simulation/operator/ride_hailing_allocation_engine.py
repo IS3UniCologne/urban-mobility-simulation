@@ -91,17 +91,6 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
             selected_transportation_alternative.pick_up_time,
         )
 
-    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201, D102
-        self, vehicle_assignment: VehicleAllocation
-    ):
-        pass
-
-        # For Autonomous Vehicles or Mass Transit (i.e., listen to position of vehicle)
-        # old_position = vehicle_assignment.vehicle.position
-        # from simulation.environment.geodesic_position import GeodesicPosition
-        # vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
-        # self._env.process(self.test(vehicle_assignment, old_position))
-
     def _add_request(self, user, vehicle_assignment):  # noqa: ANN001, ANN202
         if vehicle_assignment.vehicle.uid not in self._vehicle_assignment_ids:
             self._vehicle_assignment_requests.append((user, vehicle_assignment))
