@@ -9,7 +9,7 @@ from simulation.operator.data_transfer_object.transportation_alternative import 
 from simulation.operator.search_engine import SearchEngine, SearchEngineDependencies
 
 if TYPE_CHECKING:
-    from simulation.tasks.transportation_search_task import TransportationSearchTask
+    from simulation.tasks.transport_task import TransportTask
     from simulation.vehicle.vehicle import Vehicle
 
 from simulation.helper.configuration.enums import AutonomyType, VehicleState
@@ -50,22 +50,22 @@ class RideHailingSearchEngine(SearchEngine):
         self._min_price = ops_config.MINIMUM_PRICE
 
     def search_for_transportation_alternatives(
-        self, vehicle_search_task: TransportationSearchTask
+        self, transport_task: TransportTask
     ) -> TransportationAlternativeBrowser:
         """Spot all available vehicles to user.
 
-        :param vehicle_search_task:
+        :param transport_task:
         :return: Available Alternatives along with auxilary information regarding trip
         """
         browser = TransportationAlternativeBrowser()
 
         # hexagon_origin = vehicle_search_task.agent_position.get_default_hexagon()
 
-        origin = vehicle_search_task.transport_task.origin
+        origin = transport_task.origin
 
         cars_in_area = self._fleet.get_available_vehicles_to_user(origin)
 
-        destination = vehicle_search_task.transport_task.destination
+        destination = transport_task.destination
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
@@ -119,6 +119,7 @@ class RideHailingSearchEngine(SearchEngine):
                 duration=trip_duration,
                 distance=distance,
                 convenience=3,
+                allocation_engine=self.operator.allocation_engine,
                 route_to_pickup=route_to_pick_up,
                 pick_up_time=pickup_time,
             )
@@ -167,6 +168,7 @@ class RideHailingSearchEngine(SearchEngine):
                 duration=trip_duration,
                 distance=distance,
                 convenience=3,
+                allocation_engine=self.operator.allocation_engine,
                 route_to_pickup=route_to_pick_up,
                 pick_up_time=pickup_time,
             )

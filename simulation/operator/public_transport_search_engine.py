@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from simulation.operator.public_transport_vehicle_fleet import (
         PublicTransportVehicleFleet,
     )
-    from simulation.tasks.transportation_search_task import TransportationSearchTask
+    from simulation.tasks.transport_task import TransportTask
     from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 
 from simulation.helper.simulation_base import SimulationBase
@@ -146,13 +146,13 @@ class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):  # noq
         return viable_transit
 
     def search_for_transportation_alternatives(  # noqa: D102
-        self, transportation_search_task: TransportationSearchTask
+        self, transport_task: TransportTask
     ) -> TransportationAlternativeBrowser:
         browser = TransportationAlternativeBrowser()
-        search_time = transportation_search_task.transport_task.time
+        search_time = transport_task.time
 
         for viable_transit in self.find_viable_transit(
-            transportation_search_task,
+            transport_task,
             self._user_config.SPATIAL_STRATEGY,
             self._user_config.TRANSIT_MAX_WAIT,
         ):

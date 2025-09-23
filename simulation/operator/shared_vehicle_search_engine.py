@@ -7,7 +7,7 @@ from simulation.operator.search_engine import SearchEngine
 if TYPE_CHECKING:
     from simulation.operator.search_engine import SearchEngineDependencies
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.tasks.transportation_search_task import TransportationSearchTask
+    from simulation.tasks.transport_task import TransportTask
 
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative import (
@@ -27,7 +27,7 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         self._fleet: VehicleFleet = deps.operator.fleet
 
     def search_for_transportation_alternatives(
-        self, vehicle_search_task: TransportationSearchTask
+        self, transport_task: TransportTask
     ) -> TransportationAlternativeBrowser:
         """
         Spot all available vehicles to user
@@ -36,7 +36,7 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         """  # noqa: D205, D400
         browser = TransportationAlternativeBrowser()
 
-        hexagon_origin = vehicle_search_task.agent_position.get_region_id()
+        hexagon_origin = transport_task.origin.get_region_id()
 
         parking_vehicles_in_region = self._fleet.parking_vehicles_in_region(
             hexagon_origin
@@ -47,8 +47,8 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         )
 
         # TODO: Shouldn't we use the vehicles position instead of the task's origin?
-        origin = vehicle_search_task.transport_task.origin
-        destination = vehicle_search_task.transport_task.destination
+        origin = transport_task.origin
+        destination = transport_task.destination
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
