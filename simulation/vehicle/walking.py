@@ -5,6 +5,7 @@ from simulation.infrastructure.network.edge import Edge
 from simulation.vehicle.vehicle import Vehicle
 
 
+# TODO: We should probably delete this.
 ### Basically a singleton that is used as a placeholder in the vehicle slot for search and allocations signifying that a user is walking this route.
 class Walking(Vehicle):  # noqa: D101
     __slots__ = ("_id", "_velocity")
@@ -25,5 +26,4 @@ class Walking(Vehicle):  # noqa: D101
         )
 
     def __str__(self) -> str:  # noqa: D105
-        return "I am walking!"
         return "I am walking!"
