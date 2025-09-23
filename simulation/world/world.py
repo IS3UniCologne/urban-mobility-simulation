@@ -15,7 +15,6 @@ from simulation.infrastructure.charging_stations.charging_infastructure import (
 from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
 )
-from simulation.maas.maas_provider import MaaSProvider
 from simulation.operator.operations_management.integrated_shared_mobility_operations import (
     IntegratedSharedMobilityOperations,
 )
@@ -38,6 +37,7 @@ from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
     OnlyCarVehicleChoiceBehavior,
 )
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
+from simulation.world.mobility_search_engine import MobilitySearchEngine
 from simulation.world.population.PopulationFactory import PopulationFactory
 
 if TYPE_CHECKING:
@@ -75,8 +75,8 @@ class World(SimulationBase):  # noqa: D101
         "_env",
         "_fleets",
         "_geo_env",
-        "_maas_provider",
         "_market",
+        "_mobility_search",
         "_operators",
         "_payment_engine",
         "_population_factory",
@@ -131,7 +131,9 @@ class World(SimulationBase):  # noqa: D101
             self._initialize_population_factory()
         )
 
-        self._maas_provider: MaaSProvider = MaaSProvider(sim=self._sim)
+        self._mobility_search: MobilitySearchEngine = MobilitySearchEngine(
+            sim=self._sim
+        )
 
         self._charging_infrastructures: list[ChargingInfrastructure] | None = (
             self._initialize_charging_infrastructures()
@@ -146,15 +148,15 @@ class World(SimulationBase):  # noqa: D101
         self._user_limit = 10_000_000
 
     @property
-    def maas_provider(self) -> MaaSProvider:
-        """Get the MaaS (Mobility as a Service) provider.
+    def mobility_search(self) -> MobilitySearchEngine:
+        """Get the mobility search provider.
 
         Returns
         -------
-        MaaSProvider
-            The MaaS provider instance.
+        MobilitySearch
+            The mobility search instance.
         """
-        return self._maas_provider
+        return self._mobility_search
 
     @property
     def random_manager(self) -> RandomManager:
@@ -480,7 +482,7 @@ class World(SimulationBase):  # noqa: D101
                     fleet_index=fleet,
                     position=origin_position,
                     transport_task=task,
-                    transportation_search_service=self.maas_provider,
+                    transportation_search_service=self.mobility_search,
                     payment_service=operator,
                     vehicle_assignment_service=operator.allocation_engine,
                     vehicle_choice_behavior=self._vehicle_choice_behavior,
