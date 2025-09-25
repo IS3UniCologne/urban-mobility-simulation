@@ -77,20 +77,22 @@ class GeodesicEnvironment(Environment):
             if geometry.contains(pnt):
                 return pnt.y, pnt.x  # Latitude, Longitude
 
-    def get_centroid(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
+    def get_centroid(self, hex_id: str) -> tuple[float, float]:
         """
         Get centroid of hexagon
-        :param hex_id: Hexagon ID
-        :param layer_name: Layername (i.e., resolution, hex_7, hex_8, hex_9)
-        :return: Point (lat,lng) representing centroid of hexagon
+
+        Parameters
+        ----------
+        hex_id : str
+            Hexagon ID
+
+        Returns
+        -------
+        tuple[float, float]
+            Point (lat,lng) representing centroid of hexagon
         """
-        # Select Layer
-        gdf = self.layer[layer_name]
-
-        # Get geometry of hexagon
-        geometry = gdf.loc[hex_id].geometry
-
-        return geometry.centroid.y, geometry.centroid.x  # Lat, Lng
+        lat, lng = h3.cell_to_latlng(hex_id)
+        return lat, lng
 
     def is_in_layer(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
         return hex_id in self.layer[layer_name].index
