@@ -16,7 +16,7 @@ class GeodesicEnvironment(Environment):
     # There is only one instance of this class.
     __instance = None
 
-    __slots__ = ("_hex_geom_cache", "_rng")
+    __slots__ = ("_centroid_cache", "_hex_geom_cache", "_rng")
 
     @staticmethod
     def getInstance():  # noqa: ANN205
@@ -36,6 +36,7 @@ class GeodesicEnvironment(Environment):
             self._rng = RandomManager().get_rng(component_name="GEOENV")
 
             self._hex_geom_cache = {}
+            self._centroid_cache = {}
 
     def getLayer(self, layer_name: str):  # noqa: ANN201
         """
@@ -79,7 +80,9 @@ class GeodesicEnvironment(Environment):
 
     def get_centroid(self, hex_id: str) -> tuple[float, float]:
         """
-        Get centroid of hexagon
+        Get centroid of hexagon.
+
+        Results are cached for performance.
 
         Parameters
         ----------
@@ -91,8 +94,11 @@ class GeodesicEnvironment(Environment):
         tuple[float, float]
             Point (lat,lng) representing centroid of hexagon
         """
-        lat, lng = h3.cell_to_latlng(hex_id)
-        return lat, lng
+        if hex_id not in self._centroid_cache:
+            lat, lng = h3.cell_to_latlng(hex_id)
+            self._centroid_cache[hex_id] = (lat, lng)
+
+        return self._centroid_cache[hex_id]
 
     def is_in_layer(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
         return hex_id in self.layer[layer_name].index
