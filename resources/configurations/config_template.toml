@@ -290,7 +290,7 @@ ENERGY_CONSUMPTION             = 0.20
 EV_RELATIVE_ENERGY_CONSUMPTION = 0.3
 INITIAL_SOC                    = 0.50
 # percentage (State of Charge) that a vehicle should not drop below
-EMERGENCY_SOC_BUFFER = 0.05 
+EMERGENCY_SOC_BUFFER = 0.05
 
 PRICE_PER_MIN         = 0.35
 DAILY_TOTAL_COST      = 29.0

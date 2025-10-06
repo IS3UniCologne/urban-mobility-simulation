@@ -16,7 +16,7 @@ class GeodesicEnvironment(Environment):
     # There is only one instance of this class.
     __instance = None
 
-    __slots__ = ("_hex_geom_cache", "_rng")
+    __slots__ = ("_centroid_cache", "_hex_geom_cache", "_rng")
 
     @staticmethod
     def getInstance():  # noqa: ANN205
@@ -36,6 +36,7 @@ class GeodesicEnvironment(Environment):
             self._rng = RandomManager().get_rng(component_name="GEOENV")
 
             self._hex_geom_cache = {}
+            self._centroid_cache = {}
 
     def getLayer(self, layer_name: str):  # noqa: ANN201
         """
@@ -77,20 +78,27 @@ class GeodesicEnvironment(Environment):
             if geometry.contains(pnt):
                 return pnt.y, pnt.x  # Latitude, Longitude
 
-    def get_centroid(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
+    def get_centroid(self, hex_id: str) -> tuple[float, float]:
         """
-        Get centroid of hexagon
-        :param hex_id: Hexagon ID
-        :param layer_name: Layername (i.e., resolution, hex_7, hex_8, hex_9)
-        :return: Point (lat,lng) representing centroid of hexagon
+        Get centroid of hexagon.
+
+        Results are cached for performance.
+
+        Parameters
+        ----------
+        hex_id : str
+            Hexagon ID
+
+        Returns
+        -------
+        tuple[float, float]
+            Point (lat,lng) representing centroid of hexagon
         """
-        # Select Layer
-        gdf = self.layer[layer_name]
+        if hex_id not in self._centroid_cache:
+            lat, lng = h3.cell_to_latlng(hex_id)
+            self._centroid_cache[hex_id] = (lat, lng)
 
-        # Get geometry of hexagon
-        geometry = gdf.loc[hex_id].geometry
-
-        return geometry.centroid.y, geometry.centroid.x  # Lat, Lng
+        return self._centroid_cache[hex_id]
 
     def is_in_layer(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
         return hex_id in self.layer[layer_name].index

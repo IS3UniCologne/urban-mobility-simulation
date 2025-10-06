@@ -510,7 +510,7 @@ class DQN(RLAgent):
             )
             new_hex = bus._geodesic_env.move_in_layer(hex_id, action)  # noqa: SLF001
             new_centroid = bus._geodesic_env.get_centroid(  # noqa: SLF001
-                new_hex, f"hex_{self._config.transit_agent_config.action_resolution}"
+                new_hex
             )
 
             new_position = GeodesicPosition(*new_centroid)
