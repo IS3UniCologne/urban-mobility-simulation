@@ -255,13 +255,10 @@ class RideHailingVehicle(Vehicle):  # noqa: D101
     def move_to_pick_up_position(  # noqa: D102
         self, vehicle_assignment: VehicleAllocation
     ) -> Generator[Event, None, None]:
-        # Wait for event
-        yield vehicle_assignment.user._vehicle_allocated  # noqa: SLF001
         self._vehicle_assignment = vehicle_assignment
         # Set current state
         self.state = VehicleState.MOVING_TO_PICK_UP_POS
 
-        ###
         vehicle_soc_before_driving = self.current_state_of_charge
         route_segment = (
             vehicle_assignment.associated_transportation_alternative.route_to_pickup
@@ -283,19 +280,21 @@ class RideHailingVehicle(Vehicle):  # noqa: D101
             user_energy_consumption
         )
 
-        # Trigger next event
         self._arrived_at_pick_up_position.succeed()
+
         self.logger.debug(
             "Arrived at pick up position %s after %s time units to pick up user %s.",
             self.position,
             self._env.now - start_waiting,
             self._reserved_for_user,
         )
-        self._arrived_at_pick_up_position = self._env.event()
 
     def start_driving(self) -> None:  # noqa: D102
         self._suggested = False
         self.state = VehicleState.DRIVING
+
+        # Reset pickup arrival event for next trip
+        self._arrived_at_pick_up_position = self._env.event()
 
         self.logger.debug("Driving started.")
 
@@ -317,14 +316,9 @@ class RideHailingVehicle(Vehicle):  # noqa: D101
         self.logger.debug("Parked.")
 
     def reserve(self, user: User) -> None:  # noqa: D102
-        previous_state = self.state
         self.state = VehicleState.RESERVED
 
         self._reserved_for_user = user
-
-        self.logger.debug(
-            "Reserved to %s and previous state was %s.", user.uid, previous_state
-        )
 
     def has_enough_state_of_charge(
         self, distance: float, consider_buffer: bool = True
