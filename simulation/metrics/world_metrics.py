@@ -54,9 +54,9 @@ class WorldMetrics(MetricsBase):
         return state_counts
 
     @property
-    def active_user_processes(self) -> int:
-        """Number of active user processes."""
-        return len(self._world.user_processes)
+    def active_users(self) -> int:
+        """Number of active users."""
+        return len(self._world.users)
 
     @property
     def active_vehicle_processes(self) -> int:
@@ -84,7 +84,7 @@ class WorldMetrics(MetricsBase):
                 "total_vehicles": self.total_vehicles,
                 "user_state_distribution": self.user_state_distribution,
                 "vehicle_state_distribution": self.vehicle_state_distribution,
-                "active_user_processes": self.active_user_processes,
+                "active_users": self.active_users,
                 "active_vehicle_processes": self.active_vehicle_processes,
                 "active_demand_processes": self.active_demand_processes,
             }
