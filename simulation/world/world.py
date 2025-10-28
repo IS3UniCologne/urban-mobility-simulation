@@ -24,7 +24,6 @@ from simulation.operator.shared_vehicle_allocation_engine import (
 )
 from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
 from simulation.world.mobility_search_engine import MobilitySearchEngine
-from simulation.world.population.PopulationFactory import PopulationFactory
 
 if TYPE_CHECKING:
     import simpy
@@ -66,7 +65,6 @@ class World(SimulationBase):  # noqa: D101
         "_mobility_search",
         "_operators",
         "_payment_engine",
-        "_population_factory",
         "_random_manager",
         "_search_engine",
         "_sim",
@@ -109,11 +107,6 @@ class World(SimulationBase):  # noqa: D101
         self._vehicle_processes: dict[int, simpy.Process] = {}
 
         self._fleets: list[VehicleFleet] = []
-
-        # Add Population Factory
-        self._population_factory: PopulationFactory | None = (
-            self._initialize_population_factory()
-        )
 
         self._mobility_search: MobilitySearchEngine = MobilitySearchEngine(
             sim=self._sim
@@ -195,31 +188,6 @@ class World(SimulationBase):  # noqa: D101
                 ci_conf.instance = charging_infrastructure
                 charging_infrastructures.append(charging_infrastructure)
             return charging_infrastructures
-        else:
-            return None
-
-    def _initialize_population_factory(self) -> PopulationFactory | None:
-        if hasattr(self._config, "population"):
-            if self._config.population.RIDE_HAILING_POPULATION_PROBABILITIES:
-                return PopulationFactory(
-                    prob=self._config.population.RIDE_HAILING_POPULATION_PROBABILITIES,
-                    random_manager=self._random_manager,
-                )
-            elif self._config.population.SHARED_VEHICLE_POPULATION_PROBABILITIES:
-                return PopulationFactory(
-                    prob=self._config.population.SHARED_VEHICLE_POPULATION_PROBABILITIES,
-                    random_manager=self._random_manager,
-                )
-            elif (
-                hasattr(self._config.population, "TRANSIT_POPULATION_PROBABILITIES")
-                and self._config.population.TRANSIT_POPULATION_PROBABILITIES
-            ):
-                return PopulationFactory(
-                    prob=self._config.population.TRANSIT_POPULATION_PROBABILITIES,
-                    random_manager=self._random_manager,
-                )
-            else:
-                return None
         else:
             return None
 
