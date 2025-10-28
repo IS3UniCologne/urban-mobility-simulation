@@ -58,7 +58,6 @@ class Simulation:
             end_time = self.config.experiment_management.END_TIME
 
         self.demand_factory = self._create_demand_factory()
-        self.demand_factory.reset()
         self.sim.env.process(self.demand_factory.generate_demand())
 
         self.logger.warning("Starting Simulation.")
