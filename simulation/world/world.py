@@ -3,11 +3,6 @@ from __future__ import annotations  # noqa: D100
 import os
 from typing import TYPE_CHECKING
 
-from numpy.random import normal
-
-from simulation.agent import user
-from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import AutonomyType, VehicleType
 from simulation.helper.simulation_base import SimulationBase
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
@@ -23,20 +18,11 @@ from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.operator.public_transport_allocation_engine import (
     PublicTransportAllocationEngine,
 )
-from simulation.operator.ride_hailing_operator import RideHailingOperator
 from simulation.operator.shared_mobility_operator import SharedMobilityOperator
 from simulation.operator.shared_vehicle_allocation_engine import (
     SharedVehicleAllocationEngine,
 )
 from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
-from simulation.tasks.transport_task import TransportTask
-from simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior import (
-    DistanceBasedSharedVehicleVehicleChoiceBehavior,
-)
-from simulation.vehicle_choice_model.only_car_vehicle_choice_behavior import (
-    OnlyCarVehicleChoiceBehavior,
-)
-from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 from simulation.world.mobility_search_engine import MobilitySearchEngine
 from simulation.world.population.PopulationFactory import PopulationFactory
 
@@ -44,6 +30,7 @@ if TYPE_CHECKING:
     import simpy
     from pandas import DataFrame
 
+    from simulation.agent.user import user
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_environment import GeodesicEnvironment
     from simulation.helper.configuration.configuration import Configuration
@@ -91,7 +78,6 @@ class World(SimulationBase):  # noqa: D101
         "_user_processes",
         "_users",
         "_vehicle_assignment_engine",
-        "_vehicle_choice_behavior",
         "_vehicle_processes",
         "_vehicles",
     )
@@ -107,8 +93,6 @@ class World(SimulationBase):  # noqa: D101
         self._distance_matrix: DataFrame = self._load_distance_matrix()
 
         self._operators: list[Operator] = []
-
-        self._setup_vehicle_choice_behavior()
 
         self._demand_processes = []
 
@@ -193,27 +177,6 @@ class World(SimulationBase):  # noqa: D101
     def fleets(self) -> list[VehicleFleet]:
         """Get a list of all vehicle fleets in the world."""
         return self._fleets
-
-    def _setup_vehicle_choice_behavior(self) -> None:
-        if self._config.operators[0].OPERATOR_TYPE == RideHailingOperator:
-            rh_modes: list[str] = [AutonomyType.AUTONOMOUS, AutonomyType.HUMAN_DRIVEN]
-            self._vehicle_choice_behavior = OnlyCarVehicleChoiceBehavior(rh_modes)
-
-        elif self._config.operators[0].OPERATOR_TYPE == SharedMobilityOperator:
-            shared_modes: list[VehicleType] = list(self._config.shared_vehicles.keys())
-
-            self._vehicle_choice_behavior = DistanceBasedSharedVehicleVehicleChoiceBehavior(
-                path_to_choice_model=self._config.path.PATH_TO_MODE_CHOICE_MODEL,
-                substitution_boundary=self._config.mode_choice_model.SUBSTITUTION_BOUNDARY,
-                available_vehicles=shared_modes,
-            )
-
-        elif self._config.operators[0].OPERATOR_TYPE == PublicTransitOperator:
-            from simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior import (
-                PublicTransitVehicleChoiceBehavior,
-            )
-
-            self._vehicle_choice_behavior = PublicTransitVehicleChoiceBehavior(["Bus"])
 
     def _initialize_charging_infrastructures(
         self,
@@ -367,178 +330,9 @@ class World(SimulationBase):  # noqa: D101
         )
         return dmi.load_distance_matrix()
 
-    def add_user(self, mode, fleet: VehicleFleet, origin, destination):  # noqa: ANN001, ANN201
+    def add_user(self, user: user.User) -> None:
         """
-        Add a user agent to the world with an origin and a destination.
-
-        :param mode: which type of request
-        :param fleet: which fleet
-        :param origin: Spatial Unit ID (e.g., hex_id)
-        :param destination: Spatial Unit ID (e.g., hex_id)
-        :return: None
-        """  # noqa: D202
-
-        if len(self._users) < self._user_limit:
-            operator = fleet.operator
-
-            # Get Origin and Destination based on underlying environment
-
-            # TODO: Why are we doing this here ??
-            origin_lat, origin_lng = self._geo_env.get_random_position(
-                origin, f"hex_{self._config.world.SPATIAL_RESOLUTION}"
-            )
-            destination_lat, destination_lng = self._geo_env.get_random_position(
-                destination, f"hex_{self._config.world.SPATIAL_RESOLUTION}"
-            )
-
-            origin_position = GeodesicPosition(
-                self._sim, origin_lat, origin_lng, origin
-            )  # (Lat, Lng)
-            destination_position = GeodesicPosition(
-                self._sim, destination_lat, destination_lng, destination
-            )  # (Lat, Lng)
-
-            # Vehicle Choice
-            distance = origin_position >> destination_position
-            tc = TripCharacteristics(distance)
-            viable_vehicle_types = self._vehicle_choice_behavior.choose_vehicle(tc)
-
-            # Determine Consumer Type
-            if mode == "public_transport":
-                # User Preferences
-                max_wait_time = normal(
-                    self._config.user.TRANSIT_MAX_WAIT
-                )  # sample from normal dist centered on config
-
-                # Generate Transportation Task
-                task = TransportTask(
-                    time=self._env.now,
-                    origin=origin_position,
-                    destination=destination_position,
-                    viable_vehicle_types=viable_vehicle_types,
-                    max_wait_time=max_wait_time,
-                )
-
-                # new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
-                #                             self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env,
-                #                             passive=True if not self._config.transit_agent_config.dumb else False)
-                population_type = None
-
-                new_user = user.TransitUser(
-                    sim=self._sim,
-                    position=origin_position,
-                    transport_task=task,
-                    transportation_search_service=operator.search_engine,
-                    payment_service=operator,
-                    vehicle_assignment_service=operator.allocation_engine,
-                    vehicle_choice_behavior=self._vehicle_choice_behavior,
-                    population_type=population_type,
-                    world=self,
-                )
-            elif mode == "shared_vehicle":
-                # Generate Transportation Task
-                task = TransportTask(
-                    time=self._env.now,
-                    origin=origin_position,
-                    destination=destination_position,
-                    viable_vehicle_types=viable_vehicle_types,
-                )
-
-                # Determine Consumer Type
-                population_type = self._population_factory.generatePopulationType()
-                # TODO: Remove hard coded operator id
-                new_user = user.User(
-                    sim=self._sim,
-                    fleet=fleet,
-                    position=origin_position,
-                    transport_task=task,
-                    transportation_search_service=operator.search_engine,
-                    payment_service=operator,
-                    vehicle_assignment_service=operator.allocation_engine,
-                    vehicle_choice_behavior=self._vehicle_choice_behavior,
-                    population_type=population_type,
-                )
-                self.logger.debug(
-                    " Shared-vehicle user %s starts searching for fleet %s at %s.",
-                    new_user.uid,
-                    fleet,
-                    self._env.now,
-                )
-            elif mode == "ride_hailing":
-                task = TransportTask(
-                    self._env.now,
-                    origin_position,
-                    destination_position,
-                    viable_vehicle_types,
-                )
-
-                # Determine Consumer Type
-                population_type = (
-                    self._population_factory.generatePopulationTypeRideHailing()
-                )
-
-                new_user = user.RideHailingUser(
-                    sim=self._sim,
-                    fleet_index=fleet,
-                    position=origin_position,
-                    transport_task=task,
-                    transportation_search_service=self.mobility_search,
-                    payment_service=operator,
-                    vehicle_assignment_service=operator.allocation_engine,
-                    vehicle_choice_behavior=self._vehicle_choice_behavior,
-                    population_type=population_type,
-                )
-                self.logger.debug(
-                    "Ride-hailing user %s, %s request a vehicle at %s.",
-                    new_user.uid,
-                    population_type,
-                    self._env.now,
-                )
-            elif mode == "walking":
-                # Generate Transportation Task
-                task = TransportTask(
-                    self._env.now,
-                    origin_position,
-                    destination_position,
-                    viable_vehicle_types,
-                )
-
-                # Determine Consumer Type
-                population_type = self._population_factory.generatePopulationType()
-
-                new_user = user.User(
-                    sim=self._sim,
-                    fleet=fleet,
-                    position=origin_position,
-                    transport_task=task,
-                    transportation_search_service=self._search_engine["walking"],
-                    payment_service=self._payment_engine["walking"],
-                    vehicle_assignment_service=self._vehicle_assignment_engine[
-                        "walking"
-                    ],
-                    vehicle_choice_behavior=self._vehicle_choice_behavior,
-                    population_type=population_type,
-                )
-            else:
-                raise NotImplementedError('User mode "{mode}" not implemented.')
-
-            # Add user to user set
-            self._users.add(new_user)
-            # Start Process for each new user
-            self._user_processes[new_user.uid] = self._env.process(new_user.run())
-
-            # Spawn cleanup process for that user
-            self._env.process(self._cleanup_user(new_user, new_user.uid))
-
-            if len(self._users) == self._user_limit:
-                self.logger.info(
-                    "Reached User Limit of %s. Not adding more users to world.",
-                    self._user_limit,
-                )
-
-    def _cleanup_user(self, user, user_uid: str):  # noqa: ANN001, ANN202
-        """
-        Wait for the user process to finish, then remove the user from the simulation.
+        Add a User object to the world.
 
         Parameters
         ----------
