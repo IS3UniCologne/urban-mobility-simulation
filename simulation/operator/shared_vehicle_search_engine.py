@@ -25,6 +25,7 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         self._sim = deps.sim
         self._env = self._sim.env
         self._fleet: VehicleFleet = deps.operator.fleet
+        self._operator = deps.operator
 
     def search_for_transportation_alternatives(
         self, transport_task: TransportTask
@@ -67,7 +68,13 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
 
             # Put together
             transportation_alternative = TransportationAlternative(
-                vehicle, route, price, duration, distance, vehicle.convenience
+                vehicle=vehicle,
+                route=route,
+                price=price,
+                duration=duration,
+                distance=distance,
+                convenience=vehicle.convenience,
+                operator=self._operator,
             )
 
             if vehicle.has_enough_state_of_charge(distance):

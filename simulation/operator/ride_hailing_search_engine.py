@@ -2,7 +2,6 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.configuration import RideHailingOperationsConfig
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
@@ -39,10 +38,7 @@ class RideHailingSearchEngine(SearchEngine):
         self._env = deps.sim.env
         self._fleet = deps.operator.fleet
         ops_config = deps.operator.operations.config
-        if not isinstance(ops_config, RideHailingOperationsConfig):
-            raise TypeError(
-                "RideHailingSearchEngine requires a RideHailingOperationsConfig."
-            )
+
         self._AV_price_reduction = ops_config.AV_PRICE_REDUCTION
         self._price_entering = ops_config.PRICE_ENTERING
         self._price_per_minute = ops_config.PRICE_PER_MINUTE
@@ -119,7 +115,7 @@ class RideHailingSearchEngine(SearchEngine):
                 duration=trip_duration,
                 distance=distance,
                 convenience=3,
-                allocation_engine=self.operator.allocation_engine,
+                operator=self.operator,
                 route_to_pickup=route_to_pick_up,
                 pick_up_time=pickup_time,
             )
@@ -168,7 +164,7 @@ class RideHailingSearchEngine(SearchEngine):
                 duration=trip_duration,
                 distance=distance,
                 convenience=3,
-                allocation_engine=self.operator.allocation_engine,
+                operator=self.operator,
                 route_to_pickup=route_to_pick_up,
                 pick_up_time=pickup_time,
             )
