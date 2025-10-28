@@ -37,7 +37,7 @@ class RideHailingOperator(Operator):
 
     def pay_for_fulfilled_transportation_task(  # noqa: ANN201, D102
         self,
-        user,  # noqa: ANN001
+        user: User,
         transportation_task: TransportTask,
         selected_transportation_alternative: TransportationAlternative,
     ):
