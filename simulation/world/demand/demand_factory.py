@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import geojson
 import h3
@@ -18,6 +18,7 @@ import simpy
 from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.world.demand.demand_importer import DemandImporter
+from simulation.world.demand.user_factory import UserFactory
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     from pandas import DataFrame
 
     from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.position import RegionId
     from simulation.world.world import World
 
 
@@ -65,6 +67,8 @@ class DemandFactory(SimulationBase):
         List of unique spatial unit IDs.
     _rng : numpy.random.Generator
         Random number generator for demand sampling.
+    _user_factory : UserFactory
+        Factory for creating users.
 
     Methods
     -------
@@ -92,6 +96,7 @@ class DemandFactory(SimulationBase):
         "_temporal_column",
         "_temporal_resolution",
         "_time",
+        "_user_factory",
         "_world",
     )
     counter = 0
@@ -124,8 +129,9 @@ class DemandFactory(SimulationBase):
         self._demand_profile = self._load_demand_profile()
         self._spatial_units = list(self._demand_profile[self._origin_column].unique())
 
-        # Random Number Generators
         self._rng = sim.random_manager.get_rng("DEMANDFACTORY")
+
+        self._user_factory = UserFactory(sim, world)
 
         self._load_modifiers()
 
@@ -206,7 +212,9 @@ class DemandFactory(SimulationBase):
 
         yield spawned.succeed()
 
-    def spawn_demand_process(self, spatial_unit: str) -> Generator[simpy.Timeout]:
+    def spawn_demand_process(
+        self, spatial_unit: str
+    ) -> Generator[simpy.Timeout, Any, None]:
         """Spawn a demand generator on given spatial unit.
 
         Parameters
@@ -312,20 +320,32 @@ class DemandFactory(SimulationBase):
             except simpy.Interrupt:
                 break
 
-    def reset(self) -> None:
+    def _create_user(
+        self, origin_region: RegionId, destination_region: RegionId
+    ) -> None:
         """
-        Reset the demand factory and clear all demand-related state.
+        Create a user, add them to the world and start their lifecycle process.
 
-        This method terminates all ongoing demand processes, clears previous demand and user processes,
-        resets the list of users, and resets the global demand counter to zero.
+        Parameters
+        ----------
+        origin_region : RegionId
+            The origin spatial region ID.
+        destination_region : RegionId
+            The destination spatial region ID.
         """
-        # Terminate all ongoing demand processes
-        self._world.stop_all_processes()
+        # Create user object
+        user = self._user_factory.create_user(
+            origin_region=origin_region, destination_region=destination_region
+        )
 
-        # Clear previous demand/user processes
-        self._world.demand_processes.clear()
-        self._world.user_processes.clear()
-        self._world.users.clear()
+        self._world.add_user(user)
 
-        # Reset the global counter
-        DemandFactory.counter = 0
+        # Start user process
+        user.start()
+
+        self.logger.debug(
+            "Demand generated from hexagon %s to %s. User %s",
+            origin_region,
+            destination_region,
+            user.uid,
+        )
