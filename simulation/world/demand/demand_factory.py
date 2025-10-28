@@ -45,8 +45,6 @@ class DemandFactory(SimulationBase):
         The simulation time manager.
     _world : World
         The simulation world instance.
-    _mode : str
-        The demand mode (e.g., vehicle type or service type).
     _origin_column : str
         Name of the origin column in the demand profile.
     _destination_column : str
@@ -86,7 +84,6 @@ class DemandFactory(SimulationBase):
         "_destination_column",
         "_env",
         "_maximal_demand",
-        "_mode",
         "_modifiers",
         "_origin_column",
         "_rng",
@@ -103,7 +100,6 @@ class DemandFactory(SimulationBase):
         self,
         sim: SimulationContext,
         world: World,
-        mode: str,
         maximal_demand=3_000_000,  # noqa: ANN001
     ) -> None:
         super().__init__(sim)
@@ -112,7 +108,6 @@ class DemandFactory(SimulationBase):
         self._env = sim.env
         self._time = SimulationTime(sim.env)
         self._world: World = world
-        self._mode = mode
 
         self._temporal_resolution = self._config.world.TEMPORAL_RESOLUTION
         self._spatial_resolution = self._config.world.SPATIAL_RESOLUTION
@@ -262,10 +257,6 @@ class DemandFactory(SimulationBase):
                     # Extract Poisson Estimate for given spatio-temporal cell
                     poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
 
-                # Fleet assignment based on mode TODO: this is a hack
-                # pick random operator
-                operator = self._rng.choice([op for op in self._world.operators])
-
                 # Based on Poisson Estimate sample next arrival time (in minutes)
                 # inter_arrival_time = numpy.random.exponential(
                 #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
@@ -313,21 +304,8 @@ class DemandFactory(SimulationBase):
 
                     destination = demand_slice.iloc[idx][self._destination_column]
 
-                    # Append Arrival to World
-                    # create agent or similar consumers
-                    self.logger.debug(
-                        "Demand generated from hexagon %s to %s. Fleet %s",
-                        spatial_unit,
-                        destination,
-                        operator,
-                    )
-
-                self._world.add_user(
-                    mode=self._mode,
-                    fleet=operator.fleet,
-                    origin=spatial_unit,
-                    destination=destination,
-                )
+                    # Create and add user to world
+                    self._create_user(spatial_unit, destination)
 
                 # Increase global counter (not thread safe)
                 DemandFactory.counter += 1
