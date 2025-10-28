@@ -107,7 +107,7 @@ class RideHailingVehicle(Vehicle):  # noqa: D101
         self._max_state_of_charge = vehicle_config.MAX_STATE_OF_CHARGE  # in kWh
 
         # TODO: move this to Vehicle or Fleet Factory class
-        initial_state_of_charge_percentage = vehicle_config.INITIAL_SOC
+        initial_state_of_charge_percentage = vehicle_config.INITIAL_CHARGE_PERCENT
         if initial_state_of_charge_percentage == 0:
             initial_state_of_charge_percentage = self._sim.random_manager.uniform(
                 low=0.2, high=0.8, component="INITIALSOC"

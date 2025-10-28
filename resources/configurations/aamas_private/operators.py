@@ -32,7 +32,7 @@ rh_car_autonomous = RideHailingVehicleConfig(
     DAILY_TOTAL_COST=29.0,
     COST_PER_KM=0.45,
     PRICE_PER_KM=1.3,
-    INITIAL_SOC=0.50,
+    INITIAL_CHARGE_PERCENT=0.50,
 )
 
 charging_infrastructure_1 = ChargingInfrastructureConfig(
