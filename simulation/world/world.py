@@ -26,6 +26,8 @@ from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearch
 from simulation.world.mobility_search_engine import MobilitySearchEngine
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     import simpy
     from pandas import DataFrame
 
@@ -73,7 +75,6 @@ class World(SimulationBase):  # noqa: D101
         "_temporal_resolution",
         "_tracking",
         "_user_limit",
-        "_user_processes",
         "_users",
         "_vehicle_assignment_engine",
         "_vehicle_processes",
@@ -99,7 +100,6 @@ class World(SimulationBase):  # noqa: D101
 
         # Store all current users
         self._users: set[user.User] = set()
-        self._user_processes: dict[int, simpy.Process] = {}
 
         # Store all current vehicles
         # TODO: Probably redundant
@@ -148,10 +148,6 @@ class World(SimulationBase):  # noqa: D101
     def distance_matrix(self) -> DataFrame:
         """Get the distance matrix."""
         return self._distance_matrix
-
-    @property
-    def user_processes(self):  # noqa: ANN201, D102
-        return self._user_processes
 
     @property
     def demand_processes(self):  # noqa: ANN201, D102
@@ -298,7 +294,7 @@ class World(SimulationBase):  # noqa: D101
         )
         return dmi.load_distance_matrix()
 
-    def add_user(self, user: user.User) -> None:
+    def add_user(self, user: user.User) -> Generator[simpy.Event, None, None]:
         """
         Add a User object to the world.
 
@@ -309,28 +305,18 @@ class World(SimulationBase):  # noqa: D101
         user_uid : str
             The unique identifier for tracking.
         """
-        yield user.process_finished
+        self._users.add(user)
 
-        # Remove user from self._users
-        self._users.discard(user)
+        self.logger.debug("User %s added to world.", user.uid)
 
-        # Remove user process from self._user_processes
-        if user.uid in self._user_processes:
-            del self._user_processes[user.uid]
-
-        self.logger.debug(
-            "User %s removed from simulation after process finished.", user.uid
-        )
+        # Start process for automatic cleanup
+        self._env.process(self._monitor_user_lifecycle(user))
 
     def add_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
         self._vehicles.add(vehicle)
 
-        # TODO: register vehicle with tracking
-
     def remove_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
         self._vehicles.discard(vehicle)
-
-        # TODO: de-register vehicle with tracking
 
     @property
     def users(self):  # noqa: ANN201, D102
@@ -357,25 +343,26 @@ class World(SimulationBase):  # noqa: D101
     def changed(self, event):  # noqa: ANN001, ANN202
         self._changed = event
 
-    def stop_all_processes(self):  # noqa: ANN201, D102
-        # stop demand generation
-        for d in self.demand_processes:
-            try:
-                d.interrupt()
-            except RuntimeError:
-                # already terminated
-                pass
+    def _monitor_user_lifecycle(
+        self, user: user.User
+    ) -> Generator[simpy.Event, None, None]:
+        """
+        Monitor a user's lifecycle and clean up when it's finished.
 
-        # clean up user demands
-        for process in self.user_processes.values():
-            try:
-                process.interrupt()
-            except RuntimeError:
-                # already terminated
-                pass
+        Parameters
+        ----------
+        user : User
+            The user to monitor.
+        """
+        # Wait for user process to finish
+        yield user.process_finished
 
-    def user_process_by_id(self, user_id):  # noqa: ANN001, ANN201, D102
-        return self._user_processes.get(user_id)  # returns the process or None
+        # Remove user from tracking
+        self._users.discard(user)
+
+        self.logger.debug(
+            "User %s removed from world after process finished.", user.uid
+        )
 
     def _load_timetable(self) -> Timetable | None:
         if not hasattr(self._config.path, "PATH_TRANSIT_TIMETABLE"):
