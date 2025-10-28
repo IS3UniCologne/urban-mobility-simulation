@@ -1,11 +1,19 @@
-from abc import ABC, abstractmethod  # noqa: D100
+from __future__ import annotations  # noqa: D100
 
-from simulation.operator.data_transfer_object.transportation_alternative import (
-    TransportationAlternative,
-)
-from simulation.operator.data_transfer_object.vehicle_allocation import (
-    VehicleAllocation,
-)
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
+    )
+    from simulation.operator.data_transfer_object.vehicle_allocation import (
+        VehicleAllocation,
+    )
 
 
 class AllocationEngineInterface(ABC):  # noqa: D101
@@ -14,5 +22,5 @@ class AllocationEngineInterface(ABC):  # noqa: D101
         self,
         user,  # noqa: ANN001
         selected_transportation_alternative: TransportationAlternative,
-    ) -> VehicleAllocation:
+    ) -> Generator[Event, Any, VehicleAllocation | None]:
         pass  # Implement filtering
