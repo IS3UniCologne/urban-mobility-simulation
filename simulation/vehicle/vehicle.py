@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from simpy import Event
 
     from simulation.context.simulation_context import SimulationContext
-    from simulation.environment.position import Position
+    from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import (
         Configuration,
         VehicleConfig,
@@ -74,7 +74,7 @@ class Vehicle(SimulationBase, ABC):
         self,
         sim: SimulationContext,
         fleet: VehicleFleet,
-        position: Position,
+        position: GeodesicPosition,
         vehicle_config: VehicleConfig,
     ) -> None:
         super().__init__(sim)
@@ -86,7 +86,7 @@ class Vehicle(SimulationBase, ABC):
         self._fleet: VehicleFleet = fleet
 
         # Vehicle Position, name is intentionally mangled. Do not set directly.
-        self.__position: Position = position
+        self.__position: GeodesicPosition = position
         self._current_region: str = position.get_region_id()
         self._velocity: float = vehicle_config.VELOCITY
         self._vehicle_type: VehicleType = vehicle_config.VEHICLE_TYPE
@@ -227,18 +227,18 @@ class Vehicle(SimulationBase, ABC):
         self.__state = state
 
     @property
-    def position(self) -> Position:
+    def position(self) -> GeodesicPosition:
         """Get the current position of the vehicle.
 
         Returns
         -------
-        Position
+        GeodesicPosition
             The current position of the vehicle.
         """
         return self.__position
 
     @position.setter
-    def position(self, position: Position) -> None:
+    def position(self, position: GeodesicPosition) -> None:
         old_position = self.__position
 
         self._distance_travelled += self.__position >> position
