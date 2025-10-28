@@ -40,6 +40,7 @@ if TYPE_CHECKING:
 from simulation.helper.configuration.enums import (
     AutonomyType,
     OperatorMode,
+    PropulsionType,
     TransactionState,
 )
 from simulation.operator.data_transfer_object.transportation_alternative import (
@@ -155,6 +156,18 @@ class Operator(SimulationBase, OperatorInterface):
     def operations(self) -> OperationsInterface:
         """Get the operations used by the operator."""
         return self._operations
+
+    @property
+    def mode(self) -> OperatorMode:
+        """
+        Get the mode of the operator.
+
+        Returns
+        -------
+        OperatorMode
+            The operator mode
+        """
+        return self._mode
 
     @property
     def total_revenue(self) -> float:
@@ -284,9 +297,12 @@ class Operator(SimulationBase, OperatorInterface):
                 transportation_alternative.vehicle.autonomy_type
                 == AutonomyType.HUMAN_DRIVEN
             ):
-                revenue = transportation_alternative.price * (
-                    1 - self._config.OPERATIONS_CONFIG.DRIVER_PAYMENT_SHARE
-                )
+                if hasattr(self._config.OPERATIONS_CONFIG, "DRIVER_PAYMENT_SHARE"):
+                    revenue = transportation_alternative.price * (
+                        1 - self._config.OPERATIONS_CONFIG.DRIVER_PAYMENT_SHARE
+                    )
+                else:
+                    revenue = transportation_alternative.price
             else:
                 revenue = transportation_alternative.price
             transaction: Transaction = Transaction(
@@ -306,9 +322,13 @@ class Operator(SimulationBase, OperatorInterface):
                 energy_consumption=transportation_alternative.energy_consumed,
                 waiting_time=transportation_alternative.waiting_time,
                 pick_up_time=transportation_alternative.pick_up_time,
-                selected_vehicle_EV=transportation_alternative.vehicle.is_electric,
+                selected_vehicle_EV=(
+                    transportation_alternative.vehicle.propulsion_type
+                    == PropulsionType.BATTERY_ELECTRIC
+                ),
             )
         else:
+            # TODO: This used to be for shared vehciles, check if any of this is still needed
             transaction: Transaction = Transaction(
                 vehicle_uid=transportation_alternative.vehicle.uid,
                 origin=transportation_alternative.route.origin.get_region_id(),
@@ -353,15 +373,3 @@ class Operator(SimulationBase, OperatorInterface):
         self.log_transaction(transportation_task, None, state="Missed")
 
         self.logger.debug("Missed trip of User %s.", user.uid)
-
-    @property
-    def mode(self) -> OperatorMode:
-        """
-        Get the mode of the operator.
-
-        Returns
-        -------
-        OperatorMode
-            The operator mode
-        """
-        return self._mode
