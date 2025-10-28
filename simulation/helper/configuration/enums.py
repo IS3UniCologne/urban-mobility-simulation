@@ -96,17 +96,6 @@ class ModeChoiceStrategy(StrEnum):
     NO_SUBSTITUTION = "NoSubstitution"
 
 
-class PopulationType(Enum):
-    """Population types for grouping users."""
-
-    CLUSTER_0 = 0
-    CLUSTER_1 = 1
-    CLUSTER_2 = 2
-    CLUSTER_3 = 3
-    PRICE_SENSITIVE = 4
-    CONVENIENCE_SEEKER = 5
-
-
 class VehicleType(StrEnum):
     """Vehicle types, e.g. car, bike, scooter."""
 
