@@ -40,8 +40,10 @@ class GeodesicPosition(Position):  # noqa: D101
         self._default_resolution = sim.config.world.SPATIAL_RESOLUTION
         self._hex_id_by_resolution = {}
 
-        # Resolution 0 is the default resolution
-        self._hex_id_by_resolution[self._default_resolution] = default_res_hex_id
+        # store the hex_id if it's provided
+        if default_res_hex_id is not None:
+            self._hex_id_by_resolution[self._default_resolution] = default_res_hex_id
+
         self._geometry = Point(self._lng, self._lat)
 
     def getExactLocation(self, geojson: bool = False) -> tuple[float, float]:  # noqa: D102
