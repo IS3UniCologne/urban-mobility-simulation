@@ -6,9 +6,6 @@ from typing import TYPE_CHECKING, Any
 import h3
 import pandas as pd
 
-from simulation.helper.configuration.configuration import (
-    IntegratedSharedMobilityOperationsConfig,
-)
 from simulation.helper.configuration.enums import VehicleType
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
 from simulation.operator.operations_management.operations import (
@@ -78,10 +75,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         )  # TODO: Remove dependency on ordering
 
         ops_config = deps.operations_config
-        if not isinstance(ops_config, IntegratedSharedMobilityOperationsConfig):
-            raise TypeError(
-                "IntegratedSharedMobilityOperations requires a IntegratedSharedMobilityOperationsConfig."
-            )
+
         self._base_regions = ops_config.BASE_REGIONS
         self._base_capacity = ops_config.BASE_CAPACITY
 
@@ -166,7 +160,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                 number_of_vehicles_to_charge=no_vehicle_to_charge,
                                 vehicle_type=type,
                                 distance_to_fleet_base=distance_to_base,
-                                vehicle_fleet=self._operator_reference.fleet,
+                                vehicle_fleet=self._operator.fleet,
                                 state_of_charge_threshold=self._state_of_charge_threshold,
                             )
 
@@ -195,7 +189,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                             number_of_vehicles_to_charge=no_vehicle_to_charge,
                             vehicle_type=type,
                             distance_to_fleet_base=distance_to_base,
-                            vehicle_fleet=self._operator_reference.fleet,
+                            vehicle_fleet=self._operator.fleet,
                             state_of_charge_threshold=self._state_of_charge_threshold,
                         )
 
@@ -214,7 +208,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
             self.logger.info(
                 "There are %s vehicles with low state of charge.",
                 len(
-                    self._operator_reference.fleet.vehicles_below_soc_threshold(
+                    self._operator.fleet.vehicles_below_soc_threshold(
                         self._state_of_charge_threshold
                     )
                 ),
@@ -277,7 +271,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                     number_of_vehicles_to_relocate=no_vehicle_to_relocate,
                                     distance=relocation_distance,
                                     vehicle_type=type,
-                                    vehicle_fleet=self._operator_reference.fleet,
+                                    vehicle_fleet=self._operator.fleet,
                                 )
 
                                 multi_service_task.append_task(relocation_task)
@@ -308,7 +302,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                 number_of_vehicles_to_relocate=no_vehicle_to_relocate,
                                 distance=relocation_distance,
                                 vehicle_type=type,
-                                vehicle_fleet=self._operator_reference.fleet,
+                                vehicle_fleet=self._operator.fleet,
                             )
 
                             # Schedule to Queue
@@ -350,7 +344,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         :return: Dict of potential relocations {"SharedCar": [(origin, destination, no, distance)], ..}
         """  # noqa: D205, D400
         fleet_state = self.calculate_residual_supply(
-            self._operator_reference.fleet, self.operator.demand_monitor
+            self._operator.fleet, self.operator.demand_monitor
         )
 
         relocation_plans = self.identify_potential_relocations(fleet_state)
@@ -368,7 +362,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         """  # noqa: D205, D400
         # Get Current Fleet State
         state = self.calculate_residual_supply(
-            self._operator_reference.fleet, self._operator_reference.demand_monitor
+            self._operator.fleet, self._operator.demand_monitor
         )
 
         # TODO :remove this? The whole persist results setting should be looked into
@@ -720,10 +714,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         # Split available service worker resources among vehicle types
         # (prioritize vehicles where most low soc vehicles are present)
         capacity_per_mode = self.calculate_resource_capacity_split_for_relocation(
-            state,
-            self._available_vehicle_types,
-            self._max_vehicle_supply,
-            self._workforce.number_service_workers,
+            state, self._max_vehicle_supply, self._workforce.number_service_workers
         )
         for i, mode in enumerate(self._available_vehicle_types):
             # Relocation List containing tuples (origin, destination, number_of_vehicles_to_be_relocated, distance)
