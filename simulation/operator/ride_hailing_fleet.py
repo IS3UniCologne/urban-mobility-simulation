@@ -2,84 +2,37 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
-import pandas as pd
-
-from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    VehicleState,
-    VehicleType,
-)
+from simulation.helper.configuration.enums import AutonomyType, VehicleState
 from simulation.helper.time import SimulationTimeConverter
 from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
+    from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.environment.position import Position
+    from simulation.helper.configuration.configuration import VehicleConfig
     from simulation.vehicle.vehicle import Vehicle
 
 
 class RideHailingFleet(VehicleFleet):  # noqa: D101
-    __slots__ = ("_env", "_recharging_threshold")
+    __slots__ = ("_driver_availability_vectors", "_env", "_recharging_threshold")
 
     def __init__(self, deps: VehicleFleetDependencies) -> None:
         super().__init__(deps=deps)
 
-        rng = deps.sim.random_manager.get_rng(component_name="FLEETFACTORY")
-        hex_columns = deps.sim.config.world.SPATIAL_RESOLUTION.column_name
-
-        supply_path = deps.sim.config.path.PATH_VEHICLE_SUPPLY
-        supply_probabilities = pd.read_csv(supply_path)
-
-        for vehicle_config, total_count in deps.config.VEHICLES.items():
-            # TODO: We shouldn't hardcode the columns
-            if vehicle_config.VEHICLE_TYPE == VehicleType.CAR:
-                vehicle_probabilities = supply_probabilities["cars_prob"].to_numpy()
-            elif vehicle_config.VEHICLE_TYPE == VehicleType.BIKE:
-                vehicle_probabilities = supply_probabilities["bikes_prob"].to_numpy()
-            elif vehicle_config.VEHICLE_TYPE == VehicleType.SCOOTER:
-                vehicle_probabilities = supply_probabilities["scooters_prob"].to_numpy()
-            elif vehicle_config.VEHICLE_TYPE == VehicleType.KICK_SCOOTER:
-                vehicle_probabilities = supply_probabilities[
-                    "kick_scooters_prob"
-                ].to_numpy()
-
-            else:
-                self.logger.error(
-                    "RideHailingFleet does not support vehicle type %s",
-                    vehicle_config.VEHICLE_TYPE,
-                )
-
+        self._driver_availability_vectors: dict[VehicleConfig, list[int] | None] = {}
+        # Calculate absolute driver availability for human-driven vehicles
+        for vehicle_config in deps.config.VEHICLES:
             if vehicle_config.AUTONOMY_TYPE == AutonomyType.HUMAN_DRIVEN:
-                driver_availability_vector = [
+                total_count = deps.config.VEHICLES[vehicle_config]
+                self._driver_availability_vectors[vehicle_config] = [
                     round(float(x) * total_count) for x in deps.config.RH_AVAILABILITY
                 ]
             else:
-                driver_availability_vector = None
+                self._driver_availability_vectors[vehicle_config] = None
 
-            vehicle_count = pd.DataFrame(
-                rng.multinomial(
-                    n=total_count, pvals=vehicle_probabilities, size=1
-                ).transpose(),
-                columns=["count"],
-            )
-            vehicle_count.index = supply_probabilities.index
-            supply_probabilities["count"] = vehicle_count["count"]
-
-            for _index, row in supply_probabilities.iterrows():
-                hex_id = row[hex_columns]
-                local_count = row["count"]
-                for _ in range(local_count):
-                    rdm_lat, rdm_lng = deps.sim.geo_env.get_random_position(hex_id)
-                    pos = GeodesicPosition(deps.sim, rdm_lat, rdm_lng, hex_id)
-                    RideHailingVehicle(
-                        sim=deps.sim,
-                        position=pos,
-                        fleet=self,
-                        vehicle_config=vehicle_config,
-                        driver_availability_vector=driver_availability_vector,
-                    )
+        self._create_fleet_vehicles(deps)
 
     def _add_vehicle(self, vehicle: Vehicle) -> None:
         if vehicle not in self._vehicles:
@@ -304,3 +257,19 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
             low_soc_supply, key=lambda x: x.current_relative_state_of_charge
         )
         return low_soc_supply
+
+    def _create_vehicle(
+        self,
+        deps: VehicleFleetDependencies,
+        position: GeodesicPosition,
+        vehicle_config: VehicleConfig,
+    ) -> None:
+        RideHailingVehicle(
+            sim=deps.sim,
+            position=position,
+            fleet=self,
+            vehicle_config=vehicle_config,
+            driver_availability_vector=self._driver_availability_vectors[
+                vehicle_config
+            ],
+        )
