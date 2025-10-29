@@ -50,9 +50,22 @@ from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+from simulation.operator.operations_management.integrated_shared_mobility_operations import (
+    IntegratedSharedMobilityOperations,
+)
 from simulation.operator.operations_management.operations import Operations
 from simulation.operator.operator import Operator
+from simulation.operator.ride_hailing_allocation_engine import (
+    RideHailingAllocationEngine,
+)
+from simulation.operator.ride_hailing_operator import RideHailingOperator
+from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 from simulation.operator.search_engine import SearchEngine
+from simulation.operator.shared_mobility_operator import SharedMobilityOperator
+from simulation.operator.shared_vehicle_allocation_engine import (
+    SharedVehicleAllocationEngine,
+)
+from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
 from simulation.operator.vehicle_allocation_engine import AllocationEngine
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.world.markets.auction import Auction
@@ -165,33 +178,6 @@ class PathConfig(ConfigBaseModel):
             return Path(os.path.normpath(os.path.expanduser(v)))
 
 
-class PopulationConfig(ConfigBaseModel):
-    """Configuration for population demographics and probabilities."""
-
-    POPULATION_PROBABILITIES: list[float] = Field(min_length=1)
-    RIDE_HAILING_POPULATION_PROBABILITIES: list[float] | None = None
-    SHARED_VEHICLE_POPULATION_PROBABILITIES: list[float] | None = None
-    TRANSIT_POPULATION_PROBABILITIES: list[float] | None = None
-
-    @field_validator(
-        "POPULATION_PROBABILITIES",
-        # "RIDE_HAILING_POPULATION_PROBABILITIES",
-        # "SHARED_VEHICLE_POPULATION_PROBABILITIES",
-        # "TRANSIT_POPULATION_PROBABILITIES",
-        mode="after",
-    )
-    @classmethod
-    def validate_probabilities(cls, v: list[float] | None) -> list[float] | None:
-        """Validate that probabilities are between 0.0 and 1.0 and sum to 1.0."""
-        if v is None:
-            return v
-        if not all(0.0 <= prob <= 1.0 for prob in v):
-            raise ValueError("All probabilities must be between 0.0 and 1.0")
-        if abs(sum(v) - 1.0) > 1e-6:
-            raise ValueError("Probabilities must sum to 1.0")
-        return v
-
-
 class UserConfig(ConfigBaseModel):
     """Configuration for user behavior and preferences."""
 
@@ -205,11 +191,17 @@ class UserConfig(ConfigBaseModel):
     @classmethod
     def convert_walking_speed(cls, v: float) -> float:
         """Convert walking speed from km/h to m/s."""
-        return SimulationVelocityConverter.convert_kmh(v)
+        return SimulationVelocityConverter.kmh_to_meters_per_minute(v)
+
+
+class ChoiceModelConfig(ConfigBaseModel):
+    """Configuration for choice model parameters."""
 
 
 class VehicleConfig(ConfigBaseModel):
     """Configuration for vehicle properties and behavior."""
+
+    # TODO: check what can be moved to subclasses
 
     # Make frozen so we can use VehicleConfig in fleet dict
     model_config = ConfigDict(frozen=True)
@@ -219,12 +211,14 @@ class VehicleConfig(ConfigBaseModel):
     VEHICLE_TYPE: VehicleType
     AUTONOMY_TYPE: AutonomyType = AutonomyType.HUMAN_DRIVEN
     PROPULSION_TYPE: PropulsionType = PropulsionType.BATTERY_ELECTRIC
-    WALKING_DISTANCE: int | None = Field(default=None, ge=0, le=10000)
+    WALKING_DISTANCE: int | None = Field(
+        default=None, ge=0, le=10000
+    )  # TODO: Move this to users
     CONVENIENCE: int = Field(default=1, ge=1)
     MAX_STATE_OF_CHARGE: float | None = Field(default=None, gt=0)
     ENERGY_CONSUMPTION: float | None = Field(default=None, ge=0)
     EV_RELATIVE_ENERGY_CONSUMPTION: float | None = Field(default=None, gt=0)
-    INITIAL_SOC: float | None = Field(default=None, gt=0)
+    INITIAL_CHARGE_PERCENT: float | None = Field(default=None, gt=0)
     EMERGENCY_SOC_BUFFER: float | None = Field(default=None, gt=0)
     PRICE_PER_MIN: float | None = Field(default=None, gt=0)
     PRICE_PER_TRIP: float = Field(default=0, ge=0)
@@ -238,7 +232,7 @@ class VehicleConfig(ConfigBaseModel):
     @classmethod
     def convert_velocity(cls, v: float) -> float:
         """Convert vehicle velocity from km/h to m/s."""
-        return SimulationVelocityConverter.convert_kmh(v)
+        return SimulationVelocityConverter.kmh_to_meters_per_minute(v)
 
     # TODO: Add more validators for other vehicles etc. This is just an example of what we could be doing. Or don't :)
     @model_validator(mode="after")
@@ -260,6 +254,8 @@ class RideHailingVehicleConfig(VehicleConfig):
 
 class SharedVehicleConfig(VehicleConfig):
     """Configuration for shared vehicle parameters."""
+
+    PRICE_PER_TRIP: float = Field(default=0)
 
 
 class FleetConfig(ConfigBaseModel):
@@ -379,11 +375,13 @@ class OperationsConfig(ConfigBaseModel):
     @classmethod
     def convert_velocity(cls, v: float) -> float:
         """Convert vehicle relocation velocity from km/h to m/s."""
-        return SimulationVelocityConverter.convert_kmh(v)
+        return SimulationVelocityConverter.kmh_to_meters_per_minute(v)
 
 
 class RideHailingOperationsConfig(OperationsConfig):
     """Configuration for ride-hailing operations parameters."""
+
+    # OPERATOR_TYPE: type[Operator] =
 
     DRIVER_PAYMENT_SHARE: float = Field(gt=0)
     DISCOUNT_RATE: float = Field(ge=0)
@@ -430,6 +428,8 @@ class RideHailingMPChargingOperationsConfig(RideHailingOperationsConfig):
 
 class IntegratedSharedMobilityOperationsConfig(OperationsConfig):
     """Configuration for integrated shared mobility operations."""
+
+    OPERATIONS_TYPE: type[Operations] = IntegratedSharedMobilityOperations
 
     NUMBER_OF_SERVICE_WORKERS: int = Field(gt=0)
 
@@ -481,9 +481,13 @@ class OperatorConfig(ConfigBaseModel):
 class RideHailingOperatorConfig(OperatorConfig):
     """Configuration for ride-hailing operator parameters."""
 
+    OPERATOR_TYPE: type[Operator] = RideHailingOperator
+
 
 class SharedVehicleOperatorConfig(OperatorConfig):
     """Configuration for shared vehicle operator parameters."""
+
+    OPERATOR_TYPE: type[Operator] = SharedMobilityOperator
 
 
 class SearchEngineConfig(ConfigBaseModel):
@@ -495,9 +499,13 @@ class SearchEngineConfig(ConfigBaseModel):
 class RideHailingSearchEngineConfig(SearchEngineConfig):
     """Configuration for ride-hailing search engine parameters."""
 
+    SEARCH_ENGINE_TYPE: type[SearchEngine] = RideHailingSearchEngine
+
 
 class SharedVehicleSearchEngineConfig(SearchEngineConfig):
     """Configuration for shared vehicle search engine parameters."""
+
+    SEARCH_ENGINE_TYPE: type[SearchEngine] = SharedVehicleSearchEngine
 
 
 class AllocationEngineConfig(ConfigBaseModel):
@@ -509,9 +517,15 @@ class AllocationEngineConfig(ConfigBaseModel):
 class RideHailingAllocationEngineConfig(AllocationEngineConfig):
     """Configuration for ride-hailing vehicle allocation engine parameters."""
 
+    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine] = RideHailingAllocationEngine
+
 
 class SharedVehicleAllocationEngineConfig(AllocationEngineConfig):
     """Configuration for shared vehicle allocation engine parameters."""
+
+    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine] = (
+        SharedVehicleAllocationEngine
+    )
 
 
 class RideHailingGlobalConfig(ConfigBaseModel):
@@ -739,18 +753,6 @@ class Configuration:
             The path configuration section.
         """
         return self._get_section("path", PathConfig)
-
-    @property
-    def population(self) -> PopulationConfig:
-        """
-        Get the population configuration section.
-
-        Returns
-        -------
-        PopulationConfig
-            The population configuration section.
-        """
-        return self._get_section("population", PopulationConfig)
 
     @property
     def user(self) -> UserConfig:

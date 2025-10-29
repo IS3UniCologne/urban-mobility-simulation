@@ -15,7 +15,7 @@ class DriverInterface(ABC):  # noqa: D101
         pass
 
     @abstractmethod
-    def park_vehicle(self, vehicle, position=None):  # noqa: ANN001, ANN201, D102
+    def park_vehicle(self, vehicle):  # noqa: ANN001, ANN201, D102
         pass
 
     @abstractmethod

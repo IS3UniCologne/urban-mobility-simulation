@@ -128,18 +128,22 @@ class UserState(Enum):
     SEARCHING_TRANSPORT_ALTERNATIVES = 1
     SELECTING_TRANSPORT_ALTERNATIVES = 2
     AWAITING_ALLOCATION = 3
-    MOVING_TO_PICK_UP = 4
-    WAITING_FOR_VEHICLE = 5
-    DRIVING = 6
-    PAYING = 7
-    FULFILLED = 8
-    CANCELLED = 9  # TODO: This state seems unused
-    MISSED = 10
-    # ride hailing specifics
+    WAITING_FOR_VEHICLE = 4
+    DRIVING = 5
+    PAYING = 6
+    FULFILLED = 7
+    CANCELLED = 8  # TODO: This state seems unused
+    MISSED = 9
+    # ride hailing specific
     REFUSED = 11
-    # transit user specifics
-    IN_TRANSPORT = 101
-    MOVING_TO_DESTINATION = 102  # walk after last transit stop
+    MOVING_TO_PICK_UP = 12
+    # shared mobility specific
+    MOVING_TO_VEHICLE = 20
+    # transit user specific
+    MOVING_TO_TRANSPORT_STOP = 30
+    IN_TRANSPORT = 31
+    MOVING_TO_DESTINATION = 32  # walk after last transit stop
+    WAITING_FOR_TRANSPORT = 33
 
 
 # TODO: Have a state setter with checks for valid transitions ?
