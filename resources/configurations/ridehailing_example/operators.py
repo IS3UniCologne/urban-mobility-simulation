@@ -19,7 +19,6 @@ from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
 )
 from simulation.operator.ride_hailing_fleet import RideHailingFleet
-from simulation.operator.ride_hailing_operator import RideHailingOperator
 from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 
 rh_car_autonomous = RideHailingVehicleConfig(
@@ -54,7 +53,7 @@ rh_car_human = RideHailingVehicleConfig(
     DAILY_TOTAL_COST=29.0,
     COST_PER_KM=0.45,
     PRICE_PER_KM=1.3,
-    INITIAL_SOC=0.50,
+    INITIAL_CHARGE_PERCENT=0.50,
 )
 
 RH_AVAILABILITY = [
@@ -153,7 +152,6 @@ DEFAULT_RECHARGE_THRESHOLD = [
 ]
 
 operator_1 = RideHailingOperatorConfig(
-    OPERATOR_TYPE=RideHailingOperator,
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
     OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
@@ -180,7 +178,6 @@ operator_1 = RideHailingOperatorConfig(
     ),
 )
 operator_2 = RideHailingOperatorConfig(
-    OPERATOR_TYPE=RideHailingOperator,
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
     OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(

@@ -7,7 +7,7 @@
 [SETTINGS]
 
 # Logging
-LOG_LEVEL      = "INFO"
+LOG_LEVEL      = "DEBUG"
 FILE_LOG_LEVEL = "DEBUG"
 LOG_TIMESTAMPS = false
 # Set class specific log levels. This takes precedence over the global log levels and applies to console and log files.
@@ -23,7 +23,7 @@ END_TIME   = 1440
 
 [RANDOM_MANAGER]
 # Main seed, set to 0 to generate a new seed on every run
-SEED = 0
+SEED = 42
 # Component seeds. If commented out, they will be generated from the main seed. (default for reproducibility)
 # Set to 0 to generate a new seed for the component on every run, independent of the main seed.
 # Set to any other value to use that value as the seed for the component.

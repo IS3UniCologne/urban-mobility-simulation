@@ -1,49 +1,128 @@
 from simulation.helper.configuration.configuration import (
-    OperationsConfig,
-    OperatorConfig,
+    IntegratedSharedMobilityOperationsConfig,
+    SharedVehicleAllocationEngineConfig,
+    SharedVehicleConfig,
+    SharedVehicleFleetConfig,
+    SharedVehicleOperatorConfig,
+    SharedVehicleSearchEngineConfig,
 )
-from simulation.helper.configuration.enums import VehicleType
-from simulation.operator.operations_management.integrated_shared_mobility_operations import (
-    IntegratedSharedMobilityOperations,
+from simulation.helper.configuration.enums import (
+    AutonomyType,
+    PropulsionType,
+    VehicleType,
 )
 from simulation.operator.shared_mobility_operator import SharedMobilityOperator
 
-operator_1 = OperatorConfig(
+sv_car = SharedVehicleConfig(
+    VEHICLE_TYPE=VehicleType.CAR,
+    AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
+    PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
+    CHARGING_COST_PER_KWH=0.23,
+    CONVENIENCE=3,
+    COST_PER_KM=0.53,
+    DAILY_TOTAL_COST=29.86,
+    ENERGY_CONSUMPTION=0.20,
+    EV_RELATIVE_ENERGY_CONSUMPTION=0.8,
+    INITIAL_CHARGE_PERCENT=0.50,
+    KG_CO2_PER_KM=0.236,
+    MAX_AVAILABLE_SEATS=4,
+    MAX_STATE_OF_CHARGE=50.0,
+    PRICE_PER_MIN=0.35,
+    VELOCITY=9.54,
+    WALKING_DISTANCE=500,
+)
+
+
+sv_scooter = SharedVehicleConfig(
+    VEHICLE_TYPE=VehicleType.SCOOTER,
+    AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
+    PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
+    CHARGING_COST_PER_KWH=0.23,
+    CONVENIENCE=2,
+    COST_PER_KM=0.53,
+    DAILY_TOTAL_COST=7.66,
+    ENERGY_CONSUMPTION=0.048,
+    EV_RELATIVE_ENERGY_CONSUMPTION=0.8,
+    INITIAL_CHARGE_PERCENT=0.50,
+    KG_CO2_PER_KM=0.051,
+    MAX_AVAILABLE_SEATS=1,
+    MAX_STATE_OF_CHARGE=4.8,
+    PRICE_PER_MIN=0.23,
+    VELOCITY=8.04,
+    WALKING_DISTANCE=350,
+)
+
+sv_kick_scooter = SharedVehicleConfig(
+    VEHICLE_TYPE=VehicleType.KICK_SCOOTER,
+    AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
+    PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
+    CHARGING_COST_PER_KWH=0.23,
+    CONVENIENCE=1,
+    COST_PER_KM=0.53,
+    DAILY_TOTAL_COST=11.51,
+    ENERGY_CONSUMPTION=0.0072,
+    EV_RELATIVE_ENERGY_CONSUMPTION=0.8,
+    INITIAL_CHARGE_PERCENT=0.5,
+    KG_CO2_PER_KM=0.105,
+    MAX_AVAILABLE_SEATS=1,
+    MAX_STATE_OF_CHARGE=0.288,
+    PRICE_PER_MIN=0.19,
+    PRICE_PER_TRIP=1.0,
+    VELOCITY=2.82,
+    WALKING_DISTANCE=200,
+)
+
+sv_bike = SharedVehicleConfig(
+    VEHICLE_TYPE=VehicleType.BIKE,
+    AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
+    PROPULSION_TYPE=PropulsionType.HUMAN_POWERED,
+    CONVENIENCE=1,
+    COST_PER_KM=0.10,
+    DAILY_TOTAL_COST=11.51,
+    ENERGY_CONSUMPTION=0.0,
+    INITIAL_CHARGE_PERCENT=1.0,
+    KG_CO2_PER_KM=0.046,
+    MAX_AVAILABLE_SEATS=1,
+    MAX_STATE_OF_CHARGE=1.0,
+    PRICE_PER_MIN=0.08,
+    VELOCITY=2.82,
+    WALKING_DISTANCE=200,
+)
+
+operator_1 = SharedVehicleOperatorConfig(
     OPERATOR_TYPE=SharedMobilityOperator,
-    OPERATIONS_TYPE=IntegratedSharedMobilityOperations,
-    # Installed Charging Station Power
-    # kW (slow charger), or 7 kW or 22 kW (fast charger)
-    # Representative empirical, real-world charging station usage characteristics and data in Germany -> https://www.sciencedirect.com/science/article/pii/S2590116820300369
-    CHARGING_STATION_POWER=50.0,
-    NUMBER_OF_BASE_REGIONS=10,
-    # Base vehicle capacity (i.e.g, how many vehicle can we provide services)
-    BASE_CAPACITY=100000,
-    # berlin
-    BASE_REGIONS=[
-        "871f18869ffffff",
-        "871f18b0dffffff",
-        "871f18b23ffffff",
-        "871f18b26ffffff",
-        "871f18b35ffffff",
-        "871f1d483ffffff",
-        "871f1d489ffffff",
-        "871f1d48bffffff",
-        "871f1d48effffff",
-        "871f1d49cffffff",
-        "871f1d4aaffffff",
-        "871f1d4b3ffffff",
-        "871f1d4d2ffffff",
-        "871f1d4d3ffffff",
-        "871f1d4f3ffffff",
-        "871f1d4f6ffffff",
-    ],
-    N_VEHICLES={
-        VehicleType.BIKE: 200,
-        VehicleType.CAR: 500,
-        VehicleType.KICK_SCOOTER: 700,
-        VehicleType.SCOOTER: 500,
-    },
-    OPERATIONS_CONFIG=OperationsConfig(
+    FLEET_CONFIG=SharedVehicleFleetConfig(
+        VEHICLES={sv_car: 500, sv_scooter: 500, sv_kick_scooter: 700, sv_bike: 100}
+    ),
+    SEARCH_ENGINE_CONFIG=SharedVehicleSearchEngineConfig(),
+    ALLOCATION_ENGINE_CONFIG=SharedVehicleAllocationEngineConfig(),
+    OPERATIONS_CONFIG=IntegratedSharedMobilityOperationsConfig(
+        # Installed Charging Station Power
+        # kW (slow charger), or 7 kW or 22 kW (fast charger)
+        # Representative empirical, real-world charging station usage characteristics and data in Germany -> https://www.sciencedirect.com/science/article/pii/S2590116820300369
+        CHARGING_STATION_POWER=50.0,
+        NUMBER_OF_BASE_REGIONS=10,
+        # Base vehicle capacity (i.e.g, how many vehicle can we provide services)
+        BASE_CAPACITY=100000,
+        # berlin
+        BASE_REGIONS=[
+            "871f18869ffffff",
+            "871f18b0dffffff",
+            "871f18b23ffffff",
+            "871f18b26ffffff",
+            "871f18b35ffffff",
+            "871f1d483ffffff",
+            "871f1d489ffffff",
+            "871f1d48bffffff",
+            "871f1d48effffff",
+            "871f1d49cffffff",
+            "871f1d4aaffffff",
+            "871f1d4b3ffffff",
+            "871f1d4d2ffffff",
+            "871f1d4d3ffffff",
+            "871f1d4f3ffffff",
+            "871f1d4f6ffffff",
+        ],
         # Operations Start Time (e.g., 1440 => 00:00am) !!! 20.000 --> quasi no operations !!!
         OPERATIONS_START=15,
         # Operations Duration (e.g., 8 working hours => 8*60 => 480)
