@@ -1,7 +1,14 @@
 from __future__ import annotations  # noqa: D100
 
+from typing import TYPE_CHECKING
+
 from simulation.helper.configuration.enums import VehicleType
 from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
+from simulation.vehicle.shared_vehicle import SharedVehicle
+
+if TYPE_CHECKING:
+    from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.helper.configuration.configuration import VehicleConfig
 
 
 # TODO : rename SharedVehicleFleet, there are only mixed fleets
@@ -9,24 +16,56 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
     def __init__(self, deps: VehicleFleetDependencies) -> None:
         super().__init__(deps)
 
-    def vehicles_below_soc_threshold(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
+        self._create_fleet_vehicles(deps)
+
+    def _create_vehicle(
+        self,
+        deps: VehicleFleetDependencies,
+        position: GeodesicPosition,
+        vehicle_config: VehicleConfig,
+    ) -> None:
+        SharedVehicle(
+            sim=deps.sim, position=position, fleet=self, vehicle_config=vehicle_config
+        )
+
+    def vehicles_below_soc_threshold(
+        self, state_of_charge_threshold: float
+    ) -> set[SharedVehicle]:
+        """Return all vehicles that need to be refueled/recharged.
+
+        Parameters
+        ----------
+        state_of_charge_threshold : float
+            Threshold value between 0 and 1
+
+        Returns
+        -------
+        set[SharedVehicle]
+            Set of vehicles with state of charge below the threshold
         """
-        Return all vehicles that need to be refueled/recharged
-        :param state_of_charge_threshold: between 0 and 1
-        :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
-        """  # noqa: D205, D400
         return {
             vehicle
             for vehicle in self.vehicles
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold
         }
 
-    def vehicles_below_soc_threshold_in_region(self, state_of_charge_threshold, region):  # noqa: ANN001, ANN201
+    def vehicles_below_soc_threshold_in_region(
+        self, state_of_charge_threshold: float, region: str
+    ) -> list[SharedVehicle]:
+        """Return all vehicles that need to be refueled/recharged in a region.
+
+        Parameters
+        ----------
+        state_of_charge_threshold : float
+            Threshold value between 0 and 1
+        region : str
+            Region identifier (e.g., hexagon ID)
+
+        Returns
+        -------
+        list[SharedVehicle]
+            List of vehicles in the region with state of charge below the threshold
         """
-        Return all vehicles that need to be refueled/recharged in a region
-        :param state_of_charge_threshold: between 0 and 1
-        :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
-        """  # noqa: D205, D400
         below_soc_level_vehicles = []
         vehicles_in_region = self.vehicles_in_region(region)
         # TODO: Check if this is necessary
@@ -39,7 +78,7 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
         return below_soc_level_vehicles
 
     def supply_per_region(self) -> dict[str, dict[str, int]]:
-        """Calculates the supply of vehicles by mode for each region.
+        """Calculate the supply of vehicles by mode for each region.
 
         This method iterates through the regions and counts the number of vehicles
         available in each region, categorized by their mode (e.g., CAR, BIKE, etc.).
@@ -55,7 +94,7 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
                 '871f1d4f3ffffff': {'CAR': 5, 'BIKE': 3},
                 '871f1d4f4ffffff': {'SCOOTER': 2}
             }
-        """  # noqa: D401
+        """
         supply = {}
 
         # For each region with vehicles
@@ -78,13 +117,22 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
 
         return supply
 
-    def vehicles_to_be_charged_per_region(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
-        """
-        Return a list of number of vehicles that need to be charged in each area.
+    def vehicles_to_be_charged_per_region(
+        self, state_of_charge_threshold: float
+    ) -> dict[str, dict[VehicleType, int]]:
+        """Return a count of vehicles that need to be charged in each region.
 
-        :param state_of_charge_threshold:
-        :return: Dictionary, where key = hex_id and value is a dictionary counting the vehicles to be charged
-                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
+        Parameters
+        ----------
+        state_of_charge_threshold : float
+            Threshold value between 0 and 1
+
+        Returns
+        -------
+        dict
+            Dictionary where key = hex_id and value is a dictionary counting
+            the vehicles to be charged by vehicle type.
+            Example: {"H1212j1": {VehicleType.KICK_SCOOTER: 0, VehicleType.SCOOTER: 1}}
         """
         low_soc_supply = {}
 

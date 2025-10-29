@@ -1,11 +1,14 @@
 from __future__ import annotations  # noqa: D100
 
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import pandas as pd
 import simpy
 
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.enums import (
     AutonomyType,
     VehicleState,
@@ -15,7 +18,7 @@ from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
-    from simulation.helper.configuration.configuration import FleetConfig
+    from simulation.helper.configuration.configuration import FleetConfig, VehicleConfig
     from simulation.operator.interface.operator_interface import OperatorInterface
     from simulation.vehicle.vehicle import Vehicle
     from simulation.world.world import World
@@ -49,7 +52,7 @@ class VehicleFleetDependencies:
     config: FleetConfig
 
 
-class VehicleFleet(SimulationBase):
+class VehicleFleet(SimulationBase, ABC):
     """Class representing a fleet of vehicles.
 
     Contains methods to manage and track vehicles within the fleet.
@@ -84,6 +87,65 @@ class VehicleFleet(SimulationBase):
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_autonomy: dict[AutonomyType, set[Vehicle]] = defaultdict(set)
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
+
+    def _create_fleet_vehicles(self, deps: VehicleFleetDependencies) -> None:
+        """Create fleet vehicles using spatial distribution from supply data."""
+        rng = deps.sim.random_manager.get_rng(component_name="FLEETFACTORY")
+        hex_columns = deps.sim.config.world.SPATIAL_RESOLUTION.column_name
+
+        supply_path = deps.sim.config.path.PATH_VEHICLE_SUPPLY
+        supply_probabilities = pd.read_csv(supply_path)
+
+        # TODO: This mapping should come from configuration
+        vehicle_type_to_prob_column = {
+            VehicleType.CAR: "cars_prob",
+            VehicleType.BIKE: "bikes_prob",
+            VehicleType.SCOOTER: "scooters_prob",
+            VehicleType.KICK_SCOOTER: "kick_scooters_prob",
+        }
+
+        for vehicle_config, total_count in deps.config.VEHICLES.items():
+            prob_column = vehicle_type_to_prob_column.get(vehicle_config.VEHICLE_TYPE)
+
+            if prob_column is None:
+                self.logger.error(
+                    "Fleet does not support vehicle type %s",
+                    vehicle_config.VEHICLE_TYPE,
+                )
+                continue
+
+            vehicle_probabilities = supply_probabilities[prob_column].to_numpy()
+
+            # Sample vehicle distribution based on probabilities
+            vehicle_count = pd.DataFrame(
+                rng.multinomial(
+                    n=total_count, pvals=vehicle_probabilities, size=1
+                ).transpose(),
+                columns=["count"],
+            )
+            vehicle_count.index = supply_probabilities.index
+            supply_probabilities["count"] = vehicle_count["count"]
+
+            # Create vehicles in their assigned regions
+            for _index, row in supply_probabilities.iterrows():
+                hex_id = row[hex_columns]
+                local_count = row["count"]
+                for _ in range(local_count):
+                    rdm_lat, rdm_lng = deps.sim.geo_env.get_random_position(hex_id)
+                    pos = GeodesicPosition(deps.sim, rdm_lat, rdm_lng, hex_id)
+
+                    # Call subclass-specific vehicle creation
+                    self._create_vehicle(deps, pos, vehicle_config)
+
+    @abstractmethod
+    def _create_vehicle(
+        self,
+        deps: VehicleFleetDependencies,
+        position: GeodesicPosition,
+        vehicle_config: VehicleConfig,
+    ) -> None:
+        """Create a vehicle instance."""
+        pass
 
     @staticmethod
     def from_deps(deps: VehicleFleetDependencies) -> VehicleFleet:  # noqa: D102
