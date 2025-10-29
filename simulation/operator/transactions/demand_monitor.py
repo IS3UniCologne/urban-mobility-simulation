@@ -7,8 +7,8 @@ Implements the DemandMonitor class for tracking demand statistics.
 from collections import defaultdict
 from typing import TypedDict
 
-from simulation.environment.position import RegionId
 from simulation.helper.configuration.enums import TransactionState, VehicleType
+from simulation.helper.types import RegionId
 
 from .transaction import Transaction
 from .transaction_listener import TransactionListener
