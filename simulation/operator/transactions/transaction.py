@@ -6,8 +6,8 @@ Defines the Transaction NamedTuple used to represent a single transaction record
 
 from typing import NamedTuple
 
-from simulation.environment.position import RegionId
 from simulation.helper.configuration.enums import TransactionState, VehicleType
+from simulation.helper.types import RegionId
 
 
 class Transaction(NamedTuple):

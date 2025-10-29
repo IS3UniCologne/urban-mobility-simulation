@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from pandas import DataFrame
 
     from simulation.context.simulation_context import SimulationContext
-    from simulation.environment.position import RegionId
+    from simulation.helper.types import RegionId
     from simulation.world.world import World
 
 

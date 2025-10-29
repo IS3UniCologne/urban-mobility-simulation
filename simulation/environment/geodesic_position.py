@@ -14,7 +14,7 @@ except ImportError:
 
 from typing import TYPE_CHECKING
 
-from simulation.environment.position import RegionId
+from simulation.helper.types import RegionId
 
 from .position import Position
 
