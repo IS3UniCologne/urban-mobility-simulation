@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from pandas import DataFrame
 
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import PopulationSegmentConfig
     from simulation.helper.types import RegionId
     from simulation.world.world import World
 
@@ -326,6 +327,8 @@ class DemandFactory(SimulationBase):
         """
         Create a user, add them to the world and start their lifecycle process.
 
+        Selects a population segment randomly based on configured proportions.
+
         Parameters
         ----------
         origin_region : RegionId
@@ -333,9 +336,14 @@ class DemandFactory(SimulationBase):
         destination_region : RegionId
             The destination spatial region ID.
         """
-        # Create user object
+        # Select population segment based on proportions
+        segment = self._select_segment_for_demand()
+
+        # Create user from selected segment
         user = self._user_factory.create_user(
-            origin_region=origin_region, destination_region=destination_region
+            origin_region=origin_region,
+            destination_region=destination_region,
+            user_config=segment.USER_CONFIG,
         )
 
         self._world.add_user(user)
@@ -349,3 +357,10 @@ class DemandFactory(SimulationBase):
             destination_region,
             user.uid,
         )
+
+    def _select_segment_for_demand(self) -> PopulationSegmentConfig:
+        population_config = self._config.population
+        segment_proportions = [
+            segment.PROPORTION for segment in population_config.SEGMENTS
+        ]
+        return self._rng.choice(population_config.SEGMENTS, p=segment_proportions)
