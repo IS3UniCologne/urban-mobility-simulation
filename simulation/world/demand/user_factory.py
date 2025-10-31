@@ -12,6 +12,7 @@ from simulation.tasks.transport_task import TransportTask
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import UserConfig
     from simulation.helper.types import RegionId
     from simulation.world.world import World
 
@@ -25,9 +26,13 @@ class UserFactory(SimulationBase):
         self._world = world
         self._config = sim.config
         self._geo_env = sim.geo_env
+        self._rng = sim.random_manager.get_rng("USER_FACTORY")
 
     def create_user(
-        self, origin_region: RegionId, destination_region: RegionId
+        self,
+        origin_region: RegionId,
+        destination_region: RegionId,
+        user_config: UserConfig,
     ) -> User:
         """
         Create a user.
@@ -37,10 +42,12 @@ class UserFactory(SimulationBase):
 
         Parameters
         ----------
-        origin : str
+        origin_region : RegionId
             The origin spatial unit ID (e.g., hexagon ID).
-        destination : str
+        destination_region : RegionId
             The destination spatial unit ID (e.g., hexagon ID).
+        user_config : UserConfig
+            Configuration for the user.
 
         Returns
         -------
@@ -72,11 +79,15 @@ class UserFactory(SimulationBase):
             viable_vehicle_types=viable_vehicle_types,
         )
 
+        # TODO: Choice model deps
+        choice_model = user_config.CHOICE_MODEL_CONFIG.CHOICE_MODEL_TYPE(self._sim)
+
         user = User(
             sim=self._sim,
             position=origin_position,
             transport_task=transport_task,
             mobility_search_engine=self._world.mobility_search,
+            choice_model=choice_model,
         )
 
         self.logger.debug(

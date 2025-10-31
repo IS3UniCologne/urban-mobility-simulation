@@ -69,13 +69,13 @@ PATH_TRIP_DEMAND      = "./data/demand/{city}_shared_vehicle_trips.csv"
 PATH_DEMAND_MODIFIERS = ["./data/demand/{city}__zero_demand.geojson", "./data/demand/{city}_line200bufferROUTE.geojson"]
 
 
-[POPULATION]
-POPULATION_PROBABILITIES = [0.2, 0.3, 0.5]
+# [POPULATION]
+# POPULATION_PROBABILITIES = [0.2, 0.3, 0.5]
 
-#TODO: These should probably be phased out or become part of user config
-RIDE_HAILING_POPULATION_PROBABILITIES   = [0.247, 0.237, 0.19, 0.325]
-SHARED_VEHICLE_POPULATION_PROBABILITIES = [0.0]
-TRANSIT_POPULATION_PROBABILITIES        = [0.0]
+# #TODO: These should probably be phased out or become part of user config
+# RIDE_HAILING_POPULATION_PROBABILITIES   = [0.247, 0.237, 0.19, 0.325]
+# SHARED_VEHICLE_POPULATION_PROBABILITIES = [0.0]
+# TRANSIT_POPULATION_PROBABILITIES        = [0.0]
 
 
 # [USER]

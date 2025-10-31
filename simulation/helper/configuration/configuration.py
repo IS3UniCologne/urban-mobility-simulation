@@ -211,6 +211,43 @@ class RandomModeNearestVehicleChoiceModelConfig(ChoiceModelConfig):
     CHOICE_MODEL_TYPE: type[ChoiceModelInterface] = RandomModeNearestVehicleChoiceModel
 
 
+class PopulationSegmentConfig(ConfigBaseModel):
+    """Configuration for a population segment.
+
+    A segment represents a subset of the user population with distinct behavioral
+    characteristics and choice models.
+    """
+
+    PROPORTION: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Proportion of total population in this segment. Must sum to 1.0 across all segments.",
+    )
+    USER_CONFIG: UserConfig
+
+
+class PopulationConfig(ConfigBaseModel):
+    """Configuration for heterogeneous population of multiple segments.
+
+    Validates that segment proportions sum to 1.0.
+    """
+
+    SEGMENTS: list[PopulationSegmentConfig] = Field(
+        min_length=1, description="List of population segments"
+    )
+
+    @model_validator(mode="after")
+    def validate_proportions(self) -> PopulationConfig:
+        """Ensure segment proportions sum to 1.0."""
+        total = sum(seg.PROPORTION for seg in self.SEGMENTS)
+        if not total == 1.0:
+            raise ValueError(
+                f"Segment proportions must sum to 1.0, got {total:.4f}. "
+                f"Segments: {[seg.PROPORTION for seg in self.SEGMENTS]}"
+            )
+        return self
+
+
 class VehicleConfig(ConfigBaseModel):
     """Configuration for vehicle properties and behavior."""
 
@@ -768,28 +805,16 @@ class Configuration:
         return self._get_section("path", PathConfig)
 
     @property
-    def user(self) -> UserConfig:
+    def population(self) -> PopulationConfig:
         """
-        Get the user configuration section.
+        Get the population configuration section.
 
         Returns
         -------
-        UserConfig
-            The user configuration section.
+        PopulationConfig
+            The population configuration section.
         """
-        return self._get_section("user", UserConfig)
-
-    @property
-    def mode_choice_model(self) -> ModeChoiceModelConfig:
-        """
-        Get the mode choice model configuration section.
-
-        Returns
-        -------
-        ModeChoiceModelConfig
-            The mode choice model configuration section.
-        """
-        return self._get_section("mode_choice_model", ModeChoiceModelConfig)
+        return self._get_section("population", PopulationConfig)
 
     @property
     def charging_infrastructures(self) -> list[ChargingInfrastructureConfig]:
@@ -945,13 +970,13 @@ class Configuration:
     def _load_config_from_py(self, base_path: Path) -> None:
         """Load configuration from Python module files."""
         # Define files to load: (filename, required)
-        config_files = [("operators.py", True), ("users.py", True)]
+        config_files = [("operators.py", True), ("population.py", True)]
 
         # Map model types to their config section names
         model_to_section: dict[type[BaseModel], str] = {
             OperatorConfig: "operator",
             ChargingInfrastructureConfig: "charging_infrastructure",
-            UserConfig: "user",
+            PopulationConfig: "population",
         }
         model_classes = tuple(model_to_section.keys())
 
@@ -984,10 +1009,14 @@ class Configuration:
         self._cache["charging_infrastructure"] = section_buckets.get(
             "charging_infrastructure", []
         )
-        # For user config, take first instance if any were found
-        # TODO: handle population configs
-        if section_buckets.get("user"):
-            self._cache["user"] = section_buckets["user"][0]
+        population_configs = section_buckets.get("population", [])
+        if len(population_configs) == 0:
+            raise ValueError("No PopulationConfig instance found in population.py. ")
+        if len(population_configs) > 1:
+            raise ValueError(
+                "Multiple PopulationConfig instances found in population.py. "
+            )
+        self._cache["population"] = population_configs[0]
 
     def _collect_config_instance(
         self,
