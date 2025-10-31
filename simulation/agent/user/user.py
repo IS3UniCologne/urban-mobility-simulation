@@ -174,7 +174,6 @@ class User(Agent, DriverInterface, PassengerInterface):
             )
 
             if not available_alternatives.transportation_alternatives:
-                self._withdraw_request()
                 break
 
             # 2: Calculate choice probabilities using choice model
@@ -522,25 +521,6 @@ class User(Agent, DriverInterface, PassengerInterface):
         else:
             self.logger.debug("No vehicle was allocated.")
             return None
-
-    def _withdraw_request(
-        self, transportation_alternative: TransportationAlternative | None = None
-    ) -> None:
-        if self._transportation_alternatives_not_found.triggered:
-            self.state = UserState.MISSED
-            self.logger.debug("Transport request withdrawn due to lack of vehicles")
-        elif self._transportation_alternatives_refused.triggered:
-            self.state = UserState.REFUSED
-            self.logger.debug("Transport request refused")
-
-        # Handle withdrawal through the operator if we have an alternative
-        if transportation_alternative is not None:
-            state_name = (
-                "MISSED" if self.state == UserState.MISSED else "REFUSED"
-            )  # TODO: Enum?
-            transportation_alternative.operator.withdraw_transportation_task(
-                self, self._transport_task, state=state_name
-            )
 
     def _calculate_choice_probabilities(
         self, available_alternatives: TransportationAlternativeBrowser
