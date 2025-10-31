@@ -36,6 +36,12 @@ from pydantic import (
     model_validator,
 )
 
+from simulation.agent.user.choice_model.choice_model_interface import (
+    ChoiceModelInterface,
+)
+from simulation.agent.user.choice_model.random_nearest_vehicle_choice_model import (
+    RandomModeNearestVehicleChoiceModel,
+)
 from simulation.helper.configuration.enums import (
     AutonomyType,
     DailyResolution,
@@ -73,8 +79,6 @@ from simulation.world.markets.auction import Auction
 if TYPE_CHECKING:
     # Careful moving stuff here, pydantic needs to check type hints at runtime!
     from types import ModuleType
-
-    from pyparsing import Any
 
 
 try:
@@ -185,7 +189,8 @@ class UserConfig(ConfigBaseModel):
         gt=0, description="Maximum wait time for transit in minutes"
     )
     SPATIAL_STRATEGY: str
-    WALKING_SPEED: float = Field(gt=0)
+    WALKING_SPEED: float = Field(gt=0)  # automatically converted from km/h to m/s
+    CHOICE_MODEL_CONFIG: ChoiceModelConfig
 
     @field_validator("WALKING_SPEED", mode="after")
     @classmethod
@@ -196,6 +201,14 @@ class UserConfig(ConfigBaseModel):
 
 class ChoiceModelConfig(ConfigBaseModel):
     """Configuration for choice model parameters."""
+
+    CHOICE_MODEL_TYPE: type[ChoiceModelInterface]
+
+
+class RandomModeNearestVehicleChoiceModelConfig(ChoiceModelConfig):
+    """Configuration for Random Mode Nearest Vehicle Choice Model parameters."""
+
+    CHOICE_MODEL_TYPE: type[ChoiceModelInterface] = RandomModeNearestVehicleChoiceModel
 
 
 class VehicleConfig(ConfigBaseModel):
@@ -930,42 +943,71 @@ class Configuration:
         return self._get_section("dqn", DQNConfig)
 
     def _load_config_from_py(self, base_path: Path) -> None:
-        op_file = base_path / "operators.py"
-        if not op_file.exists():
-            raise FileNotFoundError(f'Could not find "operators.py" in {base_path}')
+        """Load configuration from Python module files."""
+        # Define files to load: (filename, required)
+        config_files = [("operators.py", True), ("users.py", True)]
 
-        module = self._import_module_file(op_file)
-
-        section_buckets: dict[str, list[Any]] = {
-            "operator": [],
-            "charging_infrastructure": [],
-        }
-
+        # Map model types to their config section names
         model_to_section: dict[type[BaseModel], str] = {
             OperatorConfig: "operator",
             ChargingInfrastructureConfig: "charging_infrastructure",
+            UserConfig: "user",
         }
         model_classes = tuple(model_to_section.keys())
 
-        def collect(obj: object) -> None:
-            if isinstance(obj, model_classes):
-                for cls in model_to_section:
-                    if isinstance(obj, cls):
-                        section_buckets[model_to_section[cls]].append(obj)
-                        return
-            if isinstance(obj, list | tuple):
-                for elem in obj:
-                    collect(elem)
-                return
-            # nothing matches, ignore
+        # Collect instances from all files
+        section_buckets: dict[str, list[BaseModel]] = {
+            section: [] for section in set(model_to_section.values())
+        }
 
-        for name, value in vars(module).items():
-            if name.startswith("_"):
+        for filename, required in config_files:
+            file_path = base_path / filename
+            if not file_path.exists():
+                if required:
+                    raise FileNotFoundError(
+                        f'Could not find required configuration file "{filename}" in {base_path}'
+                    )
                 continue
-            collect(value)
 
-        for section_name, items in section_buckets.items():
-            self._cache[section_name] = items
+            module = self._import_module_file(file_path)
+
+            # Collect config instances from this module
+            for name, value in vars(module).items():
+                if name.startswith("_"):
+                    continue
+                self._collect_config_instance(
+                    value, model_classes, model_to_section, section_buckets
+                )
+
+        # Store collected instances in cache
+        self._cache["operator"] = section_buckets.get("operator", [])
+        self._cache["charging_infrastructure"] = section_buckets.get(
+            "charging_infrastructure", []
+        )
+        # For user config, take first instance if any were found
+        # TODO: handle population configs
+        if section_buckets.get("user"):
+            self._cache["user"] = section_buckets["user"][0]
+
+    def _collect_config_instance(
+        self,
+        obj: object,
+        model_classes: tuple[type[BaseModel], ...],
+        model_to_section: dict[type[BaseModel], str],
+        section_buckets: dict[str, list[BaseModel]],
+    ) -> None:
+        """Recursively collect config instances from an object."""
+        if isinstance(obj, model_classes):
+            for cls, section in model_to_section.items():
+                if isinstance(obj, cls):
+                    section_buckets[section].append(obj)
+                    return
+        # Recurse into containers
+        if isinstance(obj, list | tuple):
+            for elem in obj:
+                self._collect_config_instance(
+                    elem, model_classes, model_to_section, section_buckets
+                )
 
     def _import_module_file(self, file_path: Path) -> ModuleType:
         """Import a module from a filesystem .py file path."""
