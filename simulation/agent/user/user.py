@@ -177,7 +177,9 @@ class User(Agent, DriverInterface, PassengerInterface):
                 break
 
             # 2: Calculate choice probabilities using choice model
-            choice_probs = yield self._env.process(
+            choice_probs: dict[
+                TransportationAlternative, float
+            ] = yield self._env.process(
                 self._calculate_choice_probabilities(available_alternatives)
             )
 
@@ -209,11 +211,15 @@ class User(Agent, DriverInterface, PassengerInterface):
                     break
 
                 # Sample and try
-                total_prob = sum(remaining.values())
-                normalized_probs = [p / total_prob for p in remaining.values()]
-                chosen_alternative = self._rng.choice(
-                    list(remaining.keys()), p=normalized_probs
+                alternatives_list = list(remaining.keys())
+                probabilities = list(remaining.values())
+                total_prob = sum(probabilities)
+                normalized_probs = [p / total_prob for p in probabilities]
+
+                chosen_idx: int = self._rng.choice(
+                    len(alternatives_list), p=normalized_probs
                 )
+                chosen_alternative = alternatives_list[chosen_idx]
 
                 attempted_alternatives.add(chosen_alternative)
 
@@ -231,6 +237,10 @@ class User(Agent, DriverInterface, PassengerInterface):
                         self._execute_chosen_alternative(vehicle_allocation)
                     )
                     allocation_succeeded = True
+                else:
+                    chosen_alternative.operator.withdraw_transportation_task(
+                        self, self._transport_task
+                    )
 
             # 4: Allocation failed for all alternatives, restart search from scratch
             if not allocation_succeeded:
