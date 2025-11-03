@@ -1,13 +1,17 @@
 from __future__ import annotations  # noqa: D100
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
+from simulation.operator.ride_hailing_fleet import RideHailingFleet
 from simulation.operator.search_engine import SearchEngine, SearchEngineDependencies
 
 if TYPE_CHECKING:
+    from simulation.helper.configuration.configuration import (
+        RideHailingOperationsConfig,
+    )
     from simulation.tasks.transport_task import TransportTask
     from simulation.vehicle.vehicle import Vehicle
 
@@ -36,8 +40,15 @@ class RideHailingSearchEngine(SearchEngine):
         super().__init__(deps)
         self._sim = deps.sim
         self._env = deps.sim.env
-        self._fleet = deps.operator.fleet
-        ops_config = deps.operator.operations.config
+
+        ops_config = cast(
+            "RideHailingOperationsConfig", deps.operator.operations.config
+        )
+
+        if not isinstance(deps.operator.fleet, RideHailingFleet):
+            raise TypeError("Fleet must be of type RideHailingFleet")
+
+        self._fleet: RideHailingFleet = deps.operator.fleet
 
         self._AV_price_reduction = ops_config.AV_PRICE_REDUCTION
         self._price_entering = ops_config.PRICE_ENTERING
@@ -86,6 +97,10 @@ class RideHailingSearchEngine(SearchEngine):
             if car.state == VehicleState.PARKING:
                 route_to_pick_up = Route(car.position, origin)
             else:
+                if car.current_task is None:
+                    # This should not happen, but just in case
+                    self._logger.warning("search found non-parking car without task")
+                    continue
                 route_to_pick_up = Route(car.current_task.destination, origin)
 
             distance_to_pick_up = route_to_pick_up.distance
@@ -133,6 +148,10 @@ class RideHailingSearchEngine(SearchEngine):
             if car.state == VehicleState.PARKING:
                 route_to_pick_up = Route(car.position, origin)
             else:
+                if car.current_task is None:
+                    # This should not happen, but just in case
+                    self._logger.warning("search found non-parking car without task")
+                    continue
                 route_to_pick_up = Route(car.current_task.destination, origin)
 
             distance_to_pick_up = route_to_pick_up.distance
