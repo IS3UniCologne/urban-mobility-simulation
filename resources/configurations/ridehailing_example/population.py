@@ -1,4 +1,4 @@
-"""Simple population configuration for testing - single homogeneous segment."""
+"""Simple population configuration for testing."""
 
 from simulation.helper.configuration.configuration import (
     PopulationConfig,
@@ -7,7 +7,6 @@ from simulation.helper.configuration.configuration import (
     UserConfig,
 )
 
-# Single user configuration for entire population
 user1 = UserConfig(
     TRANSIT_MAX_WAIT=15,
     SPATIAL_STRATEGY="nearest",
@@ -23,7 +22,6 @@ user2 = UserConfig(
 )
 
 
-# Population with single segment (100% of users)
 POPULATION = PopulationConfig(
     SEGMENTS=[
         PopulationSegmentConfig(PROPORTION=0.5, USER_CONFIG=user1),
