@@ -58,6 +58,3 @@ class WalkingSearchEngine(SearchEngineInterface):  # noqa: D101
         selected_transportation_alternative: TransportationAlternative,
     ):
         pass
-
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask):  # noqa: ANN001, ANN201, D102
-        pass

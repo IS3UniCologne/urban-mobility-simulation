@@ -13,7 +13,11 @@ from simulation.agent.agent import Agent
 from simulation.agent.user.choice_model.random_nearest_vehicle_choice_model import (
     RandomModeNearestVehicleChoiceModel,
 )
-from simulation.helper.configuration.enums import OperatorMode, UserState
+from simulation.helper.configuration.enums import (
+    OperatorMode,
+    TransactionState,
+    UserState,
+)
 from simulation.helper.time import SimulationVelocityConverter
 from simulation.operator.data_transfer_object.trip_record import TripRecord
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
@@ -238,8 +242,9 @@ class User(Agent, DriverInterface, PassengerInterface):
                     )
                     allocation_succeeded = True
                 else:
+                    # TODO: Instead of generating the missed transaction here, we could have the operator do it when allocation fails
                     chosen_alternative.operator.withdraw_transportation_task(
-                        self, self._transport_task
+                        self, self._transport_task, state=TransactionState.MISSED
                     )
 
             # 4: Allocation failed for all alternatives, restart search from scratch
