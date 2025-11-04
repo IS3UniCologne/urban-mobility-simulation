@@ -19,7 +19,6 @@ from simulation.helper.configuration.enums import (
     UserState,
 )
 from simulation.helper.time import SimulationVelocityConverter
-from simulation.operator.data_transfer_object.trip_record import TripRecord
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
@@ -92,9 +91,6 @@ class User(Agent, DriverInterface, PassengerInterface):
 
         # How long we've searched so far
         self._elapsed_search_duration = 0.0
-        # Record of completed trip
-        self._trip_record: TripRecord | None = None
-
         ### Events and Processes ###
         # TODO: Clean up unused events
         self._transportation_alternatives_selected = self._env.event()
@@ -141,25 +137,6 @@ class User(Agent, DriverInterface, PassengerInterface):
     def transport_task(self) -> TransportTask:
         """Get the transport task of the user."""
         return self._transport_task
-
-    @property
-    def trip_record(self) -> TripRecord:
-        """
-        Get user's trip record.
-
-        Returns
-        -------
-        TripRecord
-            The trip record containing finished trip data.
-
-        Raises
-        ------
-        ValueError
-            If no trip record is available. (i.e., trip not completed yet)
-        """
-        if self._trip_record is None:
-            raise ValueError("Trip record is not available yet.")
-        return self._trip_record
 
     def run(self) -> Generator[Process | Timeout, Any, None]:
         """Full user lifecycle."""
@@ -340,8 +317,8 @@ class User(Agent, DriverInterface, PassengerInterface):
         else:
             raise NotImplementedError(f"Operator mode {operator_mode} not supported")
 
-        # 2: Execute trip and get complete trip record
-        self._trip_record = yield self._env.process(
+        # 2: Execute trip
+        yield self._env.process(
             self._start_trip(vehicle_allocation=vehicle_allocation, wait_time=wait_time)
         )
 
@@ -428,11 +405,9 @@ class User(Agent, DriverInterface, PassengerInterface):
 
     def _start_trip(
         self, vehicle_allocation: VehicleAllocation, wait_time: float
-    ) -> Generator[Process | Timeout, Any, TripRecord]:
+    ) -> Generator[Process | Timeout, Any, None]:
         vehicle = vehicle_allocation.vehicle
         route = vehicle_allocation.associated_transportation_alternative.route
-
-        energy_consumed = 0.0
 
         if isinstance(vehicle, RideHailingVehicle):
             # Mount vehicle as passenger
@@ -440,9 +415,7 @@ class User(Agent, DriverInterface, PassengerInterface):
             self.mount_vehicle(vehicle)
 
             # Vehicle drives to destination
-            energy_consumed = yield self._env.process(
-                self.ride_in_vehicle(vehicle, route)
-            )
+            yield self._env.process(self.ride_in_vehicle(vehicle, route))
 
             self.park_vehicle(vehicle)  # type: ignore #TODO: This should not be done by the user
             self.unmount_vehicle(vehicle)
@@ -453,9 +426,7 @@ class User(Agent, DriverInterface, PassengerInterface):
             self.mount_vehicle_as_driver(vehicle)
 
             # User drives vehicle to destination
-            energy_consumed = yield self._env.process(
-                self.drive_vehicle(vehicle, route)
-            )
+            yield self._env.process(self.drive_vehicle(vehicle, route))
 
             self.park_vehicle(vehicle)
             self.unmount_vehicle_as_driver(vehicle)
@@ -466,12 +437,6 @@ class User(Agent, DriverInterface, PassengerInterface):
         self._arrived_at_destination.succeed()
         self.state = UserState.FULFILLED
         self.logger.debug("Trip completed.")
-
-        return TripRecord(
-            alternative=vehicle_allocation.associated_transportation_alternative,
-            actual_wait_time=wait_time,
-            energy_consumed=energy_consumed,
-        )
 
     def _move_to_pick_up_position(
         self, vehicle_assignment: VehicleAllocation
@@ -614,21 +579,19 @@ class User(Agent, DriverInterface, PassengerInterface):
 
     def ride_in_vehicle(
         self, vehicle: RideHailingVehicle, route: Route
-    ) -> Generator[Process | Timeout, Any, float]:
+    ) -> Generator[Process | Timeout, Any, None]:
         """Ride in vehicle as passenger.
 
         TODO: user currently acts as driver, need to change that
         """
         vehicle.start_driving()
 
-        vehicle_soc_before_driving = vehicle.current_state_of_charge
         for route_segment in route.route_segments:
             yield self._env.process(vehicle.move(route_segment))
 
-        vehicle_soc_after_driving = vehicle.current_state_of_charge
-        user_energy_consumption = vehicle_soc_before_driving - vehicle_soc_after_driving
         vehicle.stop_driving()
-        return user_energy_consumption
+
+        return
 
     # TODO : Probably can get rid of this
     def identify_passenger(self) -> str:
