@@ -53,7 +53,7 @@ shared_kick_scooter = SharedVehicleConfig(
     PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
     VEHICLE_TYPE=VehicleType.KICK_SCOOTER,
     VELOCITY=2.82,
-    WALKING_DISTANCE=200,
+    WALKING_DISTANCE=200,  # TODO: it's stupid to have this in the vehicle config - needs to be at population level per vehicle type
 )
 
 shared_scooter = SharedVehicleConfig(
