@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from simulation.agent.user import User
-    from simulation.helper.configuration.enums import OperatorMode
+    from simulation.helper.configuration.enums import OperatorMode, TransactionState
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -62,7 +62,7 @@ class OperatorInterface(ABC):
 
     @abstractmethod
     def withdraw_transportation_task(
-        self, user: User, transportation_task: TransportTask, state: str | None = None
+        self, user: User, transportation_task: TransportTask, state: TransactionState
     ) -> None:
         """
         Withdraw a transportation task.
@@ -73,7 +73,7 @@ class OperatorInterface(ABC):
             The user who requested the task.
         transportation_task : TransportTask
             The task to withdraw.
-        state : str | None, optional
+        state : TransactionState
             The state of the task after withdrawal.
         """
         pass

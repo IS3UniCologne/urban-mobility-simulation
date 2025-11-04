@@ -367,9 +367,9 @@ class Operator(SimulationBase, OperatorInterface):
         self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
 
     def withdraw_transportation_task(  # noqa: D102
-        self, user: User, transportation_task: TransportTask
+        self, user: User, transportation_task: TransportTask, state: TransactionState
     ) -> None:
         # Add Transaction to Log
-        self.log_transaction(transportation_task, None, state="Missed")
+        self.log_transaction(transportation_task, None, state=state)
 
         self.logger.debug("Missed trip of User %s.", user.uid)

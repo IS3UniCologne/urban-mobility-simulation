@@ -56,21 +56,3 @@ class RideHailingOperator(Operator):
         )
 
         self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
-
-    def withdraw_transportation_task(  # noqa: D102
-        self,
-        user: User,
-        transportation_task: TransportTask,
-        state: TransactionState | None = None,
-    ) -> None:
-        # distance = transportation_task.origin >> transportation_task.destination
-        # TODO: define price of the trip
-
-        # Add Transaction to Log
-        self.log_transaction(
-            transportation_task=transportation_task,
-            transportation_alternative=None,
-            state=state,
-        )
-
-        self.logger.info("Missed trip of User %s.", user.uid)
