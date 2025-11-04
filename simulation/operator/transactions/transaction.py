@@ -34,8 +34,8 @@ class Transaction(NamedTuple):
         Distance traveled during the trip.
     duration : float
         Duration of the trip.
-    selected_vehicle_type : str
-        Name of the selected vehicle type.
+    selected_vehicle_type : VehicleType | None
+        Selected vehicle type for the trip. If not available, set to None.
     state : TransactionState
         State of the transaction (e.g., "Fulfilled", "Missed").
     viable_vehicle_types : dict[VehicleType, int]
@@ -60,11 +60,10 @@ class Transaction(NamedTuple):
     price: float
     revenue: float
     distance: float
-    duration: float
-    # TODO: Change to VehicleType Enum
-    selected_vehicle_type: str
+    duration: FloatingPointError
     state: TransactionState
     viable_vehicle_types: dict[VehicleType, int]
+    selected_vehicle_type: VehicleType | None = None
     wait_time: float | None = None
     waiting_time: float | None = None
     pick_up_time: float | None = None
