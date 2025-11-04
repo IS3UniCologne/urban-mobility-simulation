@@ -26,7 +26,9 @@ if TYPE_CHECKING:
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
-    from simulation.operator.data_transfer_object.trip_record import TripRecord
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
+    )
     from simulation.operator.interface.operations_interface import OperationsInterface
     from simulation.operator.interface.search_engine_interface import (
         SearchEngineInterface,
@@ -42,9 +44,6 @@ from simulation.helper.configuration.enums import (
     OperatorMode,
     PropulsionType,
     TransactionState,
-)
-from simulation.operator.data_transfer_object.transportation_alternative import (
-    TransportationAlternative,
 )
 from simulation.operator.interface.operator_interface import OperatorInterface
 from simulation.operator.transactions import TransactionLog
@@ -257,7 +256,6 @@ class Operator(SimulationBase, OperatorInterface):
         transportation_task: TransportTask,
         transportation_alternative: TransportationAlternative | None,
         state: TransactionState,
-        trip_record: None | TripRecord = None,
     ) -> None:
         """
         Log a transaction in the transaction log.
@@ -266,88 +264,104 @@ class Operator(SimulationBase, OperatorInterface):
         ----------
         transportation_task : TransportTask
             The transportation task that was fulfilled or missed.
-        transportation_alternative : TransportationAlternative | TransportationAlternativeRideHailing | None
+        transportation_alternative : TransportationAlternative | None
             The transportation alternative that was selected for the task.
-        state : str | None
-            The state of the transaction (e.g., "Fulfilled", "Missed").
-        trip_record : None | TripRecord
-            The trip record associated with the transaction. (If available)
+        state : TransactionState
+            The state of the transaction (e.g., FULFILLED, MISSED).
         """
-        # TODO Move this to subclasses instead of checking types here
         # TODO:Check if wait times are correct once user refactoring is done
-        if transportation_alternative is None:
-            transaction: Transaction = Transaction(
-                vehicle_uid=None,
-                origin=transportation_task.origin.get_region_id(),
-                destination=transportation_task.destination.get_region_id(),
-                time_start=transportation_task.time,
-                time_end=self._env.now,
-                price=0.0,
-                revenue=0.0,
-                distance=transportation_task.origin >> transportation_task.destination,
-                duration=0.0,
-                selected_vehicle_type=None,
-                state=state,
-                wait_time=transportation_task.actual_wait_time,
-                energy_consumption=0.0,
-                viable_vehicle_types=transportation_task.viable_vehicle_types,
-            )
-        elif isinstance(transportation_alternative, TransportationAlternative):
-            if (
-                transportation_alternative.vehicle.autonomy_type
-                == AutonomyType.HUMAN_DRIVEN
-            ):
-                if hasattr(self._config.OPERATIONS_CONFIG, "DRIVER_PAYMENT_SHARE"):
-                    revenue = transportation_alternative.price * (
-                        1 - self._config.OPERATIONS_CONFIG.DRIVER_PAYMENT_SHARE
-                    )
-                else:
-                    revenue = transportation_alternative.price
-            else:
-                revenue = transportation_alternative.price
-            transaction: Transaction = Transaction(
-                vehicle_uid=transportation_alternative.vehicle.uid,
-                origin=transportation_alternative.route.origin.get_region_id(),
-                destination=transportation_alternative.route.destination.get_region_id(),
-                time_start=transportation_task.time,
-                time_end=self._env.now,
-                price=transportation_alternative.price,
-                revenue=revenue,
-                distance=transportation_alternative.distance,
-                duration=transportation_alternative.duration,
-                selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,  # TODO: Check if this is correct
-                state=state,
-                wait_time=transportation_task.actual_wait_time,
-                viable_vehicle_types=transportation_task.viable_vehicle_types,
-                energy_consumption=transportation_alternative.energy_consumed,
-                waiting_time=transportation_alternative.waiting_time,
-                pick_up_time=transportation_alternative.pick_up_time,
-                selected_vehicle_EV=(
-                    transportation_alternative.vehicle.propulsion_type
-                    == PropulsionType.BATTERY_ELECTRIC
-                ),
-            )
+        if state == TransactionState.MISSED or transportation_alternative is None:
+            transaction = self._create_missed_transaction(transportation_task, state)
         else:
-            # TODO: This used to be for shared vehciles, check if any of this is still needed
-            transaction: Transaction = Transaction(
-                vehicle_uid=transportation_alternative.vehicle.uid,
-                origin=transportation_alternative.route.origin.get_region_id(),
-                destination=transportation_alternative.route.destination.get_region_id(),
-                time_start=transportation_task.time,
-                time_end=self._env.now,
-                price=transportation_alternative.price,
-                revenue=transportation_alternative.price,
-                distance=transportation_alternative.distance,
-                duration=transportation_alternative.duration,
-                selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,  # TODO: Check if this is correct
-                state=state,
-                wait_time=transportation_task.actual_wait_time,
-                energy_consumption=trip_record.energy_consumed
-                if trip_record is not None
-                else 0.0,
-                viable_vehicle_types=transportation_task.viable_vehicle_types,
+            transaction = self._create_fulfilled_transaction(
+                transportation_task, transportation_alternative, state
             )
+
         self._transaction_log.add_transaction(transaction)
+
+    def _create_missed_transaction(
+        self, transportation_task: TransportTask, state: TransactionState
+    ) -> Transaction:
+        """Create a transaction for a missed trip."""
+        return Transaction(
+            vehicle_uid=None,
+            origin=transportation_task.origin.get_region_id(),
+            destination=transportation_task.destination.get_region_id(),
+            time_start=transportation_task.time,
+            time_end=self._env.now,
+            price=0.0,
+            revenue=0.0,
+            distance=transportation_task.origin >> transportation_task.destination,
+            duration=0.0,
+            selected_vehicle_type=None,
+            state=state,
+            wait_time=transportation_task.actual_wait_time,
+            energy_consumption=0.0,
+            viable_vehicle_types=transportation_task.viable_vehicle_types,
+        )
+
+    def _create_fulfilled_transaction(
+        self,
+        transportation_task: TransportTask,
+        transportation_alternative: TransportationAlternative,
+        state: TransactionState,
+    ) -> Transaction:
+        """Create a transaction for a fulfilled trip."""
+        revenue = self._calculate_revenue(transportation_alternative)
+
+        return Transaction(
+            vehicle_uid=transportation_alternative.vehicle.uid,
+            origin=transportation_alternative.route.origin.get_region_id(),
+            destination=transportation_alternative.route.destination.get_region_id(),
+            time_start=transportation_task.time,
+            time_end=self._env.now,
+            price=transportation_alternative.price,
+            revenue=revenue,
+            distance=transportation_alternative.distance,
+            duration=transportation_alternative.duration,
+            selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,
+            state=state,
+            wait_time=transportation_task.actual_wait_time,
+            viable_vehicle_types=transportation_task.viable_vehicle_types,
+            energy_consumption=transportation_alternative.energy_consumed,
+            waiting_time=transportation_alternative.waiting_time,
+            pick_up_time=transportation_alternative.pick_up_time,
+            selected_vehicle_EV=(
+                transportation_alternative.vehicle.propulsion_type
+                == PropulsionType.BATTERY_ELECTRIC
+            ),
+        )
+
+    def _calculate_revenue(
+        self, transportation_alternative: TransportationAlternative
+    ) -> float:
+        """
+        Calculate operator revenue from a transportation alternative.
+
+        For human-driven vehicles, deducts driver payment share if configured.
+
+        Parameters
+        ----------
+        transportation_alternative : TransportationAlternative
+            The selected transportation alternative.
+
+        Returns
+        -------
+        float
+            The revenue for the operator after deductions.
+        """
+        base_price = transportation_alternative.price
+
+        if (
+            transportation_alternative.vehicle.autonomy_type
+            == AutonomyType.HUMAN_DRIVEN
+        ):
+            driver_share = getattr(
+                self._config.OPERATIONS_CONFIG, "DRIVER_PAYMENT_SHARE", 0.0
+            )
+            return base_price * (1 - driver_share)
+
+        return base_price
 
     def pay_for_fulfilled_transportation_task(  # noqa: D102
         self,
@@ -361,7 +375,6 @@ class Operator(SimulationBase, OperatorInterface):
             transportation_task=transportation_task,
             transportation_alternative=selected_transportation_alternative,
             state=TransactionState.FULFILLED,
-            trip_record=user.trip_record,
         )
 
         self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
