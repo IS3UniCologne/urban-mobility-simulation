@@ -12,6 +12,10 @@ from simulation.helper.configuration.enums import (
     PropulsionType,
     VehicleType,
 )
+from simulation.operator.ride_hailing_allocation_engine import (
+    RideHailingAllocationEngine,
+)
+from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 
 rh_car_autonomous = RideHailingVehicleConfig(
     VELOCITY=9.54,
@@ -160,8 +164,12 @@ operator_1 = RideHailingOperatorConfig(
         DISCOUNT_RATE=0.0,
         DRIVER_PAYMENT_SHARE=0.75,
     ),
-    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(),
-    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(),
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
+        SEARCH_ENGINE_TYPE=RideHailingSearchEngine
+    ),
+    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(
+        VEHICLE_ALLOCATION_ENGINE_TYPE=RideHailingAllocationEngine
+    ),
 )
 operator_2 = RideHailingOperatorConfig(
     FLEET_CONFIG=fleet1,
@@ -181,6 +189,10 @@ operator_2 = RideHailingOperatorConfig(
         DISCOUNT_RATE=0.0,
         DRIVER_PAYMENT_SHARE=0.75,
     ),
-    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(),
-    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(),
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
+        SEARCH_ENGINE_TYPE=RideHailingSearchEngine
+    ),
+    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(
+        VEHICLE_ALLOCATION_ENGINE_TYPE=RideHailingAllocationEngine
+    ),
 )
