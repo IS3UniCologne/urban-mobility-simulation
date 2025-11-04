@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
     from simulation.helper.configuration.configuration import Configuration
     from simulation.helper.logging.uid_logger_adapter import UidLoggerAdapter
+    from simulation.helper.types import SimId
 
 
 class LogManager:
@@ -116,13 +117,13 @@ class LogManager:
 
         return self._loggers[cls_name]
 
-    def get_uid_logger(self, uid: str) -> UidLoggerAdapter:
+    def get_uid_logger(self, uid: SimId) -> UidLoggerAdapter:
         """
         Get a logger adapter that automatically includes UID in all log records.
 
         Parameters
         ----------
-        uid : str
+        uid : SimId
             The unique identifier to include in all log records.
 
         Returns

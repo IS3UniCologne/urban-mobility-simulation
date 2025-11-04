@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.logging.uid_logger_adapter import UidLoggerAdapter
+    from simulation.helper.types import SimId
 
 
 class SimulationBase:
@@ -36,7 +37,7 @@ class SimulationBase:
         return self._id
 
     @property
-    def uid(self) -> str:
+    def uid(self) -> SimId:
         """Return the unique identifier for the instance."""
         return self._uid
 

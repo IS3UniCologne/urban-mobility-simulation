@@ -1,6 +1,7 @@
 """Fleet metrics module."""
 
 from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.types import SimId
 from simulation.metrics.metrics_base import IndexedMetricsBase
 from simulation.metrics.metrics_dict import MetricsDict
 from simulation.operator.vehicle_fleet import VehicleFleet
@@ -13,11 +14,11 @@ class FleetMetrics(IndexedMetricsBase):
         """Get list of all available fleet IDs."""
         return [fleet.uid for fleet in self._simulation.world.fleets]
 
-    def get_metrics_by_uid(self, fleet_id: str) -> MetricsDict:
+    def get_metrics_by_uid(self, uid: SimId) -> MetricsDict:
         """Get metrics for a specific fleet by ID."""
-        fleet = self._get_fleet_by_id(fleet_id)
+        fleet = self._get_fleet_by_id(uid)
         if fleet is None:
-            raise KeyError(f"Fleet with ID '{fleet_id}' not found")
+            raise KeyError(f"Fleet with ID '{uid}' not found")
         return self._get_fleet_metrics(fleet)
 
     def to_dict(self) -> MetricsDict:
