@@ -9,7 +9,6 @@ from simulation.helper.configuration.enums import (
     PopulationType,
     UserState,
     VehicleState,
-    VehicleType,
 )
 from simulation.operator.data_transfer_object.trip_record import TripRecord
 from simulation.vehicle.walking import Walking
@@ -286,58 +285,7 @@ class User(Agent, DriverInterface, TrackingInterface):  # noqa: D101
             if self._transport_task.viable_vehicle_types[
                 alternative.vehicle.vehicle_type
             ]:
-                if (
-                    alternative.vehicle.vehicle_type == VehicleType.CAR
-                    and distance_to_vehicle
-                    < self._sim.config.shared_vehicles.get(
-                        VehicleType.CAR
-                    ).WALKING_DISTANCE
-                ):  # See own paper
-                    filtered_list.append(
-                        (
-                            distance_to_vehicle,
-                            alternative.price,
-                            alternative.convenience,
-                            alternative,
-                        )
-                    )
-                elif (
-                    alternative.vehicle.vehicle_type == VehicleType.KICK_SCOOTER
-                    and distance_to_vehicle
-                    < self._sim.config.shared_vehicles.get(
-                        VehicleType.KICK_SCOOTER
-                    ).WALKING_DISTANCE
-                ):  # See Reck
-                    filtered_list.append(
-                        (
-                            distance_to_vehicle,
-                            alternative.price,
-                            alternative.convenience,
-                            alternative,
-                        )
-                    )
-                elif (
-                    alternative.vehicle.vehicle_type == VehicleType.SCOOTER
-                    and distance_to_vehicle
-                    < self._sim.config.shared_vehicles.get(
-                        VehicleType.SCOOTER
-                    ).WALKING_DISTANCE
-                ):  # See Nothing..
-                    filtered_list.append(
-                        (
-                            distance_to_vehicle,
-                            alternative.price,
-                            alternative.convenience,
-                            alternative,
-                        )
-                    )
-                elif (
-                    alternative.vehicle.vehicle_type == VehicleType.BIKE
-                    and distance_to_vehicle
-                    < self._sim.config.shared_vehicles.get(
-                        VehicleType.BIKE
-                    ).WALKING_DISTANCE
-                ):  # See Nothing..
+                if distance_to_vehicle < alternative.vehicle.max_walking_distance:
                     filtered_list.append(
                         (
                             distance_to_vehicle,
