@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod  # noqa: D100
 from typing import Any
 
 from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
@@ -8,15 +8,15 @@ from simulation.context.simulation_context import SimulationContext
 from simulation.helper.simulation_base import SimulationBase
 
 
-class BidMalformedException(Exception):
+class BidMalformedException(Exception):  # noqa: D101
     pass
 
 
-class AuctionClosedException(Exception):
+class AuctionClosedException(Exception):  # noqa: D101
     pass
 
 
-class Auction(SimulationBase, ABC):
+class Auction(SimulationBase, ABC):  # noqa: D101
     __slots__ = (
         "_bid_syntax",
         "_bids",
@@ -44,22 +44,22 @@ class Auction(SimulationBase, ABC):
         self._process = self._env.process(self.run())
 
     @property
-    def result(self):  # noqa: ANN201
+    def result(self):  # noqa: ANN201, D102
         return self._result
 
     @property
-    def is_open(self):  # noqa: ANN201
+    def is_open(self):  # noqa: ANN201, D102
         return self._is_open
 
     @abstractmethod
-    def run(self):  # noqa: ANN201
+    def run(self):  # noqa: ANN201, D102
         pass
 
     @abstractmethod
-    def clear(self):  # noqa: ANN201
+    def clear(self):  # noqa: ANN201, D102
         pass
 
-    def place_bid(self, bid):  # noqa: ANN001, ANN201
+    def place_bid(self, bid):  # noqa: ANN001, ANN201, D102
         # check that bid conforms to the syntax
         try:
             die_if_unbearable(bid, self._bid_syntax)
@@ -77,5 +77,5 @@ class Auction(SimulationBase, ABC):
     @abstractmethod
     def _update_bids(self, single_bid):  # noqa: ANN001, ANN202
         """
-        This method updates the auction's bids. The auctioneer should implement the specifics per auction type."""
+        This method updates the auction's bids. The auctioneer should implement the specifics per auction type."""  # noqa: D200, D401, D404
         pass

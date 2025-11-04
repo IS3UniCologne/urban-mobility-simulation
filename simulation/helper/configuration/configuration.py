@@ -18,6 +18,7 @@ To add a new parameter to an existing section:
 2. Add the parameter to the corresponding Pydantic model, with an appropriate type hint.
 
 All validation, type conversion, and defaults should be handled using Pydantic features (validators, model_config, etc.).
+# TODO: cleanup, with more and more being config-as-code, some of the sections are obsolete
 """
 
 from __future__ import annotations
@@ -49,14 +50,13 @@ from simulation.helper.time import SimulationVelocityConverter
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
-from simulation.operator.operations_management.operations import OperationsInterface
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
-)
+from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+from simulation.operator.operations_management.operations import Operations
 from simulation.operator.operator import Operator
-from simulation.operator.ride_hailing_operator import RideHailingOperator
+from simulation.operator.search_engine import SearchEngine
+from simulation.operator.vehicle_allocation_engine import AllocationEngine
+from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.world.markets.auction import Auction
-from simulation.world.markets.shared_charging_auction import SharedChargingAuction
 
 if TYPE_CHECKING:
     # Careful moving stuff here, pydantic needs to check type hints at runtime!
@@ -212,6 +212,9 @@ class UserConfig(ConfigBaseModel):
 class VehicleConfig(ConfigBaseModel):
     """Configuration for vehicle properties and behavior."""
 
+    # Make frozen so we can use VehicleConfig in fleet dict
+    model_config = ConfigDict(frozen=True)
+
     VELOCITY: float = Field(gt=0)
     MAX_AVAILABLE_SEATS: int
     VEHICLE_TYPE: VehicleType
@@ -250,6 +253,34 @@ class VehicleConfig(ConfigBaseModel):
             if self.ENERGY_CONSUMPTION is None:
                 raise ValueError("ENERGY_CONSUMPTION is required for electric vehicles")
         return self
+
+
+class RideHailingVehicleConfig(VehicleConfig):
+    """Configuration for ride-hailing vehicle parameters."""
+
+
+class SharedVehicleConfig(VehicleConfig):
+    """Configuration for shared vehicle parameters."""
+
+
+class FleetConfig(ConfigBaseModel):
+    """Configuration for fleet parameters."""
+
+    FLEET_TYPE: type[VehicleFleet]
+
+    VEHICLES: dict[VehicleConfig, int]  # TODO: update this to use distributions
+
+
+class RideHailingFleetConfig(FleetConfig):
+    """Configuration for ride-hailing fleet parameters."""
+
+    RH_AVAILABILITY: list[float]
+
+
+class SharedVehicleFleetConfig(FleetConfig):
+    """Configuration for shared vehicle fleet parameters."""
+
+    FLEET_TYPE: type[VehicleFleet] = MixedSharedVehicleFleet
 
 
 class ModeChoiceModelConfig(ConfigBaseModel):
@@ -323,7 +354,7 @@ class ChargingInfrastructureConfig(BaseModel):
 class OperationsConfig(ConfigBaseModel):
     """Configuration for operations parameters."""
 
-    OPERATIONS_TYPE: type[OperationsInterface]
+    OPERATIONS_TYPE: type[Operations]
 
     OPERATIONS_START: int | None = Field(ge=0, default=None)
     OPERATIONS_DURATION: int | None = Field(gt=0, default=None)
@@ -334,8 +365,8 @@ class OperationsConfig(ConfigBaseModel):
     )  # TODO: unify this between sv and rh
     VEHICLE_RELOCATION_VELOCITY: float | None = Field(gt=0, default=None)
 
+    # TODO: allow_queue was both explicitly defined in the config, but also derived from queue size > 0. How do we want to handle this?
     ALLOW_QUEUE: bool | None = Field(default=False)
-    NUMBER_OF_SERVICE_WORKERS: int | None = Field(default=None, gt=0)
 
     PLANNING_LOOKAHEAD: int | None = Field(default=None, gt=0)
 
@@ -352,12 +383,79 @@ class OperationsConfig(ConfigBaseModel):
         return SimulationVelocityConverter().convert_kmh(v)
 
 
-class RideHailingBaseChargingOperationsConfig(OperationsConfig):
+class RideHailingOperationsConfig(OperationsConfig):
+    """Configuration for ride-hailing operations parameters."""
+
+    DRIVER_PAYMENT_SHARE: float = Field(gt=0)
+    DISCOUNT_RATE: float = Field(ge=0)
+    AV_PRICE_REDUCTION: float = Field(gt=0)
+    MAX_PICKUP_DISTANCE: int = Field(gt=0)
+    PRICE_ENTERING: float = Field(ge=0)
+    PRICE_PER_MINUTE: float = Field(ge=0)
+    PRICE_PER_KM: float = Field(ge=0)
+    MINIMUM_PRICE: float = Field(ge=0)
+
+    @model_validator(mode="after")
+    def apply_discount_and_availability(self) -> RideHailingGlobalConfig:
+        """
+        Apply discount to price fields and compute driver availability vector.
+
+        Returns
+        -------
+        RideHailingOperationsConfig
+            A new instance with updated price fields and driver availability vector.
+        """
+        # TODO: Is this functionality really necessary ?
+        discount = 1.0 - self.DISCOUNT_RATE
+        # TODO: Do this in fleet creation, store in vehicle
+        return self.model_copy(
+            update={
+                "PRICE_ENTERING": self.PRICE_ENTERING * discount,
+                "PRICE_PER_MINUTE": self.PRICE_PER_MINUTE * discount,
+                "PRICE_PER_KM": self.PRICE_PER_KM * discount,
+                "MINIMUM_PRICE": self.MINIMUM_PRICE * discount,
+            }
+        )
+
+
+class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for ride-hailing base charging operations."""
 
-    OPERATIONS_TYPE: type[OperationsInterface] = Field(
-        default=RideHailingBaseChargingOperations
-    )
+
+class RideHailingMPChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for ride-hailing multi-party charging operations."""
+
+    # TODO add base type once we have one
+    CHARGING_ALGORITHM_TYPE: type
+
+
+class IntegratedSharedMobilityOperationsConfig(OperationsConfig):
+    """Configuration for integrated shared mobility operations."""
+
+    NUMBER_OF_SERVICE_WORKERS: int = Field(gt=0)
+
+    CHARGING_STATION_POWER: float | None = Field(default=None)
+    NUMBER_OF_BASE_REGIONS: int | None = Field(default=None)
+    BASE_CAPACITY: int | None = Field(default=None)
+    BASE_REGIONS: list[str] | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def clamp_base_regions(self) -> IntegratedSharedMobilityOperationsConfig:
+        """
+        Clamp base regions list to match the number of base regions.
+
+        TODO: Same as above, not super intuitive.
+
+        Returns
+        -------
+        IntegratedSharedMobilityOperationsConfig
+            A new instance with updated BASE_REGIONS.
+        """
+        if self.BASE_REGIONS is None or self.NUMBER_OF_BASE_REGIONS is None:
+            return self
+        return self.model_copy(
+            update={"BASE_REGIONS": self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]}
+        )
 
 
 class OperatorConfig(ConfigBaseModel):
@@ -369,94 +467,56 @@ class OperatorConfig(ConfigBaseModel):
     # AVAILABLE_MODES_SUPPLY: list[int]
     OPERATOR_TYPE: type[Operator]
 
+    FLEET_CONFIG: FleetConfig
+
     OPERATIONS_CONFIG: OperationsConfig
+    SEARCH_ENGINE_CONFIG: SearchEngineConfig
+    ALLOCATION_ENGINE_CONFIG: AllocationEngineConfig
 
-    # TODO: Shared vehicle stuff, this should be changed once we move to the same charging infrastructure as ridehailing
-    CHARGING_STATION_POWER: int | None = Field(default=None)
-    NUMBER_OF_BASE_REGIONS: int | None = Field(default=None)
-    BASE_CAPACITY: int | None = Field(default=None)
-    BASE_REGIONS: list[str] | None = Field(default=None)
-
-    N_VEHICLES: dict[VehicleType, int] | None = Field(default=None)
+    CHARGING_INFRASTRUCTURE: ChargingInfrastructureConfig | None = Field(default=None)
 
     # Public transit stuff
     MAX_BUSSES: int | None = Field(default=None, gt=0)
-
-    @model_validator(mode="after")
-    def clamp_base_regions(self) -> OperatorConfig:
-        """
-        Clamp base regions list to match the number of base regions.
-
-        TODO: Same as above, not super intuitive.
-
-        Returns
-        -------
-        OperatorConfig
-            A new instance with updated BASE_REGIONS.
-        """
-        if self.BASE_REGIONS is None or self.NUMBER_OF_BASE_REGIONS is None:
-            return self
-        return self.model_copy(
-            update={"BASE_REGIONS": self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]}
-        )
 
 
 class RideHailingOperatorConfig(OperatorConfig):
     """Configuration for ride-hailing operator parameters."""
 
-    OPERATOR_TYPE: type[Operator] = Field(RideHailingOperator)
 
-    CHARGING_INFRASTRUCTURE: ChargingInfrastructureConfig
+class SharedVehicleOperatorConfig(OperatorConfig):
+    """Configuration for shared vehicle operator parameters."""
 
-    DRIVER_PAYMENT_SHARE: float = Field(gt=0)
+
+class SearchEngineConfig(ConfigBaseModel):
+    """Configuration for search engine parameters."""
+
+    SEARCH_ENGINE_TYPE: type[SearchEngine]
+
+
+class RideHailingSearchEngineConfig(SearchEngineConfig):
+    """Configuration for ride-hailing search engine parameters."""
+
+
+class SharedVehicleSearchEngineConfig(SearchEngineConfig):
+    """Configuration for shared vehicle search engine parameters."""
+
+
+class AllocationEngineConfig(ConfigBaseModel):
+    """Configuration for vehicle allocation engine parameters."""
+
+    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine]
+
+
+class RideHailingAllocationEngineConfig(AllocationEngineConfig):
+    """Configuration for ride-hailing vehicle allocation engine parameters."""
+
+
+class SharedVehicleAllocationEngineConfig(AllocationEngineConfig):
+    """Configuration for shared vehicle allocation engine parameters."""
 
 
 class RideHailingGlobalConfig(ConfigBaseModel):
     """Global configuration for ride-hailing parameters."""
-
-    AV_PRICE_REDUCTION: float = Field(gt=0)
-    MAX_PICKUP_DISTANCE: int = Field(gt=0)
-    PRICE_ENTERING: float = Field(ge=0)
-    PRICE_PER_MINUTE: float = Field(ge=0)
-    PRICE_PER_KM: float = Field(ge=0)
-    MINIMUM_PRICE: float = Field(ge=0)
-    ALLOCATION: float = Field(ge=0)
-    DISCOUNT_RATE: float = Field(ge=0)
-    N_RIDE_HAILING_CARS: int = Field(ge=0)
-    N_AUTONOMOUS_CARS: int = Field(ge=0)
-    EV_PENETRATION: float = Field(gt=0)
-    AV_PENETRATION: float = Field(gt=0)
-    RH_AVAILABILITY: list[float]
-    DRIVER_AVAILABILITY_VECTOR: list[int] | None = None
-
-    @model_validator(mode="after")
-    def apply_discount_and_availability(self) -> RideHailingGlobalConfig:
-        """
-        Apply discount to price fields and compute driver availability vector.
-
-        Returns
-        -------
-        RideHailingGlobalConfig
-            A new instance with updated price fields and driver availability vector.
-        """
-        # TODO: Is this functionality really necessary ?
-        discount = 1.0 - self.DISCOUNT_RATE
-        return self.model_copy(
-            update={
-                "PRICE_ENTERING": self.PRICE_ENTERING * discount,
-                "PRICE_PER_MINUTE": self.PRICE_PER_MINUTE * discount,
-                "PRICE_PER_KM": self.PRICE_PER_KM * discount,
-                "MINIMUM_PRICE": self.MINIMUM_PRICE * discount,
-                "DRIVER_AVAILABILITY_VECTOR": [
-                    round(
-                        float(x)
-                        * self.N_RIDE_HAILING_CARS
-                        * (1.0 - self.AV_PENETRATION)
-                    )
-                    for x in self.RH_AVAILABILITY
-                ],
-            }
-        )
 
 
 class AuctionConfig(ConfigBaseModel):
@@ -470,8 +530,6 @@ class AuctionConfig(ConfigBaseModel):
 
 class SharedChargingAuctionConfig(AuctionConfig):
     """Configuration for shared charging auction parameters."""
-
-    AUCTION_TYPE: type[SharedChargingAuction] = SharedChargingAuction
 
     AUCTION_INTERVAL: int = Field(gt=0)
     TIMESLOT_DURATION: int = Field(gt=0)

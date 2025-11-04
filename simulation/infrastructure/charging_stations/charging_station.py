@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, Any
 
@@ -14,13 +14,13 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
 
 
-class ChargingStation(TrackingInterface, SimulationBase):
+class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
     __slots__ = (
         "_capacity",
         "_centre",
+        "_cs_id",
         "_current_queue_time",
         "_env",
-        "_id",
         "_location",
         "_plugs",
         "_polygon",
@@ -35,6 +35,7 @@ class ChargingStation(TrackingInterface, SimulationBase):
     def __init__(
         self,
         sim: SimulationContext,
+        cs_id: int,  # ID of the charging station in relation to the charging infrastructure it belongs to
         location: str,
         power: float,
         capacity: int,
@@ -43,6 +44,7 @@ class ChargingStation(TrackingInterface, SimulationBase):
         super().__init__(sim)
         self._sim = sim
         self._env = sim.env
+        self._cs_id = cs_id
         self._capacity = int(capacity)
         self._polygon = shape(
             {
@@ -57,7 +59,6 @@ class ChargingStation(TrackingInterface, SimulationBase):
             self._sim, self._polygon.centroid.y, self._polygon.centroid.x
         )
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
-        self._id = id
         self._location = location
         self._power = float(power)  # kwh/hr
         self._queue = []
@@ -78,53 +79,54 @@ class ChargingStation(TrackingInterface, SimulationBase):
         self._env.process(self.calc_current_queue_time())
 
     @property
-    def capacity(self) -> int:
+    def capacity(self) -> int:  # noqa: D102
         return self._capacity
 
     @property
-    def plugs(self) -> simpy.PriorityResource:
+    def cs_id(self) -> int:
+        """ID of the charging station in relation to the charging infrastructure it belongs to."""
+        return self._cs_id
+
+    @property
+    def plugs(self) -> simpy.PriorityResource:  # noqa: D102
         return self._plugs
 
     @property
-    def power(self) -> float:
+    def power(self) -> float:  # noqa: D102
         return self._power
 
     @property
-    def centre(self) -> GeodesicPosition:
+    def centre(self) -> GeodesicPosition:  # noqa: D102
         return self._centre
 
     @property
-    def id(self) -> int:
-        return self._id
-
-    @property
-    def location(self) -> str:
+    def location(self) -> str:  # noqa: D102
         return self._location
 
     @property
-    def polygon(self) -> Polygon:
+    def polygon(self) -> Polygon:  # noqa: D102
         return self._polygon
 
     @property
-    def queue_size(self) -> int:
+    def queue_size(self) -> int:  # noqa: D102
         return self._queue_size
 
     @property
-    def current_queue_time(self) -> float:
+    def current_queue_time(self) -> float:  # noqa: D102
         return self._current_queue_time
 
     @property
-    def vehicle_plugged_in(self) -> simpy.Event:
+    def vehicle_plugged_in(self) -> simpy.Event:  # noqa: D102
         return self._vehicle_plugged_in
 
     @property
-    def vehicle_unplugged(self) -> simpy.Event:
+    def vehicle_unplugged(self) -> simpy.Event:  # noqa: D102
         return self._vehicle_unplugged
 
-    def register_event_subscriber(self, subscriber) -> None:  # noqa: ANN001
+    def register_event_subscriber(self, subscriber) -> None:  # noqa: ANN001, D102
         self._event_subscribers.append(subscriber)
 
-    def plug_in_notify(self) -> simpy.events.Generator:
+    def plug_in_notify(self) -> simpy.events.Generator:  # noqa: D102
         with self._plug_in_lock.request() as req:
             yield req
             self._vehicle_plugged_in.succeed()
@@ -140,7 +142,7 @@ class ChargingStation(TrackingInterface, SimulationBase):
                     x.processed_plug_in_event = self._env.event()
             self._vehicle_plugged_in = self._env.event()
 
-    def plug_out_notify(self) -> simpy.events.Generator:
+    def plug_out_notify(self) -> simpy.events.Generator:  # noqa: D102
         with self._plug_out_lock.request() as req:
             yield req
             self._vehicle_unplugged.succeed()
@@ -157,7 +159,7 @@ class ChargingStation(TrackingInterface, SimulationBase):
 
             self._vehicle_unplugged = self._env.event()
 
-    def calc_current_queue_time(self) -> simpy.events.Generator:
+    def calc_current_queue_time(self) -> simpy.events.Generator:  # noqa: D102
         # a charging station could expose the current expected queue time (if a vehicle would request charging right now) from the remaining charging times of vehicles in it and requests in the queue
         while True:
             yield self._env.timeout(1)
@@ -207,11 +209,11 @@ class ChargingStation(TrackingInterface, SimulationBase):
             # the current queue time for a new vehicle is then the difference between the earliest possible finish time and the current time
             self._current_queue_time = min(finish_times) - self._env.now
 
-    def dump(self, exposed_only: bool = True) -> dict[str, Any]:
+    def dump(self, exposed_only: bool = True) -> dict[str, Any]:  # noqa: D102
         if exposed_only:
             return {x: self.get(x) for x in self.exposes}
         else:
             return {x: self.get(x) for x in self.__slots__}
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return f"ID: {self._id}, Location: {self._location}, Current Users: {len(self._plugs.users)}, Current Queue Size: {len(self._queue)}"

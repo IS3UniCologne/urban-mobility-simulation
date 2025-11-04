@@ -14,7 +14,7 @@ from .transaction import Transaction
 from .transaction_listener import TransactionListener
 
 
-class VehicleFlow(TypedDict):
+class VehicleFlow(TypedDict):  # noqa: D101
     outflow_fulfilled: int
     outflow_missed: int
     inflow: int

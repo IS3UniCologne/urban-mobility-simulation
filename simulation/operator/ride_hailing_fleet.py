@@ -1,62 +1,94 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import AutonomyType, VehicleState
+import pandas as pd
+
+from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.configuration.enums import (
+    AutonomyType,
+    VehicleState,
+    VehicleType,
+)
 from simulation.helper.time import SimulationTimeConverter
-from simulation.operator.vehicle_fleet import VehicleFleet
+from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
+from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
+from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
-    from simulation.context.simulation_context import SimulationContext
     from simulation.environment.position import Position
-    from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
     from simulation.vehicle.vehicle import Vehicle
-    from simulation.world.world import World
 
 
-class MixedRideHailingFleet(VehicleFleet):
-    __slots__ = (
-        "_autonomous_cars",
-        "_config",
-        "_distance_threshold_to_user",
-        "_driver_availability_vector",
-        "_env",
-        "_recharging_threshold",
-        "_ridehailing_cars",
-    )
+class RideHailingFleet(VehicleFleet):  # noqa: D101
+    __slots__ = ("_env", "_recharging_threshold")
 
-    def __init__(self, sim: SimulationContext, world: World) -> None:
-        super().__init__(sim=sim, world=world)
-        self._config = sim.config
-        self._env = sim.env
-        self._ridehailing_cars = []
-        self._autonomous_cars = []
-        self._distance_threshold_to_user = (
-            self._config.ride_hailing_global.MAX_PICKUP_DISTANCE
-        )
-        self._driver_availability_vector = (
-            self._config.ride_hailing_global.DRIVER_AVAILABILITY_VECTOR
-        )
-        self._recharging_threshold = self._config.operators[
-            0
-        ].OPERATIONS_CONFIG.RECHARGE_THRESHOLD  # TODO: Get this from somewhere else
-        self._env.process(self.fleet_size_monitor())
+    def __init__(self, deps: VehicleFleetDependencies) -> None:
+        super().__init__(deps=deps)
 
-    def _add_vehicle(self, vehicle: RideHailingVehicle):  # noqa: ANN202
+        rng = deps.sim.random_manager.get_rng(component_name="FLEETFACTORY")
+        hex_columns = deps.sim.config.world.SPATIAL_RESOLUTION.column_name
+
+        supply_path = deps.sim.config.path.PATH_VEHICLE_SUPPLY
+        supply_probabilities = pd.read_csv(supply_path)
+
+        for vehicle_config, total_count in deps.config.VEHICLES.items():
+            # TODO: We shouldn't hardcode the columns
+            if vehicle_config.VEHICLE_TYPE == VehicleType.CAR:
+                vehicle_probabilities = supply_probabilities["cars_prob"].to_numpy()
+            elif vehicle_config.VEHICLE_TYPE == VehicleType.BIKE:
+                vehicle_probabilities = supply_probabilities["bikes_prob"].to_numpy()
+            elif vehicle_config.VEHICLE_TYPE == VehicleType.SCOOTER:
+                vehicle_probabilities = supply_probabilities["scooters_prob"].to_numpy()
+            elif vehicle_config.VEHICLE_TYPE == VehicleType.KICK_SCOOTER:
+                vehicle_probabilities = supply_probabilities[
+                    "kick_scooters_prob"
+                ].to_numpy()
+
+            else:
+                self.logger.error(
+                    "RideHailingFleet does not support vehicle type %s",
+                    vehicle_config.VEHICLE_TYPE,
+                )
+
+            if vehicle_config.AUTONOMY_TYPE == AutonomyType.HUMAN_DRIVEN:
+                driver_availability_vector = [
+                    round(float(x) * total_count) for x in deps.config.RH_AVAILABILITY
+                ]
+            else:
+                driver_availability_vector = None
+
+            vehicle_count = pd.DataFrame(
+                rng.multinomial(
+                    n=total_count, pvals=vehicle_probabilities, size=1
+                ).transpose(),
+                columns=["count"],
+            )
+            vehicle_count.index = supply_probabilities.index
+            supply_probabilities["count"] = vehicle_count["count"]
+
+            for _index, row in supply_probabilities.iterrows():
+                hex_id = row[hex_columns]
+                local_count = row["count"]
+                for _ in range(local_count):
+                    rdm_lat, rdm_lng = deps.sim.geo_env.get_random_position(hex_id)
+                    pos = GeodesicPosition(deps.sim, rdm_lat, rdm_lng, hex_id)
+                    RideHailingVehicle(
+                        sim=deps.sim,
+                        position=pos,
+                        fleet=self,
+                        vehicle_config=vehicle_config,
+                        driver_availability_vector=driver_availability_vector,
+                    )
+
+    def _add_vehicle(self, vehicle: Vehicle) -> None:
         if vehicle not in self._vehicles:
-            if vehicle.autonomy_type == AutonomyType.HUMAN_DRIVEN:
-                self._vehicles.append(vehicle)
-                self._world.add_vehicle(vehicle)
-                self._ridehailing_cars.append(vehicle)
-            elif vehicle.autonomy_type == AutonomyType.AUTONOMOUS:
-                self._vehicles.append(vehicle)
-                self._world.add_vehicle(vehicle)
-                self._autonomous_cars.append(vehicle)
-
+            self._vehicles.append(vehicle)
+            self._world.add_vehicle(vehicle=vehicle)
         else:
             raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
 
-    def get_available_vehicles_to_user(self, origin: Position):  # noqa: ANN201
+    def get_available_vehicles_to_user(self, origin: Position) -> list[Vehicle]:
         """
         Find available vehicles that can serve a user at a given origin location.
 
@@ -78,7 +110,6 @@ class MixedRideHailingFleet(VehicleFleet):
             A combined list of parked and serving vehicles that are available to the user
             at the specified origin location
         """
-
         parking_cars: set[Vehicle] = self._vehicles_by_state[VehicleState.PARKING]
 
         # TODO: Check if this is necessary
@@ -96,13 +127,16 @@ class MixedRideHailingFleet(VehicleFleet):
             parking_cars_in_area = [
                 car
                 for car in parking_cars_not_suggested
-                if (car.position << origin) <= self._distance_threshold_to_user
+                if (car.position << origin)
+                <= self.operator.operations.config.MAX_PICKUP_DISTANCE
             ]
 
         serving_state = VehicleState.DRIVING
         serving_vehicles = self._vehicles_by_state[serving_state]
-        hour = SimulationTimeConverter.hour_of_day(self._env.now)
-        state_of_charge_threshold = self._recharging_threshold[hour]
+        hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
+        state_of_charge_threshold = self.operator.operations.config.RECHARGE_THRESHOLD[
+            hour
+        ]
         # TODO: Check if this is necessary
         serving_vehicles_sorted = sorted(serving_vehicles, key=lambda v: v.uid)
         serving_cars = [
@@ -115,11 +149,12 @@ class MixedRideHailingFleet(VehicleFleet):
         serving_cars_in_area = []
         for car in serving_cars:
             distance_to_current_destination = (
-                car.estimated_completion_time - self._env.now
+                car.estimated_completion_time - self._sim.env.now
             ) * car.velocity
             if (
-                car.destination.position << origin
-            ) + distance_to_current_destination <= self._distance_threshold_to_user:
+                (car.destination.position << origin) + distance_to_current_destination
+                <= self.operator.operations.config.MAX_PICKUP_DISTANCE
+            ):
                 serving_cars_in_area.append(car)
 
         return parking_cars_in_area + serving_cars_in_area
@@ -129,8 +164,8 @@ class MixedRideHailingFleet(VehicleFleet):
         Return all vehicles that need to be refueled/recharged
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
-        """
-        hour = SimulationTimeConverter.hour_of_day(self._env.now)
+        """  # noqa: D205, D400
+        hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
         state_of_charge_threshold = state_of_charge_threshold[hour]
         return sum(
             1
@@ -138,7 +173,7 @@ class MixedRideHailingFleet(VehicleFleet):
             if vehicle.current_relative_state_of_charge < state_of_charge_threshold
         )
 
-    def get_operational_costs(self):  # noqa: ANN201
+    def get_operational_costs(self):  # noqa: ANN201, D102
         operational_costs = 0
         all_vehicle_list = self._vehicles
         for vehicle in all_vehicle_list:
@@ -155,7 +190,7 @@ class MixedRideHailingFleet(VehicleFleet):
         Return all vehicles that need to be refueled/recharged in a region
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
-        """
+        """  # noqa: D205, D400
         below_soc_level_vehicles = []
         cars_in_area = self.vehicles_in_region(region)
         # TODO: Check if this is necessary
@@ -167,13 +202,10 @@ class MixedRideHailingFleet(VehicleFleet):
 
         return below_soc_level_vehicles
 
-    def count_cars(self):  # noqa: ANN201
+    def count_cars(self):  # noqa: ANN201, D102
         return len(self._vehicles)
 
-    def driver_availability_vector(self):  # noqa: ANN201
-        return self._driver_availability_vector
-
-    def count_total(self):  # noqa: ANN201
+    def count_total(self):  # noqa: ANN201, D102
         return self.count_cars()
 
     def calc_supply_per_region(self):  # noqa: ANN201
@@ -181,7 +213,7 @@ class MixedRideHailingFleet(VehicleFleet):
         Return a list of number of vehicles in each region
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
-        """
+        """  # noqa: D205, D400
         available_vehicles = ["RideHailingCar"]
         values = [0] * len(available_vehicles)
 
@@ -254,7 +286,7 @@ class MixedRideHailingFleet(VehicleFleet):
         # vehicle_dict = dict(zip(available_vehicles, values))
 
         low_soc_supply = []
-        hour = SimulationTimeConverter.hour_of_day(self._env.now)
+        hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
         state_of_charge_threshold = state_of_charge_threshold[hour]
 
         parking_vehicles = self._vehicles_by_state[VehicleState.PARKING]
@@ -272,41 +304,3 @@ class MixedRideHailingFleet(VehicleFleet):
             low_soc_supply, key=lambda x: x.current_relative_state_of_charge
         )
         return low_soc_supply
-
-    def get_online_vehicles(self):  # noqa: ANN201
-        """
-        Return all vehicles which are online
-
-        :param
-        :return: Lists of online vehicles
-        """
-
-        online_vehicles = [
-            car for car in self._ridehailing_cars if car.state != VehicleState.OFFLINE
-        ]
-
-        return online_vehicles
-
-    def get_offline_vehicles(self):  # noqa: ANN201
-        """
-        Return all vehicles which are online
-
-        :param
-        :return: Lists of online vehicles
-        """
-
-        online_vehicles = [
-            car for car in self._ridehailing_cars if car.state == VehicleState.OFFLINE
-        ]
-
-        return online_vehicles
-
-    def fleet_size_monitor(self):  # noqa: ANN201
-        """
-        Monitoring the number of online vehicles
-        :return:
-        """
-        while True:
-            number_of_online_vehicles = len(self.get_online_vehicles())
-            self.logger.info("Fleet has %s online vehicles", number_of_online_vehicles)
-            yield self._env.timeout(60)

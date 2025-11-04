@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from abc import ABC
 from typing import TYPE_CHECKING
@@ -18,15 +18,15 @@ if TYPE_CHECKING:
     from simulation.operator.vehicle_fleet import VehicleFleet
 
 
-class PublicTransitVehicleException(Exception):
+class PublicTransitVehicleException(Exception):  # noqa: D101
     pass
 
 
-class PublicTransitVehicleFull(PublicTransitVehicleException):
+class PublicTransitVehicleFull(PublicTransitVehicleException):  # noqa: D101
     pass
 
 
-class PublicTransitVehicle(Vehicle, ABC):
+class PublicTransitVehicle(Vehicle, ABC):  # noqa: D101
     __slots__ = ("_current_stop", "_delay", "_route")
 
     def __init__(
@@ -51,11 +51,11 @@ class PublicTransitVehicle(Vehicle, ABC):
         self.logger.debug("Initialized.")
 
     @property
-    def route(self) -> PublicTransitRoute:
+    def route(self) -> PublicTransitRoute:  # noqa: D102
         return self._route
 
     @property
-    def current_stop(self) -> Stop:
+    def current_stop(self) -> Stop:  # noqa: D102
         return self._current_stop
 
     @current_stop.setter
@@ -63,10 +63,10 @@ class PublicTransitVehicle(Vehicle, ABC):
         self._current_stop = stop
 
     @property
-    def delay(self) -> int:
+    def delay(self) -> int:  # noqa: D102
         return self._delay
 
-    def prognose_arrival(self, stop: Stop) -> str:
+    def prognose_arrival(self, stop: Stop) -> str:  # noqa: D102
         # TODO: this is pretty optimistic: What if the vehicle waits at intermediate stops
 
         distance = self._route.subroute(self._current_stop, stop).total_distance()

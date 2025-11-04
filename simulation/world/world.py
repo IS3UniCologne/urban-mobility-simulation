@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import os
 from typing import TYPE_CHECKING
@@ -15,22 +15,15 @@ from simulation.infrastructure.charging_stations.charging_infastructure import (
 from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
 )
-from simulation.operator.fleet_factory import (
-    generate_mixed_fleet,
-    generate_mixed_ride_hailing_fleet,
-)
 from simulation.operator.operations_management.integrated_shared_mobility_operations import (
     IntegratedSharedMobilityOperations,
 )
+from simulation.operator.operator import Operator, OperatorDependencies
 from simulation.operator.public_transit_operator import PublicTransitOperator
 from simulation.operator.public_transport_allocation_engine import (
     PublicTransportAllocationEngine,
 )
-from simulation.operator.ride_hailing_allocation_engine import (
-    RideHailingAllocationEngine,
-)
 from simulation.operator.ride_hailing_operator import RideHailingOperator
-from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 from simulation.operator.shared_mobility_operator import SharedMobilityOperator
 from simulation.operator.shared_vehicle_allocation_engine import (
     SharedVehicleAllocationEngine,
@@ -55,13 +48,9 @@ if TYPE_CHECKING:
     from simulation.helper.configuration.configuration import Configuration
     from simulation.helper.random.random_manager import RandomManager
     from simulation.infrastructure.helper.timetable import Timetable
-    from simulation.operator.interface.vehicle_allocation_engine_interface import (
-        VehicleAllocationEngineInterface,
-    )
     from simulation.operator.operations_management.operations_public_transport import (
         OperationsPublicTransport,
     )
-    from simulation.operator.operator import Operator
     from simulation.operator.public_transport_search_engine import (
         PublicTransportSearchEngine,
     )
@@ -72,7 +61,7 @@ if TYPE_CHECKING:
     from simulation.vehicle.vehicle import Vehicle
 
 
-class World(SimulationBase):
+class World(SimulationBase):  # noqa: D101
     # There is only one instance of this class.
     __instance = None
     __slots__ = (
@@ -112,9 +101,6 @@ class World(SimulationBase):
         self._geo_env: GeodesicEnvironment = sim.geo_env
         self._env: simpy.Environment = sim.env
         self._random_manager = sim.random_manager
-        self._vehicle_assignment_engine: dict[
-            str, VehicleAllocationEngineInterface
-        ] = {}
 
         self._distance_matrix: DataFrame = self._load_distance_matrix()
 
@@ -161,7 +147,7 @@ class World(SimulationBase):
         return self._random_manager
 
     @property
-    def geo_env(self) -> GeodesicEnvironment:
+    def geo_env(self) -> GeodesicEnvironment:  # noqa: D102
         return self._geo_env
 
     @property
@@ -170,15 +156,15 @@ class World(SimulationBase):
         return self._distance_matrix
 
     @property
-    def user_processes(self):  # noqa: ANN201
+    def user_processes(self):  # noqa: ANN201, D102
         return self._user_processes
 
     @property
-    def demand_processes(self):  # noqa: ANN201
+    def demand_processes(self):  # noqa: ANN201, D102
         return self._demand_processes
 
     @property
-    def vehicle_processes(self):  # noqa: ANN201
+    def vehicle_processes(self):  # noqa: ANN201, D102
         return self._vehicle_processes
 
     @property
@@ -258,9 +244,16 @@ class World(SimulationBase):
             return None
 
     def _setup_operators(self) -> None:
-        self._setup_ride_hailing_operators()
-        self._setup_shared_vehicle_operators()
-        self._setup_transit_operators()
+        if not self._config.operators or len(self._config.operators) == 0:
+            raise ValueError("No operators defined in configuration.")
+        operators = self._config.operators
+        for operator_config in operators:
+            operator = Operator.from_deps(
+                deps=OperatorDependencies(
+                    sim=self._sim, config=operator_config, world=self
+                )
+            )
+            self._operators.append(operator)
 
     def _setup_transit_operators(self) -> None:
         timetable: Timetable = self._load_timetable()
@@ -307,7 +300,8 @@ class World(SimulationBase):
                 SharedVehicleAllocationEngine(sim=self._sim)
             )
 
-            fleet = generate_mixed_fleet(sim=self._sim, world=self)
+            fleet = None
+            # generate_mixed_fleet(sim=self._sim, world=self)
             self._fleets.append(fleet)
             self._search_engine[operator_id].register_fleet(fleet)
 
@@ -356,55 +350,7 @@ class World(SimulationBase):
         )
         return dmi.load_distance_matrix()
 
-    def _setup_ride_hailing_operators(self) -> None:
-        if (
-            self._config.operators
-            and self._config.operators[0].OPERATOR_TYPE != RideHailingOperator
-        ):
-            return
-
-        rh_ops = self._config.operators
-        num_rh_ops = max(2, len(rh_ops)) if rh_ops else 0
-        for i in range(num_rh_ops):
-            operator_cfg = rh_ops[min(i, len(rh_ops) - 1)]
-
-            operator_id = f"ride_hailing_{i}"
-            self._search_engine[operator_id] = RideHailingSearchEngine(sim=self._sim)
-            self._vehicle_assignment_engine[operator_id] = RideHailingAllocationEngine(
-                sim=self._sim
-            )
-            fleet = generate_mixed_ride_hailing_fleet(sim=self._sim, world=self)
-            self._fleets.append(fleet)
-            self._search_engine[operator_id].register_fleet(fleet)
-            # TODO: Maybe move this to operations ?
-            # allow_queue = (
-            #     sum(self._config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE)
-            #     > 0
-            # )
-            # # TODO: this is a
-            # available_vehicle_modes = [
-            #     AutonomyType.AUTONOMOUS,
-            #     AutonomyType.HUMAN_DRIVEN,
-            # ]
-            # available_vehicle_modes_supply = [
-            #     self._config.ride_hailing_global.N_RIDE_HAILING_CARS,
-            #     self._config.ride_hailing_global.N_AUTONOMOUS_CARS,
-            # ]
-
-            # TODO: make sure this is a single config parameter
-            operator = RideHailingOperator(
-                sim=self._sim,
-                operator_config=operator_cfg,
-                fleet=fleet,
-                charging_infrastructure=operator_cfg.CHARGING_INFRASTRUCTURE.instance,
-                search_engine=self._search_engine[operator_id],
-                allocation_engine=self._vehicle_assignment_engine[operator_id],
-                world=self,
-            )
-            self._operators.append(operator)
-            self._payment_engine[operator_id] = operator
-
-    def add_user(self, mode, fleet, origin, destination):  # noqa: ANN001, ANN201
+    def add_user(self, mode, fleet: VehicleFleet, origin, destination):  # noqa: ANN001, ANN201
         """
         Add a user agent to the world with an origin and a destination.
 
@@ -413,9 +359,11 @@ class World(SimulationBase):
         :param origin: Spatial Unit ID (e.g., hex_id)
         :param destination: Spatial Unit ID (e.g., hex_id)
         :return: None
-        """
+        """  # noqa: D202
 
         if len(self._users) < self._user_limit:
+            operator = fleet.operator
+
             # Get Origin and Destination based on underlying environment
 
             # TODO: Why are we doing this here ??
@@ -463,13 +411,9 @@ class World(SimulationBase):
                     sim=self._sim,
                     position=origin_position,
                     transport_task=task,
-                    transportation_search_service=self._search_engine[
-                        "public_transport_0"
-                    ],
-                    payment_service=self._payment_engine["public_transport_0"],
-                    vehicle_assignment_service=self._vehicle_assignment_engine[
-                        "public_transport_0"
-                    ],
+                    transportation_search_service=operator.search_engine,
+                    payment_service=operator,
+                    vehicle_assignment_service=operator.allocation_engine,
                     vehicle_choice_behavior=self._vehicle_choice_behavior,
                     population_type=population_type,
                     world=self,
@@ -488,16 +432,12 @@ class World(SimulationBase):
                 # TODO: Remove hard coded operator id
                 new_user = user.User(
                     sim=self._sim,
-                    fleet=self._operators[fleet].fleet,
+                    fleet=fleet,
                     position=origin_position,
                     transport_task=task,
-                    transportation_search_service=self._search_engine[
-                        "shared_vehicle_0"
-                    ],
-                    payment_service=self._payment_engine["shared_vehicle_0"],
-                    vehicle_assignment_service=self._vehicle_assignment_engine[
-                        "shared_vehicle_0"
-                    ],
+                    transportation_search_service=operator.search_engine,
+                    payment_service=operator,
+                    vehicle_assignment_service=operator.allocation_engine,
                     vehicle_choice_behavior=self._vehicle_choice_behavior,
                     population_type=population_type,
                 )
@@ -525,13 +465,9 @@ class World(SimulationBase):
                     fleet_index=fleet,
                     position=origin_position,
                     transport_task=task,
-                    transportation_search_service=self._search_engine[
-                        f"ride_hailing_{fleet}"
-                    ],
-                    payment_service=self._payment_engine[f"ride_hailing_{fleet}"],
-                    vehicle_assignment_service=self._vehicle_assignment_engine[
-                        f"ride_hailing_{fleet}"
-                    ],
+                    transportation_search_service=operator.search_engine,
+                    payment_service=operator,
+                    vehicle_assignment_service=operator.allocation_engine,
                     vehicle_choice_behavior=self._vehicle_choice_behavior,
                     population_type=population_type,
                 )
@@ -607,41 +543,42 @@ class World(SimulationBase):
             "User %s removed from simulation after process finished.", user.uid
         )
 
-    def add_vehicle(self, vehicle: Vehicle):  # noqa: ANN201
+    def add_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
         self._vehicles.add(vehicle)
 
         # TODO: register vehicle with tracking
 
-    def remove_vehicle(self, vehicle: Vehicle):  # noqa: ANN201
+    def remove_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
         self._vehicles.discard(vehicle)
 
         # TODO: de-register vehicle with tracking
 
     @property
-    def users(self):  # noqa: ANN201
+    def users(self):  # noqa: ANN201, D102
         return self._users
 
+    # TODO: get rid of this, only one user uses it and it should be dealt with differently
     @property
-    def vehicles(self):  # noqa: ANN201
+    def vehicles(self):  # noqa: ANN201, D102
         return self._vehicles
 
     @property
-    def charging_infrastructure(self) -> ChargingInfrastructure | None:
+    def charging_infrastructure(self) -> ChargingInfrastructure | None:  # noqa: D102
         return self._charging_infrastructures
 
     @property
-    def simulation_finished(self):  # noqa: ANN201
+    def simulation_finished(self):  # noqa: ANN201, D102
         return self._simulation_finished
 
     @property
-    def changed(self):  # noqa: ANN201
+    def changed(self):  # noqa: ANN201, D102
         return self._changed
 
     @changed.setter
     def changed(self, event):  # noqa: ANN001, ANN202
         self._changed = event
 
-    def stop_all_processes(self):  # noqa: ANN201
+    def stop_all_processes(self):  # noqa: ANN201, D102
         # stop demand generation
         for d in self.demand_processes:
             try:
@@ -658,7 +595,7 @@ class World(SimulationBase):
                 # already terminated
                 pass
 
-    def user_process_by_id(self, user_id):  # noqa: ANN001, ANN201
+    def user_process_by_id(self, user_id):  # noqa: ANN001, ANN201, D102
         return self._user_processes.get(user_id)  # returns the process or None
 
     def _load_timetable(self) -> Timetable | None:

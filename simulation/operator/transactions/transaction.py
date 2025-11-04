@@ -28,6 +28,8 @@ class Transaction(NamedTuple):
         Simulation time when the trip ended.
     price : float
         Price paid for the trip.
+    revenue: float
+        Revenue earned from the trip for the operator.
     distance : float
         Distance traveled during the trip.
     duration : float
@@ -56,8 +58,10 @@ class Transaction(NamedTuple):
     time_start: float
     time_end: float
     price: float
+    revenue: float
     distance: float
     duration: float
+    # TODO: Change to VehicleType Enum
     selected_vehicle_type: str
     state: TransactionState
     viable_vehicle_types: dict[VehicleType, int]

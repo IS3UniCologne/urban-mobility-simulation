@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -12,11 +12,11 @@ from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
+    AllocationEngineInterface,
 )
 
 
-class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
+class PublicTransportAllocationEngine(AllocationEngineInterface):  # noqa: D101
     __slots__ = ("_env", "_sim", "_vehicles_assigned_to_users")
 
     def __init__(self, sim: SimulationContext) -> None:
@@ -34,7 +34,7 @@ class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
         :param user:
         :param selected_transportation_alternative:
         :return:
-        """
+        """  # noqa: D205, D400
         selected_vehicle = selected_transportation_alternative.vehicle
 
         yield self._env.timeout(
@@ -52,7 +52,7 @@ class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
         else:
             return None
 
-    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201
+    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201, D102
         self, vehicle_assignment: VehicleAllocation
     ):
         pass

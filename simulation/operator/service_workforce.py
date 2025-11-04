@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -9,7 +9,7 @@ from simulation.operator.operations_management.task_queue import TaskQueue
 from simulation.operator.service_worker import ServiceWorker
 
 
-class ServiceWorkforce:
+class ServiceWorkforce:  # noqa: D101
     __slots__ = ("_number_service_workers", "_service_workers", "_sim", "_task_queue")
 
     def __init__(self, sim: SimulationContext, number_service_workers: int) -> None:
@@ -26,11 +26,11 @@ class ServiceWorkforce:
             )
 
     @property
-    def task_queue(self) -> TaskQueue:
+    def task_queue(self) -> TaskQueue:  # noqa: D102
         return self._task_queue
 
     @property
-    def number_service_workers(self) -> int:
+    def number_service_workers(self) -> int:  # noqa: D102
         return self._number_service_workers
 
     # TODO: Properties thread safe?

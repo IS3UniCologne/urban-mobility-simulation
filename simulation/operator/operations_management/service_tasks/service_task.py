@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
 
 
-class TaskState(Enum):
+class TaskState(Enum):  # noqa: D101
     INITIALIZED = 0
     EXECUTING = 10
     EXECUTING_RELOCATION = 11
@@ -24,7 +24,7 @@ class TaskState(Enum):
     MISSED_QUEUE_FULL = 32
 
 
-class ServiceTask(ABC, SimulationBase):
+class ServiceTask(ABC, SimulationBase):  # noqa: D101
     __slots__ = ("_env", "_sim", "_start_time", "_state", "_task_finished")
 
     def __init__(self, sim: SimulationContext) -> None:
@@ -36,13 +36,13 @@ class ServiceTask(ABC, SimulationBase):
         self._task_finished = self._env.event()
 
     @abstractmethod
-    def execute(self) -> None:
+    def execute(self) -> None:  # noqa: D102
         pass
 
     @property
-    def state(self) -> TaskState:
+    def state(self) -> TaskState:  # noqa: D102
         return self._state
 
     @property
-    def task_finished(self) -> Event:
+    def task_finished(self) -> Event:  # noqa: D102
         return self._task_finished

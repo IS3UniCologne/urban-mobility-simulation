@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
@@ -10,7 +10,6 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.simulation_base import SimulationBase
-from tracking.tracking_interface import TrackingInterface
 
 if TYPE_CHECKING:
     from simpy import Event
@@ -31,7 +30,7 @@ class VehicleError(Exception):
     """Base class for all vehicle-related exceptions."""
 
 
-class Vehicle(TrackingInterface, SimulationBase, ABC):
+class Vehicle(SimulationBase, ABC):
     """Base class for all vehicles.
 
     Contains common properties and methods used by all vehicles.
@@ -47,24 +46,28 @@ class Vehicle(TrackingInterface, SimulationBase, ABC):
         "_current_task",
         "_distance_travelled",
         "_env",
+        "_fleet",
         "_id",
         "_max_available_seats",
         "_mode",
+        "_passengers",
         "_position_changed",
+        "_propulsion_type",
         "_seats",
         "_sim",
+        "_user_mounted",
+        "_user_unmounted",
+        "_vehicle_type",
         "_velocity",
     )
 
-    exposes = ["_id", "state", "position", "_distance_travelled"]  # noqa: RUF012
-
     # We need to override __eq__ and __hash__ to use Vehicles in sets
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:  # noqa: D105
         if isinstance(other, Vehicle):
             return self.uid == other.uid
         return False
 
-    def __hash__(self) -> int:
+    def __hash__(self) -> int:  # noqa: D105
         return hash(self.uid)
 
     def __init__(
@@ -367,12 +370,6 @@ class Vehicle(TrackingInterface, SimulationBase, ABC):
 
         self.logger.debug("Parked.")
 
-    def dump(self, exposed_only: bool = True) -> dict[str, object]:
-        if exposed_only:
-            return {x: self.get(x) for x in self.exposes}
-        else:
-            return {x: self.get(x) for x in self.__slots__}
-
     # Methods
     @abstractmethod
     def move(self, route_segment: Edge) -> None:
@@ -396,8 +393,8 @@ class Vehicle(TrackingInterface, SimulationBase, ABC):
         """
         self._current_task = task
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return self.uid
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return self.__str__()

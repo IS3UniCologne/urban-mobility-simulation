@@ -1,26 +1,71 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import pandas as pd
 
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.enums import VehicleType
-from simulation.operator.vehicle_fleet import VehicleFleet
-
-if TYPE_CHECKING:
-    from simulation.context.simulation_context import SimulationContext
-    from simulation.world.world import World
+from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
+from simulation.vehicle.shared_vehicle import SharedVehicle
 
 
-class MixedSharedVehicleFleet(VehicleFleet):
-    def __init__(self, sim: SimulationContext, world: World) -> None:
-        super().__init__(sim=sim, world=world)
+# TODO : rename SharedVehicleFleet, there are only mixed fleets
+class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
+    def __init__(self, deps: VehicleFleetDependencies) -> None:
+        super().__init__(deps)
+
+        rng = deps.sim.random_manager.get_rng(component_name="FLEETFACTORY")
+        hex_columns = deps.sim.config.world.SPATIAL_RESOLUTION.column_name
+
+        supply_path = deps.sim.config.path.PATH_VEHICLE_SUPPLY
+        supply_probabilities = pd.read_csv(supply_path)
+
+        for vehicle_config, total_count in deps.config.VEHICLES.items():
+            # TODO: We shouldn't hardcode the columns
+            if vehicle_config.VEHICLE_TYPE == VehicleType.CAR:
+                vehicle_probabilities = supply_probabilities["cars_prob"].to_numpy()
+            elif vehicle_config.VEHICLE_TYPE == VehicleType.BIKE:
+                vehicle_probabilities = supply_probabilities["bikes_prob"].to_numpy()
+            elif vehicle_config.VEHICLE_TYPE == VehicleType.SCOOTER:
+                vehicle_probabilities = supply_probabilities["scooters_prob"].to_numpy()
+            elif vehicle_config.VEHICLE_TYPE == VehicleType.KICK_SCOOTER:
+                vehicle_probabilities = supply_probabilities[
+                    "kick_scooters_prob"
+                ].to_numpy()
+
+            else:
+                self.logger.error(
+                    "MixedSharedVehicleFleet does not support vehicle type %s",
+                    vehicle_config.VEHICLE_TYPE,
+                )
+
+            vehicle_count = pd.DataFrame(
+                rng.multinomial(
+                    n=total_count, pvals=vehicle_probabilities, size=1
+                ).transpose(),
+                columns=["count"],
+            )
+            vehicle_count.index = supply_probabilities.index
+            supply_probabilities["count"] = vehicle_count["count"]
+
+            for _index, row in supply_probabilities.iterrows():
+                hex_id = row[hex_columns]
+                local_count = row["count"]
+                for _ in range(local_count):
+                    rdm_lat, rdm_lng = deps.sim.geo_env.get_random_position(hex_id)
+                    pos = GeodesicPosition(deps.sim, rdm_lat, rdm_lng, hex_id)
+                    SharedVehicle(
+                        sim=deps.sim,
+                        position=pos,
+                        fleet=self,
+                        vehicle_config=vehicle_config,
+                    )
 
     def vehicles_below_soc_threshold(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
         Return all vehicles that need to be refueled/recharged
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
-        """
-
+        """  # noqa: D205, D400
         return {
             vehicle
             for vehicle in self.vehicles
@@ -32,7 +77,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
         Return all vehicles that need to be refueled/recharged in a region
         :param state_of_charge_threshold: between 0 and 1
         :return: Vehicle list in which all vehicles soc < state_of_charge_threshold
-        """
+        """  # noqa: D205, D400
         below_soc_level_vehicles = []
         vehicles_in_region = self.vehicles_in_region(region)
         # TODO: Check if this is necessary
@@ -61,7 +106,7 @@ class MixedSharedVehicleFleet(VehicleFleet):
                 '871f1d4f3ffffff': {'CAR': 5, 'BIKE': 3},
                 '871f1d4f4ffffff': {'SCOOTER': 2}
             }
-        """
+        """  # noqa: D401
         supply = {}
 
         # For each region with vehicles
@@ -92,7 +137,6 @@ class MixedSharedVehicleFleet(VehicleFleet):
         :return: Dictionary, where key = hex_id and value is a dictionary counting the vehicles to be charged
                  e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """
-
         low_soc_supply = {}
 
         # Create a set of vehicles needing charge for fast lookups

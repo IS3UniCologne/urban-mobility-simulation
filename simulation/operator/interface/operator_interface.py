@@ -5,25 +5,24 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from simulation.helper.simulation_base import SimulationBase
-
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.helper.configuration.enums import OperatorMode
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
+    from simulation.operator.interface.operations_interface import OperationsInterface
     from simulation.operator.interface.search_engine_interface import (
         SearchEngineInterface,
     )
     from simulation.operator.interface.vehicle_allocation_engine_interface import (
-        VehicleAllocationEngineInterface,
+        AllocationEngineInterface,
     )
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.tasks.transport_task import TransportTask
 
 
-class OperatorInterface(ABC, SimulationBase):
+class OperatorInterface(ABC):
     """
     Abstract interface for all transportation operators.
 
@@ -45,14 +44,20 @@ class OperatorInterface(ABC, SimulationBase):
 
     @property
     @abstractmethod
-    def assignment_engine(self) -> VehicleAllocationEngineInterface:
-        """Return the vehicle assignment engine for this operator."""
+    def allocation_engine(self) -> AllocationEngineInterface:
+        """Return the vehicle allocation engine for this operator."""
         pass
 
     @property
     @abstractmethod
     def fleet(self) -> VehicleFleet:
         """Return the vehicle fleet for this operator."""
+        pass
+
+    @property
+    @abstractmethod
+    def operations(self) -> OperationsInterface:
+        """Return the operations interface for this operator."""
         pass
 
     @abstractmethod
