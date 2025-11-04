@@ -1,10 +1,12 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
+from simulation.operator.search_engine import SearchEngine
+
 if TYPE_CHECKING:
-    from simulation.context.simulation_context import SimulationContext
-    from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+    from simulation.operator.search_engine import SearchEngineDependencies
+    from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 from simulation.infrastructure.route import Route
@@ -14,16 +16,15 @@ from simulation.operator.data_transfer_object.transportation_alternative import 
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
 )
-from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 
 
-class SharedVehicleSearchEngine(SearchEngineInterface):
+class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
     __slots__ = ("_env", "_fleet", "_sim")
 
-    def __init__(self, sim: SimulationContext) -> None:
-        self._sim = sim
-        self._env = sim.env
-        self._fleet: MixedSharedVehicleFleet = None
+    def __init__(self, deps: SearchEngineDependencies) -> None:
+        self._sim = deps.sim
+        self._env = self._sim.env
+        self._fleet: VehicleFleet = deps.operator.fleet
 
     def search_for_transportation_alternatives(
         self, vehicle_search_task: TransportationSearchTask
@@ -32,7 +33,7 @@ class SharedVehicleSearchEngine(SearchEngineInterface):
         Spot all available vehicles to user
         :param vehicle_search_task:
         :return: Available Alternatives along with auxilary information regarding trip
-        """
+        """  # noqa: D205, D400
         browser = TransportationAlternativeBrowser()
 
         hexagon_origin = vehicle_search_task.agent_position.get_region_id()

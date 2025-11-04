@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from simulation.infrastructure.transit_network.stop import Stop
 
 
-class Route:
+class Route:  # noqa: D101
     __slots__ = ("_destination", "_origin", "_route_segments")
 
     def __init__(self, origin: Position, destination: Position):  # noqa: ANN204
@@ -27,28 +27,28 @@ class Route:
         )  # Append Dummy Edge
 
     @property
-    def origin(self):  # noqa: ANN201
+    def origin(self):  # noqa: ANN201, D102
         return self._origin
 
     @property
-    def destination(self):  # noqa: ANN201
+    def destination(self):  # noqa: ANN201, D102
         return self._destination
 
     @property
-    def route_segments(self):  # noqa: ANN201
+    def route_segments(self):  # noqa: ANN201, D102
         return self._route_segments
 
     @property
-    def distance(self):  # noqa: ANN201
+    def distance(self):  # noqa: ANN201, D102
         distance = 0
         for rs in self.route_segments:
             distance += rs.distance
         return distance
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return f"Route(origin={self._origin}, destination={self._destination}, distance={self.distance})"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return self.__str__()
 
 
@@ -67,7 +67,7 @@ class PublicTransitRoute(Route):
     - A "trip" is a special instantiation of the route through departure times
     - A "stop" is a waypoint in a route
     - A "route segment" is the part of the route between two stops
-    """
+    """  # noqa: D205, D400
 
     def __init__(  # noqa: ANN204
         self,
@@ -94,41 +94,41 @@ class PublicTransitRoute(Route):
             self._route_segments = segments
 
     @property
-    def trip_id(self) -> str:
+    def trip_id(self) -> str:  # noqa: D102
         return self._trip_id
 
     @property
-    def origin(self) -> GeodesicPosition:
+    def origin(self) -> GeodesicPosition:  # noqa: D102
         return self._origin
 
     @property
-    def destination(self) -> GeodesicPosition:
+    def destination(self) -> GeodesicPosition:  # noqa: D102
         return self._destination
 
     @property
-    def route_segments(self) -> list[RouteSegment]:
+    def route_segments(self) -> list[RouteSegment]:  # noqa: D102
         return self._route_segments
 
-    def add_route_segment(self, segment: RouteSegment) -> None:
+    def add_route_segment(self, segment: RouteSegment) -> None:  # noqa: D102
         self._route_segments.append(segment)
 
-    def route_segment_by_id(self, id: int) -> RouteSegment:
+    def route_segment_by_id(self, id: int) -> RouteSegment:  # noqa: D102
         return self._route_segments[id]
 
     @property
-    def route_stops(self) -> list[Stop]:
+    def route_stops(self) -> list[Stop]:  # noqa: D102
         return self._route_stops
 
-    def route_stop_by_id(self, id: int) -> Stop:
+    def route_stop_by_id(self, id: int) -> Stop:  # noqa: D102
         return self._route_stops[id]
 
-    def route_stop_by_gtfs_id(self, gtfs_id: str) -> Stop:
+    def route_stop_by_gtfs_id(self, gtfs_id: str) -> Stop:  # noqa: D102
         # TODO: this is stupid
         for s in self._route_stops:
             if s.gtfs_id == gtfs_id:
                 return s
 
-    def add_route_stop(self, stop: Stop) -> None:
+    def add_route_stop(self, stop: Stop) -> None:  # noqa: D102
         self._route_stops.append(stop)
 
     def subroute(self, start: Stop, end: Stop) -> PublicTransitRoute:
@@ -138,7 +138,7 @@ class PublicTransitRoute(Route):
         :param start: from which stop (incl.)
         :param end: to which stop (incl.)
         :return: PublicTransitRoute Object Stop_start -> ... -> Stop_end, which is a part of self
-        """
+        """  # noqa: D205, D400
         return PublicTransitRoute(
             self._origin,
             self._destination,
@@ -148,10 +148,10 @@ class PublicTransitRoute(Route):
             self._route_segments[start.stop_id : end.stop_id],
         )
 
-    def total_distance(self) -> float:
+    def total_distance(self) -> float:  # noqa: D102
         return sum(self._route_segments)
 
-    def planned_duration(self) -> float:
+    def planned_duration(self) -> float:  # noqa: D102
         return SimulationTimeConverter.duration_between(
             self.route_stop_by_id(0).departure,
             self.route_stop_by_id(-1).departure,
@@ -161,5 +161,5 @@ class PublicTransitRoute(Route):
             else False,
         )
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return f"PublicTransitRoute with id/name {self._id} and trip id {self._trip_id}"

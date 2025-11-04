@@ -51,7 +51,7 @@ class FleetMetrics(IndexedMetricsBase):
         # fleet_avg_soc = mean(vehicle.state_of_charge for vehicle in fleet.vehicles)
 
         # # TODO: Make this work for all fleet types
-        # if fleet.__class__.__name__ == "MixedRideHailingFleet":
+        # if fleet.__class__.__name__ == "RideHailingFleet":
         #     current_charge_threshold = fleet.charge_threshold
         #     low_soc_vehicles = [
         #         vehicle

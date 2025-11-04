@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import deepcopy  # noqa: D100
 from math import sqrt
 
 import h3
@@ -14,7 +14,7 @@ from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.simulation_base import SimulationBase
 
 
-class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):
+class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):  # noqa: D101
     __slots__ = (
         "_G",
         "_actions",
@@ -47,7 +47,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):
         # n-step return
         self._G = 0
 
-    def run(self, bus):  # noqa: ANN001, ANN201
+    def run(self, bus):  # noqa: ANN001, ANN201, D102
         s0 = deepcopy(bus._env_state)  # noqa: SLF001
         self._states.append(s0)
         self._decide_next_action(bus, s0)
@@ -119,7 +119,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):
         down-left  \\ __ /  down-right
                     down
 
-        """
+        """  # noqa: D202, D301
 
         if action == "STAY":
             yield self._env.timeout(0.01)
@@ -165,7 +165,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):
         :param state: env state as given by the bus agent
         :param terminal: bool, is the state a terminal one?
         :return: numerical reward +/- or 0
-        """
+        """  # noqa: D202, D401, D404
 
         if terminal:
             return 10

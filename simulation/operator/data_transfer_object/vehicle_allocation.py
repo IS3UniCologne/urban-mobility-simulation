@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING  # noqa: D100
 from simulation.environment.position import Position
 from simulation.helper.time import SimulationTime
 from simulation.operator.data_transfer_object.transportation_alternative import (
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from simulation.agent.user import User
 
 
-class VehicleAllocation:
+class VehicleAllocation:  # noqa: D101
     __slots__ = (
         "_associated_alternative",
         "_pick_up_position",
@@ -38,21 +38,21 @@ class VehicleAllocation:
         self._pick_up_time = pick_up_time  # Pick up time (i.e., when will be the vehicle be at pickup pos)
 
     @property
-    def user(self) -> "User":
+    def user(self) -> "User":  # noqa: D102
         return self._user
 
     @property
-    def vehicle(self) -> Vehicle:
+    def vehicle(self) -> Vehicle:  # noqa: D102
         return self._vehicle
 
     @property
-    def associated_transportation_alternative(self) -> TransportationAlternative:
+    def associated_transportation_alternative(self) -> TransportationAlternative:  # noqa: D102
         return self._associated_alternative
 
     @property
-    def pick_up_position(self) -> Position:
+    def pick_up_position(self) -> Position:  # noqa: D102
         return self._pick_up_position
 
     @property
-    def pick_up_time(self) -> SimulationTime:
+    def pick_up_time(self) -> SimulationTime:  # noqa: D102
         return self._pick_up_time

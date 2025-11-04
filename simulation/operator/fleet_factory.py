@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -6,8 +6,8 @@ import pandas as pd
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.enums import VehicleType
-from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+from simulation.operator.ride_hailing_fleet import RideHailingFleet
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
@@ -140,9 +140,9 @@ def generate_ridehailing_fleet_config(sim: SimulationContext) -> pd.DataFrame:
     return fleet_config
 
 
-def generate_AV_fleet(
+def generate_AV_fleet(  # noqa: D103
     sim: SimulationContext, world: World, distribution: pd.DataFrame, n: int
-) -> MixedRideHailingFleet:
+) -> RideHailingFleet:
     rng = sim.random_manager.get_rng(component_name="FLEETFACTORY")
 
     av_config = sim.config.ride_hailing_vehicles["AutonomousCar"]
@@ -161,7 +161,7 @@ def generate_AV_fleet(
     fleet_config = distribution[[hex_column, "AVs"]]
 
     # New Fleet Object
-    fleet = MixedRideHailingFleet(sim=sim, world=world)
+    fleet = RideHailingFleet(sim=sim, world=world)
 
     for _index, row in fleet_config.iterrows():
         # We need to spawn vehicles in this hexagon
@@ -184,17 +184,16 @@ def generate_AV_fleet(
 
 def generate_mixed_ride_hailing_fleet(
     sim: SimulationContext, world: World
-) -> MixedRideHailingFleet:
+) -> RideHailingFleet:
     """
     Generate a mixed ride hailing fleet based on fleet config.
     :param sim: SimulationContext containing all necessary components
-    :return: MixedRideHailingFleet Object
-    """
-
+    :return: RideHailingFleet Object
+    """  # noqa: D205, D400
     fleet_config = generate_ridehailing_fleet_config(sim=sim)
 
     # New Fleet Object
-    fleet = MixedRideHailingFleet(sim=sim, world=world)
+    fleet = RideHailingFleet(sim=sim, world=world)
 
     # Get Column Identifier for current resolution (e.g., hex_id_7)
     hex_column = sim.config.world.SPATIAL_RESOLUTION.column_name
@@ -215,7 +214,9 @@ def generate_mixed_ride_hailing_fleet(
         # Add EV Ridehailing
         for _current_car in range(EV_count):
             rdm_lat, rdm_lng = sim.geo_env.get_random_position(hex_id)
-            pos = GeodesicPosition(sim, rdm_lat, rdm_lng, hex_id)
+            pos = GeodesicPosition(
+                sim=sim, latitude=rdm_lat, longitude=rdm_lng, default_res_hex_id=hex_id
+            )
             RideHailingVehicle(
                 sim=sim, position=pos, fleet=fleet, vehicle_config=rh_config
             )
@@ -246,8 +247,7 @@ def generate_mixed_fleet(
     Generate a mixed shared vehicle fleet based on given fleet config.
     :param sim: SimulationContext containing all necessary components
     :return: MixedSharedVehicleFleet Object
-    """
-
+    """  # noqa: D205, D400
     fleet_config = generate_fleet_config(sim=sim)
     # New Fleet Object
     fleet = MixedSharedVehicleFleet(sim=sim, world=world)

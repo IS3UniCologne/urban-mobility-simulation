@@ -1,4 +1,4 @@
-import logging
+import logging  # noqa: D100
 from typing import Any, Tuple  # noqa: UP035
 
 from beartype.door import is_bearable  # like "isinstance(...)"
@@ -8,7 +8,7 @@ from simulation.helper.simulation_base import SimulationBase
 from tracking.tracking_interface import TrackingInterface
 
 
-class Tracking(SimulationBase):
+class Tracking(SimulationBase):  # noqa: D101
     slots__ = ("__env", "tracked")
     """
     Singleton Class that controls all tracking and communication of tracking-exposed values in the simulation to
@@ -20,7 +20,7 @@ class Tracking(SimulationBase):
 
     @staticmethod
     def instance() -> "Tracking":
-        """Static access method"""
+        """Static access method"""  # noqa: D400, D401
         if Tracking.__instance is None:
             raise Exception("Tracking was not initialized")
         else:
@@ -28,13 +28,13 @@ class Tracking(SimulationBase):
 
     @staticmethod
     def init(env):  # noqa: ANN001, ANN205
-        """Static init method"""
+        """Static init method"""  # noqa: D400, D401
         if Tracking.__instance is None:
             Tracking(env)
         return Tracking.__instance
 
     def __init__(self, env: Environment):  # noqa: ANN204
-        """Virtually private constructor"""
+        """Virtually private constructor"""  # noqa: D400
         if Tracking.__instance is not None:
             raise Exception("This class is a singleton!")
         else:
@@ -50,7 +50,7 @@ class Tracking(SimulationBase):
         :param to_track: Agent (user, vehicle, ...) or resource in the simulation to register with the tracking. Must
         implement TrackingInterface
         :return: uid
-        """
+        """  # noqa: D202, D205
 
         classname = to_track.__class__.__name__
         if id is None:
@@ -74,7 +74,7 @@ class Tracking(SimulationBase):
 
         return uid
 
-    def unregister_by_uid(self, uid: str):  # noqa: ANN201
+    def unregister_by_uid(self, uid: str):  # noqa: ANN201, D102
         try:
             result = self.tracked.pop(uid)
             logging.debug(
@@ -87,11 +87,11 @@ class Tracking(SimulationBase):
                 extra={"uid": self.__class__.__name__},
             )
 
-    def unregister_by_obj(self, to_untrack: TrackingInterface):  # noqa: ANN201
+    def unregister_by_obj(self, to_untrack: TrackingInterface):  # noqa: ANN201, D102
         uid = self._get_uid(to_untrack)
         self.unregister_by_uid(uid)
 
-    def get(self, obj, attribute) -> Any:  # noqa: ANN001, ANN401
+    def get(self, obj, attribute) -> Any:  # noqa: ANN001, ANN401, D102
         if isinstance(obj, str):
             uid = obj
         elif isinstance(obj, object):
@@ -112,7 +112,7 @@ class Tracking(SimulationBase):
                 )
                 return None
 
-    def dump(self, uid, exposed_only: bool = True) -> Tuple[float, dict] | None:  # noqa: ANN001, UP006
+    def dump(self, uid, exposed_only: bool = True) -> Tuple[float, dict] | None:  # noqa: ANN001, D102, UP006
         try:
             return self.__env.now, self.tracked[uid]["reference"].dump(exposed_only)
         except KeyError:
@@ -128,7 +128,7 @@ class Tracking(SimulationBase):
 
         :param cls: class type to list, fallback is classname as str
         :return: list of uid
-        """
+        """  # noqa: D202, D400
 
         if isinstance(cls, str):
             return [x for x, y in self.tracked.items() if y["class"] == cls]
@@ -140,7 +140,7 @@ class Tracking(SimulationBase):
 
         :param uid: tracking-internal unique identifier of the object
         :return: object that implements TrackingInterface
-        """
+        """  # noqa: D401
         try:
             return self.tracked[uid]["reference"]
         except KeyError:
@@ -156,7 +156,7 @@ class Tracking(SimulationBase):
 
         :param object: A TrackingInterface-implementing object
         :return: uid
-        """
+        """  # noqa: D400
         classname = object.__class__.__name__
         try:
             uid = f"{classname}_{object._id}"  # noqa: SLF001

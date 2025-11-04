@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from simulation.operator.vehicle_fleet import VehicleFleet
 
 
-class ChargingTask(ServiceTask):
+class ChargingTask(ServiceTask):  # noqa: D101
     __slots__ = (
         "_config",
         "_destination",
@@ -58,7 +58,7 @@ class ChargingTask(ServiceTask):
         :param simpy_env: SimPy Environment
         :param args: args[0] typically service worker id
         :return:
-        """
+        """  # noqa: D202, D205, D400
 
         # Get position of fleet base (centroid of hexagon)
         fleet_base_lat, fleet_base_lng = self._sim.geo_env.get_centroid(
@@ -85,7 +85,7 @@ class ChargingTask(ServiceTask):
             for vehicle in potential_vehicles_to_charge:
                 # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
                 if (
-                    vehicle.type == self._vehicle_type
+                    vehicle.vehicle_type == self._vehicle_type
                     and vehicle.state == VehicleState.PARKING
                     and len(selected_vehicles_to_charge)
                     < self._number_of_vehicles_to_charge
@@ -130,7 +130,9 @@ class ChargingTask(ServiceTask):
             vehicle.plug_to_charging_station()
 
             # Charge Vehicle
-            vehicle_charging_power = self._config.operators[0].CHARGING_STATION_POWER
+            vehicle_charging_power = self._config.operators[
+                0
+            ].OPERATIONS_CONFIG.CHARGING_STATION_POWER
             # Note: See text regarding linearization
             # *60 as state of charge is in kWh => kWmin
             charging_duration_per_vehicles = (
@@ -148,8 +150,8 @@ class ChargingTask(ServiceTask):
         # Notify all
         self._task_finished = self._env.event()
 
-    def __str__(self):  # noqa: ANN204
+    def __str__(self):  # noqa: ANN204, D105
         return f"Charging Task for {self._number_of_vehicles_to_charge} {self._vehicle_type} from {self._origin} to {self._destination} (distance = {self._distance_to_fleet_base})"
 
-    def __repr__(self):  # noqa: ANN204
+    def __repr__(self):  # noqa: ANN204, D105
         return self.__str__()

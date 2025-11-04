@@ -38,11 +38,11 @@ class TransportationAlternative:
     distance: float
     convenience: float
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return (
             f"Vehicle {self.vehicle}, Price {self.price}, Duration {self.duration}, "
             f"Distance {self.distance}, Convenience {self.convenience}"
         )
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return self.__str__()

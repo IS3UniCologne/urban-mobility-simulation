@@ -1,20 +1,20 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod  # noqa: D100
 
 
-class Environment(ABC):
+class Environment(ABC):  # noqa: D101
     __slots__ = ("_layer",)
 
     def __init__(self) -> None:
         self._layer = {}  # name: layer frame
 
     @property
-    def layer(self):  # noqa: ANN201
+    def layer(self):  # noqa: ANN201, D102
         return self._layer
 
     @abstractmethod
-    def getLayer(self, layer_name) -> None:  # noqa: ANN001
+    def getLayer(self, layer_name) -> None:  # noqa: ANN001, D102
         pass
 
     @abstractmethod
-    def addLayer(self, layer_name, layer) -> None:  # noqa: ANN001
+    def addLayer(self, layer_name, layer) -> None:  # noqa: ANN001, D102
         pass

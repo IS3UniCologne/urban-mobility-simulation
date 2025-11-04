@@ -1,16 +1,22 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
-from abc import ABC
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import simpy
 
-from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.helper.configuration.enums import (
+    AutonomyType,
+    VehicleState,
+    VehicleType,
+)
 from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import FleetConfig
+    from simulation.operator.interface.operator_interface import OperatorInterface
     from simulation.vehicle.vehicle import Vehicle
     from simulation.world.world import World
 
@@ -19,34 +25,94 @@ class VehicleFleetError(Exception):
     """Base class for all vehicle fleet-related exceptions."""
 
 
-class VehicleFleet(ABC, SimulationBase):
+@dataclass(frozen=True, slots=True)
+class VehicleFleetDependencies:
+    """Dependencies required for the VehicleFleet.
+
+    This class ensures all subclasses maintain the same init signature.
+
+    Parameters
+    ----------
+    operator : OperatorInterface
+        The operator managing the vehicle fleet.
+    sim : SimulationContext
+        The simulation context.
+    world : World
+        The world instance.
+    config : FleetConfig
+        The fleet configuration.
+    """
+
+    operator: OperatorInterface
+    sim: SimulationContext
+    world: World
+    config: FleetConfig
+
+
+class VehicleFleet(SimulationBase):
     """Class representing a fleet of vehicles.
 
     Contains methods to manage and track vehicles within the fleet.
     """
 
     __slots__ = (
+        "_config",
+        "_operator",
         "_resource",
         "_sim",
-        "_tracking",
         "_vehicles",
+        "_vehicles_by_autonomy",
         "_vehicles_by_region",
         "_vehicles_by_state",
         "_vehicles_by_type",
         "_world",
     )
 
-    def __init__(self, sim: SimulationContext, world: World) -> None:
-        super().__init__(sim)
-        self._sim = sim
+    def __init__(self, deps: VehicleFleetDependencies) -> None:
+        super().__init__(deps.sim)
+
+        self._sim = deps.sim
+        self._operator = deps.operator
+        self._world = deps.world
+        self._config = deps.config
+
         self._vehicles: list[Vehicle] = []
 
         # Vehicle collections for faster access. We use sets for faster removals and intersections
         self._vehicles_by_type: dict[VehicleType, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_region: dict[str, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
-        self._resource = simpy.Resource(sim.env)  # Semaphore
-        self._world = world
+        self._vehicles_by_autonomy: dict[AutonomyType, set[Vehicle]] = defaultdict(set)
+        self._resource = simpy.Resource(deps.sim.env)  # Semaphore
+
+    @staticmethod
+    def from_deps(deps: VehicleFleetDependencies) -> VehicleFleet:  # noqa: D102
+        fleet_type = deps.config.FLEET_TYPE
+        return fleet_type(deps)
+
+    @property
+    def config(self) -> FleetConfig:
+        """Get the fleet configuration.
+
+        Returns
+        -------
+        FleetConfig
+            The fleet configuration.
+
+        """
+        return self._config
+
+    @property
+    def operator(self) -> OperatorInterface:
+        """Get the operator managing the vehicle fleet.
+
+        Returns
+        -------
+        OperatorInterface
+            The operator managing the vehicle fleet.
+
+        """
+        return self._operator
 
     @property
     def vehicle_types(self) -> list[VehicleType]:
@@ -98,8 +164,12 @@ class VehicleFleet(ABC, SimulationBase):
         return self._vehicles
 
     @property
-    def vehicles_by_state(self) -> dict[VehicleState, set[Vehicle]]:
+    def vehicles_by_state(self) -> dict[VehicleState, set[Vehicle]]:  # noqa: D102
         return self._vehicles_by_state
+
+    @property
+    def vehicles_by_autonomy(self) -> dict[AutonomyType, set[Vehicle]]:  # noqa: D102
+        return self._vehicles_by_autonomy
 
     def parking_vehicles_in_region(self, region: str) -> set[Vehicle]:
         """Retrieve all vehicles currently in the PARKING state within the specified region.
@@ -175,6 +245,7 @@ class VehicleFleet(ABC, SimulationBase):
             self._vehicles_by_state[vehicle.state].add(vehicle)
             self._vehicles_by_region[vehicle.current_region].add(vehicle)
             self._vehicles_by_type[vehicle.vehicle_type].add(vehicle)
+            self._vehicles_by_autonomy[vehicle.autonomy_type].add(vehicle)
 
     def _add_vehicle(self, vehicle: Vehicle) -> None:
         """Add a vehicle to the fleet.
@@ -199,6 +270,7 @@ class VehicleFleet(ABC, SimulationBase):
             self._vehicles_by_state[vehicle.state].remove(vehicle)
             self._vehicles_by_region[vehicle.current_region].remove(vehicle)
             self._vehicles_by_type[vehicle.vehicle_type].remove(vehicle)
+            self._vehicles_by_autonomy[vehicle.autonomy_type].remove(vehicle)
         else:
             raise VehicleFleetError(f"Vehicle {vehicle} is not registered in Fleet yet")
 

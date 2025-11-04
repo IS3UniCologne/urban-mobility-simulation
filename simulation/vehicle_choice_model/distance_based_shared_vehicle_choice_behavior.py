@@ -1,4 +1,4 @@
-from statsmodels.iolib.smpickle import load_pickle
+from statsmodels.iolib.smpickle import load_pickle  # noqa: D100
 
 from simulation.helper.configuration.enums import VehicleType
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
@@ -7,7 +7,7 @@ from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
 )
 
 
-class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInterface):
+class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInterface):  # noqa: D101
     __slots__ = (
         "_available_vehicles",
         "_choice_model",
@@ -32,7 +32,7 @@ class DistanceBasedSharedVehicleVehicleChoiceBehavior(VehicleChoiceBehaviorInter
 
         self._available_vehicles = available_vehicles
 
-    def choose_vehicle(self, trip_characteristics: TripCharacteristics):  # noqa: ANN201
+    def choose_vehicle(self, trip_characteristics: TripCharacteristics):  # noqa: ANN201, D102
         # Predict single outcome (1, distance) (1 = constant)
         # (Car, Kick Scooter, Scooter)
         # (p_car, p_ks, p_scooter)

@@ -1,9 +1,9 @@
-from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.configuration.enums import VehicleState  # noqa: D100
 from simulation.infrastructure.route import Route
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 
-class TransportationAlternativeRideHailing:
+class TransportationAlternativeRideHailing:  # noqa: D101
     __slots__ = (
         "_autonomous_vehicle",
         "_convenience",
@@ -54,7 +54,7 @@ class TransportationAlternativeRideHailing:
         self._waiting_time = 0.0  # Is set after successful allocation
         self._energy_consumed = 0.0  # Is set after successful trip
 
-    def set_pick_up_time(self) -> float:
+    def set_pick_up_time(self) -> float:  # noqa: D102
         if self.vehicle.state == VehicleState.PARKING:
             return self._distance_to_pickup / self.vehicle.velocity
 
@@ -65,104 +65,104 @@ class TransportationAlternativeRideHailing:
                 - self.vehicle._env.now  # noqa: SLF001
             )
 
-    def set_environment(self) -> int:
+    def set_environment(self) -> int:  # noqa: D102
         if self._vehicle.is_electric:
             return 1
         else:
             return 0
 
-    def set_technology_skeptical(self) -> int:
+    def set_technology_skeptical(self) -> int:  # noqa: D102
         if self._vehicle_type == "AutonomousCar":
             return 0
         else:
             return 1
 
-    def set_autonomous_vehicle(self) -> int:
+    def set_autonomous_vehicle(self) -> int:  # noqa: D102
         if self._vehicle_type == "AutonomousCar":
             return 1
         else:
             return 0
 
     @property
-    def environment(self) -> int:
+    def environment(self) -> int:  # noqa: D102
         return self._environment
 
     @property
-    def electric_vehicle(self) -> int:
+    def electric_vehicle(self) -> int:  # noqa: D102
         return self._electric_vehicle
 
     @property
-    def autonomous_vehicle(self) -> int:
+    def autonomous_vehicle(self) -> int:  # noqa: D102
         return self._autonomous_vehicle
 
     @property
-    def utility(self) -> float:
+    def utility(self) -> float:  # noqa: D102
         return self._utility
 
     @property
-    def technology_skeptical(self) -> int:
+    def technology_skeptical(self) -> int:  # noqa: D102
         return self._technology_skeptical
 
     @property
-    def vehicle(self) -> RideHailingVehicle:
+    def vehicle(self) -> RideHailingVehicle:  # noqa: D102
         return self._vehicle
 
     @property
-    def vehicle_type(self) -> str:
+    def vehicle_type(self) -> str:  # noqa: D102
         return self._vehicle_type
 
     @property
-    def price(self) -> float:
+    def price(self) -> float:  # noqa: D102
         return self._price
 
     @property
-    def duration(self) -> float:
+    def duration(self) -> float:  # noqa: D102
         return self._duration
 
     @property
-    def distance(self) -> float:
+    def distance(self) -> float:  # noqa: D102
         return self._distance
 
     @property
-    def route(self) -> Route:
+    def route(self) -> Route:  # noqa: D102
         return self._route
 
     @property
-    def convenience(self) -> float:
+    def convenience(self) -> float:  # noqa: D102
         return self._convenience
 
     @property
-    def route_to_pickup(self) -> Route:
+    def route_to_pickup(self) -> Route:  # noqa: D102
         return self._route_to_pickup
 
     @property
-    def distance_to_pickup(self) -> float:
+    def distance_to_pickup(self) -> float:  # noqa: D102
         return self._distance_to_pickup
 
     @property
-    def pick_up_time(self) -> float:
+    def pick_up_time(self) -> float:  # noqa: D102
         return self._pick_up_time
 
     # Perhaps it makes sense to encapsulate TransportationAlternative
     #  around a "SuccessfulTrip" where we store this object along with
     #  variables pertaining the to trip (as energy consumed, (real) travelled distance)
     @property
-    def energy_consumed(self) -> float:
+    def energy_consumed(self) -> float:  # noqa: D102
         return self._energy_consumed
 
-    def set_energy_consumed(self, energy_consumption: float) -> None:
+    def set_energy_consumed(self, energy_consumption: float) -> None:  # noqa: D102
         # energy_consumption: in kWh
         self._energy_consumed += energy_consumption
 
     @property
-    def waiting_time(self) -> float:
+    def waiting_time(self) -> float:  # noqa: D102
         return self._waiting_time
 
-    def set_waiting_time(self, waiting_time: float) -> None:
+    def set_waiting_time(self, waiting_time: float) -> None:  # noqa: D102
         self._waiting_time += waiting_time
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return f"Vehicle {self._vehicle}, Price {self._price}, Duration {self._duration}, Distance {self._distance}, Convenience {self._convenience}, Distance to pickup {self._distance_to_pickup}, Pick up time {self._pick_up_time}"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return self.__str__()

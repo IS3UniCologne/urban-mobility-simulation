@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
@@ -13,20 +13,21 @@ from simulation.infrastructure.charging_stations.virtual_charging_infrastructure
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
-from simulation.operator.operations_management.operations import OperationsInterface
+from simulation.operator.operations_management.ride_hailing_operations import (
+    RideHailingOperations,
+)
 from simulation.operator.operations_management.service_tasks.charging_task_ridehailing import (
     ChargingTaskRidehailing,
 )
 from simulation.operator.operations_management.task_queue import TaskQueue
 
 if TYPE_CHECKING:
-    from simulation.context.simulation_context import SimulationContext
-    from simulation.helper.configuration.configuration import OperationsConfig
-    from simulation.operator.ride_hailing_operator import RideHailingOperator
-    from simulation.world.world import World
+    from simulation.operator.operations_management.operations import (
+        OperationsDependencies,
+    )
 
 
-class RideHailingBaseChargingOperations(OperationsInterface):
+class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
     __slots__ = (
         "_allow_queue",
         "_available_modes",
@@ -38,7 +39,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         "_operation_duration",
         "_operations_started",
         "_operator",
-        "_recharge_theshold",
+        "_recharge_threshold",
         "_scheduled_tasks",
         "_sim",
         "_task_executed",
@@ -49,64 +50,48 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         "_world",
     )
 
-    def __init__(
-        self,
-        sim: SimulationContext,
-        operations_config: OperationsConfig,
-        distance_matrix: pd.DataFrame,
-        world: World,
-        operator: RideHailingOperator,
-    ) -> None:
-        super().__init__(sim)
-        self._world: World = world
-        self._config = sim.config
-        self._sim = sim
-        self._operator = operator
+    def __init__(self, deps: OperationsDependencies) -> None:
+        super().__init__(deps)
 
-        # Distance Matrix between Regions
-        self._distance_matrix = distance_matrix
         self._base_buffer = h3.average_hexagon_edge_length(
-            self._config.world.SPATIAL_RESOLUTION - 1, unit="m"
+            deps.sim.config.world.SPATIAL_RESOLUTION - 1, unit="m"
         )  # use a buffer when calculating distances to charging stations of next coarser grid level edge length (radius)
 
-        # To access vehicle transactions
-        # TODO: Are these even used?? Can we get rid of them ?
-        # self._available_modes = operations_config.AVAILABLE_MODES  # Modes in Fleet
-        # self._available_modes_supply = (
-        #     operations_config.AVAILABLE_MODES_SUPPLY
-        # )  # Number of Vehicles in Fleet per Mode e.g., [100, 100, 50]
+        self._recharge_threshold = self._config.RECHARGE_THRESHOLD
 
-        self._recharge_theshold = operations_config.RECHARGE_THRESHOLD
-        self._allow_queue = operations_config.ALLOW_QUEUE
+        self._allow_queue = self._config.ALLOW_QUEUE
 
         # Task List
-        self._task_queue = TaskQueue(sim)
+        self._task_queue = TaskQueue(self._sim)
         self._scheduled_tasks = []
 
         self._task_transactions = []
 
         # Events
-        self._charging_plan_updated = sim.env.event()
-        self._operations_started = sim.env.event()
-        self._task_executed = sim.env.event()
+        self._charging_plan_updated = self._sim.env.event()
+        self._operations_started = self._sim.env.event()
+        self._task_executed = self._sim.env.event()
 
         # When to start operations
-        self._time_between_operations = operations_config.TIME_BETWEEN_OPERATIONS
+        self._time_between_operations = self._config.TIME_BETWEEN_OPERATIONS
 
         # Shift Duration
-        self._duration_of_operations = operations_config.OPERATIONS_DURATION
+        self._duration_of_operations = self._config.OPERATIONS_DURATION
 
     @property
-    def charging_plan_updated(self):  # noqa: ANN201
+    def charging_plan_updated(self):  # noqa: ANN201, D102
         return self._charging_plan_updated
 
     @property
-    def task_executed(self):  # noqa: ANN201
+    def task_executed(self):  # noqa: ANN201, D102
         return self._task_executed
 
-    def execute(self):  # noqa: ANN201
-        "Below, we combine the old operational logic from operations_ridehailing.py and rebalancing_scheduler_ridehailing.py"
+    @property
+    def task_transactions(self):  # noqa: ANN201, D102
+        return pd.DataFrame(self._task_transactions)
 
+    def execute(self):  # noqa: ANN201
+        """Below, we combine the old operational logic from operations_ridehailing.py and rebalancing_scheduler_ridehailing.py"""  # noqa: D400
         while True:
             # Operations begin after first day
             self._scheduled_tasks = []
@@ -145,7 +130,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                     destination=destination,
                     number_of_vehicles_to_charge=no_vehicle_to_charge,
                     distance_to_fleet_base=distance_to_base,
-                    state_of_charge_threshold=self._recharge_theshold,
+                    state_of_charge_threshold=self._recharge_threshold,
                     charging_station=charging_station,
                     vehicle=vehicle,
                     scheduled_time=scheduled_time,
@@ -173,7 +158,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
             self.logger.info(
                 "There are %s vehicles with low state of charge.",
                 self._operator.fleet.count_vehicles_below_soc_level(
-                    self._recharge_theshold
+                    self._recharge_threshold
                 ),
             )
 
@@ -200,10 +185,10 @@ class RideHailingBaseChargingOperations(OperationsInterface):
         :return: **charging_plan**: Dictionary with keys for vehicle modes and values with lists of multiple
                 charging tasks
                 **used_capacity**: How many service workers are planned to cope with charging needs
-        """
+        """  # noqa: D205, D400
         # Get Current Fleet State
         vehicles_to_charge = self._operator.fleet.mark_vehicles_to_be_charged(
-            self._recharge_theshold
+            self._recharge_threshold
         )
         # if config.settings.PERSIST_RESULTS:
         #     state.to_csv(os.path.join(config.output_path, config.fleet_state_file), index = False)
@@ -220,8 +205,7 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                                     "SharedScooter": [], "SharedCar":[]}
                 used_capacity = [1, 3, 5] => per available vehicle mode returns number of service workers assigned to charge these vehicles
                                           => 1 SW for Kick Scooter, 3 for Shared Scooter, 5 for Shared Cars
-        """
-
+        """  # noqa: D205
         # Fleet State
 
         # We calculate for each vehicle mode dedicated charging plans based on the available resources
@@ -427,7 +411,3 @@ class RideHailingBaseChargingOperations(OperationsInterface):
                 "kWh_charged": task.kWh_charged,
             }
         )
-
-    @property
-    def task_transactions(self):  # noqa: ANN201
-        return pd.DataFrame(self._task_transactions)

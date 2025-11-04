@@ -1,10 +1,11 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
+from simulation.helper.configuration.configuration import RideHailingOperationsConfig
+from simulation.operator.search_engine import SearchEngine, SearchEngineDependencies
+
 if TYPE_CHECKING:
-    from simulation.context.simulation_context import SimulationContext
-    from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
     from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 from simulation.helper.configuration.enums import AutonomyType, VehicleState
@@ -15,10 +16,11 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
     TransportationAlternativeRideHailing,
 )
-from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 
 
-class RideHailingSearchEngine(SearchEngineInterface):
+class RideHailingSearchEngine(SearchEngine):
+    """Search engine for ride-hailing vehicles."""
+
     __slots__ = (
         "_AV_price_reduction",
         "_env",
@@ -30,23 +32,27 @@ class RideHailingSearchEngine(SearchEngineInterface):
         "_sim",
     )
 
-    def __init__(self, sim: SimulationContext) -> None:
-        self._sim = sim
-        self._env = sim.env
-        self._fleet: MixedRideHailingFleet = None
-        self._AV_price_reduction = (
-            self._sim.config.ride_hailing_global.AV_PRICE_REDUCTION
-        )
-        self._price_entering = self._sim.config.ride_hailing_global.PRICE_ENTERING
-        self._price_per_minute = self._sim.config.ride_hailing_global.PRICE_PER_MINUTE
-        self._price_per_km = self._sim.config.ride_hailing_global.PRICE_PER_KM
-        self._min_price = self._sim.config.ride_hailing_global.MINIMUM_PRICE
+    def __init__(self, deps: SearchEngineDependencies) -> None:
+        super().__init__(deps)
+        self._sim = deps.sim
+        self._env = deps.sim.env
+        self._fleet = deps.operator.fleet
+        ops_config = deps.operator.operations.config
+        if not isinstance(ops_config, RideHailingOperationsConfig):
+            raise TypeError(
+                "RideHailingSearchEngine requires a RideHailingOperationsConfig."
+            )
+        self._AV_price_reduction = ops_config.AV_PRICE_REDUCTION
+        self._price_entering = ops_config.PRICE_ENTERING
+        self._price_per_minute = ops_config.PRICE_PER_MINUTE
+        self._price_per_km = ops_config.PRICE_PER_KM
+        self._min_price = ops_config.MINIMUM_PRICE
 
     def search_for_transportation_alternatives(
         self, vehicle_search_task: TransportationSearchTask
     ) -> TransportationAlternativeBrowser:
-        """
-        Spot all available vehicles to user
+        """Spot all available vehicles to user.
+
         :param vehicle_search_task:
         :return: Available Alternatives along with auxilary information regarding trip
         """
@@ -62,7 +68,7 @@ class RideHailingSearchEngine(SearchEngineInterface):
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
-        route = Route(origin, destination)
+        route = Route(origin=origin, destination=destination)
 
         # Calc Distance
         distance = route.distance  # Euclidean Distance

@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from abc import ABC, abstractmethod
 from typing import NewType
@@ -7,13 +7,13 @@ from typing import NewType
 RegionId = NewType("RegionId", str)
 
 
-class Position(ABC):
+class Position(ABC):  # noqa: D101
     @abstractmethod
-    def getExactLocation(self) -> tuple[float, float]:
+    def getExactLocation(self) -> tuple[float, float]:  # noqa: D102
         pass
 
     @abstractmethod
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         pass
 
     @abstractmethod
@@ -21,10 +21,10 @@ class Position(ABC):
         """
         Get the region ID of the position
         :return: RegionId
-        """
+        """  # noqa: D205, D400
         pass
 
     @abstractmethod
-    def __rshift__(self, other: Position) -> float:
+    def __rshift__(self, other: Position) -> float:  # noqa: D105
         # Calculate distance between two positions
         pass

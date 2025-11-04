@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path  # noqa: D100
 
 import h3
 import pandas as pd
@@ -10,7 +10,7 @@ class DistanceMatrixImporter:
     Proxy Class for Distance Matrix. Either (Re-)Calculate, or load Matrix, if already existing
 
     Distance between hexagon elements are computed using haversine distances
-    """
+    """  # noqa: D400
 
     __slots__ = ("_city", "_data_path", "_hexagons", "_resolution")
 
@@ -26,7 +26,7 @@ class DistanceMatrixImporter:
         """
         Load or calculate distance matrix between hexagon elements
         :return:
-        """
+        """  # noqa: D202, D205, D400
 
         filename = f"{self._city}_distance_matrix_hex_{self._resolution}.csv"
         p = Path(self._data_path, filename)

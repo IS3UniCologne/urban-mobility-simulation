@@ -263,15 +263,8 @@ class DemandFactory(SimulationBase):
                     poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
 
                 # Fleet assignment based on mode TODO: this is a hack
-                if self._mode == "ride_hailing":
-                    random_number = self._rng.random(1)
-                    if random_number < 0.5:
-                        fleet = 0
-                    else:
-                        fleet = 1
-                else:
-                    # For other modes, use fleet 0
-                    fleet = 0
+                # pick random operator
+                operator = self._rng.choice([op for op in self._world.operators])
 
                 # Based on Poisson Estimate sample next arrival time (in minutes)
                 # inter_arrival_time = numpy.random.exponential(
@@ -326,10 +319,15 @@ class DemandFactory(SimulationBase):
                         "Demand generated from hexagon %s to %s. Fleet %s",
                         spatial_unit,
                         destination,
-                        fleet,
+                        operator,
                     )
 
-                self._world.add_user(self._mode, fleet, spatial_unit, destination)
+                self._world.add_user(
+                    mode=self._mode,
+                    fleet=operator.fleet,
+                    origin=spatial_unit,
+                    destination=destination,
+                )
 
                 # Increase global counter (not thread safe)
                 DemandFactory.counter += 1
