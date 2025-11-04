@@ -8,6 +8,7 @@ from .metrics_base import IndexedMetricsBase
 from .metrics_dict import MetricsDict
 
 if TYPE_CHECKING:
+    from simulation.helper.types import SimId
     from simulation.infrastructure.charging_stations.charging_station import (
         ChargingStation,
     )
@@ -30,13 +31,11 @@ class ChargingStationMetrics(IndexedMetricsBase):
             for station in self._simulation.world.charging_infrastructure.charging_stations
         ]
 
-    def get_metrics_by_uid(self, station_location: str) -> MetricsDict:
+    def get_metrics_by_uid(self, uid: SimId) -> MetricsDict:
         """Get metrics for a specific charging station by location."""
-        station = self._get_station_by_location(station_location)
+        station = self._get_station_by_location(uid)
         if station is None:
-            raise KeyError(
-                f"Charging station at location '{station_location}' not found"
-            )
+            raise KeyError(f"Charging station at location '{uid}' not found")
         return self._get_station_metrics(station)
 
     def to_dict(self) -> MetricsDict:

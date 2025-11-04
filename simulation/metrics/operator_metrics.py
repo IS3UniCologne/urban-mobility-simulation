@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from simulation.helper.types import SimId
     from simulation.operator.operator import Operator
 
 from .metrics_base import IndexedMetricsBase
@@ -19,15 +20,15 @@ class OperatorMetrics(IndexedMetricsBase):
     Operators can be accessed by their ID using indexed access (e.g. `metrics['operator_id']`).
     """
 
-    def list_available_uids(self) -> list[str]:
+    def list_available_uids(self) -> list[SimId]:
         """Get list of all available operator IDs."""
         return [operator.uid for operator in self._simulation.world.operators]
 
-    def get_metrics_by_uid(self, operator_id: str) -> MetricsDict:
+    def get_metrics_by_uid(self, uid: SimId) -> MetricsDict:
         """Get metrics for a specific operator by ID."""
-        operator = self._get_operator_by_id(operator_id)
+        operator = self._get_operator_by_id(uid)
         if operator is None:
-            raise KeyError(f"Operator with ID '{operator_id}' not found")
+            raise KeyError(f"Operator with ID '{uid}' not found")
         return self._get_operator_metrics(operator)
 
     def to_dict(self) -> MetricsDict:
@@ -64,7 +65,7 @@ class OperatorMetrics(IndexedMetricsBase):
         metrics["aggregate"] = MetricsDict(aggregate)
         return metrics
 
-    def _get_operator_by_id(self, operator_id: str) -> Operator | None:
+    def _get_operator_by_id(self, operator_id: SimId) -> Operator | None:
         """Find an operator by its ID."""
         for operator in self._simulation.world.operators:
             if operator.uid == operator_id:

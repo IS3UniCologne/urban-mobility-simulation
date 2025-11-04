@@ -302,8 +302,6 @@ class World(SimulationBase):  # noqa: D101
         ----------
         user : User or subclass
             The user agent to clean up.
-        user_uid : str
-            The unique identifier for tracking.
         """
         self._users.add(user)
 

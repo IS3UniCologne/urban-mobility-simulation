@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
 
+    from simulation.helper.types import SimId
+
 
 class UidLoggerAdapter(logging.LoggerAdapter):  # type: ignore[type-arg]
     """
@@ -21,7 +23,7 @@ class UidLoggerAdapter(logging.LoggerAdapter):  # type: ignore[type-arg]
 
     __slots__ = ("_extra_uid",)
 
-    def __init__(self, logger: logging.Logger, uid: str) -> None:
+    def __init__(self, logger: logging.Logger, uid: SimId) -> None:
         """
         Initialize the adapter with a logger and UID.
 
@@ -29,7 +31,7 @@ class UidLoggerAdapter(logging.LoggerAdapter):  # type: ignore[type-arg]
         ----------
         logger : logging.Logger
             The base logger to wrap.
-        uid : str
+        uid : SimId
             The unique identifier to include in all log records.
         """
         uid_dict = {"uid": uid}

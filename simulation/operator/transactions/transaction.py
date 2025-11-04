@@ -7,7 +7,7 @@ Defines the Transaction NamedTuple used to represent a single transaction record
 from typing import NamedTuple
 
 from simulation.helper.configuration.enums import TransactionState, VehicleType
-from simulation.helper.types import RegionId
+from simulation.helper.types import RegionId, SimId
 
 
 class Transaction(NamedTuple):
@@ -52,7 +52,7 @@ class Transaction(NamedTuple):
         Whether the selected vehicle is electric (if available).
     """
 
-    vehicle_uid: str | None
+    vehicle_uid: SimId | None
     origin: RegionId
     destination: RegionId
     time_start: float

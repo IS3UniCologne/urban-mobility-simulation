@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from simulation.helper.types import SimId
+
 
 class UidManager:
     """
@@ -15,7 +17,7 @@ class UidManager:
     def __init__(self) -> None:
         self._uid_counters: dict[type, int] = {}
 
-    def generate_uid(self, cls: type) -> tuple[int, str]:
+    def generate_uid(self, cls: type) -> tuple[int, SimId]:
         """
         Generate a unique identifier for the given class.
 
@@ -26,12 +28,12 @@ class UidManager:
 
         Returns
         -------
-        tuple[int, str]
-            A tuple containing an integer ID and a string UID.
+        tuple[int, SimId]
+            A tuple containing an integer ID and a SimId UID.
         """
         if cls not in self._uid_counters:
             self._uid_counters[cls] = 0
         id = self._uid_counters[cls]
         uid = f"{cls.__name__}_{id}"
         self._uid_counters[cls] += 1
-        return id, uid
+        return id, SimId(uid)
