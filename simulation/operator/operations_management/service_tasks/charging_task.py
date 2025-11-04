@@ -130,7 +130,9 @@ class ChargingTask(ServiceTask):  # noqa: D101
             vehicle.plug_to_charging_station()
 
             # Charge Vehicle
-            vehicle_charging_power = self._config.operators[0].CHARGING_STATION_POWER
+            vehicle_charging_power = self._config.operators[
+                0
+            ].OPERATIONS_CONFIG.CHARGING_STATION_POWER
             # Note: See text regarding linearization
             # *60 as state of charge is in kWh => kWmin
             charging_duration_per_vehicles = (

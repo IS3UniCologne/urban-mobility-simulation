@@ -1,13 +1,64 @@
-from __future__ import annotations  # noqa: D100
+from __future__ import annotations
 
+import pandas as pd
+
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.enums import VehicleType
 from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
+from simulation.vehicle.shared_vehicle import SharedVehicle
 
 
 # TODO : rename SharedVehicleFleet, there are only mixed fleets
 class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
     def __init__(self, deps: VehicleFleetDependencies) -> None:
         super().__init__(deps)
+
+        rng = deps.sim.random_manager.get_rng(component_name="FLEETFACTORY")
+        hex_columns = deps.sim.config.world.SPATIAL_RESOLUTION.column_name
+
+        supply_path = deps.sim.config.path.PATH_VEHICLE_SUPPLY
+        supply_probabilities = pd.read_csv(supply_path)
+
+        for vehicle_config, total_count in deps.config.VEHICLES.items():
+            # TODO: We shouldn't hardcode the columns
+            if vehicle_config.VEHICLE_TYPE == VehicleType.CAR:
+                vehicle_probabilities = supply_probabilities["cars_prob"].to_numpy()
+            elif vehicle_config.VEHICLE_TYPE == VehicleType.BIKE:
+                vehicle_probabilities = supply_probabilities["bikes_prob"].to_numpy()
+            elif vehicle_config.VEHICLE_TYPE == VehicleType.SCOOTER:
+                vehicle_probabilities = supply_probabilities["scooters_prob"].to_numpy()
+            elif vehicle_config.VEHICLE_TYPE == VehicleType.KICK_SCOOTER:
+                vehicle_probabilities = supply_probabilities[
+                    "kick_scooters_prob"
+                ].to_numpy()
+
+            else:
+                self.logger.error(
+                    "MixedSharedVehicleFleet does not support vehicle type %s",
+                    vehicle_config.VEHICLE_TYPE,
+                )
+
+            vehicle_count = pd.DataFrame(
+                rng.multinomial(
+                    n=total_count, pvals=vehicle_probabilities, size=1
+                ).transpose(),
+                columns=["count"],
+            )
+            vehicle_count.index = supply_probabilities.index
+            supply_probabilities["count"] = vehicle_count["count"]
+
+            for _index, row in supply_probabilities.iterrows():
+                hex_id = row[hex_columns]
+                local_count = row["count"]
+                for _ in range(local_count):
+                    rdm_lat, rdm_lng = deps.sim.geo_env.get_random_position(hex_id)
+                    pos = GeodesicPosition(deps.sim, rdm_lat, rdm_lng, hex_id)
+                    SharedVehicle(
+                        sim=deps.sim,
+                        position=pos,
+                        fleet=self,
+                        vehicle_config=vehicle_config,
+                    )
 
     def vehicles_below_soc_threshold(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
