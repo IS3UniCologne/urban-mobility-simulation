@@ -72,7 +72,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         # (from left to right)
         self._available_vehicle_types: list[VehicleType] = list(
             self.operator.fleet.count_by_type.keys()
-        )  # TODO: Remove dependency on ordering
+        )  # TODO: Remove dependency on ordering, what is the dependency even?
         self._max_vehicle_supply: list[int] = list(
             self.operator.fleet.count_by_type.values()
         )  # TODO: Remove dependency on ordering
@@ -689,6 +689,8 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         self, state: pd.DataFrame
     ) -> dict[str, list[tuple[Position, Position, int, float]]]:
         """
+        TODO: sanity check if vehicles that are in regions without demand (neither origin nor destination) are abandoned or will be relocated to promised land
+
         Calculate how many vehicles need to be moved (or can be) from origin to destination
 
           Approach:Calculate state of the fleet. Relocate vehicles from regions with positive residual (excess of vehicles)
@@ -1118,7 +1120,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
             else:
                 fleet_state[f"Residual_Supply_{vehicle}"] = (
                     fleet_state[vehicle]
-                    - fleet_state[f"{vehicle}_Low_SoC"]
+                    - (fleet_state[f"{vehicle}_Low_SoC"] if low_soc_supply else 0)
                     + fleet_state[f"Delta_{vehicle}"]
                 )
 
