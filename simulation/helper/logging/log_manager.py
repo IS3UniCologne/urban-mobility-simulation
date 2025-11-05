@@ -54,6 +54,10 @@ class LogManager:
         logging.getLogger().handlers.clear()
         logger = logging.getLogger()
 
+        # Clear filters from previous LogManager instances
+        if logger.filters:
+            logger.filters.clear()
+
         console_level = getattr(logging, config.settings.LOG_LEVEL)
         file_level = getattr(logging, config.settings.FILE_LOG_LEVEL)
         logger.setLevel(min(console_level, file_level))
@@ -93,6 +97,12 @@ class LogManager:
         if cls_name not in self._loggers:
             logger = logging.getLogger(cls_name)
             logger.propagate = False
+
+            # Clear any stale handlers/filters from previous LogManager instances
+            if logger.handlers:
+                logger.handlers.clear()
+            if logger.filters:
+                logger.filters.clear()
 
             if cls_name in self._class_overrides:
                 logger.addHandler(self._override_console_handler)
@@ -153,6 +163,12 @@ class LogManager:
         if logger_name not in self._loggers:
             logger = logging.getLogger(logger_name)
             logger.propagate = False
+
+            # Clear any handlers/filters from previous LogManager instances
+            if logger.handlers:
+                logger.handlers.clear()
+            if logger.filters:
+                logger.filters.clear()
 
             metrics_formatter = logging.Formatter("%(message)s")
 
