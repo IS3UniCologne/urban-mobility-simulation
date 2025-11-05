@@ -10,19 +10,7 @@ from simulation.infrastructure.charging_stations.charging_infastructure import (
 from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
 )
-from simulation.operator.operations_management.integrated_shared_mobility_operations import (
-    IntegratedSharedMobilityOperations,
-)
 from simulation.operator.operator import Operator, OperatorDependencies
-from simulation.operator.public_transit_operator import PublicTransitOperator
-from simulation.operator.public_transport_allocation_engine import (
-    PublicTransportAllocationEngine,
-)
-from simulation.operator.shared_mobility_operator import SharedMobilityOperator
-from simulation.operator.shared_vehicle_allocation_engine import (
-    SharedVehicleAllocationEngine,
-)
-from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
 from simulation.world.mobility_search_engine import MobilitySearchEngine
 
 if TYPE_CHECKING:
@@ -39,6 +27,10 @@ if TYPE_CHECKING:
     from simulation.infrastructure.helper.timetable import Timetable
     from simulation.operator.operations_management.operations_public_transport import (
         OperationsPublicTransport,
+    )
+    from simulation.operator.public_transit_operator import PublicTransitOperator
+    from simulation.operator.public_transport_allocation_engine import (
+        PublicTransportAllocationEngine,
     )
     from simulation.operator.public_transport_search_engine import (
         PublicTransportSearchEngine,
@@ -198,87 +190,6 @@ class World(SimulationBase):  # noqa: D101
                 )
             )
             self._operators.append(operator)
-
-    def _setup_transit_operators(self) -> None:
-        timetable: Timetable = self._load_timetable()
-        for i, operator_cfg in enumerate(
-            filter(
-                lambda o: o.OPERATOR_TYPE == PublicTransitOperator,
-                self._config.operators,
-            )
-        ):
-            operator_id = f"public_transport_{i}"
-            self.logger.info("Setting up public transport operator %s", operator_id)
-
-            fleet = self._initialize_public_transport_fleet()
-            self._fleets.append(fleet)
-            search_engine = self._create_public_transport_search_engine(
-                operator_cfg, fleet
-            )
-            allocation_engine = PublicTransportAllocationEngine(self._sim)
-            operations = self._create_public_transport_operations(
-                operator_cfg, timetable, fleet
-            )
-
-            operator = self._create_public_transit_operator(
-                fleet, operations, search_engine, allocation_engine
-            )
-
-            self._search_engine[operator_id] = search_engine
-            self._payment_engine[operator_id] = operator
-            self._vehicle_assignment_engine[operator_id] = allocation_engine
-
-            self._operators.append(operator)
-
-    def _setup_shared_vehicle_operators(self) -> None:
-        for i, operator_cfg in enumerate(
-            filter(
-                lambda o: o.OPERATOR_TYPE == SharedMobilityOperator,
-                self._config.operators,
-            )
-        ):
-            operator_id = f"shared_vehicle_{i}"
-
-            self._search_engine[operator_id] = SharedVehicleSearchEngine(sim=self._sim)
-            self._vehicle_assignment_engine[operator_id] = (
-                SharedVehicleAllocationEngine(sim=self._sim)
-            )
-
-            fleet = None
-            # generate_mixed_fleet(sim=self._sim, world=self)
-            self._fleets.append(fleet)
-            self._search_engine[operator_id].register_fleet(fleet)
-
-            ordered_available_vehicle_types = fleet.vehicle_types
-
-            ordered_max_vehicle_supply = [
-                fleet.count_by_type[veh_type]
-                for veh_type in ordered_available_vehicle_types
-            ]
-
-            # TODO: Ordered vehicle modes are silly, it should not work like that. Maybe enums ?Why do we need these mode lists at all ?
-            operations = IntegratedSharedMobilityOperations(
-                sim=self._sim,
-                time_between_operations=operator_cfg.OPERATIONS_CONFIG.TIME_BETWEEN_OPERATIONS,
-                operation_duration=operator_cfg.OPERATIONS_CONFIG.OPERATIONS_DURATION,
-                distance_matrix=self._distance_matrix,
-                ordered_available_vehicle_types=ordered_available_vehicle_types,
-                ordered_max_vehicle_supply=ordered_max_vehicle_supply,
-                state_of_charge_threshold=operator_cfg.OPERATIONS_CONFIG.RECHARGE_THRESHOLD,
-                base_regions=operator_cfg.BASE_REGIONS,
-                base_capacity=operator_cfg.BASE_CAPACITY,
-            )
-
-            operator = SharedMobilityOperator(
-                sim=self._sim,
-                fleet=fleet,
-                operations=operations,
-                search_engine=self._search_engine[operator_id],
-                allocation_engine=self._vehicle_assignment_engine[operator_id],
-                number_service_workers=operator_cfg.OPERATIONS_CONFIG.NUMBER_OF_SERVICE_WORKERS,
-            )
-            self.operators.append(operator)
-            self._payment_engine[operator_id] = operator
 
     def _load_distance_matrix(self) -> None:
         hexagons = self.geo_env.getLayer(
