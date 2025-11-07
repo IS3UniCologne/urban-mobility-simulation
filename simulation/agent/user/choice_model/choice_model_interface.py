@@ -5,6 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from simulation.helper.simulation_base import SimulationBase
+
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.operator.data_transfer_object.transportation_alternative import (
@@ -15,7 +17,7 @@ if TYPE_CHECKING:
     )
 
 
-class ChoiceModelInterface(ABC):
+class ChoiceModelInterface(SimulationBase, ABC):
     """Interface for calculating choice probabilities over transportation alternatives."""
 
     @abstractmethod
