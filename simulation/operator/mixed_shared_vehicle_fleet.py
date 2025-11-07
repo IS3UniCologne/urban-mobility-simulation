@@ -158,7 +158,7 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
             low_soc_supply[region_id] = {mode: 0 for mode in self.vehicle_types}
 
             # Count vehicles by mode in this region that need charging
-            for mode in VehicleType:
+            for mode in self.vehicle_types:
                 if mode not in self._vehicles_by_type:
                     continue
 
@@ -167,7 +167,6 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
                         self._vehicles_by_type[mode]
                     )
                 )
-                if count > 0:
-                    low_soc_supply[region_id][mode] = count
+                low_soc_supply[region_id][mode] = count
 
         return low_soc_supply
