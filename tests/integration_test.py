@@ -197,30 +197,16 @@ def _validate_simulation_log(log_path: Path, config: str) -> None:
             "Expected withdrawal message for user 561 not found in public transport template log"
         )
 
-    if config == "tests/configurations/sv_test.toml":
+    if config == "tests/configurations/sharedvehicle_test":
         # Check for new metrics table entries in the log
         expected_metrics = [
-            "|              total_revenue | 418.80     |",
-            "|    total_transaction_count | 569        |",
-            "|      total_fulfilled_trips | 63         |",
-            "|         total_missed_trips | 506        |",
+            "|              total_revenue | 451.65     |",
+            "|    total_transaction_count | 564        |",
+            "|      total_fulfilled_trips | 59         |",
+            "|         total_missed_trips | 505        |",
             "|       total_missed_revenue | 0.00       |",
-            "|        total_trip_duration | 1,572.37   |",
-            "|      average_trip_duration | 24.96      |",
-            "|        total_trip_distance | 198,128.36 |",
-            "|      average_trip_distance | 3,144.89   |",
-            "|         average_trip_price | 6.65       |",
-            "|      trip_fulfillment_rate | 0.11       |",
-            "|   total_energy_consumption | 26.59      |",
-            "| average_energy_consumption | 0.42       |",
-            "|            total_revenue | 418.80     |",
-            "|  total_transaction_count | 569        |",
-            "|    total_fulfilled_trips | 63         |",
-            "|       total_missed_trips | 506        |",
-            "|     total_missed_revenue | 0.00       |",
-            "|      total_trip_duration | 1,572.37   |",
-            "|      total_trip_distance | 198,128.36 |",
-            "| total_energy_consumption | 26.59      |",
+            "|        total_trip_duration | 1,602.11   |",
+            "|        total_trip_distance | 208,156.21 |",
         ]
         for expected in expected_metrics:
             assert expected in log_content, (

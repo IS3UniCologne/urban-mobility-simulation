@@ -19,6 +19,7 @@ from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
 )
 from simulation.operator.ride_hailing_fleet import RideHailingFleet
+from simulation.operator.ride_hailing_operator import RideHailingOperator
 from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 
 rh_car_autonomous = RideHailingVehicleConfig(
@@ -135,6 +136,60 @@ charging_infrastructure_1 = ChargingInfrastructureConfig(
 
 
 operator_1 = RideHailingOperatorConfig(
+    OPERATOR_TYPE=RideHailingOperator,
+    FLEET_CONFIG=fleet1,
+    CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
+    OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
+        OPERATIONS_TYPE=RideHailingBaseChargingOperations,
+        OPERATIONS_START=15,
+        OPERATIONS_DURATION=50,
+        TIME_BETWEEN_OPERATIONS=15,
+        RECHARGE_THRESHOLD=[
+            0.40,
+            0.45,
+            0.50,
+            0.55,
+            0.52,
+            0.50,
+            0.48,
+            0.45,
+            0.45,
+            0.42,
+            0.40,
+            0.40,
+            0.40,
+            0.40,
+            0.40,
+            0.38,
+            0.35,
+            0.32,
+            0.30,
+            0.30,
+            0.27,
+            0.30,
+            0.32,
+            0.35,
+        ],
+        VEHICLE_RELOCATION_VELOCITY=9.54,
+        AV_PRICE_REDUCTION=0.90,
+        MAX_PICKUP_DISTANCE=10000,
+        PRICE_ENTERING=2.0,
+        PRICE_PER_MINUTE=0.35,
+        PRICE_PER_KM=1.3,
+        MINIMUM_PRICE=5.0,
+        DISCOUNT_RATE=0.0,
+        DRIVER_PAYMENT_SHARE=0.75,
+    ),
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
+        SEARCH_ENGINE_TYPE=RideHailingSearchEngine
+    ),
+    ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(
+        VEHICLE_ALLOCATION_ENGINE_TYPE=RideHailingAllocationEngine
+    ),
+)
+
+operator_2 = RideHailingOperatorConfig(
+    OPERATOR_TYPE=RideHailingOperator,
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
     OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
