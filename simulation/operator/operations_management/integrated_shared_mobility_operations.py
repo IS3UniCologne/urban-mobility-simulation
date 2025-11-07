@@ -1114,7 +1114,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
             else:
                 fleet_state[f"Residual_Supply_{vehicle}"] = (
                     fleet_state[vehicle]
-                    - (fleet_state[f"{vehicle}_Low_SoC"] if low_soc_supply else 0)
+                    - (fleet_state[f"{vehicle}_Low_SoC"])
                     + fleet_state[f"Delta_{vehicle}"]
                 )
 
