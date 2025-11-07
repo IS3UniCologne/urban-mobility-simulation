@@ -12,6 +12,7 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
 )
 from simulation.operator.operator import Operator, OperatorDependencies
 from simulation.world.mobility_search_engine import MobilitySearchEngine
+from simulation.world.user_log import UserLog
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -67,6 +68,7 @@ class World(SimulationBase):  # noqa: D101
         "_temporal_resolution",
         "_tracking",
         "_user_limit",
+        "_user_log",
         "_users",
         "_vehicle_assignment_engine",
         "_vehicle_processes",
@@ -104,6 +106,8 @@ class World(SimulationBase):  # noqa: D101
             sim=self._sim
         )
 
+        self._user_log: UserLog = UserLog(sim=self._sim)
+
         self._charging_infrastructures: list[ChargingInfrastructure] | None = (
             self._initialize_charging_infrastructures()
         )
@@ -115,6 +119,17 @@ class World(SimulationBase):  # noqa: D101
         self._simulation_finished = self._env.event()
 
         self._user_limit = 10_000_000
+
+    @property
+    def user_log(self) -> UserLog:
+        """Get the user log.
+
+        Returns
+        -------
+        UserLog
+            The user log instance for system-level trip tracking.
+        """
+        return self._user_log
 
     @property
     def mobility_search(self) -> MobilitySearchEngine:
