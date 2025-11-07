@@ -24,3 +24,25 @@ class OperatorMetricsPlotAdapter:
             "metric_key": "total_fulfilled_trips",
             "plot_type": "indexed_line",
         }
+
+    @property
+    def total_service_tasks_scheduled(self) -> dict:
+        """Configuration for potting the total number of ServiceTasks of each each operator using IntegratedSharedMobilityOperations."""
+
+        return {
+            "title": "Total Scheduled ServiceTasks by Operator",
+            "metric_group": "operator",
+            "metric_key": "total_service_tasks_scheduled",
+            "plot_type": "indexed_line",
+        }
+
+    @property
+    def finished_service_tasks(self) -> dict:
+        """Configuration for potting the total number of ServiceTasks with TaskState.FINISHED of each each operator using IntegratedSharedMobilityOperations."""
+
+        return {
+            "title": "Finished ServiceTasks by Operator",
+            "metric_group": "operator",
+            "metric_key": "finished_service_tasks",
+            "plot_type": "indexed_line",
+        }

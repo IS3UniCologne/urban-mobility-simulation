@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from time import time
 from typing import TYPE_CHECKING
 
 from simulation.metrics.metrics_base import MetricsBase
@@ -18,6 +19,14 @@ class WorldMetrics(MetricsBase):
     def __init__(self, simulation: Simulation) -> None:
         super().__init__(simulation)
         self._world = simulation.world
+        self._last_evaluation_timestamp = time()
+
+    @property
+    def wall_time_per_metric_evaluation(self) -> float:
+        now = time()
+        timing = now - self._last_evaluation_timestamp
+        self._last_evaluation_timestamp = now
+        return timing
 
     @property
     def total_users(self) -> int:
@@ -87,5 +96,6 @@ class WorldMetrics(MetricsBase):
                 "active_user_processes": self.active_user_processes,
                 "active_vehicle_processes": self.active_vehicle_processes,
                 "active_demand_processes": self.active_demand_processes,
+                "wall_time_per_metric_evaluation": self.wall_time_per_metric_evaluation,
             }
         )
