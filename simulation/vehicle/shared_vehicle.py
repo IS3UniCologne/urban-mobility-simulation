@@ -40,6 +40,7 @@ class SharedVehicle(Vehicle, ABC):  # noqa: D101
         "_energy_consumption",
         "_max_available_seats",
         "_max_state_of_charge",
+        "_max_walking_distance",
         "_price_per_minute",
         "_price_per_trip",
         "_reserved_for_user",
@@ -66,6 +67,8 @@ class SharedVehicle(Vehicle, ABC):  # noqa: D101
         self._price_per_minute: float = vehicle_config.PRICE_PER_MIN
         self._price_per_trip: float = vehicle_config.PRICE_PER_TRIP
         self._driver: DriverInterface | None = None
+
+        self._max_walking_distance: float = vehicle_config.WALKING_DISTANCE
 
         # State Of Charge
         self._max_state_of_charge: float = vehicle_config.MAX_STATE_OF_CHARGE  # in kWh
@@ -98,7 +101,6 @@ class SharedVehicle(Vehicle, ABC):  # noqa: D101
 
         # Initial State
         self.state: VehicleState = VehicleState.PARKING
-        self.state: VehicleState = VehicleState.PARKING
 
         # Vehicle Reservation
         self._reserved_for_user = None
@@ -124,6 +126,10 @@ class SharedVehicle(Vehicle, ABC):  # noqa: D101
     @max_available_seats.setter
     def max_available_seats(self, max_available_seats: int) -> None:
         self._max_available_seats = max_available_seats
+
+    @property
+    def max_walking_distance(self) -> float:  # noqa: D102
+        return self._max_walking_distance
 
     @property
     def max_state_of_charge(self) -> float:  # noqa: D102
