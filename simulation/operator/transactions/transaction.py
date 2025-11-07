@@ -60,7 +60,7 @@ class Transaction(NamedTuple):
     price: float
     revenue: float
     distance: float
-    duration: FloatingPointError
+    duration: float
     state: TransactionState
     viable_vehicle_types: dict[VehicleType, int]
     selected_vehicle_type: VehicleType | None = None
