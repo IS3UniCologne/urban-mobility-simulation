@@ -1,9 +1,9 @@
 from __future__ import annotations  # noqa: D100
 
 from abc import ABC, abstractmethod
-from enum import Enum
 from typing import TYPE_CHECKING
 
+from simulation.helper.configuration.enums import TaskState, TaskType
 from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
@@ -12,26 +12,24 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
 
 
-class TaskState(Enum):  # noqa: D101
-    INITIALIZED = 0
-    EXECUTING = 10
-    EXECUTING_RELOCATION = 11
-    EXECUTING_WAITING = 12
-    EXECUTING_CHARGING = 13
-    FINISHED = 20
-    MISSED = 30
-    MISSED_TIMESLOT = 31
-    MISSED_QUEUE_FULL = 32
-
-
 class ServiceTask(ABC, SimulationBase):  # noqa: D101
-    __slots__ = ("_env", "_sim", "_start_time", "_state", "_task_finished")
+    __slots__ = (
+        "_end_time",
+        "_env",
+        "_sim",
+        "_start_time",
+        "_state",
+        "_task_finished",
+        "_task_type",
+    )
 
     def __init__(self, sim: SimulationContext) -> None:
         super().__init__(sim)
         self._sim = sim
         self._env = sim.env
+        self._task_type = TaskType.SERVICE
         self._start_time = self._env.now
+        self._end_time = None
         self._state: TaskState = TaskState.INITIALIZED
         self._task_finished = self._env.event()
 
@@ -44,5 +42,17 @@ class ServiceTask(ABC, SimulationBase):  # noqa: D101
         return self._state
 
     @property
+    def start_time(self) -> float:  # noqa: D102
+        return self._start_time
+
+    @property
+    def end_time(self) -> float | None:  # noqa: D102
+        return self._end_time
+
+    @property
     def task_finished(self) -> Event:  # noqa: D102
         return self._task_finished
+
+    @property
+    def task_type(self) -> TaskType:  # noqa: D102
+        return self._task_type

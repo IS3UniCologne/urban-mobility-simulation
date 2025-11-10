@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
 
+from simulation.helper.configuration.enums import TaskState, TaskType
 from simulation.operator.operations_management.service_tasks.service_task import (
     ServiceTask,
 )
@@ -15,6 +16,7 @@ class MultiServiceTask(ServiceTask):  # noqa: D101
 
     def __init__(self, sim: SimulationContext) -> None:
         super().__init__(sim)
+        self._task_type = TaskType.MULTI
 
         self._service_tasks = []
 
@@ -27,9 +29,9 @@ class MultiServiceTask(ServiceTask):  # noqa: D101
         yield self._env.all_of(events)
 
         # Notify all
+        self._state = TaskState.FINISHED
+        self._end_time = self._sim.time
         self._task_finished.succeed()
-
-        # Notify all
         self._task_finished = self._env.event()
 
     def append_task(self, service_task: ServiceTask) -> None:  # noqa: D102

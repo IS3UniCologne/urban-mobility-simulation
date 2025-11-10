@@ -197,3 +197,24 @@ class OperatorMode(StrEnum):
     RIDE_HAILING = "RideHailing"
     SHARED_MOBILITY = "SharedMobility"
     PUBLIC_TRANSIT = "PublicTransit"
+
+
+class TaskState(Enum):  # noqa: D101
+    INITIALIZED = 0
+    EXECUTING = 10
+    EXECUTING_RELOCATION = 11
+    EXECUTING_WAITING = 12
+    EXECUTING_CHARGING = 13
+    FINISHED = 20
+    MISSED = 30
+    MISSED_TIMESLOT = 31
+    MISSED_QUEUE_FULL = 32
+
+
+class TaskType(StrEnum):
+    """Task types for service tasks and future other tasks."""
+
+    SERVICE = "Service"  # base service task type
+    CHARGING = "Charging"
+    RELOCATION = "Relocation"
+    MULTI = "MultiService"  # bundled meta service task type

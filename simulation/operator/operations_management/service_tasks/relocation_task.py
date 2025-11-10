@@ -3,7 +3,12 @@ from __future__ import annotations  # noqa: D100
 from typing import TYPE_CHECKING
 
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.helper.configuration.enums import (
+    TaskState,
+    TaskType,
+    VehicleState,
+    VehicleType,
+)
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
@@ -39,6 +44,7 @@ class RelocationTask(ServiceTask):  # noqa: D101
         vehicle_fleet: VehicleFleet,
     ) -> None:
         super().__init__(sim)
+        self._task_type = TaskType.RELOCATION
 
         self._sim = sim
         self._config = sim.config
@@ -111,6 +117,7 @@ class RelocationTask(ServiceTask):  # noqa: D101
                 relocation_route.distance / vehicle_relocation_velocity
             ) / len(selected_vehicles_to_relocate)
 
+            self._state = TaskState.EXECUTING_RELOCATION
             yield self._env.process(
                 vehicle.relocate(
                     relocation_route,
@@ -120,9 +127,9 @@ class RelocationTask(ServiceTask):  # noqa: D101
             )
 
         # Notify all
+        self._state = TaskState.FINISHED
+        self._end_time = self._sim.time
         self._task_finished.succeed()
-
-        # Notify all
         self._task_finished = self._env.event()
 
     def __str__(self) -> str:  # noqa: D105
