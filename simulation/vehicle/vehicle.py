@@ -140,6 +140,17 @@ class Vehicle(SimulationBase, ABC):
         return self._autonomy_type
 
     @property
+    def current_relative_state_of_charge(self) -> float:
+        """Get the  current relative state of charge of the vehicle.
+
+        Returns
+        -------
+        float
+            The current relative state of charge of the vehicle.
+        """
+        raise NotImplementedError("current_relative_state_of_charge not implemented.")
+
+    @property
     def propulsion_type(self) -> PropulsionType:
         """Get the propulsion type of the vehicle.
 
