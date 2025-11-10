@@ -19,6 +19,7 @@ from simulation.helper.simulation_base import SimulationBase
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import FleetConfig, VehicleConfig
+    from simulation.helper.types import RegionId
     from simulation.operator.interface.operator_interface import OperatorInterface
     from simulation.vehicle.vehicle import Vehicle
     from simulation.world.world import World
@@ -83,7 +84,7 @@ class VehicleFleet(SimulationBase, ABC):
 
         # Vehicle collections for faster access. We use sets for faster removals and intersections
         self._vehicles_by_type: dict[VehicleType, set[Vehicle]] = defaultdict(set)
-        self._vehicles_by_region: dict[str, set[Vehicle]] = defaultdict(set)
+        self._vehicles_by_region: dict[RegionId, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_autonomy: dict[AutonomyType, set[Vehicle]] = defaultdict(set)
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
@@ -233,6 +234,19 @@ class VehicleFleet(SimulationBase, ABC):
     def vehicles_by_autonomy(self) -> dict[AutonomyType, set[Vehicle]]:  # noqa: D102
         return self._vehicles_by_autonomy
 
+    def region_vehicle_distribution(self) -> dict[RegionId, int]:
+        """Get vehicle count per region (hex ID).
+
+        Returns
+        -------
+        dict[RegionId, int]
+            Mapping of region (hexagon ID) to number of vehicles currently located there.
+        """
+        return {
+            region: len(vehicles)
+            for region, vehicles in self._vehicles_by_region.items()
+        }
+
     def parking_vehicles_in_region(self, region: str) -> set[Vehicle]:
         """Retrieve all vehicles currently in the PARKING state within the specified region.
 
@@ -247,7 +261,7 @@ class VehicleFleet(SimulationBase, ABC):
         """
         return self.vehicles_in_region_with_state(region, VehicleState.PARKING)
 
-    def vehicles_in_region(self, region: str) -> set[Vehicle]:
+    def vehicles_in_region(self, region: RegionId) -> set[Vehicle]:
         """Get all vehicles currently located in a specific region.
 
         Parameters
@@ -278,7 +292,7 @@ class VehicleFleet(SimulationBase, ABC):
         return self._vehicles_by_type[type]
 
     def vehicles_in_region_with_state(
-        self, region: str, state: VehicleState
+        self, region: RegionId, state: VehicleState
     ) -> set[Vehicle]:
         """Get vehicles in a specific region with a specific state.
 
@@ -354,7 +368,7 @@ class VehicleFleet(SimulationBase, ABC):
         self._vehicles_by_state[vehicle.state].remove(vehicle)
         self._vehicles_by_state[new_state].add(vehicle)
 
-    def update_vehicle_region(self, vehicle: Vehicle, new_region_id: str) -> None:
+    def update_vehicle_region(self, vehicle: Vehicle, new_region_id: RegionId) -> None:
         """Update the region of a vehicle in the fleet.
 
         This is used when a vehicle moves from one region to another.

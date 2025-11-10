@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         Configuration,
         VehicleConfig,
     )
+    from simulation.helper.types import RegionId
     from simulation.infrastructure.network.edge import Edge
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.tasks.transport_task import TransportTask
@@ -87,7 +88,7 @@ class Vehicle(SimulationBase, ABC):
 
         # Vehicle Position, name is intentionally mangled. Do not set directly.
         self.__position: GeodesicPosition = position
-        self._current_region: str = position.get_region_id()
+        self._current_region: RegionId = position.get_region_id()
         self._velocity: float = vehicle_config.VELOCITY
         self._vehicle_type: VehicleType = vehicle_config.VEHICLE_TYPE
         self._autonomy_type = vehicle_config.AUTONOMY_TYPE
@@ -288,12 +289,12 @@ class Vehicle(SimulationBase, ABC):
         return self._fleet
 
     @property
-    def current_region(self) -> str:
+    def current_region(self) -> RegionId:
         """Get the current region of the vehicle.
 
         Returns
         -------
-        str
+        RegionId
             The identifier of the current region of the vehicle. (e.g., hexagon ID).
         """
         return self._current_region
