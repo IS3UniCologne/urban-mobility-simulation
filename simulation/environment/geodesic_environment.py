@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class GeodesicEnvironment(Environment):  # noqa: D101
-    __slots__ = ("_hex_geom_cache", "_rng")
+    __slots__ = ("_centroid_cache", "_hex_geom_cache", "_rng")
 
     def __init__(self, sim: SimulationContext) -> None:
         super().__init__()
@@ -26,6 +26,7 @@ class GeodesicEnvironment(Environment):  # noqa: D101
         )
 
         self._hex_geom_cache = {}
+        self._centroid_cache = {}
 
         # TODO Why are we reading all the files? One should be enough.
         # Read Environment Files
@@ -67,6 +68,7 @@ class GeodesicEnvironment(Environment):  # noqa: D101
         self.layer[layer_name] = layer
 
     # TODO: Hardcoded layer here is dangerous
+    # TODO: initialize pool of positions for every region once, then draw from there instead for efficiency?
     def get_random_position(
         self, hex_id: str, layer_name: str = "hex_7"
     ) -> tuple[float, float]:
@@ -90,20 +92,18 @@ class GeodesicEnvironment(Environment):  # noqa: D101
             if geometry.contains(pnt):
                 return pnt.y, pnt.x  # Latitude, Longitude
 
-    def get_centroid(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
+    def get_centroid(self, hex_id: str) -> tuple[float, float]:
         """
-        Get centroid of hexagon
+        Get centroid of hexagon, results are cached for performance
         :param hex_id: Hexagon ID
         :param layer_name: Layername (i.e., resolution, hex_7, hex_8, hex_9)
         :return: Point (lat,lng) representing centroid of hexagon
         """  # noqa: D205, D400
-        # Select Layer
-        gdf = self.layer[layer_name]
+        if hex_id not in self._centroid_cache:
+            lat, lng = h3.cell_to_latlng(hex_id)
+            self._centroid_cache[hex_id] = (lat, lng)
 
-        # Get geometry of hexagon
-        geometry = gdf.loc[hex_id].geometry
-
-        return geometry.centroid.y, geometry.centroid.x  # Lat, Lng
+        return self._centroid_cache[hex_id]
 
     def is_in_layer(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201, D102
         return hex_id in self.layer[layer_name].index
