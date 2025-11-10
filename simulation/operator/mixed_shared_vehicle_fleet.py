@@ -115,7 +115,7 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
                 continue
 
             # Initialize the region in our supply dictionary
-            supply[region_id] = {mode: 0 for mode in VehicleType}
+            supply[region_id] = {mode: 0 for mode in self.vehicle_types}
 
             # Count vehicles by mode in this region
             for mode in VehicleType:
@@ -158,7 +158,7 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
                 continue
 
             # Initialize region entry
-            low_soc_supply[region_id] = {mode: 0 for mode in VehicleType}
+            low_soc_supply[region_id] = {mode: 0 for mode in self.vehicle_types}
 
             # Count vehicles by mode in this region that need charging
             for mode in VehicleType:
