@@ -143,6 +143,8 @@ class Vehicle(SimulationBase, ABC):
     def current_relative_state_of_charge(self) -> float:
         """Get the  current relative state of charge of the vehicle.
 
+        TODO: Implement unified method for all electric vehicles here or in a component. Remove from specific vehicle types.
+
         Returns
         -------
         float
