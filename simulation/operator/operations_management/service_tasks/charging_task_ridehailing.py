@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from beartype.door import is_bearable
 
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.configuration.enums import TaskState, TaskType, VehicleState
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
@@ -63,6 +63,7 @@ class ChargingTaskRidehailing(ServiceTask):  # noqa: D101
         scheduled_time=None,  # noqa: ANN001
     ) -> None:
         super().__init__(sim)
+        self._task_type = TaskType.CHARGING
 
         self._geo_env = sim.geo_env
         self._origin = origin

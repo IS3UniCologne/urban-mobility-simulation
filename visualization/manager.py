@@ -5,6 +5,7 @@ import webbrowser
 from queue import Queue
 
 from simulation.context.simulation_context import SimulationContext
+from visualization.adapters.fleet_metrics_adapter import FleetMetricsPlotAdapter
 from visualization.adapters.operator_metrics_adapter import OperatorMetricsPlotAdapter
 from visualization.adapters.world_metrics_adapter import WorldMetricsPlotAdapter
 from visualization.live_plotter import LivePlotter, MetricsAdapter
@@ -30,6 +31,7 @@ class VisualizationManager:
         # Expose the plot adapters to the user
         self.world = WorldMetricsPlotAdapter()
         self.operators = OperatorMetricsPlotAdapter()
+        self.fleets = FleetMetricsPlotAdapter()
 
     def add_plot(self, plot_config: dict) -> None:
         """Register a plot configuration to be displayed."""

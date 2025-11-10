@@ -26,6 +26,17 @@ class OperatorMetricsPlotAdapter:
         }
 
     @property
+    def trip_fulfillment_rate(self) -> dict:
+        """Configuration for plotting the rate of fulfilled trips of each operator."""
+
+        return {
+            "title": "Rate of Fulfilled Trips by Operator",
+            "metric_group": "operator",
+            "metric_key": "trip_fulfillment_rate",
+            "plot_type": "indexed_line",
+        }
+
+    @property
     def total_service_tasks_scheduled(self) -> dict:
         """Configuration for potting the total number of ServiceTasks of each each operator using IntegratedSharedMobilityOperations."""
 
