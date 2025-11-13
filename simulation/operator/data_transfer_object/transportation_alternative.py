@@ -88,7 +88,7 @@ class TransportationAlternative:  # noqa: D101
         self._pick_up_time = pick_up_time
         self._utility = 0.0
         self._waiting_time = 0.0  # Is set after successful allocation
-        self._energy_consumed = 0.0  # Is set after successful trip
+        self._energy_consumed = 0.0  # Updated during the trip execution
 
     @property
     def operator(self) -> OperatorInterface:  # noqa: D102
@@ -141,6 +141,8 @@ class TransportationAlternative:  # noqa: D101
     def energy_consumed(self) -> float:  # noqa: D102
         return self._energy_consumed
 
+    # TODO: Unify the way we track energy consumption (this is currently only used
+    #  in ride-hailing, while other operators track it differently)
     def increase_energy_consumed(self, energy_consumption: float) -> None:  # noqa: D102
         # energy_consumption: in kWh
         self._energy_consumed += energy_consumption
