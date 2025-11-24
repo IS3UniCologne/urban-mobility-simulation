@@ -112,7 +112,7 @@ class RandomModeNearestVehicleChoiceModel(ChoiceModelInterface):
         min_distance = float("inf")
 
         for alt in alternatives:
-            distance = user.position >> alt.vehicle.position
+            distance = user.position << alt.vehicle.position
 
             if distance < min_distance:
                 min_distance = distance
