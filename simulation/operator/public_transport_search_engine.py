@@ -149,7 +149,7 @@ class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):  # noq
         self, transport_task: TransportTask
     ) -> TransportationAlternativeBrowser:
         browser = TransportationAlternativeBrowser()
-        search_time = transport_task.time
+        search_time = transport_task.creation_time
 
         for viable_transit in self.find_viable_transit(
             transport_task,

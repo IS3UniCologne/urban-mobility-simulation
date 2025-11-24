@@ -117,7 +117,7 @@ class Timetable(SimulationBase):  # noqa: D101
         :param temporal_lookahead: How many minutes to look into the future for latest possible departure (currently this does not account for walking time)
         :return:
         """  # noqa: D205, D400
-        search_time = transport_task.time
+        search_time = transport_task.creation_time
         latest_departure = SimulationTimeConverter.as_str(
             search_time + temporal_lookahead
         )
