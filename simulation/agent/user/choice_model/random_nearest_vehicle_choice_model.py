@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 from simulation.agent.user.choice_model.choice_model_interface import (
     ChoiceModelInterface,
 )
+from simulation.helper.configuration.enums import OperatorMode, VehicleType
 
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.context.simulation_context import SimulationContext
-    from simulation.helper.configuration.enums import OperatorMode
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -32,6 +32,7 @@ class RandomModeNearestVehicleChoiceModel(ChoiceModelInterface):
     """
 
     def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim)
         self._rng = sim.random_manager.get_rng(
             component_name="RANDOM_MODE_NEAREST_VEHICLE_CHOICE_MODEL"
         )
@@ -118,3 +119,27 @@ class RandomModeNearestVehicleChoiceModel(ChoiceModelInterface):
                 nearest_alt = alt
 
         return nearest_alt if nearest_alt else alternatives[0]
+
+    @property
+    def accepted_vehicle_types(self) -> frozenset[VehicleType]:
+        """
+        Get a frozenset of vehicle types accepted by this choice model.
+
+        Returns
+        -------
+        frozenset[VehicleType]
+            Frozenset of accepted vehicle types.
+        """
+        return frozenset(vt for vt in VehicleType)
+
+    @property
+    def accepted_operator_modes(self) -> frozenset[OperatorMode]:
+        """
+        Get a frozenset of operator modes accepted by this choice model.
+
+        Returns
+        -------
+        frozenset[OperatorMode]
+            Frozenset of accepted operator modes.
+        """
+        return frozenset(mode for mode in OperatorMode)
