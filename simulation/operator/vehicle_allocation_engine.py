@@ -11,6 +11,7 @@ from simulation.operator.interface.vehicle_allocation_engine_interface import (
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import AllocationEngineConfig
+    from simulation.operator.interface.operator_interface import OperatorInterface
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,11 +20,15 @@ class AllocationEngineDependencies:
 
     sim: SimulationContext
     config: AllocationEngineConfig
+    operator: OperatorInterface
 
 
 class AllocationEngine(SimulationBase, AllocationEngineInterface):  # noqa: D101
+    __slots__ = ("_operator",)
+
     def __init__(self, deps: AllocationEngineDependencies) -> None:
         super().__init__(deps.sim)
+        self._operator = deps.operator
 
     @staticmethod
     def from_deps(deps: AllocationEngineDependencies) -> AllocationEngine:  # noqa: D102
