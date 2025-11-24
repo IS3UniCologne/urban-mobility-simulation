@@ -7,6 +7,7 @@ from simulation.helper.configuration.enums import (
     PropulsionType,
     VehicleState,
 )
+from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
 
 from .vehicle import Vehicle
 
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
     from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
 
 
-class RideHailingVehicle(Vehicle):  # noqa: D101
+class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
     __slots__ = (
         "_arrived_at_pick_up_position",
         "_available_seats",
@@ -188,10 +189,6 @@ class RideHailingVehicle(Vehicle):  # noqa: D101
         self._price_per_minute = price_per_minute
 
     @property
-    def reserved_for_user(self) -> User:  # noqa: D102
-        return self._reserved_for_user
-
-    @property
     def max_state_of_charge(self) -> float:  # noqa: D102
         return self._max_state_of_charge
 
@@ -286,7 +283,7 @@ class RideHailingVehicle(Vehicle):  # noqa: D101
             "Arrived at pick up position %s after %s time units to pick up user %s.",
             self.position,
             self._env.now - start_waiting,
-            self._reserved_for_user,
+            self.reserved_for_user.uid,
         )
 
     def start_driving(self) -> None:  # noqa: D102
@@ -306,7 +303,7 @@ class RideHailingVehicle(Vehicle):  # noqa: D101
 
     def park(self) -> None:  # noqa: D102
         # Lift reservation
-        self._reserved_for_user = None
+        self.release_reservation()
         self._driving_finished.succeed()
         self._driving_finished = self._env.event()
         # self._suggested = False
@@ -314,11 +311,6 @@ class RideHailingVehicle(Vehicle):  # noqa: D101
         self.state = VehicleState.PARKING
 
         self.logger.debug("Parked.")
-
-    def reserve(self, user: User) -> None:  # noqa: D102
-        self.state = VehicleState.RESERVED
-
-        self._reserved_for_user = user
 
     def has_enough_state_of_charge(
         self, distance: float, consider_buffer: bool = True

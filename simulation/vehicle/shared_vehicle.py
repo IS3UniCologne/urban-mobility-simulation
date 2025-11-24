@@ -1,9 +1,9 @@
 from __future__ import annotations  # noqa: D100
 
-from abc import ABC
 from typing import TYPE_CHECKING, Any
 
 from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
 
 from .vehicle import Vehicle
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from simulation.vehicle.interfaces.driver_interface import DriverInterface
 
 
-class SharedVehicle(Vehicle, ABC):  # noqa: D101
+class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
     __slots__ = (
         "_available_seats",
         "_charging_station_charging_finished",
@@ -72,11 +72,16 @@ class SharedVehicle(Vehicle, ABC):  # noqa: D101
 
         # State Of Charge
         self._max_state_of_charge: float = vehicle_config.MAX_STATE_OF_CHARGE  # in kWh
-        self._current_state_of_charge: float = sim.random_manager.uniform(
-            low=0, high=self._max_state_of_charge, component="INITIALSOC"
+
+        # Initialize SoC as percentage of max capacity
+        initial_charge_percent = vehicle_config.INITIAL_CHARGE_PERCENT
+        self._current_state_of_charge: float = (
+            self._max_state_of_charge * initial_charge_percent
         )  # in kWh
 
         self._energy_consumption: float = vehicle_config.ENERGY_CONSUMPTION  # in kWh/km
+
+        self._reserved_for_user: User | None = None
 
         #### Vehicle Events
         # Driving Events
@@ -101,9 +106,6 @@ class SharedVehicle(Vehicle, ABC):  # noqa: D101
 
         # Initial State
         self.state: VehicleState = VehicleState.PARKING
-
-        # Vehicle Reservation
-        self._reserved_for_user = None
 
     @property
     def price_per_minute(self) -> float:  # noqa: D102
@@ -144,7 +146,7 @@ class SharedVehicle(Vehicle, ABC):  # noqa: D101
         return (
             self.current_state_of_charge / self.max_state_of_charge
             if self.max_state_of_charge != 0
-            else 1
+            else 0
         )
 
     @property
@@ -182,19 +184,12 @@ class SharedVehicle(Vehicle, ABC):  # noqa: D101
 
     def park(self) -> None:  # noqa: D102
         # Lift reservation
-        self._reserved_for_user = None
+        self.release_reservation()
 
         # Make vehicle available for others again
         self.state = VehicleState.PARKING
 
         self.logger.debug("Parked.")
-
-    def reserve(self, user: User) -> None:  # noqa: D102
-        self.state = VehicleState.RESERVED
-
-        self._reserved_for_user = user
-
-        self.logger.debug("Reserved to %s.", user.uid)
 
     def has_enough_state_of_charge(self, distance: float) -> bool:
         """
@@ -286,15 +281,13 @@ class SharedVehicle(Vehicle, ABC):  # noqa: D101
         :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
         :return:
         """  # noqa: D205, D400
-        if (
-            self._driver is not None
-            or self.state == VehicleState.RESERVED
-            or len(self._passengers) > 0
-        ):
+        if self._driver is not None or self.is_reserved or len(self._passengers) > 0:
             self.logger.debug(
                 "Vehicle %s has a driver. Revoke relocation task.", self.uid
             )
-            # TODO: Whey are we yielding here?
+            # FIX: Reset state if it was marked for service
+            if self.state == VehicleState.PRE_SERVICE:
+                self.state = VehicleState.PARKING
             yield self._env.timeout(1)
 
             return
