@@ -169,26 +169,6 @@ class Operator(SimulationBase, OperatorInterface):
         return self._mode
 
     @property
-    def total_revenue(self) -> float:
-        """Get the total revenue of the operator."""
-        return self._transaction_log.metrics.total_revenue
-
-    @property
-    def total_fulfilled_trips(self) -> int:
-        """Get the total number of fulfilled trips by the operator."""
-        return self._transaction_log.metrics.total_fulfilled_trips
-
-    @property
-    def total_missed_trips(self) -> int:
-        """Get the total number of missed trips by the operator."""
-        return self._transaction_log.metrics.total_missed_trips
-
-    @property
-    def total_missed_revenue(self) -> float:
-        """Get the total missed revenue by the operator."""
-        return self._transaction_log.metrics.total_missed_revenue
-
-    @property
     def fleet(self) -> VehicleFleet:
         """Get the vehicle fleet of the operator."""
         return self._fleet
