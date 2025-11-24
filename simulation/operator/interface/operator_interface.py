@@ -5,6 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from simulation.helper.simulation_base import SimulationBase
+
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.helper.configuration.enums import OperatorMode, TransactionState
@@ -22,7 +24,7 @@ if TYPE_CHECKING:
     from simulation.tasks.transport_task import TransportTask
 
 
-class OperatorInterface(ABC):
+class OperatorInterface(SimulationBase, ABC):
     """
     Abstract interface for all transportation operators.
 
@@ -96,5 +98,21 @@ class OperatorInterface(ABC):
             The fulfilled task.
         selected_transportation_alternative : TransportationAlternative
             The selected transportation alternative for the task.
+        """
+        pass
+
+    @abstractmethod
+    def log_failed_allocation_attempt(
+        self, user: User, transportation_task: TransportTask
+    ) -> None:
+        """
+        Log a failed vehicle allocation attempt.
+
+        Parameters
+        ----------
+        user : User
+            The user who requested the task.
+        transportation_task : TransportTask
+            The task for which allocation failed.
         """
         pass
