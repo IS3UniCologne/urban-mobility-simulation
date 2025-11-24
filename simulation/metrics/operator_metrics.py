@@ -38,7 +38,7 @@ class OperatorMetrics(IndexedMetricsBase):
             "total_revenue": 0.0,
             "total_transaction_count": 0,
             "total_fulfilled_trips": 0,
-            "total_missed_trips": 0,
+            "total_missed_allocations": 0,
             "total_missed_revenue": 0.0,
             "total_trip_duration": 0.0,
             "total_trip_distance": 0.0,
@@ -56,7 +56,7 @@ class OperatorMetrics(IndexedMetricsBase):
                 operator.transaction_log.transaction_count
             )
             aggregate["total_fulfilled_trips"] += tx_metrics.total_fulfilled_trips
-            aggregate["total_missed_trips"] += tx_metrics.total_missed_trips
+            aggregate["total_missed_allocations"] += tx_metrics.total_missed_trips
             aggregate["total_missed_revenue"] += tx_metrics.total_missed_revenue
             aggregate["total_trip_duration"] += tx_metrics.total_trip_duration
             aggregate["total_trip_distance"] += tx_metrics.total_trip_distance
