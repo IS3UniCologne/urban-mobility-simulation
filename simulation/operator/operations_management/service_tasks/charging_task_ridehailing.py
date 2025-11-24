@@ -87,7 +87,7 @@ class ChargingTaskRidehailing(ServiceTask):  # noqa: D101
         self._charging_duration = (
             (
                 vehicle.max_state_of_charge
-                - vehicle.current_state_of_charge
+                - vehicle.current_relative_state_of_charge
                 + (
                     (vehicle.position >> self._destination_position)
                     / 1000
