@@ -160,7 +160,6 @@ class VehicleState(Enum):
     ONLINE = 6  # When the driver is online
     OFFLINE = 7  # When the driver is offline
     SOME_STATE = 1002
-    RESERVED = 1001
     MOVING_TO_PICK_UP_POS = 1003
 
     ### Public transport vehicle states ###
