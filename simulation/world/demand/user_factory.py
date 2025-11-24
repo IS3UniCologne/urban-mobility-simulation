@@ -6,9 +6,7 @@ from typing import TYPE_CHECKING
 
 from simulation.agent.user.user import User
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleType
 from simulation.helper.simulation_base import SimulationBase
-from simulation.tasks.transport_task import TransportTask
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
@@ -69,25 +67,12 @@ class UserFactory(SimulationBase):
             self._sim, destination_lat, destination_lng
         )
 
-        # TODO: Implement proper filtering criteria in user config
-        viable_vehicle_types = {vt: 1 for vt in VehicleType}
-
-        transport_task = TransportTask(
-            time=self._sim.env.now,
-            origin=origin_position,
-            destination=destination_position,
-            viable_vehicle_types=viable_vehicle_types,
-        )
-
-        # TODO: Choice model deps
-        choice_model = user_config.CHOICE_MODEL_CONFIG.CHOICE_MODEL_TYPE(self._sim)
-
         user = User(
             sim=self._sim,
-            position=origin_position,
-            transport_task=transport_task,
+            user_log=self._world.user_log,
+            origin=origin_position,
+            destination=destination_position,
             mobility_search_engine=self._world.mobility_search,
-            choice_model=choice_model,
         )
 
         self.logger.debug(
