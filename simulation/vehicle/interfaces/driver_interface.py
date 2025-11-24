@@ -1,4 +1,14 @@
-from abc import ABC, abstractmethod  # noqa: D100
+"""Interface for driver behavior in vehicles."""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Process
 
 
 class DriverInterface(ABC):  # noqa: D101
@@ -11,7 +21,7 @@ class DriverInterface(ABC):  # noqa: D101
         pass
 
     @abstractmethod
-    def drive_vehicle(self, vehicle, route):  # noqa: ANN001, ANN201, D102
+    def drive_vehicle(self, vehicle, route) -> Generator[Process, Any, None]:  # noqa: ANN001, D102
         pass
 
     @abstractmethod
@@ -19,5 +29,5 @@ class DriverInterface(ABC):  # noqa: D101
         pass
 
     @abstractmethod
-    def identify_driver(self):  # noqa: ANN201, D102
+    def identify_driver(self) -> str:  # noqa: D102
         pass
