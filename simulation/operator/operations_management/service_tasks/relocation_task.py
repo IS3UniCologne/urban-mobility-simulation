@@ -13,6 +13,7 @@ from simulation.operator.operations_management.service_tasks.service_task import
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.operator.vehicle_fleet import VehicleFleet
+    from simulation.vehicle.vehicle import Vehicle
 
 
 class RelocationTask(ServiceTask):  # noqa: D101
@@ -68,7 +69,7 @@ class RelocationTask(ServiceTask):  # noqa: D101
             potential_vehicles_sorted = sorted(
                 potential_vehicles_to_relocate, key=lambda v: v.uid
             )
-            selected_vehicles_to_relocate = []
+            selected_vehicles_to_relocate: list[Vehicle] = []
 
             # Filter relevant vehicles
             for vehicle in potential_vehicles_sorted:
