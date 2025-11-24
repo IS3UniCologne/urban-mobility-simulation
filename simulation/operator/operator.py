@@ -251,6 +251,31 @@ class Operator(SimulationBase, OperatorInterface):
         """Start the operations process."""
         self._env.process(self._operations.execute())
 
+    def log_failed_allocation_attempt(
+        self, user: User, transportation_task: TransportTask
+    ) -> None:
+        """
+        Log a failed vehicle allocation attempt.
+
+        This represents a missed revenue opportunity for the operator - the user wanted
+        to use this operator (chose it from available alternatives) but no vehicle could
+        be allocated.
+
+        Parameters
+        ----------
+        user : User
+            The user who attempted allocation.
+        transportation_task : TransportTask
+            The transportation task that was requested.
+        transportation_alternative : TransportationAlternative
+            The transportation alternative that was selected but could not be allocated.
+        """
+        transaction = self._create_missed_transaction(
+            transportation_task, TransactionState.MISSED
+        )
+
+        self._transaction_log.add_transaction(transaction)
+
     def log_transaction(
         self,
         transportation_task: TransportTask,

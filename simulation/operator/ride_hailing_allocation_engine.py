@@ -104,6 +104,11 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
                 "Vehicle %s already assigned to another user",
                 selected_transportation_alternative.vehicle.uid,
             )
+            # Log failed allocation attempt
+            # TODO: do we want to filter multiple failed allocation attempts by the same user?
+            self._operator.log_failed_allocation_attempt(
+                user=user, transportation_task=user.transport_task
+            )
             return None
 
         yield self._vehicles_assigned_to_users
@@ -117,6 +122,10 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
                 if selected_vehicle.reserved_for_user
                 else "None",
                 user.uid,
+            )
+            # Log failed allocation attempt
+            self._operator.log_failed_allocation_attempt(
+                user=user, transportation_task=user.transport_task
             )
             return None
 

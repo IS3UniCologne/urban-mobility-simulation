@@ -71,6 +71,10 @@ class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
 
         # No Vehicle Allocation
         if selected_vehicle.reserved_for_user != user:
+            # Log failed allocation attempt
+            self._operator.log_failed_allocation_attempt(
+                user=user, transportation_task=user.transport_task
+            )
             return None
 
         # Vehicle was succesfully allocated
