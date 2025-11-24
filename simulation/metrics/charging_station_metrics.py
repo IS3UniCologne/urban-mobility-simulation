@@ -22,12 +22,12 @@ class ChargingStationMetrics(IndexedMetricsBase):
     Charging stations can be accessed by their location using indexed access (e.g. `metrics['station_location']`).
     """
 
-    def list_available_uids(self) -> list[str]:
+    def list_available_uids(self) -> list[SimId]:
         """Get list of all available charging station locations."""
         if self._simulation.world.charging_infrastructure is None:
             return []
         return [
-            station.location
+            station.uid
             for station in self._simulation.world.charging_infrastructure.charging_stations
         ]
 
