@@ -322,6 +322,16 @@ class RideHailingFleetConfig(FleetConfig):
 
     RH_AVAILABILITY: list[float]
 
+    @field_validator("RH_AVAILABILITY", mode="after")
+    @classmethod
+    def validate_availability_length(cls, v: list[float]) -> list[float]:
+        """Validate that RH_AVAILABILITY has exactly 24 elements (one per hour)."""
+        if len(v) != 24:
+            raise ValueError(
+                f"RH_AVAILABILITY must have exactly 24 elements (one per hour), got {len(v)}"
+            )
+        return v
+
 
 class SharedVehicleFleetConfig(FleetConfig):
     """Configuration for shared vehicle fleet parameters."""
