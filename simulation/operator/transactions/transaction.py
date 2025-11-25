@@ -14,9 +14,9 @@ class Transaction(NamedTuple):
     """
     Represents a single transaction record in the simulation.
 
-    Parameters
+    Attributes
     ----------
-    vehicle_id : int or None
+    vehicle_uid : SimId or None
         Unique identifier for the vehicle. If not available, set to None.
     origin : RegionId
         Region ID of the trip origin.
@@ -28,22 +28,18 @@ class Transaction(NamedTuple):
         Simulation time when the trip ended.
     price : float
         Price paid for the trip.
-    revenue: float
+    revenue : float
         Revenue earned from the trip for the operator.
     distance : float
         Distance traveled during the trip.
     duration : float
         Duration of the trip.
-    selected_vehicle_type : VehicleType | None
-        Selected vehicle type for the trip. If not available, set to None.
     state : TransactionState
         State of the transaction (e.g., "Fulfilled", "Missed").
-    viable_vehicle_types : dict[VehicleType, int]
-        Dictionary mapping vehicle type names to 1 (available) or 0 (not available).
-    wait_time : float or None, optional
-        Waiting time before the trip started (if available).
-    waiting_time : float or None, optional
-        Duplicate (?) of wait_time (if available). TODO: Straighten this out #50
+    accepted_vehicle_types : frozenset of VehicleType
+        Set of accepted vehicle types for the trip.
+    selected_vehicle_type : VehicleType or None, optional
+        Selected vehicle type for the trip. If not available, set to None.
     pick_up_time : float or None, optional
         Time spent picking up the passenger (if available).
     energy_consumption : float or None, optional
@@ -62,10 +58,8 @@ class Transaction(NamedTuple):
     distance: float
     duration: float
     state: TransactionState
-    viable_vehicle_types: dict[VehicleType, int]
+    accepted_vehicle_types: frozenset[VehicleType]
     selected_vehicle_type: VehicleType | None = None
-    wait_time: float | None = None
-    waiting_time: float | None = None
     pick_up_time: float | None = None
     energy_consumption: float | None = None
     selected_vehicle_EV: str | bool | None = None
