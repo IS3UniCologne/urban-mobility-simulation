@@ -4,42 +4,40 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import TransactionState
-
 if TYPE_CHECKING:
     from simulation.operator.transactions.transaction_log import TransactionLog
 
 
 class TransactionMetricsHelper:
-    """Calculates metrics from transaction log data."""
+    """
+    Calculates metrics from transaction log data.
+
+    Parameters
+    ----------
+    transaction_log : TransactionLog
+        The transaction log to analyze.
+
+    Attributes
+    ----------
+    _transaction_log : TransactionLog
+        The transaction log used for metrics calculations.
+    """
 
     def __init__(self, transaction_log: TransactionLog) -> None:
-        """
-        Initialize transaction metrics calculator.
-
-        Parameters
-        ----------
-        transaction_log : TransactionLog
-            The transaction log to analyze.
-        """
+        """Initialize self."""
         self._transaction_log = transaction_log
 
     @property
     def total_revenue(self) -> float:
         """
-        Calculate the total revenue from all fulfilled transactions.
-
-        This method uses the cached DataFrame for vectorized operations.
-        If we need access to this function frequently during the simulation, we might want to change it.
+        Get total revenue from fulfilled transactions.
 
         Returns
         -------
         float
             Total revenue from transactions with state 'Fulfilled'.
         """
-        df = self._transaction_log.to_dataframe()
-        fulfilled_mask = df["state"] == TransactionState.FULFILLED
-        return float(df.loc[fulfilled_mask, "price"].sum())
+        return self._transaction_log.incremental_metrics.total_revenue
 
     @property
     def total_fulfilled_trips(self) -> int:
@@ -51,8 +49,7 @@ class TransactionMetricsHelper:
         int
             Count of transactions with state 'Fulfilled'.
         """
-        df = self._transaction_log.to_dataframe()
-        return int(df[df["state"] == TransactionState.FULFILLED].shape[0])
+        return self._transaction_log.incremental_metrics.fulfilled_count
 
     @property
     def total_missed_trips(self) -> int:
@@ -62,44 +59,34 @@ class TransactionMetricsHelper:
         Returns
         -------
         int
-            Count of transactions with state 'Missed'.
+            Count of transactions with state 'Missed' or 'Withdrawn'.
         """
-        df = self._transaction_log.to_dataframe()
-        # TODO: Terminology Missed vs Withdrawn is a bit confusing here.
-
-        return int(
-            df[
-                df["state"].isin([TransactionState.MISSED, TransactionState.WITHDRAWN])
-            ].shape[0]
-        )
+        metrics = self._transaction_log.incremental_metrics
+        return metrics.missed_count + metrics.withdrawn_count
 
     @property
     def total_missed_revenue(self) -> float:
         """
-        Calculate the total revenue lost from missed trips.
+        Get total revenue lost from missed trips.
 
         Returns
         -------
         float
             Total revenue from transactions with state 'Missed'.
         """
-        df = self._transaction_log.to_dataframe()
-        missed_mask = df["state"] == TransactionState.MISSED
-        return float(df.loc[missed_mask, "price"].sum())
+        return self._transaction_log.incremental_metrics.total_missed_revenue
 
     @property
     def total_trip_duration(self) -> float:
         """
-        Calculate the total duration of all fulfilled trips.
+        Get total duration of fulfilled trips.
 
         Returns
         -------
         float
             Total duration of trips with state 'Fulfilled'.
         """
-        df = self._transaction_log.to_dataframe()
-        fulfilled_mask = df["state"] == TransactionState.FULFILLED
-        return float(df.loc[fulfilled_mask, "duration"].sum())
+        return self._transaction_log.incremental_metrics.total_duration
 
     @property
     def average_trip_duration(self) -> float:
@@ -110,24 +97,24 @@ class TransactionMetricsHelper:
         -------
         float
             Average duration of trips with state 'Fulfilled'.
+            If no fulfilled trips exist, returns 0.0.
         """
-        df = self._transaction_log.to_dataframe()
-        fulfilled_mask = df["state"] == TransactionState.FULFILLED
-        return float(df.loc[fulfilled_mask, "duration"].mean())
+        metrics = self._transaction_log.incremental_metrics
+        if metrics.fulfilled_count == 0:
+            return 0.0
+        return metrics.total_duration / metrics.fulfilled_count
 
     @property
     def total_trip_distance(self) -> float:
         """
-        Calculate the total trip distance for fulfilled trips.
+        Get total trip distance for fulfilled trips.
 
         Returns
         -------
         float
             Total distance of trips with state 'Fulfilled'.
         """
-        df = self._transaction_log.to_dataframe()
-        fulfilled_mask = df["state"] == TransactionState.FULFILLED
-        return float(df.loc[fulfilled_mask, "distance"].sum())
+        return self._transaction_log.incremental_metrics.total_distance
 
     @property
     def average_trip_distance(self) -> float:
@@ -138,10 +125,12 @@ class TransactionMetricsHelper:
         -------
         float
             Average distance of trips with state 'Fulfilled'.
+            If no fulfilled trips exist, returns 0.0.
         """
-        df = self._transaction_log.to_dataframe()
-        fulfilled_mask = df["state"] == TransactionState.FULFILLED
-        return float(df.loc[fulfilled_mask, "distance"].mean())
+        metrics = self._transaction_log.incremental_metrics
+        if metrics.fulfilled_count == 0:
+            return 0.0
+        return metrics.total_distance / metrics.fulfilled_count
 
     @property
     def average_trip_price(self) -> float:
@@ -152,10 +141,12 @@ class TransactionMetricsHelper:
         -------
         float
             Average price of trips with state 'Fulfilled'.
+            If no fulfilled trips exist, returns 0.0.
         """
-        df = self._transaction_log.to_dataframe()
-        fulfilled_mask = df["state"] == TransactionState.FULFILLED
-        return float(df.loc[fulfilled_mask, "price"].mean())
+        metrics = self._transaction_log.incremental_metrics
+        if metrics.fulfilled_count == 0:
+            return 0.0
+        return metrics.total_price_sum / metrics.fulfilled_count
 
     @property
     def trip_fulfillment_rate(self) -> float:
@@ -166,25 +157,24 @@ class TransactionMetricsHelper:
         -------
         float
             Ratio of fulfilled trips to total trips.
+            Returns 0.0 if there are no transactions.
         """
-        total_trips = self._transaction_log.transaction_count
-        if total_trips == 0:
+        metrics = self._transaction_log.incremental_metrics
+        if metrics.total_count == 0:
             return 0.0
-        return self.total_fulfilled_trips / total_trips
+        return metrics.fulfilled_count / metrics.total_count
 
     @property
     def total_energy_consumption(self) -> float:
         """
-        Calculate the total energy consumption for all fulfilled trips.
+        Get the total energy consumption for fulfilled trips.
 
         Returns
         -------
         float
             Total energy consumed during trips with state 'Fulfilled'.
         """
-        df = self._transaction_log.to_dataframe()
-        fulfilled_mask = df["state"] == TransactionState.FULFILLED
-        return float(df.loc[fulfilled_mask, "energy_consumption"].sum())
+        return self._transaction_log.incremental_metrics.total_energy
 
     @property
     def average_energy_consumption(self) -> float:
@@ -195,7 +185,9 @@ class TransactionMetricsHelper:
         -------
         float
             Average energy consumed during trips with state 'Fulfilled'.
+            If no fulfilled trips exist, returns 0.0.
         """
-        df = self._transaction_log.to_dataframe()
-        fulfilled_mask = df["state"] == TransactionState.FULFILLED
-        return float(df.loc[fulfilled_mask, "energy_consumption"].mean())
+        metrics = self._transaction_log.incremental_metrics
+        if metrics.fulfilled_count == 0:
+            return 0.0
+        return metrics.total_energy / metrics.fulfilled_count
