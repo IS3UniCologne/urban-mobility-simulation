@@ -21,7 +21,23 @@ if TYPE_CHECKING:
 
 
 class MetricsSnapshot:
-    """A snapshot of metrics at a specific simulation time."""
+    """
+    A snapshot of metrics at a specific simulation time.
+
+    Parameters
+    ----------
+    timestamp : float
+        The simulation time when the snapshot was taken.
+    metrics : MetricsDict
+        The metrics data collected.
+
+    Attributes
+    ----------
+    timestamp : float
+        The simulation time when the snapshot was taken.
+    metrics : MetricsDict
+        The metrics data collected.
+    """
 
     def __init__(self, timestamp: float, metrics: MetricsDict) -> None:
         self.timestamp = timestamp
@@ -51,8 +67,25 @@ class TrackingJob:
         Job name.
     interval : float or None
         Periodic capture interval. None disables automatic periodic captures.
-    tracked_classes : list[str] or None
+    tracked_classes : list of str or None
         Metrics classes to track. None means all available.
+
+    Attributes
+    ----------
+    name : str
+        Job name.
+    interval : float or None
+        Periodic capture interval.
+    tracked_classes : list of str or None
+        Metrics classes to track.
+    process : simpy.Process or None
+        The simpy process for periodic tracking, if active.
+    snapshots : list of MetricsSnapshot
+        List of captured snapshots.
+    last_snapshot_time : float or None
+        Timestamp of the last captured snapshot.
+    active : bool
+        Whether the job is currently active.
     """
 
     def __init__(
@@ -92,9 +125,15 @@ class TrackingJob:
 
 
 class MetricsTracker(SimulationBase):
-    """Metrics tracking manager for periodic and manual snapshots.
+    """
+    Metrics tracking manager for periodic and manual snapshots.
 
     Can run multiple tracking jobs in parallel, each with its own configuration.
+
+    Parameters
+    ----------
+    simulation : Simulation
+        The main simulation instance.
     """
 
     def __init__(self, simulation: Simulation) -> None:
@@ -221,7 +260,7 @@ class MetricsTracker(SimulationBase):
         for name in self._jobs.keys():
             self.stop_job(name)
 
-    def capture(self, name: str) -> MetricsSnapshot:
+    def capture_job_snapshot(self, name: str) -> MetricsSnapshot:
         """
         Manually capture a snapshot for a job.
 
@@ -249,7 +288,7 @@ class MetricsTracker(SimulationBase):
             job.add_snapshot(empty)
             return empty
 
-    def capture_all(self) -> dict[str, MetricsSnapshot]:
+    def capture_all_job_snapshots(self) -> dict[str, MetricsSnapshot]:
         """
         Capture snapshots for all jobs.
 
@@ -260,7 +299,7 @@ class MetricsTracker(SimulationBase):
         """
         result: dict[str, MetricsSnapshot] = {}
         for name in self._jobs.keys():
-            result[name] = self.capture(name)
+            result[name] = self.capture_job_snapshot(name)
         return result
 
     def get_snapshots(
@@ -280,7 +319,7 @@ class MetricsTracker(SimulationBase):
 
         Returns
         -------
-        list[MetricsSnapshot]
+        list of MetricsSnapshot
             List of snapshots within the specified time range.
         """
         job = self._require_job(name)
@@ -310,8 +349,8 @@ class MetricsTracker(SimulationBase):
 
         Returns
         -------
-        pd.DataFrame
-            DataFrame indexed by timestamp.
+        pandas.DataFrame
+            DataFrame indexed by timestamp containing the job's snapshots.
         """
         snaps = self.get_snapshots(name, start_time, end_time)
         if not snaps:
@@ -342,8 +381,8 @@ class MetricsTracker(SimulationBase):
 
         Returns
         -------
-        pd.DataFrame
-            Combined DataFrame.
+        pandas.DataFrame
+            Combined DataFrame for all jobs, either in long or wide format.
         """
         frames: list[pd.DataFrame] = []
         for name in self._jobs.keys():
@@ -407,7 +446,7 @@ class MetricsTracker(SimulationBase):
             "Exported %d snapshots for job %s to %s", len(df), name, full_path
         )
 
-    def export_all(
+    def export_all_jobs(
         self,
         file_name: str,
         start_time: float | None = None,
@@ -415,7 +454,7 @@ class MetricsTracker(SimulationBase):
         file_format: str = "csv",
     ) -> None:
         """
-        Export all jobs individually.
+        Export all jobs' snapshots one by one.
 
         Parameters
         ----------
@@ -494,7 +533,7 @@ class MetricsTracker(SimulationBase):
         Returns
         -------
         MetricsDict
-            Collected metrics.
+            Collected metrics for the specified classes.
         """
         if classes is None:
             return self._simulation.metrics.all_metrics()
@@ -506,7 +545,7 @@ class MetricsTracker(SimulationBase):
             if job.interval is not None:
                 yield self._simulation.sim.env.timeout(job.interval)
             while job.active and job.interval is not None:
-                self.capture(name)
+                self.capture_job_snapshot(name)
                 yield self._simulation.sim.env.timeout(job.interval)
         except Exception as e:
             if job.active:
