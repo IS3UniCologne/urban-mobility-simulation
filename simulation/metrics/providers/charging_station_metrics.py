@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .metrics_base import IndexedMetricsBase
-from .metrics_dict import MetricsDict
+from ..metrics_base import IndexedMetricsBase
+from ..metrics_dict import MetricsDict
 
 if TYPE_CHECKING:
     from simulation.helper.types import SimId
@@ -20,6 +20,11 @@ class ChargingStationMetrics(IndexedMetricsBase):
 
     Provides both individual charging station metrics and aggregated metrics.
     Charging stations can be accessed by their location using indexed access (e.g. `metrics['station_location']`).
+
+    Parameters
+    ----------
+    simulation : Simulation
+        The main simulation instance.
     """
 
     def list_available_uids(self) -> list[SimId]:

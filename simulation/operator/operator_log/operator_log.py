@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -132,7 +133,7 @@ class OperatorLog:
         if not self._transactions:
             return pd.DataFrame()
 
-        df = pd.DataFrame([t._asdict() for t in self._transactions])
+        df = pd.DataFrame([asdict(t) for t in self._transactions])
 
         # Expand accepted_vehicle_types set into individual boolean columns
         df = self._expand_accepted_vehicle_types(df)

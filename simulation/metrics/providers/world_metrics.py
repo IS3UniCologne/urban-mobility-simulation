@@ -4,16 +4,22 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from simulation.metrics.metrics_base import MetricsBase
-
-from .metrics_dict import MetricsDict
+from ..metrics_base import MetricsBase
+from ..metrics_dict import MetricsDict
 
 if TYPE_CHECKING:
     from simulation.simulation import Simulation
 
 
 class WorldMetrics(MetricsBase):
-    """Metrics class for the simulation world."""
+    """
+    Metrics class for the simulation world.
+
+    Parameters
+    ----------
+    simulation : Simulation
+        The main simulation instance.
+    """
 
     def __init__(self, simulation: Simulation) -> None:
         super().__init__(simulation)
@@ -21,8 +27,8 @@ class WorldMetrics(MetricsBase):
 
     @property
     def total_users(self) -> int:
-        """Total number of users in the world."""
-        return len(self._world.users)
+        """Total number of users created so far."""
+        return self._world.total_users
 
     @property
     def total_vehicles(self) -> int:
@@ -58,16 +64,6 @@ class WorldMetrics(MetricsBase):
         """Number of active users."""
         return len(self._world.users)
 
-    @property
-    def active_vehicle_processes(self) -> int:
-        """Number of active vehicle processes."""
-        return len(self._world.vehicle_processes)
-
-    @property
-    def active_demand_processes(self) -> int:
-        """Number of active demand generation processes."""
-        return len(self._world.demand_processes)
-
     def to_dict(self) -> MetricsDict:
         """
         Get all world metrics as a dictionary.
@@ -77,7 +73,6 @@ class WorldMetrics(MetricsBase):
         MetricsDict
             Dictionary containing all world metrics.
         """
-        """Return all world-level metrics."""
         return MetricsDict(
             {
                 "total_users": self.total_users,
@@ -85,7 +80,5 @@ class WorldMetrics(MetricsBase):
                 "user_state_distribution": self.user_state_distribution,
                 "vehicle_state_distribution": self.vehicle_state_distribution,
                 "active_users": self.active_users,
-                "active_vehicle_processes": self.active_vehicle_processes,
-                "active_demand_processes": self.active_demand_processes,
             }
         )

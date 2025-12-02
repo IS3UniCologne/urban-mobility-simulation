@@ -19,10 +19,15 @@ class MetricsBase(ABC):
     Abstract base class for all user-facing metrics classes.
 
     Provides a standard interface for metrics access and logging.
+
+    Parameters
+    ----------
+    simulation : Simulation
+        The main simulation instance.
     """
 
     def __init__(self, simulation: Simulation) -> None:
-        self._simulation = simulation
+        self._simulation: Simulation = simulation
 
     @abstractmethod
     def to_dict(self) -> MetricsDict:
@@ -87,7 +92,7 @@ class IndexedMetricsBase(MetricsBase):
 
         Returns
         -------
-        list[SimId]
+        list of SimId
             List of available entity UIDs.
         """
         pass

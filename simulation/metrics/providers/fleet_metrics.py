@@ -1,5 +1,7 @@
 """Fleet metrics module."""
 
+from statistics import mean
+
 from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.types import SimId
 from simulation.metrics.metrics_base import IndexedMetricsBase
@@ -8,33 +10,71 @@ from simulation.operator.vehicle_fleet import VehicleFleet
 
 
 class FleetMetrics(IndexedMetricsBase):
-    """Metrics class for fleet-specific metrics."""
+    """
+    Metrics class for fleet-specific metrics.
 
-    def list_available_uids(self) -> list[str]:
-        """Get list of all available fleet IDs."""
-        return [fleet.uid for fleet in self._simulation.world.fleets]
+    Parameters
+    ----------
+    simulation : Simulation
+        Simulation instance providing access to the world and operators.
+    """
+
+    def list_available_uids(self) -> list[SimId]:
+        """
+        Get list of all available fleet IDs.
+
+        Returns
+        -------
+        list of SimId
+            List of fleet unique identifiers.
+        """
+        return [operator.fleet.uid for operator in self._simulation.world.operators]
 
     def get_metrics_by_uid(self, uid: SimId) -> MetricsDict:
-        """Get metrics for a specific fleet by ID."""
+        """
+        Get metrics for a specific fleet by ID.
+
+        Parameters
+        ----------
+        uid : SimId
+            The unique identifier of the fleet.
+
+        Returns
+        -------
+        MetricsDict
+            Metrics dictionary for the specified fleet.
+
+        Raises
+        ------
+        KeyError
+            If the fleet with the given ID is not found.
+        """
         fleet = self._get_fleet_by_id(uid)
         if fleet is None:
             raise KeyError(f"Fleet with ID '{uid}' not found")
         return self._get_fleet_metrics(fleet)
 
     def to_dict(self) -> MetricsDict:
-        """Return metrics for all fleets."""
+        """
+        Return metrics for all fleets.
+
+        Returns
+        -------
+        MetricsDict
+            Mapping of fleet keys to their metrics.
+        """
         return MetricsDict(
             {
-                f"fleet_{fleet.uid}": self._get_fleet_metrics(fleet)
-                for fleet in self._simulation.world.fleets
+                f"fleet_{operator.fleet.uid}": self._get_fleet_metrics(operator.fleet)
+                for operator in self._simulation.world.operators
             }
         )
 
     def _get_fleet_by_id(self, fleet_id: str) -> VehicleFleet | None:
         """Find a fleet by its ID."""
-        for fleet in self._simulation.world.fleets:
-            if fleet.uid == fleet_id:
-                return fleet
+        for operator in self._simulation.world.operators:
+            if operator.fleet.uid == fleet_id:
+                return operator.fleet
         return None
 
     def _get_fleet_metrics(self, fleet: VehicleFleet) -> MetricsDict:
@@ -47,20 +87,14 @@ class FleetMetrics(IndexedMetricsBase):
         moving_to_pick_up_pos_vehicles = len(
             fleet.vehicles_by_state[VehicleState.MOVING_TO_PICK_UP_POS]
         )
-        reserved_vehicles = len(fleet.vehicles_by_state[VehicleState.RESERVED])
 
-        # fleet_avg_soc = mean(vehicle.state_of_charge for vehicle in fleet.vehicles)
+        fleet_avg_soc = (
+            mean(vehicle.current_relative_state_of_charge for vehicle in fleet.vehicles)
+            if fleet.vehicles
+            else 0.0
+        )
 
-        # # TODO: Make this work for all fleet types
-        # if fleet.__class__.__name__ == "RideHailingFleet":
-        #     current_charge_threshold = fleet.charge_threshold
-        #     low_soc_vehicles = [
-        #         vehicle
-        #         for vehicle in fleet.vehicles
-        #         if vehicle.state_of_charge < current_charge_threshold
-        #     ]
-        # else:
-        #     raise NotImplementedError()
+        vehicle_distribution_by_region = fleet.region_vehicle_distribution()
 
         return MetricsDict(
             {
@@ -70,6 +104,7 @@ class FleetMetrics(IndexedMetricsBase):
                 "relocating_vehicles": relocating_vehicles,
                 "pre_service_vehicles": pre_service_vehicles,
                 "moving_to_pick_up_pos_vehicles": moving_to_pick_up_pos_vehicles,
-                "reserved_vehicles": reserved_vehicles,
+                "avg_state_of_charge": fleet_avg_soc,
+                "vehicle_distribution_by_region": vehicle_distribution_by_region,
             }
         )

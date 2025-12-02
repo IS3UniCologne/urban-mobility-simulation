@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from simulation.helper.configuration.enums import TransactionState, VehicleType
 
@@ -50,17 +50,6 @@ class BaseOperatorLogEntry:
     price: float
     revenue: float
     duration: float
-
-    def _asdict(self) -> dict[str, Any]:
-        """
-        Convert to dictionary for DataFrame compatibility.
-
-        Returns
-        -------
-        dict[str, Any]
-            Dictionary representation of the log entry.
-        """
-        return asdict(self)
 
 
 @dataclass(frozen=True, slots=True)
