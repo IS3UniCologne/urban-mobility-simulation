@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from simulation.helper.simulation_base import SimulationBase
@@ -10,6 +11,7 @@ from simulation.helper.simulation_base import SimulationBase
 if TYPE_CHECKING:
     from simulation.agent.user.user import User
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import ChoiceModelConfig
     from simulation.helper.configuration.enums import OperatorMode, VehicleType
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
@@ -19,11 +21,53 @@ if TYPE_CHECKING:
     )
 
 
-class ChoiceModelInterface(SimulationBase, ABC):
-    """Interface for calculating choice probabilities over transportation alternatives."""
+@dataclass(frozen=True, slots=True)
+class ChoiceModelDependencies:
+    """
+    Dependencies for the Choice Model.
 
-    def __init__(self, sim: SimulationContext) -> None:
-        super().__init__(sim)
+    Parameters
+    ----------
+    sim : SimulationContext
+        The simulation context.
+    choice_model_config : ChoiceModelConfig
+        Configuration for the choice model.
+    """
+
+    sim: SimulationContext
+    choice_model_config: ChoiceModelConfig
+
+
+class ChoiceModelInterface(SimulationBase, ABC):
+    """
+    Interface for calculating choice probabilities over transportation alternatives.
+
+    Parameters
+    ----------
+    deps : ChoiceModelDependencies
+        Dependencies required to initialize the choice model.
+    """
+
+    def __init__(self, deps: ChoiceModelDependencies) -> None:
+        super().__init__(deps.sim)
+
+    @staticmethod
+    def from_deps(deps: ChoiceModelDependencies) -> ChoiceModelInterface:
+        """
+        Create choice model instance from dependencies.
+
+        Parameters
+        ----------
+        deps : ChoiceModelDependencies
+            Dependencies required to create the choice model.
+
+        Returns
+        -------
+        ChoiceModelInterface
+            The initialized choice model instance.
+        """
+        choice_model_type = deps.choice_model_config.CHOICE_MODEL_TYPE
+        return choice_model_type(deps)
 
     @abstractmethod
     def calculate_choice_probabilities(
@@ -41,7 +85,7 @@ class ChoiceModelInterface(SimulationBase, ABC):
 
         Returns
         -------
-        dict[TransportationAlternative, float]
+        dict
             Mapping of alternatives to their choice probabilities.
             Probabilities should sum to 1.0.
         """
@@ -55,7 +99,7 @@ class ChoiceModelInterface(SimulationBase, ABC):
 
         Returns
         -------
-        frozenset[VehicleType]
+        frozenset of VehicleType
             Frozenset of accepted vehicle types.
         """
         pass
@@ -68,7 +112,7 @@ class ChoiceModelInterface(SimulationBase, ABC):
 
         Returns
         -------
-        frozenset[OperatorMode]
+        frozenset of OperatorMode
             Frozenset of accepted operator modes.
         """
         pass
