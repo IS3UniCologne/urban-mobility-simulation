@@ -5,7 +5,10 @@ from __future__ import annotations
 from collections import deque
 from typing import TYPE_CHECKING
 
-from simulation.agent.user.user_log import FulfilledUserLogEntry, UserLogEntry
+from simulation.agent.user.user_log.user_log_entry import (
+    FulfilledUserLogEntry,
+    UserLogEntry,
+)
 from simulation.helper.configuration.enums import TransactionState
 
 if TYPE_CHECKING:
