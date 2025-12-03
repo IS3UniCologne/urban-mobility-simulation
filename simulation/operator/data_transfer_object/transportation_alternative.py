@@ -54,7 +54,6 @@ class TransportationAlternative:  # noqa: D101
         "_distance",
         "_distance_to_pickup",
         "_duration",
-        "_energy_consumed",
         "_operator",
         "_pick_up_time",
         "_price",
@@ -62,7 +61,6 @@ class TransportationAlternative:  # noqa: D101
         "_route_to_pickup",
         "_utility",
         "_vehicle",
-        "_waiting_time",
     )
 
     def __init__(
@@ -87,8 +85,6 @@ class TransportationAlternative:  # noqa: D101
         self._route_to_pickup = route_to_pickup
         self._pick_up_time = pick_up_time
         self._utility = 0.0
-        self._waiting_time = 0.0  # Is set after successful allocation
-        self._energy_consumed = 0.0  # Updated during the trip execution
 
     @property
     def operator(self) -> OperatorInterface:  # noqa: D102
@@ -133,26 +129,6 @@ class TransportationAlternative:  # noqa: D101
     @property
     def pick_up_time(self) -> float | None:  # noqa: D102
         return self._pick_up_time
-
-    # Perhaps it makes sense to encapsulate TransportationAlternative
-    #  around a "SuccessfulTrip" where we store this object along with
-    #  variables pertaining the to trip (as energy consumed, (real) travelled distance)
-    @property
-    def energy_consumed(self) -> float:  # noqa: D102
-        return self._energy_consumed
-
-    # TODO: Unify the way we track energy consumption (this is currently only used
-    #  in ride-hailing, while other operators track it differently)
-    def increase_energy_consumed(self, energy_consumption: float) -> None:  # noqa: D102
-        # energy_consumption: in kWh
-        self._energy_consumed += energy_consumption
-
-    @property
-    def waiting_time(self) -> float:  # noqa: D102
-        return self._waiting_time
-
-    def increase_waiting_time(self, waiting_time: float) -> None:  # noqa: D102
-        self._waiting_time += waiting_time
 
     def __str__(self) -> str:  # noqa: D105
         return f"Vehicle {self._vehicle}, Price {self._price}, Duration {self._duration}, Distance {self._distance}, Convenience {self._convenience} {', Distance to pickup ' + str(self._route_to_pickup.distance) + ', Pick up time ' + str(self._pick_up_time) if self._route_to_pickup else ''},"
