@@ -6,13 +6,13 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from simulation.agent.user.choice_model.choice_model_interface import (
+    ChoiceModelDependencies,
     ChoiceModelInterface,
 )
 from simulation.helper.configuration.enums import OperatorMode, VehicleType
 
 if TYPE_CHECKING:
     from simulation.agent.user import User
-    from simulation.context.simulation_context import SimulationContext
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -31,9 +31,9 @@ class RandomModeNearestVehicleChoiceModel(ChoiceModelInterface):
     3. Within that mode, select the vehicle closest to the user
     """
 
-    def __init__(self, sim: SimulationContext) -> None:
-        super().__init__(sim)
-        self._rng = sim.random_manager.get_rng(
+    def __init__(self, deps: ChoiceModelDependencies) -> None:
+        super().__init__(deps=deps)
+        self._rng = deps.sim.random_manager.get_rng(
             component_name="RANDOM_MODE_NEAREST_VEHICLE_CHOICE_MODEL"
         )
 
