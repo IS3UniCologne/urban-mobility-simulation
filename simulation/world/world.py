@@ -3,6 +3,7 @@ from __future__ import annotations  # noqa: D100
 import os
 from typing import TYPE_CHECKING
 
+from simulation.agent.user.user_log import UserLog
 from simulation.helper.simulation_base import SimulationBase
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
@@ -11,8 +12,8 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
 )
 from simulation.operator.operator import Operator, OperatorDependencies
+from simulation.vehicle.vehicle import Vehicle
 from simulation.world.mobility_search_engine import MobilitySearchEngine
-from simulation.world.user_log import UserLog
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from pandas import DataFrame
 
     from simulation.agent.user import user
+    from simulation.agent.user.user import User
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_environment import GeodesicEnvironment
     from simulation.helper.configuration.configuration import Configuration
@@ -66,8 +68,8 @@ class World(SimulationBase):  # noqa: D101
         "_simulation_finished",
         "_spatial_resolution",
         "_temporal_resolution",
+        "_total_users",
         "_tracking",
-        "_user_limit",
         "_user_log",
         "_users",
         "_vehicle_assignment_engine",
@@ -94,6 +96,7 @@ class World(SimulationBase):  # noqa: D101
 
         # Store all current users
         self._users: set[user.User] = set()
+        self._total_users: int = 0
 
         # Store all current vehicles
         # TODO: Probably redundant
@@ -117,8 +120,6 @@ class World(SimulationBase):  # noqa: D101
         # Events
         self._changed = self._env.event()
         self._simulation_finished = self._env.event()
-
-        self._user_limit = 10_000_000
 
     @property
     def user_log(self) -> UserLog:
@@ -230,6 +231,7 @@ class World(SimulationBase):  # noqa: D101
             The user agent to clean up.
         """
         self._users.add(user)
+        self._total_users += 1
 
         self.logger.debug("User %s added to world.", user.uid)
 
@@ -243,12 +245,18 @@ class World(SimulationBase):  # noqa: D101
         self._vehicles.discard(vehicle)
 
     @property
-    def users(self):  # noqa: ANN201, D102
+    def users(self) -> set[User]:
+        """Get the set of current users in the world."""
         return self._users
+
+    @property
+    def total_users(self) -> int:
+        """Get total number of users that have been added to the world so far."""
+        return self._total_users
 
     # TODO: get rid of this, only one user uses it and it should be dealt with differently
     @property
-    def vehicles(self):  # noqa: ANN201, D102
+    def vehicles(self) -> set[Vehicle]:  # noqa: D102
         return self._vehicles
 
     @property
