@@ -69,6 +69,7 @@ class UserFactory(SimulationBase):
 
         user = User(
             sim=self._sim,
+            user_config=user_config,
             user_log=self._world.user_log,
             origin=origin_position,
             destination=destination_position,
