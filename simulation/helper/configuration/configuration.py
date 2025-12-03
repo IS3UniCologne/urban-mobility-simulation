@@ -188,16 +188,11 @@ class UserConfig(ConfigBaseModel):
 
     TRANSIT_MAX_WAIT: int = Field(
         gt=0, description="Maximum wait time for transit in minutes"
-    )
+    )  # TODO: this is directly read in the public transport search engine. Either move it to that config or make it a user parameter
     SPATIAL_STRATEGY: str
-    WALKING_SPEED: float = Field(gt=0)  # automatically converted from km/h to m/s
+    WALKING_SPEED_KMH: float = Field(gt=0)
+    MAX_SEARCH_DURATION_MIN: int = Field(gt=0)
     CHOICE_MODEL_CONFIG: ChoiceModelConfig
-
-    @field_validator("WALKING_SPEED", mode="after")
-    @classmethod
-    def convert_walking_speed(cls, v: float) -> float:
-        """Convert walking speed from km/h to m/s."""
-        return SimulationVelocityConverter.kmh_to_meters_per_minute(v)
 
 
 class ChoiceModelConfig(ConfigBaseModel):
