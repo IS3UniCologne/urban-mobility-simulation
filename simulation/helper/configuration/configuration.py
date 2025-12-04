@@ -252,46 +252,26 @@ class VehicleConfig(ConfigBaseModel):
     # Make frozen so we can use VehicleConfig in fleet dict
     model_config = ConfigDict(frozen=True)
 
-    VELOCITY: float = Field(gt=0)
+    VELOCITY_KMH: float = Field(gt=0)
     MAX_AVAILABLE_SEATS: int
     VEHICLE_TYPE: VehicleType
     AUTONOMY_TYPE: AutonomyType = AutonomyType.HUMAN_DRIVEN
     PROPULSION_TYPE: PropulsionType = PropulsionType.BATTERY_ELECTRIC
+    ENERGY_CAPACITY: float = Field(default=None, gt=0)  # kWh or Liters
+    ENERGY_CONSUMPTION_PER_KM: float = Field(default=None, ge=0)  # kWh/km or Liters/km
+    INITIAL_CHARGE_PERCENT: float = Field(default=None, ge=0, le=1)
+    ENERGY_BUFFER_PERCENT: float | None = Field(default=None, ge=0, le=1)
     WALKING_DISTANCE: int | None = Field(
         default=None, ge=0, le=10000
     )  # TODO: Move this to users
     CONVENIENCE: int = Field(default=1, ge=1)
-    MAX_STATE_OF_CHARGE: float | None = Field(default=None, gt=0)
-    ENERGY_CONSUMPTION: float | None = Field(default=None, ge=0)
-    EV_RELATIVE_ENERGY_CONSUMPTION: float | None = Field(default=None, gt=0)
-    INITIAL_CHARGE_PERCENT: float | None = Field(default=None, gt=0)
-    EMERGENCY_SOC_BUFFER: float | None = Field(default=None, gt=0)
-    PRICE_PER_MIN: float | None = Field(default=None, gt=0)
+    PRICE_PER_MIN: float | None = Field(default=None, ge=0)
     PRICE_PER_TRIP: float = Field(default=0, ge=0)
-    DAILY_TOTAL_COST: float | None = Field(default=None, gt=0)
-    COST_PER_KM: float | None = Field(default=None, gt=0)
-    PRICE_PER_KM: float | None = Field(default=None, gt=0)
-    CHARGING_COST_PER_KWH: float | None = Field(default=None, gt=0)
-    KG_CO2_PER_KM: float | None = Field(default=None, gt=0)
-
-    @field_validator("VELOCITY", mode="after")
-    @classmethod
-    def convert_velocity(cls, v: float) -> float:
-        """Convert vehicle velocity from km/h to m/s."""
-        return SimulationVelocityConverter.kmh_to_meters_per_minute(v)
-
-    # TODO: Add more validators for other vehicles etc. This is just an example of what we could be doing. Or don't :)
-    @model_validator(mode="after")
-    def validate_electric_vehicle_fields(self) -> VehicleConfig:
-        """Validate fields specific to electric vehicles."""
-        if self.PROPULSION_TYPE == PropulsionType.BATTERY_ELECTRIC:
-            if self.MAX_STATE_OF_CHARGE is None:
-                raise ValueError(
-                    "MAX_STATE_OF_CHARGE is required for electric vehicles"
-                )
-            if self.ENERGY_CONSUMPTION is None:
-                raise ValueError("ENERGY_CONSUMPTION is required for electric vehicles")
-        return self
+    DAILY_TOTAL_COST: float | None = Field(default=None, ge=0)
+    COST_PER_KM: float | None = Field(default=None, ge=0)
+    PRICE_PER_KM: float | None = Field(default=None, ge=0)
+    CHARGING_COST_PER_KWH: float | None = Field(default=None, ge=0)
+    KG_CO2_PER_KM: float | None = Field(default=None, ge=0)
 
 
 class RideHailingVehicleConfig(VehicleConfig):
