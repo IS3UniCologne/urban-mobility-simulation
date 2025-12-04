@@ -18,16 +18,15 @@ from simulation.operator.operations_management.algorithms.charging_station_alloc
 )
 
 rh_car_autonomous = RideHailingVehicleConfig(
-    VELOCITY=32.16,
+    VELOCITY_KMH=32.16,
     MAX_AVAILABLE_SEATS=4,
     VEHICLE_TYPE=VehicleType.CAR,
     AUTONOMY_TYPE=AutonomyType.AUTONOMOUS,
     PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
-    MAX_STATE_OF_CHARGE=50.0,
-    ENERGY_CONSUMPTION=0.20,
-    EV_RELATIVE_ENERGY_CONSUMPTION=0.3,
+    ENERGY_CAPACITY=50.0,
+    ENERGY_CONSUMPTION_PER_KM=0.20,
     CHARGING_COST_PER_KWH=0.43,
-    EMERGENCY_SOC_BUFFER=0.05,
+    ENERGY_BUFFER_PERCENT=0.05,
     PRICE_PER_MIN=0.35,
     DAILY_TOTAL_COST=29.0,
     COST_PER_KM=0.45,
