@@ -16,7 +16,15 @@ if TYPE_CHECKING:
 
 
 class UserFactory(SimulationBase):
-    """Factory for creating mobility users and their transport tasks."""
+    """Factory module for creating new users.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        The active simulation context instance.
+    world : World
+        The world instance containing state and services used during simulation.
+    """
 
     def __init__(self, sim: SimulationContext, world: World) -> None:
         super().__init__(sim)
