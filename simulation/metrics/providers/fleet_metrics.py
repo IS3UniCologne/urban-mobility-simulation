@@ -88,6 +88,7 @@ class FleetMetrics(IndexedMetricsBase):
             fleet.vehicles_by_state[VehicleState.MOVING_TO_PICK_UP_POS]
         )
 
+        # TODO: Not like this, look for similar inefficient code and refactor
         fleet_avg_soc = (
             mean(vehicle.current_relative_state_of_charge for vehicle in fleet.vehicles)
             if fleet.vehicles
