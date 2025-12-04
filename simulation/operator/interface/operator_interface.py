@@ -13,6 +13,9 @@ if TYPE_CHECKING:
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
+    from simulation.operator.data_transfer_object.vehicle_allocation import (
+        VehicleAllocation,
+    )
     from simulation.operator.interface.operations_interface import OperationsInterface
     from simulation.operator.interface.search_engine_interface import (
         SearchEngineInterface,
@@ -85,7 +88,7 @@ class OperatorInterface(SimulationBase, ABC):
         self,
         user: User,
         transportation_task: TransportTask,
-        selected_transportation_alternative: TransportationAlternative,
+        vehicle_allocation: VehicleAllocation,
     ) -> None:
         """
         Process payment for a fulfilled transportation task.
@@ -96,14 +99,17 @@ class OperatorInterface(SimulationBase, ABC):
             The user who requested the task.
         transportation_task : TransportTask
             The fulfilled task.
-        selected_transportation_alternative : TransportationAlternative
-            The selected transportation alternative for the task.
+        vehicle_allocation : VehicleAllocation
+            The vehicle allocation for the task.
         """
         pass
 
     @abstractmethod
     def log_failed_allocation_attempt(
-        self, user: User, transportation_task: TransportTask
+        self,
+        user: User,
+        transportation_task: TransportTask,
+        transportation_alternative: TransportationAlternative,
     ) -> None:
         """
         Log a failed vehicle allocation attempt.
@@ -113,6 +119,8 @@ class OperatorInterface(SimulationBase, ABC):
         user : User
             The user who requested the task.
         transportation_task : TransportTask
-            The task for which allocation failed.
+                The task for which allocation failed.
+        transportation_alternative : TransportationAlternative
+            The transportation alternative that was selected but could not be allocated.
         """
         pass
