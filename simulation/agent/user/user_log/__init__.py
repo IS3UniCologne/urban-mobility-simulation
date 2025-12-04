@@ -1,6 +1,6 @@
-"""User logging module.
+"""User logging package.
 
-This module logs user trip requests and their outcomes.
+This package logs user trip requests and their outcomes.
 """
 
 from .user_log import UserLog

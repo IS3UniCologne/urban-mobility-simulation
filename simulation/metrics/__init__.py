@@ -1,4 +1,4 @@
-"""Metrics module for simulation analysis.
+"""Metrics package for simulation analysis.
 
 Modules
 -------
