@@ -16,19 +16,18 @@ from simulation.operator.shared_mobility_operator import SharedMobilityOperator
 sv_car = SharedVehicleConfig(
     VEHICLE_TYPE=VehicleType.CAR,
     AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
-    PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
+    PROPULSION_TYPE=PropulsionType.INTERNAL_COMBUSTION,
     CHARGING_COST_PER_KWH=0.23,
     CONVENIENCE=3,
     COST_PER_KM=0.53,
     DAILY_TOTAL_COST=29.86,
-    ENERGY_CONSUMPTION=0.20,
-    EV_RELATIVE_ENERGY_CONSUMPTION=0.8,
+    ENERGY_CONSUMPTION_PER_KM=0.20,
     INITIAL_CHARGE_PERCENT=0.50,
     KG_CO2_PER_KM=0.236,
     MAX_AVAILABLE_SEATS=4,
-    MAX_STATE_OF_CHARGE=50.0,
+    ENERGY_CAPACITY=50.0,
     PRICE_PER_MIN=0.35,
-    VELOCITY=9.54,
+    VELOCITY_KMH=9.54,
     WALKING_DISTANCE=500,
 )
 
@@ -41,14 +40,13 @@ sv_scooter = SharedVehicleConfig(
     CONVENIENCE=2,
     COST_PER_KM=0.53,
     DAILY_TOTAL_COST=7.66,
-    ENERGY_CONSUMPTION=0.048,
-    EV_RELATIVE_ENERGY_CONSUMPTION=0.8,
+    ENERGY_CONSUMPTION_PER_KM=0.048,
     INITIAL_CHARGE_PERCENT=0.50,
     KG_CO2_PER_KM=0.051,
     MAX_AVAILABLE_SEATS=1,
-    MAX_STATE_OF_CHARGE=4.8,
+    ENERGY_CAPACITY=4.8,
     PRICE_PER_MIN=0.23,
-    VELOCITY=8.04,
+    VELOCITY_KMH=8.04,
     WALKING_DISTANCE=350,
 )
 
@@ -60,15 +58,14 @@ sv_kick_scooter = SharedVehicleConfig(
     CONVENIENCE=1,
     COST_PER_KM=0.53,
     DAILY_TOTAL_COST=11.51,
-    ENERGY_CONSUMPTION=0.0072,
-    EV_RELATIVE_ENERGY_CONSUMPTION=0.8,
+    ENERGY_CONSUMPTION_PER_KM=0.0072,
     INITIAL_CHARGE_PERCENT=0.5,
     KG_CO2_PER_KM=0.105,
     MAX_AVAILABLE_SEATS=1,
-    MAX_STATE_OF_CHARGE=0.288,
+    ENERGY_CAPACITY=0.288,
     PRICE_PER_MIN=0.19,
     PRICE_PER_TRIP=1.0,
-    VELOCITY=2.82,
+    VELOCITY_KMH=2.82,
     WALKING_DISTANCE=200,
 )
 
@@ -79,13 +76,13 @@ sv_bike = SharedVehicleConfig(
     CONVENIENCE=1,
     COST_PER_KM=0.10,
     DAILY_TOTAL_COST=11.51,
-    ENERGY_CONSUMPTION=0.0,
+    ENERGY_CONSUMPTION_PER_KM=0.0,
     INITIAL_CHARGE_PERCENT=1.0,
     KG_CO2_PER_KM=0.046,
     MAX_AVAILABLE_SEATS=1,
-    MAX_STATE_OF_CHARGE=1.0,
+    ENERGY_CAPACITY=1.0,
     PRICE_PER_MIN=0.08,
-    VELOCITY=2.82,
+    VELOCITY_KMH=2.82,
     WALKING_DISTANCE=200,
 )
 
@@ -130,7 +127,7 @@ operator_1 = SharedVehicleOperatorConfig(
         TIME_BETWEEN_OPERATIONS=15,
         # When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
         # Optimal Deployment of Charging Stations for Electric Vehicular Networks https://dl.acm.org/doi/pdf/10.1145/2413236.2413238 -> SOC threshold: 0.05
-        RECHARGE_THRESHOLD=0.1,
+        RECHARGE_THRESHOLD=0.3,
         # Velocity of Relocation Vehicle (i.e., car/van velocity) in kilometer/hour
         # Free-floating carsharing vehicle placement and relocation -> Takes 40 km/h but says that this is probably too fast for the city center.
         # Feature-based selection of carsharing relocation modes: 15-20 km/h for Munich, Milan and Toronto https://www.sciencedirect.com/science/article/pii/S1366554521000466

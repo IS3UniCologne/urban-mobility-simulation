@@ -10,14 +10,16 @@ from simulation.helper.configuration.configuration import (
 user1 = UserConfig(
     TRANSIT_MAX_WAIT=15,
     SPATIAL_STRATEGY="nearest",
-    WALKING_SPEED=5.0,  # km/h
+    WALKING_SPEED_KMH=5.0,  # km/h
+    MAX_SEARCH_DURATION_MIN=10,
     CHOICE_MODEL_CONFIG=RandomModeNearestVehicleChoiceModelConfig(),
 )
 
 user2 = UserConfig(
     TRANSIT_MAX_WAIT=15,
     SPATIAL_STRATEGY="nearest",
-    WALKING_SPEED=5.5,  # km/h not so fast!
+    WALKING_SPEED_KMH=5.5,  # km/h not so fast!
+    MAX_SEARCH_DURATION_MIN=15,
     CHOICE_MODEL_CONFIG=RandomModeNearestVehicleChoiceModelConfig(),
 )
 

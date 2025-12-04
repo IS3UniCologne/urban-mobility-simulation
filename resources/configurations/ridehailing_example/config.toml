@@ -7,11 +7,12 @@
 [SETTINGS]
 
 # Logging
-LOG_LEVEL      = "DEBUG"
-FILE_LOG_LEVEL = "DEBUG"
+# WARNING: Setting log levels to DEBUG will SIGNIFICANTLY slow down the simulation!
+LOG_LEVEL      = "INFO"
+FILE_LOG_LEVEL = "INFO"
 LOG_TIMESTAMPS = false
 # Set class specific log levels. This takes precedence over the global log levels and applies to console and log files.
-LOG_CLASS_OVERRIDES = { RideHailingUser = "DEBUG", RideHailingOperator = "DEBUG" }
+LOG_CLASS_OVERRIDES = { RideHailingUser = "DEBUG", RideHailingOperator = "INFO" }
 # Output
 PERSIST_RESULTS = true
 
