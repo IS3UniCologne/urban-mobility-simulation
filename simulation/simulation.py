@@ -58,9 +58,9 @@ class Simulation:
         self.demand_factory = self._create_demand_factory()
         self.sim.env.process(self.demand_factory.generate_demand())
 
-        self.logger.warning("Starting Simulation.")
+        self.logger.info("Starting Simulation.")
         self.sim.env.run(until=end_time)
-        self.logger.warning("Ending Simulation.")
+        self.logger.info("Ending Simulation.")
 
         self._post_simulation_processing()
 
