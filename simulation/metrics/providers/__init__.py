@@ -1,5 +1,5 @@
 """
-Metrics providers module.
+Metrics providers package.
 
 This package contains the high-level metrics provider classes that format
 and aggregate data for the main Metrics class.
