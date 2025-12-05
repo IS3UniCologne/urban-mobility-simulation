@@ -54,4 +54,4 @@ class RideHailingOperator(Operator):
             energy_consumed=vehicle_allocation.energy_consumed,
         )
 
-        self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
+        self.logger.debug("New Payment (%s) received from User %s.", payment, user.uid)
