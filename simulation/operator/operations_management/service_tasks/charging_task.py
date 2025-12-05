@@ -13,6 +13,7 @@ from simulation.operator.operations_management.service_tasks.service_task import
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.operator.vehicle_fleet import VehicleFleet
+    from simulation.vehicle.vehicle import Vehicle
 
 
 class ChargingTask(ServiceTask):  # noqa: D101
@@ -75,11 +76,11 @@ class ChargingTask(ServiceTask):  # noqa: D101
 
             # Identify vehicles to relocate
             potential_vehicles_to_charge = (
-                self._vehicle_fleet.vehicles_below_soc_threshold_in_region(
+                self._vehicle_fleet.vehicles_below_energy_threshold_in_region(
                     self._state_of_charge_threshold, self._origin
                 )
             )
-            selected_vehicles_to_charge = []
+            selected_vehicles_to_charge: list[Vehicle] = []
 
             # Filter relevant vehicles
             for vehicle in potential_vehicles_to_charge:
@@ -136,7 +137,7 @@ class ChargingTask(ServiceTask):  # noqa: D101
             # Note: See text regarding linearization
             # *60 as state of charge is in kWh => kWmin
             charging_duration_per_vehicles = (
-                (vehicle._max_state_of_charge / vehicle_charging_power) * 60  # noqa: SLF001
+                (vehicle.energy_system.capacity / vehicle_charging_power) * 60
             ) / len(selected_vehicles_to_charge)
 
             yield self._env.process(vehicle.charge(charging_duration_per_vehicles))

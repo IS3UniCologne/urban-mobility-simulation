@@ -123,7 +123,7 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
         return sum(
             1
             for vehicle in self._vehicles
-            if vehicle.current_relative_state_of_charge < state_of_charge_threshold
+            if vehicle.energy_system.current_energy_relative < state_of_charge_threshold
         )
 
     def get_operational_costs(self):  # noqa: ANN201, D102
@@ -150,7 +150,10 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
         cars_in_area_sorted = sorted(cars_in_area, key=lambda v: v.uid)
 
         for vehicle in cars_in_area_sorted:
-            if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
+            if (
+                vehicle.energy_system.current_energy_relative
+                < state_of_charge_threshold
+            ):
                 below_soc_level_vehicles.append(vehicle)
 
         return below_soc_level_vehicles
@@ -248,13 +251,14 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
 
         for vehicle in parking_vehicles_sorted:
             if (
-                vehicle.current_relative_state_of_charge < state_of_charge_threshold
+                vehicle.energy_system.current_energy_relative
+                < state_of_charge_threshold
                 and not vehicle._suggested  # noqa: SLF001
             ):
                 low_soc_supply.append(vehicle)
 
         low_soc_supply = sorted(
-            low_soc_supply, key=lambda x: x.current_relative_state_of_charge
+            low_soc_supply, key=lambda x: x.energy_system.current_energy_relative
         )
         return low_soc_supply
 

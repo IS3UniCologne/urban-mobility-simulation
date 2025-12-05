@@ -2,8 +2,9 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, Any
 
-from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.helper.configuration.enums import VehicleState
 from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
+from simulation.vehicle.movement_stats import MovementStats
 
 from .vehicle import Vehicle
 
@@ -31,15 +32,12 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         "_charging_station_charging_started",
         "_charging_station_plugged_in",
         "_charging_station_plugged_out",
-        "_current_state_of_charge",
         "_driver",
         "_driver_mounted",
         "_driver_unmounted",
         "_driving_finished",
         "_driving_started",
-        "_energy_consumption",
         "_max_available_seats",
-        "_max_state_of_charge",
         "_max_walking_distance",
         "_price_per_minute",
         "_price_per_trip",
@@ -69,17 +67,6 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self._driver: DriverInterface | None = None
 
         self._max_walking_distance: float = vehicle_config.WALKING_DISTANCE
-
-        # State Of Charge
-        self._max_state_of_charge: float = vehicle_config.MAX_STATE_OF_CHARGE  # in kWh
-
-        # Initialize SoC as percentage of max capacity
-        initial_charge_percent = vehicle_config.INITIAL_CHARGE_PERCENT
-        self._current_state_of_charge: float = (
-            self._max_state_of_charge * initial_charge_percent
-        )  # in kWh
-
-        self._energy_consumption: float = vehicle_config.ENERGY_CONSUMPTION  # in kWh/km
 
         self._reserved_for_user: User | None = None
 
@@ -134,43 +121,28 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         return self._max_walking_distance
 
     @property
-    def max_state_of_charge(self) -> float:  # noqa: D102
-        return self._max_state_of_charge
-
-    @property
-    def current_state_of_charge(self) -> float:  # noqa: D102
-        return self._current_state_of_charge
-
-    @property
-    def current_relative_state_of_charge(self) -> float:  # noqa: D102
-        return (
-            self.current_state_of_charge / self.max_state_of_charge
-            if self.max_state_of_charge != 0
-            else 0
-        )
-
-    @property
-    def energy_consumption(self) -> float:  # noqa: D102
-        return self._energy_consumption
-
-    @property
     def velocity(self) -> float:  # noqa: D102
-        return self._velocity
+        return self._velocity_mm
 
-    def move(self, route_segment: Edge) -> Generator[Any, Any, Any]:  # noqa: D102
+    def move(self, route_segment: Edge) -> Generator[Any, Any, MovementStats]:  # noqa: D102
         distance = route_segment.distance
-        velocity = self._velocity
+        velocity = self._velocity_mm
         time = distance / velocity
 
-        if not self.has_enough_state_of_charge(distance):
+        if not self.energy_system.has_enough_energy(distance):
             raise RuntimeError(
-                f"{self.__class__.__name__!s} {self.uid} has been tried to move but has not enough state of charge."
+                f"{self.__class__.__name__!s} {self.uid} has been tried to move but has not enough energy."
             )
 
         yield self._env.timeout(time)
 
         self._update_positions(route_segment.destination.position)
-        self._update_state_of_charge(distance)
+        energy_consumed = self.energy_system.consume_for_distance(distance)
+        return MovementStats(
+            energy_consumed=energy_consumed,
+            distance_travelled=distance,
+            time_taken=time,
+        )
 
     def start_driving(self) -> None:  # noqa: D102
         self.state = VehicleState.DRIVING
@@ -190,39 +162,6 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self.state = VehicleState.PARKING
 
         self.logger.debug("Parked.")
-
-    def has_enough_state_of_charge(self, distance: float) -> bool:
-        """
-        Check if vehicle has enough SoC left for trip
-        :param distance: in meter
-        :return:
-        """  # noqa: D205, D400
-        # Bike does not need to check SoC
-        if self._vehicle_type == VehicleType.BIKE:
-            return True
-
-        if self.energy_consumption * distance / 1000 >= self._current_state_of_charge:
-            return False
-        return True
-
-    def _update_state_of_charge(self, distance: float) -> None:
-        """
-        Update state of charge of vehicles based on driven distance.
-        SoC = SoC_old - EnergyConsumption (kWh/km) * km
-        :param distance: Distance driven
-        """  # noqa: D205, D400
-        energy_consumed = self.energy_consumption * distance / 1000
-        self._current_state_of_charge -= energy_consumed
-
-        if self._current_state_of_charge < 0:
-            self._current_state_of_charge = 0.0
-
-        self.logger.debug(
-            "Current state of charge %s/%s (%s%%).",
-            round(self.current_state_of_charge, 2),
-            self.max_state_of_charge,
-            round(self.current_state_of_charge / self.max_state_of_charge * 100, 2),
-        )
 
     def _update_positions(self, new_position: Position) -> None:
         # Update Vehicle Position
@@ -339,28 +278,24 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self.logger.debug("Vehicle plugged out from charging station.")
 
     def charge(self, charging_time: float, amount: int = 0) -> Generator[Any, Any, Any]:  # noqa: D102
+        # TODO: This should be somewhere else. Either the base class or energy system or a dedicated component.
+
         # Notify charging
         self._charging_station_charging_started.succeed()
         self._charging_station_charging_started = self._env.event()
 
-        if amount == 0:
-            amount = self._max_state_of_charge - self._current_state_of_charge
-
-        # Update Current State of Charge
-        self._current_state_of_charge += amount
-
-        # Charge
-        yield self._env.timeout(charging_time)
+        # Delegate to energy system
+        yield from self.energy_system.refill(amount, charging_time)
 
         # Notify charging ended
         self._charging_station_charging_finished.succeed()
         self._charging_station_charging_finished = self._env.event()
 
         self.logger.debug(
-            "Vehicle charged %s kWh and has now %s kWh out of %s.",
+            "Vehicle charged %s (units) and has now %s out of %s.",
             amount,
-            self._current_state_of_charge,
-            self._max_state_of_charge,
+            self.energy_system.current_energy_absolute,
+            self.energy_system.capacity,
         )
 
     def __str__(self):  # noqa: ANN204, D105

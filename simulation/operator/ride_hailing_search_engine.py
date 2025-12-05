@@ -70,6 +70,7 @@ class RideHailingSearchEngine(SearchEngine):
 
         origin = transport_task.origin
 
+        # TODO: These are vehicles, not necessarily cars
         cars_in_area = self._fleet.get_available_vehicles_to_user(origin)
 
         destination = transport_task.destination
@@ -132,11 +133,11 @@ class RideHailingSearchEngine(SearchEngine):
                 convenience=3,
                 operator=self.operator,
                 route_to_pickup=route_to_pick_up,
-                pick_up_time=pickup_time,
+                est_pickup_time=pickup_time,
             )
 
             total_distance = distance + distance_to_pick_up
-            if car.has_enough_state_of_charge(total_distance) and car.state in [
+            if car.energy_system.has_enough_energy(total_distance) and car.state in [
                 VehicleState.PARKING,
                 VehicleState.DRIVING,
             ]:
@@ -185,11 +186,11 @@ class RideHailingSearchEngine(SearchEngine):
                 convenience=3,
                 operator=self.operator,
                 route_to_pickup=route_to_pick_up,
-                pick_up_time=pickup_time,
+                est_pickup_time=pickup_time,
             )
 
             total_distance = distance + distance_to_pick_up
-            if car.has_enough_state_of_charge(total_distance) and car.state in [
+            if car.energy_system.has_enough_energy(total_distance) and car.state in [
                 VehicleState.PARKING,
                 VehicleState.DRIVING,
             ]:
