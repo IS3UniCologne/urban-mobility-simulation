@@ -29,9 +29,10 @@ if TYPE_CHECKING:
     import simpy
 
     from simulation.environment.position import Position
+    from simulation.helper.configuration.configuration import OperationsConfig
     from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
-    from simulation.operator.transactions import DemandMonitor
-    from simulation.operator.transactions.demand_monitor import VehicleDemandByRegion
+    from simulation.operator.operator_log import DemandMonitor
+    from simulation.operator.operator_log.demand_monitor import VehicleDemandByRegion
 
 
 class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
@@ -45,6 +46,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         "_duration_of_operations",
         "_geo_env",
         "_max_vehicle_supply",
+        "_operations_start",
         "_operations_started",
         "_ordered_max_vehicle_supply",
         "_scheduled_tasks",
@@ -74,10 +76,12 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
             self.operator.fleet.count_by_type.values()
         )  # TODO: Remove dependency on ordering
 
-        ops_config = deps.operations_config
+        ops_config: OperationsConfig = deps.operations_config
 
         self._base_regions = ops_config.BASE_REGIONS
         self._base_capacity = ops_config.BASE_CAPACITY
+
+        self._operations_start = ops_config.OPERATIONS_START
 
         self._state_of_charge_threshold = ops_config.RECHARGE_THRESHOLD
 
@@ -113,15 +117,20 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
         """  # noqa: D200, D400
+        # Wait for operations to start
+        if self._operations_start > 0:
+            yield self._env.timeout(self._operations_start)
+
         while True:
-            yield self._env.timeout(self._time_between_operations)
+            cycle_start = self._env.now
+            cycle_end = cycle_start + self._duration_of_operations
 
             # Clean old jobs (if there are some left)
             self._workforce.task_queue.clear()
 
-            if not self.operator.transaction_log.has_successful_transaction:
+            if not self.operator.operator_log.has_successful_transaction:
                 self.logger.debug(
-                    "Skip operations, cause there has not been one successful transaction yet"
+                    "No successful transactions yet, skipping operations cycle."
                 )
                 continue
 
@@ -208,7 +217,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
             self.logger.info(
                 "There are %s vehicles with low state of charge.",
                 len(
-                    self._operator.fleet.vehicles_below_soc_threshold(
+                    self._operator.fleet.vehicles_below_energy_threshold(
                         self._state_of_charge_threshold
                     )
                 ),
@@ -224,11 +233,8 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
             self._charging_plan_updated.succeed()
             self._charging_plan_updated = self._env.event()
 
-            # While Shift is not over, recalculate relocation plans and execute them.
-            while (
-                self._env.now % self._time_between_operations
-                < self._duration_of_operations
-            ):
+            # Relocation phase (while within operations window)
+            while self._env.now < cycle_end:
                 self.logger.info("Planning next relocation schedule.")
 
                 # Reset Scheduled Tasks
@@ -333,6 +339,11 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                 self.logger.info(
                     "Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan."
                 )
+
+            # Wait until next cycle
+            next_cycle = cycle_start + self._time_between_operations
+            wait_time = max(0, next_cycle - self._env.now)
+            yield self._env.timeout(wait_time)
 
     def generate_relocation_plan(
         self,
@@ -909,7 +920,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                     hexagons = {}
 
                     for tuple_idx, tuple in enumerate(relocation):
-                        origin, destination, vehicle_count, distance = tuple
+                        origin, destination, _, _ = tuple
 
                         # We relocate vehicles to this position => Index 0
                         if tuple_idx == 0:
@@ -1155,12 +1166,11 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         - A positive delta indicates a vehicle surplus (more arrivals than departures).
         """
         vehicle_demand: VehicleDemandByRegion = demand_monitor.get_demand_data()
-        ordered_available_vehicle = demand_monitor.ordered_available_vehicles
 
         rows = []
         for hex_id in vehicle_demand.keys():
             row: dict[str, int | str] = {"hex_id": hex_id}
-            for vehicle in ordered_available_vehicle:
+            for vehicle in self._available_vehicle_types:
                 inflow = (
                     vehicle_demand.get(hex_id, {}).get(vehicle, {}).get("inflow", 0)
                 )
