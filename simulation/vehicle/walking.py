@@ -14,11 +14,11 @@ class Walking(Vehicle):  # noqa: D101
         # Position of Walking actually just takes user position, so it does not matter
         super(Walking, self).__init__(env, GeodesicPosition(0, 0, None))  # noqa: UP008
 
-        self._velocity = velocity
+        self._velocity_mm = velocity
 
     @property
     def velocity(self) -> float:  # noqa: D102
-        return self._velocity
+        return self._velocity_mm
 
     def move(self, route_segment: Edge):  # noqa: ANN201, D102
         self.logger.warning(

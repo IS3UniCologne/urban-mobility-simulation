@@ -77,7 +77,7 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
                 operator=self._operator,
             )
 
-            if vehicle.has_enough_state_of_charge(distance):
+            if vehicle.energy_system.has_enough_energy(distance):
                 browser.add_transportation_alternative(transportation_alternative)
 
         return browser

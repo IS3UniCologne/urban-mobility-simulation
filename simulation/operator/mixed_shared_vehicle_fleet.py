@@ -28,55 +28,6 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
             sim=deps.sim, position=position, fleet=self, vehicle_config=vehicle_config
         )
 
-    def vehicles_below_soc_threshold(
-        self, state_of_charge_threshold: float
-    ) -> set[SharedVehicle]:
-        """Return all vehicles that need to be refueled/recharged.
-
-        Parameters
-        ----------
-        state_of_charge_threshold : float
-            Threshold value between 0 and 1
-
-        Returns
-        -------
-        set[SharedVehicle]
-            Set of vehicles with state of charge below the threshold
-        """
-        return {
-            vehicle
-            for vehicle in self.vehicles
-            if vehicle.current_relative_state_of_charge < state_of_charge_threshold
-        }
-
-    def vehicles_below_soc_threshold_in_region(
-        self, state_of_charge_threshold: float, region: str
-    ) -> list[SharedVehicle]:
-        """Return all vehicles that need to be refueled/recharged in a region.
-
-        Parameters
-        ----------
-        state_of_charge_threshold : float
-            Threshold value between 0 and 1
-        region : str
-            Region identifier (e.g., hexagon ID)
-
-        Returns
-        -------
-        list[SharedVehicle]
-            List of vehicles in the region with state of charge below the threshold
-        """
-        below_soc_level_vehicles = []
-        vehicles_in_region = self.vehicles_in_region(region)
-        # TODO: Check if this is necessary
-        vehicles_in_region_sorted = sorted(vehicles_in_region, key=lambda v: v.uid)
-
-        for vehicle in vehicles_in_region_sorted:
-            if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
-                below_soc_level_vehicles.append(vehicle)
-
-        return below_soc_level_vehicles
-
     def supply_per_region(self) -> dict[str, dict[str, int]]:
         """Calculate the supply of vehicles by mode for each region.
 
@@ -137,25 +88,25 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
         low_soc_supply = {}
 
         # Create a set of vehicles needing charge for fast lookups
-        vehicles_needing_charge = self.vehicles_below_soc_threshold(
+        vehicles_needing_charge = self.vehicles_below_energy_threshold(
             state_of_charge_threshold
         )
 
-        if not vehicles_needing_charge:
-            return low_soc_supply
-
-        # For each region with vehicles
         for region_id, vehicles_in_region in self._vehicles_by_region.items():
-            # Find vehicles in this region that need charging
+            if not vehicles_in_region:
+                continue
+
+            low_soc_supply[region_id] = {mode: 0 for mode in self.vehicle_types}
+
+            if not vehicles_needing_charge:
+                continue
+
             region_vehicles_needing_charge = vehicles_in_region.intersection(
                 vehicles_needing_charge
             )
 
             if not region_vehicles_needing_charge:
                 continue
-
-            # Initialize region entry
-            low_soc_supply[region_id] = {mode: 0 for mode in self.vehicle_types}
 
             # Count vehicles by mode in this region that need charging
             for mode in self.vehicle_types:

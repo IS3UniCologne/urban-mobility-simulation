@@ -86,12 +86,10 @@ class ChargingTaskRidehailing(ServiceTask):  # noqa: D101
         self._waiting_time = None
         self._charging_duration = (
             (
-                vehicle.max_state_of_charge
-                - vehicle.current_relative_state_of_charge
-                + (
-                    (vehicle.position >> self._destination_position)
-                    / 1000
-                    * vehicle._energy_consumption  # noqa: SLF001
+                vehicle.energy_system.capacity
+                - vehicle.energy_system.current_energy_absolute
+                + vehicle.energy_system.calculate_energy_required(
+                    vehicle.position >> self._destination_position
                 )
             )
             / charging_station.power

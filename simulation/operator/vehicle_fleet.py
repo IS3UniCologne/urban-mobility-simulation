@@ -312,6 +312,53 @@ class VehicleFleet(SimulationBase, ABC):
             self._vehicles_by_state[state]
         )
 
+    def vehicles_below_energy_threshold(self, energy_threshold: float) -> set[Vehicle]:
+        """Return all vehicles that need to be refueled/recharged.
+
+        Parameters
+        ----------
+        energy_threshold : float
+            Threshold value between 0 and 1
+
+        Returns
+        -------
+        set[Vehicle]
+            Set of vehicles with energy level below the threshold
+        """
+        return {
+            vehicle
+            for vehicle in self.vehicles
+            if vehicle.energy_system.current_energy_relative < energy_threshold
+        }
+
+    def vehicles_below_energy_threshold_in_region(
+        self, energy_threshold: float, region: RegionId
+    ) -> list[Vehicle]:
+        """Return all vehicles that need to be refueled/recharged in a region.
+
+        Parameters
+        ----------
+        energy_threshold : float
+            Threshold value between 0 and 1
+        region : RegionId
+            Region identifier (e.g., hexagon ID)
+
+        Returns
+        -------
+        list[Vehicle]
+            List of vehicles in the region with energy level below the threshold
+        """
+        below_energy_level_vehicles = []
+        vehicles_in_region = self.vehicles_in_region(region)
+        # TODO: Check if this is necessary
+        vehicles_in_region_sorted = sorted(vehicles_in_region, key=lambda v: v.uid)
+
+        for vehicle in vehicles_in_region_sorted:
+            if vehicle.energy_system.current_energy_relative < energy_threshold:
+                below_energy_level_vehicles.append(vehicle)
+
+        return below_energy_level_vehicles
+
     def register_vehicle(self, vehicle: Vehicle) -> None:
         """Register a new vehicle to the fleet."""
         if vehicle in self._vehicles:

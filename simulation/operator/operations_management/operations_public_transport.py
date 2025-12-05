@@ -51,7 +51,7 @@ class OperationsPublicTransport(OperationsInterface):  # noqa: D101
         self._fleet = fleet
         self._operator_config = operator_config
         self._walking_speed = self._config.user.WALKING_SPEED
-        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY
+        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY_KMH
 
     def execute(self):  # noqa: ANN201
         """

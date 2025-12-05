@@ -259,8 +259,10 @@ class VehicleConfig(ConfigBaseModel):
     PROPULSION_TYPE: PropulsionType = PropulsionType.BATTERY_ELECTRIC
     ENERGY_CAPACITY: float = Field(default=None, gt=0)  # kWh or Liters
     ENERGY_CONSUMPTION_PER_KM: float = Field(default=None, ge=0)  # kWh/km or Liters/km
-    INITIAL_CHARGE_PERCENT: float = Field(default=None, ge=0, le=1)
-    ENERGY_BUFFER_PERCENT: float | None = Field(default=None, ge=0, le=1)
+    INITIAL_CHARGE_RATIO: float = Field(default=None, ge=0, le=1)
+    ENERGY_RESERVE_RATIO: float | None = Field(
+        default=None, ge=0, le=1, description="Reserve energy ratio to maintain"
+    )
     WALKING_DISTANCE: int | None = Field(
         default=None, ge=0, le=10000
     )  # TODO: Move this to users
