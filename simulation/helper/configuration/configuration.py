@@ -453,24 +453,6 @@ class IntegratedSharedMobilityOperationsConfig(OperationsConfig):
     BASE_CAPACITY: int | None = Field(default=None)
     BASE_REGIONS: list[str] | None = Field(default=None)
 
-    @model_validator(mode="after")
-    def clamp_base_regions(self) -> IntegratedSharedMobilityOperationsConfig:
-        """
-        Clamp base regions list to match the number of base regions.
-
-        TODO: Same as above, not super intuitive.
-
-        Returns
-        -------
-        IntegratedSharedMobilityOperationsConfig
-            A new instance with updated BASE_REGIONS.
-        """
-        if self.BASE_REGIONS is None or self.NUMBER_OF_BASE_REGIONS is None:
-            return self
-        return self.model_copy(
-            update={"BASE_REGIONS": self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]}
-        )
-
 
 class OperatorConfig(ConfigBaseModel):
     """Configuration for operator parameters."""

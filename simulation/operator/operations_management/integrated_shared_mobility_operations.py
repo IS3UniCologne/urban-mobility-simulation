@@ -80,6 +80,12 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         ops_config: OperationsConfig = deps.operations_config
 
         self._base_regions = ops_config.BASE_REGIONS
+        if (
+            self._base_regions is not None
+            and ops_config.NUMBER_OF_BASE_REGIONS is not None
+        ):
+            self._base_regions = self._base_regions[: ops_config.NUMBER_OF_BASE_REGIONS]
+
         self._base_capacity = ops_config.BASE_CAPACITY
 
         self._operations_start = ops_config.OPERATIONS_START
