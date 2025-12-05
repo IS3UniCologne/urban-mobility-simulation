@@ -35,7 +35,7 @@ from simulation.vehicle.shared_vehicle import SharedVehicle
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from simpy import Process, Timeout
+    from simpy import Event, Process, Timeout
 
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
@@ -697,7 +697,7 @@ class User(Agent, DriverInterface, PassengerInterface):
         """
         vehicle = vehicle_allocation.vehicle
         route = vehicle_allocation.transportation_alternative.route
-        energy_consumed = 0.0
+        energy_consumed: float = 0.0
 
         if isinstance(vehicle, RideHailingVehicle):
             # Mount vehicle as passenger
@@ -706,7 +706,7 @@ class User(Agent, DriverInterface, PassengerInterface):
 
             # Vehicle drives to destination
             energy_consumed = yield self._env.process(
-                self.ride_in_vehicle(vehicle, route)
+                generator=self.ride_in_vehicle(vehicle, route)
             )
 
             self.park_vehicle(vehicle)  # type: ignore #TODO: This should not be done by the user
@@ -861,7 +861,7 @@ class User(Agent, DriverInterface, PassengerInterface):
 
     def drive_vehicle(
         self, vehicle: SharedVehicle, route: Route
-    ) -> Generator[Process, Any, float]:
+    ) -> Generator[Event, Any, float]:
         """
         Drive vehicle along route.
 
@@ -876,8 +876,8 @@ class User(Agent, DriverInterface, PassengerInterface):
 
         Yields
         ------
-        Process
-            Driving process.
+        Event
+            Driving process events.
 
         Returns
         -------
@@ -951,7 +951,7 @@ class User(Agent, DriverInterface, PassengerInterface):
 
     def ride_in_vehicle(
         self, vehicle: RideHailingVehicle, route: Route
-    ) -> Generator[Process, Any, float]:
+    ) -> Generator[Event, Any, float]:
         """
         Ride in vehicle as a passenger.
 
@@ -966,8 +966,8 @@ class User(Agent, DriverInterface, PassengerInterface):
 
         Yields
         ------
-        Process
-            Riding process.
+        Event
+            Riding process events.
 
         Returns
         -------

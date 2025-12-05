@@ -368,7 +368,7 @@ class Operator(OperatorInterface):
             energy_consumed=vehicle_allocation.energy_consumed,
         )
 
-        self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
+        self.logger.debug("New Payment (%s) received from User %s.", payment, user.uid)
 
     def withdraw_transportation_task(  # noqa: D102
         self, user: User, transportation_task: TransportTask, state: TransactionState

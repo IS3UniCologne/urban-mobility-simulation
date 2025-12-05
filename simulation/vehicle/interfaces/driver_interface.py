@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from simpy import Process
+    from simpy import Event
 
 
 class DriverInterface(ABC):  # noqa: D101
@@ -21,7 +21,7 @@ class DriverInterface(ABC):  # noqa: D101
         pass
 
     @abstractmethod
-    def drive_vehicle(self, vehicle, route) -> Generator[Process, Any, None]:  # noqa: ANN001, D102
+    def drive_vehicle(self, vehicle, route) -> Generator[Event, Any, float]:  # noqa: ANN001, D102
         pass
 
     @abstractmethod

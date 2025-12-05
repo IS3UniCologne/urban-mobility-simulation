@@ -78,7 +78,7 @@ class Vehicle(SimulationBase, ABC):
         "_user_mounted",
         "_user_unmounted",
         "_vehicle_type",
-        "_velocity",
+        "_velocity_mm",
     )
 
     # We need to override __eq__ and __hash__ to use Vehicles in sets

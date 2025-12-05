@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from simpy import Process
+    from simpy import Event
 
     from simulation.infrastructure.route import Route
     from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
@@ -28,7 +28,7 @@ class PassengerInterface(ABC):  # noqa: D101
     @abstractmethod
     def ride_in_vehicle(
         self, vehicle: RideHailingVehicle, route: Route
-    ) -> Generator[Process, Any, None]:
+    ) -> Generator[Event, Any, float]:
         """Ride in vehicle to destination as a passenger."""
         pass
 

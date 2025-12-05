@@ -247,12 +247,12 @@ class VehicleFleet(SimulationBase, ABC):
             for region, vehicles in self._vehicles_by_region.items()
         }
 
-    def parking_vehicles_in_region(self, region: str) -> set[Vehicle]:
+    def parking_vehicles_in_region(self, region: RegionId) -> set[Vehicle]:
         """Retrieve all vehicles currently in the PARKING state within the specified region.
 
         Parameters
         ----------
-        region : str
+        region : RegionId
             Region identifier (e.g., hexagon ID).
 
         Returns
