@@ -34,10 +34,6 @@ class BaseOperatorLogEntry:
         State of the transaction.
     price : float
         Price paid for the trip.
-    revenue : float
-        Revenue earned from the trip for the operator.
-    duration : float
-        Duration of the trip.
     """
 
     origin: RegionId
@@ -48,8 +44,6 @@ class BaseOperatorLogEntry:
     accepted_vehicle_types: frozenset[VehicleType]
     state: TransactionState
     price: float
-    revenue: float
-    duration: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +65,10 @@ class FulfilledOperatorLogEntry(BaseOperatorLogEntry):
         Energy consumed during the trip.
     selected_vehicle_EV : bool
         Whether the selected vehicle is electric.
+    revenue : float
+        Revenue earned from the trip for the operator.
+    duration : float
+        Duration of the trip.
     """
 
     vehicle_uid: SimId
@@ -78,6 +76,8 @@ class FulfilledOperatorLogEntry(BaseOperatorLogEntry):
     pick_up_time: float
     energy_consumption: float
     selected_vehicle_EV: bool
+    revenue: float
+    duration: float
 
     def __post_init__(self) -> None:
         """Validate that state is FULFILLED."""
