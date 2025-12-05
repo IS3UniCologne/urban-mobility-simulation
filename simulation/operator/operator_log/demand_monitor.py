@@ -75,7 +75,9 @@ class DemandMonitor(OperatorLogEntryListener):
             self.vehicle_data[destination][vehicle_type]["inflow"] += 1
         elif isinstance(transaction, MissedOperatorLogEntry):
             # TODO: Find a better way to do this, for now this should be approximately correct over time :)
-            vehicle_type = self._rng.choice(list(transaction.accepted_vehicle_types))
+            vehicle_type = self._rng.choice(
+                sorted(list(transaction.accepted_vehicle_types))
+            )
             self.vehicle_data[origin][vehicle_type]["outflow_missed"] += 1
 
     def get_demand_data(self) -> VehicleDemandByRegion:

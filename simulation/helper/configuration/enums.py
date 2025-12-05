@@ -2,19 +2,7 @@
 
 from __future__ import annotations
 
-import sys
-from enum import Enum, IntEnum
-
-if sys.version_info >= (3, 11):
-    from enum import StrEnum  # Python 3.11+
-else:
-
-    class StrEnum(str, Enum):  # type: ignore[no-redef]
-        """
-        StrEnum replacement for Python < 3.11.
-
-        We can remove this once we drop support for Python 3.11.
-        """
+from enum import Enum, IntEnum, StrEnum
 
 
 class TemporalResolution(IntEnum):

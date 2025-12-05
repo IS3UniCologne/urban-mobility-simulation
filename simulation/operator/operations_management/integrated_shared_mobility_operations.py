@@ -69,12 +69,13 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         # For example: If we observe a demand for KickScooter and Scooter, we count that
         # demand to KickScooter. This ordering is defined according to the following list
         # (from left to right)
-        self._available_vehicle_types: list[VehicleType] = list(
-            self.operator.fleet.count_by_type.keys()
+        count_by_type = self.operator.fleet.count_by_type
+        self._available_vehicle_types: list[VehicleType] = sorted(
+            list(count_by_type.keys())
         )  # TODO: Remove dependency on ordering
-        self._max_vehicle_supply: list[int] = list(
-            self.operator.fleet.count_by_type.values()
-        )  # TODO: Remove dependency on ordering
+        self._max_vehicle_supply: list[int] = [
+            count_by_type[t] for t in self._available_vehicle_types
+        ]  # TODO: Remove dependency on ordering
 
         ops_config: OperationsConfig = deps.operations_config
 
@@ -1168,7 +1169,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         vehicle_demand: VehicleDemandByRegion = demand_monitor.get_demand_data()
 
         rows = []
-        for hex_id in vehicle_demand.keys():
+        for hex_id in sorted(vehicle_demand.keys()):
             row: dict[str, int | str] = {"hex_id": hex_id}
             for vehicle in self._available_vehicle_types:
                 inflow = (
