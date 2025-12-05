@@ -3397,7 +3397,7 @@ requires-dist = [
     { name = "torch", marker = "extra == 'ml'", specifier = ">=2.6.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
-provides-extras = ["ml", "notebooks"]
+provides-extras = ["notebooks", "ml"]
 
 [package.metadata.requires-dev]
 dev = [
