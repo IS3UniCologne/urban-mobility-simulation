@@ -422,35 +422,12 @@ class RideHailingOperationsConfig(OperationsConfig):
     # OPERATOR_TYPE: type[Operator] =
 
     DRIVER_PAYMENT_SHARE: float = Field(gt=0)
-    DISCOUNT_RATE: float = Field(ge=0)
     AV_PRICE_REDUCTION: float = Field(gt=0)
     MAX_PICKUP_DISTANCE: int = Field(gt=0)
     PRICE_ENTERING: float = Field(ge=0)
     PRICE_PER_MINUTE: float = Field(ge=0)
     PRICE_PER_KM: float = Field(ge=0)
     MINIMUM_PRICE: float = Field(ge=0)
-
-    @model_validator(mode="after")
-    def apply_discount_and_availability(self) -> RideHailingGlobalConfig:
-        """
-        Apply discount to price fields and compute driver availability vector.
-
-        Returns
-        -------
-        RideHailingOperationsConfig
-            A new instance with updated price fields and driver availability vector.
-        """
-        # TODO: Is this functionality really necessary ?
-        discount = 1.0 - self.DISCOUNT_RATE
-        # TODO: Do this in fleet creation, store in vehicle
-        return self.model_copy(
-            update={
-                "PRICE_ENTERING": self.PRICE_ENTERING * discount,
-                "PRICE_PER_MINUTE": self.PRICE_PER_MINUTE * discount,
-                "PRICE_PER_KM": self.PRICE_PER_KM * discount,
-                "MINIMUM_PRICE": self.MINIMUM_PRICE * discount,
-            }
-        )
 
 
 class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
