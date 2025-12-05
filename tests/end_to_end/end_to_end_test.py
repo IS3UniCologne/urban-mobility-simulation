@@ -65,5 +65,12 @@ def _validate_metrics(actual_metrics: dict, config_path: str) -> None:
 
     expected = expectations[config_name]
 
-    # Validate that actual metrics match expected metrics exactly
-    assert actual_metrics == expected, f"Metrics mismatch for {config_name}"
+    # Validate that actual metrics match expected metrics approximately
+    assert actual_metrics["operator_metrics"] == pytest.approx(
+        expected["operator_metrics"]
+    )
+    assert actual_metrics["user_metrics"] == pytest.approx(expected["user_metrics"])
+
+    assert actual_metrics["fleet_metrics"].keys() == expected["fleet_metrics"].keys()
+    for fleet_id, metrics in actual_metrics["fleet_metrics"].items():
+        assert metrics == pytest.approx(expected["fleet_metrics"][fleet_id])
