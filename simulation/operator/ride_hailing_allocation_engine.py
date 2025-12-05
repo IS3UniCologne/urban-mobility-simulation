@@ -6,6 +6,7 @@ from simulation.operator.vehicle_allocation_engine import (
     AllocationEngine,
     AllocationEngineDependencies,
 )
+from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -36,7 +37,9 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
         self._env = deps.sim.env
         self._vehicles_assigned_to_users = self._env.event()
         self._env.process(self.run())
-        self._vehicle_assignment_requests = []
+        self._vehicle_assignment_requests: list[
+            tuple[User, TransportationAlternative]
+        ] = []
         self._vehicle_assignment_ids = set()
 
     def run(self):  # noqa: ANN201, D102
@@ -48,13 +51,19 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
             # ################## # ###################### #
 
             # First Come First Serve - Assign vehicles to first request
-            for user, requests in self._vehicle_assignment_requests:
-                if requests.vehicle.state == VehicleState.PARKING:
-                    requests.vehicle.reserve(user)
+            for user, requested_alternative in self._vehicle_assignment_requests:
+                if isinstance(requested_alternative.vehicle, ReservableMixin):
+                    if requested_alternative.vehicle.state == VehicleState.PARKING:
+                        requested_alternative.vehicle.reserve(user)
+                    else:
+                        self.logger.debug(
+                            "Vehicle %s is not available for assignment",
+                            requested_alternative.vehicle.uid,
+                        )
                 else:
-                    self.logger.debug(
-                        "Vehicle %s is not available for assignment",
-                        requests.vehicle.uid,
+                    self.logger.warning(
+                        "Vehicle %s does not support reservation",
+                        requested_alternative.vehicle.uid,
                     )
 
             # Implement: First come First Serve
@@ -107,7 +116,9 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
             # Log failed allocation attempt
             # TODO: do we want to filter multiple failed allocation attempts by the same user?
             self._operator.log_failed_allocation_attempt(
-                user=user, transportation_task=user.transport_task
+                user=user,
+                transportation_task=user.transport_task,
+                transportation_alternative=selected_transportation_alternative,
             )
             return None
 
@@ -125,7 +136,9 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
             )
             # Log failed allocation attempt
             self._operator.log_failed_allocation_attempt(
-                user=user, transportation_task=user.transport_task
+                user=user,
+                transportation_task=user.transport_task,
+                transportation_alternative=selected_transportation_alternative,
             )
             return None
 
@@ -135,10 +148,9 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
         # Create allocation object
         vehicle_allocation = VehicleAllocation(
             user,
-            selected_vehicle,
             selected_transportation_alternative,
             selected_vehicle.position,
-            selected_transportation_alternative.pick_up_time,
+            selected_transportation_alternative.est_pickup_time,
         )
 
         # Dispatch vehicle to pickup location
