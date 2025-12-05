@@ -31,12 +31,12 @@ rh_car_autonomous = RideHailingVehicleConfig(
     ENERGY_CAPACITY=50.0,
     ENERGY_CONSUMPTION_PER_KM=0.20,
     CHARGING_COST_PER_KWH=0.43,
-    ENERGY_BUFFER_PERCENT=0.05,
+    ENERGY_RESERVE_RATIO=0.05,
     PRICE_PER_MIN=0.35,
     DAILY_TOTAL_COST=29.0,
     COST_PER_KM=0.45,
     PRICE_PER_KM=1.3,
-    INITIAL_CHARGE_PERCENT=0.50,
+    INITIAL_CHARGE_RATIO=0.50,
 )
 rh_car_human = RideHailingVehicleConfig(
     VELOCITY_KMH=9.54,
@@ -47,12 +47,12 @@ rh_car_human = RideHailingVehicleConfig(
     ENERGY_CAPACITY=50.0,
     ENERGY_CONSUMPTION_PER_KM=0.20,
     CHARGING_COST_PER_KWH=0.43,
-    ENERGY_BUFFER_PERCENT=0.05,
+    ENERGY_RESERVE_RATIO=0.05,
     PRICE_PER_MIN=0.35,
     DAILY_TOTAL_COST=29.0,
     COST_PER_KM=0.45,
     PRICE_PER_KM=1.3,
-    INITIAL_CHARGE_PERCENT=0.50,
+    INITIAL_CHARGE_RATIO=0.50,
 )
 rh_car_human_2 = RideHailingVehicleConfig(
     VELOCITY_KMH=9.54,
@@ -63,12 +63,12 @@ rh_car_human_2 = RideHailingVehicleConfig(
     ENERGY_CAPACITY=50.0,
     ENERGY_CONSUMPTION_PER_KM=0.20,
     CHARGING_COST_PER_KWH=0.43,
-    ENERGY_BUFFER_PERCENT=0.05,
+    ENERGY_RESERVE_RATIO=0.05,
     PRICE_PER_MIN=0.35,
     DAILY_TOTAL_COST=29.0,
     COST_PER_KM=0.45,
     PRICE_PER_KM=1.3,
-    INITIAL_CHARGE_PERCENT=0.50,
+    INITIAL_CHARGE_RATIO=0.50,
 )
 
 
@@ -174,7 +174,6 @@ operator_1 = RideHailingOperatorConfig(
         PRICE_PER_MINUTE=0.35,
         PRICE_PER_KM=1.3,
         MINIMUM_PRICE=5.0,
-        DISCOUNT_RATE=0.0,
         DRIVER_PAYMENT_SHARE=0.75,
     ),
     SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
@@ -227,7 +226,6 @@ operator_2 = RideHailingOperatorConfig(
         PRICE_PER_MINUTE=0.35,
         PRICE_PER_KM=1.3,
         MINIMUM_PRICE=5.0,
-        DISCOUNT_RATE=0.0,
         DRIVER_PAYMENT_SHARE=0.75,
     ),
     SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
