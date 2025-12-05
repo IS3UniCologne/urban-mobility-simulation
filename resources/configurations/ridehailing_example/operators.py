@@ -165,7 +165,6 @@ operator_1 = RideHailingOperatorConfig(
         PRICE_PER_MINUTE=0.35,
         PRICE_PER_KM=1.3,
         MINIMUM_PRICE=5.0,
-        DISCOUNT_RATE=0.0,
         DRIVER_PAYMENT_SHARE=0.75,
     ),
     SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
@@ -191,7 +190,6 @@ operator_2 = RideHailingOperatorConfig(
         PRICE_PER_MINUTE=0.35,
         PRICE_PER_KM=1.3,
         MINIMUM_PRICE=5.0,
-        DISCOUNT_RATE=0.0,
         DRIVER_PAYMENT_SHARE=0.75,
     ),
     SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
