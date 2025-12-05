@@ -90,7 +90,10 @@ class FleetMetrics(IndexedMetricsBase):
 
         # TODO: Not like this, look for similar inefficient code and refactor
         fleet_avg_soc = (
-            mean(vehicle.current_relative_state_of_charge for vehicle in fleet.vehicles)
+            mean(
+                vehicle.energy_system.current_energy_relative
+                for vehicle in fleet.vehicles
+            )
             if fleet.vehicles
             else 0.0
         )
