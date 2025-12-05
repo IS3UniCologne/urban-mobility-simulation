@@ -2,7 +2,7 @@ from __future__ import annotations  # noqa: D100
 
 from simulation.helper.configuration.enums import OperatorMode
 from simulation.operator.operator import Operator, OperatorDependencies
-from simulation.operator.transactions import DemandMonitor
+from simulation.operator.operator_log import DemandMonitor
 
 
 class SharedMobilityOperator(Operator):  # noqa: D101
@@ -21,10 +21,8 @@ class SharedMobilityOperator(Operator):  # noqa: D101
         super().build_operator_subcomponents(deps)
 
         # Register demand monitor to transaction log
-        self._demand_monitor: DemandMonitor = DemandMonitor(
-            self._fleet.vehicle_types
-        )  # TODO: Check if order is correct
-        self._transaction_log.add_listener(self._demand_monitor)
+        self._demand_monitor: DemandMonitor = DemandMonitor(self._sim)
+        self._operator_log.add_listener(self._demand_monitor)
 
     @property
     def demand_monitor(self) -> DemandMonitor:
