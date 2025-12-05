@@ -117,7 +117,7 @@ def data_vehicles(vehicles, fs=200, et="normal"):  # noqa: ANN001, ANN201
 
 def plot_vehicels_SOC_2(dg1, dg2):  # noqa: ANN001, ANN201
     set_style()
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
+    _, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
     sns.lineplot(data=dg1, x="hour", y="SOC", ci=100, hue="day", legend=False, ax=ax[0])
     sns.lineplot(data=dg2, x="hour", y="SOC", ci=100, hue="day", legend=False, ax=ax[1])
     ax[0].set_ylim(15, 100)
@@ -161,7 +161,7 @@ def adjust(x):  # noqa: ANN001, ANN201
 def plot_vehicels_SOC_3(dg1, dg2, dg3):  # noqa: ANN001, ANN201
     set_style()
     # dg3['SOC']=dg3.apply(lambda x:adjust(x), axis=1)
-    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4), constrained_layout=True)
+    _, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4), constrained_layout=True)
     sns.lineplot(data=dg1, x="hour", y="SOC", ci=100, hue="day", legend=False, ax=ax[0])
     sns.lineplot(data=dg2, x="hour", y="SOC", ci=100, hue="day", legend=False, ax=ax[1])
     sns.lineplot(data=dg3, x="hour", y="SOC", ci=100, hue="day", legend=False, ax=ax[2])
@@ -187,7 +187,7 @@ def plot_vehicels_SOC_3(dg1, dg2, dg3):  # noqa: ANN001, ANN201
 
 def plot_vehicels_SOC_4(dg1, dg2, dg3, dg4):  # noqa: ANN001, ANN201
     set_style()
-    fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 6), constrained_layout=True)
+    _, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 6), constrained_layout=True)
     sns.lineplot(
         data=dg1, x="hour", y="SOC", ci=100, hue="day", legend=False, ax=ax[0][0]
     )
@@ -225,7 +225,7 @@ def plot_vehicels_SOC_4(dg1, dg2, dg3, dg4):  # noqa: ANN001, ANN201
 
 
 def plot_vehicels_mode_4(dg1, dg2, dg3, dg4):  # noqa: ANN001, ANN201
-    fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 6), constrained_layout=True)
+    _, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 6), constrained_layout=True)
     sns.barplot(
         data=dg1 / 1440 * 7, palette=sns.color_palette("mako", n_colors=6), ax=ax[0][0]
     )
@@ -265,7 +265,7 @@ def plot_vehicels_mode_4(dg1, dg2, dg3, dg4):  # noqa: ANN001, ANN201
 #
 def plot_vehicels_mode_3(dg1, dg2, dg3):  # noqa: ANN001, ANN201
     set_style()
-    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(16, 4), constrained_layout=True)
+    _, ax = plt.subplots(nrows=1, ncols=3, figsize=(16, 4), constrained_layout=True)
     sns.barplot(
         data=dg1 / 1440 * 7, palette=sns.color_palette("mako", n_colors=6), ax=ax[0]
     )

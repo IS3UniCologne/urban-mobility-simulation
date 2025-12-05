@@ -66,7 +66,7 @@ def data_preparation(df_raw):  # noqa: ANN001, ANN201
 
 def plot_CS_Benchmark(dg):  # noqa: ANN001, ANN201
     set_style()
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
+    _, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), constrained_layout=True)
     HUE = "scenario"
     N_COLORS = 5
     DODGE = True
