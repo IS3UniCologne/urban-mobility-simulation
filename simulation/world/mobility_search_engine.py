@@ -61,13 +61,13 @@ class MobilitySearchEngine(SimulationBase):
         Aggregates transportation alternatives from all registered operators."""
 
         for operator in self._operators:
-            alternatives: TransportationAlternativeBrowser = (
+            alternative_browser: TransportationAlternativeBrowser = (
                 operator.search_engine.search_for_transportation_alternatives(
                     transport_task
                 )
             )
-            # TODO: This is a very stupid way to aggregate. We have to refactor this later.
-            for alt in alternatives.transportation_alternatives:
-                aggregated.add_transportation_alternative(alt)
+            aggregated.transportation_alternatives.extend(
+                alternative_browser.transportation_alternatives
+            )
 
         return aggregated
