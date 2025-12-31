@@ -2,7 +2,7 @@
 
 TODO: Will be developed in the following stages:
 
-        # Stage 1: Offer alternatives from all operators (just act as a SearchEngine aggregator)
+        # Stage 1 : Offer alternatives from all operators (just act as a SearchEngine aggregator)
         # Stage 2: Add filtering based on user preferences
         # Stage 3: Implement (delayed) vehicle allocation
         # Stage 4: Implement composite trips (e.g., shared vehicle + public transit)

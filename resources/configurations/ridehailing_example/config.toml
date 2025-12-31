@@ -14,7 +14,7 @@ LOG_TIMESTAMPS = false
 # Set class specific log levels. This takes precedence over the global log levels and applies to console and log files.
 LOG_CLASS_OVERRIDES = { RideHailingUser = "DEBUG", RideHailingOperator = "INFO" }
 # Output
-PERSIST_RESULTS = true
+PERSIST_RESULTS = false
 
 
 [EXPERIMENT_MANAGEMENT]
