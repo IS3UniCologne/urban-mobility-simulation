@@ -2,7 +2,7 @@
 
 from statistics import mean
 
-from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.configuration.enums import PropulsionType, VehicleState
 from simulation.helper.types import SimId
 from simulation.metrics.metrics_base import IndexedMetricsBase
 from simulation.metrics.metrics_dict import MetricsDict
@@ -93,6 +93,7 @@ class FleetMetrics(IndexedMetricsBase):
             mean(
                 vehicle.energy_system.current_energy_relative
                 for vehicle in fleet.vehicles
+                if vehicle.propulsion_type not in [PropulsionType.HUMAN_POWERED]
             )
             if fleet.vehicles
             else 0.0
