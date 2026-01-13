@@ -503,7 +503,11 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
             (time % 1440) / 60
         )  # TODO: This rounds to the nearest hour, should we use SimulationTimeConverter.hour_of_day instead?
         number_of_online_vehicles = len(
-            self.fleet.vehicles_by_state[VehicleState.ONLINE]
+            self.fleet.vehicles_by_autonomy[AutonomyType.HUMAN_DRIVEN]
+        ) - len(
+            self.fleet.vehicles_by_state[VehicleState.OFFLINE].intersection(
+                self.fleet.vehicles_by_autonomy[AutonomyType.HUMAN_DRIVEN]
+            )
         )
         if fleet_size_threshold is None:
             return False
