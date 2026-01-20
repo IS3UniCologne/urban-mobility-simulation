@@ -64,7 +64,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         "_shift_earn",
         "_shift_end_time",
         "_shift_start_time",
-        "_suggested",
         "_total_earn",
         "_user_mounted",
         "_user_unmounted",
@@ -128,7 +127,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
 
         # Vehicle Reservation
         self._reserved_for_user = None
-        self._suggested = False
 
         # Estimation information for finishing the current task
         self._estimated_completion_time: int = 0
@@ -240,7 +238,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         )
 
     def start_driving(self) -> None:  # noqa: D102
-        self._suggested = False
         self.state = VehicleState.DRIVING
 
         # Reset pickup arrival event for next trip
@@ -259,7 +256,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self.release_reservation()
         self._driving_finished.succeed()
         self._driving_finished = self._env.event()
-        # self._suggested = False
         # Make vehicle available for others again
         self.state = VehicleState.PARKING
 
