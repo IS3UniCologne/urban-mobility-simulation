@@ -67,19 +67,13 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
 
         # TODO: Check if this is necessary
         parking_cars_sorted = sorted(parking_cars, key=lambda v: v.uid)
-        parking_cars_not_suggested: list[Vehicle] = [
-            car
-            for car in parking_cars_sorted
-            # TODO: we should not acceess _suggested directly
-            if not car._suggested  # noqa: SLF001
-        ]
 
-        if not parking_cars_not_suggested:
+        if not parking_cars_sorted:
             parking_cars_in_area = []
         else:
             parking_cars_in_area = [
                 car
-                for car in parking_cars_not_suggested
+                for car in parking_cars_sorted
                 if (car.position << origin)
                 <= self.operator.operations.config.MAX_PICKUP_DISTANCE
             ]
@@ -92,11 +86,11 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
         ]
         # TODO: Check if this is necessary
         serving_vehicles_sorted = sorted(serving_vehicles, key=lambda v: v.uid)
+        # TODO: This logic seems off, double check
         serving_cars = [
             car
             for car in serving_vehicles_sorted
-            if car._suggested  # noqa: SLF001
-            and car.current_relative_state_of_charge > state_of_charge_threshold + 5
+            if car.current_relative_state_of_charge > state_of_charge_threshold + 5
         ]
 
         serving_cars_in_area = []
@@ -253,8 +247,8 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
             if (
                 vehicle.energy_system.current_energy_relative
                 < state_of_charge_threshold
-                and not vehicle._suggested  # noqa: SLF001
             ):
+                # TODO: check if we need to filter before appending
                 low_soc_supply.append(vehicle)
 
         low_soc_supply = sorted(
