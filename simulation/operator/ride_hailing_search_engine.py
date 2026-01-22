@@ -102,6 +102,7 @@ class RideHailingSearchEngine(SearchEngine):
                     # This should not happen, but just in case
                     self._logger.warning("search found non-parking car without task")
                     continue
+                # TODO: this does not consider that the car will deplete energy to current_task.destination
                 route_to_pick_up = Route(car.current_task.destination, origin)
 
             distance_to_pick_up = route_to_pick_up.distance
