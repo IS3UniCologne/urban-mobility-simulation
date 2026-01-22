@@ -145,7 +145,7 @@ class ChargingTaskRidehailing(ServiceTask):  # noqa: D101
 
                 if is_bearable(self._charging_station, VirtualChargingStation):
                     # only in this case we can check for the next condition, otherwise AttributeError gets thrown
-                    if self._charging_station.valid_timeframe is not None:
+                    if self._charging_station.valid_timeframe() is not None:
                         # if we are in a context of shared capacity, we need to wait for the reservation
 
                         scheduled_timeslot_end = (
