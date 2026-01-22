@@ -40,6 +40,9 @@ from pydantic import (
 from simulation.agent.user.choice_model.choice_model_interface import (
     ChoiceModelInterface,
 )
+from simulation.agent.user.choice_model.min_pickup_time_vehicle_choice_model import (
+    MinPickupTimeVehicleChoiceModel,
+)
 from simulation.agent.user.choice_model.random_nearest_vehicle_choice_model import (
     RandomModeNearestVehicleChoiceModel,
 )
@@ -205,6 +208,12 @@ class RandomModeNearestVehicleChoiceModelConfig(ChoiceModelConfig):
     """Configuration for Random Mode Nearest Vehicle Choice Model parameters."""
 
     CHOICE_MODEL_TYPE: type[ChoiceModelInterface] = RandomModeNearestVehicleChoiceModel
+
+
+class MinPickupTimeVehicleChoiceModelConfig(ChoiceModelConfig):
+    """Configuration for Minimum Pickup Time Vehicle Choice Model parameters."""
+
+    CHOICE_MODEL_TYPE: type[ChoiceModelInterface] = MinPickupTimeVehicleChoiceModel
 
 
 class PopulationSegmentConfig(ConfigBaseModel):

@@ -264,9 +264,10 @@ class User(Agent, DriverInterface, PassengerInterface):
             }
 
             while (
-                len(attempted_alternatives) < len(choice_probs)
+                len(attempted_alternatives) < len(viable_alternatives)
                 and not allocation_succeeded
             ):
+                # TODO: we are attempting allocations with old information, what if the vehicle moved in the meantime?
                 # Check timeout before attempting allocation
                 if self._is_search_duration_exceeded():
                     self._search_end_time = self._env.now
@@ -299,6 +300,9 @@ class User(Agent, DriverInterface, PassengerInterface):
 
                 # Track that we attempted this operator
                 self._attempted_operators.add(chosen_alternative.operator)
+
+                # TODO: check if this solves multiple allocations in ride hailing case, need to establish real reservation system
+                chosen_alternative.vehicle._suggested = True
 
                 # Attempt allocation
                 vehicle_allocation = yield self._env.process(
@@ -481,6 +485,7 @@ class User(Agent, DriverInterface, PassengerInterface):
 
             # Wait before searching again
             yield self._env.timeout(1)
+
         # We did not receive any transportation alternatives, return empty list
         self._transportation_alternatives_not_found.succeed()
         return available_transportation_alternatives

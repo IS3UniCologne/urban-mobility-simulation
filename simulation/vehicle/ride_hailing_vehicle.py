@@ -195,9 +195,9 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
 
         if not self.energy_system.has_enough_energy(
             distance=distance,
-            energy_reserve_ratio=0.0
-            if relocating
-            else None,  # TODO: Why don't we use a buffer when relocating?
+            energy_reserve_ratio=(
+                0.0 if relocating else None
+            ),  # TODO: Why don't we use a buffer when relocating?
         ):
             raise RuntimeError(
                 f"{self.__class__.__name__!s} {self.uid} has been tried to move but has not enough energy."
