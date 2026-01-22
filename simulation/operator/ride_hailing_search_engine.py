@@ -69,11 +69,10 @@ class RideHailingSearchEngine(SearchEngine):
         # hexagon_origin = vehicle_search_task.agent_position.get_default_hexagon()
 
         origin = transport_task.origin
+        destination = transport_task.destination
 
         # TODO: These are vehicles, not necessarily cars
-        cars_in_area = self._fleet.get_available_vehicles_to_user(origin)
-
-        destination = transport_task.destination
+        cars_in_area = self._fleet.get_available_vehicles_to_user(origin, destination)
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
@@ -102,7 +101,7 @@ class RideHailingSearchEngine(SearchEngine):
                     # This should not happen, but just in case
                     self._logger.warning("search found non-parking car without task")
                     continue
-                # TODO: this does not consider that the car will deplete energy to current_task.destination
+
                 route_to_pick_up = Route(car.current_task.destination, origin)
 
             distance_to_pick_up = route_to_pick_up.distance
@@ -119,7 +118,6 @@ class RideHailingSearchEngine(SearchEngine):
             )
 
             # calculate pick up time
-
             pickup_time = self._calculate_pickup_time(
                 vehicle=car, route_to_pick_up=route_to_pick_up
             )
@@ -137,12 +135,7 @@ class RideHailingSearchEngine(SearchEngine):
                 est_pickup_time=pickup_time,
             )
 
-            total_distance = distance + distance_to_pick_up
-            if car.energy_system.has_enough_energy(total_distance) and car.state in [
-                VehicleState.PARKING,
-                VehicleState.DRIVING,
-            ]:
-                browser.add_transportation_alternative(transportation_alternative)
+            browser.add_transportation_alternative(transportation_alternative)
 
         # if vehicle_search_task.transport_task.viable_vehicle_modes['AutonomousCar'] == 1:
         for car in AVs_in_area:
@@ -162,7 +155,6 @@ class RideHailingSearchEngine(SearchEngine):
             trip_duration = distance / car.velocity
 
             # Calc Price
-            # TODO: update the price for ride-hailing
             price = (
                 max(
                     self._price_entering
@@ -190,24 +182,35 @@ class RideHailingSearchEngine(SearchEngine):
                 est_pickup_time=pickup_time,
             )
 
-            total_distance = distance + distance_to_pick_up
-            if car.energy_system.has_enough_energy(total_distance) and car.state in [
-                VehicleState.PARKING,
-                VehicleState.DRIVING,
-            ]:
-                browser.add_transportation_alternative(transportation_alternative)
+            browser.add_transportation_alternative(transportation_alternative)
 
         return browser
 
     def _calculate_pickup_time(
         self, vehicle: Vehicle, route_to_pick_up: Route
     ) -> float:
+        """
+        Calculate the estimated pickup time for a vehicle.
+        If the vehicle is currently parking, the pickup time is calculated as the time it takes to drive to the pickup location plus the current simulation time.
+        If the vehicle is currently driving, the pickup time is calculated as the time it takes to drive to the pickup location plus the estimated completion time of the vehicle's current task.
+
+        Parameters
+        ----------
+        vehicle : Vehicle
+            The vehicle for which to calculate the pickup time.
+        route_to_pick_up : Route
+            The route from the vehicle's current position to the pickup location.
+
+        Returns
+        -------
+        float
+            The estimated pickup time in simulation time units.
+        """
         if vehicle.state == VehicleState.PARKING:
-            return route_to_pick_up.distance / vehicle.velocity
+            return route_to_pick_up.distance / vehicle.velocity + self._sim.time
 
         elif vehicle.state == VehicleState.DRIVING:
             return (
                 route_to_pick_up.distance / vehicle.velocity
                 + vehicle.estimated_completion_time
-                - self._sim.env.now
             )

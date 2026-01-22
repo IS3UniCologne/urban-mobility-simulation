@@ -1,9 +1,9 @@
 """Simple population configuration for testing."""
 
 from simulation.helper.configuration.configuration import (
+    MinPickupTimeVehicleChoiceModelConfig,
     PopulationConfig,
     PopulationSegmentConfig,
-    RandomModeNearestVehicleChoiceModelConfig,
     UserConfig,
 )
 
@@ -12,7 +12,7 @@ user1 = UserConfig(
     SPATIAL_STRATEGY="nearest",
     WALKING_SPEED_KMH=5.0,  # km/h
     MAX_SEARCH_DURATION_MIN=10,
-    CHOICE_MODEL_CONFIG=RandomModeNearestVehicleChoiceModelConfig(),
+    CHOICE_MODEL_CONFIG=MinPickupTimeVehicleChoiceModelConfig(),
 )
 
 
