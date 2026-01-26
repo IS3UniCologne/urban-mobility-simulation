@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from beartype.door import is_bearable
 
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.vehicle_states import VehicleState
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )

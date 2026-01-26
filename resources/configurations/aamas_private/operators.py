@@ -8,11 +8,7 @@ from simulation.helper.configuration.configuration import (
     RideHailingVehicleConfig,
     SharedChargingAuctionConfig,
 )
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    PropulsionType,
-    VehicleType,
-)
+from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
 from simulation.operator.operations_management.algorithms.charging_station_allocation import (
     DowntimeMinWithoutLookahead,
 )

@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 from pandas import DataFrame
 
-from simulation.helper.configuration.enums import (
+from simulation.helper.enums import (
     DailyResolution,
     SpatialResolution,
     TemporalResolution,
