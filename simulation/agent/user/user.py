@@ -264,7 +264,7 @@ class User(Agent, DriverInterface, PassengerInterface):
             }
 
             while (
-                len(attempted_alternatives) < len(choice_probs)
+                len(attempted_alternatives) < len(viable_alternatives)
                 and not allocation_succeeded
             ):
                 # Check timeout before attempting allocation
