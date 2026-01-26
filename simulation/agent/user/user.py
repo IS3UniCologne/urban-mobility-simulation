@@ -262,6 +262,7 @@ class User(Agent, DriverInterface, PassengerInterface):
             viable_alternatives = {
                 alt: prob for alt, prob in choice_probs.items() if prob > 0
             }
+            viable_alternatives_set = set(viable_alternatives.keys())
 
             while (
                 len(attempted_alternatives) < len(viable_alternatives)
@@ -275,18 +276,11 @@ class User(Agent, DriverInterface, PassengerInterface):
                     )
                     break
 
-                remaining = {
-                    alt: prob
-                    for alt, prob in viable_alternatives.items()
-                    if alt not in attempted_alternatives
-                }
-
-                if not remaining:
-                    break
+                remaining_alts = viable_alternatives_set - attempted_alternatives
 
                 # Sample and try
-                alternatives_list = list(remaining.keys())
-                probabilities = list(remaining.values())
+                alternatives_list = list(remaining_alts)
+                probabilities = [viable_alternatives[alt] for alt in alternatives_list]
                 total_prob = sum(probabilities)
                 normalized_probs = [p / total_prob for p in probabilities]
 
