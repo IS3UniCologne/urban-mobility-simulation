@@ -705,12 +705,14 @@ class User(Agent, DriverInterface, PassengerInterface):
             self.mount_vehicle(vehicle)
 
             # Vehicle drives to destination
-            energy_consumed = yield self._env.process(
-                generator=self.ride_in_vehicle(vehicle, route)
-            )
+            try:
+                energy_consumed = yield self._env.process(
+                    generator=self.ride_in_vehicle(vehicle, route)
+                )
 
-            self.park_vehicle(vehicle)  # type: ignore #TODO: This should not be done by the user
-            self.unmount_vehicle(vehicle)
+                self.park_vehicle(vehicle)  # type: ignore #TODO: This should not be done by the user
+            finally:
+                self.unmount_vehicle(vehicle)
 
         elif isinstance(vehicle, SharedVehicle):
             # For shared vehicles, user acts as driver
@@ -718,12 +720,13 @@ class User(Agent, DriverInterface, PassengerInterface):
             self.mount_vehicle_as_driver(vehicle)
 
             # User drives vehicle to destination
-            energy_consumed = yield self._env.process(
-                self.drive_vehicle(vehicle, route)
-            )
-
-            self.park_vehicle(vehicle)
-            self.unmount_vehicle_as_driver(vehicle)
+            try:
+                energy_consumed = yield self._env.process(
+                    self.drive_vehicle(vehicle, route)
+                )
+                self.park_vehicle(vehicle)
+            finally:
+                self.unmount_vehicle_as_driver(vehicle)
 
         else:
             raise NotImplementedError(f"Vehicle type {type(vehicle)} not supported")
