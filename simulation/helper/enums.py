@@ -134,34 +134,6 @@ class UserState(Enum):
     WAITING_FOR_TRANSPORT = 33
 
 
-# TODO: Have a state setter with checks for valid transitions ?
-class VehicleState(Enum):
-    """Vehicle states."""
-
-    ### Generic vehicle states ###
-    INITIALIZED = 0
-    PARKING = 1
-    DRIVING = 2
-    RELOCATING = 3
-    CHARGING = 4
-    PRE_SERVICE = 5
-    ONLINE = 6  # When the driver is online
-    OFFLINE = 7  # When the driver is offline
-    SOME_STATE = 1002
-    MOVING_TO_PICK_UP_POS = 1003
-
-    ### Public transport vehicle states ###
-    AT_TERMINAL_ORIGIN = 2001
-    AT_TERMINAL_DESTINATION = 2002
-    AT_STOP = 2003
-
-    # bus specific
-    EN_ROUTE_PLANNED = 2011
-    EN_ROUTE_DETOUR = 2012
-
-    UNKNOWN = 2999
-
-
 # TODO: Do we need both withdrawn and missed? If so we should clarify the difference.
 class TransactionState(StrEnum):
     """Transaction states."""
