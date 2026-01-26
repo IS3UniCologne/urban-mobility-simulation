@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import TransactionState
+from simulation.helper.enums import TransactionState
 from simulation.operator.operator_log.operator_log_entry import (
     FulfilledOperatorLogEntry,
     MissedOperatorLogEntry,

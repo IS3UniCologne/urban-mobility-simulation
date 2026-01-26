@@ -7,11 +7,7 @@ from simulation.helper.configuration.configuration import (
     RideHailingSearchEngineConfig,
     RideHailingVehicleConfig,
 )
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    PropulsionType,
-    VehicleType,
-)
+from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
 from simulation.operator.operations_management.ridehailing_base_charging_operations import (
     RideHailingBaseChargingOperations,
 )

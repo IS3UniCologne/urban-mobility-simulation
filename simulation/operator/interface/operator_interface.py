@@ -9,7 +9,7 @@ from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
     from simulation.agent.user import User
-    from simulation.helper.configuration.enums import OperatorMode, TransactionState
+    from simulation.helper.enums import OperatorMode, TransactionState
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )

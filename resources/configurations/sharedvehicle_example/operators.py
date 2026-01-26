@@ -6,11 +6,7 @@ from simulation.helper.configuration.configuration import (
     SharedVehicleOperatorConfig,
     SharedVehicleSearchEngineConfig,
 )
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    PropulsionType,
-    VehicleType,
-)
+from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
 from simulation.operator.shared_mobility_operator import SharedMobilityOperator
 
 sv_car = SharedVehicleConfig(

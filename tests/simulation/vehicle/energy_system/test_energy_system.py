@@ -3,11 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from simulation.helper.configuration.configuration import VehicleConfig
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    PropulsionType,
-    VehicleType,
-)
+from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
 from simulation.vehicle.energy_system.battery_system import BatterySystem
 from simulation.vehicle.energy_system.human_powered_system import HumanPoweredSystem
 from simulation.vehicle.energy_system.internal_combustion_system import (

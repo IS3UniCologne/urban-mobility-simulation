@@ -9,7 +9,7 @@ from simulation.agent.user.choice_model.choice_model_interface import (
     ChoiceModelDependencies,
     ChoiceModelInterface,
 )
-from simulation.helper.configuration.enums import OperatorMode, VehicleType
+from simulation.helper.enums import OperatorMode, VehicleType
 
 if TYPE_CHECKING:
     from simulation.agent.user import User

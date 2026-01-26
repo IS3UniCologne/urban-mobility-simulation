@@ -8,7 +8,7 @@ from collections import defaultdict
 from typing import TypedDict
 
 from simulation.context.simulation_context import SimulationContext
-from simulation.helper.configuration.enums import VehicleType
+from simulation.helper.enums import VehicleType
 from simulation.helper.types import RegionId
 
 from .operator_log_entry import (

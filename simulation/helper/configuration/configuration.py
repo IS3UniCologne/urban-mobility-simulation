@@ -43,7 +43,7 @@ from simulation.agent.user.choice_model.choice_model_interface import (
 from simulation.agent.user.choice_model.random_nearest_vehicle_choice_model import (
     RandomModeNearestVehicleChoiceModel,
 )
-from simulation.helper.configuration.enums import (
+from simulation.helper.enums import (
     AutonomyType,
     DailyResolution,
     ModeChoiceStrategy,
