@@ -11,6 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Generic, Self, TypeVar
 
+from simulation.helper.exceptions import InvalidStateTransitionError
+
 
 @dataclass(frozen=True, slots=True)
 class State:
@@ -255,9 +257,3 @@ class StateMachine(Generic[StateT]):
             Path from root to current state
         """
         return self._current_state.get_path()
-
-
-class InvalidStateTransitionError(Exception):
-    """Raised when an invalid state transition is attempted."""
-
-    pass
