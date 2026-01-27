@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from simulation.tasks.transport_task import TransportTask
 
 
-from simulation.helper.configuration.enums import OperatorMode, TransactionState
+from simulation.helper.enums import OperatorMode, TransactionState
 from simulation.operator.operator import Operator, OperatorDependencies
 
 
