@@ -2,8 +2,9 @@
 
 from statistics import mean
 
-from simulation.helper.configuration.enums import PropulsionType, VehicleState
+from simulation.helper.enums import PropulsionType
 from simulation.helper.types import SimId
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.metrics.metrics_base import IndexedMetricsBase
 from simulation.metrics.metrics_dict import MetricsDict
 from simulation.operator.vehicle_fleet import VehicleFleet
@@ -79,13 +80,18 @@ class FleetMetrics(IndexedMetricsBase):
 
     def _get_fleet_metrics(self, fleet: VehicleFleet) -> MetricsDict:
         """Get metrics for a single fleet."""
-        parking_vehicles = len(fleet.vehicles_by_state[VehicleState.PARKING])
-        charging_vehicles = len(fleet.vehicles_by_state[VehicleState.CHARGING])
-        driving_vehicles = len(fleet.vehicles_by_state[VehicleState.DRIVING])
-        relocating_vehicles = len(fleet.vehicles_by_state[VehicleState.RELOCATING])
-        pre_service_vehicles = len(fleet.vehicles_by_state[VehicleState.PRE_SERVICE])
-        moving_to_pick_up_pos_vehicles = len(
-            fleet.vehicles_by_state[VehicleState.MOVING_TO_PICK_UP_POS]
+        idle_vehicles = len(fleet.vehicles_by_state.get(VehicleStates.IDLE, set()))
+        charging_vehicles = len(
+            fleet.vehicles_by_state.get(VehicleStates.CHARGING, set())
+        )
+        transporting_vehicles = len(
+            fleet.vehicles_by_state.get(VehicleStates.TRANSPORTING, set())
+        )
+        relocating_vehicles = len(
+            fleet.vehicles_by_state.get(VehicleStates.RELOCATING, set())
+        )
+        moving_to_pick_up_vehicles = len(
+            fleet.vehicles_by_state.get(VehicleStates.PICK_UP, set())
         )
 
         # TODO: Not like this, look for similar inefficient code and refactor
@@ -103,12 +109,11 @@ class FleetMetrics(IndexedMetricsBase):
 
         return MetricsDict(
             {
-                "parking_vehicles": parking_vehicles,
+                "idle_vehicles": idle_vehicles,
                 "charging_vehicles": charging_vehicles,
-                "driving_vehicles": driving_vehicles,
+                "transporting_vehicles": transporting_vehicles,
                 "relocating_vehicles": relocating_vehicles,
-                "pre_service_vehicles": pre_service_vehicles,
-                "moving_to_pick_up_pos_vehicles": moving_to_pick_up_pos_vehicles,
+                "moving_to_pick_up_vehicles": moving_to_pick_up_vehicles,
                 "avg_state_of_charge": fleet_avg_soc,
                 "vehicle_distribution_by_region": vehicle_distribution_by_region,
             }
