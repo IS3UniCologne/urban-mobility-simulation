@@ -3,14 +3,11 @@ from __future__ import annotations  # noqa: D100
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    PropulsionType,
-    VehicleState,
-    VehicleType,
-)
+from simulation.helper.exceptions import VehicleError
 from simulation.helper.simulation_base import SimulationBase
+from simulation.helper.state_machine import StateMachine
 from simulation.helper.time import SimulationVelocityConverter
+from simulation.helper.vehicle_states import VehicleStates
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -23,7 +20,9 @@ if TYPE_CHECKING:
         Configuration,
         VehicleConfig,
     )
+    from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
     from simulation.helper.types import RegionId
+    from simulation.helper.vehicle_states import VehicleState
     from simulation.infrastructure.network.edge import Edge
     from simulation.infrastructure.route import Route
     from simulation.operator.vehicle_fleet import VehicleFleet
@@ -31,10 +30,6 @@ if TYPE_CHECKING:
     from simulation.vehicle.energy_system import EnergySystem
     from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
     from simulation.vehicle.movement_stats import MovementStats
-
-
-class VehicleError(Exception):
-    """Base class for all vehicle-related exceptions."""
 
 
 class Vehicle(SimulationBase, ABC):
@@ -57,7 +52,6 @@ class Vehicle(SimulationBase, ABC):
 
     __slots__ = (
         "__position",
-        "__state",
         "_autonomy_type",
         "_config",
         "_convenience",
@@ -75,6 +69,7 @@ class Vehicle(SimulationBase, ABC):
         "_propulsion_type",
         "_seats",
         "_sim",
+        "_state_machine",
         "_user_mounted",
         "_user_unmounted",
         "_vehicle_type",
@@ -133,8 +128,11 @@ class Vehicle(SimulationBase, ABC):
         self._user_mounted: Event = sim.env.event()
         self._user_unmounted: Event = sim.env.event()
 
-        # Initial State, name is intentionally mangled. Do not set directly.
-        self.__state: VehicleState = VehicleState.INITIALIZED
+        # TODO: Do we want different valid transitions per vehicle type?
+        self._state_machine: StateMachine[VehicleState] = StateMachine(
+            initial_state=VehicleStates.IDLE,
+            allowed_transitions=VehicleStates.TRANSITIONS,
+        )
 
         # Store current task (if any)
         # TODO: Make this a generic task interface
@@ -235,6 +233,17 @@ class Vehicle(SimulationBase, ABC):
         return self._max_available_seats
 
     @property
+    def state_machine(self) -> StateMachine[VehicleState]:
+        """Get the state machine of the vehicle.
+
+        Returns
+        -------
+        StateMachine
+            The state machine of the vehicle.
+        """
+        return self._state_machine
+
+    @property
     def state(self) -> VehicleState:
         """Get current state of the vehicle.
 
@@ -243,26 +252,24 @@ class Vehicle(SimulationBase, ABC):
         VehicleState
             The current state of the vehicle.
         """
-        return self.__state
+        return self._state_machine.current_state
 
     @state.setter
     def state(self, state: VehicleState) -> None:
         """Set current state of the vehicle.
-
-        DO NOT CHANGE _state DIRECTLY.
-        This is to ensure that the fleet is notified of state changes.
 
         Parameters
         ----------
         state : VehicleState
             The new state of the vehicle.
         """
-        if state == self.__state:
+        if state is self._state_machine.current_state:
             # No state change
             return
+        old_state = self._state_machine.current_state
+        self._state_machine.transition_to(state)
         # Notify fleet about state change
-        self._fleet.update_vehicle_state(self, state)
-        self.__state = state
+        self._fleet.update_vehicle_state(self, old_state, state)
 
     @property
     def position(self) -> GeodesicPosition:
@@ -404,7 +411,7 @@ class Vehicle(SimulationBase, ABC):
 
         This method is used to set the vehicle to a parked state.
         """
-        self.state = VehicleState.PARKING
+        self.state = VehicleStates.IDLE
 
         self.logger.debug("Parked.")
 
