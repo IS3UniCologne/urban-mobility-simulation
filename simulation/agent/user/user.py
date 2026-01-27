@@ -246,9 +246,7 @@ class User(Agent, DriverInterface, PassengerInterface):
                 break
 
             # 2: Calculate choice probabilities using choice model
-            choice_probs: dict[
-                TransportationAlternative, float
-            ] = yield self._env.process(
+            choice_probs: dict[TransportationAlternative, float] = (
                 self._calculate_choice_probabilities(available_alternatives)
             )
 
@@ -809,7 +807,7 @@ class User(Agent, DriverInterface, PassengerInterface):
 
     def _calculate_choice_probabilities(
         self, available_alternatives: TransportationAlternativeBrowser
-    ) -> Generator[Timeout, Any, dict[TransportationAlternative, float]]:
+    ) -> dict[TransportationAlternative, float]:
         """
         Calculate choice probabilities using the configured choice model.
 
@@ -818,19 +816,11 @@ class User(Agent, DriverInterface, PassengerInterface):
         available_alternatives : TransportationAlternativeBrowser
             Available transportation alternatives.
 
-        Yields
-        ------
-        Timeout
-            Batching delay.
-
         Returns
         -------
         dict of TransportationAlternative to float
             Mapping of alternatives to their choice probabilities (sum to 1.0).
         """
-        # Batching delay (for allocation synchronization) #TODO: Can we get rid of this?
-        yield self._env.timeout(1)
-
         # Calculate choice probabilities using the choice model
         choice_probs = self._choice_model.calculate_choice_probabilities(
             user=self, available_alternatives=available_alternatives
