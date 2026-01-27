@@ -18,9 +18,9 @@ from simulation.agent.action_space import ActionSpace
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTimeConverter
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.vehicle.public_transit_bus import Bus
 
 
@@ -264,7 +264,7 @@ class DQN(RLAgent, SimulationBase):  # noqa: D101
             )  # S_t, as numpy 3d matrix
 
             reached_destination = (
-                True if bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
+                True if bus.state is VehicleStates.AT_TERMINAL else False
             )
             reached_timelimit = (
                 True if self._env.now - bus._spawned > self._timelimit else False  # noqa: SLF001
@@ -503,7 +503,7 @@ class DQN(RLAgent, SimulationBase):  # noqa: D101
             )
             duration = distance / bus._velocity  # in minutes  # noqa: SLF001
 
-            self._state = VehicleState.EN_ROUTE_DETOUR
+            self._state = VehicleStates.EN_ROUTE
 
             yield self._env.timeout(duration)
 
@@ -519,9 +519,7 @@ class DQN(RLAgent, SimulationBase):  # noqa: D101
             self._env.event()
         )  # only reset it after we have entered the method
 
-        reached_destination = (
-            True if bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
-        )
+        reached_destination = True if bus.state is VehicleStates.AT_TERMINAL else False
         reached_timelimit = (
             True if self._env.now - bus._spawned > self._timelimit else False  # noqa: SLF001
         )

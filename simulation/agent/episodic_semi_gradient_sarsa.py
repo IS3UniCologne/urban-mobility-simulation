@@ -9,8 +9,8 @@ import numpy as np
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.simulation_base import SimulationBase
+from simulation.helper.vehicle_states import VehicleStates
 
 if TYPE_CHECKING:
     import simpy
@@ -100,7 +100,9 @@ class EpisodicSemiGradientSarsa(RLAgent, SimulationBase):  # noqa: D101
         self._q_hat = q_hat
 
     def run(self, bus):  # noqa: ANN001, ANN201, D102
-        while not bus.state == VehicleState.AT_TERMINAL_DESTINATION:
+        while not bus.state_machine.is_state_match_or_descendant(
+            VehicleStates.AT_TERMINAL
+        ):
             # to get a value copy of a state we need to deepcopy, otherwise modifying self._env_state results in
             # modifying the "copy" which really is just a reference
             before_state = deepcopy(bus._env_state)  # noqa: SLF001
@@ -110,7 +112,7 @@ class EpisodicSemiGradientSarsa(RLAgent, SimulationBase):  # noqa: D101
             s = self._vectorize_state(before_state)
             s_ = self._vectorize_state(bus._env_state)  # noqa: SLF001
             a = self._action_space.action_as_binary_vector(action)
-            if bus.state is VehicleState.AT_TERMINAL_DESTINATION:
+            if bus.state is VehicleStates.AT_TERMINAL:
                 # update weights
                 self._update_policy(s, a, terminal=True)
                 # and go to next episode
@@ -175,7 +177,7 @@ class EpisodicSemiGradientSarsa(RLAgent, SimulationBase):  # noqa: D101
             distance = bus.position >> new_position
             duration = distance / bus._velocity  # in minutes  # noqa: SLF001
 
-            self._state = VehicleState.EN_ROUTE_DETOUR
+            self._state = VehicleStates.EN_ROUTE
 
             yield self._env.timeout(duration)
 
