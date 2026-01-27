@@ -37,7 +37,9 @@ class VehicleStates:
     # Operator task states
     RELOCATING = VehicleState(name="RELOCATING", parent=OPERATOR_TASK)
     CHARGING = VehicleState(name="CHARGING", parent=OPERATOR_TASK)
-    PRE_SERVICE = VehicleState(name="WAITING_FOR_CHARGING", parent=OPERATOR_TASK)
+    WAITING_FOR_CHARGING = VehicleState(
+        name="WAITING_FOR_CHARGING", parent=OPERATOR_TASK
+    )
 
     # Allowed transitions
     TRANSITIONS: ClassVar[dict[VehicleState, set[VehicleState]]] = {
@@ -51,8 +53,9 @@ class VehicleStates:
         EN_ROUTE: {AT_STOP, AT_TERMINAL, IDLE},
         AT_TERMINAL: {EN_ROUTE, IDLE},
         # Operator tasks
-        RELOCATING: {IDLE, CHARGING},
+        RELOCATING: {IDLE, WAITING_FOR_CHARGING, CHARGING},
         CHARGING: {IDLE, RELOCATING},
+        WAITING_FOR_CHARGING: {CHARGING, IDLE},
         # Offline
         OFFLINE: {IDLE},
     }
