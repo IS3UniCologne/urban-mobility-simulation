@@ -20,11 +20,7 @@ from simulation.agent.user.user_log import (
     UserLog,
     UserLogEntry,
 )
-from simulation.helper.configuration.enums import (
-    OperatorMode,
-    TransactionState,
-    UserState,
-)
+from simulation.helper.enums import OperatorMode, TransactionState, UserState
 from simulation.helper.time import SimulationVelocityConverter
 from simulation.tasks.transport_task import TransportTask
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
