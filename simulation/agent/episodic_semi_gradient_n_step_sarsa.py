@@ -10,8 +10,8 @@ from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproxima
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.simulation_base import SimulationBase
+from simulation.helper.vehicle_states import VehicleStates
 
 
 class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):  # noqa: D101
@@ -64,7 +64,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):  # noqa: D101
                 yield self._env.process(self._take_action(bus, self._actions[t]))  # A_t
                 self._rewards.append(self._reward)  # R_t+1
                 self._states.append(deepcopy(bus._env_state))  # S_t+1  # noqa: SLF001
-                if bus.state is VehicleState.AT_TERMINAL_DESTINATION:
+                if bus.state is VehicleStates.AT_TERMINAL:
                     T = t + 1
                 else:
                     self._decide_next_action(bus, self._states[t + 1])  # A_t+1
@@ -138,7 +138,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):  # noqa: D101
             distance = bus.position >> new_position
             duration = distance / bus._velocity  # in minutes  # noqa: SLF001
 
-            self._state = VehicleState.EN_ROUTE_DETOUR
+            self._state = VehicleStates.EN_ROUTE
 
             yield self._env.timeout(duration)
 
