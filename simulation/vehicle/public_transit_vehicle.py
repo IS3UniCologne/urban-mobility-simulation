@@ -3,8 +3,8 @@ from __future__ import annotations  # noqa: D100
 from abc import ABC
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.time import SimulationTimeConverter
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.vehicle.vehicle import Vehicle
 
@@ -16,14 +16,6 @@ if TYPE_CHECKING:
     from simulation.infrastructure.route import PublicTransitRoute, Route
     from simulation.infrastructure.transit_network.stop import Stop
     from simulation.operator.vehicle_fleet import VehicleFleet
-
-
-class PublicTransitVehicleException(Exception):  # noqa: D101
-    pass
-
-
-class PublicTransitVehicleFull(PublicTransitVehicleException):  # noqa: D101
-    pass
 
 
 class PublicTransitVehicle(Vehicle, ABC):  # noqa: D101
@@ -46,7 +38,7 @@ class PublicTransitVehicle(Vehicle, ABC):  # noqa: D101
         self._delay: int = 0  # in seconds from planned route timetable
 
         # Initialize state
-        self.state = VehicleState.AT_TERMINAL_ORIGIN
+        self.state = VehicleStates.AT_TERMINAL
 
         self.logger.debug("Initialized.")
 

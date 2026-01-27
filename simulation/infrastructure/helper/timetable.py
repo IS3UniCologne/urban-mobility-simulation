@@ -7,6 +7,7 @@ import geopandas as gpd
 import pandas as pd
 
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.exceptions import AmbiguousTripException
 from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 
@@ -20,10 +21,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from simulation.context.simulation_context import SimulationContext
-
-
-class AmbiguousTripException(Exception):  # noqa: D101
-    pass
 
 
 class Timetable(SimulationBase):  # noqa: D101
