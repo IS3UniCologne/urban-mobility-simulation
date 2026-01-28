@@ -68,9 +68,9 @@ def run_simulation_and_extract_metrics(config_path: str) -> dict[str, Any]:
     relevant_fleet_metrics = {}
     for fleet_id, fleet_data in fleet_metrics.items():
         relevant_fleet_metrics[fleet_id] = {
-            "parking_vehicles": fleet_data["parking_vehicles"],
+            "idle_vehicles": fleet_data["idle_vehicles"],
             "charging_vehicles": fleet_data["charging_vehicles"],
-            "driving_vehicles": fleet_data["driving_vehicles"],
+            "transporting_vehicles": fleet_data["transporting_vehicles"],
             "avg_state_of_charge": fleet_data["avg_state_of_charge"],
         }
 
