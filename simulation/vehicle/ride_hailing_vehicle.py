@@ -198,7 +198,7 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
             else None,  # TODO: Why don't we use a buffer when relocating?
         ):
             raise RuntimeError(
-                f"{self.__class__.__name__!s} {self.uid} has been tried to move but has not enough energy."
+                f"{self.__class__.__name__!s} {self.uid} does not have enough energy for intended move."
             )
 
         yield self._env.timeout(time)
