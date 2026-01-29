@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.tasks.transport_task import TransportTask
 
-from simulation.helper.configuration.enums import TransactionState
+from simulation.helper.enums import TransactionState
 from simulation.helper.time import SimulationTime
 from simulation.infrastructure.helper import timetable
 from simulation.operator.operator import Operator

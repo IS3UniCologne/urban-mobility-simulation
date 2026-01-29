@@ -2,7 +2,7 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import VehicleType
+from simulation.helper.enums import VehicleType
 from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
