@@ -3,7 +3,6 @@ from __future__ import annotations  # noqa: D100
 from typing import TYPE_CHECKING
 
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.vehicle_states import VehicleStates
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
@@ -101,10 +100,7 @@ class ChargingTask(ServiceTask):  # noqa: D101
 
         # Start Charging Process
         for vehicle in selected_vehicles_to_charge:
-            # Wait for vehicle to become idle
-            if not vehicle.state_machine.is_in_state_or_descendant(VehicleStates.IDLE):
-                self.logger.debug("Waiting for vehicle %s to become idle", vehicle.uid)
-                yield vehicle.became_idle
+            yield from vehicle.wait_for_idle()
 
             # Relocation Route from origin of vehicle to fleet base
             distance = vehicle.position >> fleet_base_position
