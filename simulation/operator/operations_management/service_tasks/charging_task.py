@@ -3,7 +3,7 @@ from __future__ import annotations  # noqa: D100
 from typing import TYPE_CHECKING
 
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState, VehicleType
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
@@ -12,8 +12,9 @@ from simulation.operator.operations_management.service_tasks.service_task import
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.enums import VehicleType
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.vehicle.vehicle import Vehicle
+    from simulation.vehicle.shared_vehicle import SharedVehicle
 
 
 class ChargingTask(ServiceTask):  # noqa: D101
@@ -75,24 +76,23 @@ class ChargingTask(ServiceTask):  # noqa: D101
             yield req
 
             # Identify vehicles to relocate
-            potential_vehicles_to_charge = (
+            potential_vehicles_to_charge: list[SharedVehicle] = (
                 self._vehicle_fleet.vehicles_below_energy_threshold_in_region(
                     self._state_of_charge_threshold, self._origin
                 )
             )
-            selected_vehicles_to_charge: list[Vehicle] = []
+            selected_vehicles_to_charge: list[SharedVehicle] = []
 
             # Filter relevant vehicles
             for vehicle in potential_vehicles_to_charge:
-                # Filter by vehicle mode and only parking vehicles (possibly some vehicles are driving around with low soc)
+                # Filter by vehicle type, omit already reserved vehicles
                 if (
                     vehicle.vehicle_type == self._vehicle_type
-                    and vehicle.state == VehicleState.PARKING
                     and len(selected_vehicles_to_charge)
                     < self._number_of_vehicles_to_charge
+                    and not vehicle.is_reserved
                 ):
-                    # Mark Vehicle => Change state su
-                    # ch that other service workers don't touch it!!
+                    # Mark Vehicle => Change state such that other service workers don't touch it!!
                     vehicle.prepare_for_service_task(
                         f"Service Worker {args[0]}", self.__class__.__name__
                     )
@@ -101,6 +101,11 @@ class ChargingTask(ServiceTask):  # noqa: D101
 
         # Start Charging Process
         for vehicle in selected_vehicles_to_charge:
+            # Wait for vehicle to become idle
+            if not vehicle.state_machine.is_in_state_or_descendant(VehicleStates.IDLE):
+                self.logger.debug("Waiting for vehicle %s to become idle", vehicle.uid)
+                yield vehicle.became_idle
+
             # Relocation Route from origin of vehicle to fleet base
             distance = vehicle.position >> fleet_base_position
             relocation_route = Edge(
@@ -118,6 +123,30 @@ class ChargingTask(ServiceTask):  # noqa: D101
                 distance / vehicle_relocation_velocity
             ) / len(selected_vehicles_to_charge)
 
+            # Calculate charging duration for prediction
+            vehicle_charging_power = self._config.operators[
+                0
+            ].OPERATIONS_CONFIG.CHARGING_STATION_POWER
+            charging_duration_per_vehicle = (
+                (
+                    vehicle.energy_system.capacity
+                    - vehicle.energy_system.current_energy_absolute
+                )
+                / vehicle_charging_power
+                * 60
+            )
+
+            # Set predicted state: post-charge energy and total task duration
+            vehicle.energy_system.predicted_energy_after_task = (
+                vehicle.energy_system.capacity
+            )
+            vehicle.estimated_completion_time = (
+                self._env.now
+                + relocation_duration_per_vehicle
+                + charging_duration_per_vehicle
+            )
+
+            vehicle.release_reservation()
             # First relocate vehicle to base
             yield self._env.process(
                 vehicle.relocate(
@@ -131,16 +160,7 @@ class ChargingTask(ServiceTask):  # noqa: D101
             vehicle.plug_to_charging_station()
 
             # Charge Vehicle
-            vehicle_charging_power = (
-                self._config.operators[0].OPERATIONS_CONFIG.CHARGING_STATION_POWER
-            )  # TODO: Fix this once charging infrastructure is unified
-            # Note: See text regarding linearization
-            # *60 as state of charge is in kWh => kWmin
-            charging_duration_per_vehicles = (
-                (vehicle.energy_system.capacity / vehicle_charging_power) * 60
-            ) / len(selected_vehicles_to_charge)
-
-            yield self._env.process(vehicle.charge(charging_duration_per_vehicles))
+            yield self._env.process(vehicle.charge(charging_duration_per_vehicle))
 
             # Unplug Vehicle from Charging Station
             vehicle.unplug_from_charging_station()
