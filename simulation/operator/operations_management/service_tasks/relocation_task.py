@@ -3,7 +3,6 @@ from __future__ import annotations  # noqa: D100
 from typing import TYPE_CHECKING
 
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState, VehicleType
 from simulation.infrastructure.network.edge import Edge
 from simulation.infrastructure.network.vertex import Vertex
 from simulation.operator.operations_management.service_tasks.service_task import (
@@ -12,6 +11,7 @@ from simulation.operator.operations_management.service_tasks.service_task import
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.enums import VehicleType
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.vehicle.vehicle import Vehicle
 
@@ -73,17 +73,16 @@ class RelocationTask(ServiceTask):  # noqa: D101
 
             # Filter relevant vehicles
             for vehicle in potential_vehicles_sorted:
-                # Filter by vehicle type and only parking vehicles (possibly some vehicles are driving around with low soc)
+                # Filter by vehicle type, omit reserved
                 if (
                     vehicle.vehicle_type == self._vehicle_type
-                    and vehicle.state == VehicleState.PARKING
+                    and not vehicle.is_reserved
                 ):
-                    # Mark Vehicle => Change state su
-                    # ch that other service workers don't touch it!!
+                    # Mark Vehicle => Change state such that other service workers don't touch it!!
                     vehicle.prepare_for_service_task(
                         f"Service Worker {args[0]}", self.__class__.__name__
                     )
-                    # Add to charging list
+                    # Add to relocation list
                     selected_vehicles_to_relocate.append(vehicle)
                     if (
                         len(selected_vehicles_to_relocate)
@@ -93,6 +92,9 @@ class RelocationTask(ServiceTask):  # noqa: D101
                         break
         # Start Relocation Process
         for vehicle in selected_vehicles_to_relocate:
+            yield from vehicle.wait_for_idle()
+
+            vehicle.release_reservation()
             # Random Destination at Dest Region
             lat, lng = self._geo_env.get_random_position(self._destination)
             vehicle_dest = GeodesicPosition(self._sim, lat, lng, self._destination)
@@ -111,6 +113,14 @@ class RelocationTask(ServiceTask):  # noqa: D101
             relocation_duration_per_vehicle = (
                 relocation_route.distance / vehicle_relocation_velocity
             ) / len(selected_vehicles_to_relocate)
+
+            # Set predicted state: energy after relocation and completion time
+            vehicle.energy_system.set_predicted_energy_for_distance(
+                relocation_route.distance
+            )
+            vehicle.estimated_completion_time = (
+                self._env.now + relocation_duration_per_vehicle
+            )
 
             yield self._env.process(
                 vehicle.relocate(
