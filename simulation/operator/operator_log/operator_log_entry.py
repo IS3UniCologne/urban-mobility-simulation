@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import TransactionState, VehicleType
+from simulation.helper.enums import TransactionState, VehicleType
 
 if TYPE_CHECKING:
     from simulation.helper.types import RegionId, SimId
