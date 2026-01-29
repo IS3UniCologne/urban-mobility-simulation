@@ -3,7 +3,7 @@ from __future__ import annotations  # noqa: D100
 from typing import TYPE_CHECKING
 
 import pandas as pd
-from simpy import AnyOf
+from simpy import AnyOf, Event
 
 from simulation.helper.configuration.configuration import (
     RideHailingMPChargingOperationsConfig,
@@ -20,6 +20,8 @@ from simulation.operator.operations_management.service_tasks.charging_task_rideh
 from simulation.operator.operations_management.task_queue import TaskQueue
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from simulation.operator.operations_management.operations import (
         OperationsDependencies,
     )
@@ -64,7 +66,7 @@ class RideHailingMPChargingOperations(RideHailingOperations):
 
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
 
-    def execute(self) -> None:  # noqa: D102
+    def execute(self) -> Generator[Event, None, None]:  # noqa: D102
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             sim=self._sim,
