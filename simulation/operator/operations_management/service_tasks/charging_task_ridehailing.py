@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from beartype.door import is_bearable
 
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.vehicle_states import VehicleState
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from simulation.infrastructure.charging_stations.charging_station import (
         ChargingStation,
     )
-    from simulation.vehicle.vehicle import Vehicle
+    from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 
 # TODO: refactor to not be a copy of ChargingTask that was used for SharedVehicles
@@ -58,7 +58,7 @@ class ChargingTaskRidehailing(ServiceTask):  # noqa: D101
         distance_to_fleet_base: float,
         state_of_charge_threshold: float,
         charging_station: ChargingStation = None,
-        vehicle: Vehicle = None,
+        vehicle: RideHailingVehicle = None,  # TODO: Why do we default this to None ?
         vehicle_type=None,  # noqa: ANN001
         scheduled_time=None,  # noqa: ANN001
     ) -> None:
@@ -126,134 +126,150 @@ class ChargingTaskRidehailing(ServiceTask):  # noqa: D101
         :return:
         """  # noqa: D202, D205, D400
 
-        # Filter only parking vehicles (possibly some vehicles are driving around with low soc)
-        if self._vehicle.state == VehicleState.PARKING:
-            relocation_route = Edge(
-                self._distance,
-                Vertex(self._vehicle.position),
-                Vertex(self._destination_position),
+        # Wait for vehicle to become idle
+        if not self._vehicle.state_machine.is_in_state_or_descendant(
+            VehicleStates.IDLE
+        ):
+            self.logger.debug(
+                "Waiting for vehicle %s to become idle", self._vehicle.uid
             )
+            yield self._vehicle.became_idle
 
-            self._state = TaskState.EXECUTING_RELOCATION
+        self._state = TaskState.EXECUTING_RELOCATION
 
-            # First relocate vehicle to charging site
-            yield self._env.process(self._vehicle.relocate(relocation_route))
+        self._vehicle.release_reservation()
 
-            if self._vehicle.is_electric:
-                self._vehicle.waiting_for_charging()
-                waiting_start = self._env.now
+        relocation_route = Edge(
+            distance=self._distance,
+            origin=Vertex(self._vehicle.position),
+            destination=Vertex(self._destination_position),
+        )
+        relocation_duration = self._distance / self._vehicle.velocity
 
-                if is_bearable(self._charging_station, VirtualChargingStation):
-                    # only in this case we can check for the next condition, otherwise AttributeError gets thrown
-                    if self._charging_station.valid_timeframe is not None:
-                        # if we are in a context of shared capacity, we need to wait for the reservation
+        # Set predicted state: energy after relocation and completion time
+        self._vehicle.energy_system.predicted_energy_after_task = (
+            self._vehicle.energy_system.capacity
+        )
+        self._vehicle.estimated_completion_time = (
+            self._env.now + relocation_duration + self._charging_duration
+        )
 
-                        scheduled_timeslot_end = (
-                            self._scheduled_time
-                            + self._charging_station.virtual_charging_infrastructure._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION  # noqa: SLF001
-                        )
-                        self._waiting_time = self._scheduled_time - self._env.now
-                        if self._waiting_time > 0:
-                            self.logger.debug(
-                                "Vehicle %s waits %s minutes for reserved slot.",
-                                self._vehicle.uid,
-                                self._waiting_time,
-                            )
-                            self._state = TaskState.EXECUTING_WAITING
-                            yield self._env.timeout(max(0, self._waiting_time))
-                        elif scheduled_timeslot_end <= self._env.now:
-                            self.logger.warning(
-                                "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
-                                self._vehicle.uid,
-                                self._env.now - scheduled_timeslot_end,
-                            )
-                            self._state = TaskState.MISSED_TIMESLOT
-                            self._vehicle.state = VehicleState.PARKING
-                            self._task_finished.succeed()
-                            return
+        # First relocate vehicle to charging site
+        yield self._env.process(self._vehicle.relocate(relocation_route))
 
-                check_station_full = False
-                # we sanity check if the physical capacity is not exhausted
-                check_station_full = (
-                    len(self._charging_station.plugs.users)
-                    >= self._charging_station.plugs.capacity
-                )
+        # TODO: Should we even get here if the vehicle is not electric?
+        if self._vehicle.is_electric:
+            self._vehicle.wait_for_charging()
+            waiting_start = self._env.now
 
-                if check_station_full and self._charging_station.queue_size <= len(
-                    self._charging_station.plugs.queue
-                ):
-                    # charging station is at capacity and the queue is also full
-                    self.logger.info(
-                        "Vehicle %s arrived charging station, but the queue is full. Cannot charge!",
-                        self._vehicle.uid,
+            if is_bearable(self._charging_station, VirtualChargingStation):
+                # only in this case we can check for the next condition, otherwise AttributeError gets thrown
+                if self._charging_station.valid_timeframe is not None:
+                    # if we are in a context of shared capacity, we need to wait for the reservation
+
+                    scheduled_timeslot_end = (
+                        self._scheduled_time
+                        + self._charging_station.virtual_charging_infrastructure._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION  # noqa: SLF001
                     )
-                    self._state = TaskState.MISSED_QUEUE_FULL
-                    self._vehicle.state = VehicleState.PARKING
-                    self._task_finished.succeed()
-                    return
-                else:
-                    self._state = TaskState.EXECUTING_WAITING
-
-                with self._charging_station.plugs.request() as req:
-                    yield req
-
-                    if self._scheduled_time is not None:
-                        self._charging_duration = min(
-                            self._charging_duration,
-                            (
-                                self._scheduled_time
-                                + self._charging_station.virtual_charging_infrastructure._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION  # noqa: SLF001
-                            )
-                            - self._env.now,
-                        )
-
-                    if self._charging_duration <= 0:
-                        self.logger.info(
-                            "Vehicle %s has a fishy charging time of %s minutes at. Cannot charge!",
+                    self._waiting_time = self._scheduled_time - self._env.now
+                    if self._waiting_time > 0:
+                        self.logger.debug(
+                            "Vehicle %s waits %s minutes for reserved slot.",
                             self._vehicle.uid,
-                            self._charging_duration,
+                            self._waiting_time,
+                        )
+                        self._state = TaskState.EXECUTING_WAITING
+                        yield self._env.timeout(max(0, self._waiting_time))
+                    elif scheduled_timeslot_end <= self._env.now:
+                        self.logger.warning(
+                            "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
+                            self._vehicle.uid,
+                            self._env.now - scheduled_timeslot_end,
                         )
                         self._state = TaskState.MISSED_TIMESLOT
-                        self._vehicle.state = VehicleState.PARKING
+                        self._vehicle.abort_charging_task()
                         self._task_finished.succeed()
                         return
 
-                    self._charging_duration -= (
-                        1e-6 if self._charging_duration > 1e-6 else 0
-                    )
+            check_station_full = False
+            # we sanity check if the physical capacity is not exhausted
+            check_station_full = (
+                len(self._charging_station.plugs.users)
+                >= self._charging_station.plugs.capacity
+            )
 
-                    self._kWh_charged = (
-                        self._charging_duration / 60 * self._charging_station.power
-                    )
-                    self._estimated_completion_time = (
-                        self._env.now + self._charging_duration
-                    )
-
-                    # Plugin Vehicle to Charging Station
-                    self._arrived_at_charging_station.succeed()
-                    self._vehicle.plug_to_charging_station()
-                    self._env.process(self._charging_station.plug_in_notify())
-
-                    if not isinstance(self._charging_station, VirtualChargingStation):
-                        waiting_stop = self._env.now
-                        self._waiting_time = waiting_stop - waiting_start
-
-                    self._state = TaskState.EXECUTING_CHARGING
-
-                    self._started_charging.succeed(self._env.now)
-
-                    yield self._env.process(
-                        self._vehicle.charge(self._charging_duration, self._kWh_charged)
-                    )
+            if check_station_full and self._charging_station.queue_size <= len(
+                self._charging_station.plugs.queue
+            ):
+                # charging station is at capacity and the queue is also full
+                self.logger.info(
+                    "Vehicle %s arrived charging station, but the queue is full. Cannot charge!",
+                    self._vehicle.uid,
+                )
+                self._state = TaskState.MISSED_QUEUE_FULL
+                self._vehicle.abort_charging_task()
+                self._task_finished.succeed()
+                return
             else:
-                # TODO: this usage of "charge" for possibly ICE vehicles is confusing
-                self._vehicle.state = VehicleState.PRE_SERVICE
+                self._state = TaskState.EXECUTING_WAITING
+
+            with self._charging_station.plugs.request() as req:
+                yield req
+
+                if self._scheduled_time is not None:
+                    self._charging_duration = min(
+                        self._charging_duration,
+                        (
+                            self._scheduled_time
+                            + self._charging_station.virtual_charging_infrastructure._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION  # noqa: SLF001
+                        )
+                        - self._env.now,
+                    )
+
+                if self._charging_duration <= 0:
+                    self.logger.info(
+                        "Vehicle %s has a fishy charging time of %s minutes at. Cannot charge!",
+                        self._vehicle.uid,
+                        self._charging_duration,
+                    )
+                    self._state = TaskState.MISSED_TIMESLOT
+                    self._vehicle.abort_charging_task()
+                    self._task_finished.succeed()
+                    return
+
+                self._charging_duration -= 1e-6 if self._charging_duration > 1e-6 else 0
+
+                self._kWh_charged = (
+                    self._charging_duration / 60 * self._charging_station.power
+                )
+                self._estimated_completion_time = (
+                    self._env.now + self._charging_duration
+                )
+
+                # Plugin Vehicle to Charging Station
+                self._arrived_at_charging_station.succeed()
                 self._vehicle.plug_to_charging_station()
-                yield self._env.process(self._vehicle.charge(charging_time=5))
-            # Unplug Vehicle from Charging Station
-            self._vehicle.unplug_from_charging_station()
-            self._env.process(self._charging_station.plug_out_notify())
-            self._state = TaskState.FINISHED
+                self._env.process(self._charging_station.plug_in_notify())
+
+                if not isinstance(self._charging_station, VirtualChargingStation):
+                    waiting_stop = self._env.now
+                    self._waiting_time = waiting_stop - waiting_start
+
+                self._state = TaskState.EXECUTING_CHARGING
+
+                self._started_charging.succeed(self._env.now)
+
+                yield self._env.process(
+                    self._vehicle.charge(self._charging_duration, self._kWh_charged)
+                )
+        else:
+            # TODO: this usage of "charge" for possibly ICE vehicles is confusing
+            self._vehicle.plug_to_charging_station()
+            yield self._env.process(self._vehicle.charge(charging_time=5))
+        # Unplug Vehicle from Charging Station
+        self._vehicle.unplug_from_charging_station()
+        self._env.process(self._charging_station.plug_out_notify())
+        self._state = TaskState.FINISHED
 
         # Notify all
         self._task_finished.succeed()
@@ -263,6 +279,3 @@ class ChargingTaskRidehailing(ServiceTask):  # noqa: D101
 
     def __repr__(self):  # noqa: ANN204, D105
         return self.__str__()
-
-    def get_charging_station(self):  # noqa: ANN201, D102
-        pass
