@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 import h3
 import pandas as pd
 
-from simulation.helper.configuration.enums import VehicleType
+from simulation.helper.enums import VehicleType
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
 from simulation.operator.operations_management.operations import (
     Operations,
