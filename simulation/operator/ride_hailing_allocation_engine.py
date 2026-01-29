@@ -2,6 +2,7 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, Any
 
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.operator.vehicle_allocation_engine import (
     AllocationEngine,
     AllocationEngineDependencies,
@@ -18,7 +19,6 @@ if TYPE_CHECKING:
         TransportationAlternative,
     )
 
-from simulation.helper.configuration.enums import VehicleState
 from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
@@ -27,6 +27,7 @@ from simulation.operator.data_transfer_object.vehicle_allocation import (
 class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
     __slots__ = (
         "_env",
+        "_request_arrived",
         "_vehicle_assignment_ids",
         "_vehicle_assignment_requests",
         "_vehicles_assigned_to_users",
@@ -36,6 +37,7 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
         super().__init__(deps)
         self._env = deps.sim.env
         self._vehicles_assigned_to_users = self._env.event()
+        self._request_arrived = self._env.event()
         self._env.process(self.run())
         self._vehicle_assignment_requests: list[
             tuple[User, TransportationAlternative]
@@ -46,6 +48,10 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
         while True:
             yield self._env.timeout(1)
 
+            if not self._vehicle_assignment_requests:
+                # no requests to process
+                continue
+
             # ################## # ###################### #
             # Matching Algorithm : First Come First Serve #
             # ################## # ###################### #
@@ -53,12 +59,20 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
             # First Come First Serve - Assign vehicles to first request
             for user, requested_alternative in self._vehicle_assignment_requests:
                 if isinstance(requested_alternative.vehicle, ReservableMixin):
-                    if requested_alternative.vehicle.state == VehicleState.PARKING:
-                        requested_alternative.vehicle.reserve(user)
+                    if (
+                        # TODO: Include non-idle vehicles for pre-booking ?
+                        requested_alternative.vehicle.state_machine.is_in_state(
+                            VehicleStates.IDLE
+                        )
+                        and not requested_alternative.vehicle.is_reserved
+                    ):
+                        requested_alternative.vehicle.reserve_for_user(user)
                     else:
                         self.logger.debug(
-                            "Vehicle %s is not available for assignment",
+                            "Vehicle %s not available for assignment (state: %s, reserved: %s)",
                             requested_alternative.vehicle.uid,
+                            requested_alternative.vehicle.state,
+                            requested_alternative.vehicle.is_reserved,
                         )
                 else:
                     self.logger.warning(
@@ -94,17 +108,8 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
         """
         selected_vehicle = selected_transportation_alternative.vehicle
 
-        # If vehicle is finishing another trip, wait for it to complete
-        if selected_vehicle.state == VehicleState.DRIVING:
-            self.logger.debug(
-                "Vehicle %s is currently driving. Waiting for trip completion before allocation.",
-                selected_vehicle.uid,
-            )
-            yield selected_vehicle._driving_finished  # noqa: SLF001
-            self.logger.debug(
-                "Vehicle %s finished driving. Proceeding with allocation.",
-                selected_vehicle.uid,
-            )
+        # Wait for vehicle to become idle (if not already)
+        yield from selected_vehicle.wait_for_idle()
 
         try:
             self._add_request(user, selected_transportation_alternative)
@@ -142,6 +147,24 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
             )
             return None
 
+        # TODO: This should not happen but until the state system is fully reliable we keep this check
+        if not selected_vehicle.state_machine.is_in_state(VehicleStates.IDLE):
+            self.logger.warning(
+                "Vehicle %s is no longer IDLE (state: %s), cannot dispatch for user %s",
+                selected_vehicle.uid,
+                selected_vehicle.state,
+                user.uid,
+            )
+            self._operator.log_failed_allocation_attempt(
+                user=user,
+                transportation_task=user.transport_task,
+                transportation_alternative=selected_transportation_alternative,
+            )
+            return None
+
+        # TODO: Move this to task
+        selected_vehicle.release_reservation()
+
         # Set vehicle task
         selected_vehicle.set_current_task(user.transport_task)
 
@@ -163,5 +186,8 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
         if vehicle_assignment.vehicle.uid not in self._vehicle_assignment_ids:
             self._vehicle_assignment_requests.append((user, vehicle_assignment))
             self._vehicle_assignment_ids.add(vehicle_assignment.vehicle.uid)
+            # Trigger event to wake up allocation engine
+            self._request_arrived.succeed()
+            self._request_arrived = self._env.event()
         else:
             raise Exception
