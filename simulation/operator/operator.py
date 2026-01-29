@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import OperatorConfig
-    from simulation.helper.configuration.enums import VehicleType
+    from simulation.helper.enums import VehicleType
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from simulation.tasks.transport_task import TransportTask
     from simulation.world.world import World
 
-from simulation.helper.configuration.enums import (
+from simulation.helper.enums import (
     AutonomyType,
     OperatorMode,
     PropulsionType,
