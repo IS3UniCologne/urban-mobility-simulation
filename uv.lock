@@ -2677,7 +2677,7 @@ wheels = [
 
 [[package]]
 name = "scalene"
-version = "2.1.0"
+version = "2.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloudpickle" },
@@ -2689,16 +2689,16 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/21/1315ca57e40c46d103058f12b0c7542d961fbb462604494f8781756b82ef/scalene-2.1.0.tar.gz", hash = "sha256:66615928ec56e5626569606e6641815715a2ef67734b0480f5a8256cbcbe1535", size = 9435592, upload-time = "2026-01-23T21:30:46.173Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b1/36/c449adacf155ca43f80fb0e7f70525a6c9639694a17968c47f8a762362d2/scalene-2.1.3.tar.gz", hash = "sha256:151a952b1dcf8c128c822d51f86bf951bb4216239cb6cd277824a61cee54961f", size = 9459387, upload-time = "2026-01-31T20:22:43.778Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bf/5a/8035d29dbba883ef3718bf46bcb445c45e0155067f54da9282f4306d421b/scalene-2.1.0-cp310-cp310-macosx_15_0_universal2.whl", hash = "sha256:02fbc719166aaa936228344634dbd152a5b2e85aba6693b1055ded371bb666b4", size = 1204029, upload-time = "2026-01-23T21:32:53.933Z" },
-    { url = "https://files.pythonhosted.org/packages/0b/d8/2e87e1e1a0470119ea121985bec201074a68870b0475f64ccddfeeda589c/scalene-2.1.0-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6b00920c8e5381bade2ee6b22607522c86af44121121ff624277d5684d470556", size = 1496378, upload-time = "2026-01-23T21:19:41.874Z" },
-    { url = "https://files.pythonhosted.org/packages/97/82/e74a2173aff6a8b5f635c9401dbcff3dd46ee2677d0539950bc4bc86fcdf/scalene-2.1.0-cp310-cp310-win_amd64.whl", hash = "sha256:6653afcf5d5110c8b94f8a08aeb54afdb6baab71be69266cb8f294b045d395b2", size = 1138011, upload-time = "2026-01-23T21:22:10.52Z" },
-    { url = "https://files.pythonhosted.org/packages/bb/fe/8fad54594b0f1f5a601833ee7146048cb5f80860ffd981de79a7eef551d5/scalene-2.1.0-cp311-cp311-macosx_15_0_universal2.whl", hash = "sha256:3b4481e19e42c7b443f2734483dc3abc6f6feb0d331df3aff169754e8896a057", size = 1204090, upload-time = "2026-01-23T21:30:44.429Z" },
-    { url = "https://files.pythonhosted.org/packages/30/67/2fa60d393e0dfb3c1f363d71d865110edbcd8b8b93f404e97a36fa381d85/scalene-2.1.0-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:dce0e83613da2e6f513237172d0dbb08b590f036e0849f6166a0dbc7218a8f44", size = 1497068, upload-time = "2026-01-23T21:19:43.216Z" },
-    { url = "https://files.pythonhosted.org/packages/a5/09/2d29cf532773f306eda21efbeca4bebc6564e20f8cc3228836a1a53e4cc2/scalene-2.1.0-cp312-cp312-macosx_15_0_universal2.whl", hash = "sha256:5293a9c4017064816199bf06a33b0655f086c4f7471ed8cfcca3fed68efc75c5", size = 1203865, upload-time = "2026-01-23T21:27:30.623Z" },
-    { url = "https://files.pythonhosted.org/packages/b7/68/74375b0f9fe9048e7cb0e5d4adb67c793058deef69697d00dd19f4cd19ec/scalene-2.1.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ad92844e307eece8d629e91d13e3093dcf1a5dff794ecfa5bb92313f28afdd5d", size = 1497517, upload-time = "2026-01-23T21:19:45.941Z" },
-    { url = "https://files.pythonhosted.org/packages/74/d5/e84efa2d5a810a38f6ce398636c87fdb959848bbfdf902c545f4f73d0966/scalene-2.1.0-cp312-cp312-win_amd64.whl", hash = "sha256:b19d4ed46213705c5a36475e4408b2f0177e291c7079d4ac96d22c2d02822c8e", size = 1138032, upload-time = "2026-01-23T21:22:02.528Z" },
+    { url = "https://files.pythonhosted.org/packages/02/fa/fe95aa8880c7b0e2363a7ad17cb372c75b1f39cdfa92b056c9c3e2f5757a/scalene-2.1.3-cp310-cp310-macosx_15_0_universal2.whl", hash = "sha256:e97b9d3089b1c57d1c4e751474aba93c2bb0843389e854f5dc703680dec8900b", size = 1214378, upload-time = "2026-01-31T20:15:43.27Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/4f/db5476b63a650aad5b0bee2f3b3f790dc3c6fe1e0c862e2da22aa9dcd758/scalene-2.1.3-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:7c5460105300fd3a76c3a5d5dc6bebc120694b110123e86f349bf428b76ef336", size = 1506723, upload-time = "2026-01-31T20:14:13.081Z" },
+    { url = "https://files.pythonhosted.org/packages/68/98/6b151dc209f06147299fcaa45d53534ed691a16a4208a9b5301a5d753b4c/scalene-2.1.3-cp310-cp310-win_amd64.whl", hash = "sha256:d82353265ad0ae7fa72aa34ea8101dbd1398359017f976bca5c9e089bf320a90", size = 1148470, upload-time = "2026-01-31T20:16:44.351Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/27/f7a2803b83445d8796ddfaaf51509531da4f70b908a98071ee71fde505a6/scalene-2.1.3-cp311-cp311-macosx_15_0_universal2.whl", hash = "sha256:e59ef2583f9b42fb9465fa6bd03e67c200563d4f8c760068b19cc20d7ddfc3a0", size = 1214442, upload-time = "2026-01-31T20:22:41.977Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/72/6dec500547c21de32aa1dc526b9b17b32d29291e221a3d8285ac0fbb0ceb/scalene-2.1.3-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:2ff4fcec4ea115b2b594e326e1a980a744b366f241b12e445d9f1c75db9553e3", size = 1507411, upload-time = "2026-01-31T20:14:19.579Z" },
+    { url = "https://files.pythonhosted.org/packages/44/b1/6d0a10d91a73c1666e64ba447a486f21216480ceef26cf06653b1bb9c454/scalene-2.1.3-cp312-cp312-macosx_15_0_universal2.whl", hash = "sha256:fb31866a46ff70a05d64cbe1ef91711659248ea975a979302ec7f6b9931dda68", size = 1214214, upload-time = "2026-01-31T20:16:26.554Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/55/648c8b054ad8420570a6ed05381619a757d815359d1a9f23994376287ed5/scalene-2.1.3-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e6a76672b3cd7266ced9698f4499af15b311695f312291118e5e4e34bb971a61", size = 1507864, upload-time = "2026-01-31T20:14:14.635Z" },
+    { url = "https://files.pythonhosted.org/packages/82/09/97cbb923af0107f3e36d8bd9a3de67f2198ce892e12818c61e51ec86b45b/scalene-2.1.3-cp312-cp312-win_amd64.whl", hash = "sha256:9a511bffbeabe5960d97b89ce07ef190c8d60d346f68bb96806e0b7dcdc82045", size = 1148494, upload-time = "2026-01-31T20:20:41.925Z" },
 ]
 
 [[package]]
