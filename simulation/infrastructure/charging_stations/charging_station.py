@@ -160,7 +160,7 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
             self._vehicle_unplugged = self._env.event()
 
     def calc_current_queue_time(self) -> simpy.events.Generator:  # noqa: D102
-        # a charging station could expose the current expected queue time (if a vehicle would request charging right now) from the remaining charging times of vehicles in it and requests in the queue
+        # Estimate queue time from request metadata on active and queued plugs.
         while True:
             yield self._env.timeout(1)
             # first we get the most trivial scenario out of the way
@@ -172,29 +172,35 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
                 1e-6
             )  # this might be necessary for process order, when charging tasks are making the switch from queue to plugs
 
-            # that seems really hacky but the only way to directly access the caller that initiated the request to the simpy ressource, if you find a better way feel free to raise a pull request :)
-            ongoing_charging_tasks = [
-                x.proc._generator.gi_frame.f_locals["self"]  # noqa: SLF001
-                for x in self._plugs.users
-            ]
-            queued_tasks = [
-                x.proc._generator.gi_frame.f_locals["self"]  # noqa: SLF001
-                for x in self._plugs.queue
-            ]
+            ongoing_requests = list(self._plugs.users)
+            queued_requests = list(self._plugs.queue)
 
             ongoing_tasks_completion_time_asc = sorted(
                 [
-                    x._estimated_completion_time  # noqa: SLF001
-                    for x in ongoing_charging_tasks
-                    if x._estimated_completion_time is not None  # noqa: SLF001
+                    req.estimated_completion_time
+                    for req in ongoing_requests
+                    if req.estimated_completion_time is not None
                 ]
             )
-            queued_tasks_charging_time = [x.charging_duration for x in queued_tasks]
+            queued_tasks_charging_time = [
+                req.charging_duration
+                for req in queued_requests
+                if req.charging_duration is not None
+            ]
 
             # calculate rolling finish times
             finish_times = (
                 ongoing_tasks_completion_time_asc.copy()
             )  # init for currently charging
+
+            if len(ongoing_requests) != len(ongoing_tasks_completion_time_asc):
+                raise ValueError(
+                    "Missing estimated completion time for active charging request."
+                )
+            if len(queued_requests) != len(queued_tasks_charging_time):
+                raise ValueError(
+                    "Missing charging duration for queued charging request."
+                )
             for i, charging_time in enumerate(queued_tasks_charging_time):
                 if i < self._capacity:
                     # if the queue is short, the queued vehicles finish time is just the end time of the i-th next finished vehicle plus its own charging time
