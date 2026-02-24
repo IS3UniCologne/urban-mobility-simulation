@@ -1,0 +1,157 @@
+"""VehicleSession represents one actor's complete interaction with a vehicle."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from simulation.helper.enums import TaskState
+from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
+    from simulation.agent.user import User
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.tasks.base.vehicle_task import VehicleTask
+    from simulation.vehicle.reservation import Reservation
+    from simulation.vehicle.vehicle import Vehicle
+    from simulation.vehicle.vehicle_use import VehicleUse
+
+from simulation.helper.simulation_base import SimulationBase
+
+
+class VehicleSession(SimulationBase):
+    """One actor's complete interaction with a vehicle from start to finish.
+
+    A session waits for a reservation to be fulfilled, then converts it
+    into an active ``VehicleUse``.  The reservation is released so that
+    other actors can queue for the vehicle.  The ``VehicleUse`` is held
+    for the entire session duration and released in a ``finally`` block
+    to prevent leaks.
+
+    The session automatically calculates predicted energy delta and
+    duration by querying all tasks before execution begins.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        The simulation context.
+    vehicle : Vehicle
+        The vehicle being operated on.
+    reservation : Reservation
+        The reservation that grants access to the vehicle.
+    tasks : list of VehicleTask
+        The tasks to execute sequentially.
+    holder : User or None
+        The user who will actively use the vehicle, or None for operator
+        use.
+    """
+
+    __slots__ = (
+        "_env",
+        "_holder",
+        "_reservation",
+        "_sim",
+        "_tasks",
+        "_use",
+        "_vehicle",
+    )
+
+    def __init__(
+        self,
+        sim: SimulationContext,
+        vehicle: Vehicle,
+        reservation: Reservation,
+        tasks: list[VehicleTask],
+        holder: User | None = None,
+    ) -> None:
+        super().__init__(sim)
+        self._env = sim.env
+        self._sim = sim
+        self._vehicle = vehicle
+        self._reservation = reservation
+        self._tasks = tasks
+        self._holder = holder
+        self._use: VehicleUse | None = None
+
+    def execute(self) -> Generator[Event, None, None]:
+        """Execute the session.
+
+        Yields
+        ------
+        Event
+            SimPy events during session execution.
+        """
+        try:
+            # 1. Wait for vehicle availability (skip if already fulfilled)
+            if not self._reservation.ready_event.triggered:
+                self.logger.debug(
+                    "Session waiting for reservation for vehicle %s, holder=%s.",
+                    self._vehicle.uid,
+                    self._holder,
+                )
+                yield self._reservation.ready_event
+
+            # 2. Acquire exclusive use (auto-releases reservation)
+            self._acquire_use()
+
+            self.logger.debug(
+                "Session started for vehicle %s with %s task(s), holder=%s",
+                self._vehicle.uid,
+                len(self._tasks),
+                self._holder,
+            )
+
+            # 3. Calculate predicted energy and duration for entire session
+            self._set_session_predictions()
+
+            # 4. Execute tasks sequentially
+            for task in self._tasks:
+                yield from task.execute()
+                if task.state is TaskState.ABORTED:
+                    self.logger.debug("Session stopping early: task aborted.")
+                    break
+
+        finally:
+            # 5. Always release vehicle use
+            if self._use is not None and isinstance(self._vehicle, ReservableMixin):
+                if self._vehicle.current_use is self._use:
+                    self._vehicle.release_use()
+                    self.logger.debug(
+                        "Session for vehicle %s ended, use released.", self._vehicle.uid
+                    )
+
+    def _acquire_use(self) -> None:
+        if isinstance(self._vehicle, ReservableMixin):
+            self._use = self._vehicle.acquire_use(holder=self._holder)
+        else:
+            self._use = None
+
+    def _set_session_predictions(self) -> None:
+        """Predict energy and duration for the entire session.
+
+        A tasks predicted energy and duration can depend on the preceding tasks,
+        so we iterate through all tasks sequentially.
+        """
+        running_energy = self._vehicle.energy_system.current_energy_absolute
+        total_duration = 0.0
+
+        for task in self._tasks:
+            energy_delta = task.get_predicted_energy_delta(running_energy)
+            running_energy += energy_delta
+            total_duration += task.get_predicted_duration(running_energy)
+
+        self._vehicle.energy_system.predicted_energy = running_energy
+        self._vehicle.estimated_completion_time = self._env.now + total_duration
+
+        total_energy_delta = (
+            running_energy - self._vehicle.energy_system.current_energy_absolute
+        )
+        self.logger.debug(
+            "Session predictions for vehicle %s: energy_delta=%.2f kWh, duration=%.1f min.",
+            self._vehicle.uid,
+            total_energy_delta,
+            total_duration,
+        )
