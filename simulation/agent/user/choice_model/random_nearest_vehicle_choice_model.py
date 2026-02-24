@@ -69,7 +69,7 @@ class RandomModeNearestVehicleChoiceModel(ChoiceModelInterface):
             alternatives_by_mode[alt.operator.mode].append(alt)
 
         # Randomly select a mode (uniform probability)
-        available_modes = sorted(list(alternatives_by_mode.keys()), key=str)
+        available_modes = sorted(alternatives_by_mode.keys(), key=str)
         selected_mode = self._rng.choice(available_modes)
 
         # Get alternatives in selected mode
