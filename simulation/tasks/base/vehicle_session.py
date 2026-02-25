@@ -42,7 +42,7 @@ class VehicleSession(SimulationBase):
         The vehicle being operated on.
     reservation : Reservation
         The reservation that grants access to the vehicle.
-    tasks : list of VehicleTask
+    tasks : list of VehicleTask[Vehicle]
         The tasks to execute sequentially.
     holder : User or None
         The user who will actively use the vehicle, or None for operator
@@ -64,7 +64,7 @@ class VehicleSession(SimulationBase):
         sim: SimulationContext,
         vehicle: Vehicle,
         reservation: Reservation,
-        tasks: list[VehicleTask],
+        tasks: list[VehicleTask[Vehicle]],
         holder: User | None = None,
     ) -> None:
         super().__init__(sim)
@@ -75,6 +75,12 @@ class VehicleSession(SimulationBase):
         self._tasks = tasks
         self._holder = holder
         self._use: VehicleUse | None = None
+        self.logger.debug(
+            "Session initialized for vehicle %s with %s task(s), holder=%s",
+            self._vehicle.uid,
+            len(self._tasks),
+            self._holder,
+        )
 
     def execute(self) -> Generator[Event, None, None]:
         """Execute the session.

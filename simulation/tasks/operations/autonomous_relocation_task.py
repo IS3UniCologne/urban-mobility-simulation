@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from simulation.infrastructure.route import Edge, Vertex
 from simulation.tasks.base.vehicle_task import VehicleTask
-from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -15,17 +14,17 @@ if TYPE_CHECKING:
 
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
-    from simulation.vehicle.vehicle import Vehicle
+    from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 
-class AutonomousRelocationTask(VehicleTask):
+class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
     """Relocates an autonomous vehicle to a destination.
 
     Parameters
     ----------
     sim : SimulationContext
         The simulation context.
-    vehicle : Vehicle
+    vehicle : RideHailingVehicle
         The vehicle to relocate.
     destination : GeodesicPosition
         The destination position for the vehicle.
@@ -38,7 +37,7 @@ class AutonomousRelocationTask(VehicleTask):
     def __init__(
         self,
         sim: SimulationContext,
-        vehicle: Vehicle,
+        vehicle: RideHailingVehicle,
         destination: GeodesicPosition,
         distance: float,
     ) -> None:
@@ -54,32 +53,20 @@ class AutonomousRelocationTask(VehicleTask):
         Event
             Events during relocation.
         """
-        if not isinstance(self._vehicle, RideHailingVehicle):
-            self.logger.error(
-                "Vehicle %s is not a RideHailingVehicle and cannot be relocated with %s.",
-                self._vehicle.uid,
-                self.__class__.__name__,
-            )
-            # TODO: Check for autonomy type instead of vehicle type, and allow relocation for any autonomous vehicle
-            self._abort()
-            return
-
-        vehicle: RideHailingVehicle = self._vehicle
-
         self.logger.debug(
             "Autonomously relocating vehicle %s to %s (%.0f m).",
-            vehicle.uid,
+            self._vehicle.uid,
             self._destination,
             self._distance,
         )
 
         relocation_route = Edge(
             distance=self._distance,
-            origin=Vertex(vehicle.position),
+            origin=Vertex(self._vehicle.position),
             destination=Vertex(self._destination),
         )
 
-        yield self._env.process(vehicle.relocate(relocation_route))
+        yield self._env.process(self._vehicle.relocate(relocation_route))
 
     def get_predicted_energy_delta(self, current_energy: float | None = None) -> float:
         """Calculate predicted energy for relocation.
