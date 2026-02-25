@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -18,8 +18,10 @@ from simulation.helper.enums import TaskState
 from simulation.helper.exceptions import TaskAborted
 from simulation.helper.simulation_base import SimulationBase
 
+VehicleT = TypeVar("VehicleT", bound="Vehicle", covariant=True)
 
-class VehicleTask(SimulationBase, ABC):
+
+class VehicleTask(SimulationBase, ABC, Generic[VehicleT]):
     """Abstract base class for vehicle tasks.
 
     A task represents an interaction with a vehicle, such as
@@ -39,11 +41,11 @@ class VehicleTask(SimulationBase, ABC):
 
     __slots__ = ("_env", "_sim", "_state", "_vehicle")
 
-    def __init__(self, sim: SimulationContext, vehicle: Vehicle) -> None:
+    def __init__(self, sim: SimulationContext, vehicle: VehicleT) -> None:
         super().__init__(sim)
         self._sim: SimulationContext = sim
         self._env: Environment = sim.env
-        self._vehicle: Vehicle = vehicle
+        self._vehicle: VehicleT = vehicle
         self._state: TaskState = TaskState.INITIALIZED
 
     @property
@@ -52,7 +54,7 @@ class VehicleTask(SimulationBase, ABC):
         return self._state
 
     @property
-    def vehicle(self) -> Vehicle:
+    def vehicle(self) -> VehicleT:
         """Get the vehicle this task operates on."""
         return self._vehicle
 
