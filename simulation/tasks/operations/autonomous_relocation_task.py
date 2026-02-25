@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class AutonomousRelocationTask(VehicleTask):
-    """Relocates an autonomous vehicle to a destinationy.
+    """Relocates an autonomous vehicle to a destination.
 
     Parameters
     ----------
