@@ -93,6 +93,11 @@ class VehicleTask(SimulationBase, ABC, Generic[VehicleT]):
                 self.__class__.__name__,
                 self._vehicle.uid,
             )
+        except TaskAborted:
+            self._state = TaskState.ABORTED
+            self.logger.debug(
+                "%s aborted for vehicle %s.", self.__class__.__name__, self._vehicle.uid
+            )
         except Exception:
             self._state = TaskState.ABORTED
             self.logger.warning(
