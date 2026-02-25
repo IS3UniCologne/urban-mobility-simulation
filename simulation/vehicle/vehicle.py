@@ -196,6 +196,21 @@ class Vehicle(SimulationBase, ABC):
         """
         return self._velocity_mm
 
+    def calculate_travel_time(self, distance: float) -> float:
+        """Calculate travel time for a given distance.
+
+        Parameters
+        ----------
+        distance : float
+            Distance in meters.
+
+        Returns
+        -------
+        float
+            Travel time in minutes.
+        """
+        return distance / self._velocity_mm
+
     @property
     def available_seats(self) -> int:
         """Get the number of available seats in the vehicle.
