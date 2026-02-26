@@ -22,7 +22,10 @@ from simulation.agent.user.user_log import (
 )
 from simulation.helper.enums import OperatorMode, TransactionState, UserState
 from simulation.helper.time import SimulationVelocityConverter
-from simulation.tasks.transport_task import TransportTask
+from simulation.operator.data_transfer_object.transport_request import TransportRequest
+from simulation.tasks.base.vehicle_session import VehicleSession
+from simulation.tasks.trips.ride_hailing_trip_task import RideHailingTripTask
+from simulation.tasks.trips.shared_trip_task import SharedTripTask
 from simulation.vehicle.interfaces.driver_interface import DriverInterface
 from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
@@ -82,7 +85,7 @@ class User(Agent, DriverInterface, PassengerInterface):
     ----------
     state : UserState
         Current state of the user.
-    transport_task : TransportTask
+    transport_task : TransportRequest
         The transportation task associated with the user.
     energy_consumed : float
         Total energy consumed by the user.
@@ -107,7 +110,7 @@ class User(Agent, DriverInterface, PassengerInterface):
         "_search_start_time",
         "_sim",
         "_state",
-        "_transport_task",
+        "_transport_request",
         "_transportation_alternatives_not_found",
         "_trip_end_time",
         "_trip_start_time",
@@ -150,7 +153,7 @@ class User(Agent, DriverInterface, PassengerInterface):
             user_config.WALKING_SPEED_KMH
         )
 
-        self._transport_task = TransportTask(
+        self._transport_request = TransportRequest(
             creation_time=self._sim.env.now,
             origin=origin,
             destination=destination,
@@ -195,7 +198,7 @@ class User(Agent, DriverInterface, PassengerInterface):
 
     def __str__(self) -> str:
         """Return string representation of the user."""
-        return f"User with id {self.uid} is in state {self._state} and has transportation task {self._transport_task}"
+        return f"User with id {self.uid} is in state {self._state}."
 
     @property
     def state(self) -> UserState:
@@ -208,9 +211,14 @@ class User(Agent, DriverInterface, PassengerInterface):
         self._state = value
 
     @property
-    def transport_task(self) -> TransportTask:
-        """Get the transport task of the user."""
-        return self._transport_task
+    def transport_request(self) -> TransportRequest:
+        """Get the transport request of the user."""
+        return self._transport_request
+
+    @property
+    def walking_speed_mm(self) -> float:
+        """Get the walking speed of the user in meters per minute."""
+        return self._walking_speed_mm
 
     @property
     def energy_consumed(self) -> float:
@@ -346,8 +354,8 @@ class User(Agent, DriverInterface, PassengerInterface):
 
             outcome = FulfilledUserLogEntry(
                 user_uid=self.uid,
-                origin=self._transport_task.origin.get_region_id(),
-                destination=self._transport_task.destination.get_region_id(),
+                origin=self._transport_request.origin.get_region_id(),
+                destination=self._transport_request.destination.get_region_id(),
                 search_start_time=self._search_start_time,
                 search_end_time=self._search_end_time,
                 outcome_time=self._env.now,
@@ -365,8 +373,8 @@ class User(Agent, DriverInterface, PassengerInterface):
         else:
             outcome = MissedUserLogEntry(
                 user_uid=self.uid,
-                origin=self._transport_task.origin.get_region_id(),
-                destination=self._transport_task.destination.get_region_id(),
+                origin=self._transport_request.origin.get_region_id(),
+                destination=self._transport_request.destination.get_region_id(),
                 search_start_time=self._search_start_time,
                 search_end_time=self._search_end_time,
                 outcome_time=self._env.now,
@@ -451,7 +459,7 @@ class User(Agent, DriverInterface, PassengerInterface):
 
             available_transportation_alternatives = (
                 self._mobility_search_engine.search_for_transportation_alternatives(
-                    self._transport_task
+                    self._transport_request
                 )
             )
 
@@ -481,9 +489,11 @@ class User(Agent, DriverInterface, PassengerInterface):
 
     def _execute_chosen_alternative(
         self, vehicle_allocation: VehicleAllocation
-    ) -> Generator[Process, Any, None]:
-        """
-        User executes the selected transportation alternative.
+    ) -> Generator[Event | Process, Any, None]:
+        """Execute the selected transportation alternative via VehicleSession.
+
+        Creates the appropriate trip task, wraps it in a VehicleSession,
+        and executes. The session manages the reservation lifecycle.
 
         Parameters
         ----------
@@ -492,8 +502,8 @@ class User(Agent, DriverInterface, PassengerInterface):
 
         Yields
         ------
-        Process
-            Simulation processes for trip execution.
+        Event or Process
+            Simulation events and processes for trip execution.
 
         Raises
         ------
@@ -504,105 +514,64 @@ class User(Agent, DriverInterface, PassengerInterface):
 
         self._trip_start_time = self._env.now
 
-        # 1: Move to vehicle / wait for vehicle arrival
+        trip_task: RideHailingTripTask | SharedTripTask
+
         if operator_mode == OperatorMode.RIDE_HAILING:
-            yield self._env.process(self._wait_for_vehicle_arrival(vehicle_allocation))
+            vehicle = vehicle_allocation.vehicle
+            assert isinstance(vehicle, RideHailingVehicle)
+            trip_task = RideHailingTripTask(
+                sim=self._sim, vehicle=vehicle, user=self, allocation=vehicle_allocation
+            )
         elif operator_mode == OperatorMode.SHARED_MOBILITY:
-            yield self._env.process(self._walk_to_vehicle(vehicle_allocation))
+            vehicle = vehicle_allocation.vehicle
+            assert isinstance(vehicle, SharedVehicle)
+            trip_task = SharedTripTask(
+                sim=self._sim, vehicle=vehicle, user=self, allocation=vehicle_allocation
+            )
         elif operator_mode == OperatorMode.PUBLIC_TRANSPORT:
+            # Public transport not yet migrated to VehicleSession
             yield self._env.process(self._walk_to_transit_stop(vehicle_allocation))
             yield self._env.process(self._wait_for_transport(vehicle_allocation))
+            return
         else:
             raise NotImplementedError(f"Operator mode {operator_mode} not supported")
 
-        # 2: Execute trip
-        trip_energy = yield self._env.process(
-            self._start_trip(vehicle_allocation=vehicle_allocation)
+        # Execute trip via VehicleSession
+        reservation = vehicle_allocation.reservation
+        assert reservation is not None
+        session = VehicleSession(
+            sim=self._sim,
+            vehicle=vehicle_allocation.vehicle,
+            reservation=reservation,
+            tasks=[trip_task],
+            holder=self,
         )
+        yield from session.execute()
+
+        # Retrieve results from trip task
+        trip_energy = trip_task.energy_consumed
         vehicle_allocation.increase_energy_consumed(trip_energy)
         self._energy_consumed += trip_energy
 
-        # 3: Store trip execution details for global logging
+        # Record timing
+        if isinstance(trip_task, RideHailingTripTask):
+            arrival_time = trip_task.vehicle_arrival_time
+            if arrival_time is not None:
+                self._vehicle_arrival_time = arrival_time
+        self._assigned_vehicle_arrived.succeed()
+        self._arrived_at_destination.succeed()
+
+        self.state = UserState.FULFILLED
+        self.logger.debug("Trip completed.")
+
+        # Store trip end time and handle payment
         self._trip_end_time = self._env.now
-        # 4: Handle payment
         operator = vehicle_allocation.transportation_alternative.operator
         operator.pay_for_fulfilled_transportation_task(
             user=self,
-            transportation_task=self._transport_task,
+            transportation_task=self._transport_request,
             vehicle_allocation=vehicle_allocation,
         )
-
-    def _wait_for_vehicle_arrival(
-        self, vehicle_allocation: VehicleAllocation
-    ) -> Generator[Any, Any, None]:
-        """
-        Wait for a ride-hailing vehicle to arrive at user's location.
-
-        Parameters
-        ----------
-        vehicle_allocation : VehicleAllocation
-            The vehicle allocation.
-
-        Yields
-        ------
-        Any
-            Event indicating vehicle arrival.
-
-        Raises
-        ------
-        ValueError
-            If the vehicle is not a ride-hailing vehicle.
-        """
-        self._state = UserState.WAITING_FOR_VEHICLE
-
-        # TODO: Make this cleaner
-        # check if vehicle is a ride hailing vehicle
-        if not isinstance(vehicle_allocation.vehicle, RideHailingVehicle):
-            raise ValueError("Vehicle is not a ride-hailing vehicle")
-
-        # Wait for vehicle to arrive at pickup position
-        yield vehicle_allocation.vehicle._arrived_at_pick_up_position  # noqa: SLF001
-
-        self._vehicle_arrival_time = self._env.now
-        self._assigned_vehicle_arrived.succeed()
-        self.logger.debug(
-            "Vehicle %s arrived at user location at time %s.",
-            vehicle_allocation.vehicle.uid,
-            self._env.now,
-        )
-
-    def _walk_to_vehicle(
-        self, vehicle_allocation: VehicleAllocation
-    ) -> Generator[Process, Any, None]:
-        """
-        Walk to a shared vehicle's parking location.
-
-        Parameters
-        ----------
-        vehicle_allocation : VehicleAllocation
-            The vehicle allocation.
-
-        Yields
-        ------
-        Process
-            Walking process.
-        """
-        self._state = UserState.MOVING_TO_VEHICLE
-
-        # Walk to where the vehicle is parked
-        yield self._env.process(
-            self._walk(self._position, vehicle_allocation.pick_up_position)
-        )
-
-        self.logger.debug(
-            "Arrived at vehicle %s at position %s at time %s.",
-            vehicle_allocation.vehicle.uid,
-            vehicle_allocation.pick_up_position,
-            self._env.now,
-        )
-
-        # Vehicle is immediately available (no waiting)
-        self._assigned_vehicle_arrived.succeed()
 
     def _walk_to_transit_stop(
         self, vehicle_allocation: VehicleAllocation
@@ -662,73 +631,6 @@ class User(Agent, DriverInterface, PassengerInterface):
         raise NotImplementedError("Waiting for transport not implemented yet.")
 
         # self._assigned_vehicle_arrived.succeed()
-
-    def _start_trip(
-        self, vehicle_allocation: VehicleAllocation
-    ) -> Generator[Process | Timeout, Any, float]:
-        """
-        Start the trip with the allocated vehicle.
-
-        Parameters
-        ----------
-        vehicle_allocation : VehicleAllocation
-            The vehicle allocation.
-
-        Yields
-        ------
-        Process or Timeout
-            Driving or riding process.
-
-        Returns
-        -------
-        float
-            Energy consumed during the trip.
-
-        Raises
-        ------
-        NotImplementedError
-            If the vehicle type is not supported.
-        """
-        vehicle = vehicle_allocation.vehicle
-        route = vehicle_allocation.transportation_alternative.route
-        energy_consumed: float = 0.0
-
-        if isinstance(vehicle, RideHailingVehicle):
-            # Mount vehicle as passenger
-            self.state = UserState.IN_TRANSPORT
-            self.mount_vehicle(vehicle)
-
-            # Vehicle drives to destination
-            try:
-                energy_consumed = yield self._env.process(
-                    generator=self.ride_in_vehicle(vehicle, route)
-                )
-
-                self.park_vehicle(vehicle)  # type: ignore #TODO: This should not be done by the user
-            finally:
-                self.unmount_vehicle(vehicle)
-
-        elif isinstance(vehicle, SharedVehicle):
-            # For shared vehicles, user acts as driver
-            self.state = UserState.IN_TRANSPORT
-            self.mount_vehicle_as_driver(vehicle)
-
-            # User drives vehicle to destination
-            try:
-                energy_consumed = yield self._env.process(
-                    self.drive_vehicle(vehicle, route)
-                )
-                self.park_vehicle(vehicle)
-            finally:
-                self.unmount_vehicle_as_driver(vehicle)
-
-        else:
-            raise NotImplementedError(f"Vehicle type {type(vehicle)} not supported")
-
-        self._arrived_at_destination.succeed()
-        self.state = UserState.FULFILLED
-        self.logger.debug("Trip completed.")
-        return energy_consumed
 
     def _walk(
         self, origin: GeodesicPosition, destination: GeodesicPosition
