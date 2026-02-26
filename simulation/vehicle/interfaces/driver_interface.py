@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 
     from simpy import Event
 
+    from simulation.environment.geodesic_position import GeodesicPosition
+
 
 class DriverInterface(ABC):  # noqa: D101
     @abstractmethod
@@ -30,4 +32,15 @@ class DriverInterface(ABC):  # noqa: D101
 
     @abstractmethod
     def identify_driver(self) -> str:  # noqa: D102
+        pass
+
+    @abstractmethod
+    def on_vehicle_moved(self, position: GeodesicPosition) -> None:
+        """Update position when the vehicle carrying this driver moves.
+
+        Parameters
+        ----------
+        position : GeodesicPosition
+            The new position of the vehicle.
+        """
         pass

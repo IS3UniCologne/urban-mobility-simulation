@@ -578,6 +578,21 @@ class User(Agent, DriverInterface, PassengerInterface):
             vehicle_allocation=vehicle_allocation,
         )
 
+    def walk_to(self, destination: GeodesicPosition) -> Generator[Timeout, Any, None]:
+        """Walk from current position to a destination.
+
+        Parameters
+        ----------
+        destination : GeodesicPosition
+            Target position to walk to.
+
+        Yields
+        ------
+        Timeout
+            Timeout event corresponding to walking duration.
+        """
+        yield from self._walk(self._position, destination)
+
     def _walk_to_transit_stop(
         self, vehicle_allocation: VehicleAllocation
     ) -> Generator[Process, Any, None]:
@@ -888,3 +903,15 @@ class User(Agent, DriverInterface, PassengerInterface):
             Passenger identifier.
         """
         return f"User {self.uid}"
+
+    def on_vehicle_moved(self, position: GeodesicPosition) -> None:
+        """Update position when the vehicle carrying this user moves.
+
+        Satisfies both DriverInterface and PassengerInterface.
+
+        Parameters
+        ----------
+        position : GeodesicPosition
+            The new position of the vehicle.
+        """
+        self._position = position
