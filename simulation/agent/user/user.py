@@ -221,6 +221,11 @@ class User(Agent, DriverInterface, PassengerInterface):
         return self._walking_speed_mm
 
     @property
+    def position(self) -> GeodesicPosition:
+        """Get the current position of the user."""
+        return self._position
+
+    @property
     def energy_consumed(self) -> float:
         """Get the total energy consumed by the user's activities."""
         return self._energy_consumed
