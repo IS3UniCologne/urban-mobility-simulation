@@ -150,3 +150,24 @@ class OperatorMode(StrEnum):
     RIDE_HAILING = "Ridehailing"
     SHARED_MOBILITY = "SharedMobility"
     PUBLIC_TRANSPORT = "PublicTransport"
+
+
+class TaskState(Enum):
+    """State of a vehicle task throughout its lifecycle.
+
+    Attributes
+    ----------
+    INITIALIZED : int
+        Task has been created but not yet started.
+    EXECUTING : int
+        Task is actively running.
+    FINISHED : int
+        Task completed successfully.
+    ABORTED : int
+        Task was aborted before completion.
+    """
+
+    INITIALIZED = 0
+    EXECUTING = 10
+    FINISHED = 20
+    ABORTED = 30
