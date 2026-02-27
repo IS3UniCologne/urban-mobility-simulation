@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import PropulsionType
+from simulation.helper.enums import PropulsionType
 from simulation.vehicle.energy_system.battery_system import BatterySystem
 from simulation.vehicle.energy_system.human_powered_system import HumanPoweredSystem
 from simulation.vehicle.energy_system.internal_combustion_system import (

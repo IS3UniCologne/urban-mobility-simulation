@@ -46,6 +46,8 @@ class EnergySystem(SimulationBase, ABC):
             vehicle_config.ENERGY_RESERVE_RATIO or 0.0
         ) * self._capacity
 
+        self._predicted_energy: float | None = None
+
         self.logger.debug(
             "Initialized EnergySystem with capacity %s and consumption %s",
             self._capacity,
@@ -78,6 +80,51 @@ class EnergySystem(SimulationBase, ABC):
         if self._capacity == 0:
             return 0.0
         return self._current_energy / self._capacity
+
+    @property
+    def predicted_energy(self) -> float:
+        """Predicted absolute energy level after completing current session.
+
+        Falls back to current energy if no prediction is set.
+
+        Returns
+        -------
+        float
+            Predicted energy level in absolute units.
+        """
+        return (
+            self._predicted_energy
+            if self._predicted_energy is not None
+            else self._current_energy
+        )
+
+    @predicted_energy.setter
+    def predicted_energy(self, value: float | None) -> None:
+        """Set predicted absolute energy level after completing current session.
+
+        Parameters
+        ----------
+        value : float or None
+            Predicted energy level in absolute units.
+        """
+        self._predicted_energy = value
+
+    @property
+    def predicted_energy_relative(self) -> float:
+        """Predicted relative energy level (0.0 to 1.0) after completing current session.
+
+        Falls back to current energy if no prediction is set.
+
+        Returns
+        -------
+        float
+            Predicted energy level as ratio of capacity.
+        """
+        if self._predicted_energy is None:
+            return self.current_energy_relative
+        if self._capacity == 0:
+            return 0.0
+        return self._predicted_energy / self._capacity
 
     def calculate_energy_required(self, distance: float) -> float:
         """
@@ -146,6 +193,46 @@ class EnergySystem(SimulationBase, ABC):
         bool
             True if enough energy is available.
         """
+
+    def has_enough_predicted_energy(
+        self, additional_distance: float, energy_reserve_ratio: float | None = None
+    ) -> bool:
+        """
+        Check if predicted energy after current task is sufficient for additional distance.
+
+        Falls back to current energy if no prediction is set.
+
+        Parameters
+        ----------
+        additional_distance : float
+            Additional distance to check.
+        energy_reserve_ratio : float | None, optional
+            Energy reserve ratio to maintain. If None, uses the buffer from config.
+
+        Returns
+        -------
+        bool
+            True if predicted energy (or current energy if no prediction) is sufficient for additional distance.
+        """
+        # Use stored prediction if available, otherwise fall back to current energy
+        energy_level = (
+            self._predicted_energy
+            if self._predicted_energy is not None
+            else self._current_energy
+        )
+
+        additional_energy_required = self.calculate_energy_required(additional_distance)
+
+        if energy_reserve_ratio is None:
+            buffer = self._default_buffer
+        else:
+            buffer = energy_reserve_ratio * self._capacity
+
+        return energy_level >= (additional_energy_required + buffer)
+
+    def clear_predicted_energy(self) -> None:
+        """Clear the predicted energy level."""
+        self._predicted_energy = None
 
     @abstractmethod
     def refill(self, amount: float, duration: float) -> Generator[Event, None, None]:
