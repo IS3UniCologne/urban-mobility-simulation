@@ -18,27 +18,6 @@ class VehicleReservationError(VehicleError):
         super().__init__(message)
 
 
-class AlreadyReservedForUserError(VehicleReservationError):
-    """Raised when attempting to reserve a vehicle already reserved for a user."""
-
-    def __init__(self, vehicle_uid: str, user_uid: str) -> None:
-        self.user_uid = user_uid
-        super().__init__(
-            f"Vehicle {vehicle_uid} is already reserved for user {user_uid}",
-            vehicle_uid=vehicle_uid,
-        )
-
-
-class AlreadyReservedForOperatorError(VehicleReservationError):
-    """Raised when attempting to reserve a vehicle already reserved for operator tasks."""
-
-    def __init__(self, vehicle_uid: str) -> None:
-        super().__init__(
-            f"Vehicle {vehicle_uid} is already reserved for operator tasks",
-            vehicle_uid=vehicle_uid,
-        )
-
-
 class PublicTransitVehicleException(VehicleError):
     """Base exception for public transit vehicle errors."""
 
@@ -85,3 +64,12 @@ class BidMalformedException(Exception):
 
 class AuctionClosedException(Exception):
     """Raised when attempting to interact with a closed auction."""
+
+
+# ============================================================================
+# Task Exceptions
+# ============================================================================
+
+
+class TaskAborted(Exception):
+    """Raised to signal early task termination."""

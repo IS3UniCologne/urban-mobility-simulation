@@ -17,47 +17,40 @@ class VehicleStates:
     """Namespace for vehicle state constants and transitions."""
 
     # Root level states
-    IDLE = VehicleState(name="IDLE")
-    IN_USE = VehicleState(name="IN_USE")
+    STANDBY = VehicleState(name="STANDBY")
+    TRANSPORTING = VehicleState(name="TRANSPORTING")
+    SERVICING = VehicleState(name="SERVICING")
     OFFLINE = VehicleState(name="OFFLINE")
 
-    # In-use subcategories
-    SERVING_PASSENGERS = VehicleState(name="SERVING_PASSENGERS", parent=IN_USE)
-    OPERATOR_TASK = VehicleState(name="OPERATOR_TASK", parent=IN_USE)
+    # Transporting
+    PICK_UP = VehicleState(name="PICK_UP", parent=TRANSPORTING)
+    DRIVING = VehicleState(name="DRIVING", parent=TRANSPORTING)
+    WAITING_FOR_USER = VehicleState(name="WAITING_FOR_USER", parent=TRANSPORTING)
+    AT_STOP = VehicleState(name="AT_STOP", parent=TRANSPORTING)
+    EN_ROUTE = VehicleState(name="EN_ROUTE", parent=TRANSPORTING)
+    AT_TERMINAL = VehicleState(name="AT_TERMINAL", parent=TRANSPORTING)
 
-    # Passenger operations - Ride-hailing/shared mobility
-    PICK_UP = VehicleState(name="PICK_UP", parent=SERVING_PASSENGERS)
-    TRANSPORTING = VehicleState(name="TRANSPORTING", parent=SERVING_PASSENGERS)
-    WAITING_FOR_USER = VehicleState(name="WAITING_FOR_USER", parent=SERVING_PASSENGERS)
-
-    # Passenger operations - Public transport
-    AT_STOP = VehicleState(name="AT_STOP", parent=SERVING_PASSENGERS)
-    EN_ROUTE = VehicleState(name="EN_ROUTE", parent=SERVING_PASSENGERS)
-    AT_TERMINAL = VehicleState(name="AT_TERMINAL", parent=SERVING_PASSENGERS)
-
-    # Operator task states
-    RELOCATING = VehicleState(name="RELOCATING", parent=OPERATOR_TASK)
-    CHARGING = VehicleState(name="CHARGING", parent=OPERATOR_TASK)
-    WAITING_FOR_CHARGING = VehicleState(
-        name="WAITING_FOR_CHARGING", parent=OPERATOR_TASK
-    )
+    # Servicing
+    RELOCATING = VehicleState(name="RELOCATING", parent=SERVICING)
+    CHARGING = VehicleState(name="CHARGING", parent=SERVICING)
+    WAITING_FOR_CHARGING = VehicleState(name="WAITING_FOR_CHARGING", parent=SERVICING)
 
     # Allowed transitions
     TRANSITIONS: ClassVar[dict[VehicleState, set[VehicleState]]] = {
         # TODO: Check if these transitions make sense
         # Ride-hailing/shared mobility
-        IDLE: {PICK_UP, TRANSPORTING, RELOCATING, CHARGING, OFFLINE, WAITING_FOR_USER},
-        PICK_UP: {TRANSPORTING, IDLE},
-        TRANSPORTING: {IDLE, CHARGING, RELOCATING},
-        WAITING_FOR_USER: {TRANSPORTING, IDLE},
+        STANDBY: {PICK_UP, DRIVING, RELOCATING, CHARGING, OFFLINE, WAITING_FOR_USER},
+        PICK_UP: {DRIVING, STANDBY},
+        DRIVING: {STANDBY, CHARGING, RELOCATING},
+        WAITING_FOR_USER: {DRIVING, STANDBY},
         # Public transport
-        AT_STOP: {EN_ROUTE, AT_TERMINAL, IDLE},
-        EN_ROUTE: {AT_STOP, AT_TERMINAL, IDLE},
-        AT_TERMINAL: {EN_ROUTE, IDLE},
+        AT_STOP: {EN_ROUTE, AT_TERMINAL, STANDBY},
+        EN_ROUTE: {AT_STOP, AT_TERMINAL, STANDBY},
+        AT_TERMINAL: {EN_ROUTE, STANDBY},
         # Operator tasks
-        RELOCATING: {IDLE, WAITING_FOR_CHARGING, CHARGING},
-        CHARGING: {IDLE, RELOCATING},
-        WAITING_FOR_CHARGING: {CHARGING, IDLE},
+        RELOCATING: {STANDBY, WAITING_FOR_CHARGING, CHARGING},
+        CHARGING: {STANDBY, RELOCATING},
+        WAITING_FOR_CHARGING: {CHARGING, STANDBY},
         # Offline
-        OFFLINE: {IDLE},
+        OFFLINE: {STANDBY},
     }
