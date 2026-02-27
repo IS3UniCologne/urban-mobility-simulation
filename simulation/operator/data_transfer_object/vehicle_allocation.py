@@ -1,21 +1,38 @@
 from typing import TYPE_CHECKING  # noqa: D100
 
+from simulation.agent.user import User
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.time import SimulationTime
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
+from simulation.vehicle.interfaces.reservable_interface import ReservableInterface
 from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
-    from simulation.agent.user import User
+    from simulation.vehicle.reservation import Reservation
 
 
-class VehicleAllocation:  # noqa: D101
+class VehicleAllocation:
+    """DTO representing allocation of a vehicle to a user.
+
+    Parameters
+    ----------
+    user : User
+        The user whom the vehicle is allocated to.
+    transportation_alternative : TransportationAlternative
+        The selected transportation alternative.
+    pick_up_position : GeodesicPosition
+        The pick-up position for the user.
+    pick_up_time : SimulationTime
+        The time at which the vehicle will be at the pick-up position.
+    """
+
     __slots__ = (
         "_energy_consumed",
         "_pick_up_position",
         "_pick_up_time",
+        "_reservation",
         "_transportation_alternative",
         "_user",
         "_vehicle",
@@ -23,10 +40,10 @@ class VehicleAllocation:  # noqa: D101
 
     def __init__(  # noqa: ANN204
         self,
-        user: "User",
+        user: User,
         transportation_alternative: TransportationAlternative,
-        pick_up_position: GeodesicPosition,
-        pick_up_time: SimulationTime,
+        pick_up_position: GeodesicPosition,  # Todo these are ridehailing specific, might want to refactor
+        pick_up_time: SimulationTime | None,
     ):
         self._user = user  # User that got the assignment
         self._vehicle = (
@@ -39,10 +56,15 @@ class VehicleAllocation:  # noqa: D101
             pick_up_position  # Pick up position of user for vehicle
         )
         self._pick_up_time = pick_up_time  # Pick up time (i.e., when will be the vehicle be at pickup pos)
+        self._reservation = (
+            self._vehicle.current_reservation
+            if isinstance(self._vehicle, ReservableInterface)
+            else None
+        )
         self._energy_consumed = 0.0
 
     @property
-    def user(self) -> "User":  # noqa: D102
+    def user(self) -> User:  # noqa: D102
         return self._user
 
     @property
@@ -58,7 +80,7 @@ class VehicleAllocation:  # noqa: D101
         return self._pick_up_position
 
     @property
-    def pick_up_time(self) -> SimulationTime:  # noqa: D102
+    def pick_up_time(self) -> SimulationTime | None:  # noqa: D102
         return self._pick_up_time
 
     @property
@@ -69,6 +91,11 @@ class VehicleAllocation:  # noqa: D101
     @energy_consumed.setter
     def energy_consumed(self, value: float) -> None:
         self._energy_consumed = value
+
+    @property
+    def reservation(self) -> "Reservation | None":
+        """Get the reservation associated with this allocation."""
+        return self._reservation
 
     def increase_energy_consumed(self, amount: float) -> None:
         """Increase the energy consumed by the given amount."""
