@@ -8,7 +8,6 @@ from simulation.infrastructure.network.vertex import Vertex
 
 if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
-    from simulation.environment.position import Position
     from simulation.infrastructure.transit_network.route_segment import RouteSegment
     from simulation.infrastructure.transit_network.stop import Stop
 
@@ -16,7 +15,7 @@ if TYPE_CHECKING:
 class Route:  # noqa: D101
     __slots__ = ("_destination", "_distance", "_origin", "_route_segments")
 
-    def __init__(self, origin: Position, destination: Position):  # noqa: ANN204
+    def __init__(self, origin: GeodesicPosition, destination: GeodesicPosition):  # noqa: ANN204
         self._origin = origin
         self._destination = destination
         self._route_segments: list[Edge] = []
