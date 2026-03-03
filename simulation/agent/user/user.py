@@ -26,8 +26,6 @@ from simulation.operator.data_transfer_object.transport_request import Transport
 from simulation.tasks.base.vehicle_session import VehicleSession
 from simulation.tasks.trips.ride_hailing_trip_task import RideHailingTripTask
 from simulation.tasks.trips.shared_trip_task import SharedTripTask
-from simulation.vehicle.interfaces.driver_interface import DriverInterface
-from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
@@ -39,7 +37,6 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import UserConfig
-    from simulation.infrastructure.route import Route
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -53,7 +50,7 @@ if TYPE_CHECKING:
     from simulation.world.mobility_search_engine import MobilitySearchEngine
 
 
-class User(Agent, DriverInterface, PassengerInterface):
+class User(Agent):
     """
     Represents a single user agent in the simulation.
 
@@ -196,9 +193,11 @@ class User(Agent, DriverInterface, PassengerInterface):
 
         self.logger.debug("Started user process.")
 
-    def __str__(self) -> str:
-        """Return string representation of the user."""
+    def __repr__(self) -> str:  # noqa: D105
         return f"User with id {self.uid} is in state {self._state}."
+
+    def __str__(self) -> str:  # noqa: D105
+        return f"User {self.uid}"
 
     @property
     def state(self) -> UserState:
@@ -755,159 +754,8 @@ class User(Agent, DriverInterface, PassengerInterface):
         return choice_probs
 
     # --------------------------
-    # DriverInterface
-    # --------------------------
-    def mount_vehicle_as_driver(self, vehicle: SharedVehicle) -> None:
-        """
-        Mount vehicle as driver.
-
-        TODO: Create DrivableVehicleInterface to generalize this
-
-        Parameters
-        ----------
-        vehicle : SharedVehicle
-            The vehicle to mount.
-        """
-        vehicle.mount_driver(self)
-
-    def drive_vehicle(
-        self, vehicle: SharedVehicle, route: Route
-    ) -> Generator[Event, Any, float]:
-        """
-        Drive vehicle along route.
-
-        TODO: Create DrivableVehicleInterface to generalize this
-
-        Parameters
-        ----------
-        vehicle : SharedVehicle
-            The vehicle to drive.
-        route : Route
-            The route to follow.
-
-        Yields
-        ------
-        Event
-            Driving process events.
-
-        Returns
-        -------
-        float
-            Energy consumed.
-        """
-        vehicle.start_driving()
-        energy_consumed = yield from vehicle.traverse_route(route)
-
-        vehicle.stop_driving()
-        return energy_consumed
-
-    def park_vehicle(self, vehicle: SharedVehicle) -> None:
-        """
-        Park vehicle.
-
-        Parameters
-        ----------
-        vehicle : SharedVehicle
-            The vehicle to park.
-        """
-        vehicle.park()
-
-    def unmount_vehicle_as_driver(self, vehicle: SharedVehicle) -> None:
-        """
-        Unmount vehicle as driver.
-
-        Parameters
-        ----------
-        vehicle : SharedVehicle
-            The vehicle to unmount.
-        """
-        vehicle.unmount_driver()
-
-    # TODO : Probably can get rid of this
-    def identify_driver(self) -> str:
-        """
-        Identify driver.
-
-        Returns
-        -------
-        str
-            Driver identifier.
-        """
-        return f"User {self.uid}"
-
-    # --------------------------
-    # PassengerInterface
-    # --------------------------
-    def mount_vehicle(self, vehicle: RideHailingVehicle) -> None:
-        """
-        Mount vehicle as a passenger.
-
-        Parameters
-        ----------
-        vehicle : RideHailingVehicle
-            The vehicle to mount.
-        """
-        vehicle.mount_passenger(self)
-
-    def unmount_vehicle(self, vehicle: RideHailingVehicle) -> None:
-        """
-        Unmount vehicle as a passenger.
-
-        Parameters
-        ----------
-        vehicle : RideHailingVehicle
-            The vehicle to unmount.
-        """
-        vehicle.unmount_passenger(self)
-
-    def ride_in_vehicle(
-        self, vehicle: RideHailingVehicle, route: Route
-    ) -> Generator[Event, Any, float]:
-        """
-        Ride in vehicle as a passenger.
-
-        TODO: user currently acts as driver, need to change that
-
-        Parameters
-        ----------
-        vehicle : RideHailingVehicle
-            The vehicle to ride in.
-        route : Route
-            The route to follow.
-
-        Yields
-        ------
-        Event
-            Riding process events.
-
-        Returns
-        -------
-        float
-            Energy consumed.
-        """
-        vehicle.start_driving()
-        energy_consumed = yield from vehicle.traverse_route(route)
-
-        vehicle.stop_driving()
-
-        return energy_consumed
-
-    # TODO : Probably can get rid of this
-    def identify_passenger(self) -> str:
-        """
-        Identify passenger.
-
-        Returns
-        -------
-        str
-            Passenger identifier.
-        """
-        return f"User {self.uid}"
-
     def on_vehicle_moved(self, position: GeodesicPosition) -> None:
         """Update position when the vehicle carrying this user moves.
-
-        Satisfies both DriverInterface and PassengerInterface.
 
         Parameters
         ----------
