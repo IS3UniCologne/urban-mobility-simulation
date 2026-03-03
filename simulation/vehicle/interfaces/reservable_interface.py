@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from simulation.agent.user import User
+    from simulation.vehicle.reservation import Reservation
 
 
 class ReservableInterface(ABC):
@@ -12,48 +13,75 @@ class ReservableInterface(ABC):
 
     @property
     @abstractmethod
-    def reserved_for_user(self) -> "User | None":
-        """Get the user who reserved this vehicle."""
+    def current_reservation(self) -> "Reservation | None":
+        """Active reservation.
+
+        Returns
+        -------
+        Reservation or None
+            Active reservation, or None if unreserved.
+        """
 
     @property
     @abstractmethod
-    def reserved_for_operator(self) -> bool:
-        """Check if the vehicle is reserved for operator tasks."""
+    def reserved_for_user(self) -> "User | None":
+        """User holding the reservation.
+
+        Returns
+        -------
+        User or None
+            User from the current reservation, or None if unreserved or operator-reserved.
+        """
 
     @property
     @abstractmethod
     def is_reserved(self) -> bool:
-        """Check if the vehicle is currently reserved."""
+        """True if vehicle has an active reservation."""
 
     @abstractmethod
-    def reserve_for_user(self, user: "User") -> None:
-        """Reserve the vehicle for a user.
+    def reserve(self, requester: "User | None" = None) -> "Reservation":
+        """Reserve vehicle.
 
         Parameters
         ----------
-        user : User
-            The user who wants to reserve the vehicle.
+        requester : User or None
+            Reserving user, or None for operator reservations.
+
+        Returns
+        -------
+        Reservation
+            Yieldable reservation; yield ``reservation.ready_event`` to wait for availability.
 
         Raises
         ------
-        AlreadyReservedForUserError
-            If the vehicle is already reserved for another user.
-        AlreadyReservedForOperatorError
-            If the vehicle is already reserved for operator tasks.
+        AlreadyReservedError
+            If the vehicle already has an active reservation.
         """
 
+    @property
     @abstractmethod
-    def reserve_for_operator(self) -> None:
-        """Reserve the vehicle for operator tasks.
+    def is_in_use(self) -> bool:
+        """True if vehicle has an active use."""
+
+    @abstractmethod
+    def acquire_use(
+        self, reservation: "Reservation", holder: "User | None" = None
+    ) -> None:
+        """Convert current reservation into active use.
+
+        Parameters
+        ----------
+        reservation : Reservation
+            The reservation token obtained from ``reserve()``.
+        holder : User or None
+            User actively using the vehicle, or None for operator use.
 
         Raises
         ------
-        AlreadyReservedForUserError
-            If the vehicle is already reserved for a user.
-        AlreadyReservedForOperatorError
-            If the vehicle is already reserved for operator tasks.
+        InvalidReservationError
+            If ``reservation`` does not match the vehicle's active reservation.
         """
 
     @abstractmethod
-    def release_reservation(self) -> None:
-        """Release the current reservation."""
+    def release_use(self) -> None:
+        """Release active vehicle use."""

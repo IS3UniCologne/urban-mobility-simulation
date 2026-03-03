@@ -18,6 +18,26 @@ class VehicleReservationError(VehicleError):
         super().__init__(message)
 
 
+class AlreadyReservedError(VehicleReservationError):
+    """Raised when attempting to reserve an already-reserved vehicle."""
+
+    def __init__(self, vehicle_uid: str, requester: str) -> None:
+        super().__init__(
+            f"Vehicle {vehicle_uid} already reserved; cannot reserve for {requester}.",
+            vehicle_uid=vehicle_uid,
+        )
+
+
+class InvalidReservationError(VehicleReservationError):
+    """Raised when the reservation passed to acquire_use does not match the vehicle's active reservation."""
+
+    def __init__(self, vehicle_uid: str) -> None:
+        super().__init__(
+            f"Reservation mismatch on vehicle {vehicle_uid}: caller does not hold the active reservation.",
+            vehicle_uid=vehicle_uid,
+        )
+
+
 class PublicTransitVehicleException(VehicleError):
     """Base exception for public transit vehicle errors."""
 
@@ -67,7 +87,7 @@ class AuctionClosedException(Exception):
 
 
 # ============================================================================
-# Task Exceptions
+# Vehicle Task Exceptions
 # ============================================================================
 
 
