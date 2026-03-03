@@ -38,6 +38,10 @@ class InvalidReservationError(VehicleReservationError):
         )
 
 
+class ReservationStateError(VehicleReservationError):
+    """Raised when a reservation operation is attempted in an invalid vehicle state."""
+
+
 class PublicTransitVehicleException(VehicleError):
     """Base exception for public transit vehicle errors."""
 
