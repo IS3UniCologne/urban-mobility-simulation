@@ -39,7 +39,15 @@ class VehicleStates:
     TRANSITIONS: ClassVar[dict[VehicleState, set[VehicleState]]] = {
         # TODO: Check if these transitions make sense
         # Ride-hailing/shared mobility
-        STANDBY: {PICK_UP, DRIVING, RELOCATING, CHARGING, OFFLINE, WAITING_FOR_USER},
+        STANDBY: {
+            PICK_UP,
+            DRIVING,
+            RELOCATING,
+            CHARGING,
+            WAITING_FOR_CHARGING,
+            OFFLINE,
+            WAITING_FOR_USER,
+        },
         PICK_UP: {DRIVING, STANDBY},
         DRIVING: {STANDBY, CHARGING, RELOCATING},
         WAITING_FOR_USER: {DRIVING, STANDBY},
