@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from simulation.tasks.base.vehicle_task import VehicleTask
     from simulation.vehicle.reservation import Reservation
     from simulation.vehicle.vehicle import Vehicle
-    from simulation.vehicle.vehicle_use import VehicleUse
 
 from simulation.helper.simulation_base import SimulationBase
 
@@ -25,14 +24,8 @@ from simulation.helper.simulation_base import SimulationBase
 class VehicleSession(SimulationBase):
     """One actor's complete interaction with a vehicle from start to finish.
 
-    A session waits for a reservation to be fulfilled, then converts it
-    into an active ``VehicleUse``.  The reservation is released so that
-    other actors can queue for the vehicle.  The ``VehicleUse`` is held
-    for the entire session duration and released in a ``finally`` block
-    to prevent leaks.
-
-    The session automatically calculates predicted energy delta and
-    duration by querying all tasks before execution begins.
+    Automatically manages vehicl lock acquisition and release.
+    Calculates predicted energy and duration for the whole session.
 
     Parameters
     ----------
@@ -49,15 +42,7 @@ class VehicleSession(SimulationBase):
         use.
     """
 
-    __slots__ = (
-        "_env",
-        "_holder",
-        "_reservation",
-        "_sim",
-        "_tasks",
-        "_use",
-        "_vehicle",
-    )
+    __slots__ = ("_env", "_holder", "_reservation", "_sim", "_tasks", "_vehicle")
 
     def __init__(
         self,
@@ -74,7 +59,6 @@ class VehicleSession(SimulationBase):
         self._reservation = reservation
         self._tasks = tasks
         self._holder = holder
-        self._use: VehicleUse | None = None
         self.logger.debug(
             "Session initialized for vehicle %s with %s task(s), holder=%s",
             self._vehicle.uid,
@@ -122,18 +106,15 @@ class VehicleSession(SimulationBase):
 
         finally:
             # 5. Always release vehicle use
-            if self._use is not None and isinstance(self._vehicle, ReservableMixin):
-                if self._vehicle.current_use is self._use:
-                    self._vehicle.release_use()
-                    self.logger.debug(
-                        "Session for vehicle %s ended, use released.", self._vehicle.uid
-                    )
+            if isinstance(self._vehicle, ReservableMixin) and self._vehicle.is_in_use:
+                self._vehicle.release_use()
+                self.logger.debug(
+                    "Session for vehicle %s ended, use released.", self._vehicle.uid
+                )
 
     def _acquire_use(self) -> None:
         if isinstance(self._vehicle, ReservableMixin):
-            self._use = self._vehicle.acquire_use(holder=self._holder)
-        else:
-            self._use = None
+            self._vehicle.acquire_use(self._reservation, holder=self._holder)
 
     def _set_session_predictions(self) -> None:
         """Predict energy and duration for the entire session.

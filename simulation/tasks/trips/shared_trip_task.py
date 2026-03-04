@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from simulation.helper.enums import UserState
-from simulation.helper.vehicle_states import VehicleStates
 from simulation.tasks.base.vehicle_task import VehicleTask
 
 if TYPE_CHECKING:
@@ -63,9 +62,9 @@ class SharedTripTask(VehicleTask["SharedVehicle"]):
 
     def _run(self) -> Generator[Event, None, None]:
         # Walk to vehicle
+        # TODO: Let User handle their own state transitions
         self._user.state = UserState.MOVING_TO_VEHICLE
-        if not self._vehicle.state_machine.is_in_state(VehicleStates.WAITING_FOR_USER):
-            self._vehicle.state = VehicleStates.WAITING_FOR_USER
+        self._vehicle.wait_for_user()
         yield from self._user.walk_to(self._vehicle.position)
 
         # Embark
@@ -74,9 +73,7 @@ class SharedTripTask(VehicleTask["SharedVehicle"]):
 
         # Transport
         route = self._allocation.transportation_alternative.route
-        self._vehicle.start_driving()
         self._energy_consumed = yield from self._vehicle.traverse_route(route)
-        self._vehicle.stop_driving()
 
         # Disembark
         self._vehicle.park()

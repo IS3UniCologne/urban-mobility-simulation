@@ -75,7 +75,7 @@ class RideHailingTripTask(VehicleTask["RideHailingVehicle"]):
         """
         # Rendezvous
         self._user.state = UserState.WAITING_FOR_VEHICLE
-        self._vehicle.set_current_task(self._user.transport_request)
+        self._vehicle.set_current_request(self._user.transport_request)
         self._env.process(self._vehicle.move_to_pick_up_position(self._allocation))
         yield self._vehicle._arrived_at_pick_up_position  # noqa: SLF001
         self._vehicle_arrival_time = self._env.now
@@ -88,7 +88,6 @@ class RideHailingTripTask(VehicleTask["RideHailingVehicle"]):
         route = self._allocation.transportation_alternative.route
         self._vehicle.start_driving()
         self._energy_consumed = yield from self._vehicle.traverse_route(route)
-        self._vehicle.stop_driving()
 
         # Disembark
         self._vehicle.park()

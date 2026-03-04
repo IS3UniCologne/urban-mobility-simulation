@@ -99,10 +99,10 @@ class ReservableMixin(ReservableInterface):
 
         # Vehicle not in use - fulfill immediately
         if not self._is_in_use:
-            if not self._state_machine.is_in_state(VehicleStates.STANDBY):
+            if self.state is not VehicleStates.STANDBY:
                 raise ReservationStateError(
                     f"Vehicle {self.uid}: cannot reserve vehicle not in use and not in STANDBY "
-                    f"(state={self._state_machine.current_state!r})",
+                    f"(state={self.state!r})",
                     vehicle_uid=self.uid,
                 )
             self._reservation = reservation
@@ -159,10 +159,10 @@ class ReservableMixin(ReservableInterface):
         self.clear_predicted_state()  # type: ignore[attr-defined], this will be cleaner once we use components instead
 
         if self._reservation is not None:
-            if not self._state_machine.is_in_state(VehicleStates.STANDBY):
+            if self.state is not VehicleStates.STANDBY:
                 raise ReservationStateError(
                     f"Vehicle {self.uid}: released use with pending reservation but state is "
-                    f"{self._state_machine.current_state!r} — reservation would be stuck",
+                    f"{self.state!r} — reservation would be stuck",
                     vehicle_uid=self.uid,
                 )
             self._reservation.fulfill()
