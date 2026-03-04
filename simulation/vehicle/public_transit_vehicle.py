@@ -38,7 +38,7 @@ class PublicTransitVehicle(Vehicle, ABC):  # noqa: D101
         self._delay: int = 0  # in seconds from planned route timetable
 
         # Initialize state
-        self.state = VehicleStates.AT_TERMINAL
+        self._set_state(VehicleStates.AT_TERMINAL)
 
         self.logger.debug("Initialized.")
 
@@ -62,7 +62,7 @@ class PublicTransitVehicle(Vehicle, ABC):  # noqa: D101
         # TODO: this is pretty optimistic: What if the vehicle waits at intermediate stops
 
         distance = self._route.subroute(self._current_stop, stop).total_distance()
-        duration = distance / self._velocity_mm  # in minutes
+        duration = self.calculate_travel_time(distance)  # in minutes
         arrival = SimulationTimeConverter.as_str(self._env.now + duration, "%H:%M:%S")
         # stop will likely be reached in travel duration + delay, but not earlier than planned (will wait there)
         return max(arrival, stop.departure)
