@@ -213,22 +213,6 @@ class StateMachine(Generic[StateT]):
         self._current_state = target_state
         self._history.append(target_state)
 
-    def is_in_state(self, state: StateT) -> bool:
-        """
-        Check if current state equals given state.
-
-        Parameters
-        ----------
-        state : StateT
-            State to check
-
-        Returns
-        -------
-        bool
-            True if current state is state
-        """
-        return self._current_state is state
-
     def is_in_state_or_descendant(self, category: StateT) -> bool:
         """
         Check if current state is in category (exact match or descendant).
