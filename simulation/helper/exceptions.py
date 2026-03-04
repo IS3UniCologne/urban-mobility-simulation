@@ -42,6 +42,10 @@ class ReservationStateError(VehicleReservationError):
     """Raised when a reservation operation is attempted in an invalid vehicle state."""
 
 
+class EnergyDepletedError(VehicleError):
+    """Raised when a vehicle's energy is depleted during travel."""
+
+
 class PublicTransitVehicleException(VehicleError):
     """Base exception for public transit vehicle errors."""
 
