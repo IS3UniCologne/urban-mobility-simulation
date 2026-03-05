@@ -75,6 +75,11 @@ class EnergySystem(SimulationBase, ABC):
         return self._capacity
 
     @property
+    def energy_consumption_per_km(self) -> float:
+        """Energy consumption per kilometer."""
+        return self._energy_consumption
+
+    @property
     def current_energy_relative(self) -> float:
         """Relative energy level (0.0 to 1.0)."""
         if self._capacity == 0:
