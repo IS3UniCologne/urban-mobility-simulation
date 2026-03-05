@@ -50,26 +50,6 @@ class HumanPoweredSystem(EnergySystem):
         self.logger.debug("Human powered travel for %s meters", distance)
         return 0.0
 
-    def has_enough_energy(
-        self, distance: float, energy_reserve_ratio: float | None = None
-    ) -> bool:
-        """
-        Check if there is enough energy (Always True for human power).
-
-        Parameters
-        ----------
-        distance : float
-            Distance to travel in meters.
-        energy_reserve_ratio : float | None, optional
-            Energy reserve ratio to maintain. Default is 0.0.
-
-        Returns
-        -------
-        bool
-            Always True.
-        """
-        return True
-
     def refill(self, amount: float, duration: float) -> Generator[Event, None, None]:
         """
         Refill energy. Does nothing for now :).

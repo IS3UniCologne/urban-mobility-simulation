@@ -179,61 +179,29 @@ class EnergySystem(SimulationBase, ABC):
             Amount of energy consumed.
         """
 
-    @abstractmethod
-    def has_enough_energy(
-        self, distance: float, energy_reserve_ratio: float | None = None
-    ) -> bool:
-        """
-        Check if there is enough energy for the distance provided, considering an optional buffer.
+    def has_enough_energy(self, distance: float, *, use_buffer: bool = True) -> bool:
+        """Check if predicted energy covers distance.
+
+        Uses predicted energy after current session if available,
+        falls back to current energy otherwise.
 
         Parameters
         ----------
         distance : float
             Distance to travel in meters.
-        energy_reserve_ratio : float | None, optional
-            Energy reserve ratio to maintain. If None, uses the buffer from config.
+        use_buffer : bool
+            If True (default), hold back the configured energy reserve buffer.
+            Set to False when the vehicle must use all remaining energy,
+            e.g. driving to a charging station.
 
         Returns
         -------
         bool
             True if enough energy is available.
         """
-
-    def has_enough_predicted_energy(
-        self, additional_distance: float, energy_reserve_ratio: float | None = None
-    ) -> bool:
-        """
-        Check if predicted energy after current task is sufficient for additional distance.
-
-        Falls back to current energy if no prediction is set.
-
-        Parameters
-        ----------
-        additional_distance : float
-            Additional distance to check.
-        energy_reserve_ratio : float | None, optional
-            Energy reserve ratio to maintain. If None, uses the buffer from config.
-
-        Returns
-        -------
-        bool
-            True if predicted energy (or current energy if no prediction) is sufficient for additional distance.
-        """
-        # Use stored prediction if available, otherwise fall back to current energy
-        energy_level = (
-            self._predicted_energy
-            if self._predicted_energy is not None
-            else self._current_energy
-        )
-
-        additional_energy_required = self.calculate_energy_required(additional_distance)
-
-        if energy_reserve_ratio is None:
-            buffer = self._default_buffer
-        else:
-            buffer = energy_reserve_ratio * self._capacity
-
-        return energy_level >= (additional_energy_required + buffer)
+        required = self.calculate_energy_required(distance)
+        buffer = self._default_buffer if use_buffer else 0.0
+        return self.predicted_energy >= (required + buffer)
 
     def clear_predicted_energy(self) -> None:
         """Clear the predicted energy level."""
