@@ -29,6 +29,10 @@ class HumanPoweredSystem(EnergySystem):
 
     def __init__(self, sim: SimulationContext, vehicle_config: VehicleConfig) -> None:
         super().__init__(sim, vehicle_config)
+        if vehicle_config.ENERGY_CONSUMPTION_PER_KM > 0:
+            self.logger.warning(
+                "HumanPoweredSystem should have zero energy consumption."
+            )
         self._current_energy = 100.0
         self._capacity = 100.0
 
