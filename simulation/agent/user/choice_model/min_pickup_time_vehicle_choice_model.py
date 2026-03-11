@@ -38,7 +38,7 @@ class MinPickupTimeVehicleChoiceModel(ChoiceModelInterface):
         frozenset[VehicleType]
             Frozenset of accepted vehicle types.
         """
-        return frozenset(VehicleType.CAR)
+        return frozenset([VehicleType.CAR])
 
     @property
     def accepted_operator_modes(self) -> frozenset[OperatorMode]:
@@ -50,4 +50,4 @@ class MinPickupTimeVehicleChoiceModel(ChoiceModelInterface):
         frozenset[OperatorMode]
             Frozenset of accepted operator modes.
         """
-        return frozenset(OperatorMode.RIDE_HAILING)
+        return frozenset([OperatorMode.RIDE_HAILING])
