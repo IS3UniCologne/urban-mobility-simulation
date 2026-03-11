@@ -449,7 +449,7 @@ class RideHailingUncoordinatedChargingOperationsConfig(RideHailingOperationsConf
     """Configuration for shared, uncoordinated charging operations"""
 
 
-class RideHailingCoordinatedChargingOperationsConfig(RideHailingOperationsConfig):
+class RideHailingSharedChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for shared, coordinated charging operations"""
 
 

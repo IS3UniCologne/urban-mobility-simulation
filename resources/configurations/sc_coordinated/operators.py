@@ -4,9 +4,9 @@ from simulation.helper.configuration.configuration import (
     ChargingInfrastructureConfig,
     OperatorConfig,
     RideHailingAllocationEngineConfig,
-    RideHailingCoordinatedChargingOperationsConfig,
     RideHailingFleetConfig,
     RideHailingSearchEngineConfig,
+    RideHailingSharedChargingOperationsConfig,
     RideHailingVehicleConfig,
     SharedChargingAuctionConfig,
 )
@@ -126,7 +126,7 @@ operator_1 = OperatorConfig(
     #     VEHICLE_RELOCATION_VELOCITY=32.16,
     #     ALLOW_QUEUE=True,
     # ),
-    OPERATIONS_CONFIG=RideHailingCoordinatedChargingOperationsConfig(
+    OPERATIONS_CONFIG=RideHailingSharedChargingOperationsConfig(
         OPERATIONS_TYPE=RideHailingSharedChargingOperations,
         OPERATIONS_START=10,
         OPERATIONS_DURATION=50,
@@ -158,7 +158,7 @@ operator_2 = OperatorConfig(
     FLEET_CONFIG=fleet,
     OPERATOR_TYPE=RideHailingOperator,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    OPERATIONS_CONFIG=RideHailingCoordinatedChargingOperationsConfig(
+    OPERATIONS_CONFIG=RideHailingSharedChargingOperationsConfig(
         OPERATIONS_TYPE=RideHailingSharedChargingOperations,
         OPERATIONS_START=10,
         OPERATIONS_DURATION=50,
