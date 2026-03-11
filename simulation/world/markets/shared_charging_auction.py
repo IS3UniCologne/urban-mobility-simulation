@@ -29,11 +29,11 @@ class SharedChargingAuction(Auction):  # noqa: D101
     __slots__ = (
         "_charging_infrastructure",
         "_charging_locations",
+        "_last_auction_state",
         "_location_results",
         "_next_timeslot",
         "_participants",
         "_shared_charging_config",
-        "_last_auction_state",
     )
 
     exposes = ["_next_timeslot", "_bids", "_location_results"]  # noqa: RUF012

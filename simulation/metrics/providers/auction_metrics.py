@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 
 from ..metrics_base import MetricsBase
 from ..metrics_dict import MetricsDict
 from simulation.world.markets.shared_charging_auction import SharedChargingAuction
 
-if TYPE_CHECKING:
-    from simulation.simulation import Simulation
 
 
 class AuctionMetrics(MetricsBase):

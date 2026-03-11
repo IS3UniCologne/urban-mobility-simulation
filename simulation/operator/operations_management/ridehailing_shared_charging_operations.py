@@ -2,7 +2,6 @@ from __future__ import annotations  # noqa: D100
 
 import dataclasses
 from collections import namedtuple
-from typing import TYPE_CHECKING
 
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
@@ -19,8 +18,6 @@ from simulation.operator.operations_management.ridehailing_base_charging_operati
 )
 from simulation.world.markets.interfaces.bidder_interface import BidderInterface
 
-if TYPE_CHECKING:
-    from simulation.operator.ride_hailing_operator import RideHailingOperator
 
 
 class RideHailingSharedChargingOperations(RideHailingOperations, BidderInterface):  # noqa: D101
