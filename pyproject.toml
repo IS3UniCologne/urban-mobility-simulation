@@ -27,6 +27,7 @@ dependencies = [
   "prettytable>=3.16.0",
   "pyarrow>=19.0.1",
   "pydantic>=2.11.4",
+  "rtree>=1.4.1",
   "shapely>=2.0.7",
   "simpy>=4.1.1",
   "statsmodels>=0.14.4",

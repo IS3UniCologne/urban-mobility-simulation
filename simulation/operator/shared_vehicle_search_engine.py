@@ -39,8 +39,9 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
 
         hexagon_origin = transport_task.origin.get_region_id()
 
-        parking_vehicles_in_region = self._fleet.parking_vehicles_in_region(
-            hexagon_origin
+        parking_vehicles_in_region = self._fleet.parking_vehicles_in_radius(
+            transport_task.origin,
+            radius=400,  # Example radius in meters. # TODO: this needs to be MAX_WALK_DISTANCE per vehicle? one index per vehicle type?
         )
         # Sort vehicles by ID to ensure deterministic iteration order
         parking_vehicles_sorted = sorted(

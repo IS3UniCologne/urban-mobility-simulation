@@ -260,6 +260,18 @@ class Vehicle(SimulationBase, ABC):
         if state == self.__state:
             # No state change
             return
+        # Update r tree Index for fast spatial queries
+        # TODO: this is hardcoded for a spatial index of parking vehicles
+        if (
+            self._Vehicle__state == VehicleState.PARKING
+            and state != VehicleState.PARKING
+        ):
+            self._fleet.delete_from_spatial_index(self)
+        elif (
+            self._Vehicle__state != VehicleState.PARKING
+            and state == VehicleState.PARKING
+        ):
+            self._fleet.insert_into_spatial_index(self)
         # Notify fleet about state change
         self._fleet.update_vehicle_state(self, state)
         self.__state = state
