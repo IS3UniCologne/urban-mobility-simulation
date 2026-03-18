@@ -446,11 +446,11 @@ class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
 
 
 class RideHailingUncoordinatedChargingOperationsConfig(RideHailingOperationsConfig):
-    """Configuration for shared, uncoordinated charging operations"""
+    """Configuration for shared, uncoordinated charging operations."""
 
 
 class RideHailingSharedChargingOperationsConfig(RideHailingOperationsConfig):
-    """Configuration for shared, coordinated charging operations"""
+    """Configuration for shared, coordinated charging operations."""
 
 
 class RideHailingMPChargingOperationsConfig(RideHailingOperationsConfig):

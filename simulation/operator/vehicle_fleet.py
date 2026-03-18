@@ -445,9 +445,25 @@ class VehicleFleet(SimulationBase, ABC):
         self._vehicles_by_region[new_region_id].add(vehicle)
 
     def insert_into_spatial_index(self, vehicle: Vehicle) -> None:
+        """
+        Insert a vehicle into the spatial index.
+
+        Parameters
+        ----------
+        vehicle : Vehicle
+            The vehicle to insert.
+        """
         self._vehicles_spatial_index.insert(vehicle)
 
     def delete_from_spatial_index(self, vehicle: Vehicle) -> None:
+        """
+        Delete a vehicle from the spatial index.
+
+        Parameters
+        ----------
+        vehicle : Vehicle
+            The vehicle to delete.
+        """
         self._vehicles_spatial_index.delete(vehicle)
 
     def parking_vehicles_in_radius(

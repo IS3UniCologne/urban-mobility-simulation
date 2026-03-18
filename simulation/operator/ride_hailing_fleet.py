@@ -38,7 +38,7 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
         self, origin: Position, destination: Position
     ) -> list[Vehicle]:
         """
-        TODO: This is opinionated and should thus not be part of the fleet, it is operations logic
+        TODO: This is opinionated and should thus not be part of the fleet, it is operations logic.
 
         Find available vehicles that can serve a user at a given origin location.
 
