@@ -1,3 +1,5 @@
+"""Module for uncoordinated ride-hailing charging operations."""
+
 import dataclasses
 from collections import namedtuple
 

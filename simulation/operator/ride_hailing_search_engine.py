@@ -104,8 +104,6 @@ class RideHailingSearchEngine(SearchEngine):
 
                 route_to_pick_up = Route(car.current_task.destination, origin)
 
-            distance_to_pick_up = route_to_pick_up.distance
-
             # Calc Duration
             trip_duration = distance / car.velocity
 
@@ -191,6 +189,7 @@ class RideHailingSearchEngine(SearchEngine):
     ) -> float:
         """
         Calculate the estimated pickup time for a vehicle.
+
         If the vehicle is currently parking, the pickup time is calculated as the time it takes to drive to the pickup location plus the current simulation time.
         If the vehicle is currently driving, the pickup time is calculated as the time it takes to drive to the pickup location plus the estimated completion time of the vehicle's current task.
 

@@ -1,3 +1,5 @@
+"""A vehicle choice model that selects the alternative with the minimum estimated pickup time."""
+
 from simulation.agent.user.choice_model.choice_model_interface import (
     ChoiceModelDependencies,
     ChoiceModelInterface,
@@ -13,12 +15,42 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 
 
 class MinPickupTimeVehicleChoiceModel(ChoiceModelInterface):
+    """
+    Vehicle choice model based on minimum estimated pickup time.
+
+    This model always selects the transportation alternative that has the
+    shortest estimated pickup time for the user.
+    """
+
     def __init__(self, deps: ChoiceModelDependencies) -> None:
+        """
+        Initialize the choice model.
+
+        Parameters
+        ----------
+        deps : ChoiceModelDependencies
+            The dependencies required by the choice model.
+        """
         super().__init__(deps=deps)
 
     def calculate_choice_probabilities(
         self, user: User, available_alternatives: TransportationAlternativeBrowser
     ) -> dict[TransportationAlternative, float]:
+        """
+        Calculate the choice probabilities based on the minimum pickup time.
+
+        Parameters
+        ----------
+        user : User
+            The user making the choice.
+        available_alternatives : TransportationAlternativeBrowser
+            The browser containing available transportation alternatives.
+
+        Returns
+        -------
+        dict[TransportationAlternative, float]
+            A dictionary of alternatives and their associated choice probabilities.
+        """
         alternatives = available_alternatives.transportation_alternatives
 
         if not alternatives:

@@ -1,3 +1,9 @@
+"""Geodesic helper module for spatial indexing and coordinate transformations.
+
+This module provides utilities for fast spatial vehicle indexing using R-tree
+and coordinate transformations between WGS84 and UTM coordinate systems.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -11,14 +17,21 @@ if TYPE_CHECKING:
 
 
 class FastSpatialVehicleIndex:
+    """
+    A fast spatial index for efficient vehicle radius lookups.
+
+    This class uses an R-tree index for fast spatial searches based on
+    Euclidean distance in meters (using UTM coordinates).
+    """
+
     def __init__(self, utm_epsg: str) -> None:
         """
-        Set up a fast (approximate) spatial index for radius lookups based on euclidean distance (in meters)
+        Set up a fast (approximate) spatial index for radius lookups based on euclidean distance (in meters).
 
         Parameters
         ----------
         utm_epsg : str
-            The UTM zone of the simulated city in EPSG reference. For Berlin e.g. it's "epsg:25832"
+            The UTM zone of the simulated city in EPSG reference. For Berlin e.g. it's "epsg:25832".
         """
         self._transformer = Transformer.from_crs(
             crs_from="epsg:4326", crs_to=utm_epsg, always_xy=True
@@ -26,6 +39,14 @@ class FastSpatialVehicleIndex:
         self._rtree = Index()
 
     def insert(self, vehicle: Vehicle) -> None:
+        """
+        Insert a vehicle into the spatial index.
+
+        Parameters
+        ----------
+        vehicle : Vehicle
+            The vehicle to insert.
+        """
         x, y = self._transformer.transform(
             *vehicle.position.getExactLocation(geojson=True)
         )
@@ -33,6 +54,14 @@ class FastSpatialVehicleIndex:
         self._rtree.insert(vehicle.id, bounds)
 
     def delete(self, vehicle: Vehicle) -> None:
+        """
+        Delete a vehicle from the spatial index.
+
+        Parameters
+        ----------
+        vehicle : Vehicle
+            The vehicle to delete.
+        """
         x, y = self._transformer.transform(
             *vehicle.position.getExactLocation(geojson=True)
         )
@@ -40,19 +69,20 @@ class FastSpatialVehicleIndex:
         self._rtree.delete(vehicle.id, bounds)
 
     def radius_search(self, point: GeodesicPosition, radius: float) -> list[int]:
-        """_summary_
+        """
+        Search for vehicle IDs within a certain radius of a point.
 
         Parameters
         ----------
         point : GeodesicPosition
-            The center point of the search
+            The center point of the search.
         radius : float
-            The radius within which to search for vehicles (in meters)
+            The radius within which to search for vehicles (in meters).
 
         Returns
         -------
         list[int]
-            Return a list of vehicle.id
+            Return a list of vehicle IDs.
         """
         qx, qy = self._transformer.transform(*point.getExactLocation(geojson=True))
 
@@ -65,4 +95,17 @@ class FastSpatialVehicleIndex:
         return vehicles_in_bbox
 
     def transform_point(self, point: GeodesicPosition) -> tuple[float, float]:
+        """
+        Transform a geodesic position to UTM coordinates.
+
+        Parameters
+        ----------
+        point : GeodesicPosition
+            The position to transform.
+
+        Returns
+        -------
+        tuple[float, float]
+            The UTM coordinates (x, y).
+        """
         return self._transformer.transform(*point.getExactLocation(geojson=True))
