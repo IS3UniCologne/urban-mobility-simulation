@@ -34,18 +34,11 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
 
         self._create_fleet_vehicles(deps)
 
-    def _add_vehicle(self, vehicle: Vehicle) -> None:
-        if vehicle not in self._vehicles:
-            self._vehicles.append(vehicle)
-            self._world.add_vehicle(vehicle=vehicle)
-        else:
-            raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
-
     def get_available_vehicles_to_user(
         self, origin: Position, destination: Position
     ) -> list[Vehicle]:
         """
-        TODO: make more efficient, this is horrible
+        TODO: This is opinionated and should thus not be part of the fleet, it is operations logic
 
         Find available vehicles that can serve a user at a given origin location.
 
@@ -68,28 +61,40 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
             at the specified origin location and have enough energy to complete the proposed trip
         """
         route_distance = origin << destination
-        parking_cars: set[Vehicle] = self._vehicles_by_state[VehicleState.PARKING]
+        # parking_cars: set[Vehicle] = self._vehicles_by_state[VehicleState.PARKING]
 
-        parking_cars_not_suggested: list[Vehicle] = [
+        # parking_cars_not_suggested: list[Vehicle] = [
+        #     car
+        #     for car in parking_cars
+        #     # TODO: we should not acceess _suggested directly
+        #     if not car._suggested
+        # ]
+
+        # if not parking_cars_not_suggested:
+        #     parking_cars_in_area = []
+        # else:
+        #     # TODO: this is slow. unbelievably slow. use spatial index.
+        #     parking_cars_in_area = [
+        #         car
+        #         for car in parking_cars_not_suggested
+        #         if (car.position << origin)
+        #         <= self.operator.operations.config.MAX_PICKUP_DISTANCE
+        #         and car.energy_system.has_enough_energy(
+        #             (car.position << origin) + route_distance
+        #         )
+        #     ]
+
+        parking_cars_in_area = self.parking_vehicles_in_radius(
+            origin, self.operator.operations.config.MAX_PICKUP_DISTANCE
+        )
+        parking_cars_in_area = [
             car
-            for car in parking_cars
-            # TODO: we should not acceess _suggested directly
+            for car in parking_cars_in_area
             if not car._suggested  # noqa: SLF001
+            and car.energy_system.has_enough_energy(
+                (car.position << origin) + route_distance
+            )
         ]
-
-        if not parking_cars_not_suggested:
-            parking_cars_in_area = []
-        else:
-            # TODO: this is slow. unbelievably slow. use spatial index.
-            parking_cars_in_area = [
-                car
-                for car in parking_cars_not_suggested
-                if (car.position << origin)
-                <= self.operator.operations.config.MAX_PICKUP_DISTANCE
-                and car.energy_system.has_enough_energy(
-                    (car.position << origin) + route_distance
-                )
-            ]
 
         serving_vehicles = self._vehicles_by_state[VehicleState.DRIVING]
         # hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)

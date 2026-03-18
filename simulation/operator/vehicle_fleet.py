@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 import simpy
 
+from simulation.environment.geodesic_helper import FastSpatialVehicleIndex
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.enums import (
     AutonomyType,
@@ -66,9 +67,11 @@ class VehicleFleet(SimulationBase, ABC):
         "_sim",
         "_vehicles",
         "_vehicles_by_autonomy",
+        "_vehicles_by_id",
         "_vehicles_by_region",
         "_vehicles_by_state",
         "_vehicles_by_type",
+        "_vehicles_spatial_index",
         "_world",
     )
 
@@ -87,7 +90,13 @@ class VehicleFleet(SimulationBase, ABC):
         self._vehicles_by_region: dict[RegionId, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_autonomy: dict[AutonomyType, set[Vehicle]] = defaultdict(set)
+        self._vehicles_by_id: dict[int, Vehicle] = defaultdict(set)
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
+
+        # Vehicle spatial index
+        self._vehicles_spatial_index: FastSpatialVehicleIndex = FastSpatialVehicleIndex(
+            "epsg:25832"
+        )  # TODO: config or infer from geodesic
 
     def _create_fleet_vehicles(self, deps: VehicleFleetDependencies) -> None:
         """Create fleet vehicles using spatial distribution from supply data."""
@@ -369,6 +378,7 @@ class VehicleFleet(SimulationBase, ABC):
             self._vehicles_by_region[vehicle.current_region].add(vehicle)
             self._vehicles_by_type[vehicle.vehicle_type].add(vehicle)
             self._vehicles_by_autonomy[vehicle.autonomy_type].add(vehicle)
+            self._vehicles_by_id[vehicle.id] = vehicle
 
     def _add_vehicle(self, vehicle: Vehicle) -> None:
         """Add a vehicle to the fleet.
@@ -394,6 +404,7 @@ class VehicleFleet(SimulationBase, ABC):
             self._vehicles_by_region[vehicle.current_region].remove(vehicle)
             self._vehicles_by_type[vehicle.vehicle_type].remove(vehicle)
             self._vehicles_by_autonomy[vehicle.autonomy_type].remove(vehicle)
+            del self._vehicles_by_id[vehicle.id]
         else:
             raise VehicleFleetError(f"Vehicle {vehicle} is not registered in Fleet yet")
 
@@ -432,3 +443,37 @@ class VehicleFleet(SimulationBase, ABC):
 
         # Add vehicle to new hexagon's set
         self._vehicles_by_region[new_region_id].add(vehicle)
+
+    def insert_into_spatial_index(self, vehicle: Vehicle) -> None:
+        self._vehicles_spatial_index.insert(vehicle)
+
+    def delete_from_spatial_index(self, vehicle: Vehicle) -> None:
+        self._vehicles_spatial_index.delete(vehicle)
+
+    def parking_vehicles_in_radius(
+        self, query_position: GeodesicPosition, radius: float
+    ) -> list[Vehicle]:
+        """
+        Find all parking vehicles within a certain radius of a given position.
+
+        Parameters
+        ----------
+        query_position : GeodesicPosition
+            The position to search around.
+        radius : float
+            The radius within which to search for parking vehicles (in meters).
+        """
+        ids = self._vehicles_spatial_index.radius_search(query_position, radius)
+        vehicles_in_bbox = [self._vehicles_by_id[id] for id in ids]
+
+        # second pass: euclidean distance
+        radius_squared = radius**2
+        qx, qy = self._vehicles_spatial_index.transform_point(query_position)
+        vehicles_in_radius = []
+        for v in vehicles_in_bbox:
+            vx, vy = self._vehicles_spatial_index.transform_point(v.position)
+            distance_squared = (vx - qx) ** 2 + (vy - qy) ** 2
+            if distance_squared <= radius_squared:
+                vehicles_in_radius.append(v)
+
+        return vehicles_in_radius
