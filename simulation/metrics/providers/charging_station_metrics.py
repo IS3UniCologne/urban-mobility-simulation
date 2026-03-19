@@ -62,11 +62,7 @@ class ChargingStationMetrics(IndexedMetricsBase):
             "average_queue_utilization": 0.0,
         }
 
-        stations = [
-            cs
-            for infra in infrastructures
-            for cs in infra.charging_stations
-        ]
+        stations = [cs for infra in infrastructures for cs in infra.charging_stations]
         for station in stations:
             station_metrics = self._get_station_metrics(station)
             metrics[station.location] = station_metrics

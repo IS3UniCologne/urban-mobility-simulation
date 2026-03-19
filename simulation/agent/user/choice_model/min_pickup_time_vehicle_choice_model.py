@@ -58,9 +58,9 @@ class MinPickupTimeVehicleChoiceModel(ChoiceModelInterface):
 
         alternatives_sorted = sorted(
             alternatives,
-            key=lambda alt: alt.est_pickup_time
-            if alt.est_pickup_time is not None
-            else float("inf"),
+            key=lambda alt: (
+                alt.est_pickup_time if alt.est_pickup_time is not None else float("inf")
+            ),
         )
 
         return {alternatives_sorted[0]: 1.0} | {a: 0 for a in alternatives_sorted[1:]}
