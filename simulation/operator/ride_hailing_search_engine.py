@@ -147,8 +147,6 @@ class RideHailingSearchEngine(SearchEngine):
                     continue
                 route_to_pick_up = Route(car.current_task.destination, origin)
 
-            distance_to_pick_up = route_to_pick_up.distance
-
             # Calc Duration
             trip_duration = distance / car.velocity
 
