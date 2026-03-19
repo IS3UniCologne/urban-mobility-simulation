@@ -10,6 +10,9 @@ from simulation.helper.simulation_base import SimulationBase
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.helper.enums import OperatorMode, TransactionState
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -24,7 +27,6 @@ if TYPE_CHECKING:
         AllocationEngineInterface,
     )
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.tasks.transport_task import TransportTask
 
 
 class OperatorInterface(SimulationBase, ABC):
@@ -67,7 +69,7 @@ class OperatorInterface(SimulationBase, ABC):
 
     @abstractmethod
     def withdraw_transportation_task(
-        self, user: User, transportation_task: TransportTask, state: TransactionState
+        self, user: User, transportation_task: TransportRequest, state: TransactionState
     ) -> None:
         """
         Withdraw a transportation task.
@@ -76,7 +78,7 @@ class OperatorInterface(SimulationBase, ABC):
         ----------
         user : User
             The user who requested the task.
-        transportation_task : TransportTask
+        transportation_task : TransportRequest
             The task to withdraw.
         state : TransactionState
             The state of the task after withdrawal.
@@ -87,7 +89,7 @@ class OperatorInterface(SimulationBase, ABC):
     def pay_for_fulfilled_transportation_task(
         self,
         user: User,
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         vehicle_allocation: VehicleAllocation,
     ) -> None:
         """
@@ -97,7 +99,7 @@ class OperatorInterface(SimulationBase, ABC):
         ----------
         user : User
             The user who requested the task.
-        transportation_task : TransportTask
+        transportation_task : TransportRequest
             The fulfilled task.
         vehicle_allocation : VehicleAllocation
             The vehicle allocation for the task.
@@ -108,7 +110,7 @@ class OperatorInterface(SimulationBase, ABC):
     def log_failed_allocation_attempt(
         self,
         user: User,
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         transportation_alternative: TransportationAlternative,
     ) -> None:
         """
@@ -118,7 +120,7 @@ class OperatorInterface(SimulationBase, ABC):
         ----------
         user : User
             The user who requested the task.
-        transportation_task : TransportTask
+        transportation_task : TransportRequest
                 The task for which allocation failed.
         transportation_alternative : TransportationAlternative
             The transportation alternative that was selected but could not be allocated.
