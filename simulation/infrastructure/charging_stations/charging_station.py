@@ -12,6 +12,7 @@ from tracking.tracking_interface import TrackingInterface
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.types import RegionId
 
 
 class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
@@ -36,7 +37,7 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
         self,
         sim: SimulationContext,
         cs_id: int,  # ID of the charging station in relation to the charging infrastructure it belongs to
-        location: str,
+        location: RegionId,
         power: float,
         capacity: int,
         queue_size: int,
@@ -100,7 +101,7 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
         return self._centre
 
     @property
-    def location(self) -> str:  # noqa: D102
+    def location(self) -> RegionId:  # noqa: D102
         return self._location
 
     @property
@@ -214,6 +215,21 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
 
             # the current queue time for a new vehicle is then the difference between the earliest possible finish time and the current time
             self._current_queue_time = min(finish_times) - self._env.now
+
+    def timeslot_end(self, scheduled_time: float | None) -> float | None:
+        """Return the end of the reserved timeslot, or None if not timeslot-based.
+
+        Parameters
+        ----------
+        scheduled_time : float or None
+            The scheduled start time of the timeslot.
+
+        Returns
+        -------
+        float or None
+            None — physical charging stations are not timeslot-based.
+        """
+        return None
 
     def dump(self, exposed_only: bool = True) -> dict[str, Any]:  # noqa: D102
         if exposed_only:
