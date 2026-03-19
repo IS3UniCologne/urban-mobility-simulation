@@ -190,3 +190,9 @@ pytest.ini
 
 # local settings overrides
 .ruff.toml
+
+#Agents
+CLAUDE.md
+.claude/
+AGENTS.md
+.agents/
