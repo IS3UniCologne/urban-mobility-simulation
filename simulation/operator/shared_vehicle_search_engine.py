@@ -2,12 +2,15 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.operator.search_engine import SearchEngine
 
 if TYPE_CHECKING:
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
     from simulation.operator.search_engine import SearchEngineDependencies
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.tasks.transport_task import TransportTask
 
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative import (
@@ -28,7 +31,7 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         self._operator = deps.operator
 
     def search_for_transportation_alternatives(
-        self, transport_task: TransportTask
+        self, transport_task: TransportRequest
     ) -> TransportationAlternativeBrowser:
         """
         Spot all available vehicles to user
@@ -39,8 +42,8 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
 
         hexagon_origin = transport_task.origin.get_region_id()
 
-        parking_vehicles_in_region = self._fleet.parking_vehicles_in_region(
-            hexagon_origin
+        parking_vehicles_in_region = self._fleet.vehicles_in_region_with_state(
+            hexagon_origin, VehicleStates.STANDBY
         )
         # Sort vehicles by ID to ensure deterministic iteration order
         parking_vehicles_sorted = sorted(
@@ -61,7 +64,7 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         # Add all available cars to alternative browser
         for vehicle in parking_vehicles_sorted:
             # Calc Duration
-            duration = distance / vehicle.velocity
+            duration = vehicle.calculate_travel_time(distance)
 
             # Calc Price
             price = duration * vehicle.price_per_minute + vehicle.price_per_trip

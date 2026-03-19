@@ -2,6 +2,7 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, cast
 
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
@@ -12,10 +13,13 @@ if TYPE_CHECKING:
     from simulation.helper.configuration.configuration import (
         RideHailingOperationsConfig,
     )
-    from simulation.tasks.transport_task import TransportTask
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
+    from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
     from simulation.vehicle.vehicle import Vehicle
 
-from simulation.helper.configuration.enums import AutonomyType, VehicleState
+from simulation.helper.enums import AutonomyType
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
@@ -57,7 +61,7 @@ class RideHailingSearchEngine(SearchEngine):
         self._min_price = ops_config.MINIMUM_PRICE
 
     def search_for_transportation_alternatives(
-        self, transport_task: TransportTask
+        self, transport_task: TransportRequest
     ) -> TransportationAlternativeBrowser:
         """Spot all available vehicles to user.
 
@@ -87,7 +91,7 @@ class RideHailingSearchEngine(SearchEngine):
         AVs_in_area = [
             car for car in cars_in_area if car.autonomy_type == AutonomyType.AUTONOMOUS
         ]
-        CVs_in_area = [
+        CVs_in_area: list[RideHailingVehicle] = [
             car
             for car in cars_in_area
             if car.autonomy_type == AutonomyType.HUMAN_DRIVEN
@@ -95,19 +99,21 @@ class RideHailingSearchEngine(SearchEngine):
         # if vehicle_search_task.transport_task.viable_vehicle_modes['RideHailingCar'] == 1:
         for car in CVs_in_area:
             # Calc waiting time
-            if car.state == VehicleState.PARKING:
+            if car.is_reserved:
+                continue
+
+            if car.state is VehicleStates.STANDBY:
                 route_to_pick_up = Route(car.position, origin)
             else:
-                if car.current_task is None:
-                    # This should not happen, but just in case
-                    self._logger.warning("search found non-parking car without task")
+                if car.current_request is None:
+                    self._logger.warning("search found non-parking car without request")
                     continue
-                route_to_pick_up = Route(car.current_task.destination, origin)
+                route_to_pick_up = Route(car.current_request.destination, origin)
 
             distance_to_pick_up = route_to_pick_up.distance
 
             # Calc Duration
-            trip_duration = distance / car.velocity
+            trip_duration = car.calculate_travel_time(distance)
 
             # Calc Price
             price = max(
@@ -137,28 +143,26 @@ class RideHailingSearchEngine(SearchEngine):
             )
 
             total_distance = distance + distance_to_pick_up
-            if car.energy_system.has_enough_energy(total_distance) and car.state in [
-                VehicleState.PARKING,
-                VehicleState.DRIVING,
-            ]:
+
+            if car.energy_system.has_enough_energy(total_distance):
                 browser.add_transportation_alternative(transportation_alternative)
 
         # if vehicle_search_task.transport_task.viable_vehicle_modes['AutonomousCar'] == 1:
         for car in AVs_in_area:
             # Calc waiting time
-            if car.state == VehicleState.PARKING:
+            if car.state is VehicleStates.STANDBY:
                 route_to_pick_up = Route(car.position, origin)
             else:
-                if car.current_task is None:
+                if car.current_request is None:
                     # This should not happen, but just in case
-                    self._logger.warning("search found non-parking car without task")
+                    self._logger.warning("search found non-parking car without request")
                     continue
-                route_to_pick_up = Route(car.current_task.destination, origin)
+                route_to_pick_up = Route(car.current_request.destination, origin)
 
             distance_to_pick_up = route_to_pick_up.distance
 
             # Calc Duration
-            trip_duration = distance / car.velocity
+            trip_duration = car.calculate_travel_time(distance)
 
             # Calc Price
             # TODO: update the price for ride-hailing
@@ -190,10 +194,8 @@ class RideHailingSearchEngine(SearchEngine):
             )
 
             total_distance = distance + distance_to_pick_up
-            if car.energy_system.has_enough_energy(total_distance) and car.state in [
-                VehicleState.PARKING,
-                VehicleState.DRIVING,
-            ]:
+
+            if car.energy_system.has_enough_energy(total_distance):
                 browser.add_transportation_alternative(transportation_alternative)
 
         return browser
@@ -201,12 +203,12 @@ class RideHailingSearchEngine(SearchEngine):
     def _calculate_pickup_time(
         self, vehicle: Vehicle, route_to_pick_up: Route
     ) -> float:
-        if vehicle.state == VehicleState.PARKING:
-            return route_to_pick_up.distance / vehicle.velocity
+        if vehicle.state is VehicleStates.STANDBY:
+            return vehicle.calculate_travel_time(route_to_pick_up.distance)
 
-        elif vehicle.state == VehicleState.DRIVING:
+        elif vehicle.is_in_use:
             return (
-                route_to_pick_up.distance / vehicle.velocity
+                vehicle.calculate_travel_time(route_to_pick_up.distance)
                 + vehicle.estimated_completion_time
                 - self._sim.env.now
             )
