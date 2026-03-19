@@ -1,5 +1,7 @@
 """Interface for vehicles that support user and operator reservations."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -13,7 +15,7 @@ class ReservableInterface(ABC):
 
     @property
     @abstractmethod
-    def current_reservation(self) -> "Reservation | None":
+    def current_reservation(self) -> Reservation | None:
         """Active reservation.
 
         Returns
@@ -24,7 +26,7 @@ class ReservableInterface(ABC):
 
     @property
     @abstractmethod
-    def reserved_for_user(self) -> "User | None":
+    def reserved_for_user(self) -> User | None:
         """User holding the reservation.
 
         Returns
@@ -39,7 +41,7 @@ class ReservableInterface(ABC):
         """True if vehicle has an active reservation."""
 
     @abstractmethod
-    def reserve(self, requester: "User | None" = None) -> "Reservation":
+    def reserve(self, requester: User | None = None) -> Reservation:
         """Reserve vehicle.
 
         Parameters
@@ -64,9 +66,7 @@ class ReservableInterface(ABC):
         """True if vehicle has an active use."""
 
     @abstractmethod
-    def acquire_use(
-        self, reservation: "Reservation", holder: "User | None" = None
-    ) -> None:
+    def acquire_use(self, reservation: Reservation, holder: User | None = None) -> None:
         """Convert current reservation into active use.
 
         Parameters
