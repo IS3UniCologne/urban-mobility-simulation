@@ -135,7 +135,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
 
             # Clean old jobs (if there are some left)
             self._scheduled_jobs.clear()
-            self._workforce.work_queue.clear()
+            self._workforce.job_queue.clear()
 
             if not self.operator.operator_log.has_successful_transaction:
                 self.logger.debug(
@@ -222,7 +222,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                         no_vehicles_scheduled_to_charge[type] += no_vehicle_to_charge
 
             # Insert Tasks into Task Queue
-            self._workforce.work_queue.bulk_append(self._scheduled_jobs)
+            self._workforce.job_queue.bulk_append(self._scheduled_jobs)
 
             self.logger.info(
                 "There are %s vehicles with low state of charge.",
@@ -333,7 +333,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                             )
 
                 # Insert Tasks into Task Queue
-                self._workforce.work_queue.bulk_append(self._scheduled_jobs)
+                self._workforce.job_queue.bulk_append(self._scheduled_jobs)
 
                 if len(charging_events):
                     # Wait for Charging events
