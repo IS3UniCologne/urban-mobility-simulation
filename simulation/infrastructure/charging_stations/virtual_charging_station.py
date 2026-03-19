@@ -74,6 +74,29 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
         return self._virtual_charging_infrastructure
 
     @property
+    def timeslot_duration(self) -> int | None:
+        """Duration of one coordination timeslot in minutes."""
+        return self._virtual_charging_infrastructure._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION  # noqa: SLF001
+
+    def timeslot_end(self, scheduled_time: float | None) -> float | None:
+        """Return scheduled_time + timeslot_duration if a valid timeframe exists, else None.
+
+        Parameters
+        ----------
+        scheduled_time : float or None
+            The scheduled start time of the timeslot.
+
+        Returns
+        -------
+        float or None
+            End of the timeslot, or None if no active timeslot or scheduled_time is None.
+        """
+        if self._valid_timeframe is None or scheduled_time is None:
+            return None
+        assert self.timeslot_duration is not None
+        return scheduled_time + self.timeslot_duration
+
+    @property
     def cs_id(self) -> int:
         """ID of the charging station in relation to the charging infrastructure it belongs to.
 
