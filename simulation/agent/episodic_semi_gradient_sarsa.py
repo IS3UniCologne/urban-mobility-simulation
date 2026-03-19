@@ -100,9 +100,7 @@ class EpisodicSemiGradientSarsa(RLAgent, SimulationBase):  # noqa: D101
         self._q_hat = q_hat
 
     def run(self, bus):  # noqa: ANN001, ANN201, D102
-        while not bus.state_machine.is_state_match_or_descendant(
-            VehicleStates.AT_TERMINAL
-        ):
+        while not bus.is_in_state_or_ancestor(VehicleStates.AT_TERMINAL):
             # to get a value copy of a state we need to deepcopy, otherwise modifying self._env_state results in
             # modifying the "copy" which really is just a reference
             before_state = deepcopy(bus._env_state)  # noqa: SLF001
