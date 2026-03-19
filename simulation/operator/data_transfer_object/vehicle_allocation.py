@@ -1,16 +1,18 @@
-from typing import TYPE_CHECKING  # noqa: D100
+from __future__ import annotations  # noqa: D100
 
-from simulation.agent.user import User
-from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.time import SimulationTime
-from simulation.operator.data_transfer_object.transportation_alternative import (
-    TransportationAlternative,
-)
+from typing import TYPE_CHECKING
+
 from simulation.vehicle.interfaces.reservable_interface import ReservableInterface
-from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
+    from simulation.agent.user import User
+    from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.helper.time import SimulationTime
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
+    )
     from simulation.vehicle.reservation import Reservation
+    from simulation.vehicle.vehicle import Vehicle
 
 
 class VehicleAllocation:
@@ -93,7 +95,7 @@ class VehicleAllocation:
         self._energy_consumed = value
 
     @property
-    def reservation(self) -> "Reservation | None":
+    def reservation(self) -> Reservation | None:
         """Get the reservation associated with this allocation."""
         return self._reservation
 
