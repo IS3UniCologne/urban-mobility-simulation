@@ -669,7 +669,7 @@ class User(Agent):
         Timeout
             Timeout event corresponding to walking duration.
         """
-        distance = origin >> destination
+        distance = origin << destination
         duration = distance / self._walking_speed_mm
 
         self.logger.debug(

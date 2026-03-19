@@ -59,7 +59,7 @@ class ServiceWorkerRelocationTask(VehicleTask["SharedVehicle"]):
         Event
             Events during relocation.
         """
-        distance = self._vehicle.position >> self._destination
+        distance = self._vehicle.position << self._destination
         relocation_route = Edge(
             distance, Vertex(self._vehicle.position), Vertex(self._destination)
         )
@@ -83,7 +83,7 @@ class ServiceWorkerRelocationTask(VehicleTask["SharedVehicle"]):
         float
             Predicted energy delta in kWh for relocating to destination.
         """
-        distance = self._vehicle.position >> self._destination
+        distance = self._vehicle.position << self._destination
         energy_required = self._vehicle.energy_system.calculate_energy_required(
             distance
         )
