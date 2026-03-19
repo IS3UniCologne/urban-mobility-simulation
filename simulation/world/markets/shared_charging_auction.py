@@ -121,7 +121,9 @@ class SharedChargingAuction(Auction):  # noqa: D101
             self.logger.debug("Bids received. Starting clearing")
 
             auctioned_timeslot = self._next_timeslot
-            auctioned_capacity = self._charging_infrastructure.get_available_capacity(self._next_timeslot).copy()
+            auctioned_capacity = self._charging_infrastructure.get_available_capacity(
+                self._next_timeslot
+            ).copy()
 
             self.clear()
             try:
@@ -131,14 +133,14 @@ class SharedChargingAuction(Auction):  # noqa: D101
                     "Result of SharedChargingAuction must be a dict of (participant id, dict of (location id, (capacity, clearing price)))"
                 )
             self._announce_results()
-            
+
             self._last_auction_state = {
                 "timeslot": auctioned_timeslot,
                 "available_capacity": auctioned_capacity,
                 "bids": self._bids.copy(),
                 "results": self._location_results.copy(),
             }
-            
+
             self._bids = {}
             self._update_auctionable_capacity()
 
