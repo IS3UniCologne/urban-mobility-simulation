@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from simulation.infrastructure.route import Edge, Vertex
 from simulation.tasks.base.vehicle_task import VehicleTask
+from simulation.vehicle.shared_vehicle import SharedVehicle
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -14,10 +15,10 @@ if TYPE_CHECKING:
 
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
-    from simulation.vehicle.shared_vehicle import SharedVehicle
+    from simulation.vehicle.vehicle import Vehicle
 
 
-class ServiceWorkerRelocationTask(VehicleTask["SharedVehicle"]):
+class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
     """Single vehicle relocation operation with a service worker.
 
     TODO: implement actual service worker behavior.
@@ -32,24 +33,20 @@ class ServiceWorkerRelocationTask(VehicleTask["SharedVehicle"]):
         The destination position for the vehicle.
     relocation_duration : float
         Duration to relocate vehicle (in minutes).
-    service_worker_uid : str
-        Identifier of the service worker performing this task.
     """
 
-    __slots__ = ("_destination", "_relocation_duration", "_service_worker_uid")
+    __slots__ = ("_destination", "_relocation_duration")
 
     def __init__(
         self,
         sim: SimulationContext,
-        vehicle: SharedVehicle,
+        vehicle: Vehicle,
         destination: GeodesicPosition,
         relocation_duration: float,
-        service_worker_uid: str,
     ) -> None:
         super().__init__(sim, vehicle)
         self._destination = destination
         self._relocation_duration = relocation_duration
-        self._service_worker_uid = service_worker_uid
 
     def _run(self) -> Generator[Event, None, None]:
         """Relocate vehicle to destination.
@@ -65,9 +62,7 @@ class ServiceWorkerRelocationTask(VehicleTask["SharedVehicle"]):
         )
 
         yield self._env.process(
-            self._vehicle.relocate(
-                relocation_route, self._relocation_duration, self._service_worker_uid
-            )
+            self._vehicle.relocate(relocation_route, self._relocation_duration)
         )
 
     def get_predicted_energy_delta(self, current_energy: float | None = None) -> float:
@@ -100,6 +95,6 @@ class ServiceWorkerRelocationTask(VehicleTask["SharedVehicle"]):
         Returns
         -------
         float
-            Predicted duration in minutes (provided by coordinator).
+            Predicted duration in minutes (provided by relocation job).
         """
         return self._relocation_duration
