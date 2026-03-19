@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class GeodesicEnvironment(Environment):  # noqa: D101
-    __slots__ = ("_centroid_cache", "_hex_geom_cache", "_rng")
+    __slots__ = ("_centroid_cache", "_hex_geom_cache", "_logger", "_rng", "_utm_epsg")
 
     def __init__(self, sim: SimulationContext) -> None:
         super().__init__()
@@ -28,10 +28,18 @@ class GeodesicEnvironment(Environment):  # noqa: D101
         self._hex_geom_cache = {}
         self._centroid_cache = {}
 
+        self._logger = sim.log_manager.get_class_logger(self.__class__.__name__)
+
         # TODO Why are we reading all the files? One should be enough.
         # Read Environment Files
         with open(sim.config.path.PATH_ENV_BOUNDING_BOX, encoding="utf-8") as file:
             env_df = gpd.read_file(file)
+            if env_df.crs is None:
+                self._logger.warning(
+                    "Bounding box CRS is None. Defaulting to EPSG:4326."
+                )
+                env_df.set_crs("epsg:4326", inplace=True)
+            self._utm_epsg = f"epsg:{env_df.estimate_utm_crs().to_epsg()}"
 
         with open(sim.config.path.PATH_ENV_HEX_LAYER_RES_9, encoding="utf-8") as file:
             env_df_hex_9 = gpd.read_file(file)
@@ -49,6 +57,11 @@ class GeodesicEnvironment(Environment):  # noqa: D101
         self.addLayer("hex_9", env_df_hex_9)
         self.addLayer("hex_8", env_df_hex_8)
         self.addLayer("hex_7", env_df_hex_7)
+
+    @property
+    def utm_epsg(self) -> str:
+        """The UTM CRS EPSG code for the environment."""
+        return self._utm_epsg
 
     def getLayer(self, layer_name: str):  # noqa: ANN201
         """
