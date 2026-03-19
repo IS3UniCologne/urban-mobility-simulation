@@ -18,19 +18,20 @@ if TYPE_CHECKING:
 
 
 class VirtualChargingStation(SimulationBase):  # noqa: D101
-    __slots = (
-        "_env",
-        "_valid_timeframe",
+    __slots__ = (
         "_capacity",
-        "_polygon",
         "_centre",
-        "_plugs",
         "_cs_id",
+        "_current_queue_time",
+        "_env",
         "_location",
+        "_physical_charging_station",
+        "_plugs",
+        "_polygon",
         "_power",
         "_queue",
         "_queue_size",
-        "_current_queue_time",
+        "_valid_timeframe",
         "_virtual_charging_infrastructure",
     )
 
