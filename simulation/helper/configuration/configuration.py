@@ -53,6 +53,7 @@ from simulation.helper.enums import (
     VehicleType,
 )
 from simulation.helper.time import SimulationVelocityConverter
+from simulation.helper.types import RegionId
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -270,7 +271,7 @@ class VehicleConfig(ConfigBaseModel):
     PRICE_PER_MIN: float | None = Field(default=None, ge=0)
     PRICE_PER_TRIP: float = Field(default=0, ge=0)
     DAILY_TOTAL_COST: float | None = Field(default=None, ge=0)
-    COST_PER_KM: float | None = Field(default=None, ge=0)
+    COST_PER_KM: float | None = Field(default=0, ge=0)
     PRICE_PER_KM: float | None = Field(default=None, ge=0)
     CHARGING_COST_PER_KWH: float | None = Field(default=None, ge=0)
     KG_CO2_PER_KM: float | None = Field(default=None, ge=0)
@@ -337,7 +338,7 @@ class ChargingInfrastructureConfig(BaseModel):
     )
 
     NUMBER_OF_CHARGING_STATIONS: int
-    LOCATIONS: list[str]
+    LOCATIONS: list[RegionId]
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
@@ -396,7 +397,7 @@ class OperationsConfig(ConfigBaseModel):
     RECHARGE_THRESHOLD: list[float] | float | None = Field(
         default=None
     )  # TODO: unify this between sv and rh
-    VEHICLE_RELOCATION_VELOCITY: float | None = Field(gt=0, default=None)
+    VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0, default=0)
 
     # TODO: allow_queue was both explicitly defined in the config, but also derived from queue size > 0. How do we want to handle this?
     ALLOW_QUEUE: bool | None = Field(default=False)
