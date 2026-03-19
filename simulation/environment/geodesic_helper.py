@@ -72,6 +72,8 @@ class FastSpatialVehicleIndex:
         """
         Search for vehicle IDs within a certain radius of a point.
 
+        #TODO: This is currently using a square box, not a circle.
+
         Parameters
         ----------
         point : GeodesicPosition
