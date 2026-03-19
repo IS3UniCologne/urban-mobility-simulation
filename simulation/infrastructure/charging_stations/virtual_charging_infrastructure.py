@@ -112,7 +112,9 @@ class VirtualChargingInfrastructure(SimulationBase):
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_available_capacity(self, at_timeslot: int | None = None):  # noqa: ANN201, D102
+    def get_available_capacity(  # noqa: D102
+        self, at_timeslot: int | None = None
+    ) -> dict[int, dict[str, int]] | dict[str, int]:
         if self._current_lookahead is None:
             return self._availability
         try:
