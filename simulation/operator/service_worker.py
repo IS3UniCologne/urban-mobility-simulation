@@ -26,7 +26,7 @@ class ServiceWorkerState(Enum):  # noqa: D101
 class ServiceWorker(SimulationBase):  # noqa: D101
     service_worker_id = 0
 
-    __slots__ = ("_env", "_id", "_state", "_work_queue")
+    __slots__ = ("_env", "_id", "_job_queue", "_state")
 
     def __init__(self, sim: SimulationContext, job_queue: JobQueue) -> None:
         super().__init__(sim)
@@ -34,21 +34,21 @@ class ServiceWorker(SimulationBase):  # noqa: D101
         self._env = sim.env
         self._state = ServiceWorkerState.HIBERNATE
 
-        self._work_queue = job_queue
+        self._job_queue = job_queue
 
         ServiceWorker.service_worker_id += 1
 
     def run(self):  # noqa: ANN201, D102
         while True:
             # Wait until operation management engine puts jobs into queue
-            yield self._work_queue.queue_updated
+            yield self._job_queue.queue_updated
 
             self.logger.debug("Waking up and searching for available jobs.")
 
             self._state = ServiceWorkerState.FREE
 
-            while self._work_queue.count > 0:
-                next_job = self._work_queue.popleft()
+            while self._job_queue.count > 0:
+                next_job = self._job_queue.popleft()
 
                 yield self._env.process(self.execute_job(next_job))
 
