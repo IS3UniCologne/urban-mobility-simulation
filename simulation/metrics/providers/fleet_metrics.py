@@ -80,10 +80,14 @@ class FleetMetrics(IndexedMetricsBase):
 
     def _get_fleet_metrics(self, fleet: VehicleFleet) -> MetricsDict:
         """Get metrics for a single fleet."""
-        idle_vehicles = len(fleet.vehicles_by_state.get(VehicleStates.IDLE, set()))
+        standby_vehicles = len(
+            fleet.vehicles_by_state.get(VehicleStates.STANDBY, set())
+        )
         charging_vehicles = len(
             fleet.vehicles_by_state.get(VehicleStates.CHARGING, set())
+            | fleet.vehicles_by_state.get(VehicleStates.WAITING_FOR_CHARGING, set())
         )
+        # Count all vehicles in TRANSPORTING state or its descendants
         transporting_vehicles = len(
             fleet.vehicles_by_state.get(VehicleStates.TRANSPORTING, set())
         )
@@ -109,7 +113,7 @@ class FleetMetrics(IndexedMetricsBase):
 
         return MetricsDict(
             {
-                "idle_vehicles": idle_vehicles,
+                "standby_vehicles": standby_vehicles,
                 "charging_vehicles": charging_vehicles,
                 "transporting_vehicles": transporting_vehicles,
                 "relocating_vehicles": relocating_vehicles,
