@@ -68,7 +68,7 @@ class FastSpatialVehicleIndex:
         bounds = (x, y, x, y)
         self._rtree.delete(vehicle.id, bounds)
 
-    def radius_search(self, point: GeodesicPosition, radius: float) -> list[int]:
+    def radius_search(self, point: GeodesicPosition, radius: float) -> set[int]:
         """
         Search for vehicle IDs within a certain radius of a point.
 
@@ -81,8 +81,8 @@ class FastSpatialVehicleIndex:
 
         Returns
         -------
-        list[int]
-            Return a list of vehicle IDs.
+        set[int]
+            Return a set of vehicle IDs.
         """
         qx, qy = self._transformer.transform(*point.getExactLocation(geojson=True))
 

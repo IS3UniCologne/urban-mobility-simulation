@@ -294,7 +294,9 @@ class User(Agent, DriverInterface, PassengerInterface):
                 self._attempted_operators.add(chosen_alternative.operator)
 
                 # TODO: check if this solves multiple allocations in ride hailing case, need to establish real reservation system
-                chosen_alternative.vehicle._suggested = True  # noqa: SLF001
+                # this will probably be superseded by the vehicle state refactor @WilliamTYH ?
+                if isinstance(chosen_alternative.vehicle, RideHailingVehicle):
+                    chosen_alternative.vehicle._suggested = True  # noqa: SLF001
 
                 # Attempt allocation
                 vehicle_allocation = yield self._env.process(

@@ -90,7 +90,7 @@ class VehicleFleet(SimulationBase, ABC):
         self._vehicles_by_region: dict[RegionId, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_autonomy: dict[AutonomyType, set[Vehicle]] = defaultdict(set)
-        self._vehicles_by_id: dict[int, Vehicle] = defaultdict(set)
+        self._vehicles_by_id: dict[int, Vehicle] = {}
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
 
         # Vehicle spatial index
