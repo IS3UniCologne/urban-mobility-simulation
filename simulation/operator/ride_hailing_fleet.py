@@ -2,8 +2,9 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import AutonomyType, VehicleState
+from simulation.helper.enums import AutonomyType
 from simulation.helper.time import SimulationTimeConverter
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.vehicle import Vehicle
@@ -63,23 +64,27 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
             A combined list of parked and serving vehicles that are available to the user
             at the specified origin location
         """
-        parking_cars: set[Vehicle] = self._vehicles_by_state[VehicleState.PARKING]
+        idle_vehicles: set[RideHailingVehicle] = self._vehicles_by_state[
+            VehicleStates.STANDBY
+        ]
 
         # TODO: Check if this is necessary
-        parking_cars_sorted = sorted(parking_cars, key=lambda v: v.uid)
+        idle_vehicles_sorted = sorted(idle_vehicles, key=lambda v: v.uid)
 
-        if not parking_cars_sorted:
-            parking_cars_in_area = []
+        if not idle_vehicles_sorted:
+            idle_vehicles_in_area = []
         else:
-            parking_cars_in_area = [
-                car
-                for car in parking_cars_sorted
-                if (car.position << origin)
+            idle_vehicles_in_area = [
+                vehicle
+                for vehicle in idle_vehicles_sorted
+                if (vehicle.position << origin)
                 <= self.operator.operations.config.MAX_PICKUP_DISTANCE
             ]
 
-        serving_state = VehicleState.DRIVING
-        serving_vehicles = self._vehicles_by_state[serving_state]
+        # TODO: Is this correct still ?
+        serving_vehicles: set[RideHailingVehicle] = self._vehicles_by_state[
+            VehicleStates.DRIVING
+        ]
         hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
         state_of_charge_threshold = self.operator.operations.config.RECHARGE_THRESHOLD[
             hour
@@ -90,7 +95,8 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
         serving_cars = [
             car
             for car in serving_vehicles_sorted
-            if car.current_relative_state_of_charge > state_of_charge_threshold + 5
+            if car.energy_system.current_energy_relative
+            > state_of_charge_threshold + 0.05
         ]
 
         serving_cars_in_area = []
@@ -99,12 +105,12 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
                 car.estimated_completion_time - self._sim.env.now
             ) * car.velocity
             if (
-                (car.destination.position << origin) + distance_to_current_destination
+                (car.destination << origin) + distance_to_current_destination
                 <= self.operator.operations.config.MAX_PICKUP_DISTANCE
             ):
                 serving_cars_in_area.append(car)
 
-        return parking_cars_in_area + serving_cars_in_area
+        return idle_vehicles_in_area + serving_cars_in_area
 
     def count_vehicles_below_soc_level(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
@@ -217,44 +223,47 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
                 if hex_id not in low_soc_supply:
                     low_soc_supply[hex_id] = dict(zip(available_vehicles, values))
 
-                if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
+                if (
+                    vehicle.energy_system.current_energy_relative
+                    < state_of_charge_threshold
+                ):
                     low_soc_supply[hex_id][mode] += 1
 
         return low_soc_supply
 
     def mark_vehicles_to_be_charged(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
+        """Mark and return vehicles that need to be charged.
+
+        Checks all vehicles (STANDBY and in-use) and marks those below the SoC
+        threshold for charging. For vehicles in use, uses predicted energy
+        after task completion.
+
+        Parameters
+        ----------
+        state_of_charge_threshold : list
+            Hourly thresholds for state of charge (0 to 1).
+
+        Returns
+        -------
+        list
+            Vehicles marked for charging, sorted by current energy level.
         """
-        Return a list of number of vehicles that need to be charged in each area.
-
-        :param state_of_charge_threshold:
-        :return: List, vehicles with low SoC}
-        """
-        # available_vehicles = ["RideHailingCar"]
-        # values = [0] * len(available_vehicles)
-
-        # Set counter to 0 for all vehicle types
-        # vehicle_dict = dict(zip(available_vehicles, values))
-
-        low_soc_supply = []
+        # TODO: Does this really belong in the fleet?
         hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
-        state_of_charge_threshold = state_of_charge_threshold[hour]
+        threshold = state_of_charge_threshold[hour]
 
-        parking_vehicles = self._vehicles_by_state[VehicleState.PARKING]
-        # TODO: Check if this is necessary
-        parking_vehicles_sorted = sorted(parking_vehicles, key=lambda v: v.uid)
+        low_soc_vehicles = []
+        # Only check vehicles that are not OFFLINE
+        offline_vehicles = self._vehicles_by_state.get(VehicleStates.OFFLINE, set())
+        candidate_vehicles = set(self.vehicles) - offline_vehicles
 
-        for vehicle in parking_vehicles_sorted:
-            if (
-                vehicle.energy_system.current_energy_relative
-                < state_of_charge_threshold
-            ):
-                # TODO: check if we need to filter before appending
-                low_soc_supply.append(vehicle)
+        for vehicle in sorted(candidate_vehicles, key=lambda v: v.uid):
+            if vehicle.is_reserved:
+                continue
+            if vehicle.energy_system.predicted_energy_relative < threshold:
+                low_soc_vehicles.append(vehicle)
 
-        low_soc_supply = sorted(
-            low_soc_supply, key=lambda x: x.energy_system.current_energy_relative
-        )
-        return low_soc_supply
+        return low_soc_vehicles
 
     def _create_vehicle(
         self,

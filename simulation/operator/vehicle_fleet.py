@@ -232,8 +232,8 @@ class VehicleFleet(SimulationBase, ABC):
         -------
         dict[VehicleState, set[Vehicle]]
             Dictionary mapping states to sets of vehicles. Includes entries for:
-            - Leaf states (e.g., PICK_UP, TRANSPORTING)
-            - Parent states (e.g., SERVING_PASSENGERS, IN_USE)
+            - Leaf states (e.g., PICK_UP, DRIVING)
+            - Parent states (e.g., TRANSPORTING, SERVICING)
         """
         return self._vehicles_by_state
 
@@ -297,7 +297,7 @@ class VehicleFleet(SimulationBase, ABC):
         region : RegionId
             Region identifier (e.g., hexagon ID).
         state : VehicleState
-            The state to query (e.g., IDLE, SERVING_PASSENGERS, IN_USE).
+            The state to query (e.g., STANDBY, TRANSPORTING, SERVICING).
             Can be a leaf state or parent state in the hierarchy.
 
         Returns
@@ -321,12 +321,13 @@ class VehicleFleet(SimulationBase, ABC):
         Returns
         -------
         set[Vehicle]
-            Set of vehicles with energy level below the threshold
+            Set of vehicles with energy level below the threshold once they complete
+            their current session.
         """
         return {
             vehicle
             for vehicle in self.vehicles
-            if vehicle.energy_system.current_energy_relative < energy_threshold
+            if vehicle.energy_system.predicted_energy_relative < energy_threshold
         }
 
     def vehicles_below_energy_threshold_in_region(
@@ -344,18 +345,17 @@ class VehicleFleet(SimulationBase, ABC):
         Returns
         -------
         list[Vehicle]
-            List of vehicles in the region with energy level below the threshold
+            List of vehicles in the region with energy level below the threshold once they complete
+            their current session.
         """
-        below_energy_level_vehicles = []
-        vehicles_in_region = self.vehicles_in_region(region)
-        # TODO: Check if this is necessary
-        vehicles_in_region_sorted = sorted(vehicles_in_region, key=lambda v: v.uid)
-
-        for vehicle in vehicles_in_region_sorted:
-            if vehicle.energy_system.current_energy_relative < energy_threshold:
-                below_energy_level_vehicles.append(vehicle)
-
-        return below_energy_level_vehicles
+        vehicles_in_region = sorted(
+            self.vehicles_in_region(region), key=lambda v: v.uid
+        )
+        return [
+            vehicle
+            for vehicle in vehicles_in_region
+            if vehicle.energy_system.predicted_energy_relative < energy_threshold
+        ]
 
     def register_vehicle(self, vehicle: Vehicle) -> None:
         """Register a new vehicle to the fleet."""
