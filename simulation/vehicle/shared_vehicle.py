@@ -66,16 +66,16 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self._set_state(VehicleStates.WAITING_FOR_USER)
         self.logger.debug("Waiting for user.")
 
-    def relocate(
-        self, route_segment: Edge, time: float, relocator: str
-    ) -> Generator[Any, Any, Any]:
+    def relocate(self, route_segment: Edge, time: float) -> Generator[Any, Any, Any]:
+        """Relocate vehicle independent of state of charge and availability of driver.
+
+        Parameters
+        ----------
+        route_segment : Edge
+            The route to relocate the vehicle along.
+        time : float
+            Duration of the relocation in minutes.
         """
-        Relocate vehicle independent of state of charge and availability of driver
-        :param route_segment:
-        :param time:
-        :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
-        :return:
-        """  # noqa: D205, D400
         # TODO: Do we still need this check ?
         if self._driver is not None or len(self._passengers) > 0:
             self.logger.error(
@@ -101,8 +101,7 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self._set_state(VehicleStates.STANDBY)
 
         self.logger.debug(
-            "Vehicle relocated by %s from %s to %s in %s minutes.",
-            relocator,
+            "Vehicle relocated from %s to %s in %s minutes.",
             old_position,
             self.position,
             time,

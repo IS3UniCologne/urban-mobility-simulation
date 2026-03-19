@@ -320,7 +320,7 @@ class Vehicle(SimulationBase, ABC):
     def position(self, position: GeodesicPosition) -> None:
         old_position = self.__position
 
-        self._distance_travelled += self.__position >> position
+        self._distance_travelled += self.__position << position
 
         new_region = position.get_region_id()
 
