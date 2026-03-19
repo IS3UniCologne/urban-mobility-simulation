@@ -282,7 +282,7 @@ class Operator(OperatorInterface):
             destination=transportation_task.destination.get_region_id(),
             time_start=transportation_task.creation_time,
             time_end=self._env.now,
-            distance=transportation_task.origin >> transportation_task.destination,
+            distance=transportation_task.origin << transportation_task.destination,
             accepted_vehicle_types=transportation_task.accepted_vehicle_types,
             state=state,
             price=transportation_alternative.price,

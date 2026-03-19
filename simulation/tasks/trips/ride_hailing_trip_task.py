@@ -109,7 +109,7 @@ class RideHailingTripTask(VehicleTask["RideHailingVehicle"]):
         alternative = self._allocation.transportation_alternative
 
         pickup_energy = self._vehicle.energy_system.calculate_energy_required(
-            self._vehicle.position >> self._allocation.pick_up_position
+            self._vehicle.position << self._allocation.pick_up_position
         )
 
         transport_energy = self._vehicle.energy_system.calculate_energy_required(
@@ -133,7 +133,7 @@ class RideHailingTripTask(VehicleTask["RideHailingVehicle"]):
         """
         alternative = self._allocation.transportation_alternative
 
-        pickup_distance = self._vehicle.position >> self._allocation.pick_up_position
+        pickup_distance = self._vehicle.position << self._allocation.pick_up_position
         pickup_duration = self._vehicle.calculate_travel_time(pickup_distance)
 
         transport_duration = alternative.duration
