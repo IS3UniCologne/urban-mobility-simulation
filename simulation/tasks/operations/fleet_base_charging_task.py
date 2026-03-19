@@ -31,15 +31,23 @@ class FleetBaseChargingTask(VehicleTask["SharedVehicle"]):
         The vehicle to charge (already at fleet base).
     charging_power : float
         Power of the charging station in kW.
+    linearization_factor : int
+        Number of vehicles being charged in parallel. Duration is divided
+        by this factor to simulate parallel charging.
     """
 
-    __slots__ = ("_charging_power",)
+    __slots__ = ("_charging_power", "_linearization_factor")
 
     def __init__(
-        self, sim: SimulationContext, vehicle: SharedVehicle, charging_power: float
+        self,
+        sim: SimulationContext,
+        vehicle: SharedVehicle,
+        charging_power: float,
+        linearization_factor: int = 1,
     ) -> None:
         super().__init__(sim, vehicle)
         self._charging_power = charging_power
+        self._linearization_factor = linearization_factor
 
     def _compute_charging_duration(self, current_energy: float | None = None) -> float:
         if current_energy is None:
@@ -47,7 +55,7 @@ class FleetBaseChargingTask(VehicleTask["SharedVehicle"]):
         energy_deficit = self._vehicle.energy_system.capacity - current_energy
         if energy_deficit <= 0 or self._charging_power <= 0:
             return 0.0
-        return (energy_deficit / self._charging_power) * 60
+        return (energy_deficit / self._charging_power) * 60 / self._linearization_factor
 
     def _run(self) -> Generator[Event, None, None]:
         duration = self._compute_charging_duration()
