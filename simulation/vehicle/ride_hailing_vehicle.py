@@ -141,13 +141,13 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self.logger.debug("Driving started.")
 
     def relocate(self, route_segment: Edge) -> Generator[Any, Any, Any]:
+        """Relocate vehicle independent of state of charge and availability of driver.
+
+        Parameters
+        ----------
+        route_segment : Edge
+            The route to relocate the vehicle along.
         """
-        Relocate vehicle independent of state of charge and availability of driver
-        :param route_segment:
-        :param time:
-        :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
-        :return:
-        """  # noqa: D205, D400
         if self._driver is not None or len(self._passengers) > 0:
             self.logger.debug(
                 "Vehicle %s has a driver %s. Revoke relocation task.",
