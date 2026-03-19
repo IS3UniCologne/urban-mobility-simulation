@@ -45,16 +45,20 @@ class AuctionMetrics(MetricsBase):
                     metrics[f"infrastructure_{idx}"] = auction_metrics
 
                     # Add to global aggregates
-                    agg = auction_metrics.get("aggregate", {})
-                    if agg:
+                    agg = auction_metrics["aggregate"]
+                    if isinstance(agg, dict):
                         # Taking the timeslot from the first infrastructure (they should be synced anyway)
-                        aggregate["auction_timeslot"] = agg.get("auction_timeslot", -1)
-                        aggregate["total_available_capacity"] += agg.get("available_capacity", 0)
-                        aggregate["total_cleared_capacity"] += agg.get("cleared_capacity", 0)
-                        aggregate["total_bidded_capacity"] += agg.get("total_bidded_capacity", 0)
-                        aggregate["total_bids_count"] += agg.get("bids_count", 0)
-                        sum_clearing_price += agg.get("avg_clearing_price", 0.0) * agg.get("cleared_capacity", 0)
-                        sum_bid_price += agg.get("avg_bid_price", 0.0) * agg.get("total_bidded_capacity", 0)
+                        aggregate["auction_timeslot"] = agg["auction_timeslot"]
+                        aggregate["total_available_capacity"] += agg["available_capacity"]
+                        aggregate["total_cleared_capacity"] += agg["cleared_capacity"]
+                        aggregate["total_bidded_capacity"] += agg["total_bidded_capacity"]
+                        aggregate["total_bids_count"] += agg["bids_count"]
+                        sum_clearing_price += (
+                            agg["avg_clearing_price"] * agg["cleared_capacity"]
+                        )
+                        sum_bid_price += (
+                            agg["avg_bid_price"] * agg["total_bidded_capacity"]
+                        )
 
         if aggregate["total_cleared_capacity"] > 0:
             aggregate["avg_clearing_price"] = sum_clearing_price / aggregate["total_cleared_capacity"]
