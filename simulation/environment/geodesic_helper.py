@@ -37,6 +37,7 @@ class FastSpatialVehicleIndex:
             crs_from="epsg:4326", crs_to=utm_epsg, always_xy=True
         )
         self._rtree = Index()
+        self._coords: dict[int, tuple[float, float]] = {}
 
     def insert(self, vehicle: Vehicle) -> None:
         """
@@ -47,11 +48,16 @@ class FastSpatialVehicleIndex:
         vehicle : Vehicle
             The vehicle to insert.
         """
+        if vehicle.id in self._coords:
+            raise RuntimeError(
+                f"Vehicle {vehicle.id} already in spatial index; "
+                "duplicate insert or ID collision across vehicle subclasses."
+            )
         x, y = self._transformer.transform(
             *vehicle.position.getExactLocation(geojson=True)
         )
-        bounds = (x, y, x, y)
-        self._rtree.insert(vehicle.id, bounds)
+        self._coords[vehicle.id] = (x, y)
+        self._rtree.insert(vehicle.id, (x, y, x, y))
 
     def delete(self, vehicle: Vehicle) -> None:
         """
@@ -62,11 +68,21 @@ class FastSpatialVehicleIndex:
         vehicle : Vehicle
             The vehicle to delete.
         """
-        x, y = self._transformer.transform(
+        coords = self._coords.pop(vehicle.id, None)
+        if coords is None:
+            raise RuntimeError(
+                f"Vehicle {vehicle.id} not in spatial index; cannot delete."
+            )
+        x, y = coords
+        cx, cy = self._transformer.transform(
             *vehicle.position.getExactLocation(geojson=True)
         )
-        bounds = (x, y, x, y)
-        self._rtree.delete(vehicle.id, bounds)
+        if cx != x or cy != y:
+            raise RuntimeError(
+                f"Vehicle {vehicle.id} position changed since insertion; "
+                "index is inconsistent."
+            )
+        self._rtree.delete(vehicle.id, (x, y, x, y))
 
     def radius_search(self, point: GeodesicPosition, radius: float) -> set[int]:
         """
