@@ -15,7 +15,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from simulation.context.simulation_context import SimulationContext
-    from simulation.tasks.transport_task import TransportTask
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -103,7 +105,7 @@ class Timetable(SimulationBase):  # noqa: D101
 
     def find_viable_trips(
         self,
-        transport_task: TransportTask,
+        transport_task: TransportRequest,
         spatial_strategy: str = "hexagon",
         temporal_lookahead: int = 10,
     ) -> gpd.GeoDataFrame:

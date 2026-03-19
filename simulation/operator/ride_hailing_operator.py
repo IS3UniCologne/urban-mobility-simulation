@@ -7,10 +7,12 @@ if TYPE_CHECKING:
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
     from simulation.operator.data_transfer_object.vehicle_allocation import (
         VehicleAllocation,
     )
-    from simulation.tasks.transport_task import TransportTask
 
 
 from simulation.helper.enums import OperatorMode, TransactionState
@@ -38,7 +40,7 @@ class RideHailingOperator(Operator):
     def pay_for_fulfilled_transportation_task(  # noqa: ANN201, D102
         self,
         user: User,
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         vehicle_allocation: VehicleAllocation,
     ):
         selected_transportation_alternative = (
