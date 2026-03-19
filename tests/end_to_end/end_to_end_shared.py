@@ -1,6 +1,6 @@
 """Shared utilities for end-to-end tests."""
 
-from typing import Any
+from typing import Any, cast
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.simulation import Simulation
@@ -17,7 +17,7 @@ def run_simulation_and_extract_metrics(config_path: str) -> dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         A dictionary containing the structured metrics (operator, user, fleet).
     """
     # Initialize configuration
@@ -34,8 +34,8 @@ def run_simulation_and_extract_metrics(config_path: str) -> dict[str, Any]:
     user_metrics = simulation.metrics.user_metrics.to_dict()
     fleet_metrics = simulation.metrics.fleet_metrics.to_dict()
 
-    aggregate = metrics["aggregate"]
-    user_aggregate = user_metrics["aggregate"]
+    aggregate = cast("dict[str, Any]", metrics["aggregate"])
+    user_aggregate = cast("dict[str, Any]", user_metrics["aggregate"])
 
     # Filter relevant metrics to avoid noise
     relevant_operator_metrics = {
@@ -67,8 +67,9 @@ def run_simulation_and_extract_metrics(config_path: str) -> dict[str, Any]:
 
     relevant_fleet_metrics = {}
     for fleet_id, fleet_data in fleet_metrics.items():
+        fleet_data = cast("dict[str, Any]", fleet_data)
         relevant_fleet_metrics[fleet_id] = {
-            "idle_vehicles": fleet_data["idle_vehicles"],
+            "standby_vehicles": fleet_data["standby_vehicles"],
             "charging_vehicles": fleet_data["charging_vehicles"],
             "transporting_vehicles": fleet_data["transporting_vehicles"],
             "avg_state_of_charge": fleet_data["avg_state_of_charge"],
