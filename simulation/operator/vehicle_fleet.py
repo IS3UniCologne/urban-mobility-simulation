@@ -95,8 +95,8 @@ class VehicleFleet(SimulationBase, ABC):
 
         # Vehicle spatial index
         self._vehicles_spatial_index: FastSpatialVehicleIndex = FastSpatialVehicleIndex(
-            "epsg:25832"
-        )  # TODO: config or infer from geodesic
+            deps.sim.geo_env.utm_epsg
+        )
 
     def _create_fleet_vehicles(self, deps: VehicleFleetDependencies) -> None:
         """Create fleet vehicles using spatial distribution from supply data."""
