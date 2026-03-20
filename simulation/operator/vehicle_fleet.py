@@ -467,7 +467,9 @@ class VehicleFleet(SimulationBase, ABC):
         self._vehicles_spatial_index.delete(vehicle)
 
     def parking_vehicles_in_radius(
-        self, query_position: GeodesicPosition, radius: float
+        self,
+        query_position: GeodesicPosition,
+        radius: float | int | dict[VehicleType, float | int],
     ) -> list[Vehicle]:
         """
         Find all parking vehicles within a certain radius of a given position.
@@ -476,17 +478,27 @@ class VehicleFleet(SimulationBase, ABC):
         ----------
         query_position : GeodesicPosition
             The position to search around.
-        radius : float
+        radius : float | int | dict[VehicleType, float | int]
             The radius within which to search for parking vehicles (in meters).
+            If a dictionary is provided, vehicles are filtered according to the
+            specific radius mapped to their vehicle type.
         """
         ids = self._vehicles_spatial_index.radius_search(query_position, radius)
-        vehicles_in_bbox = [self._vehicles_by_id[id] for id in ids]
+        # Sort the IDs to ensure deterministic iteration order across partitions
+        vehicles_in_bbox = [self._vehicles_by_id[vid] for vid in sorted(ids)]
 
         # second pass: euclidean distance
-        radius_squared = radius**2
         qx, qy = self._vehicles_spatial_index.transform_point(query_position)
         vehicles_in_radius = []
         for v in vehicles_in_bbox:
+            if isinstance(radius, dict):
+                if v.vehicle_type not in radius:
+                    continue
+                r = radius[v.vehicle_type]
+            else:
+                r = radius
+
+            radius_squared = r**2
             vx, vy = self._vehicles_spatial_index.transform_point(v.position)
             distance_squared = (vx - qx) ** 2 + (vy - qy) ** 2
             if distance_squared <= radius_squared:
