@@ -6,17 +6,19 @@ and coordinate transformations between WGS84 and UTM coordinate systems.
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
-from pyproj import Transformer
 from rtree.index import Index
 
 from simulation.environment.geodesic_position import GeodesicPosition
 
 if TYPE_CHECKING:
-    from simulation.environment.position import Position
     from simulation.helper.configuration.enums import VehicleType
     from simulation.vehicle.vehicle import Vehicle
+
+# Constant for meters per degree of latitude (approximately 111.32 km)
+METERS_PER_DEGREE = 111320.0
 
 
 class FastSpatialVehicleIndex:
@@ -24,21 +26,11 @@ class FastSpatialVehicleIndex:
     A fast spatial index for efficient vehicle radius lookups.
 
     This class uses an R-tree index for fast spatial searches based on
-    Euclidean distance in meters (using UTM coordinates).
+    WGS84 coordinates and an equirectangular approximation for Euclidean distance in meters.
     """
 
-    def __init__(self, utm_epsg: str) -> None:
-        """
-        Set up a fast (approximate) spatial index for radius lookups based on euclidean distance (in meters).
-
-        Parameters
-        ----------
-        utm_epsg : str
-            The UTM zone of the simulated city in EPSG reference. For Berlin e.g. it's "epsg:25832".
-        """
-        self._transformer = Transformer.from_crs(
-            crs_from="epsg:4326", crs_to=utm_epsg, always_xy=True
-        )
+    def __init__(self) -> None:
+        """Set up a fast (approximate) spatial index for radius lookups based on WGS84 coordinates."""
         self._rtrees: dict[VehicleType, Index] = {}
         self._coords: dict[int, tuple[float, float, VehicleType]] = {}
 
@@ -56,15 +48,13 @@ class FastSpatialVehicleIndex:
                 f"Vehicle {vehicle.id} already in spatial index; "
                 "duplicate insert or ID collision across vehicle subclasses."
             )
-        x, y = self._transformer.transform(
-            *vehicle.position.getExactLocation(geojson=True)
-        )
+        lng, lat = vehicle.position.getExactLocation(geojson=True)
         v_type = vehicle.vehicle_type
-        self._coords[vehicle.id] = (x, y, v_type)
+        self._coords[vehicle.id] = (lng, lat, v_type)
 
         if v_type not in self._rtrees:
             self._rtrees[v_type] = Index()
-        self._rtrees[v_type].insert(vehicle.id, (x, y, x, y))
+        self._rtrees[v_type].insert(vehicle.id, (lng, lat, lng, lat))
 
     def delete(self, vehicle: Vehicle) -> None:
         """
@@ -80,16 +70,14 @@ class FastSpatialVehicleIndex:
             raise RuntimeError(
                 f"Vehicle {vehicle.id} not in spatial index; cannot delete."
             )
-        x, y, v_type = coords_info
-        cx, cy = self._transformer.transform(
-            *vehicle.position.getExactLocation(geojson=True)
-        )
-        if cx != x or cy != y:
+        lng, lat, v_type = coords_info
+        clng, clat = vehicle.position.getExactLocation(geojson=True)
+        if clng != lng or clat != lat:
             raise RuntimeError(
                 f"Vehicle {vehicle.id} position changed since insertion; "
                 "index is inconsistent."
             )
-        self._rtrees[v_type].delete(vehicle.id, (x, y, x, y))
+        self._rtrees[v_type].delete(vehicle.id, (lng, lat, lng, lat))
 
     def radius_search(
         self,
@@ -99,7 +87,9 @@ class FastSpatialVehicleIndex:
         """
         Search for vehicle IDs within a certain radius of a point.
 
-        Attention: This is using a square box, not a circle, it is an overestimation of a radius search!
+        This uses a two-step approach:
+        1. Bounding box search in WGS84 using the R-tree.
+        2. Circular post-filtering using an equirectangular approximation for Euclidean distance in meters.
 
         Parameters
         ----------
@@ -115,57 +105,65 @@ class FastSpatialVehicleIndex:
         set[int]
             Return a set of vehicle IDs.
         """
-        qx, qy = self._transformer.transform(*point.getExactLocation(geojson=True))
-        vehicles_in_bbox: set[int] = set()
+        user_lng, user_lat = point.getExactLocation(geojson=True)
+        lat_rad = math.radians(user_lat)
+        cos_lat = math.cos(lat_rad)
+        lng_meter_scale = METERS_PER_DEGREE * cos_lat
+
+        vehicles_in_radius: set[int] = set()
 
         if isinstance(radius, dict):
             for v_type, r in radius.items():
                 if v_type in self._rtrees:
-                    bounds = (qx - r, qy - r, qx + r, qy + r)
-                    vehicles_in_bbox.update(self._rtrees[v_type].intersection(bounds))
+                    delta_lat = r / METERS_PER_DEGREE
+                    delta_lng = r / lng_meter_scale
+                    bounds = (
+                        user_lng - delta_lng,
+                        user_lat - delta_lat,
+                        user_lng + delta_lng,
+                        user_lat + delta_lat,
+                    )
+                    candidates = self._rtrees[v_type].intersection(bounds)
+
+                    radius_squared = r**2
+                    for vid in candidates:
+                        lng, lat, _ = self._coords[vid]
+                        dx = (lng - user_lng) * lng_meter_scale
+                        dy = (lat - user_lat) * METERS_PER_DEGREE
+                        if (dx**2 + dy**2) <= radius_squared:
+                            vehicles_in_radius.add(vid)
         else:
-            bounds = (qx - radius, qy - radius, qx + radius, qy + radius)
+            delta_lat = radius / METERS_PER_DEGREE
+            delta_lng = radius / lng_meter_scale
+            bounds = (
+                user_lng - delta_lng,
+                user_lat - delta_lat,
+                user_lng + delta_lng,
+                user_lat + delta_lat,
+            )
+            radius_squared = radius**2
+
             for rtree in self._rtrees.values():
-                vehicles_in_bbox.update(rtree.intersection(bounds))
+                candidates = rtree.intersection(bounds)
+                for vid in candidates:
+                    lng, lat, _ = self._coords[vid]
+                    dx = (lng - user_lng) * lng_meter_scale
+                    dy = (lat - user_lat) * METERS_PER_DEGREE
+                    if (dx**2 + dy**2) <= radius_squared:
+                        vehicles_in_radius.add(vid)
 
-        return vehicles_in_bbox
-
-    def transform_point(self, point: GeodesicPosition) -> tuple[float, float]:
-        """
-        Transform a geodesic position to UTM coordinates.
-
-        Parameters
-        ----------
-        point : GeodesicPosition
-            The position to transform.
-
-        Returns
-        -------
-        tuple[float, float]
-            The UTM coordinates (x, y).
-        """
-        return self._transformer.transform(*point.getExactLocation(geojson=True))
+        return vehicles_in_radius
 
 
 class FastSpatialDestinationIndex:
     """
     A fast spatial index for efficient vehicle destination radius lookups.
 
-    Tracks en-route vehicles based on their destination and ETA.
+    Tracks en-route vehicles based on their destination and ETA using WGS84 coordinates.
     """
 
-    def __init__(self, utm_epsg: str) -> None:
-        """
-        Set up a fast (approximate) spatial index for destination radius lookups.
-
-        Parameters
-        ----------
-        utm_epsg : str
-            The UTM zone of the simulated city in EPSG reference.
-        """
-        self._transformer = Transformer.from_crs(
-            crs_from="epsg:4326", crs_to=utm_epsg, always_xy=True
-        )
+    def __init__(self) -> None:
+        """Set up a fast (approximate) spatial index for destination radius lookups."""
         self._rtree: Index = Index()
         self._coords: dict[int, tuple[float, float]] = {}
         self._etas: dict[int, float] = {}
@@ -185,11 +183,11 @@ class FastSpatialDestinationIndex:
         if vehicle.id in self._coords:
             self.delete(vehicle)
 
-        x, y = self.transform_point(vehicle.destination)
-        self._coords[vehicle.id] = (x, y)
+        lng, lat = vehicle.destination.getExactLocation(geojson=True)
+        self._coords[vehicle.id] = (lng, lat)
         self._etas[vehicle.id] = getattr(vehicle, "estimated_completion_time", 0.0)
 
-        self._rtree.insert(vehicle.id, (x, y, x, y))
+        self._rtree.insert(vehicle.id, (lng, lat, lng, lat))
 
     def delete(self, vehicle: Vehicle) -> None:
         """
@@ -205,9 +203,9 @@ class FastSpatialDestinationIndex:
             return
 
         self._etas.pop(vehicle.id, None)
-        x, y = coords_info
+        lng, lat = coords_info
 
-        self._rtree.delete(vehicle.id, (x, y, x, y))
+        self._rtree.delete(vehicle.id, (lng, lat, lng, lat))
 
     def radius_search(
         self, point: GeodesicPosition, radius: float | int, max_eta: float | None = None
@@ -215,8 +213,9 @@ class FastSpatialDestinationIndex:
         """
         Search for vehicle IDs within a certain destination radius and ETA.
 
-        TODO: Consider partitioned index or dynamic radius mapping if heterogeneous
-        query needs arise (e.g., different radii per vehicle type). (similar to FastSpatialVehicleIndex)
+        This uses a two-step approach:
+        1. Bounding box search in WGS84 using the R-tree.
+        2. Circular post-filtering using an equirectangular approximation for Euclidean distance in meters.
 
         Parameters
         ----------
@@ -232,37 +231,33 @@ class FastSpatialDestinationIndex:
         set[int]
             Return a set of vehicle IDs.
         """
-        qx, qy = self.transform_point(point)
-        vehicles_in_bbox: set[int] = set()
+        user_lng, user_lat = point.getExactLocation(geojson=True)
+        lat_rad = math.radians(user_lat)
+        cos_lat = math.cos(lat_rad)
+        lng_meter_scale = METERS_PER_DEGREE * cos_lat
 
-        bounds = (qx - radius, qy - radius, qx + radius, qy + radius)
-        vehicles_in_bbox.update(self._rtree.intersection(bounds))
+        delta_lat = radius / METERS_PER_DEGREE
+        delta_lng = radius / lng_meter_scale
+        bounds = (
+            user_lng - delta_lng,
+            user_lat - delta_lat,
+            user_lng + delta_lng,
+            user_lat + delta_lat,
+        )
 
-        if max_eta is not None:
-            vehicles_in_bbox = {
-                vid
-                for vid in vehicles_in_bbox
-                if self._etas.get(vid, float("inf")) <= max_eta
-            }
+        candidates = list(self._rtree.intersection(bounds))
+        vehicles_in_radius: set[int] = set()
+        radius_squared = radius**2
 
-        return vehicles_in_bbox
+        for vid in candidates:
+            # Check ETA first for early exit
+            if max_eta is not None and self._etas.get(vid, float("inf")) > max_eta:
+                continue
 
-    def transform_point(
-        self, point: GeodesicPosition | Position
-    ) -> tuple[float, float]:
-        """
-        Transform a geodesic position to UTM coordinates.
+            lng, lat = self._coords[vid]
+            dx = (lng - user_lng) * lng_meter_scale
+            dy = (lat - user_lat) * METERS_PER_DEGREE
+            if (dx**2 + dy**2) <= radius_squared:
+                vehicles_in_radius.add(vid)
 
-        Parameters
-        ----------
-        point : GeodesicPosition | Position
-            The position to transform.
-
-        Returns
-        -------
-        tuple[float, float]
-            The UTM coordinates (x, y).
-        """
-        if not isinstance(point, GeodesicPosition):
-            raise TypeError("Point must be a GeodesicPosition to get geojson location.")
-        return self._transformer.transform(*point.getExactLocation(geojson=True))
+        return vehicles_in_radius

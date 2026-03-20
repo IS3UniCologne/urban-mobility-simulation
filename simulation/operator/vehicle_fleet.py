@@ -97,14 +97,10 @@ class VehicleFleet(SimulationBase, ABC):
         self._vehicles_by_id: dict[int, Vehicle] = {}
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
         # Vehicle spatial index
-        self._vehicles_spatial_index: FastSpatialVehicleIndex = FastSpatialVehicleIndex(
-            deps.sim.geo_env.utm_epsg
-        )
+        self._vehicles_spatial_index: FastSpatialVehicleIndex = FastSpatialVehicleIndex()
         self._en_route_spatial_index: FastSpatialDestinationIndex | None = None
         if self._config.ENABLE_EN_ROUTE_INDEX:
-            self._en_route_spatial_index = FastSpatialDestinationIndex(
-                deps.sim.geo_env.utm_epsg
-            )
+            self._en_route_spatial_index = FastSpatialDestinationIndex()
 
     def _create_fleet_vehicles(self, deps: VehicleFleetDependencies) -> None:
         """Create fleet vehicles using spatial distribution from supply data."""
@@ -522,19 +518,8 @@ class VehicleFleet(SimulationBase, ABC):
         ids = self._en_route_spatial_index.radius_search(
             query_position, radius, max_eta
         )
-        vehicles_in_bbox = [self._vehicles_by_id[vid] for vid in sorted(ids)]
-
-        qx, qy = self._en_route_spatial_index.transform_point(query_position)
-        vehicles_in_radius = []
-        for v in vehicles_in_bbox:
-            radius_squared = radius**2
-            if hasattr(v, "destination") and v.destination is not None:
-                vx, vy = self._en_route_spatial_index.transform_point(v.destination)
-                distance_squared = (vx - qx) ** 2 + (vy - qy) ** 2
-                if distance_squared <= radius_squared:
-                    vehicles_in_radius.append(v)
-
-        return vehicles_in_radius
+        # Sort the IDs to ensure deterministic iteration order across partitions
+        return [self._vehicles_by_id[vid] for vid in sorted(ids)]
 
     def parking_vehicles_in_radius(
         self,
@@ -555,23 +540,4 @@ class VehicleFleet(SimulationBase, ABC):
         """
         ids = self._vehicles_spatial_index.radius_search(query_position, radius)
         # Sort the IDs to ensure deterministic iteration order across partitions
-        vehicles_in_bbox = [self._vehicles_by_id[vid] for vid in sorted(ids)]
-
-        # second pass: euclidean distance
-        qx, qy = self._vehicles_spatial_index.transform_point(query_position)
-        vehicles_in_radius = []
-        for v in vehicles_in_bbox:
-            if isinstance(radius, dict):
-                if v.vehicle_type not in radius:
-                    continue
-                r = radius[v.vehicle_type]
-            else:
-                r = radius
-
-            radius_squared = r**2
-            vx, vy = self._vehicles_spatial_index.transform_point(v.position)
-            distance_squared = (vx - qx) ** 2 + (vy - qy) ** 2
-            if distance_squared <= radius_squared:
-                vehicles_in_radius.append(v)
-
-        return vehicles_in_radius
+        return [self._vehicles_by_id[vid] for vid in sorted(ids)]
