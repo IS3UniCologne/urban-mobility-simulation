@@ -8,7 +8,10 @@ from typing import TYPE_CHECKING
 import pandas as pd
 import simpy
 
-from simulation.environment.geodesic_helper import FastSpatialVehicleIndex
+from simulation.environment.geodesic_helper import (
+    FastSpatialDestinationIndex,
+    FastSpatialVehicleIndex,
+)
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.enums import (
     AutonomyType,
@@ -62,6 +65,7 @@ class VehicleFleet(SimulationBase, ABC):
 
     __slots__ = (
         "_config",
+        "_en_route_spatial_index",
         "_operator",
         "_resource",
         "_sim",
@@ -92,11 +96,15 @@ class VehicleFleet(SimulationBase, ABC):
         self._vehicles_by_autonomy: dict[AutonomyType, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_id: dict[int, Vehicle] = {}
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
-
         # Vehicle spatial index
         self._vehicles_spatial_index: FastSpatialVehicleIndex = FastSpatialVehicleIndex(
             deps.sim.geo_env.utm_epsg
         )
+        self._en_route_spatial_index: FastSpatialDestinationIndex | None = None
+        if self._config.ENABLE_EN_ROUTE_INDEX:
+            self._en_route_spatial_index = FastSpatialDestinationIndex(
+                deps.sim.geo_env.utm_epsg
+            )
 
     def _create_fleet_vehicles(self, deps: VehicleFleetDependencies) -> None:
         """Create fleet vehicles using spatial distribution from supply data."""
@@ -465,6 +473,68 @@ class VehicleFleet(SimulationBase, ABC):
             The vehicle to delete.
         """
         self._vehicles_spatial_index.delete(vehicle)
+
+    def insert_into_en_route_spatial_index(self, vehicle: Vehicle) -> None:
+        """
+        Insert a vehicle into the en-route spatial index.
+
+        Parameters
+        ----------
+        vehicle : Vehicle
+            The vehicle to insert.
+        """
+        if self._en_route_spatial_index is not None:
+            self._en_route_spatial_index.insert(vehicle)
+
+    def delete_from_en_route_spatial_index(self, vehicle: Vehicle) -> None:
+        """
+        Delete a vehicle from the en-route spatial index.
+
+        Parameters
+        ----------
+        vehicle : Vehicle
+            The vehicle to delete.
+        """
+        if self._en_route_spatial_index is not None:
+            self._en_route_spatial_index.delete(vehicle)
+
+    def expected_arrivals_in_radius(
+        self,
+        query_position: GeodesicPosition,
+        radius: float | int,
+        max_eta: float | None = None,
+    ) -> list[Vehicle]:
+        """
+        Find all vehicles expected to arrive within a certain radius and ETA.
+
+        Parameters
+        ----------
+        query_position : GeodesicPosition
+            The position to search around.
+        radius : float | int
+            The radius within which to search for vehicles (in meters).
+        max_eta : float | None
+            The maximum acceptable ETA.
+        """
+        if self._en_route_spatial_index is None:
+            return []
+
+        ids = self._en_route_spatial_index.radius_search(
+            query_position, radius, max_eta
+        )
+        vehicles_in_bbox = [self._vehicles_by_id[vid] for vid in sorted(ids)]
+
+        qx, qy = self._en_route_spatial_index.transform_point(query_position)
+        vehicles_in_radius = []
+        for v in vehicles_in_bbox:
+            radius_squared = radius**2
+            if hasattr(v, "destination") and v.destination is not None:
+                vx, vy = self._en_route_spatial_index.transform_point(v.destination)
+                distance_squared = (vx - qx) ** 2 + (vy - qy) ** 2
+                if distance_squared <= radius_squared:
+                    vehicles_in_radius.append(v)
+
+        return vehicles_in_radius
 
     def parking_vehicles_in_radius(
         self,
