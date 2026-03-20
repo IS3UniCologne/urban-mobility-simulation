@@ -212,7 +212,7 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
 
     def relocate(
         self, route_segment: Edge, time: float, relocator: str
-    ) -> Generator[Any, Any, Any]:
+    ) -> Generator[Any, Any, bool]:
         """
         Relocate vehicle independent of state of charge and availability of driver
         :param route_segment:
@@ -229,7 +229,7 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
                 self.state = VehicleState.PARKING
             yield self._env.timeout(1)
 
-            return
+            return False
 
             # raise Exception(f'Vehicle {self.uid} has a driver {self._driver.identify_driver()}. Unable to relocate vehicle.')
 
@@ -260,6 +260,8 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
             self.position,
             time,
         )
+
+        return True
 
     def plug_to_charging_station(self) -> None:  # noqa: D102
         self.state = VehicleState.CHARGING
