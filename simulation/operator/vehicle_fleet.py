@@ -97,7 +97,9 @@ class VehicleFleet(SimulationBase, ABC):
         self._vehicles_by_id: dict[int, Vehicle] = {}
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
         # Vehicle spatial index
-        self._vehicles_spatial_index: FastSpatialVehicleIndex = FastSpatialVehicleIndex()
+        self._vehicles_spatial_index: FastSpatialVehicleIndex = (
+            FastSpatialVehicleIndex()
+        )
         self._en_route_spatial_index: FastSpatialDestinationIndex | None = None
         if self._config.ENABLE_EN_ROUTE_INDEX:
             self._en_route_spatial_index = FastSpatialDestinationIndex()
