@@ -11,9 +11,8 @@ from typing import TYPE_CHECKING
 
 from rtree.index import Index
 
-from simulation.environment.geodesic_position import GeodesicPosition
-
 if TYPE_CHECKING:
+    from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.enums import VehicleType
     from simulation.vehicle.vehicle import Vehicle
 
