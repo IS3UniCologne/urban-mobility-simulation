@@ -266,7 +266,6 @@ class Vehicle(SimulationBase, ABC):
             self._fleet.delete_from_spatial_index(self)
         elif self.__state != VehicleState.PARKING and state == VehicleState.PARKING:
             self._fleet.insert_into_spatial_index(self)
-            self._fleet.delete_from_en_route_spatial_index(self)
         # Notify fleet about state change
         self._fleet.update_vehicle_state(self, state)
         self.__state = state
