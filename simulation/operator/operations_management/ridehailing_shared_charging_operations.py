@@ -63,13 +63,10 @@ class RideHailingSharedChargingOperations(RideHailingOperations, BidderInterface
 
         # hack a virtual operator reference into it?
         VirtualOperator = namedtuple(
-            "VirtualOperator", ["id", "fleet", "charging_infrastructure"]
+            "VirtualOperator", ["fleet", "charging_infrastructure"]
         )
 
-        # TODO: can we just use uid instead ?
-        id = self._operator.uid.split("_")[1]
         vo = VirtualOperator(
-            id=id,
             fleet=self._operator.fleet,
             charging_infrastructure=self._virtual_charging_infrastructure,
         )
