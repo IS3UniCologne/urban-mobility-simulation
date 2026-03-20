@@ -19,13 +19,19 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 
 
 class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
-    __slots__ = ("_env", "_fleet", "_sim")
+    __slots__ = ("_env", "_fleet", "_radii", "_sim")
 
     def __init__(self, deps: SearchEngineDependencies) -> None:
         self._sim = deps.sim
         self._env = self._sim.env
         self._fleet: VehicleFleet = deps.operator.fleet
         self._operator = deps.operator
+
+        self._radii = {
+            config.VEHICLE_TYPE: config.WALKING_DISTANCE
+            for config in self._fleet.config.VEHICLES
+            if config.WALKING_DISTANCE is not None
+        }
 
     def search_for_transportation_alternatives(
         self, transport_task: TransportTask
@@ -38,8 +44,7 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         browser = TransportationAlternativeBrowser()
 
         parking_vehicles_in_region = self._fleet.parking_vehicles_in_radius(
-            transport_task.origin,
-            radius=400,  # Example radius in meters. # TODO: this needs to be MAX_WALK_DISTANCE per vehicle? one index per vehicle type?
+            transport_task.origin, radius=self._radii
         )
         # Sort vehicles by ID to ensure deterministic iteration order
         parking_vehicles_sorted = sorted(

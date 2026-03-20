@@ -13,7 +13,8 @@ from rtree.index import Index
 
 if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
-    from simulation.vehicle.ride_hailing_vehicle import Vehicle
+    from simulation.helper.configuration.enums import VehicleType
+    from simulation.vehicle.vehicle import Vehicle
 
 
 class FastSpatialVehicleIndex:
@@ -36,8 +37,8 @@ class FastSpatialVehicleIndex:
         self._transformer = Transformer.from_crs(
             crs_from="epsg:4326", crs_to=utm_epsg, always_xy=True
         )
-        self._rtree = Index()
-        self._coords: dict[int, tuple[float, float]] = {}
+        self._rtrees: dict[VehicleType, Index] = {}
+        self._coords: dict[int, tuple[float, float, VehicleType]] = {}
 
     def insert(self, vehicle: Vehicle) -> None:
         """
@@ -56,8 +57,12 @@ class FastSpatialVehicleIndex:
         x, y = self._transformer.transform(
             *vehicle.position.getExactLocation(geojson=True)
         )
-        self._coords[vehicle.id] = (x, y)
-        self._rtree.insert(vehicle.id, (x, y, x, y))
+        v_type = vehicle.vehicle_type
+        self._coords[vehicle.id] = (x, y, v_type)
+
+        if v_type not in self._rtrees:
+            self._rtrees[v_type] = Index()
+        self._rtrees[v_type].insert(vehicle.id, (x, y, x, y))
 
     def delete(self, vehicle: Vehicle) -> None:
         """
@@ -68,12 +73,12 @@ class FastSpatialVehicleIndex:
         vehicle : Vehicle
             The vehicle to delete.
         """
-        coords = self._coords.pop(vehicle.id, None)
-        if coords is None:
+        coords_info = self._coords.pop(vehicle.id, None)
+        if coords_info is None:
             raise RuntimeError(
                 f"Vehicle {vehicle.id} not in spatial index; cannot delete."
             )
-        x, y = coords
+        x, y, v_type = coords_info
         cx, cy = self._transformer.transform(
             *vehicle.position.getExactLocation(geojson=True)
         )
@@ -82,20 +87,26 @@ class FastSpatialVehicleIndex:
                 f"Vehicle {vehicle.id} position changed since insertion; "
                 "index is inconsistent."
             )
-        self._rtree.delete(vehicle.id, (x, y, x, y))
+        self._rtrees[v_type].delete(vehicle.id, (x, y, x, y))
 
-    def radius_search(self, point: GeodesicPosition, radius: float) -> set[int]:
+    def radius_search(
+        self,
+        point: GeodesicPosition,
+        radius: float | int | dict[VehicleType, float | int],
+    ) -> set[int]:
         """
         Search for vehicle IDs within a certain radius of a point.
 
-        #TODO: This is currently using a square box, not a circle.
+        Attention: This is using a square box, not a circle, it is an overestimation of a radius search!
 
         Parameters
         ----------
         point : GeodesicPosition
             The center point of the search.
-        radius : float
+        radius : float | int | dict[VehicleType, float | int]
             The radius within which to search for vehicles (in meters).
+            Can be a single radius for all vehicle types, or a dictionary
+            mapping specific vehicle types to their respective search radii.
 
         Returns
         -------
@@ -103,12 +114,17 @@ class FastSpatialVehicleIndex:
             Return a set of vehicle IDs.
         """
         qx, qy = self._transformer.transform(*point.getExactLocation(geojson=True))
+        vehicles_in_bbox: set[int] = set()
 
-        # this uses bounding box (square), not radius. Do second pass downstream
-        bounds = (qx - radius, qy - radius, qx + radius, qy + radius)
-        vehicles_in_bbox = set(
-            self._rtree.intersection(bounds)
-        )  # TODO: set is a workaround because hits are duplicated - fix this
+        if isinstance(radius, dict):
+            for v_type, r in radius.items():
+                if v_type in self._rtrees:
+                    bounds = (qx - r, qy - r, qx + r, qy + r)
+                    vehicles_in_bbox.update(self._rtrees[v_type].intersection(bounds))
+        else:
+            bounds = (qx - radius, qy - radius, qx + radius, qy + radius)
+            for rtree in self._rtrees.values():
+                vehicles_in_bbox.update(rtree.intersection(bounds))
 
         return vehicles_in_bbox
 
