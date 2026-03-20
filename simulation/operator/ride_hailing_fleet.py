@@ -96,28 +96,46 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
             )
         ]
 
-        serving_vehicles = self._vehicles_by_state[VehicleState.DRIVING]
-        # hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
-        # state_of_charge_threshold = self.operator.operations.config.RECHARGE_THRESHOLD[
-        #     hour
+        # serving_vehicles = self._vehicles_by_state[VehicleState.DRIVING]
+        # # hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
+        # # state_of_charge_threshold = self.operator.operations.config.RECHARGE_THRESHOLD[
+        # #     hour
+        # # ]
+
+        # # TODO: to decide whether to show vehicles that are potentially ready to charge (below threshold) is not job of the fleet!
+        # serving_cars = [
+        #     car
+        #     for car in serving_vehicles
+        #     if not car._suggested
+        #     # and car.current_relative_state_of_charge > state_of_charge_threshold
         # ]
 
-        # TODO: to decide whether to show vehicles that are potentially ready to charge (below threshold) is not job of the fleet!
-        serving_cars = [
-            car
-            for car in serving_vehicles
-            if not car._suggested  # noqa: SLF001
-            # and car.current_relative_state_of_charge > state_of_charge_threshold
-        ]
+        # serving_cars_in_area = [
+        #     car
+        #     for car in serving_cars
+        #     # distance_to_current_destination = (
+        #     #     car.estimated_completion_time - self._sim.env.now
+        #     # ) * car.velocity
+        #     if (car.current_task.destination << origin)
+        #     <= self.operator.operations.config.MAX_PICKUP_DISTANCE
+        #     and car.energy_system.has_enough_energy(
+        #         (car.current_task.origin << car.current_task.destination)
+        #         + (car.current_task.destination << origin)
+        #         + route_distance
+        #     )
+        # ]
+
+        serving_cars_in_area = self.expected_arrivals_in_radius(
+            origin,
+            self.operator.operations.config.MAX_PICKUP_DISTANCE,
+            self._sim.time
+            + 5,  # TODO: The operator / fleet does not know the user preference for waiting time. It is an operational decision to make an educated guess here
+        )
 
         serving_cars_in_area = [
             car
-            for car in serving_cars
-            # distance_to_current_destination = (
-            #     car.estimated_completion_time - self._sim.env.now
-            # ) * car.velocity
-            if (car.current_task.destination << origin)
-            <= self.operator.operations.config.MAX_PICKUP_DISTANCE
+            for car in serving_cars_in_area
+            if not car._suggested  # noqa: SLF001
             and car.energy_system.has_enough_energy(
                 (car.current_task.origin << car.current_task.destination)
                 + (car.current_task.destination << origin)

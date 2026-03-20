@@ -71,7 +71,6 @@ class RideHailingSearchEngine(SearchEngine):
         origin = transport_task.origin
         destination = transport_task.destination
 
-        # TODO: These are vehicles, not necessarily cars
         cars_in_area = self._fleet.get_available_vehicles_to_user(origin, destination)
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop

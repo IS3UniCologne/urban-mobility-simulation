@@ -302,11 +302,14 @@ class FleetConfig(ConfigBaseModel):
 
     VEHICLES: dict[VehicleConfig, int]  # TODO: update this to use distributions
 
+    ENABLE_EN_ROUTE_INDEX: bool = Field(default=False)
+
 
 class RideHailingFleetConfig(FleetConfig):
     """Configuration for ride-hailing fleet parameters."""
 
     RH_AVAILABILITY: list[float]
+    ENABLE_EN_ROUTE_INDEX: bool = Field(default=True)
 
     @field_validator("RH_AVAILABILITY", mode="after")
     @classmethod
