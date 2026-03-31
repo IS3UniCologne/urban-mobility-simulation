@@ -429,6 +429,12 @@ class VehicleFleet(SimulationBase, ABC):
         If this throws an exception, the vehicle state is probably being
         incorrectly set through the private attribute
         """
+        if vehicle.state == VehicleState.PARKING and new_state != VehicleState.PARKING:
+            self._vehicles_spatial_index.delete(vehicle)
+        elif (
+            vehicle.state != VehicleState.PARKING and new_state == VehicleState.PARKING
+        ):
+            self._vehicles_spatial_index.insert(vehicle)
         self._vehicles_by_state[vehicle.state].remove(vehicle)
         self._vehicles_by_state[new_state].add(vehicle)
 
@@ -449,28 +455,6 @@ class VehicleFleet(SimulationBase, ABC):
 
         # Add vehicle to new hexagon's set
         self._vehicles_by_region[new_region_id].add(vehicle)
-
-    def insert_into_spatial_index(self, vehicle: Vehicle) -> None:
-        """
-        Insert a vehicle into the spatial index.
-
-        Parameters
-        ----------
-        vehicle : Vehicle
-            The vehicle to insert.
-        """
-        self._vehicles_spatial_index.insert(vehicle)
-
-    def delete_from_spatial_index(self, vehicle: Vehicle) -> None:
-        """
-        Delete a vehicle from the spatial index.
-
-        Parameters
-        ----------
-        vehicle : Vehicle
-            The vehicle to delete.
-        """
-        self._vehicles_spatial_index.delete(vehicle)
 
     def insert_into_en_route_spatial_index(self, vehicle: Vehicle) -> None:
         """
