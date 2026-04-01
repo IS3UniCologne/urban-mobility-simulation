@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from simulation.environment.position import Position
     from simulation.helper.configuration.configuration import VehicleConfig
     from simulation.infrastructure.network.edge import Edge
+    from simulation.infrastructure.route import Route
     from simulation.operator.operations_management.service_tasks.service_task import (
         ServiceTask,
     )
@@ -190,20 +191,19 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         distance = route_segment.distance
         velocity = self._velocity_mm
         time = distance / velocity
-        self.estimated_completion_time = self._env.now + time
-        self.destination = route_segment.destination
 
         if not self.energy_system.has_enough_energy(
             distance=distance,
-            energy_reserve_ratio=0.0
-            if relocating
-            else None,  # TODO: Why don't we use a buffer when relocating?
+            energy_reserve_ratio=(
+                0.0 if relocating else None
+            ),  # TODO: Why don't we use a buffer when relocating?
         ):
             raise RuntimeError(
                 f"{self.__class__.__name__!s} {self.uid} has been tried to move but has not enough energy."
             )
 
         yield self._env.timeout(time)
+
         try:
             self._update_positions(route_segment.destination)
         except Exception:
@@ -216,6 +216,34 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
             distance_travelled=distance,
             time_taken=time,
         )
+
+    def traverse_route(self, route: Route) -> Generator[Event, None, float]:
+        """
+        Traverse a route and update the en-route spatial index with the final destination.
+
+        Parameters
+        ----------
+        route : Route
+            The route to traverse.
+
+        Returns
+        -------
+        float
+            Total energy consumed during traversal.
+        """
+        self.destination = route.destination
+        total_time = route.distance / self._velocity_mm
+        self.estimated_completion_time = self._env.now + total_time
+
+        self.fleet.insert_into_en_route_spatial_index(self)
+
+        total_energy = yield from super().traverse_route(route)
+
+        self.fleet.delete_from_en_route_spatial_index(self)
+        self.destination = None
+        self.estimated_completion_time = 0
+
+        return total_energy
 
     def move_to_pick_up_position(  # noqa: D102
         self, vehicle_assignment: VehicleAllocation

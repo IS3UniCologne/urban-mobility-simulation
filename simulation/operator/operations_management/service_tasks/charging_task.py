@@ -119,13 +119,17 @@ class ChargingTask(ServiceTask):  # noqa: D101
             ) / len(selected_vehicles_to_charge)
 
             # First relocate vehicle to base
-            yield self._env.process(
+            relocation_successful = yield self._env.process(
                 vehicle.relocate(
                     relocation_route,
                     relocation_duration_per_vehicle,
                     f"Service Worker {args[0]}",
                 )
             )
+
+            if not relocation_successful:
+                # TODO: this is not really a successful charging task if some of the vehicles cannot be charged, reflect in task result?
+                continue
 
             # Plugin Vehicle to Charging Station
             vehicle.plug_to_charging_station()

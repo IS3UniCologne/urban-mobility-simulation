@@ -250,9 +250,7 @@ class User(Agent, DriverInterface, PassengerInterface):
                 break
 
             # 2: Calculate choice probabilities using choice model
-            choice_probs: dict[
-                TransportationAlternative, float
-            ] = yield self._env.process(
+            choice_probs: dict[TransportationAlternative, float] = (
                 self._calculate_choice_probabilities(available_alternatives)
             )
 
@@ -268,6 +266,7 @@ class User(Agent, DriverInterface, PassengerInterface):
                 len(attempted_alternatives) < len(viable_alternatives)
                 and not allocation_succeeded
             ):
+                # TODO: we are attempting allocations with old information, what if the vehicle moved in the meantime?
                 # Check timeout before attempting allocation
                 if self._is_search_duration_exceeded():
                     self._search_end_time = self._env.now
@@ -293,6 +292,11 @@ class User(Agent, DriverInterface, PassengerInterface):
 
                 # Track that we attempted this operator
                 self._attempted_operators.add(chosen_alternative.operator)
+
+                # TODO: check if this solves multiple allocations in ride hailing case, need to establish real reservation system
+                # this will probably be superseded by the vehicle state refactor @WilliamTYH ?
+                if isinstance(chosen_alternative.vehicle, RideHailingVehicle):
+                    chosen_alternative.vehicle._suggested = True  # noqa: SLF001
 
                 # Attempt allocation
                 vehicle_allocation = yield self._env.process(
@@ -475,6 +479,7 @@ class User(Agent, DriverInterface, PassengerInterface):
 
             # Wait before searching again
             yield self._env.timeout(1)
+
         # We did not receive any transportation alternatives, return empty list
         self._transportation_alternatives_not_found.succeed()
         return available_transportation_alternatives
@@ -804,7 +809,7 @@ class User(Agent, DriverInterface, PassengerInterface):
 
     def _calculate_choice_probabilities(
         self, available_alternatives: TransportationAlternativeBrowser
-    ) -> Generator[Timeout, Any, dict[TransportationAlternative, float]]:
+    ) -> dict[TransportationAlternative, float]:
         """
         Calculate choice probabilities using the configured choice model.
 
@@ -813,19 +818,12 @@ class User(Agent, DriverInterface, PassengerInterface):
         available_alternatives : TransportationAlternativeBrowser
             Available transportation alternatives.
 
-        Yields
-        ------
-        Timeout
-            Batching delay.
 
         Returns
         -------
         dict of TransportationAlternative to float
             Mapping of alternatives to their choice probabilities (sum to 1.0).
         """
-        # Batching delay (for allocation synchronization) #TODO: Can we get rid of this?
-        yield self._env.timeout(1)
-
         # Calculate choice probabilities using the choice model
         choice_probs = self._choice_model.calculate_choice_probabilities(
             user=self, available_alternatives=available_alternatives

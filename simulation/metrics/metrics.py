@@ -10,6 +10,7 @@ from .metrics_base import MetricsBase
 from .metrics_dict import MetricsDict
 from .metrics_tracker import MetricsTracker
 from .providers import (
+    AuctionMetrics,
     ChargingStationMetrics,
     FleetMetrics,
     OperatorMetrics,
@@ -47,6 +48,8 @@ class Metrics(SimulationBase):
         Metrics related to charging stations.
     fleet_metrics : FleetMetrics
         Metrics related to fleets.
+    auction_metrics : AuctionMetrics
+        Metrics related to auctions.
     """
 
     def __init__(self, simulation: Simulation) -> None:
@@ -58,6 +61,7 @@ class Metrics(SimulationBase):
         self.user_metrics = UserMetrics(simulation)
         self.charging_station_metrics = ChargingStationMetrics(simulation)
         self.fleet_metrics = FleetMetrics(simulation)
+        self.auction_metrics = AuctionMetrics(simulation)
 
         # Initialize metrics tracker
         self._tracker = MetricsTracker(simulation)

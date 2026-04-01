@@ -260,7 +260,7 @@ class World(SimulationBase):  # noqa: D101
         return self._vehicles
 
     @property
-    def charging_infrastructure(self) -> ChargingInfrastructure | None:  # noqa: D102
+    def charging_infrastructures(self) -> list[ChargingInfrastructure] | None:  # noqa: D102
         return self._charging_infrastructures
 
     @property
