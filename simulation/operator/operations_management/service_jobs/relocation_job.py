@@ -13,7 +13,7 @@ from simulation.tasks.base.vehicle_session import VehicleSession
 from simulation.tasks.operations.service_worker_relocation_task import (
     ServiceWorkerRelocationTask,
 )
-from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
+from simulation.vehicle.shared_vehicle import SharedVehicle
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -78,14 +78,14 @@ class RelocationJob(ServiceJob):
                 vehicle
                 for vehicle in potential_vehicles_to_relocate
                 if vehicle.vehicle_type == self._vehicle_type
-                and isinstance(vehicle, ReservableMixin)
+                and isinstance(vehicle, SharedVehicle)
                 and not vehicle.is_reserved
             )
             max_candidates = max(0, int(self._number_of_vehicles_to_relocate))
             candidates = heapq.nsmallest(
                 max_candidates, eligible_vehicles, key=lambda v: v.uid
             )
-            selected_vehicles_to_relocate: list[tuple[Vehicle, Reservation]] = [
+            selected_vehicles_to_relocate: list[tuple[SharedVehicle, Reservation]] = [
                 (vehicle, vehicle.reserve()) for vehicle in candidates
             ]
 

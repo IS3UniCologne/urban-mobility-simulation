@@ -6,7 +6,7 @@ from simulation.operator.vehicle_allocation_engine import (
     AllocationEngine,
     AllocationEngineDependencies,
 )
-from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
+from simulation.vehicle.interfaces.reservable_interface import ReservableInterface
 
 if TYPE_CHECKING:
     from simulation.agent.user import User
@@ -51,7 +51,7 @@ class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
 
             # First Come First Serve - Assign vehicles to first request
             for user, requested_alternative in self._vehicle_assignment_requests:
-                if isinstance(requested_alternative.vehicle, ReservableMixin):
+                if isinstance(requested_alternative.vehicle, ReservableInterface):
                     if (
                         not requested_alternative.vehicle.is_reserved
                         and requested_alternative.vehicle.energy_system.has_enough_energy(

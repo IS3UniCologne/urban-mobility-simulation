@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
-    from simulation.vehicle.vehicle import Vehicle
 
 
 class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
@@ -40,7 +39,7 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
     def __init__(
         self,
         sim: SimulationContext,
-        vehicle: Vehicle,
+        vehicle: SharedVehicle,
         destination: GeodesicPosition,
         relocation_duration: float,
     ) -> None:
