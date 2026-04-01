@@ -8,10 +8,15 @@ from typing import TYPE_CHECKING
 import pandas as pd
 import simpy
 
+from simulation.environment.geodesic_helper import (
+    FastSpatialDestinationIndex,
+    FastSpatialVehicleIndex,
+)
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.enums import AutonomyType, VehicleType
 from simulation.helper.exceptions import VehicleFleetError
 from simulation.helper.simulation_base import SimulationBase
+from simulation.helper.vehicle_states import VehicleStates
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
@@ -55,14 +60,17 @@ class VehicleFleet(SimulationBase, ABC):
 
     __slots__ = (
         "_config",
+        "_en_route_spatial_index",
         "_operator",
         "_resource",
         "_sim",
         "_vehicles",
         "_vehicles_by_autonomy",
+        "_vehicles_by_id",
         "_vehicles_by_region",
         "_vehicles_by_state",
         "_vehicles_by_type",
+        "_vehicles_spatial_index",
         "_world",
     )
 
@@ -81,7 +89,15 @@ class VehicleFleet(SimulationBase, ABC):
         self._vehicles_by_region: dict[RegionId, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_state: dict[VehicleState, set[Vehicle]] = defaultdict(set)
         self._vehicles_by_autonomy: dict[AutonomyType, set[Vehicle]] = defaultdict(set)
+        self._vehicles_by_id: dict[int, Vehicle] = {}
         self._resource = simpy.Resource(deps.sim.env)  # Semaphore
+        # Vehicle spatial index
+        self._vehicles_spatial_index: FastSpatialVehicleIndex = (
+            FastSpatialVehicleIndex()
+        )
+        self._en_route_spatial_index: FastSpatialDestinationIndex | None = None
+        if self._config.ENABLE_EN_ROUTE_INDEX:
+            self._en_route_spatial_index = FastSpatialDestinationIndex()
 
     def _create_fleet_vehicles(self, deps: VehicleFleetDependencies) -> None:
         """Create fleet vehicles using spatial distribution from supply data."""
@@ -369,6 +385,9 @@ class VehicleFleet(SimulationBase, ABC):
             self._vehicles_by_region[vehicle.current_region].add(vehicle)
             self._vehicles_by_type[vehicle.vehicle_type].add(vehicle)
             self._vehicles_by_autonomy[vehicle.autonomy_type].add(vehicle)
+            self._vehicles_by_id[vehicle.id] = vehicle
+            if vehicle.state == VehicleStates.STANDBY:
+                self._vehicles_spatial_index.insert(vehicle)
 
     def _add_vehicle(self, vehicle: Vehicle) -> None:
         """Add a vehicle to the fleet.
@@ -395,6 +414,7 @@ class VehicleFleet(SimulationBase, ABC):
             self._vehicles_by_region[vehicle.current_region].remove(vehicle)
             self._vehicles_by_type[vehicle.vehicle_type].remove(vehicle)
             self._vehicles_by_autonomy[vehicle.autonomy_type].remove(vehicle)
+            del self._vehicles_by_id[vehicle.id]
         else:
             raise VehicleFleetError(f"Vehicle {vehicle} is not registered in Fleet yet")
 
@@ -429,6 +449,13 @@ class VehicleFleet(SimulationBase, ABC):
         for ancestor in new_state.get_ancestors():
             self._vehicles_by_state[ancestor].add(vehicle)
 
+        # Update spatial index if needed
+
+        if old_state == VehicleStates.STANDBY and new_state != VehicleStates.STANDBY:
+            self._vehicles_spatial_index.delete(vehicle)
+        elif old_state != VehicleStates.STANDBY and new_state == VehicleStates.STANDBY:
+            self._vehicles_spatial_index.insert(vehicle)
+
     def update_vehicle_region(self, vehicle: Vehicle, new_region_id: RegionId) -> None:
         """Update the region of a vehicle in the fleet.
 
@@ -446,3 +473,75 @@ class VehicleFleet(SimulationBase, ABC):
 
         # Add vehicle to new hexagon's set
         self._vehicles_by_region[new_region_id].add(vehicle)
+
+    def insert_into_en_route_spatial_index(self, vehicle: Vehicle) -> None:
+        """
+        Insert a vehicle into the en-route spatial index.
+
+        Parameters
+        ----------
+        vehicle : Vehicle
+            The vehicle to insert.
+        """
+        if self._en_route_spatial_index is not None:
+            self._en_route_spatial_index.insert(vehicle)
+
+    def delete_from_en_route_spatial_index(self, vehicle: Vehicle) -> None:
+        """
+        Delete a vehicle from the en-route spatial index.
+
+        Parameters
+        ----------
+        vehicle : Vehicle
+            The vehicle to delete.
+        """
+        if self._en_route_spatial_index is not None:
+            self._en_route_spatial_index.delete(vehicle)
+
+    def expected_arrivals_in_radius(
+        self,
+        query_position: GeodesicPosition,
+        radius: float | int,
+        max_eta: float | None = None,
+    ) -> list[Vehicle]:
+        """
+        Find all vehicles expected to arrive within a certain radius and ETA.
+
+        Parameters
+        ----------
+        query_position : GeodesicPosition
+            The position to search around.
+        radius : float | int
+            The radius within which to search for vehicles (in meters).
+        max_eta : float | None
+            The maximum acceptable ETA.
+        """
+        if self._en_route_spatial_index is None:
+            return []
+
+        ids = self._en_route_spatial_index.radius_search(
+            query_position, radius, max_eta
+        )
+        # Sort the IDs to ensure deterministic iteration order across partitions
+        return [self._vehicles_by_id[vid] for vid in sorted(ids)]
+
+    def parking_vehicles_in_radius(
+        self,
+        query_position: GeodesicPosition,
+        radius: float | int | dict[VehicleType, float | int],
+    ) -> list[Vehicle]:
+        """
+        Find all parking vehicles within a certain radius of a given position.
+
+        Parameters
+        ----------
+        query_position : GeodesicPosition
+            The position to search around.
+        radius : float | int | dict[VehicleType, float | int]
+            The radius within which to search for parking vehicles (in meters).
+            If a dictionary is provided, vehicles are filtered according to the
+            specific radius mapped to their vehicle type.
+        """
+        ids = self._vehicles_spatial_index.radius_search(query_position, radius)
+        # Sort the IDs to ensure deterministic iteration order across partitions
+        return [self._vehicles_by_id[vid] for vid in sorted(ids)]

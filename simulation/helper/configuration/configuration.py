@@ -40,6 +40,9 @@ from pydantic import (
 from simulation.agent.user.choice_model.choice_model_interface import (
     ChoiceModelInterface,
 )
+from simulation.agent.user.choice_model.min_pickup_time_vehicle_choice_model import (
+    MinPickupTimeVehicleChoiceModel,
+)
 from simulation.agent.user.choice_model.random_nearest_vehicle_choice_model import (
     RandomModeNearestVehicleChoiceModel,
 )
@@ -208,6 +211,12 @@ class RandomModeNearestVehicleChoiceModelConfig(ChoiceModelConfig):
     CHOICE_MODEL_TYPE: type[ChoiceModelInterface] = RandomModeNearestVehicleChoiceModel
 
 
+class MinPickupTimeVehicleChoiceModelConfig(ChoiceModelConfig):
+    """Configuration for Minimum Pickup Time Vehicle Choice Model parameters."""
+
+    CHOICE_MODEL_TYPE: type[ChoiceModelInterface] = MinPickupTimeVehicleChoiceModel
+
+
 class PopulationSegmentConfig(ConfigBaseModel):
     """Configuration for a population segment.
 
@@ -294,11 +303,14 @@ class FleetConfig(ConfigBaseModel):
 
     VEHICLES: dict[VehicleConfig, int]  # TODO: update this to use distributions
 
+    ENABLE_EN_ROUTE_INDEX: bool = Field(default=False)
+
 
 class RideHailingFleetConfig(FleetConfig):
     """Configuration for ride-hailing fleet parameters."""
 
     RH_AVAILABILITY: list[float]
+    ENABLE_EN_ROUTE_INDEX: bool = Field(default=True)
 
     @field_validator("RH_AVAILABILITY", mode="after")
     @classmethod
@@ -400,6 +412,8 @@ class OperationsConfig(ConfigBaseModel):
     VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0, default=0)
 
     # TODO: allow_queue was both explicitly defined in the config, but also derived from queue size > 0. How do we want to handle this?
+    # We need both: The charging station needs to state how much parking space there is for queueing
+    # and the operator needs to be able to include a potentially different, acceptable queue size (or 0 for not allowing to queue) in its operational considerations
     ALLOW_QUEUE: bool | None = Field(default=False)
 
     PLANNING_LOOKAHEAD: int | None = Field(default=None, gt=0)
@@ -433,6 +447,14 @@ class RideHailingOperationsConfig(OperationsConfig):
 
 class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for ride-hailing base charging operations."""
+
+
+class RideHailingUncoordinatedChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for shared, uncoordinated charging operations."""
+
+
+class RideHailingSharedChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for shared, coordinated charging operations."""
 
 
 class RideHailingMPChargingOperationsConfig(RideHailingOperationsConfig):
