@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from simulation.helper.enums import TaskState
-from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
+from simulation.vehicle.interfaces.reservable_interface import ReservableInterface
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -106,14 +106,17 @@ class VehicleSession(SimulationBase):
 
         finally:
             # 5. Always release vehicle use
-            if isinstance(self._vehicle, ReservableMixin) and self._vehicle.is_in_use:
+            if (
+                isinstance(self._vehicle, ReservableInterface)
+                and self._vehicle.is_in_use
+            ):
                 self._vehicle.release_use()
                 self.logger.debug(
                     "Session for vehicle %s ended, use released.", self._vehicle.uid
                 )
 
     def _acquire_use(self) -> None:
-        if isinstance(self._vehicle, ReservableMixin):
+        if isinstance(self._vehicle, ReservableInterface):
             self._vehicle.acquire_use(self._reservation, holder=self._holder)
 
     def _set_session_predictions(self) -> None:

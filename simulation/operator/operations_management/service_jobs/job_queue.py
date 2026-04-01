@@ -6,6 +6,8 @@ from collections import deque
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from simpy import Event
+
     from simulation.context.simulation_context import SimulationContext
     from simulation.operator.operations_management.service_jobs.service_job import (
         ServiceJob,
@@ -46,5 +48,5 @@ class JobQueue:  # noqa: D101
         return len(self._queue)
 
     @property
-    def queue_updated(self):  # noqa: ANN201, D102
+    def queue_updated(self) -> Event:  # noqa: D102
         return self._queue_updated

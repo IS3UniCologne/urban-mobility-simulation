@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from simulation.helper.exceptions import (
     AlreadyReservedError,
@@ -14,12 +14,12 @@ from simulation.vehicle.interfaces.reservable_interface import ReservableInterfa
 from simulation.vehicle.reservation import Reservation
 
 if TYPE_CHECKING:
-    from logging import Logger
-
     from simpy import Environment
 
     from simulation.agent.user import User
+    from simulation.helper.logging.uid_logger_adapter import UidLoggerAdapter
     from simulation.helper.state_machine import StateMachine
+    from simulation.helper.types import SimId
     from simulation.helper.vehicle_states import VehicleState
 
 
@@ -29,12 +29,22 @@ class ReservableMixin(ReservableInterface):
     __slots__ = ()
 
     if TYPE_CHECKING:
+        # We need this mess for type checking... changing this into a component would be much cleaner
         _env: Environment
         _state_machine: StateMachine[VehicleState]
-        logger: Logger
-        uid: str
 
-    def __init__(self, *args: object, **kwargs: object) -> None:
+        @property
+        def logger(self) -> UidLoggerAdapter: ...  # noqa: D102
+
+        @property
+        def uid(self) -> SimId: ...  # noqa: D102
+
+        @property
+        def state(self) -> VehicleState: ...  # noqa: D102
+
+        def clear_predicted_state(self) -> None: ...  # noqa: D102
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         super().__init__(*args, **kwargs)
         self._reservation: Reservation | None = None
         self._is_in_use: bool = False
@@ -156,7 +166,7 @@ class ReservableMixin(ReservableInterface):
             return
 
         self._is_in_use = False
-        self.clear_predicted_state()  # type: ignore[attr-defined], this will be cleaner once we use components instead
+        self.clear_predicted_state()
 
         if self._reservation is not None:
             if self.state is not VehicleStates.STANDBY:
