@@ -183,7 +183,7 @@ class ChargingTaskRidehailing(ServiceTask):  # noqa: D101
                     self._charging_station.plugs.queue
                 ):
                     # charging station is at capacity and the queue is also full
-                    self.logger.info(
+                    self.logger.debug(
                         "Vehicle %s arrived charging station, but the queue is full. Cannot charge!",
                         self._vehicle.uid,
                     )

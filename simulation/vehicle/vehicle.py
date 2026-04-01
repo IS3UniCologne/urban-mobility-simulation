@@ -260,7 +260,6 @@ class Vehicle(SimulationBase, ABC):
         if state == self.__state:
             # No state change
             return
-        # Notify fleet about state change
         self._fleet.update_vehicle_state(self, state)
         self.__state = state
 

@@ -29,11 +29,13 @@ class ChargingStationMetrics(IndexedMetricsBase):
 
     def list_available_uids(self) -> list[SimId]:
         """Get list of all available charging station locations."""
-        if self._simulation.world.charging_infrastructure is None:
+        infrastructures = self._simulation.world.charging_infrastructures
+        if infrastructures is None:
             return []
         return [
             station.uid
-            for station in self._simulation.world.charging_infrastructure.charging_stations
+            for infrastructure in infrastructures
+            for station in infrastructure.charging_stations
         ]
 
     def get_metrics_by_uid(self, uid: SimId) -> MetricsDict:
@@ -45,7 +47,8 @@ class ChargingStationMetrics(IndexedMetricsBase):
 
     def to_dict(self) -> MetricsDict:
         """Return metrics for all charging stations plus aggregate metrics."""
-        if self._simulation.world.charging_infrastructure is None:
+        infrastructures = self._simulation.world.charging_infrastructures
+        if infrastructures is None:
             return MetricsDict()
 
         metrics = MetricsDict()
@@ -59,8 +62,7 @@ class ChargingStationMetrics(IndexedMetricsBase):
             "average_queue_utilization": 0.0,
         }
 
-        stations = self._simulation.world.charging_infrastructure.charging_stations
-
+        stations = [cs for infra in infrastructures for cs in infra.charging_stations]
         for station in stations:
             station_metrics = self._get_station_metrics(station)
             metrics[station.location] = station_metrics
@@ -92,12 +94,14 @@ class ChargingStationMetrics(IndexedMetricsBase):
 
     def _get_station_by_location(self, location: str) -> ChargingStation | None:
         """Find a charging station by its location."""
-        if self._simulation.world.charging_infrastructure is None:
+        infrastructures = self._simulation.world.charging_infrastructures
+        if infrastructures is None:
             return None
 
-        for station in self._simulation.world.charging_infrastructure.charging_stations:
-            if station.location == location:
-                return station
+        for infrastructure in infrastructures:
+            for station in infrastructure.charging_stations:
+                if station.location == location:
+                    return station
         return None
 
     def _get_station_metrics(self, station: ChargingStation) -> MetricsDict:
