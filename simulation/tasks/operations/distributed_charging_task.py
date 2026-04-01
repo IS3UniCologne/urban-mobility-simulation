@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 from simulation.helper.enums import PropulsionType
@@ -18,8 +17,6 @@ if TYPE_CHECKING:
         ChargingStation,
     )
     from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
-
-logger = logging.getLogger(__name__)
 
 
 class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
@@ -105,7 +102,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
         vehicle = self._vehicle
 
         if vehicle.propulsion_type != PropulsionType.BATTERY_ELECTRIC:
-            logger.error(
+            self.logger.error(
                 "Vehicle %s has unsupported propulsion type %s for charging task.",
                 vehicle.uid,
                 vehicle.propulsion_type,
@@ -121,14 +118,14 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
             assert self._scheduled_time is not None
             self._waiting_time = max(0.0, self._scheduled_time - self._env.now)
             if self._waiting_time > 0:
-                logger.debug(
+                self.logger.debug(
                     "Vehicle %s waits %s minutes for reserved slot.",
                     vehicle.uid,
                     self._waiting_time,
                 )
                 yield self._env.timeout(self._waiting_time)
             elif timeslot_end <= self._env.now:
-                logger.warning(
+                self.logger.warning(
                     "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
                     vehicle.uid,
                     self._env.now - timeslot_end,
@@ -148,7 +145,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
             self._charging_station.plugs.queue
         ):
             # charging station is at capacity and the queue is also full
-            logger.info(
+            self.logger.info(
                 "Vehicle %s arrived charging station, but the queue is full. Cannot charge!",
                 vehicle.uid,
             )
@@ -167,7 +164,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
                 actual_duration = min(actual_duration, timeslot_end - self._env.now)
 
             if actual_duration <= 0:
-                logger.info(
+                self.logger.info(
                     "Vehicle %s has a fishy charging time of %s minutes. Cannot charge!",
                     vehicle.uid,
                     actual_duration,
