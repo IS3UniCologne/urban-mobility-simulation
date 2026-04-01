@@ -97,14 +97,7 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
 
             scheduled_sessions: list[ChargingSession] = []
             for charging_plan in charging_plans:
-                (
-                    origin,
-                    destination,
-                    no_vehicle_to_charge,
-                    distance_to_base,
-                    charging_station,
-                    vehicle,
-                ) = charging_plan[0]
+                *_, charging_station, vehicle = charging_plan[0]
 
                 # we need to do some differentiation here, because we need to check if the charging station is virtual, and if it is, we need to check if we are in a context with reserved timeslots
                 scheduled_time = None
