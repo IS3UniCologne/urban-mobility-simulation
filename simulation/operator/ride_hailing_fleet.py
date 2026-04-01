@@ -35,15 +35,12 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
 
         self._create_fleet_vehicles(deps)
 
-    def _add_vehicle(self, vehicle: Vehicle) -> None:
-        if vehicle not in self._vehicles:
-            self._vehicles.append(vehicle)
-            self._world.add_vehicle(vehicle=vehicle)
-        else:
-            raise Exception(f"Vehicle {vehicle} is already registered in Fleet")
-
-    def get_available_vehicles_to_user(self, origin: Position) -> list[Vehicle]:
+    def get_available_vehicles_to_user(
+        self, origin: Position, destination: Position
+    ) -> list[Vehicle]:
         """
+        TODO: This is opinionated and should thus not be part of the fleet, it is operations logic.
+
         Find available vehicles that can serve a user at a given origin location.
 
         This method identifies two types of available vehicles:
@@ -62,55 +59,35 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
         -------
         list
             A combined list of parked and serving vehicles that are available to the user
-            at the specified origin location
+            at the specified origin location and have enough energy to complete the proposed trip
         """
-        idle_vehicles: set[RideHailingVehicle] = self._vehicles_by_state[
-            VehicleStates.STANDBY
-        ]
+        route_distance = origin << destination
+        parking_cars_in_area = self.parking_vehicles_in_radius(
+            origin, radius=self.operator.operations.config.MAX_PICKUP_DISTANCE
+        )
 
-        # TODO: Check if this is necessary
-        idle_vehicles_sorted = sorted(idle_vehicles, key=lambda v: v.uid)
-
-        if not idle_vehicles_sorted:
-            idle_vehicles_in_area = []
-        else:
-            idle_vehicles_in_area = [
-                vehicle
-                for vehicle in idle_vehicles_sorted
-                if (vehicle.position << origin)
-                <= self.operator.operations.config.MAX_PICKUP_DISTANCE
-            ]
-
-        # TODO: Is this correct still ?
-        serving_vehicles: set[RideHailingVehicle] = self._vehicles_by_state[
-            VehicleStates.DRIVING
-        ]
-        hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
-        state_of_charge_threshold = self.operator.operations.config.RECHARGE_THRESHOLD[
-            hour
-        ]
-        # TODO: Check if this is necessary
-        serving_vehicles_sorted = sorted(serving_vehicles, key=lambda v: v.uid)
-        # TODO: This logic seems off, double check
-        serving_cars = [
+        parking_cars_in_area = [
             car
-            for car in serving_vehicles_sorted
-            if car.energy_system.current_energy_relative
-            > state_of_charge_threshold + 0.05
+            for car in parking_cars_in_area
+            if car.energy_system.has_enough_energy(
+                (car.position << origin) + route_distance
+            )
         ]
-
-        serving_cars_in_area = []
-        for car in serving_cars:
-            distance_to_current_destination = (
-                car.estimated_completion_time - self._sim.env.now
-            ) * car.velocity
-            if (
-                (car.destination << origin) + distance_to_current_destination
-                <= self.operator.operations.config.MAX_PICKUP_DISTANCE
-            ):
-                serving_cars_in_area.append(car)
-
-        return idle_vehicles_in_area + serving_cars_in_area
+        serving_cars_in_area = self.expected_arrivals_in_radius(
+            origin,
+            self.operator.operations.config.MAX_PICKUP_DISTANCE,
+            self._sim.time + 5,
+        )
+        serving_cars_in_area = [
+            car
+            for car in serving_cars_in_area
+            if car.energy_system.has_enough_energy(
+                (car.current_request.origin << car.current_request.destination)
+                + (car.current_request.destination << origin)
+                + route_distance
+            )
+        ]
+        return parking_cars_in_area + serving_cars_in_area
 
     def count_vehicles_below_soc_level(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """

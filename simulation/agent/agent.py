@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
 
 
+# TODO: what the fuck is this class, E1101:no-member (_state)
 class Agent(SimulationBase, ABC):  # noqa: D101
     __slots__ = ("_position", "_state")
 

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import VehicleConfig
     from simulation.infrastructure.network.edge import Edge
+    from simulation.infrastructure.route import Route
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.vehicle.reservation import Reservation
 
@@ -102,6 +103,29 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
             distance_travelled=distance,
             time_taken=time,
         )
+
+    def traverse_route(self, route: Route) -> Generator[Event, None, float]:
+        """
+        Traverse a route and update the en-route spatial index with the final destination.
+
+        Parameters
+        ----------
+        route : Route
+            The route to traverse.
+
+        Returns
+        -------
+        float
+            Total energy consumed during traversal.
+        """
+        self.fleet.insert_into_en_route_spatial_index(self)
+
+        total_energy = yield from super().traverse_route(route)
+
+        self.fleet.delete_from_en_route_spatial_index(self)
+        self.destination = None
+
+        return total_energy
 
     def move_to_pick_up_position(  # noqa: D102
         self, vehicle_assignment: VehicleAllocation
