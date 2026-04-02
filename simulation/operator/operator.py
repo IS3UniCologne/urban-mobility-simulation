@@ -260,7 +260,6 @@ class Operator(OperatorInterface):
         energy_consumed : float | None
             The energy consumed during the trip.
         """
-        # TODO:Check if wait times are correct once user refactoring is done
         if state == TransactionState.MISSED or transportation_alternative is None:
             transaction = self._create_missed_transaction(
                 transportation_task, state, transportation_alternative
@@ -313,7 +312,12 @@ class Operator(OperatorInterface):
             duration=transportation_alternative.duration,
             vehicle_uid=transportation_alternative.vehicle.uid,
             selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,
-            pick_up_time=transportation_alternative.est_pickup_time,
+            est_pickup_wait=(
+                transportation_alternative.est_pickup_time
+                - transportation_task.creation_time
+                if transportation_alternative.est_pickup_time is not None
+                else 0.0
+            ),
             energy_consumption=energy_consumed if energy_consumed is not None else 0.0,
             selected_vehicle_EV=(
                 transportation_alternative.vehicle.propulsion_type
