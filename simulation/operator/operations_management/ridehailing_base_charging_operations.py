@@ -121,17 +121,7 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
                 # Track session completion
                 self._env.process(self._track_session(session))
 
-            self.logger.info(
-                "There are %s vehicles with low state of charge.",
-                self._operator.fleet.count_vehicles_below_soc_level(
-                    self._recharge_threshold
-                ),
-            )
-
-            self.logger.info(
-                "Charging sessions scheduled. In total %s are generated.",
-                len(charging_plans),
-            )
+            self.logger.debug("Charging sessions scheduled: %s.", len(charging_plans))
             # Notify listeners
             self._charging_plan_updated.succeed()
             self._charging_plan_updated = self._env.event()
@@ -157,6 +147,14 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
         )
         # if config.settings.PERSIST_RESULTS:
         #     state.to_csv(os.path.join(config.output_path, config.fleet_state_file), index = False)
+
+        self.logger.debug(
+            "There are %s vehicles currently below SOC threshold and an additional %s after task completion.",
+            self._operator.fleet.count_vehicles_below_soc_level(
+                self._recharge_threshold
+            ),
+            len(vehicles_to_charge),
+        )
 
         charging_plans = self.calculate_charging_plan(vehicles_to_charge)
 
