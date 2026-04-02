@@ -19,12 +19,8 @@ class Route:  # noqa: D101
         self._origin = origin
         self._destination = destination
         self._route_segments: list[Edge] = []
-        self._distance = None
 
-        distance = origin << destination  # euclidean distance
-        self._route_segments.append(
-            Edge(distance, Vertex(origin), Vertex(destination))
-        )  # Append Dummy Edge
+        self._distance = origin << destination
 
     @property
     def origin(self):  # noqa: ANN201, D102
@@ -36,6 +32,14 @@ class Route:  # noqa: D101
 
     @property
     def route_segments(self):  # noqa: ANN201, D102
+        if len(self._route_segments) == 0:
+            self._route_segments.append(
+                Edge(
+                    distance=self.distance,
+                    origin=Vertex(self.origin),
+                    destination=Vertex(self.destination),
+                )
+            )
         return self._route_segments
 
     @property
@@ -91,6 +95,9 @@ class PublicTransitRoute(Route):
             self._route_segments: list[RouteSegment] = []
         else:
             self._route_segments = segments
+
+        # PublicTransitRoute distance is derived from segment distances, not OD direct line.
+        self._distance = None
 
     @property
     def trip_id(self) -> str:  # noqa: D102
