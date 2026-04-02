@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from simulation.operator.operations_management.operations import (
         OperationsDependencies,
     )
+    from simulation.vehicle.vehicle import Vehicle
 
 
 class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
@@ -197,7 +198,7 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
 
         return charging_plans
 
-    def calculate_charging_plan(self, vehicles_to_charge):  # noqa: ANN001, ANN201
+    def calculate_charging_plan(self, vehicles_to_charge: list[Vehicle]):  # noqa: ANN201
         """
         :param vehicles_to_charge: List of vehicles to be charged
         :return: all_charging_plans and used capacity per mode
@@ -260,8 +261,8 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
                 # add safety buffer when vehicle is unluckily positioned at the very edge of the hexagon
                 selected_base_distance += self._base_buffer
                 selected_base = sorted_base_list.index[0]
-                if not vehicle.has_enough_state_of_charge(
-                    selected_base_distance, consider_buffer=False
+                if not vehicle.energy_system.has_enough_energy(
+                    distance=selected_base_distance, energy_reserve_ratio=0.0
                 ):
                     self.logger.debug(
                         "Vehicle %s considered for charging at %s has not enough state of charge to relocate there, skipping.",

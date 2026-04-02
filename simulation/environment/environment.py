@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod  # noqa: D100
 
 
 class Environment(ABC):  # noqa: D101
+    # TODO: not really an ABC with init
     __slots__ = ("_layer",)
 
     def __init__(self) -> None:

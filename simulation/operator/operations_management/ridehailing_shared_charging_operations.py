@@ -1,14 +1,17 @@
 from __future__ import annotations  # noqa: D100
 
+import dataclasses
 from collections import namedtuple
 from typing import TYPE_CHECKING
 
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
-from simulation.operator.interface.operations_interface import OperationsInterface
 from simulation.operator.operations_management.algorithms.distance_based_bidding_strategy import (
     get_bid,
+)
+from simulation.operator.operations_management.ride_hailing_operations import (
+    RideHailingOperations,
 )
 from simulation.operator.operations_management.ridehailing_base_charging_operations import (
     RideHailingBaseChargingOperations,
@@ -16,77 +19,63 @@ from simulation.operator.operations_management.ridehailing_base_charging_operati
 from simulation.world.markets.interfaces.bidder_interface import BidderInterface
 
 if TYPE_CHECKING:
-    import pandas as pd
-
-    from simulation.context.simulation_context import SimulationContext
-    from simulation.helper.configuration.configuration import OperationsConfig
-    from simulation.operator.ride_hailing_operator import RideHailingOperator
-    from simulation.world.world import World
+    from simulation.operator.operations_management.operations import (
+        OperationsDependencies,
+    )
 
 
-class RideHailingSharedChargingOperations(BidderInterface, OperationsInterface):  # noqa: D101
+class RideHailingSharedChargingOperations(RideHailingOperations, BidderInterface):  # noqa: D101
     __slots__ = (
         "_auction",
         "_bidding_parameters",
         "_charging_operations",
         "_config",
+        "_deps",
         "_distance_matrix",
         "_operations_config",
         "_sim",
         "_state_of_charge_threshold",
         "_virtual_charging_infrastructure",
+        "_world",
     )
 
-    def __init__(  # noqa: ANN204
-        self,
-        sim: SimulationContext,
-        distance_matrix: pd.DataFrame,
-        operations_config: OperationsConfig,
-        world: World,
-        operator: RideHailingOperator,
-    ):
-        self._env = sim.env
-        self._sim = sim
-        self._operations_config = operations_config
-        self._world = world
-        self._auction = operator.charging_infrastructure.auction
+    def __init__(self, deps: OperationsDependencies) -> None:
+        super().__init__(deps)
 
-        OperationsInterface.__init__(self, sim)
-        BidderInterface.__init__(self, env=sim.env, auction=self._auction)
+        self._deps = deps
+
+        self._auction = self._operator.charging_infrastructure.auction
+
+        BidderInterface.__init__(self, env=self._env, auction=self._auction)
 
         self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
         # self._bidding_strategy = bidding_strategy
-        self._state_of_charge_threshold = operations_config.RECHARGE_THRESHOLD
-        self._distance_matrix = distance_matrix
-        self._config = sim.config
+        self._state_of_charge_threshold = self._config.RECHARGE_THRESHOLD
         self._charging_operations = None
 
     def execute(self):  # noqa: ANN201, D102
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
             sim=self._sim,
-            charging_infrastructure=self._operator_reference.charging_infrastructure,
+            charging_infrastructure=self._operator.charging_infrastructure,
             lookahead=self._auction._shared_charging_config.AUCTION_LOOKAHEAD,  # noqa: SLF001
-        )
-
-        self._charging_operations = RideHailingBaseChargingOperations(
-            sim=self._sim,
-            operations_config=self._operations_config,
-            distance_matrix=self._distance_matrix,
-            world=self._world,
         )
 
         # hack a virtual operator reference into it?
         VirtualOperator = namedtuple(
-            "VirtualOperator", ["id", "fleet", "charging_infrastructure"]
+            "VirtualOperator", ["fleet", "charging_infrastructure"]
         )
-        self._charging_operations.register_operator_reference(
-            VirtualOperator(
-                id=self._operator_reference.uid,
-                fleet=self._operator_reference.fleet,
-                charging_infrastructure=self._virtual_charging_infrastructure,
-            )
+
+        vo = VirtualOperator(
+            fleet=self._operator.fleet,
+            charging_infrastructure=self._virtual_charging_infrastructure,
         )
+
+        patched_deps = dataclasses.replace(
+            self._deps, operator=vo
+        )  # shallow copy, as we want to retain references to sim and world
+
+        self._charging_operations = RideHailingBaseChargingOperations(patched_deps)
 
         self._env.process(self._delay_charging_operations())
 
@@ -109,11 +98,11 @@ class RideHailingSharedChargingOperations(BidderInterface, OperationsInterface):
         self._bids = get_bid(
             auctioned_timeslot=auctioned_timeslot,
             auctioned_capacity=auctioned_capacity,
-            bid_decay=self._operations_config.BID_DECAY,
-            random_overbidding=self._operations_config.RANDOM_OVERBIDDING,
-            overbid_prob=self._operations_config.OVERBID_PROB,
-            bid_default=self._operations_config.BID_DEFAULT,
-            operator_reference=self._operator_reference,
+            bid_decay=self._config.BID_DECAY,
+            random_overbidding=self._config.RANDOM_OVERBIDDING,
+            overbid_prob=self._config.OVERBID_PROB,
+            bid_default=self._config.BID_DEFAULT,
+            operator_reference=self._operator,
             state_of_charge_threshold=self._state_of_charge_threshold,
             participant_id=self._auction_participant_id,
             distance_matrix=self._distance_matrix,

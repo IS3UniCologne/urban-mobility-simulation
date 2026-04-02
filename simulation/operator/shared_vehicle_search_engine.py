@@ -7,7 +7,7 @@ from simulation.operator.search_engine import SearchEngine
 if TYPE_CHECKING:
     from simulation.operator.search_engine import SearchEngineDependencies
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.tasks.transportation_search_task import TransportationSearchTask
+    from simulation.tasks.transport_task import TransportTask
 
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative import (
@@ -19,15 +19,22 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 
 
 class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
-    __slots__ = ("_env", "_fleet", "_sim")
+    __slots__ = ("_env", "_fleet", "_radii", "_sim")
 
     def __init__(self, deps: SearchEngineDependencies) -> None:
         self._sim = deps.sim
         self._env = self._sim.env
         self._fleet: VehicleFleet = deps.operator.fleet
+        self._operator = deps.operator
+
+        self._radii = {
+            config.VEHICLE_TYPE: config.WALKING_DISTANCE
+            for config in self._fleet.config.VEHICLES
+            if config.WALKING_DISTANCE is not None
+        }
 
     def search_for_transportation_alternatives(
-        self, vehicle_search_task: TransportationSearchTask
+        self, transport_task: TransportTask
     ) -> TransportationAlternativeBrowser:
         """
         Spot all available vehicles to user
@@ -36,10 +43,8 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         """  # noqa: D205, D400
         browser = TransportationAlternativeBrowser()
 
-        hexagon_origin = vehicle_search_task.agent_position.get_region_id()
-
-        parking_vehicles_in_region = self._fleet.parking_vehicles_in_region(
-            hexagon_origin
+        parking_vehicles_in_region = self._fleet.parking_vehicles_in_radius(
+            transport_task.origin, radius=self._radii
         )
         # Sort vehicles by ID to ensure deterministic iteration order
         parking_vehicles_sorted = sorted(
@@ -47,8 +52,8 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         )
 
         # TODO: Shouldn't we use the vehicles position instead of the task's origin?
-        origin = vehicle_search_task.transport_task.origin
-        destination = vehicle_search_task.transport_task.destination
+        origin = transport_task.origin
+        destination = transport_task.destination
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
@@ -67,10 +72,16 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
 
             # Put together
             transportation_alternative = TransportationAlternative(
-                vehicle, route, price, duration, distance, vehicle.convenience
+                vehicle=vehicle,
+                route=route,
+                price=price,
+                duration=duration,
+                distance=distance,
+                convenience=vehicle.convenience,
+                operator=self._operator,
             )
 
-            if vehicle.has_enough_state_of_charge(distance):
+            if vehicle.energy_system.has_enough_energy(distance):
                 browser.add_transportation_alternative(transportation_alternative)
 
         return browser

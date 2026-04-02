@@ -1,14 +1,8 @@
 from __future__ import annotations  # noqa: D100
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from simulation.agent.user import User
-    from simulation.tasks.transport_task import TransportTask
-
-from simulation.helper.configuration.enums import OperatorMode, TransactionState
+from simulation.helper.configuration.enums import OperatorMode
 from simulation.operator.operator import Operator, OperatorDependencies
-from simulation.operator.transactions import DemandMonitor
+from simulation.operator.operator_log import DemandMonitor
 
 
 class SharedMobilityOperator(Operator):  # noqa: D101
@@ -27,10 +21,8 @@ class SharedMobilityOperator(Operator):  # noqa: D101
         super().build_operator_subcomponents(deps)
 
         # Register demand monitor to transaction log
-        self._demand_monitor: DemandMonitor = DemandMonitor(
-            self._fleet.vehicle_types
-        )  # TODO: Check if order is correct
-        self._transaction_log.add_listener(self._demand_monitor)
+        self._demand_monitor: DemandMonitor = DemandMonitor(self._sim)
+        self._operator_log.add_listener(self._demand_monitor)
 
     @property
     def demand_monitor(self) -> DemandMonitor:
@@ -43,44 +35,3 @@ class SharedMobilityOperator(Operator):  # noqa: D101
             The demand monitor instance.
         """
         return self._demand_monitor
-
-    def withdraw_transportation_task(  # noqa: ANN201, D102
-        self, user: User, transportation_task: TransportTask
-    ):
-        # vehicle_types = [
-        #     mode.name
-        #     for mode in self._config.shared_vehicle_global.AVAILABLE_VEHICLE_MODES
-        # ]
-
-        # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
-        # We count the lost revenue for the "cheapest" mode
-        # TODO: Do this somewhere else and not every time a task is withdrawn (vectorize this)
-        # for vehicle_type in vehicle_types:
-        #     if (
-        #         vehicle_type in transportation_task.viable_vehicle_modes
-        #         and transportation_task.viable_vehicle_modes[vehicle_type] == 1
-        #     ):
-        #         distance = transportation_task.origin >> transportation_task.destination
-        #         velocity = (
-        #             Configuration()
-        #             .shared_vehicles.get(VehicleMode[vehicle_type])
-        #             .VELOCITY
-        #         )
-        #         price_per_min = (
-        #             Configuration()
-        #             .shared_vehicles.get(VehicleMode[vehicle_type])
-        #             .PRICE_PER_MIN
-        #         )
-        #         missed_trip_cost = distance / velocity * price_per_min
-
-        #         if vehicle_type == "KickScooter":
-        #             missed_trip_cost += 1.0  # Unlock Fee
-
-        self.log_transaction(
-            transportation_task=transportation_task,
-            transportation_alternative=None,
-            state=TransactionState.MISSED,
-            trip_record=None,
-        )
-
-        self.logger.info("Missed trip of User %s.", user.uid)

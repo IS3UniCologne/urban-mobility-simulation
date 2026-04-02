@@ -81,6 +81,7 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
         For a globally unique identifier, use the `uid` property inherited from SimulationBase."""  # noqa: D209
         return self._cs_id
 
+    @property
     def valid_timeframe(self) -> tuple[float, float] | None:  # noqa: D102
         return self._valid_timeframe
 

@@ -1,9 +1,11 @@
 from __future__ import annotations  # noqa: D100
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from simulation.helper.configuration.configuration import OperationsConfig
     from simulation.operator.operator import Operator
 
@@ -20,5 +22,5 @@ class OperationsInterface(ABC):  # noqa: D101
         pass
 
     @abstractmethod
-    def execute(self) -> None:  # noqa: D102
+    def execute(self) -> Generator[Any, Any, Any]:  # noqa: D102
         pass

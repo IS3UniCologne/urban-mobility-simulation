@@ -4,7 +4,7 @@ This module provides functionality for solving the Traveling Salesman Problem
 using the 2-opt local search heuristic for route optimization.
 """
 
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 import pandas as pd
 
@@ -42,12 +42,9 @@ def solve_tsp(hexagons: dict[str, int], distance_matrix: pd.DataFrame) -> TspRes
     for hex_i, value_i in hexagons.items():
         for hex_j, value_j in hexagons.items():
             if hex_i != hex_j:
-                dist_lookup[(value_i, value_j)] = float(
-                    distance_matrix.at[hex_j, hex_i]  # type: ignore
-                )
-                dist_lookup[(value_j, value_i)] = float(
-                    distance_matrix.at[hex_j, hex_i]  # type: ignore
-                )
+                val = cast("float", distance_matrix.at[hex_j, hex_i])
+                dist_lookup[(value_i, value_j)] = val
+                dist_lookup[(value_j, value_i)] = val
 
     n = len(hexagons)
 

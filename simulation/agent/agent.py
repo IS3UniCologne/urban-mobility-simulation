@@ -7,9 +7,10 @@ from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
-    from simulation.environment.position import Position
+    from simulation.environment.geodesic_position import GeodesicPosition
 
 
+# TODO: what the fuck is this class, E1101:no-member (_state)
 class Agent(SimulationBase, ABC):  # noqa: D101
     __slots__ = ("_position", "_state")
 
@@ -20,16 +21,12 @@ class Agent(SimulationBase, ABC):  # noqa: D101
     def state(self):  # noqa: ANN201, D102
         return self._state
 
-    @state.setter
-    def state(self, state) -> None:  # noqa: ANN001
-        self._state = state
-
     @property
-    def position(self) -> Position:  # noqa: D102
+    def position(self) -> GeodesicPosition:  # noqa: D102
         return self._position
 
     @position.setter
-    def position(self, position: Position) -> None:
+    def position(self, position: GeodesicPosition) -> None:
         self._position = position
 
     @abstractmethod

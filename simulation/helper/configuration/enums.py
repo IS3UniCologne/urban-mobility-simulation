@@ -2,19 +2,7 @@
 
 from __future__ import annotations
 
-import sys
-from enum import Enum, IntEnum
-
-if sys.version_info >= (3, 11):
-    from enum import StrEnum  # Python 3.11+
-else:
-
-    class StrEnum(str, Enum):  # type: ignore[no-redef]
-        """
-        StrEnum replacement for Python < 3.11.
-
-        We can remove this once we drop support for Python 3.11.
-        """
+from enum import Enum, IntEnum, StrEnum
 
 
 class TemporalResolution(IntEnum):
@@ -96,17 +84,6 @@ class ModeChoiceStrategy(StrEnum):
     NO_SUBSTITUTION = "NoSubstitution"
 
 
-class PopulationType(Enum):
-    """Population types for grouping users."""
-
-    CLUSTER_0 = 0
-    CLUSTER_1 = 1
-    CLUSTER_2 = 2
-    CLUSTER_3 = 3
-    PRICE_SENSITIVE = 4
-    CONVENIENCE_SEEKER = 5
-
-
 class VehicleType(StrEnum):
     """Vehicle types, e.g. car, bike, scooter."""
 
@@ -138,21 +115,26 @@ class UserState(Enum):
     INITIALIZED = 0
     SEARCHING_TRANSPORT_ALTERNATIVES = 1
     SELECTING_TRANSPORT_ALTERNATIVES = 2
-    ALLOCATING_VEHICLE = 3
-    MOVING_TO_PICK_UP_POS = 4
-    WAITING_FOR_VEHICLE = 5
-    DRIVING = 6
-    PAYING = 7
-    FULFILLED = 8
-    CANCELLED = 9
-    MISSED = 10
-    # ride hailing specifics
+    AWAITING_ALLOCATION = 3
+    WAITING_FOR_VEHICLE = 4
+    DRIVING = 5
+    PAYING = 6
+    FULFILLED = 7
+    CANCELLED = 8  # TODO: This state seems unused
+    MISSED = 9
+    # ride hailing specific
     REFUSED = 11
-    # transit user specifics
-    IN_TRANSPORT = 101
-    MOVING_TO_DESTINATION = 102  # walk after last transit stop
+    MOVING_TO_PICK_UP = 12
+    # shared mobility specific
+    MOVING_TO_VEHICLE = 20
+    # transit user specific
+    MOVING_TO_TRANSPORT_STOP = 30
+    IN_TRANSPORT = 31
+    MOVING_TO_DESTINATION = 32  # walk after last transit stop
+    WAITING_FOR_TRANSPORT = 33
 
 
+# TODO: Have a state setter with checks for valid transitions ?
 class VehicleState(Enum):
     """Vehicle states."""
 
@@ -166,7 +148,6 @@ class VehicleState(Enum):
     ONLINE = 6  # When the driver is online
     OFFLINE = 7  # When the driver is offline
     SOME_STATE = 1002
-    RESERVED = 1001
     MOVING_TO_PICK_UP_POS = 1003
 
     ### Public transport vehicle states ###
@@ -194,6 +175,6 @@ class OperatorMode(StrEnum):
     """Operator modes for different types of services."""
 
     # TODO: We probably should standardize these names across the codebase.
-    RIDE_HAILING = "RideHailing"
+    RIDE_HAILING = "Ridehailing"
     SHARED_MOBILITY = "SharedMobility"
-    PUBLIC_TRANSIT = "PublicTransit"
+    PUBLIC_TRANSPORT = "PublicTransport"

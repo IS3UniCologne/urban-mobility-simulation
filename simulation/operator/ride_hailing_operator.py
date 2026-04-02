@@ -7,8 +7,8 @@ if TYPE_CHECKING:
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
-    from simulation.operator.data_transfer_object.transportation_alternative import (
-        TransportationAlternative,
+    from simulation.operator.data_transfer_object.vehicle_allocation import (
+        VehicleAllocation,
     )
     from simulation.tasks.transport_task import TransportTask
 
@@ -37,40 +37,21 @@ class RideHailingOperator(Operator):
 
     def pay_for_fulfilled_transportation_task(  # noqa: ANN201, D102
         self,
-        user,  # noqa: ANN001
+        user: User,
         transportation_task: TransportTask,
-        selected_transportation_alternative: TransportationAlternative,
+        vehicle_allocation: VehicleAllocation,
     ):
+        selected_transportation_alternative = (
+            vehicle_allocation.transportation_alternative
+        )
         payment = selected_transportation_alternative.price
-        # # we need to pay the driver costs
-        # TODO : What do we do about this? Do we want to keep the driver payment share ?
-        # if vehicle.__class__.__name__ == "RideHailingCar":
-        #     self.increase     _total_revenue(payment * (1 - self._driver_payment_share))
-        #     vehicle.update_earned_money(payment)
 
         # Add Transaction to Log
         self.log_transaction(
             transportation_task=transportation_task,
             transportation_alternative=selected_transportation_alternative,
             state=TransactionState.FULFILLED,
+            energy_consumed=vehicle_allocation.energy_consumed,
         )
 
-        self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
-
-    def withdraw_transportation_task(  # noqa: D102
-        self,
-        user: User,
-        transportation_task: TransportTask,
-        state: TransactionState | None = None,
-    ) -> None:
-        # distance = transportation_task.origin >> transportation_task.destination
-        # TODO: define price of the trip
-
-        # Add Transaction to Log
-        self.log_transaction(
-            transportation_task=transportation_task,
-            transportation_alternative=None,
-            state=state,
-        )
-
-        self.logger.info("Missed trip of User %s.", user.uid)
+        self.logger.debug("New Payment (%s) received from User %s.", payment, user.uid)
