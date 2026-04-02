@@ -37,7 +37,6 @@ def solve_tsp(hexagons: dict[str, int], distance_matrix: pd.DataFrame) -> TspRes
     :return: Optimized tour sequence, tour cost, and distance lookup dictionary
     """
     # Create a distance lookup dictionary for faster access
-    # TODO: remove the type: ignore statements with https://github.com/IS3UniCologne/urban-mobility-simulation/issues/109
     dist_lookup: dict[tuple[int, int], float] = {}
     for hex_i, value_i in hexagons.items():
         for hex_j, value_j in hexagons.items():
