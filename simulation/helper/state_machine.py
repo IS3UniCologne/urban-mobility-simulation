@@ -142,8 +142,8 @@ class StateMachine(Generic[StateT]):
     ----------
     initial_state : StateT
         Initial state
-    allowed_transitions : dict of StateT to set of StateT or None
-        Valid state transitions; if None, all transitions allowed
+    allowed_transitions : dict of StateT to set of StateT
+        Valid state transitions
 
     Attributes
     ----------
@@ -152,9 +152,7 @@ class StateMachine(Generic[StateT]):
     """
 
     def __init__(
-        self,
-        initial_state: StateT,
-        allowed_transitions: dict[StateT, set[StateT]] | None = None,
+        self, initial_state: StateT, allowed_transitions: dict[StateT, set[StateT]]
     ) -> None:
         self._current_state = initial_state
         self._allowed_transitions = allowed_transitions
@@ -184,8 +182,6 @@ class StateMachine(Generic[StateT]):
         bool
             True if transition is valid
         """
-        if self._allowed_transitions is None:
-            return True
         allowed = self._allowed_transitions.get(self._current_state, set())
         return target_state in allowed
 
