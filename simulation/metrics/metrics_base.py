@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import logging
 
+    from simulation.helper.types import SimId
     from simulation.simulation import Simulation
 
     from .metrics_dict import MetricsDict
@@ -18,10 +19,15 @@ class MetricsBase(ABC):
     Abstract base class for all user-facing metrics classes.
 
     Provides a standard interface for metrics access and logging.
+
+    Parameters
+    ----------
+    simulation : Simulation
+        The main simulation instance.
     """
 
     def __init__(self, simulation: Simulation) -> None:
-        self._simulation = simulation
+        self._simulation: Simulation = simulation
 
     @abstractmethod
     def to_dict(self) -> MetricsDict:
@@ -58,13 +64,13 @@ class IndexedMetricsBase(MetricsBase):
     """
 
     @abstractmethod
-    def get_metrics_by_uid(self, uid: str) -> MetricsDict:
+    def get_metrics_by_uid(self, uid: SimId) -> MetricsDict:
         """
         Get metrics for a specific entity by UID.
 
         Parameters
         ----------
-        uid : str
+        uid : SimId
             The unique identifier of the entity as defined in SimulationBase.
 
         Returns
@@ -80,18 +86,18 @@ class IndexedMetricsBase(MetricsBase):
         pass
 
     @abstractmethod
-    def list_available_uids(self) -> list[str]:
+    def list_available_uids(self) -> list[SimId]:
         """
         Get list of all available entity UIDs.
 
         Returns
         -------
-        list[str]
+        list of SimId
             List of available entity UIDs.
         """
         pass
 
-    def __getitem__(self, entity_id: str) -> MetricsDict:
+    def __getitem__(self, entity_id: SimId) -> MetricsDict:
         """
         Get metrics for a specific entity by UID using indexing syntax (e.g. OperatorMetrics["Operator_1"]).
 

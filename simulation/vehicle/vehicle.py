@@ -10,20 +10,27 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.simulation_base import SimulationBase
+from simulation.helper.time import SimulationVelocityConverter
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from simpy import Event
 
     from simulation.context.simulation_context import SimulationContext
-    from simulation.environment.position import Position
+    from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import (
         Configuration,
         VehicleConfig,
     )
+    from simulation.helper.types import RegionId
     from simulation.infrastructure.network.edge import Edge
+    from simulation.infrastructure.route import Route
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.tasks.transport_task import TransportTask
+    from simulation.vehicle.energy_system import EnergySystem
     from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
+    from simulation.vehicle.movement_stats import MovementStats
 
 
 class VehicleError(Exception):
@@ -31,9 +38,21 @@ class VehicleError(Exception):
 
 
 class Vehicle(SimulationBase, ABC):
-    """Base class for all vehicles.
+    """
+    Base class for all vehicles.
 
     Contains common properties and methods used by all vehicles.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        The simulation context.
+    fleet : VehicleFleet
+        The fleet to which the vehicle belongs.
+    position : GeodesicPosition
+        The initial position of the vehicle.
+    vehicle_config : VehicleConfig
+        The vehicle configuration.
     """
 
     __slots__ = (
@@ -45,6 +64,7 @@ class Vehicle(SimulationBase, ABC):
         "_current_region",
         "_current_task",
         "_distance_travelled",
+        "_energy_system",
         "_env",
         "_fleet",
         "_id",
@@ -58,7 +78,7 @@ class Vehicle(SimulationBase, ABC):
         "_user_mounted",
         "_user_unmounted",
         "_vehicle_type",
-        "_velocity",
+        "_velocity_mm",
     )
 
     # We need to override __eq__ and __hash__ to use Vehicles in sets
@@ -74,7 +94,7 @@ class Vehicle(SimulationBase, ABC):
         self,
         sim: SimulationContext,
         fleet: VehicleFleet,
-        position: Position,
+        position: GeodesicPosition,
         vehicle_config: VehicleConfig,
     ) -> None:
         super().__init__(sim)
@@ -86,12 +106,19 @@ class Vehicle(SimulationBase, ABC):
         self._fleet: VehicleFleet = fleet
 
         # Vehicle Position, name is intentionally mangled. Do not set directly.
-        self.__position: Position = position
-        self._current_region: str = position.get_region_id()
-        self._velocity: float = vehicle_config.VELOCITY
+        self.__position: GeodesicPosition = position
+        self._current_region: RegionId = position.get_region_id()
+        self._velocity_mm: float = SimulationVelocityConverter.kmh_to_meters_per_minute(
+            vehicle_config.VELOCITY_KMH
+        )
         self._vehicle_type: VehicleType = vehicle_config.VEHICLE_TYPE
         self._autonomy_type = vehicle_config.AUTONOMY_TYPE
         self._propulsion_type = vehicle_config.PROPULSION_TYPE
+
+        # Energy System
+        from simulation.vehicle.energy_system import create_energy_system
+
+        self._energy_system = create_energy_system(sim, vehicle_config)
 
         # Seating information
         self._max_available_seats: int = vehicle_config.MAX_AVAILABLE_SEATS
@@ -150,6 +177,17 @@ class Vehicle(SimulationBase, ABC):
         return self._propulsion_type
 
     @property
+    def energy_system(self) -> EnergySystem:
+        """Get the energy system of the vehicle.
+
+        Returns
+        -------
+        EnergySystem
+            The energy system of the vehicle.
+        """
+        return self._energy_system
+
+    @property
     def velocity(self) -> float:
         """Get the velocity of the vehicle.
 
@@ -158,7 +196,7 @@ class Vehicle(SimulationBase, ABC):
         float
             The velocity of the vehicle.
         """
-        return self._velocity
+        return self._velocity_mm
 
     @property
     def available_seats(self) -> int:
@@ -222,23 +260,22 @@ class Vehicle(SimulationBase, ABC):
         if state == self.__state:
             # No state change
             return
-        # Notify fleet about state change
         self._fleet.update_vehicle_state(self, state)
         self.__state = state
 
     @property
-    def position(self) -> Position:
+    def position(self) -> GeodesicPosition:
         """Get the current position of the vehicle.
 
         Returns
         -------
-        Position
+        GeodesicPosition
             The current position of the vehicle.
         """
         return self.__position
 
     @position.setter
-    def position(self, position: Position) -> None:
+    def position(self, position: GeodesicPosition) -> None:
         old_position = self.__position
 
         self._distance_travelled += self.__position >> position
@@ -288,12 +325,12 @@ class Vehicle(SimulationBase, ABC):
         return self._fleet
 
     @property
-    def current_region(self) -> str:
+    def current_region(self) -> RegionId:
         """Get the current region of the vehicle.
 
         Returns
         -------
-        str
+        RegionId
             The identifier of the current region of the vehicle. (e.g., hexagon ID).
         """
         return self._current_region
@@ -372,14 +409,39 @@ class Vehicle(SimulationBase, ABC):
 
     # Methods
     @abstractmethod
-    def move(self, route_segment: Edge) -> None:
+    def move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
         """Move the vehicle along a route segment.
 
         Parameters
         ----------
         route_segment : Edge
             The route segment along which the vehicle will move.
+
+        Returns
+        -------
+        MovementStats
+            The statistics of the movement.
         """
+
+    def traverse_route(self, route: Route) -> Generator[Event, None, float]:
+        """
+        Traverse a route and return total energy consumed.
+
+        Parameters
+        ----------
+        route : Route
+            The route to traverse.
+
+        Returns
+        -------
+        float
+            Total energy consumed during traversal.
+        """
+        total_energy = 0.0
+        for segment in route.route_segments:
+            stats = yield from self.move(segment)
+            total_energy += stats.energy_consumed
+        return total_energy
 
     # As of now, this is only used with TransportTask
     # TODO: As part of the vehicle interface refactoring, this should be used to have transparency about a vehicles current task at all time

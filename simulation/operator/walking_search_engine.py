@@ -7,7 +7,6 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 from simulation.tasks.transport_task import TransportTask
-from simulation.tasks.transportation_search_task import TransportationSearchTask
 from simulation.vehicle.walking import Walking
 
 
@@ -19,17 +18,17 @@ class WalkingSearchEngine(SearchEngineInterface):  # noqa: D101
         self._walking = Walking(env)
 
     def search_for_transportation_alternatives(
-        self, vehicle_search_task: TransportationSearchTask
+        self, transport_task: TransportTask
     ) -> TransportationAlternativeBrowser:
         """
         Spot all available vehicles to user
-        :param vehicle_search_task:
+        :param transport_task:
         :return: Available Alternatives along with auxilary information regarding trip
         """  # noqa: D205, D400
         browser = TransportationAlternativeBrowser()
 
-        origin = vehicle_search_task.transport_task.origin
-        destination = vehicle_search_task.transport_task.destination
+        origin = transport_task.origin
+        destination = transport_task.destination
 
         # Calc Route
         route = Route(origin, destination)
@@ -58,7 +57,4 @@ class WalkingSearchEngine(SearchEngineInterface):  # noqa: D101
         transportation_task: TransportTask,
         selected_transportation_alternative: TransportationAlternative,
     ):
-        pass
-
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask):  # noqa: ANN001, ANN201, D102
         pass

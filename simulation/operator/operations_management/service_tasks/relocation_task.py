@@ -13,6 +13,7 @@ from simulation.operator.operations_management.service_tasks.service_task import
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.operator.vehicle_fleet import VehicleFleet
+    from simulation.vehicle.vehicle import Vehicle
 
 
 class RelocationTask(ServiceTask):  # noqa: D101
@@ -68,7 +69,7 @@ class RelocationTask(ServiceTask):  # noqa: D101
             potential_vehicles_sorted = sorted(
                 potential_vehicles_to_relocate, key=lambda v: v.uid
             )
-            selected_vehicles_to_relocate = []
+            selected_vehicles_to_relocate: list[Vehicle] = []
 
             # Filter relevant vehicles
             for vehicle in potential_vehicles_sorted:
@@ -111,13 +112,16 @@ class RelocationTask(ServiceTask):  # noqa: D101
                 relocation_route.distance / vehicle_relocation_velocity
             ) / len(selected_vehicles_to_relocate)
 
-            yield self._env.process(
+            relocation_successful = yield self._env.process(
                 vehicle.relocate(
                     relocation_route,
                     relocation_duration_per_vehicle,
                     f"Service Worker {args[0]}",
                 )
             )
+
+            if not relocation_successful:
+                continue
 
         # Notify all
         self._task_finished.succeed()

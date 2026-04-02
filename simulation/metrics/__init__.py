@@ -1,17 +1,32 @@
-"""Metrics module."""
+"""Metrics package for simulation analysis.
 
-from .charging_station_metrics import ChargingStationMetrics
-from .fleet_metrics import FleetMetrics
+Modules
+-------
+- metrics: Provides central access to all metrics.
+- metrics_dict: Dictionary-like used for storing metrics data.
+- metrics_tracker: Tracks metrics over time.
+- providers: Various metrics providers for different aspects of the simulation.
+- statistics: Intermediate statistics classes used by metrics providers.
+"""
+
 from .metrics import Metrics
 from .metrics_dict import MetricsDict
-from .operator_metrics import OperatorMetrics
-from .world_metrics import WorldMetrics
+from .metrics_tracker import MetricsTracker
+from .providers import (
+    ChargingStationMetrics,
+    FleetMetrics,
+    OperatorMetrics,
+    UserMetrics,
+    WorldMetrics,
+)
 
 __all__ = [
     "ChargingStationMetrics",
     "FleetMetrics",
     "Metrics",
     "MetricsDict",
+    "MetricsTracker",
     "OperatorMetrics",
+    "UserMetrics",
     "WorldMetrics",
 ]

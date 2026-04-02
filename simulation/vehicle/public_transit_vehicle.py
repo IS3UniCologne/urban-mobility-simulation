@@ -70,7 +70,7 @@ class PublicTransitVehicle(Vehicle, ABC):  # noqa: D101
         # TODO: this is pretty optimistic: What if the vehicle waits at intermediate stops
 
         distance = self._route.subroute(self._current_stop, stop).total_distance()
-        duration = distance / self._velocity  # in minutes
+        duration = distance / self._velocity_mm  # in minutes
         arrival = SimulationTimeConverter.as_str(self._env.now + duration, "%H:%M:%S")
         # stop will likely be reached in travel duration + delay, but not earlier than planned (will wait there)
         return max(arrival, stop.departure)

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
+from simulation.vehicle.movement_stats import MovementStats
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 from tracking.tracking_interface import TrackingInterface
 
@@ -165,11 +166,13 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
         yield self._env.process(self.move(route_segment))
 
-    def move(self, route_segment: RouteSegment) -> Generator[Event, None, None]:  # noqa: D102
+    def move(  # noqa: D102
+        self, route_segment: RouteSegment
+    ) -> Generator[Event, None, MovementStats]:
         # TODO: use road network speed limits?
 
         distance = route_segment.distance  # in meter
-        duration = distance / self._velocity  # in minutes
+        duration = distance / self._velocity_mm  # in minutes
 
         self.state = VehicleState.EN_ROUTE_PLANNED
 
@@ -198,6 +201,13 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
                 self._current_stop.stop_id,
                 self._time.now_as_str(),
             )
+
+        energy_consumed = self.energy_system.consume_for_distance(distance)
+        return MovementStats(
+            energy_consumed=energy_consumed,
+            distance_travelled=distance,
+            time_taken=duration,
+        )
 
     def _update_positions(self, new_position) -> None:  # noqa: ANN001
         # Update Vehicle Position

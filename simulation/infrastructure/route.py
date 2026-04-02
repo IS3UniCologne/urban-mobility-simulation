@@ -14,14 +14,15 @@ if TYPE_CHECKING:
 
 
 class Route:  # noqa: D101
-    __slots__ = ("_destination", "_origin", "_route_segments")
+    __slots__ = ("_destination", "_distance", "_origin", "_route_segments")
 
     def __init__(self, origin: Position, destination: Position):  # noqa: ANN204
         self._origin = origin
         self._destination = destination
         self._route_segments: list[Edge] = []
+        self._distance = None
 
-        distance = origin >> destination  # euclidean distance
+        distance = origin << destination  # euclidean distance
         self._route_segments.append(
             Edge(distance, Vertex(origin), Vertex(destination))
         )  # Append Dummy Edge
@@ -40,10 +41,9 @@ class Route:  # noqa: D101
 
     @property
     def distance(self):  # noqa: ANN201, D102
-        distance = 0
-        for rs in self.route_segments:
-            distance += rs.distance
-        return distance
+        if self._distance is None:
+            self._distance = sum(rs.distance for rs in self.route_segments)
+        return self._distance
 
     def __str__(self) -> str:  # noqa: D105
         return f"Route(origin={self._origin}, destination={self._destination}, distance={self.distance})"
@@ -111,6 +111,7 @@ class PublicTransitRoute(Route):
 
     def add_route_segment(self, segment: RouteSegment) -> None:  # noqa: D102
         self._route_segments.append(segment)
+        self._distance = None
 
     def route_segment_by_id(self, id: int) -> RouteSegment:  # noqa: D102
         return self._route_segments[id]

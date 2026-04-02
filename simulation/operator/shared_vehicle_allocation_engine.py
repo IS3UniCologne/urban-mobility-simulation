@@ -6,6 +6,7 @@ from simulation.operator.vehicle_allocation_engine import (
     AllocationEngine,
     AllocationEngineDependencies,
 )
+from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
 
 if TYPE_CHECKING:
     from simulation.agent.user import User
@@ -28,11 +29,14 @@ class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
     )
 
     def __init__(self, deps: AllocationEngineDependencies) -> None:
+        super().__init__(deps)
         self._sim = deps.sim
         self._env = self._sim.env
         self._vehicles_assigned_to_users = self._env.event()
         self._env.process(self.run())
-        self._vehicle_assignment_requests = []
+        self._vehicle_assignment_requests: list[
+            tuple[User, TransportationAlternative]
+        ] = []
 
     def run(self):  # noqa: ANN201, D102
         while True:
@@ -43,9 +47,16 @@ class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
             # ################## # ###################### #
 
             # First Come First Serve - Assign vehicles to first request
-            for user, requests in self._vehicle_assignment_requests:
-                if requests.vehicle.state == VehicleState.PARKING:
-                    requests.vehicle.reserve(user)
+            for user, requested_alternative in self._vehicle_assignment_requests:
+                if isinstance(requested_alternative.vehicle, ReservableMixin):
+                    # TODO: vehicle state check should be handled in reserve method
+                    if requested_alternative.vehicle.state == VehicleState.PARKING:
+                        requested_alternative.vehicle.reserve(user)
+                else:
+                    self.logger.warning(
+                        "Vehicle %s does not support reservation",
+                        requested_alternative.vehicle.uid,
+                    )
 
             # Implement: First come First Serve
             self._vehicles_assigned_to_users.succeed()
@@ -71,24 +82,18 @@ class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
 
         # No Vehicle Allocation
         if selected_vehicle.reserved_for_user != user:
+            # Log failed allocation attempt
+            self._operator.log_failed_allocation_attempt(
+                user=user,
+                transportation_task=user.transport_task,
+                transportation_alternative=selected_transportation_alternative,
+            )
             return None
 
         # Vehicle was succesfully allocated
         return VehicleAllocation(
-            user,
-            selected_vehicle,
-            selected_transportation_alternative,
-            selected_vehicle.position,
-            None,
+            user=user,
+            transportation_alternative=selected_transportation_alternative,
+            pick_up_position=selected_vehicle.position,
+            pick_up_time=None,
         )
-
-    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201, D102
-        self, vehicle_assignment: VehicleAllocation
-    ):
-        pass
-        # TODO: What is this ?
-        # For Autonomous Vehicles or Mass Transit (i.e., listen to position of vehicle)
-        # old_position = vehicle_assignment.vehicle.position
-        # from simulation.environment.geodesic_position import GeodesicPosition
-        # vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
-        # self._env.process(self.test(vehicle_assignment, old_position))

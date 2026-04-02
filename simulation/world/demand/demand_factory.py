@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import geojson
 import h3
@@ -18,6 +18,7 @@ import simpy
 from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.world.demand.demand_importer import DemandImporter
+from simulation.world.demand.user_factory import UserFactory
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -25,6 +26,8 @@ if TYPE_CHECKING:
     from pandas import DataFrame
 
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import PopulationSegmentConfig
+    from simulation.helper.types import RegionId
     from simulation.world.world import World
 
 
@@ -45,8 +48,6 @@ class DemandFactory(SimulationBase):
         The simulation time manager.
     _world : World
         The simulation world instance.
-    _mode : str
-        The demand mode (e.g., vehicle type or service type).
     _origin_column : str
         Name of the origin column in the demand profile.
     _destination_column : str
@@ -67,6 +68,8 @@ class DemandFactory(SimulationBase):
         List of unique spatial unit IDs.
     _rng : numpy.random.Generator
         Random number generator for demand sampling.
+    _user_factory : UserFactory
+        Factory for creating users.
 
     Methods
     -------
@@ -86,7 +89,6 @@ class DemandFactory(SimulationBase):
         "_destination_column",
         "_env",
         "_maximal_demand",
-        "_mode",
         "_modifiers",
         "_origin_column",
         "_rng",
@@ -95,6 +97,7 @@ class DemandFactory(SimulationBase):
         "_temporal_column",
         "_temporal_resolution",
         "_time",
+        "_user_factory",
         "_world",
     )
     counter = 0
@@ -103,7 +106,6 @@ class DemandFactory(SimulationBase):
         self,
         sim: SimulationContext,
         world: World,
-        mode: str,
         maximal_demand=3_000_000,  # noqa: ANN001
     ) -> None:
         super().__init__(sim)
@@ -112,7 +114,6 @@ class DemandFactory(SimulationBase):
         self._env = sim.env
         self._time = SimulationTime(sim.env)
         self._world: World = world
-        self._mode = mode
 
         self._temporal_resolution = self._config.world.TEMPORAL_RESOLUTION
         self._spatial_resolution = self._config.world.SPATIAL_RESOLUTION
@@ -129,8 +130,9 @@ class DemandFactory(SimulationBase):
         self._demand_profile = self._load_demand_profile()
         self._spatial_units = list(self._demand_profile[self._origin_column].unique())
 
-        # Random Number Generators
         self._rng = sim.random_manager.get_rng("DEMANDFACTORY")
+
+        self._user_factory = UserFactory(sim, world)
 
         self._load_modifiers()
 
@@ -211,7 +213,9 @@ class DemandFactory(SimulationBase):
 
         yield spawned.succeed()
 
-    def spawn_demand_process(self, spatial_unit: str) -> Generator[simpy.Timeout]:
+    def spawn_demand_process(
+        self, spatial_unit: str
+    ) -> Generator[simpy.Timeout, Any, None]:
         """Spawn a demand generator on given spatial unit.
 
         Parameters
@@ -262,10 +266,6 @@ class DemandFactory(SimulationBase):
                     # Extract Poisson Estimate for given spatio-temporal cell
                     poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
 
-                # Fleet assignment based on mode TODO: this is a hack
-                # pick random operator
-                operator = self._rng.choice([op for op in self._world.operators])
-
                 # Based on Poisson Estimate sample next arrival time (in minutes)
                 # inter_arrival_time = numpy.random.exponential(
                 #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
@@ -313,41 +313,54 @@ class DemandFactory(SimulationBase):
 
                     destination = demand_slice.iloc[idx][self._destination_column]
 
-                    # Append Arrival to World
-                    # create agent or similar consumers
-                    self.logger.debug(
-                        "Demand generated from hexagon %s to %s. Fleet %s",
-                        spatial_unit,
-                        destination,
-                        operator,
-                    )
-
-                self._world.add_user(
-                    mode=self._mode,
-                    fleet=operator.fleet,
-                    origin=spatial_unit,
-                    destination=destination,
-                )
+                    # Create and add user to world
+                    self._create_user(spatial_unit, destination)
 
                 # Increase global counter (not thread safe)
                 DemandFactory.counter += 1
             except simpy.Interrupt:
                 break
 
-    def reset(self) -> None:
+    def _create_user(
+        self, origin_region: RegionId, destination_region: RegionId
+    ) -> None:
         """
-        Reset the demand factory and clear all demand-related state.
+        Create a user, add them to the world and start their lifecycle process.
 
-        This method terminates all ongoing demand processes, clears previous demand and user processes,
-        resets the list of users, and resets the global demand counter to zero.
+        Selects a population segment randomly based on configured proportions.
+
+        Parameters
+        ----------
+        origin_region : RegionId
+            The origin spatial region ID.
+        destination_region : RegionId
+            The destination spatial region ID.
         """
-        # Terminate all ongoing demand processes
-        self._world.stop_all_processes()
+        # Select population segment based on proportions
+        segment = self._select_segment_for_demand()
 
-        # Clear previous demand/user processes
-        self._world.demand_processes.clear()
-        self._world.user_processes.clear()
-        self._world.users.clear()
+        # Create user from selected segment
+        user = self._user_factory.create_user(
+            origin_region=origin_region,
+            destination_region=destination_region,
+            user_config=segment.USER_CONFIG,
+        )
 
-        # Reset the global counter
-        DemandFactory.counter = 0
+        self._world.add_user(user)
+
+        # Start user process
+        user.start()
+
+        self.logger.debug(
+            "Demand generated from hexagon %s to %s. User %s",
+            origin_region,
+            destination_region,
+            user.uid,
+        )
+
+    def _select_segment_for_demand(self) -> PopulationSegmentConfig:
+        population_config = self._config.population
+        segment_proportions = [
+            segment.PROPORTION for segment in population_config.SEGMENTS
+        ]
+        return self._rng.choice(population_config.SEGMENTS, p=segment_proportions)
