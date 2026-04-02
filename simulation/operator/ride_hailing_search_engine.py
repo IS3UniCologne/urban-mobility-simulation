@@ -205,7 +205,7 @@ class RideHailingSearchEngine(SearchEngine):
         Returns
         -------
         float
-            The estimated pickup time in simulation time units.
+            The estimated pickup time in simulation time units (absolute).
         """
         if vehicle.state is VehicleStates.STANDBY:
             return (
