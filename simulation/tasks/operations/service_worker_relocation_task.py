@@ -65,7 +65,7 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
         )
 
     def get_predicted_energy_delta(self, current_energy: float | None = None) -> float:
-        """Calculate predicted energy for relocation.
+        """Return predicted energy for relocation: Zero, as service worker is assumed to use external energy source.
 
         Parameters
         ----------
@@ -75,13 +75,9 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
         Returns
         -------
         float
-            Predicted energy delta in kWh for relocating to destination.
+            Zero, as service worker is assumed to use external energy source.
         """
-        distance = self._vehicle.position << self._destination
-        energy_required = self._vehicle.energy_system.calculate_energy_required(
-            distance
-        )
-        return -energy_required
+        return 0.0
 
     def get_predicted_duration(self, current_energy: float | None = None) -> float:
         """Calculate predicted duration for relocation.
