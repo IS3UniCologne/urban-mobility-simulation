@@ -217,7 +217,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
             current_energy = vehicle.energy_system.current_energy_absolute
 
         charging_energy_gain = min(
-            self._kWh_charged if self._kWh_charged > 0 else float("inf"),
+            self._charging_duration / 60 * self._charging_station.power,
             vehicle.energy_system.capacity - current_energy,
         )
 
