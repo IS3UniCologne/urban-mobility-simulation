@@ -87,9 +87,10 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
     def is_electric(self) -> bool:  # noqa: D102
         return self._is_electric
 
-    def move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:  # noqa: D102
+    def move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
         """
         Move vehicle along a route segment.
+
         Attention: Low-level function that does not update states! This should not directly be invoked.
 
         Parameters
@@ -107,7 +108,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         Event
             simpy Timeout event for the duration of the movement.
         """
-
         distance = route_segment.distance
         time = self.calculate_travel_time(distance)
         self.estimated_completion_time = self._env.now + time
@@ -205,7 +205,7 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
 
         self._set_state(VehicleStates.RELOCATING)
 
-        yield from self.traverse_route(route)   
+        yield from self.traverse_route(route)
 
         # Invoke event to notify listeners that relocation ended
         self._vehicle_relocation_finished.succeed()
