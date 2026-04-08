@@ -563,7 +563,7 @@ class Vehicle(SimulationBase, ABC):
         """
         total_energy = 0.0
         for segment in route.route_segments:
-            stats = yield self.move(segment)
+            stats = yield from self.move(segment)
             total_energy += stats.energy_consumed
 
         return total_energy
