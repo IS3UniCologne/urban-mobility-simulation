@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from simulation.infrastructure.route import Edge, Vertex
+from simulation.infrastructure.route import Route
 from simulation.tasks.base.vehicle_task import VehicleTask
 
 if TYPE_CHECKING:
@@ -60,13 +60,11 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
             self._distance,
         )
 
-        relocation_route = Edge(
-            distance=self._distance,
-            origin=Vertex(self._vehicle.position),
-            destination=Vertex(self._destination),
+        relocation_route = Route(
+            origin=self._vehicle.position, destination=self._destination
         )
 
-        yield self._env.process(self._vehicle.relocate(relocation_route))
+        yield from self._vehicle.relocate(relocation_route)
 
     def get_predicted_energy_delta(self, current_energy: float | None = None) -> float:
         """Calculate predicted energy for relocation.
