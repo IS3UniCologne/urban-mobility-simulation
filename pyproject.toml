@@ -201,6 +201,7 @@ module = [
   "simulation.operator.operations_management.operations_public_transport",
   "simulation.operator.operations_management.ridehailing_MP_charging_operations",
   "simulation.operator.operations_management.ridehailing_base_charging_operations",
+  "simulation.operator.operations_management.ridehailing_greedy_charging_operations",
   "simulation.operator.operations_management.ridehailing_shared_charging_operations",
   "simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations",
   "simulation.operator.operations_management.service_tasks.charging_task",

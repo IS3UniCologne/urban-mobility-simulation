@@ -80,7 +80,7 @@ class RideHailingTripTask(VehicleTask["RideHailingVehicle"]):
         yield self._vehicle._arrived_at_pick_up_position  # noqa: SLF001
         self._vehicle_arrival_time = self._env.now
 
-        # Embrak
+        # Embark
         self._user.state = UserState.IN_TRANSPORT
         self._vehicle.mount_passenger(self._user)
 
