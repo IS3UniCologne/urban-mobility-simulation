@@ -26,12 +26,13 @@ class VirtualChargingInfrastructure(SimulationBase):
     This class provides a virtual charging infrastructure (a special view on the physical charging infrastructure) to a certain observer.
     This could e.g. be fleet operators that are only allowed to charge at locations where they buy capacity.
 
-    This class replicates the public API of ChargingInfrastructure.
+    This class replicates the public API of ChargingInfrastructure. #TODO: Yes? Then we should we make sure about this by implementing a Protocol
     """  # noqa: D205, D404
 
     __slots__ = (
         "_availability",
         "_charging_infrastructure",
+        "_charging_stations_by_location",
         "_current_lookahead",
         "_env",
         "_listeners",
@@ -71,6 +72,9 @@ class VirtualChargingInfrastructure(SimulationBase):
                 )
                 for cs in self._charging_infrastructure.charging_stations
             ]
+            self._charging_stations_by_location = {
+                cs.location: cs for cs in self._virtual_charging_stations
+            }
             if self._current_lookahead is not None:
                 self._update_virtual_cs(init=True)
         else:
@@ -229,3 +233,6 @@ class VirtualChargingInfrastructure(SimulationBase):
                     "Plugged out registered at %s.", charging_station.location
                 )
                 self._listeners[cs.uid].processed_plug_out_event.succeed()
+
+    def get_charging_station_by_location(self, location: str) -> VirtualChargingStation:  # noqa: D102
+        return self._charging_stations_by_location[location]

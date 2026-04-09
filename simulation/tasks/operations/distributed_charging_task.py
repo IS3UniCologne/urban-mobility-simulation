@@ -146,7 +146,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
         ):
             # charging station is at capacity and the queue is also full
             self.logger.info(
-                "Vehicle %s arrived charging station, but the queue is full. Cannot charge!",
+                "Vehicle %s arrived at charging station, but the queue is full. Cannot charge!",
                 vehicle.uid,
             )
             # Abort: queue full

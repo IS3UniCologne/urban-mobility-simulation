@@ -1,6 +1,7 @@
 from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, Any
+from warnings import deprecated
 
 import h3
 import pandas as pd
@@ -27,6 +28,9 @@ if TYPE_CHECKING:
     from simulation.vehicle.vehicle import Vehicle
 
 
+@deprecated(
+    "This class is deprecated and will be removed in future versions. Please use RideHailingGreedyChargingOperations instead until the refactor is complete."
+)
 class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
     __slots__ = (
         "_allow_queue",
@@ -56,7 +60,7 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
 
         self._recharge_threshold = self._config.RECHARGE_THRESHOLD
 
-        self._allow_queue = self._config.ALLOW_QUEUE
+        self._allow_queue = self._config.ALLOWED_QUEUE_SIZE > 0
 
         self._job_transactions: list[dict] = []
 

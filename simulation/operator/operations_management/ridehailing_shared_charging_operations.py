@@ -13,8 +13,8 @@ from simulation.operator.operations_management.algorithms.distance_based_bidding
 from simulation.operator.operations_management.ride_hailing_operations import (
     RideHailingOperations,
 )
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
+from simulation.operator.operations_management.ridehailing_greedy_charging_operations import (
+    RideHailingGreedyChargingOperations,
 )
 from simulation.world.markets.interfaces.bidder_interface import BidderInterface
 
@@ -79,7 +79,7 @@ class RideHailingSharedChargingOperations(RideHailingOperations, BidderInterface
             self._deps, operator=virtual_operator
         )  # shallow copy, as we want to retain references to sim and world
 
-        self._charging_operations = RideHailingBaseChargingOperations(patched_deps)
+        self._charging_operations = RideHailingGreedyChargingOperations(patched_deps)
 
         self._env.process(self._delay_charging_operations())
 

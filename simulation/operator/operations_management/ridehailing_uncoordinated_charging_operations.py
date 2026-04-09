@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
+from simulation.operator.operations_management.ridehailing_greedy_charging_operations import (
+    RideHailingGreedyChargingOperations,
 )
 
 if TYPE_CHECKING:
@@ -77,7 +77,7 @@ class RideHailingUncoordinatedChargingOperations(RideHailingOperations):  # noqa
             self._deps, operator=vo
         )  # shallow copy, as we want to retain references to sim and world
 
-        self._charging_operations = RideHailingBaseChargingOperations(patched_deps)
+        self._charging_operations = RideHailingGreedyChargingOperations(patched_deps)
 
         # update virtual infra with vehicles on their way
         self._env.process(self._listen_for_sessions())

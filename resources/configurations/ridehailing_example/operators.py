@@ -1,15 +1,15 @@
 from simulation.helper.configuration.configuration import (
     ChargingInfrastructureConfig,
     RideHailingAllocationEngineConfig,
-    RideHailingBaseChargingOperationsConfig,
     RideHailingFleetConfig,
+    RideHailingGreedyChargingOperationsConfig,
     RideHailingOperatorConfig,
     RideHailingSearchEngineConfig,
     RideHailingVehicleConfig,
 )
 from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
+from simulation.operator.operations_management.ridehailing_greedy_charging_operations import (
+    RideHailingGreedyChargingOperations,
 )
 from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
@@ -148,8 +148,8 @@ DEFAULT_RECHARGE_THRESHOLD = [
 operator_1 = RideHailingOperatorConfig(
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
-        OPERATIONS_TYPE=RideHailingBaseChargingOperations,
+    OPERATIONS_CONFIG=RideHailingGreedyChargingOperationsConfig(
+        OPERATIONS_TYPE=RideHailingGreedyChargingOperations,
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,
         TIME_BETWEEN_OPERATIONS=15,
@@ -173,8 +173,8 @@ operator_1 = RideHailingOperatorConfig(
 operator_2 = RideHailingOperatorConfig(
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    OPERATIONS_CONFIG=RideHailingBaseChargingOperationsConfig(
-        OPERATIONS_TYPE=RideHailingBaseChargingOperations,
+    OPERATIONS_CONFIG=RideHailingGreedyChargingOperationsConfig(
+        OPERATIONS_TYPE=RideHailingGreedyChargingOperations,
         OPERATIONS_START=15,
         OPERATIONS_DURATION=50,
         TIME_BETWEEN_OPERATIONS=15,

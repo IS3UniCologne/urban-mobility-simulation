@@ -411,10 +411,7 @@ class OperationsConfig(ConfigBaseModel):
     )  # TODO: unify this between sv and rh
     VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0, default=0)
 
-    # TODO: allow_queue was both explicitly defined in the config, but also derived from queue size > 0. How do we want to handle this?
-    # We need both: The charging station needs to state how much parking space there is for queueing
-    # and the operator needs to be able to include a potentially different, acceptable queue size (or 0 for not allowing to queue) in its operational considerations
-    ALLOW_QUEUE: bool | None = Field(default=False)
+    ALLOWED_QUEUE_SIZE: int | None = Field(default=0, ge=0)
 
     PLANNING_LOOKAHEAD: int | None = Field(default=None, gt=0)
 
@@ -447,6 +444,10 @@ class RideHailingOperationsConfig(OperationsConfig):
 
 class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for ride-hailing base charging operations."""
+
+
+class RideHailingGreedyChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for ride-hailing greedy charging operations."""
 
 
 class RideHailingUncoordinatedChargingOperationsConfig(RideHailingOperationsConfig):
