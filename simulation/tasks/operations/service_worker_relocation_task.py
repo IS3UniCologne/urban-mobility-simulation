@@ -36,6 +36,8 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
 
     __slots__ = ("_relocation_duration",)
 
+    _destination: GeodesicPosition  # Narrowed from optional type in parent class
+
     def __init__(
         self,
         sim: SimulationContext,
@@ -44,7 +46,6 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
         relocation_duration: float,
     ) -> None:
         super().__init__(sim, vehicle, destination)
-        self._destination = destination
         self._relocation_duration = relocation_duration
 
     def _run(self) -> Generator[Event, None, None]:

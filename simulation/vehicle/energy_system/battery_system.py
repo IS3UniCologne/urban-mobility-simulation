@@ -49,6 +49,13 @@ class BatterySystem(EnergySystem):
 
         consumed = self.calculate_energy_required(distance)
         self._current_energy -= consumed
+        self.logger.debug(
+            "Vehicle consumed %.2f kWh for %dm. Remaining: %.2f (%.1f%%)",
+            consumed,
+            distance,
+            self._current_energy,
+            self.current_energy_relative * 100,
+        )
         if self._current_energy < 0:
             deficit = -self._current_energy
             self._current_energy = 0.0
@@ -59,13 +66,6 @@ class BatterySystem(EnergySystem):
         self._lifetime_energy_consumed += consumed
         self._lifetime_emissions += self.calculate_emissions_for_distance(distance)
 
-        self.logger.debug(
-            "Consumed %s kWh energy for %s meters. SOC: %s kWh (%.2f%%)",
-            consumed,
-            distance,
-            self.current_energy_absolute,
-            self.current_energy_relative * 100,
-        )
         return consumed
 
     def refill(self, amount: float, duration: float) -> Generator[Event, None, None]:

@@ -12,9 +12,9 @@ if TYPE_CHECKING:
     from simpy.core import Environment
 
     from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.vehicle.vehicle import Vehicle
 
-from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.enums import TaskState
 from simulation.helper.exceptions import TaskAborted
 from simulation.helper.simulation_base import SimulationBase

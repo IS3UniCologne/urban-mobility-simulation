@@ -20,7 +20,7 @@ class Walking(Vehicle):  # noqa: D101
     def velocity(self) -> float:  # noqa: D102
         return self._velocity_mm
 
-    def _move(self, route_segment: Edge):
+    def _move(self, route_segment: Edge) -> None:
         self.logger.warning(
             "Warning: Method 'move' for walking called, even though it is not implemented!"
         )
