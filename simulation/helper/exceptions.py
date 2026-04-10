@@ -38,6 +38,17 @@ class InvalidReservationError(VehicleReservationError):
         )
 
 
+class ReservationCanceledError(VehicleReservationError):
+    """Raised when a reservation was canceled before it could be consumed."""
+
+    def __init__(self, vehicle_uid: str, reason: str | None = None) -> None:
+        detail = f"Reason: {reason}." if reason else ""
+        super().__init__(
+            f"Reservation canceled on vehicle {vehicle_uid}. {detail}",
+            vehicle_uid=vehicle_uid,
+        )
+
+
 class ReservationStateError(VehicleReservationError):
     """Raised when a reservation operation is attempted in an invalid vehicle state."""
 

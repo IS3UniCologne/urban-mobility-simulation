@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from simulation.helper.enums import PropulsionType
 from simulation.tasks.base.vehicle_task import VehicleTask
+from simulation.vehicle.interfaces.reservable_interface import ReservableInterface
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -98,6 +99,11 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
         """Get the estimated completion time."""
         return self._estimated_completion_time
 
+    def _cancel_queued_user_reservation(self, reason: str) -> None:
+        vehicle = self._vehicle
+        if isinstance(vehicle, ReservableInterface):
+            vehicle.cancel_queued_user_reservation(reason)
+
     def _run(self) -> Generator[Event, None, None]:
         vehicle = self._vehicle
 
@@ -125,13 +131,15 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
                 )
                 yield self._env.timeout(self._waiting_time)
             elif timeslot_end <= self._env.now:
+                # reserved timeslot missed -> abort
                 self.logger.warning(
                     "Vehicle %s arrived %s minutes at charging station after scheduled slot has ended. Cannot charge!",
                     vehicle.uid,
                     self._env.now - timeslot_end,
                 )
-                # Abort: missed timeslot
+                self._cancel_queued_user_reservation("charging-abort:missed-timeslot")
                 # TODO: Decide whether arrival should be signaled before aborting to unblock capacity updates.
+                # @WilliamTYH what do you mean?
                 vehicle.abort_charging_wait()
                 self._abort()
 
@@ -144,12 +152,12 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
         if check_station_full and self._charging_station.queue_size <= len(
             self._charging_station.plugs.queue
         ):
-            # charging station is at capacity and the queue is also full
-            self.logger.info(
+            # charging station is at capacity and the queue is also full -> abort
+            self.logger.warning(
                 "Vehicle %s arrived at charging station, but the queue is full. Cannot charge!",
                 vehicle.uid,
             )
-            # Abort: queue full
+            self._cancel_queued_user_reservation("charging-abort:queue-full")
             # TODO: Decide whether arrival should be signaled before aborting to unblock capacity updates.
             vehicle.abort_charging_wait()
             self._abort()
@@ -169,6 +177,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
                     vehicle.uid,
                     actual_duration,
                 )
+                self._cancel_queued_user_reservation("charging-abort:invalid-duration")
                 # Abort: invalid charging duration
                 # TODO: Decide whether arrival should be signaled before aborting to unblock capacity updates.
                 vehicle.abort_charging_wait()
@@ -196,14 +205,16 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
         vehicle.unplug_from_charging_station()
         self._env.process(self._charging_station.plug_out_notify())
 
-    def get_predicted_energy_delta(self, current_energy: float | None = None) -> float:
+    def get_predicted_energy_delta(
+        self, prev_task_energy: float | None = None
+    ) -> float:
         """Calculate predicted energy gain from charging.
 
         Relocation energy is predicted by the separate relocation task.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Running energy level from previous tasks. When None, uses
             vehicle's actual current energy.
 
@@ -213,24 +224,24 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
             Energy delta in kWh (positive = energy gain).
         """
         vehicle = self._vehicle
-        if current_energy is None:
-            current_energy = vehicle.energy_system.current_energy_absolute
+        if prev_task_energy is None:
+            prev_task_energy = vehicle.energy_system.current_energy_absolute
 
         charging_energy_gain = min(
             self._charging_duration / 60 * self._charging_station.power,
-            vehicle.energy_system.capacity - current_energy,
+            vehicle.energy_system.capacity - prev_task_energy,
         )
 
         return charging_energy_gain
 
-    def get_predicted_duration(self, current_energy: float | None = None) -> float:
+    def get_predicted_duration(self, prev_task_energy: float | None = None) -> float:
         """Calculate predicted duration for charging.
 
         Relocation duration is predicted by the separate relocation task.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Running energy level from previous tasks. Unused; duration
             is pre-calculated for distributed charging.
 

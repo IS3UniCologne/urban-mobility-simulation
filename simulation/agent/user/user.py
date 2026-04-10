@@ -21,6 +21,7 @@ from simulation.agent.user.user_log import (
     UserLogEntry,
 )
 from simulation.helper.enums import OperatorMode, TransactionState, UserState
+from simulation.helper.exceptions import ReservationCanceledError
 from simulation.helper.time import SimulationVelocityConverter
 from simulation.operator.data_transfer_object.transport_request import TransportRequest
 from simulation.tasks.base.vehicle_session import VehicleSession
@@ -304,9 +305,43 @@ class User(Agent):
                 if vehicle_allocation:
                     # We found a viable alternative, execute the trip
                     self._search_end_time = self._env.now
-                    yield self._env.process(
-                        self._execute_chosen_alternative(vehicle_allocation)
+
+                    reservation = vehicle_allocation.reservation
+                    if reservation is None:
+                        raise RuntimeError(
+                            "Sanity check failed: allocation has no reservation"
+                        )
+                    if reservation.requester is not self:
+                        raise RuntimeError(
+                            "Sanity check failed: allocation reservation requester mismatch"
+                        )
+
+                    required_distance = chosen_alternative.distance + (
+                        chosen_alternative.route_to_pickup.distance
+                        if chosen_alternative.route_to_pickup
+                        else 0.0
                     )
+                    if not vehicle_allocation.vehicle.energy_system.has_enough_energy(
+                        required_distance
+                    ):
+                        raise RuntimeError(
+                            "Sanity check failed: allocation granted despite insufficient energy "
+                            f"for required_distance={required_distance:.2f}m"
+                        )
+
+                    try:
+                        yield self._env.process(
+                            self._execute_chosen_alternative(vehicle_allocation)
+                        )
+                    except ReservationCanceledError as err:
+                        self.logger.debug(
+                            "Allocation canceled before trip execution for user %s on vehicle %s: %s",
+                            self.uid,
+                            vehicle_allocation.vehicle.uid,
+                            err,
+                        )
+                        vehicle_allocation = None
+                        continue
                     allocation_succeeded = True
 
             # 4: Allocation failed for all alternatives, restart search from scratch

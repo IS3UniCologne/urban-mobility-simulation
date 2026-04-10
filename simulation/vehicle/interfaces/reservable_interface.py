@@ -85,3 +85,18 @@ class ReservableInterface(ABC):
     @abstractmethod
     def release_use(self) -> None:
         """Release active vehicle use."""
+
+    @abstractmethod
+    def cancel_queued_user_reservation(self, reason: str) -> bool:
+        """Cancel a queued user reservation while vehicle is currently in use.
+
+        Parameters
+        ----------
+        reason : str
+            Human-readable cancellation reason for observability.
+
+        Returns
+        -------
+        bool
+            True if a queued user reservation was canceled, else False.
+        """

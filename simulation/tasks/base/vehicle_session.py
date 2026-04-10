@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from simulation.helper.enums import TaskState
+from simulation.helper.exceptions import ReservationCanceledError
 from simulation.vehicle.interfaces.reservable_interface import ReservableInterface
 
 if TYPE_CHECKING:
@@ -82,7 +83,16 @@ class VehicleSession(SimulationBase):
                     self._vehicle.uid,
                     self._holder,
                 )
-                yield self._reservation.ready_event
+                try:
+                    yield self._reservation.ready_event
+                except ReservationCanceledError as err:
+                    self.logger.debug(
+                        "Session aborted before acquire_use for vehicle %s, holder=%s: %s",
+                        self._vehicle.uid,
+                        self._holder,
+                        err,
+                    )
+                    raise
 
             # 2. Acquire exclusive use (auto-releases reservation)
             self._acquire_use()

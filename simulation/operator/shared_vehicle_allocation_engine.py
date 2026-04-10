@@ -91,12 +91,36 @@ class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
         )
 
         selected_vehicle = selected_transportation_alternative.vehicle
+        required_distance = selected_transportation_alternative.distance
 
         yield self._vehicles_assigned_to_users
 
         # No Vehicle Allocation
         if selected_vehicle.reserved_for_user != user:
             # Log failed allocation attempt
+            self._operator.log_failed_allocation_attempt(
+                user=user,
+                transportation_task=user.transport_request,
+                transportation_alternative=selected_transportation_alternative,
+            )
+            return None
+
+        if (
+            selected_vehicle.is_in_use
+            and not selected_vehicle.energy_system.has_enough_energy(required_distance)
+        ):
+            canceled = selected_vehicle.cancel_queued_user_reservation(
+                reason="allocation-revalidation:insufficient-energy"
+            )
+            self.logger.debug(
+                "Allocation revalidation failed for vehicle %s and user %s (required_distance=%.2f, current=%.2f, predicted=%.2f, canceled=%s).",
+                selected_vehicle.uid,
+                user.uid,
+                required_distance,
+                selected_vehicle.energy_system.current_energy_absolute,
+                selected_vehicle.energy_system.predicted_energy,
+                canceled,
+            )
             self._operator.log_failed_allocation_attempt(
                 user=user,
                 transportation_task=user.transport_request,

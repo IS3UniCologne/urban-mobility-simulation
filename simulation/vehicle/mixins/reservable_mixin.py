@@ -125,6 +125,25 @@ class ReservableMixin(ReservableInterface):
         self.logger.debug("Reservation for %s set as next (vehicle in use).", label)
         return reservation
 
+    def cancel_queued_user_reservation(self, reason: str) -> bool:
+        """Cancel queued next-user reservation while vehicle is in use."""
+        if not self._is_in_use or self._reservation is None:
+            return False
+
+        if self._reservation.is_operator:
+            return False
+
+        requester = self._reservation.requester
+        self._reservation.cancel(vehicle_uid=self.uid, reason=reason)
+        self.logger.debug(
+            "Canceled queued reservation for %s on vehicle %s. Reason: %s",
+            requester.uid if requester else "unknown",
+            self.uid,
+            reason,
+        )
+        self._reservation = None
+        return True
+
     @property
     def is_in_use(self) -> bool:
         """True if vehicle has an active use."""

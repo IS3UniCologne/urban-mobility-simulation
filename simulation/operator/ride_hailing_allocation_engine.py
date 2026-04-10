@@ -101,6 +101,12 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
             Vehicle allocation if successful, None otherwise.
         """
         selected_vehicle = selected_transportation_alternative.vehicle
+        pickup_distance = (
+            selected_transportation_alternative.route_to_pickup.distance
+            if selected_transportation_alternative.route_to_pickup
+            else 0.0
+        )
+        total_distance = selected_transportation_alternative.distance + pickup_distance
 
         self._add_request(user, selected_transportation_alternative)
         yield self._vehicles_assigned_to_users
@@ -116,6 +122,30 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
                 user.uid,
             )
             # Log failed allocation attempt
+            self._operator.log_failed_allocation_attempt(
+                user=user,
+                transportation_task=user.transport_request,
+                transportation_alternative=selected_transportation_alternative,
+            )
+            return None
+
+        # Revalidate feasibility at grant time for queued reservations on in-use vehicles.
+        if (
+            selected_vehicle.is_in_use
+            and not selected_vehicle.energy_system.has_enough_energy(total_distance)
+        ):
+            canceled = selected_vehicle.cancel_queued_user_reservation(
+                reason="allocation-revalidation:insufficient-energy"
+            )
+            self.logger.debug(
+                "Allocation revalidation failed for vehicle %s and user %s (required_distance=%.2f, current=%.2f, predicted=%.2f, canceled=%s).",
+                selected_vehicle.uid,
+                user.uid,
+                total_distance,
+                selected_vehicle.energy_system.current_energy_absolute,
+                selected_vehicle.energy_system.predicted_energy,
+                canceled,
+            )
             self._operator.log_failed_allocation_attempt(
                 user=user,
                 transportation_task=user.transport_request,

@@ -34,6 +34,8 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
 
     __slots__ = ("_distance",)
 
+    _destination: GeodesicPosition  # Narrowed from optional type in parent class
+
     def __init__(
         self,
         sim: SimulationContext,
@@ -42,6 +44,7 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
         distance: float,
     ) -> None:
         super().__init__(sim, vehicle, destination)
+        assert self._destination is not None  # Narrowed from parent's optional type
         self._distance = distance
 
     def _run(self) -> Generator[Event, None, None]:
