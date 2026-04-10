@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.vehicle.vehicle import Vehicle
 
+from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.enums import TaskState
 from simulation.helper.exceptions import TaskAborted
 from simulation.helper.simulation_base import SimulationBase
@@ -37,16 +38,29 @@ class VehicleTask(SimulationBase, ABC, Generic[VehicleT]):
         The simulation context.
     vehicle : Vehicle
         The vehicle this task operates on.
+    destination : GeodesicPosition or None
+        Optional destination for the task.
     """
 
-    __slots__ = ("_env", "_sim", "_state", "_vehicle")
+    __slots__ = ("_destination", "_env", "_sim", "_state", "_vehicle")
 
-    def __init__(self, sim: SimulationContext, vehicle: VehicleT) -> None:
+    def __init__(
+        self,
+        sim: SimulationContext,
+        vehicle: VehicleT,
+        destination: GeodesicPosition | None = None,
+    ) -> None:
         super().__init__(sim)
         self._sim: SimulationContext = sim
         self._env: Environment = sim.env
+        self._destination: GeodesicPosition | None = destination
         self._vehicle: VehicleT = vehicle
         self._state: TaskState = TaskState.INITIALIZED
+
+    @property
+    def destination(self) -> GeodesicPosition | None:
+        """Get the relocation destination."""
+        return self._destination
 
     @property
     def state(self) -> TaskState:

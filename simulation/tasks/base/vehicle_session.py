@@ -120,10 +120,11 @@ class VehicleSession(SimulationBase):
             self._vehicle.acquire_use(self._reservation, holder=self._holder)
 
     def _set_session_predictions(self) -> None:
-        """Predict energy and duration for the entire session.
+        """Predict energy, duration, and destination for the entire session.
 
         A tasks predicted energy and duration can depend on the preceding tasks,
         so we iterate through all tasks sequentially.
+        For the destination, we set it based on the last task that holds the attribute.
         """
         running_energy = self._vehicle.energy_system.current_energy_absolute
         total_duration = 0.0
@@ -135,13 +136,18 @@ class VehicleSession(SimulationBase):
 
         self._vehicle.energy_system.predicted_energy = running_energy
         self._vehicle.estimated_completion_time = self._env.now + total_duration
+        for task in reversed(self._tasks):
+            if task.destination is not None:
+                self._vehicle.destination = task.destination
+                break
 
         total_energy_delta = (
             running_energy - self._vehicle.energy_system.current_energy_absolute
         )
         self.logger.debug(
-            "Session predictions for vehicle %s: energy_delta=%.2f kWh, duration=%.1f min.",
+            "Session predictions for vehicle %s: destination=%s, energy_delta=%.2f kWh, duration=%.1f min.",
             self._vehicle.uid,
+            self._vehicle.destination,
             total_energy_delta,
             total_duration,
         )

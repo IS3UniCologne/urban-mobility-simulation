@@ -56,7 +56,7 @@ class RideHailingOperations(Operations):
             *geo_env.get_centroid(charging_session.destination),
             charging_session.destination,
         )
-        distance = vehicle.position << dest_position
+        distance = vehicle.destination << dest_position
 
         reservation = vehicle.reserve()
 

@@ -164,9 +164,9 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
 
     def _move_to_next_stop(self) -> Generator[Event, None, None]:
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
-        yield self._env.process(self.move(route_segment))
+        yield self._env.process(self._move(route_segment))
 
-    def move(  # noqa: D102
+    def _move(
         self, route_segment: RouteSegment
     ) -> Generator[Event, None, MovementStats]:
         # TODO: use road network speed limits?
