@@ -32,7 +32,7 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
         Pre-calculated distance to destination (in meters).
     """
 
-    __slots__ = ("_destination", "_distance")
+    __slots__ = ("_distance",)
 
     def __init__(
         self,
@@ -41,8 +41,7 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
         destination: GeodesicPosition,
         distance: float,
     ) -> None:
-        super().__init__(sim, vehicle)
-        self._destination = destination
+        super().__init__(sim, vehicle, destination)
         self._distance = distance
 
     def _run(self) -> Generator[Event, None, None]:
@@ -53,6 +52,14 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
         Event
             Events during relocation.
         """
+        if self._vehicle.position == self._destination:
+            self.logger.debug(
+                "Vehicle %s is already at the destination %s. No relocation needed.",
+                self._vehicle.uid,
+                self._destination,
+            )
+            return
+
         self.logger.debug(
             "Autonomously relocating vehicle %s to %s (%.0f m).",
             self._vehicle.uid,
@@ -63,6 +70,17 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
         relocation_route = Route(
             origin=self._vehicle.position, destination=self._destination
         )
+
+        try:
+            assert relocation_route.distance == self._distance
+        except AssertionError:
+            self.logger.error(
+                "Distance mismatch for vehicle relocation %s: expected %.0f m, got %.0f m.",
+                self._vehicle.uid,
+                self._distance,
+                relocation_route.distance,
+            )
+            raise
 
         yield from self._vehicle.relocate(relocation_route)
 

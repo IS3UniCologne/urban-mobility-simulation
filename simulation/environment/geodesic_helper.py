@@ -178,6 +178,10 @@ class FastSpatialDestinationIndex:
         """
         if not hasattr(vehicle, "destination") or vehicle.destination is None:
             return
+        if vehicle.destination == vehicle.position:
+            # a vehicle at its destination is not en-route; skip indexing
+            # TODO: warn caller?
+            return
 
         if vehicle.id in self._coords:
             self.delete(vehicle)

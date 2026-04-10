@@ -107,8 +107,7 @@ class RideHailingGreedyChargingOperations(RideHailingOperations):
                 continue
 
             vehicles_to_charge = sorted(
-                vehicles_to_charge,
-                key=lambda x: x.energy_system.current_energy_relative,
+                vehicles_to_charge, key=lambda x: x.energy_system.predicted_energy
             )
 
             # 2. Fetch charging station availabilities
@@ -147,8 +146,8 @@ class RideHailingGreedyChargingOperations(RideHailingOperations):
 
             # 3. Assign vehicles to charging stations, greedily by closest available
             for vehicle in vehicles_to_charge:
-                # 3.a get region of vehicle
-                region = vehicle.position.get_region_id()
+                # 3.a get region of vehicle at destination (if moving) or current position (if not moving)
+                region = vehicle.destination.get_region_id()
 
                 # 3.b get distances of charging stations
                 # considering only the ones with remaining capacity from other charging plans

@@ -50,7 +50,11 @@ class SharedTripTask(VehicleTask["SharedVehicle"]):
         user: User,
         allocation: VehicleAllocation,
     ) -> None:
-        super().__init__(sim, vehicle)
+        super().__init__(
+            sim,
+            vehicle,
+            destination=allocation.transportation_alternative.route.destination,
+        )
         self._user = user
         self._allocation = allocation
         self._energy_consumed: float = 0.0

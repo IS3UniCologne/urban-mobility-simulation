@@ -47,7 +47,7 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
     def price_per_trip(self) -> float:  # noqa: D102
         return self._price_per_trip
 
-    def move(self, route_segment: Edge) -> Generator[Any, Any, MovementStats]:  # noqa: D102
+    def _move(self, route_segment: Edge) -> Generator[Any, Any, MovementStats]:
         distance = route_segment.distance
         time = self.calculate_travel_time(distance)
 

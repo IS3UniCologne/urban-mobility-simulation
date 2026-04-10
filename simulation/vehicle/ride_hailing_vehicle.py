@@ -87,11 +87,11 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
     def is_electric(self) -> bool:  # noqa: D102
         return self._is_electric
 
-    def move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
+    def _move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
         """
         Move vehicle along a route segment.
 
-        Attention: Low-level function that does not update states! This should not directly be invoked.
+            Attention: Low-level function that does not update states! This should not directly be invoked.
 
         Parameters
         ----------
@@ -110,14 +110,13 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         """
         distance = route_segment.distance
         time = self.calculate_travel_time(distance)
-        self.estimated_completion_time = self._env.now + time
-        self.destination = route_segment.destination.position
 
         yield self._env.timeout(time)
+
         self._update_position(route_segment.destination.position)
         energy_consumed = self.energy_system.consume_for_distance(distance)
         self.travel_costs += distance / 1000 * self._cost_km
-        self.estimated_completion_time = 0
+
         return MovementStats(
             energy_consumed=energy_consumed,
             distance_travelled=distance,
@@ -126,7 +125,9 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
 
     def traverse_route(self, route: Route) -> Generator[Event, None, float]:
         """
-        Traverse a route and update the en-route spatial index with the final destination.
+        Traverse a route and update the expectations.
+
+            This high-level function keeps track of the vehicle's estimated completion time and expected destination.
 
         Parameters
         ----------
@@ -140,10 +141,10 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         """
         self.fleet.insert_into_en_route_spatial_index(self)
 
+        # delegate to low level traversal of route segments
         total_energy = yield from super().traverse_route(route)
 
         self.fleet.delete_from_en_route_spatial_index(self)
-        self.destination = None
 
         return total_energy
 

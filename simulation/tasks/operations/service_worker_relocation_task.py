@@ -34,7 +34,7 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
         Duration to relocate vehicle (in minutes).
     """
 
-    __slots__ = ("_destination", "_relocation_duration")
+    __slots__ = ("_relocation_duration",)
 
     def __init__(
         self,
@@ -43,7 +43,7 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
         destination: GeodesicPosition,
         relocation_duration: float,
     ) -> None:
-        super().__init__(sim, vehicle)
+        super().__init__(sim, vehicle, destination)
         self._destination = destination
         self._relocation_duration = relocation_duration
 

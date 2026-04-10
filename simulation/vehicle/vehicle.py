@@ -394,15 +394,15 @@ class Vehicle(SimulationBase, ABC):
         self._estimated_completion_time = estimated_completion_time
 
     @property
-    def destination(self) -> GeodesicPosition | None:
+    def destination(self) -> GeodesicPosition:
         """Destination position of the current movement.
 
         Returns
         -------
         GeodesicPosition or None
-            The destination position of the current movement (None if not moving).
+            The destination position of the current movement (current position if not moving).
         """
-        return self._destination
+        return self._destination if self._destination is not None else self.__position
 
     @destination.setter
     def destination(self, value: GeodesicPosition | None) -> None:
@@ -533,7 +533,7 @@ class Vehicle(SimulationBase, ABC):
 
     # Methods
     @abstractmethod
-    def move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
+    def _move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
         """Move the vehicle along a route segment.
 
         Parameters
@@ -563,7 +563,7 @@ class Vehicle(SimulationBase, ABC):
         """
         total_energy = 0.0
         for segment in route.route_segments:
-            stats = yield from self.move(segment)
+            stats = yield from self._move(segment)
             total_energy += stats.energy_consumed
 
         return total_energy
