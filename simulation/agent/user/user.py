@@ -237,8 +237,8 @@ class User(Agent):
         self._search_start_time = self._env.now
         vehicle_allocation: VehicleAllocation | None = None
 
-        while self.state != UserState.FULFILLED and self.state != UserState.MISSED:
-            # Does we have time left to search?
+        while self.state not in (UserState.FULFILLED, UserState.MISSED):
+            # Do we have time left to search?
             if self._is_search_duration_exceeded():
                 self._search_end_time = self._env.now
                 self.state = UserState.MISSED
@@ -249,7 +249,6 @@ class User(Agent):
             available_alternatives = yield self._env.process(
                 self._search_for_alternatives()
             )
-
             if not available_alternatives.transportation_alternatives:
                 break
 
@@ -257,108 +256,157 @@ class User(Agent):
             choice_probs: dict[TransportationAlternative, float] = (
                 self._calculate_choice_probabilities(available_alternatives)
             )
-
             # 3: Try alternatives probabilistically until one succeeds or we run out of time
-            attempted_alternatives: set[TransportationAlternative] = set()
-            allocation_succeeded = False
-            viable_alternatives = {
-                alt: prob for alt, prob in choice_probs.items() if prob > 0
-            }
-            viable_alternatives_set = set(viable_alternatives.keys())
-
-            while (
-                len(attempted_alternatives) < len(viable_alternatives)
-                and not allocation_succeeded
-            ):
-                # TODO: we are attempting allocations with old information, what if the vehicle moved in the meantime?
-                # Check timeout before attempting allocation
-                if self._is_search_duration_exceeded():
-                    self._search_end_time = self._env.now
-                    self.logger.debug(
-                        "Max search duration reached during allocation attempts"
-                    )
-                    break
-
-                remaining_alts = viable_alternatives_set - attempted_alternatives
-
-                # Sample and try
-                alternatives_list = list(remaining_alts)
-                probabilities = [viable_alternatives[alt] for alt in alternatives_list]
-                total_prob = sum(probabilities)
-                normalized_probs = [p / total_prob for p in probabilities]
-
-                chosen_idx: int = self._rng.choice(
-                    len(alternatives_list), p=normalized_probs
-                )
-                chosen_alternative = alternatives_list[chosen_idx]
-
-                attempted_alternatives.add(chosen_alternative)
-
-                # Track that we attempted this operator
-                self._attempted_operators.add(chosen_alternative.operator)
-
-                # Attempt allocation
-                vehicle_allocation = yield self._env.process(
-                    self._allocate_vehicle(chosen_alternative)
-                )
-
-                if vehicle_allocation:
-                    # We found a viable alternative, execute the trip
-                    self._search_end_time = self._env.now
-
-                    reservation = vehicle_allocation.reservation
-                    if reservation is None:
-                        raise RuntimeError(
-                            "Sanity check failed: allocation has no reservation"
-                        )
-                    if reservation.requester is not self:
-                        raise RuntimeError(
-                            "Sanity check failed: allocation reservation requester mismatch"
-                        )
-
-                    required_distance = chosen_alternative.distance + (
-                        chosen_alternative.route_to_pickup.distance
-                        if chosen_alternative.route_to_pickup
-                        else 0.0
-                    )
-                    if not vehicle_allocation.vehicle.energy_system.has_enough_energy(
-                        required_distance
-                    ):
-                        raise RuntimeError(
-                            "Sanity check failed: allocation granted despite insufficient energy "
-                            f"for required_distance={required_distance:.2f}m"
-                        )
-
-                    try:
-                        yield self._env.process(
-                            self._execute_chosen_alternative(vehicle_allocation)
-                        )
-                    except ReservationCanceledError as err:
-                        self.logger.debug(
-                            "Allocation canceled before trip execution for user %s on vehicle %s: %s",
-                            self.uid,
-                            vehicle_allocation.vehicle.uid,
-                            err,
-                        )
-                        vehicle_allocation = None
-                        continue
-                    allocation_succeeded = True
-
+            vehicle_allocation = yield self._env.process(
+                self._try_alternatives(choice_probs)
+            )
             # 4: Allocation failed for all alternatives, restart search from scratch
-            if not allocation_succeeded:
+            if vehicle_allocation is None:
                 self.logger.debug(
                     "Allocation failed for all alternatives, restarting search."
                 )
                 self._reset_user()
                 yield self._env.timeout(1)
-                continue
 
-        # Log final outcome
         self._log_trip_outcome(vehicle_allocation)
-
-        # Ensure process is always marked as finished
         if not self.process_finished.triggered:
             self.process_finished.succeed()
+
+    def _try_alternatives(
+        self, choice_probs: dict[TransportationAlternative, float]
+    ) -> Generator[Process | Event, Any, VehicleAllocation | None]:
+        """
+        Try transportation alternatives probabilistically until one succeeds.
+
+        Samples from viable alternatives (prob > 0) without replacement, attempting
+        vehicle allocation for each. Returns on first success or when all alternatives
+        are exhausted or the search timeout is hit.
+
+        Parameters
+        ----------
+        choice_probs : dict of TransportationAlternative to float
+            Mapping of alternatives to their choice probabilities.
+
+        Yields
+        ------
+        Process or Event
+            Allocation and trip execution processes.
+
+        Returns
+        -------
+        VehicleAllocation or None
+            Successful allocation, or None if all alternatives failed.
+        """
+        # TODO: we are attempting allocations with old information, what if the vehicle moved in the meantime?
+        viable = {alt: prob for alt, prob in choice_probs.items() if prob > 0}
+        attempted: set[TransportationAlternative] = set()
+
+        while len(attempted) < len(viable):
+            if self._is_search_duration_exceeded():
+                self._search_end_time = self._env.now
+                self.logger.debug(
+                    "Max search duration reached during allocation attempts"
+                )
+                return None
+
+            chosen = self._sample_alternative(viable.keys() - attempted, viable)
+            attempted.add(chosen)
+            self._attempted_operators.add(chosen.operator)
+
+            vehicle_allocation: VehicleAllocation | None = yield self._env.process(
+                self._allocate_vehicle(chosen)
+            )
+
+            if vehicle_allocation is None:
+                continue
+
+            self._search_end_time = self._env.now
+            self._validate_allocation(vehicle_allocation, chosen)
+
+            try:
+                yield self._env.process(
+                    self._execute_chosen_alternative(vehicle_allocation)
+                )
+            except ReservationCanceledError as err:
+                self.logger.debug(
+                    "Allocation canceled before trip execution for user %s on vehicle %s: %s",
+                    self.uid,
+                    vehicle_allocation.vehicle.uid,
+                    err,
+                )
+                continue
+
+            return vehicle_allocation
+
+        return None
+
+    def _sample_alternative(
+        self,
+        remaining: set[TransportationAlternative],
+        viable: dict[TransportationAlternative, float],
+    ) -> TransportationAlternative:
+        """
+        Sample one alternative from the remaining set, weighted by probability.
+
+        Parameters
+        ----------
+        remaining : set of TransportationAlternative
+            Alternatives not yet attempted.
+        viable : dict of TransportationAlternative to float
+            Full probability mapping (superset of remaining).
+
+        Returns
+        -------
+        TransportationAlternative
+            The sampled alternative.
+        """
+        alternatives_list = list(remaining)
+        probs = [viable[alt] for alt in alternatives_list]
+        total = sum(probs)
+        normalized = [p / total for p in probs]
+        idx: int = self._rng.choice(len(alternatives_list), p=normalized)
+        return alternatives_list[idx]
+
+    def _validate_allocation(
+        self,
+        vehicle_allocation: VehicleAllocation,
+        chosen_alternative: TransportationAlternative,
+    ) -> None:
+        """
+        Sanity-check an allocation before executing the trip.
+
+        Parameters
+        ----------
+        vehicle_allocation : VehicleAllocation
+            The allocation to validate.
+        chosen_alternative : TransportationAlternative
+            The alternative that was allocated.
+
+        Raises
+        ------
+        RuntimeError
+            If any sanity check fails.
+        """
+        reservation = vehicle_allocation.reservation
+        if reservation is None:
+            raise RuntimeError("Sanity check failed: allocation has no reservation")
+        if reservation.requester is not self:
+            raise RuntimeError(
+                "Sanity check failed: allocation reservation requester mismatch"
+            )
+
+        required_distance = chosen_alternative.distance + (
+            chosen_alternative.route_to_pickup.distance
+            if chosen_alternative.route_to_pickup
+            else 0.0
+        )
+        if not vehicle_allocation.vehicle.energy_system.has_enough_energy(
+            required_distance
+        ):
+            raise RuntimeError(
+                "Sanity check failed: allocation granted despite insufficient energy "
+                f"for required_distance={required_distance:.2f}m"
+            )
 
     def _log_trip_outcome(self, vehicle_allocation: VehicleAllocation | None) -> None:
         """
