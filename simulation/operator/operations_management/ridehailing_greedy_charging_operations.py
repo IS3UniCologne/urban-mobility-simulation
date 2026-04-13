@@ -55,7 +55,6 @@ class RideHailingGreedyChargingOperations(RideHailingOperations):
 
         # Events
         self._charging_plan_updated = self._sim.env.event()
-        self._operations_started = self._sim.env.event()
         self._job_executed = self._sim.env.event()
 
         # When to start operations
