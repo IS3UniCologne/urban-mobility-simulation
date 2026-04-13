@@ -126,7 +126,13 @@ class ReservableMixin(ReservableInterface):
         return reservation
 
     def cancel_queued_user_reservation(self, reason: str) -> bool:
-        """Cancel queued next-user reservation while vehicle is in use."""
+        """Cancel queued next-user reservation while vehicle is in use.
+
+        Returns
+        -------
+        bool
+            True if a reservation was canceled, False if no user reservation to cancel.
+        """
         if not self._is_in_use or self._reservation is None:
             return False
 
