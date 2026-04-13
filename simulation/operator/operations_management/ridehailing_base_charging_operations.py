@@ -1,12 +1,12 @@
 from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, Any
-from warnings import deprecated
 
 import h3
 import pandas as pd
 from beartype.door import is_bearable
 from simpy import AnyOf
+from typing_extensions import deprecated
 
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
