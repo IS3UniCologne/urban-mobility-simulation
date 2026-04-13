@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 from simulation.helper.time import SimulationTimeConverter
 from simulation.infrastructure.network.edge import Edge
-from simulation.infrastructure.network.vertex import Vertex
 
 if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
@@ -36,8 +35,8 @@ class Route:  # noqa: D101
             self._route_segments.append(
                 Edge(
                     distance=self.distance,
-                    origin=Vertex(self.origin),
-                    destination=Vertex(self.destination),
+                    origin=self.origin,
+                    destination=self.destination,
                 )
             )
         return self._route_segments

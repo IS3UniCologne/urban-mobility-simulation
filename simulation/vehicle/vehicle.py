@@ -1,6 +1,6 @@
 from __future__ import annotations  # noqa: D100
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import TYPE_CHECKING
 
 from simulation.helper.exceptions import VehicleError
@@ -8,6 +8,7 @@ from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.state_machine import StateMachine
 from simulation.helper.time import SimulationVelocityConverter
 from simulation.helper.vehicle_states import VehicleStates
+from simulation.vehicle.movement_stats import MovementStats
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -26,12 +27,12 @@ if TYPE_CHECKING:
     from simulation.helper.vehicle_states import VehicleState
     from simulation.infrastructure.network.edge import Edge
     from simulation.infrastructure.route import Route
+    from simulation.infrastructure.transit_network.route_segment import RouteSegment
     from simulation.operator.data_transfer_object.transport_request import (
         TransportRequest,
     )
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.vehicle.energy_system import EnergySystem
-    from simulation.vehicle.movement_stats import MovementStats
 
 
 class Vehicle(SimulationBase, ABC):
@@ -532,13 +533,14 @@ class Vehicle(SimulationBase, ABC):
         self.logger.debug("Parked.")
 
     # Methods
-    @abstractmethod
-    def _move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
+    def _move(
+        self, route_segment: Edge | RouteSegment
+    ) -> Generator[Event, None, MovementStats]:
         """Move the vehicle along a route segment.
 
         Parameters
         ----------
-        route_segment : Edge
+        route_segment : Edge | RouteSegment
             The route segment along which the vehicle will move.
 
         Returns
@@ -546,6 +548,20 @@ class Vehicle(SimulationBase, ABC):
         MovementStats
             The statistics of the movement.
         """
+        distance = route_segment.distance
+        duration = self.calculate_travel_time(distance)
+
+        yield self._env.timeout(duration)
+
+        self._update_position(route_segment.destination)
+
+        energy_consumed = self.energy_system.consume_for_distance(distance)
+
+        return MovementStats(
+            energy_consumed=energy_consumed,
+            distance_travelled=distance,
+            time_taken=duration,
+        )
 
     def traverse_route(self, route: Route) -> Generator[Event, None, float]:
         """

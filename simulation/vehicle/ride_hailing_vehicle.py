@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 from simulation.helper.enums import AutonomyType, PropulsionType
 from simulation.helper.vehicle_states import VehicleStates
 from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
-from simulation.vehicle.movement_stats import MovementStats
 
 from .vehicle import Vehicle
 
@@ -20,6 +19,7 @@ if TYPE_CHECKING:
     from simulation.infrastructure.network.edge import Edge
     from simulation.infrastructure.route import Route
     from simulation.operator.vehicle_fleet import VehicleFleet
+    from simulation.vehicle.movement_stats import MovementStats
     from simulation.vehicle.reservation import Reservation
 
     from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
@@ -108,20 +108,11 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         Event
             simpy Timeout event for the duration of the movement.
         """
-        distance = route_segment.distance
-        time = self.calculate_travel_time(distance)
+        stats = yield from super()._move(route_segment)
 
-        yield self._env.timeout(time)
+        self.travel_costs += stats.distance_travelled / 1000 * self._cost_km
 
-        self._update_position(route_segment.destination.position)
-        energy_consumed = self.energy_system.consume_for_distance(distance)
-        self.travel_costs += distance / 1000 * self._cost_km
-
-        return MovementStats(
-            energy_consumed=energy_consumed,
-            distance_travelled=distance,
-            time_taken=time,
-        )
+        return stats
 
     def traverse_route(self, route: Route) -> Generator[Event, None, float]:
         """
