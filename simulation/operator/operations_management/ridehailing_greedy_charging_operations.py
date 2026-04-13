@@ -61,7 +61,7 @@ class RideHailingGreedyChargingOperations(RideHailingOperations):
         self._time_between_operations = self._config.TIME_BETWEEN_OPERATIONS
 
         # Shift Duration
-        self._duration_of_operations = self._config.OPERATIONS_DURATION
+        self._duration_of_operations = self._config.OPERATIONS_DURATION  # TODO: This is doing nothing, remove ? (I think its a remnant from shared mobility)
 
     @property
     def charging_plan_updated(self):  # noqa: ANN201, D102
@@ -81,7 +81,7 @@ class RideHailingGreedyChargingOperations(RideHailingOperations):
         Yields
         ------
         Generator[Timeout, None, None]
-            _description_
+            Timeout until next execution of operations.
         """
         while True:
             yield self._env.timeout(self._time_between_operations)
