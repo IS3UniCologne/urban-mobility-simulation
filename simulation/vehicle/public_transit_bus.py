@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.helper.vehicle_states import VehicleStates
-from simulation.vehicle.movement_stats import MovementStats
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 from tracking.tracking_interface import TrackingInterface
 
@@ -23,6 +22,7 @@ if TYPE_CHECKING:
     from simulation.infrastructure.route import PublicTransitRoute
     from simulation.infrastructure.transit_network.route_segment import RouteSegment
     from simulation.operator.vehicle_fleet import VehicleFleet
+    from simulation.vehicle.movement_stats import MovementStats
 
 
 class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
@@ -171,9 +171,6 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
     ) -> Generator[Event, None, MovementStats]:
         # TODO: use road network speed limits?
 
-        distance = route_segment.distance  # in meter
-        duration = self.calculate_travel_time(distance)  # in minutes
-
         self._set_state(VehicleStates.EN_ROUTE)
 
         self.logger.debug(
@@ -182,10 +179,9 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
             route_segment.end.stop_id,
         )
 
-        yield self._env.timeout(duration)
+        stats = yield from super()._move(route_segment)
 
         self._current_stop = route_segment.end
-        self._update_position(route_segment.end)
 
         if self._current_stop == self._route.destination:
             self._set_state(VehicleStates.AT_TERMINAL)
@@ -202,12 +198,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
                 self._time.now_as_str(),
             )
 
-        energy_consumed = self.energy_system.consume_for_distance(distance)
-        return MovementStats(
-            energy_consumed=energy_consumed,
-            distance_travelled=distance,
-            time_taken=duration,
-        )
+        return stats
 
     def _update_position(self, new_position) -> None:  # noqa: ANN001
         # Update Vehicle Position

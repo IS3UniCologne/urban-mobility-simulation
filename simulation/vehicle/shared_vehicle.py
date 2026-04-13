@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any
 
 from simulation.helper.vehicle_states import VehicleStates
 from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
-from simulation.vehicle.movement_stats import MovementStats
 
 from .vehicle import Vehicle
 
@@ -47,20 +46,6 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
     def price_per_trip(self) -> float:  # noqa: D102
         return self._price_per_trip
 
-    def _move(self, route_segment: Edge) -> Generator[Any, Any, MovementStats]:
-        distance = route_segment.distance
-        time = self.calculate_travel_time(distance)
-
-        yield self._env.timeout(time)
-
-        self._update_position(route_segment.destination.position)
-        energy_consumed = self.energy_system.consume_for_distance(distance)
-        return MovementStats(
-            energy_consumed=energy_consumed,
-            distance_travelled=distance,
-            time_taken=time,
-        )
-
     def wait_for_user(self) -> None:
         """Set vehicle to WAITING_FOR_USER state while user walks to pickup."""
         self._set_state(VehicleStates.WAITING_FOR_USER)
@@ -94,7 +79,7 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         old_position = self.position
 
         # Update new position of vehicle
-        self._update_position(route_segment.destination.position)
+        self._update_position(route_segment.destination)
 
         self._vehicle_relocation_finished.succeed()
         self._vehicle_relocation_finished = self._env.event()

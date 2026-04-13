@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from simulation.infrastructure.route import Edge, Vertex
+from simulation.infrastructure.route import Edge
 from simulation.tasks.base.vehicle_task import VehicleTask
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
@@ -57,9 +57,7 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
             Events during relocation.
         """
         distance = self._vehicle.position << self._destination
-        relocation_route = Edge(
-            distance, Vertex(self._vehicle.position), Vertex(self._destination)
-        )
+        relocation_route = Edge(distance, self._vehicle.position, self._destination)
 
         yield self._env.process(
             self._vehicle.relocate(relocation_route, self._relocation_duration)
