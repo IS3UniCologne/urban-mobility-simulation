@@ -9,7 +9,6 @@ from simpy import AnyOf, Event
 from simulation.helper.configuration.configuration import (
     RideHailingMPChargingOperationsConfig,
 )
-from simulation.helper.exceptions import TaskAborted
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
@@ -130,23 +129,13 @@ class RideHailingMPChargingOperations(RideHailingOperations):
     ) -> Generator[Event, Any, None]:
         # as soon as the pre_queuing or pre_charging checkpoint event is triggered, we know the vehicle has arrived and
         # is either occupying a slot in the queue, at the plugs, or the task has aborted
-        try:
-            yield AnyOf(
-                self._sim.env,
-                [session.pre_queuing_checkpoint, session.pre_charging_checkpoint],
-            )
-        except TaskAborted:
-            # Should never happen with full knowledge, keep around just in case
-            self.logger.warning(
-                "Charging session for vehicle %s aborted before start of charging. Releasing assumed capacity.",
-                session.vehicle.uid,
-            )
-        finally:
-            availability = (
-                self._virtual_charging_infrastructure.get_available_capacity()
-            )
-            availability[session.destination] += 1
-            self._virtual_charging_infrastructure.update(availability=availability)
+        yield AnyOf(
+            self._sim.env,
+            [session.pre_queuing_checkpoint, session.pre_charging_checkpoint],
+        )
+        availability = self._virtual_charging_infrastructure.get_available_capacity()
+        availability[session.destination] += 1
+        self._virtual_charging_infrastructure.update(availability=availability)
 
     def _track_session(self, session: ChargingSession) -> Generator[AnyOf, Any, None]:
         yield AnyOf(self._env, [session.finished, self._world.simulation_finished])
