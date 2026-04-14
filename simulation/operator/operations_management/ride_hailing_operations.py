@@ -72,6 +72,7 @@ class RideHailingOperations(Operations):
             charging_station=charging_session.charging_station,
             scheduled_time=charging_session.scheduled_time,
             arrived_at_charging_station=charging_session.arrived_at_charging_station,
+            started_queuing=charging_session.started_queuing,
             started_charging=charging_session.started_charging,
         )
 
