@@ -128,11 +128,12 @@ class RideHailingMPChargingOperations(RideHailingOperations):
     def _update_after_arrival(
         self, session: ChargingSession
     ) -> Generator[Event, Any, None]:
-        # as soon as the started_queuing or started_charging event is triggered, we know the vehicle has arrived and
+        # as soon as the pre_queuing or pre_charging checkpoint event is triggered, we know the vehicle has arrived and
         # is either occupying a slot in the queue, at the plugs, or the task has aborted
         try:
             yield AnyOf(
-                self._sim.env, [session.started_queuing, session.started_charging]
+                self._sim.env,
+                [session.pre_queuing_checkpoint, session.pre_charging_checkpoint],
             )
         except TaskAborted:
             # Should never happen with full knowledge, keep around just in case
