@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any
 
 from simpy import AnyOf
 
-from simulation.helper.exceptions import TaskAborted
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
@@ -109,22 +108,13 @@ class RideHailingUncoordinatedChargingOperations(RideHailingOperations):  # noqa
     ) -> Generator[Event, Any, None]:
         # as soon as the started_queuing or started_charging event is triggered, we know the vehicle has arrived and
         # is either occupying a slot in the queue, at the plugs, or the task has aborted
-        try:
-            yield AnyOf(
-                self._sim.env,
-                [session.pre_queuing_checkpoint, session.pre_charging_checkpoint],
-            )
-        except TaskAborted:
-            self.logger.debug(
-                "Charging session for vehicle %s aborted before start of charging. Releasing assumed capacity.",
-                session.vehicle.uid,
-            )
-        finally:
-            availability = (
-                self._virtual_charging_infrastructure.get_available_capacity()
-            )
-            availability[session.destination] += 1
-            self._virtual_charging_infrastructure.update(availability=availability)
+        yield AnyOf(
+            self._sim.env,
+            [session.pre_queuing_checkpoint, session.pre_charging_checkpoint],
+        )
+        availability = self._virtual_charging_infrastructure.get_available_capacity()
+        availability[session.destination] += 1
+        self._virtual_charging_infrastructure.update(availability=availability)
 
     @property
     def job_transactions(self) -> pd.DataFrame:  # noqa: D102
