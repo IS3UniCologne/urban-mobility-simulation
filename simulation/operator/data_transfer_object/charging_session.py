@@ -29,6 +29,7 @@ class ChargingSession:
     vehicle: RideHailingVehicle
     charging_station: ChargingStation
     arrived_at_charging_station: Event
+    started_queuing: Event
     started_charging: Event
 
     finished: Event = None  # type: ignore[assignment]
@@ -93,6 +94,7 @@ class ChargingSession:
             vehicle=vehicle,
             charging_station=charging_station,
             arrived_at_charging_station=sim.env.event(),
+            started_queuing=sim.env.event(),
             started_charging=sim.env.event(),
             finished=sim.env.event(),
         )
