@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from simulation.helper.enums import PropulsionType
-from simulation.helper.exceptions import TaskAborted
 from simulation.tasks.base.vehicle_task import VehicleTask
 from simulation.vehicle.interfaces.reservable_interface import ReservableInterface
 
@@ -49,22 +48,22 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
     scheduled_time : float or None
         Scheduled timeslot start time (for virtual charging stations).
     arrived_at_charging_station : Event
-        Event to signal arrival at charging station.
+        Event to signal post arrival at charging station checkpoint.
     started_queuing : Event
-        Event to signal queuing start.
+        Event to signal pre queuing start checkpoint.
     started_charging : Event
-        Event to signal charging start.
+        Event to signal pre charging start checkpoint.
     """
 
     __slots__ = (
-        "_arrived_at_charging_station",
+        "_arrival_at_cs_checkpoint",
         "_charging_duration",
         "_charging_station",
         "_estimated_completion_time",
         "_kWh_charged",
+        "_pre_charging_checkpoint",
+        "_pre_queuing_checkpoint",
         "_scheduled_time",
-        "_started_charging",
-        "_started_queuing",
         "_waiting_time",
     )
 
@@ -83,9 +82,9 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
         self._charging_duration = charging_duration
         self._charging_station = charging_station
         self._scheduled_time = scheduled_time
-        self._arrived_at_charging_station = arrived_at_charging_station
-        self._started_queuing = started_queuing
-        self._started_charging = started_charging
+        self._arrival_at_cs_checkpoint = arrived_at_charging_station
+        self._pre_queuing_checkpoint = started_queuing
+        self._pre_charging_checkpoint = started_charging
         self._waiting_time: float = 0.0
         self._kWh_charged: float = 0.0
         self._estimated_completion_time: float = 0.0
@@ -121,7 +120,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
             )
             raise ValueError("Unsupported propulsion type for charging task.")
 
-        self._arrived_at_charging_station.succeed()
+        self._arrival_at_cs_checkpoint.succeed()
         vehicle.wait_for_charging()
         waiting_start = self._env.now
 
@@ -145,7 +144,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
                     self._env.now - timeslot_end,
                 )
                 self._cancel_queued_user_reservation("charging-abort:missed-timeslot")
-                self._started_charging.fail(TaskAborted("Missed scheduled timeslot"))
+                self._pre_queuing_checkpoint.succeed()
                 vehicle.abort_charging_wait()
                 self._abort()
 
@@ -164,11 +163,11 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
                 vehicle.uid,
             )
             self._cancel_queued_user_reservation("charging-abort:queue-full")
-            self._started_queuing.fail(TaskAborted("Charging station queue full"))
+            self._pre_queuing_checkpoint.succeed()
             vehicle.abort_charging_wait()
             self._abort()
 
-        self._started_queuing.succeed(self._env.now)
+        self._pre_queuing_checkpoint.succeed(self._env.now)
 
         with self._charging_station.plugs.request() as req:
             req.charging_duration = self._charging_duration  # type: ignore[attr-defined]
@@ -187,7 +186,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
                 )
                 self._cancel_queued_user_reservation("charging-abort:invalid-duration")
                 # Abort: invalid charging duration
-                self._started_charging.fail(TaskAborted("Invalid charging duration"))
+                self._pre_charging_checkpoint.succeed()
                 vehicle.abort_charging_wait()
                 self._abort()
 
@@ -204,7 +203,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
             if timeslot_end is None:
                 self._waiting_time = self._env.now - waiting_start
 
-            self._started_charging.succeed(self._env.now)
+            self._pre_charging_checkpoint.succeed(self._env.now)
 
             yield self._env.process(vehicle.charge(actual_duration, self._kWh_charged))
 
