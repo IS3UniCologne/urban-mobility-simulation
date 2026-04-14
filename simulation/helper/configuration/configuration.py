@@ -49,7 +49,6 @@ from simulation.agent.user.choice_model.random_nearest_vehicle_choice_model impo
 from simulation.helper.enums import (
     AutonomyType,
     DailyResolution,
-    ModeChoiceStrategy,
     PropulsionType,
     SpatialResolution,
     TemporalResolution,
@@ -327,19 +326,6 @@ class SharedVehicleFleetConfig(FleetConfig):
     """Configuration for shared vehicle fleet parameters."""
 
     FLEET_TYPE: type[VehicleFleet] = MixedSharedVehicleFleet
-
-
-class ModeChoiceModelConfig(ConfigBaseModel):
-    """Configuration for mode choice model parameters."""
-
-    SUBSTITUTION_BOUNDARY: float
-    AV_TRUST: list[float]
-    MODE_CHOICE_STRATEGY: ModeChoiceStrategy
-    MOD_COEFFICIENTS: list[list[float]]
-    MOD_COEFFICIENTS_CI_LOWER: list[list[float]]
-    MOD_COEFFICIENTS_CI_UPPER: list[list[float]]
-    MOD_P_VALUES: list[list[float]]
-    MOD_COEFFICIENT_INTERVAL_ADJUSTER: float
 
 
 class ChargingInfrastructureConfig(BaseModel):
