@@ -134,8 +134,10 @@ class Timetable(SimulationBase):  # noqa: D101
         if spatial_strategy not in ["euclidean", "walk"]:
             # if stops in vicinity were found by hexagon, no distance has been calculated, use euclidean
             viable_trips["walk_dist"] = viable_trips.apply(
-                lambda x: transport_task.origin
-                >> GeodesicPosition(self._sim, x["stop_lat"], x["stop_lon"]),
+                lambda x: (
+                    transport_task.origin
+                    >> GeodesicPosition(self._sim, x["stop_lat"], x["stop_lon"])
+                ),
                 axis=1,
             )
         viable_trips["walk_duration"] = viable_trips["walk_dist"] / 83.33
