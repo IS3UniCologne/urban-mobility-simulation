@@ -12,7 +12,7 @@ LOG_LEVEL      = "INFO"
 FILE_LOG_LEVEL = "DEBUG"
 LOG_TIMESTAMPS = false
 # Set class specific log levels. This takes precedence over the global log levels and applies to console and log files.
-LOG_CLASS_OVERRIDES = { DowntimeMinWithoutLookahead = "DEBUG"}
+# LOG_CLASS_OVERRIDES = { DowntimeMinWithoutLookahead = "DEBUG"}
 # Output
 PERSIST_RESULTS = false
 
