@@ -453,8 +453,8 @@ service_rate_fleet_1 = (
     / fleet_1_transactions.shape[0]
 )
 
-fleet_0_task_transactions = ridehailing_operations_0.task_transactions
-fleet_1_task_transactions = ridehailing_operations_1.task_transactions
+fleet_0_task_transactions = ridehailing_operations_0.job_transactions
+fleet_1_task_transactions = ridehailing_operations_1.job_transactions
 
 fleet_0_task_transactions.to_csv(
     f"data/output/transactions/{output_timestamp}_fleet_0_task_transactions.csv",

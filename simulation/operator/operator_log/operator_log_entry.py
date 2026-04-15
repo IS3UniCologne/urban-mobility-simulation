@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import TransactionState, VehicleType
+from simulation.helper.enums import TransactionState, VehicleType
 
 if TYPE_CHECKING:
     from simulation.helper.types import RegionId, SimId
@@ -59,8 +59,8 @@ class FulfilledOperatorLogEntry(BaseOperatorLogEntry):
         Unique identifier for the vehicle.
     selected_vehicle_type : VehicleType
         Selected vehicle type for the trip.
-    pick_up_time : float
-        Time spent picking up the passenger.
+    est_pickup_wait : float
+        Estimated wait time from request creation until pickup.
     energy_consumption : float
         Energy consumed during the trip.
     selected_vehicle_EV : bool
@@ -73,7 +73,7 @@ class FulfilledOperatorLogEntry(BaseOperatorLogEntry):
 
     vehicle_uid: SimId
     selected_vehicle_type: VehicleType
-    pick_up_time: float
+    est_pickup_wait: float
     energy_consumption: float
     selected_vehicle_EV: bool
     revenue: float

@@ -26,12 +26,13 @@ class VirtualChargingInfrastructure(SimulationBase):
     This class provides a virtual charging infrastructure (a special view on the physical charging infrastructure) to a certain observer.
     This could e.g. be fleet operators that are only allowed to charge at locations where they buy capacity.
 
-    This class replicates the public API of ChargingInfrastructure.
+    This class replicates the public API of ChargingInfrastructure. #TODO: Yes? Then we should we make sure about this by implementing a Protocol
     """  # noqa: D205, D404
 
     __slots__ = (
         "_availability",
         "_charging_infrastructure",
+        "_charging_stations_by_location",
         "_current_lookahead",
         "_env",
         "_listeners",
@@ -71,6 +72,9 @@ class VirtualChargingInfrastructure(SimulationBase):
                 )
                 for cs in self._charging_infrastructure.charging_stations
             ]
+            self._charging_stations_by_location = {
+                cs.location: cs for cs in self._virtual_charging_stations
+            }
             if self._current_lookahead is not None:
                 self._update_virtual_cs(init=True)
         else:
@@ -112,7 +116,9 @@ class VirtualChargingInfrastructure(SimulationBase):
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_available_capacity(self, at_timeslot: int | None = None):  # noqa: ANN201, D102
+    def get_available_capacity(  # noqa: D102
+        self, at_timeslot: int | None = None
+    ) -> dict[int, dict[str, int]] | dict[str, int]:
         if self._current_lookahead is None:
             return self._availability
         try:
@@ -130,22 +136,18 @@ class VirtualChargingInfrastructure(SimulationBase):
     def _update_virtual_cs(self, init: bool = False) -> None:
         for cs in self._virtual_charging_stations:
             # availability might be negative if we account for some vehicle on the way and in the meantime another vehicle arrives at the already full station
-            bounded_capa = (
-                max(
-                    0,
-                    min(
-                        self._availability[self._current_lookahead][cs.location]
-                        if self._current_lookahead is not None
-                        else self._availability[cs.location],
-                        cs._physical_charging_station.capacity,  # noqa: SLF001
-                    ),
+            capa = (
+                (
+                    self._availability[self._current_lookahead][cs.location]
+                    if self._current_lookahead is not None
+                    else self._availability[cs.location]
                 )
                 if not init
                 else 0
             )
+
             cs.update_capacity(
-                capacity=bounded_capa,
-                # TODO: move all shared_charging_auction to charging infrastructure config?
+                capacity=capa,
                 valid_timeframe=(
                     self._current_lookahead,
                     self._current_lookahead
@@ -169,7 +171,6 @@ class VirtualChargingInfrastructure(SimulationBase):
         if self._current_lookahead is not None:
             # update the current lookahead to be the next coordinated (e.g. auctioned) slot
             self._current_lookahead = self._env.now + (
-                # TODO: move all shared_charging_auction to charging infrastructure config?
                 self._charging_infrastructure._charging_infra_config.COORDINATION_LOOKAHEAD  # noqa: SLF001
                 - (
                     self._env.now
@@ -227,3 +228,6 @@ class VirtualChargingInfrastructure(SimulationBase):
                     "Plugged out registered at %s.", charging_station.location
                 )
                 self._listeners[cs.uid].processed_plug_out_event.succeed()
+
+    def get_charging_station_by_location(self, location: str) -> VirtualChargingStation:  # noqa: D102
+        return self._charging_stations_by_location[location]

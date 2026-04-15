@@ -46,7 +46,7 @@ from simulation.agent.user.choice_model.min_pickup_time_vehicle_choice_model imp
 from simulation.agent.user.choice_model.random_nearest_vehicle_choice_model import (
     RandomModeNearestVehicleChoiceModel,
 )
-from simulation.helper.configuration.enums import (
+from simulation.helper.enums import (
     AutonomyType,
     DailyResolution,
     ModeChoiceStrategy,
@@ -56,6 +56,7 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.time import SimulationVelocityConverter
+from simulation.helper.types import RegionId
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
@@ -167,7 +168,7 @@ class PathConfig(ConfigBaseModel):
     PATH_TRANSIT_TIMETABLE: Path
     PATH_TRANSIT_SHAPES: Path
     PATH_VEHICLE_SUPPLY: Path
-    PATH_TO_MODE_CHOICE_MODEL: Path
+    PATH_TO_MODE_CHOICE_MODEL: Path  # deprecated, remove
     OUTPUT_FOLDER: Path
     TRANSACTION_FILE: Path
     FLEET_STATE_FILE: Path
@@ -279,7 +280,7 @@ class VehicleConfig(ConfigBaseModel):
     PRICE_PER_MIN: float | None = Field(default=None, ge=0)
     PRICE_PER_TRIP: float = Field(default=0, ge=0)
     DAILY_TOTAL_COST: float | None = Field(default=None, ge=0)
-    COST_PER_KM: float | None = Field(default=None, ge=0)
+    COST_PER_KM: float | None = Field(default=0, ge=0)
     PRICE_PER_KM: float | None = Field(default=None, ge=0)
     CHARGING_COST_PER_KWH: float | None = Field(default=None, ge=0)
     KG_CO2_PER_KM: float | None = Field(default=None, ge=0)
@@ -349,7 +350,7 @@ class ChargingInfrastructureConfig(BaseModel):
     )
 
     NUMBER_OF_CHARGING_STATIONS: int
-    LOCATIONS: list[str]
+    LOCATIONS: list[RegionId]
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
@@ -408,12 +409,9 @@ class OperationsConfig(ConfigBaseModel):
     RECHARGE_THRESHOLD: list[float] | float | None = Field(
         default=None
     )  # TODO: unify this between sv and rh
-    VEHICLE_RELOCATION_VELOCITY: float | None = Field(gt=0, default=None)
+    VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0, default=0)
 
-    # TODO: allow_queue was both explicitly defined in the config, but also derived from queue size > 0. How do we want to handle this?
-    # We need both: The charging station needs to state how much parking space there is for queueing
-    # and the operator needs to be able to include a potentially different, acceptable queue size (or 0 for not allowing to queue) in its operational considerations
-    ALLOW_QUEUE: bool | None = Field(default=False)
+    ALLOWED_QUEUE_SIZE: int | None = Field(default=0, ge=0)
 
     PLANNING_LOOKAHEAD: int | None = Field(default=None, gt=0)
 
@@ -446,6 +444,10 @@ class RideHailingOperationsConfig(OperationsConfig):
 
 class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for ride-hailing base charging operations."""
+
+
+class RideHailingGreedyChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for ride-hailing greedy charging operations."""
 
 
 class RideHailingUncoordinatedChargingOperationsConfig(RideHailingOperationsConfig):

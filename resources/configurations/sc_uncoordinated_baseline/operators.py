@@ -9,11 +9,7 @@ from simulation.helper.configuration.configuration import (
     RideHailingUncoordinatedChargingOperationsConfig,
     RideHailingVehicleConfig,
 )
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    PropulsionType,
-    VehicleType,
-)
+from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
 from simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations import (
     RideHailingUncoordinatedChargingOperations,
 )
@@ -131,7 +127,7 @@ operator_1 = OperatorConfig(
         TIME_BETWEEN_OPERATIONS=10,
         RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
         VEHICLE_RELOCATION_VELOCITY=32.16,
-        ALLOW_QUEUE=False,
+        ALLOWED_QUEUE_SIZE=0,
         AV_PRICE_REDUCTION=1.0,
         MAX_PICKUP_DISTANCE=5000,
         PRICE_ENTERING=2.0,  # doesnt apply
@@ -159,7 +155,7 @@ operator_2 = OperatorConfig(
         TIME_BETWEEN_OPERATIONS=10,
         RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
         VEHICLE_RELOCATION_VELOCITY=32.16,
-        ALLOW_QUEUE=False,
+        ALLOWED_QUEUE_SIZE=0,
         AV_PRICE_REDUCTION=1.0,
         MAX_PICKUP_DISTANCE=10000,
         PRICE_ENTERING=2.0,  # doesnt apply

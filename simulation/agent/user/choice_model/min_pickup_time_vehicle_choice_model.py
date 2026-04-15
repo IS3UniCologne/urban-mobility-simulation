@@ -5,7 +5,7 @@ from simulation.agent.user.choice_model.choice_model_interface import (
     ChoiceModelInterface,
 )
 from simulation.agent.user.user import User
-from simulation.helper.configuration.enums import OperatorMode, VehicleType
+from simulation.helper.enums import OperatorMode, VehicleType
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )

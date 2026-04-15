@@ -52,12 +52,9 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
             CSs_range.append(i.cs_id)
 
         d = {}  # distance matrix
-        # TODO: use haversive vector or distance matrix
         for j in vehicles:
             for i in CSs:
-                d[i.cs_id, j.id] = i.centre >> j.position
-                # if isinstance(d[i.id, j.id], list):
-                #     d[i.id, j.id] = float([i.id, j.id][0])
+                d[i.cs_id, j.id] = i.centre << j.destination
 
         Q = {}  # queueing time of the CS
         N = {}  # available capacity (excl queue)
@@ -66,13 +63,14 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
         for i in CSs:
             Q[i.cs_id] = i.current_queue_time
             N[i.cs_id] = i.capacity  # this only works with VirtualChargingStations !!
-            # TODO: M should incorporate overflow of capa
-            M[i.cs_id] = i.capacity + (i.queue_size - len(i.plugs.queue))
+            M[i.cs_id] = (
+                i.capacity - i.blocked_capacity + (i.queue_size - len(i.plugs.queue))
+            )
             C[i.cs_id] = i.plugs.capacity
 
         SoC = {}  # state of charge for vehicles that need to charge
         for j in vehicles:
-            SoC[j.id] = j.current_relative_state_of_charge
+            SoC[j.id] = j.energy_system.predicted_energy_relative
             # if isinstance(SoC[j.id], list):
             #     SoC[j.id] = float(SoC[j.id][0])
 
@@ -84,9 +82,9 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
 
         # TODO: This is under the assumption that all vehicles have the same consumption and battery capacity
         # charging consumption per distance in kWh/km
-        alpha = vehicles[0].energy_consumption
+        alpha = vehicles[0].energy_system.energy_consumption_per_km
         # max state of charge in kWh
-        beta = vehicles[0].max_state_of_charge
+        beta = vehicles[0].energy_system.capacity
         rho = self._operator.operations.config.LOW_SOC_PENALTY
 
         mdl.CSs = Set(initialize=CSs_range)
@@ -193,7 +191,10 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
         mdl.objective = Objective(rule=objective_rule, sense=minimize)
 
         opt = SolverFactory("highs")
-        opt.solve(mdl)
+        try:
+            opt.solve(mdl)
+        except Exception as e:
+            raise e
 
         pairs = []
         for i in CSs:
@@ -210,7 +211,7 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
         stats_allocations = (
             pd.Series(
                 [
-                    v.current_relative_state_of_charge
+                    v.energy_system.current_energy_relative
                     for i in pairs
                     for k, v in i.items()
                     if k == "vehicle"
@@ -222,7 +223,7 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
         )
         self.logger.debug("Stats of allocations: %s", stats_allocations)
         stats_candidates = (
-            pd.Series([v.current_relative_state_of_charge for v in vehicles])
+            pd.Series([v.energy_system.current_energy_relative for v in vehicles])
             .describe()
             .__str__()
             .split("\n")

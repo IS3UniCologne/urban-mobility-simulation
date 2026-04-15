@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from simulation.agent.user.user import User
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import ChoiceModelConfig
-    from simulation.helper.configuration.enums import OperatorMode, VehicleType
+    from simulation.helper.enums import OperatorMode, VehicleType
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )

@@ -1,17 +1,34 @@
 """Module for uncoordinated ride-hailing charging operations."""
 
+from __future__ import annotations
+
 import dataclasses
 from collections import namedtuple
+from typing import TYPE_CHECKING, Any
+
+from simpy import AnyOf
 
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
-from simulation.operator.operations_management.operations import OperationsDependencies
+from simulation.operator.operations_management.ridehailing_greedy_charging_operations import (
+    RideHailingGreedyChargingOperations,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    import pandas as pd
+    from simpy.events import Event
+
+    from simulation.operator.data_transfer_object.charging_session import (
+        ChargingSession,
+    )
+    from simulation.operator.operations_management.operations import (
+        OperationsDependencies,
+    )
 from simulation.operator.operations_management.ride_hailing_operations import (
     RideHailingOperations,
-)
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
 )
 
 
@@ -62,38 +79,43 @@ class RideHailingUncoordinatedChargingOperations(RideHailingOperations):  # noqa
             self._deps, operator=vo
         )  # shallow copy, as we want to retain references to sim and world
 
-        self._charging_operations = RideHailingBaseChargingOperations(patched_deps)
+        self._charging_operations = RideHailingGreedyChargingOperations(patched_deps)
 
         # update virtual infra with vehicles on their way
-        self._env.process(self._listen_for_tasks())
+        self._env.process(self._listen_for_sessions())
 
         yield self._env.process(self._charging_operations.execute())
 
-    def _listen_for_tasks(self):  # noqa: ANN202
+    def _listen_for_sessions(self):  # noqa: ANN202
         while True:
-            task = yield self._charging_operations.task_executed
+            session: ChargingSession = yield self._charging_operations.job_executed
             # update virtual infra with vehicles on their way
-            self._update_after_sending(task)
-            self._env.process(self._update_after_arrival(task))
 
-    def _update_after_sending(self, task):  # noqa: ANN001, ANN202
+            self._update_after_sending(session)
+            self._env.process(self._update_after_arrival(session))
+
+    def _update_after_sending(self, session: ChargingSession) -> None:
         # Update virtual capacity when sending out a vehicle
 
         availability = (
             self._virtual_charging_infrastructure.get_available_capacity().copy()
         )
-        availability[task.destination] -= 1
+        availability[session.destination] -= 1
         self._virtual_charging_infrastructure.update(availability=availability)
 
-    def _update_after_arrival(self, task):  # noqa: ANN001, ANN202
-        # as soon as the vehicle really arrives, we can undo this because its then reflected in the capacity
-        yield task._arrived_at_charging_station  # noqa: SLF001
-        availability = (
-            self._virtual_charging_infrastructure.get_available_capacity().copy()
+    def _update_after_arrival(
+        self, session: ChargingSession
+    ) -> Generator[Event, Any, None]:
+        # as soon as the started_queuing or started_charging event is triggered, we know the vehicle has arrived and
+        # is either occupying a slot in the queue, at the plugs, or the task has aborted
+        yield AnyOf(
+            self._sim.env,
+            [session.pre_queuing_checkpoint, session.pre_charging_checkpoint],
         )
-        availability[task.destination] += 1
+        availability = self._virtual_charging_infrastructure.get_available_capacity()
+        availability[session.destination] += 1
         self._virtual_charging_infrastructure.update(availability=availability)
 
     @property
-    def task_transactions(self):  # noqa: ANN201, D102
-        return self._charging_operations.task_transactions
+    def job_transactions(self) -> pd.DataFrame:  # noqa: D102
+        return self._charging_operations.job_transactions

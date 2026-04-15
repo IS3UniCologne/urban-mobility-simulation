@@ -20,15 +20,13 @@ from simulation.agent.user.user_log import (
     UserLog,
     UserLogEntry,
 )
-from simulation.helper.configuration.enums import (
-    OperatorMode,
-    TransactionState,
-    UserState,
-)
+from simulation.helper.enums import OperatorMode, TransactionState, UserState
+from simulation.helper.exceptions import ReservationCanceledError
 from simulation.helper.time import SimulationVelocityConverter
-from simulation.tasks.transport_task import TransportTask
-from simulation.vehicle.interfaces.driver_interface import DriverInterface
-from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
+from simulation.operator.data_transfer_object.transport_request import TransportRequest
+from simulation.tasks.base.vehicle_session import VehicleSession
+from simulation.tasks.trips.ride_hailing_trip_task import RideHailingTripTask
+from simulation.tasks.trips.shared_trip_task import SharedTripTask
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.shared_vehicle import SharedVehicle
 
@@ -40,7 +38,6 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import UserConfig
-    from simulation.infrastructure.route import Route
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -54,7 +51,7 @@ if TYPE_CHECKING:
     from simulation.world.mobility_search_engine import MobilitySearchEngine
 
 
-class User(Agent, DriverInterface, PassengerInterface):
+class User(Agent):
     """
     Represents a single user agent in the simulation.
 
@@ -86,7 +83,7 @@ class User(Agent, DriverInterface, PassengerInterface):
     ----------
     state : UserState
         Current state of the user.
-    transport_task : TransportTask
+    transport_task : TransportRequest
         The transportation task associated with the user.
     energy_consumed : float
         Total energy consumed by the user.
@@ -111,7 +108,7 @@ class User(Agent, DriverInterface, PassengerInterface):
         "_search_start_time",
         "_sim",
         "_state",
-        "_transport_task",
+        "_transport_request",
         "_transportation_alternatives_not_found",
         "_trip_end_time",
         "_trip_start_time",
@@ -154,7 +151,7 @@ class User(Agent, DriverInterface, PassengerInterface):
             user_config.WALKING_SPEED_KMH
         )
 
-        self._transport_task = TransportTask(
+        self._transport_request = TransportRequest(
             creation_time=self._sim.env.now,
             origin=origin,
             destination=destination,
@@ -197,9 +194,11 @@ class User(Agent, DriverInterface, PassengerInterface):
 
         self.logger.debug("Started user process.")
 
-    def __str__(self) -> str:
-        """Return string representation of the user."""
-        return f"User with id {self.uid} is in state {self._state} and has transportation task {self._transport_task}"
+    def __repr__(self) -> str:  # noqa: D105
+        return f"User with id {self.uid} is in state {self._state}."
+
+    def __str__(self) -> str:  # noqa: D105
+        return f"User {self.uid}"
 
     @property
     def state(self) -> UserState:
@@ -212,9 +211,14 @@ class User(Agent, DriverInterface, PassengerInterface):
         self._state = value
 
     @property
-    def transport_task(self) -> TransportTask:
-        """Get the transport task of the user."""
-        return self._transport_task
+    def transport_request(self) -> TransportRequest:
+        """Get the transport request of the user."""
+        return self._transport_request
+
+    @property
+    def walking_speed_mm(self) -> float:
+        """Get the walking speed of the user in meters per minute."""
+        return self._walking_speed_mm
 
     @property
     def energy_consumed(self) -> float:
@@ -233,8 +237,8 @@ class User(Agent, DriverInterface, PassengerInterface):
         self._search_start_time = self._env.now
         vehicle_allocation: VehicleAllocation | None = None
 
-        while self.state != UserState.FULFILLED and self.state != UserState.MISSED:
-            # Does we have time left to search?
+        while self.state not in (UserState.FULFILLED, UserState.MISSED):
+            # Do we have time left to search?
             if self._is_search_duration_exceeded():
                 self._search_end_time = self._env.now
                 self.state = UserState.MISSED
@@ -245,7 +249,6 @@ class User(Agent, DriverInterface, PassengerInterface):
             available_alternatives = yield self._env.process(
                 self._search_for_alternatives()
             )
-
             if not available_alternatives.transportation_alternatives:
                 break
 
@@ -253,79 +256,157 @@ class User(Agent, DriverInterface, PassengerInterface):
             choice_probs: dict[TransportationAlternative, float] = (
                 self._calculate_choice_probabilities(available_alternatives)
             )
-
             # 3: Try alternatives probabilistically until one succeeds or we run out of time
-            attempted_alternatives: set[TransportationAlternative] = set()
-            allocation_succeeded = False
-            viable_alternatives = {
-                alt: prob for alt, prob in choice_probs.items() if prob > 0
-            }
-            viable_alternatives_set = set(viable_alternatives.keys())
-
-            while (
-                len(attempted_alternatives) < len(viable_alternatives)
-                and not allocation_succeeded
-            ):
-                # TODO: we are attempting allocations with old information, what if the vehicle moved in the meantime?
-                # Check timeout before attempting allocation
-                if self._is_search_duration_exceeded():
-                    self._search_end_time = self._env.now
-                    self.logger.debug(
-                        "Max search duration reached during allocation attempts"
-                    )
-                    break
-
-                remaining_alts = viable_alternatives_set - attempted_alternatives
-
-                # Sample and try
-                alternatives_list = list(remaining_alts)
-                probabilities = [viable_alternatives[alt] for alt in alternatives_list]
-                total_prob = sum(probabilities)
-                normalized_probs = [p / total_prob for p in probabilities]
-
-                chosen_idx: int = self._rng.choice(
-                    len(alternatives_list), p=normalized_probs
-                )
-                chosen_alternative = alternatives_list[chosen_idx]
-
-                attempted_alternatives.add(chosen_alternative)
-
-                # Track that we attempted this operator
-                self._attempted_operators.add(chosen_alternative.operator)
-
-                # TODO: check if this solves multiple allocations in ride hailing case, need to establish real reservation system
-                # this will probably be superseded by the vehicle state refactor @WilliamTYH ?
-                if isinstance(chosen_alternative.vehicle, RideHailingVehicle):
-                    chosen_alternative.vehicle._suggested = True  # noqa: SLF001
-
-                # Attempt allocation
-                vehicle_allocation = yield self._env.process(
-                    self._allocate_vehicle(chosen_alternative)
-                )
-
-                if vehicle_allocation:
-                    # We found a viable alternative, execute the trip
-                    self._search_end_time = self._env.now
-                    yield self._env.process(
-                        self._execute_chosen_alternative(vehicle_allocation)
-                    )
-                    allocation_succeeded = True
-
+            vehicle_allocation = yield self._env.process(
+                self._try_alternatives(choice_probs)
+            )
             # 4: Allocation failed for all alternatives, restart search from scratch
-            if not allocation_succeeded:
+            if vehicle_allocation is None:
                 self.logger.debug(
                     "Allocation failed for all alternatives, restarting search."
                 )
                 self._reset_user()
                 yield self._env.timeout(1)
-                continue
 
-        # Log final outcome
         self._log_trip_outcome(vehicle_allocation)
-
-        # Ensure process is always marked as finished
         if not self.process_finished.triggered:
             self.process_finished.succeed()
+
+    def _try_alternatives(
+        self, choice_probs: dict[TransportationAlternative, float]
+    ) -> Generator[Process | Event, Any, VehicleAllocation | None]:
+        """
+        Try transportation alternatives probabilistically until one succeeds.
+
+        Samples from viable alternatives (prob > 0) without replacement, attempting
+        vehicle allocation for each. Returns on first success or when all alternatives
+        are exhausted or the search timeout is hit.
+
+        Parameters
+        ----------
+        choice_probs : dict of TransportationAlternative to float
+            Mapping of alternatives to their choice probabilities.
+
+        Yields
+        ------
+        Process or Event
+            Allocation and trip execution processes.
+
+        Returns
+        -------
+        VehicleAllocation or None
+            Successful allocation, or None if all alternatives failed.
+        """
+        # TODO: we are attempting allocations with old information, what if the vehicle moved in the meantime?
+        viable = {alt: prob for alt, prob in choice_probs.items() if prob > 0}
+        attempted: set[TransportationAlternative] = set()
+
+        while len(attempted) < len(viable):
+            if self._is_search_duration_exceeded():
+                self._search_end_time = self._env.now
+                self.logger.debug(
+                    "Max search duration reached during allocation attempts"
+                )
+                return None
+
+            chosen = self._sample_alternative(viable.keys() - attempted, viable)
+            attempted.add(chosen)
+            self._attempted_operators.add(chosen.operator)
+
+            vehicle_allocation: VehicleAllocation | None = yield self._env.process(
+                self._allocate_vehicle(chosen)
+            )
+
+            if vehicle_allocation is None:
+                continue
+
+            self._search_end_time = self._env.now
+            self._validate_allocation(vehicle_allocation, chosen)
+
+            try:
+                yield self._env.process(
+                    self._execute_chosen_alternative(vehicle_allocation)
+                )
+            except ReservationCanceledError as err:
+                self.logger.debug(
+                    "Allocation canceled before trip execution for user %s on vehicle %s: %s",
+                    self.uid,
+                    vehicle_allocation.vehicle.uid,
+                    err,
+                )
+                continue
+
+            return vehicle_allocation
+
+        return None
+
+    def _sample_alternative(
+        self,
+        remaining: set[TransportationAlternative],
+        viable: dict[TransportationAlternative, float],
+    ) -> TransportationAlternative:
+        """
+        Sample one alternative from the remaining set, weighted by probability.
+
+        Parameters
+        ----------
+        remaining : set of TransportationAlternative
+            Alternatives not yet attempted.
+        viable : dict of TransportationAlternative to float
+            Full probability mapping (superset of remaining).
+
+        Returns
+        -------
+        TransportationAlternative
+            The sampled alternative.
+        """
+        alternatives_list = list(remaining)
+        probs = [viable[alt] for alt in alternatives_list]
+        total = sum(probs)
+        normalized = [p / total for p in probs]
+        idx: int = self._rng.choice(len(alternatives_list), p=normalized)
+        return alternatives_list[idx]
+
+    def _validate_allocation(
+        self,
+        vehicle_allocation: VehicleAllocation,
+        chosen_alternative: TransportationAlternative,
+    ) -> None:
+        """
+        Sanity-check an allocation before executing the trip.
+
+        Parameters
+        ----------
+        vehicle_allocation : VehicleAllocation
+            The allocation to validate.
+        chosen_alternative : TransportationAlternative
+            The alternative that was allocated.
+
+        Raises
+        ------
+        RuntimeError
+            If any sanity check fails.
+        """
+        reservation = vehicle_allocation.reservation
+        if reservation is None:
+            raise RuntimeError("Sanity check failed: allocation has no reservation")
+        if reservation.requester is not self:
+            raise RuntimeError(
+                "Sanity check failed: allocation reservation requester mismatch"
+            )
+
+        required_distance = chosen_alternative.distance + (
+            chosen_alternative.route_to_pickup.distance
+            if chosen_alternative.route_to_pickup
+            else 0.0
+        )
+        if not vehicle_allocation.vehicle.energy_system.has_enough_energy(
+            required_distance
+        ):
+            raise RuntimeError(
+                "Sanity check failed: allocation granted despite insufficient energy "
+                f"for required_distance={required_distance:.2f}m"
+            )
 
     def _log_trip_outcome(self, vehicle_allocation: VehicleAllocation | None) -> None:
         """
@@ -350,8 +431,8 @@ class User(Agent, DriverInterface, PassengerInterface):
 
             outcome = FulfilledUserLogEntry(
                 user_uid=self.uid,
-                origin=self._transport_task.origin.get_region_id(),
-                destination=self._transport_task.destination.get_region_id(),
+                origin=self._transport_request.origin.get_region_id(),
+                destination=self._transport_request.destination.get_region_id(),
                 search_start_time=self._search_start_time,
                 search_end_time=self._search_end_time,
                 outcome_time=self._env.now,
@@ -369,8 +450,8 @@ class User(Agent, DriverInterface, PassengerInterface):
         else:
             outcome = MissedUserLogEntry(
                 user_uid=self.uid,
-                origin=self._transport_task.origin.get_region_id(),
-                destination=self._transport_task.destination.get_region_id(),
+                origin=self._transport_request.origin.get_region_id(),
+                destination=self._transport_request.destination.get_region_id(),
                 search_start_time=self._search_start_time,
                 search_end_time=self._search_end_time,
                 outcome_time=self._env.now,
@@ -455,7 +536,7 @@ class User(Agent, DriverInterface, PassengerInterface):
 
             available_transportation_alternatives = (
                 self._mobility_search_engine.search_for_transportation_alternatives(
-                    self._transport_task
+                    self._transport_request
                 )
             )
 
@@ -479,16 +560,17 @@ class User(Agent, DriverInterface, PassengerInterface):
 
             # Wait before searching again
             yield self._env.timeout(1)
-
         # We did not receive any transportation alternatives, return empty list
         self._transportation_alternatives_not_found.succeed()
         return available_transportation_alternatives
 
     def _execute_chosen_alternative(
         self, vehicle_allocation: VehicleAllocation
-    ) -> Generator[Process, Any, None]:
-        """
-        User executes the selected transportation alternative.
+    ) -> Generator[Event | Process, Any, None]:
+        """Execute the selected transportation alternative via VehicleSession.
+
+        Creates the appropriate trip task, wraps it in a VehicleSession,
+        and executes. The session manages the reservation lifecycle.
 
         Parameters
         ----------
@@ -497,8 +579,8 @@ class User(Agent, DriverInterface, PassengerInterface):
 
         Yields
         ------
-        Process
-            Simulation processes for trip execution.
+        Event or Process
+            Simulation events and processes for trip execution.
 
         Raises
         ------
@@ -509,105 +591,79 @@ class User(Agent, DriverInterface, PassengerInterface):
 
         self._trip_start_time = self._env.now
 
-        # 1: Move to vehicle / wait for vehicle arrival
+        trip_task: RideHailingTripTask | SharedTripTask
+
         if operator_mode == OperatorMode.RIDE_HAILING:
-            yield self._env.process(self._wait_for_vehicle_arrival(vehicle_allocation))
+            vehicle = vehicle_allocation.vehicle
+            assert isinstance(vehicle, RideHailingVehicle)
+            trip_task = RideHailingTripTask(
+                sim=self._sim, vehicle=vehicle, user=self, allocation=vehicle_allocation
+            )
         elif operator_mode == OperatorMode.SHARED_MOBILITY:
-            yield self._env.process(self._walk_to_vehicle(vehicle_allocation))
+            vehicle = vehicle_allocation.vehicle
+            assert isinstance(vehicle, SharedVehicle)
+            trip_task = SharedTripTask(
+                sim=self._sim, vehicle=vehicle, user=self, allocation=vehicle_allocation
+            )
         elif operator_mode == OperatorMode.PUBLIC_TRANSPORT:
+            # Public transport not yet migrated to VehicleSession
             yield self._env.process(self._walk_to_transit_stop(vehicle_allocation))
             yield self._env.process(self._wait_for_transport(vehicle_allocation))
+            return
         else:
             raise NotImplementedError(f"Operator mode {operator_mode} not supported")
 
-        # 2: Execute trip
-        trip_energy = yield self._env.process(
-            self._start_trip(vehicle_allocation=vehicle_allocation)
+        # Execute trip via VehicleSession
+        reservation = vehicle_allocation.reservation
+        assert reservation is not None
+        session = VehicleSession(
+            sim=self._sim,
+            vehicle=vehicle_allocation.vehicle,
+            reservation=reservation,
+            tasks=[trip_task],
+            holder=self,
         )
+        yield from session.execute()
+
+        # Retrieve results from trip task
+        trip_energy = trip_task.energy_consumed
         vehicle_allocation.increase_energy_consumed(trip_energy)
         self._energy_consumed += trip_energy
 
-        # 3: Store trip execution details for global logging
+        # Record timing
+        if isinstance(trip_task, RideHailingTripTask):
+            arrival_time = trip_task.vehicle_arrival_time
+            if arrival_time is not None:
+                self._vehicle_arrival_time = arrival_time
+        self._assigned_vehicle_arrived.succeed()
+        self._arrived_at_destination.succeed()
+
+        self.state = UserState.FULFILLED
+        self.logger.debug("Trip completed.")
+
+        # Store trip end time and handle payment
         self._trip_end_time = self._env.now
-        # 4: Handle payment
         operator = vehicle_allocation.transportation_alternative.operator
         operator.pay_for_fulfilled_transportation_task(
             user=self,
-            transportation_task=self._transport_task,
+            transportation_task=self._transport_request,
             vehicle_allocation=vehicle_allocation,
         )
 
-    def _wait_for_vehicle_arrival(
-        self, vehicle_allocation: VehicleAllocation
-    ) -> Generator[Any, Any, None]:
-        """
-        Wait for a ride-hailing vehicle to arrive at user's location.
+    def walk_to(self, destination: GeodesicPosition) -> Generator[Timeout, Any, None]:
+        """Walk from current position to a destination.
 
         Parameters
         ----------
-        vehicle_allocation : VehicleAllocation
-            The vehicle allocation.
+        destination : GeodesicPosition
+            Target position to walk to.
 
         Yields
         ------
-        Any
-            Event indicating vehicle arrival.
-
-        Raises
-        ------
-        ValueError
-            If the vehicle is not a ride-hailing vehicle.
+        Timeout
+            Timeout event corresponding to walking duration.
         """
-        self._state = UserState.WAITING_FOR_VEHICLE
-
-        # TODO: Make this cleaner
-        # check if vehicle is a ride hailing vehicle
-        if not isinstance(vehicle_allocation.vehicle, RideHailingVehicle):
-            raise ValueError("Vehicle is not a ride-hailing vehicle")
-
-        # Wait for vehicle to arrive at pickup position
-        yield vehicle_allocation.vehicle._arrived_at_pick_up_position  # noqa: SLF001
-
-        self._vehicle_arrival_time = self._env.now
-        self._assigned_vehicle_arrived.succeed()
-        self.logger.debug(
-            "Vehicle %s arrived at user location at time %s.",
-            vehicle_allocation.vehicle.uid,
-            self._env.now,
-        )
-
-    def _walk_to_vehicle(
-        self, vehicle_allocation: VehicleAllocation
-    ) -> Generator[Process, Any, None]:
-        """
-        Walk to a shared vehicle's parking location.
-
-        Parameters
-        ----------
-        vehicle_allocation : VehicleAllocation
-            The vehicle allocation.
-
-        Yields
-        ------
-        Process
-            Walking process.
-        """
-        self._state = UserState.MOVING_TO_VEHICLE
-
-        # Walk to where the vehicle is parked
-        yield self._env.process(
-            self._walk(self._position, vehicle_allocation.pick_up_position)
-        )
-
-        self.logger.debug(
-            "Arrived at vehicle %s at position %s at time %s.",
-            vehicle_allocation.vehicle.uid,
-            vehicle_allocation.pick_up_position,
-            self._env.now,
-        )
-
-        # Vehicle is immediately available (no waiting)
-        self._assigned_vehicle_arrived.succeed()
+        yield from self._walk(self._position, destination)
 
     def _walk_to_transit_stop(
         self, vehicle_allocation: VehicleAllocation
@@ -668,70 +724,6 @@ class User(Agent, DriverInterface, PassengerInterface):
 
         # self._assigned_vehicle_arrived.succeed()
 
-    def _start_trip(
-        self, vehicle_allocation: VehicleAllocation
-    ) -> Generator[Process | Timeout, Any, float]:
-        """
-        Start the trip with the allocated vehicle.
-
-        Parameters
-        ----------
-        vehicle_allocation : VehicleAllocation
-            The vehicle allocation.
-
-        Yields
-        ------
-        Process or Timeout
-            Driving or riding process.
-
-        Returns
-        -------
-        float
-            Energy consumed during the trip.
-
-        Raises
-        ------
-        NotImplementedError
-            If the vehicle type is not supported.
-        """
-        vehicle = vehicle_allocation.vehicle
-        route = vehicle_allocation.transportation_alternative.route
-        energy_consumed: float = 0.0
-
-        if isinstance(vehicle, RideHailingVehicle):
-            # Mount vehicle as passenger
-            self.state = UserState.IN_TRANSPORT
-            self.mount_vehicle(vehicle)
-
-            # Vehicle drives to destination
-            energy_consumed = yield self._env.process(
-                generator=self.ride_in_vehicle(vehicle, route)
-            )
-
-            self.park_vehicle(vehicle)  # type: ignore #TODO: This should not be done by the user
-            self.unmount_vehicle(vehicle)
-
-        elif isinstance(vehicle, SharedVehicle):
-            # For shared vehicles, user acts as driver
-            self.state = UserState.IN_TRANSPORT
-            self.mount_vehicle_as_driver(vehicle)
-
-            # User drives vehicle to destination
-            energy_consumed = yield self._env.process(
-                self.drive_vehicle(vehicle, route)
-            )
-
-            self.park_vehicle(vehicle)
-            self.unmount_vehicle_as_driver(vehicle)
-
-        else:
-            raise NotImplementedError(f"Vehicle type {type(vehicle)} not supported")
-
-        self._arrived_at_destination.succeed()
-        self.state = UserState.FULFILLED
-        self.logger.debug("Trip completed.")
-        return energy_consumed
-
     def _walk(
         self, origin: GeodesicPosition, destination: GeodesicPosition
     ) -> Generator[Timeout, Any, None]:
@@ -750,7 +742,7 @@ class User(Agent, DriverInterface, PassengerInterface):
         Timeout
             Timeout event corresponding to walking duration.
         """
-        distance = origin >> destination
+        distance = origin << destination
         duration = distance / self._walking_speed_mm
 
         self.logger.debug(
@@ -818,7 +810,6 @@ class User(Agent, DriverInterface, PassengerInterface):
         available_alternatives : TransportationAlternativeBrowser
             Available transportation alternatives.
 
-
         Returns
         -------
         dict of TransportationAlternative to float
@@ -836,151 +827,12 @@ class User(Agent, DriverInterface, PassengerInterface):
         return choice_probs
 
     # --------------------------
-    # DriverInterface
-    # --------------------------
-    def mount_vehicle_as_driver(self, vehicle: SharedVehicle) -> None:
-        """
-        Mount vehicle as driver.
-
-        TODO: Create DrivableVehicleInterface to generalize this
+    def on_vehicle_moved(self, position: GeodesicPosition) -> None:
+        """Update position when the vehicle carrying this user moves.
 
         Parameters
         ----------
-        vehicle : SharedVehicle
-            The vehicle to mount.
+        position : GeodesicPosition
+            The new position of the vehicle.
         """
-        vehicle.mount_driver(self)
-
-    def drive_vehicle(
-        self, vehicle: SharedVehicle, route: Route
-    ) -> Generator[Event, Any, float]:
-        """
-        Drive vehicle along route.
-
-        TODO: Create DrivableVehicleInterface to generalize this
-
-        Parameters
-        ----------
-        vehicle : SharedVehicle
-            The vehicle to drive.
-        route : Route
-            The route to follow.
-
-        Yields
-        ------
-        Event
-            Driving process events.
-
-        Returns
-        -------
-        float
-            Energy consumed.
-        """
-        vehicle.start_driving()
-        energy_consumed = yield from vehicle.traverse_route(route)
-
-        vehicle.stop_driving()
-        return energy_consumed
-
-    def park_vehicle(self, vehicle: SharedVehicle) -> None:
-        """
-        Park vehicle.
-
-        Parameters
-        ----------
-        vehicle : SharedVehicle
-            The vehicle to park.
-        """
-        vehicle.park()
-
-    def unmount_vehicle_as_driver(self, vehicle: SharedVehicle) -> None:
-        """
-        Unmount vehicle as driver.
-
-        Parameters
-        ----------
-        vehicle : SharedVehicle
-            The vehicle to unmount.
-        """
-        vehicle.unmount_driver()
-
-    # TODO : Probably can get rid of this
-    def identify_driver(self) -> str:
-        """
-        Identify driver.
-
-        Returns
-        -------
-        str
-            Driver identifier.
-        """
-        return f"User {self.uid}"
-
-    # --------------------------
-    # PassengerInterface
-    # --------------------------
-    def mount_vehicle(self, vehicle: RideHailingVehicle) -> None:
-        """
-        Mount vehicle as a passenger.
-
-        Parameters
-        ----------
-        vehicle : RideHailingVehicle
-            The vehicle to mount.
-        """
-        vehicle.mount_passenger(self)
-
-    def unmount_vehicle(self, vehicle: RideHailingVehicle) -> None:
-        """
-        Unmount vehicle as a passenger.
-
-        Parameters
-        ----------
-        vehicle : RideHailingVehicle
-            The vehicle to unmount.
-        """
-        vehicle.unmount_passenger(self)
-
-    def ride_in_vehicle(
-        self, vehicle: RideHailingVehicle, route: Route
-    ) -> Generator[Event, Any, float]:
-        """
-        Ride in vehicle as a passenger.
-
-        TODO: user currently acts as driver, need to change that
-
-        Parameters
-        ----------
-        vehicle : RideHailingVehicle
-            The vehicle to ride in.
-        route : Route
-            The route to follow.
-
-        Yields
-        ------
-        Event
-            Riding process events.
-
-        Returns
-        -------
-        float
-            Energy consumed.
-        """
-        vehicle.start_driving()
-        energy_consumed = yield from vehicle.traverse_route(route)
-
-        vehicle.stop_driving()
-
-        return energy_consumed
-
-    # TODO : Probably can get rid of this
-    def identify_passenger(self) -> str:
-        """
-        Identify passenger.
-
-        Returns
-        -------
-        str
-            Passenger identifier.
-        """
-        return f"User {self.uid}"
+        self._position = position

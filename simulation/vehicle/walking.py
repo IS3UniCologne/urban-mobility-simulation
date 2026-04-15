@@ -1,7 +1,10 @@
-from simpy import Environment  # noqa: D100
+from collections.abc import Generator  # noqa: D100
+
+from simpy import Environment, Event
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.infrastructure.network.edge import Edge
+from simulation.vehicle.movement_stats import MovementStats
 from simulation.vehicle.vehicle import Vehicle
 
 
@@ -20,10 +23,14 @@ class Walking(Vehicle):  # noqa: D101
     def velocity(self) -> float:  # noqa: D102
         return self._velocity_mm
 
-    def move(self, route_segment: Edge):  # noqa: ANN201, D102
+    def _move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
         self.logger.warning(
             "Warning: Method 'move' for walking called, even though it is not implemented!"
         )
+
+        if False:
+            yield self._env.timeout(0)
+        return MovementStats(0, 0, 0)
 
     def __str__(self) -> str:  # noqa: D105
         return "I am walking!"

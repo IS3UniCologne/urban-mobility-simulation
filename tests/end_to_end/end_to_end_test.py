@@ -66,11 +66,35 @@ def _validate_metrics(actual_metrics: dict, config_path: str) -> None:
     expected = expectations[config_name]
 
     # Validate that actual metrics match expected metrics approximately
-    assert actual_metrics["operator_metrics"] == pytest.approx(
-        expected["operator_metrics"]
-    )
-    assert actual_metrics["user_metrics"] == pytest.approx(expected["user_metrics"])
+    try:
+        assert actual_metrics["operator_metrics"] == pytest.approx(
+            expected["operator_metrics"]
+        )
+    except AssertionError as e:
+        raise AssertionError(
+            f"operator_metrics mismatch for config {config_path}: {e}\nActual: {actual_metrics['operator_metrics']}\nExpected: {expected['operator_metrics']}"
+        )
 
-    assert actual_metrics["fleet_metrics"].keys() == expected["fleet_metrics"].keys()
+    try:
+        assert actual_metrics["user_metrics"] == pytest.approx(expected["user_metrics"])
+    except AssertionError as e:
+        raise AssertionError(
+            f"user_metrics mismatch for config {config_path}: {e}\nActual: {actual_metrics['user_metrics']}\nExpected: {expected['user_metrics']}"
+        )
+
+    try:
+        assert (
+            actual_metrics["fleet_metrics"].keys() == expected["fleet_metrics"].keys()
+        )
+    except AssertionError as e:
+        raise AssertionError(
+            f"fleet_metrics keys mismatch for config {config_path}: {e}\nActual: {list(actual_metrics['fleet_metrics'].keys())}\nExpected: {list(expected['fleet_metrics'].keys())}"
+        )
+
     for fleet_id, metrics in actual_metrics["fleet_metrics"].items():
-        assert metrics == pytest.approx(expected["fleet_metrics"][fleet_id])
+        try:
+            assert metrics == pytest.approx(expected["fleet_metrics"][fleet_id])
+        except AssertionError as e:
+            raise AssertionError(
+                f"fleet_metrics mismatch for fleet_id {fleet_id} in config {config_path}: {e}\nActual: {metrics}\nExpected: {expected['fleet_metrics'][fleet_id]}"
+            )

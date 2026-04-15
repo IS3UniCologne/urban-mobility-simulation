@@ -8,7 +8,7 @@ from collections import defaultdict
 from typing import TypedDict
 
 from simulation.context.simulation_context import SimulationContext
-from simulation.helper.configuration.enums import VehicleType
+from simulation.helper.enums import VehicleType
 from simulation.helper.types import RegionId
 
 from .operator_log_entry import (
@@ -76,7 +76,7 @@ class DemandMonitor(OperatorLogEntryListener):
         elif isinstance(transaction, MissedOperatorLogEntry):
             # TODO: Find a better way to do this, for now this should be approximately correct over time :)
             vehicle_type = self._rng.choice(
-                sorted(list(transaction.accepted_vehicle_types))
+                sorted(transaction.accepted_vehicle_types, key=str)
             )
             self.vehicle_data[origin][vehicle_type]["outflow_missed"] += 1
 

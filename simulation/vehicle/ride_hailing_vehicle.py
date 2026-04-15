@@ -2,13 +2,9 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING, Any
 
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    PropulsionType,
-    VehicleState,
-)
+from simulation.helper.enums import AutonomyType, PropulsionType
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
-from simulation.vehicle.movement_stats import MovementStats
 
 from .vehicle import Vehicle
 
@@ -17,18 +13,14 @@ if TYPE_CHECKING:
 
     from simpy import Event
 
-    from simulation.agent.user import User
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
-    from simulation.environment.position import Position
     from simulation.helper.configuration.configuration import VehicleConfig
     from simulation.infrastructure.network.edge import Edge
     from simulation.infrastructure.route import Route
-    from simulation.operator.operations_management.service_tasks.service_task import (
-        ServiceTask,
-    )
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.vehicle.interfaces.driver_interface import DriverInterface
+    from simulation.vehicle.movement_stats import MovementStats
+    from simulation.vehicle.reservation import Reservation
 
     from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
 
@@ -36,44 +28,14 @@ if TYPE_CHECKING:
 class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
     __slots__ = (
         "_arrived_at_pick_up_position",
-        "_available_seats",
         "_charging_cost_per_kWh",
-        "_charging_station_charging_finished",
-        "_charging_station_charging_started",
-        "_charging_station_plugged_in",
         "_charging_station_plugged_out",
         "_cost_km",
-        "_cost_km_seats",
-        "_destination",
-        "_driver",
         "_driver_availability_vector",
-        "_driver_mounted",
-        "_driver_unmounted",
-        "_driving_finished",
-        "_driving_started",
-        "_energy_buffer_relative",
-        "_env",
-        "_estimated_completion_time",
         "_is_electric",
-        "_max_available_seats",
-        "_offline_duration",
-        "_offline_event",
-        "_online_event",
         "_price_per_minute",
-        "_reserved_for_user",
-        "_shift_duration",
-        "_shift_earn",
-        "_shift_end_time",
-        "_shift_start_time",
-        "_suggested",
-        "_total_earn",
-        "_user_mounted",
-        "_user_unmounted",
+        "_reservation",
         "_vehicle_assignment",
-        "_vehicle_parked",
-        "_vehicle_relocation_finished",
-        "_vehicle_relocation_started",
-        "_velocity",
         "charging_costs",
         "travel_costs",
     )
@@ -82,17 +44,15 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self,
         sim: SimulationContext,
         fleet: VehicleFleet,
-        position: Position,
+        position: GeodesicPosition,
         vehicle_config: VehicleConfig,
-        driver_availability_vector: list[int] | None,
+        driver_availability_vector: list[int],
     ) -> None:
         super().__init__(
             sim=sim, fleet=fleet, position=position, vehicle_config=vehicle_config
         )
 
-        self._env = sim.env
         self._price_per_minute = vehicle_config.PRICE_PER_MIN
-        self._driver: DriverInterface | None = None
         # TODO Change this to use type directly
         self._is_electric = (
             vehicle_config.PROPULSION_TYPE == PropulsionType.BATTERY_ELECTRIC
@@ -102,124 +62,63 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self.travel_costs = 0
         self.charging_costs = 0
 
-        #### Vehicle Events
-        # Driving Events
-        self._vehicle_parked: Event = self._env.event()
-        self._user_mounted: Event = self._env.event()
-        self._driving_started: Event = self._env.event()
-        self._driving_finished: Event = self._env.event()
-        self._user_unmounted: Event = self._env.event()
+        # Vehicle Events
         self._arrived_at_pick_up_position: Event = self._env.event()
-
-        self._driver_mounted: Event = self._env.event()
-        self._driver_unmounted: Event = self._env.event()
-
-        # Relocation Events
-        self._vehicle_relocation_started: Event = self._env.event()
-        self._vehicle_relocation_finished: Event = self._env.event()
-
-        # Charging Events
-        self._charging_station_plugged_in: Event = self._env.event()
-        self._charging_station_charging_started: Event = self._env.event()
-        self._charging_station_charging_finished: Event = self._env.event()
         self._charging_station_plugged_out: Event = self._env.event()
 
-        # Initial State
-        self.state: VehicleState = VehicleState.PARKING
+        self._reservation: Reservation | None = None
+        self._is_in_use: bool = False
 
-        # Vehicle Reservation
-        self._reserved_for_user = None
-        self._suggested = False
-
-        # Estimation information for finishing the current task
-        self._estimated_completion_time: int = 0
-        self._destination: Position = None
-
+        # TODO: Update config types/refactor config
         # costs
         self._cost_km: float = vehicle_config.COST_PER_KM
         self._charging_cost_per_kWh: float = vehicle_config.CHARGING_COST_PER_KWH
 
-        self._energy_buffer_relative: float = vehicle_config.ENERGY_RESERVE_RATIO
-
         if vehicle_config.AUTONOMY_TYPE == AutonomyType.HUMAN_DRIVEN:
             self._price_per_minute = vehicle_config.PRICE_PER_MIN
-            self._total_earn = 0
-            self._shift_earn = 0
-            self._shift_duration = 0
-            self._offline_duration = 0
-            self._shift_start_time = None
-            self._shift_end_time = 0
-            self.state = VehicleState.OFFLINE
-            self._online_event = self._env.event()
-            self._offline_event = self._env.event()
-
-            self._energy_buffer_relative = vehicle_config.ENERGY_RESERVE_RATIO
-
+            self._set_state(VehicleStates.OFFLINE)
             self._env.process(self.run_shift_check_process())
 
     @property
     def price_per_minute(self) -> float:  # noqa: D102
         return self._price_per_minute
 
-    @price_per_minute.setter
-    def price_per_minute(self, price_per_minute: float) -> None:
-        self._price_per_minute = price_per_minute
-
-    @property
-    def estimated_completion_time(self) -> float:  # noqa: D102
-        return self._estimated_completion_time
-
-    @estimated_completion_time.setter
-    def estimated_completion_time(self, estimated_completion_time: float) -> None:
-        self._estimated_completion_time = estimated_completion_time
-
-    @property
-    def destination(self) -> Position:  # noqa: D102
-        return self._destination
-
     @property
     def is_electric(self) -> bool:  # noqa: D102
         return self._is_electric
 
-    @destination.setter
-    def destination(self, destination: Position) -> None:
-        self._destination = destination
+    def _move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
+        """
+        Move vehicle along a route segment.
 
-    def move(  # noqa: D102
-        self, route_segment: Edge, relocating: bool = False
-    ) -> Generator[Event, None, MovementStats]:
-        distance = route_segment.distance
-        velocity = self._velocity_mm
-        time = distance / velocity
+            Attention: Low-level function that does not update states! This should not directly be invoked.
 
-        if not self.energy_system.has_enough_energy(
-            distance=distance,
-            energy_reserve_ratio=(
-                0.0 if relocating else None
-            ),  # TODO: Why don't we use a buffer when relocating?
-        ):
-            raise RuntimeError(
-                f"{self.__class__.__name__!s} {self.uid} has been tried to move but has not enough energy."
-            )
+        Parameters
+        ----------
+        route_segment : Edge
+            The route segment to move along.
 
-        yield self._env.timeout(time)
+        Returns
+        -------
+        MovementStats
+            The movement stats.
 
-        try:
-            self._update_positions(route_segment.destination)
-        except Exception:
-            self._update_positions(route_segment.destination.position)
-        energy_consumed = self.energy_system.consume_for_distance(distance)
-        self.travel_costs += distance / 1000 * self._cost_km
-        self.estimated_completion_time = 0
-        return MovementStats(
-            energy_consumed=energy_consumed,
-            distance_travelled=distance,
-            time_taken=time,
-        )
+        Yields
+        ------
+        Event
+            simpy Timeout event for the duration of the movement.
+        """
+        stats = yield from super()._move(route_segment)
+
+        self.travel_costs += stats.distance_travelled / 1000 * self._cost_km
+
+        return stats
 
     def traverse_route(self, route: Route) -> Generator[Event, None, float]:
         """
-        Traverse a route and update the en-route spatial index with the final destination.
+        Traverse a route and update the expectations.
+
+            This high-level function keeps track of the vehicle's estimated completion time and expected destination.
 
         Parameters
         ----------
@@ -231,17 +130,12 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         float
             Total energy consumed during traversal.
         """
-        self.destination = route.destination
-        total_time = route.distance / self._velocity_mm
-        self.estimated_completion_time = self._env.now + total_time
-
         self.fleet.insert_into_en_route_spatial_index(self)
 
+        # delegate to low level traversal of route segments
         total_energy = yield from super().traverse_route(route)
 
         self.fleet.delete_from_en_route_spatial_index(self)
-        self.destination = None
-        self.estimated_completion_time = 0
 
         return total_energy
 
@@ -249,157 +143,94 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self, vehicle_assignment: VehicleAllocation
     ) -> Generator[Event, None, None]:
         self._vehicle_assignment = vehicle_assignment
-        # Set current state
-        self.state = VehicleState.MOVING_TO_PICK_UP_POS
 
-        route_segment = vehicle_assignment.transportation_alternative.route_to_pickup
+        if vehicle_assignment.transportation_alternative.route_to_pickup is None:
+            self.logger.error(
+                "Vehicle assignment %s has no route to pickup. Unable to move to pickup position.",
+                vehicle_assignment,
+            )
+            raise Exception(
+                f"Vehicle assignment {vehicle_assignment} has no route to pickup. Unable to move to pickup position."
+            )
+        route = vehicle_assignment.transportation_alternative.route_to_pickup
 
-        # Calculate route to pick up position, and update user's position
-        movement_stats = yield self._env.process(self.move(route_segment))
+        self._set_state(VehicleStates.PICK_UP)
 
-        vehicle_assignment.increase_energy_consumed(movement_stats.energy_consumed)
+        energy_consumed = yield from self.traverse_route(route)
+
+        vehicle_assignment.increase_energy_consumed(energy_consumed)
 
         self._arrived_at_pick_up_position.succeed()
 
         self.logger.debug(
             "Arrived at pick up position %s to pick up user %s.",
             self.position,
-            self.reserved_for_user.uid,
+            vehicle_assignment.user.uid,
         )
 
     def start_driving(self) -> None:  # noqa: D102
-        self._suggested = False
-        self.state = VehicleState.DRIVING
+        self._set_state(VehicleStates.DRIVING)
 
         # Reset pickup arrival event for next trip
         self._arrived_at_pick_up_position = self._env.event()
 
         self.logger.debug("Driving started.")
 
-    def stop_driving(self) -> None:  # noqa: D102
-        self.state = VehicleState.PARKING
-        self.set_current_task(None)
+    def relocate(self, route: Route) -> Generator[Any, Any, Any]:
+        """Relocate vehicle.
 
-        self.logger.debug("Driving stopped.")
-
-    def park(self) -> None:  # noqa: D102
-        # Lift reservation
-        self.release_reservation()
-        self._driving_finished.succeed()
-        self._driving_finished = self._env.event()
-        # self._suggested = False
-        # Make vehicle available for others again
-        self.state = VehicleState.PARKING
-
-        self.logger.debug("Parked.")
-
-    def _update_positions(self, new_position: GeodesicPosition) -> None:
-        # Update Vehicle Position
-        self.position = new_position
-
-        # Update Position of Driver
-        if self._driver:
-            self._driver.position = new_position
-
-        # Update Position of Passengers
-        for passenger in self._passengers:
-            passenger.position = new_position
-
-    def mount_driver(self, driver: DriverInterface) -> None:  # noqa: D102
-        if self._driver is not None:
-            raise Exception(
-                f"Vehicle {self.uid} has already a driver {self._driver.identify_driver()}. Unable to mount driver."
-            )
-
-        self._driver = driver
-        self._driver_mounted.succeed()
-        self._driver_mounted = self._env.event()
-
-        self.state = VehicleState.DRIVING
-
-        self.logger.debug("Driver: %s mounted vehicle.", driver.identify_driver())
-
-    def unmount_driver(self) -> None:  # noqa: D102
-        if self._driver is None:
-            raise Exception("Vehicle has no driver to unmount.")
-
-        tmp_driver_id = self._driver.identify_driver()
-        self._driver = None
-        self._driver_unmounted.succeed()
-        self._driver_unmounted = self._env.event()
-
-        self.state = VehicleState.PARKING
-
-        self.logger.debug("Driver: %s unmounted vehicle.", tmp_driver_id)
-
-    def prepare_for_service_task(self, caller: User, task: ServiceTask) -> None:  # noqa: D102
-        self.state = VehicleState.PRE_SERVICE
-        self.logger.debug("Marked for Service Task [%s] by %s.", task, caller)
-
-    def relocate(self, route_segment: Edge) -> Generator[Any, Any, Any]:
+        Parameters
+        ----------
+        route : Route
+            The route to relocate the vehicle along.
         """
-        Relocate vehicle independent of state of charge and availability of driver
-        :param route_segment:
-        :param time:
-        :param relocator: The exact entity (e.g., Service Worker ID) that relocated the vehicle
-        :return:
-        """  # noqa: D205, D400
         if self._driver is not None or len(self._passengers) > 0:
             self.logger.debug(
                 "Vehicle %s has a driver %s. Revoke relocation task.",
                 self.uid,
-                self._driver.identify_driver(),
+                self._driver,
             )
-
-            yield self._env.timeout(1)
-
-            return
 
             raise Exception(
-                f"Vehicle {self.uid} has a driver {self._driver.identify_driver()}. Unable to relocate vehicle."
+                f"Vehicle {self.uid} has a driver {self._driver}. Unable to relocate vehicle."
             )
 
-        # Invoke event to notify listeners that relocation started
-        self._vehicle_relocation_started.succeed()
-        self._vehicle_relocation_started = self._env.event()
-        self.state = VehicleState.RELOCATING
+        self._set_state(VehicleStates.RELOCATING)
 
-        yield self._env.process(self.move(route_segment=route_segment, relocating=True))
+        yield from self.traverse_route(route)
 
         # Invoke event to notify listeners that relocation ended
         self._vehicle_relocation_finished.succeed()
         self._vehicle_relocation_finished = self._env.event()
 
-        self.park()
+        self._set_state(VehicleStates.STANDBY)
 
-    def waiting_for_charging(self) -> None:  # noqa: D102
-        self.state = VehicleState.PRE_SERVICE
+    def wait_for_charging(self) -> None:  # noqa: D102
+        self._set_state(VehicleStates.WAITING_FOR_CHARGING)
 
         self.logger.debug("Vehicle started waiting in the queue.")
 
     def plug_to_charging_station(self) -> None:  # noqa: D102
-        self.state = VehicleState.CHARGING
-
-        self._charging_station_plugged_in.succeed()
-        self._charging_station_plugged_in = self._env.event()
-
+        self._set_state(VehicleStates.CHARGING)
         self.logger.debug("Vehicle plugged in to charging station.")
 
     def unplug_from_charging_station(self) -> None:  # noqa: D102
-        self.state = VehicleState.PARKING
+        self._set_state(VehicleStates.STANDBY)
 
         self._charging_station_plugged_out.succeed()
         self._charging_station_plugged_out = self._env.event()
 
         self.logger.debug("Vehicle plugged out from charging station.")
 
+    def abort_charging_wait(self) -> None:
+        """Cancel waiting for charging and return to standby."""
+        self._set_state(VehicleStates.STANDBY)
+
+    # TODO: Should this be part of the EnergySystem ?
     def charge(  # noqa: D102
         self, charging_time: float, charge_amount: float = 0
     ) -> Generator[Event, None, None]:
-        # Notify charging
-        self.state = VehicleState.CHARGING
-        self._charging_station_charging_started.succeed()
-        self._charging_station_charging_started = self._env.event()
+        self._set_state(VehicleStates.CHARGING)
 
         if charge_amount == 0:
             charge_amount = (
@@ -411,10 +242,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         # Charge
         yield from self.energy_system.refill(charge_amount, charging_time)
 
-        # Notify charging ended
-        self._charging_station_charging_finished.succeed()
-        self._charging_station_charging_finished = self._env.event()
-
         self.logger.debug(
             "Vehicle charged %s kWh and has now %s kWh out of %s.",
             charge_amount,
@@ -422,81 +249,9 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
             self.energy_system.capacity,
         )
 
-    ### stuff from RideHailingCar ###
-
-    @property
-    def total_earn(self) -> float:  # noqa: D102
-        return self._total_earn
-
-    @property
-    def shift_earn(self) -> float:  # noqa: D102
-        return self._shift_earn
-
-    @property
-    def shift_duration(self) -> float:  # noqa: D102
-        return self._shift_duration
-
-    @property
-    def offline_duration(self) -> float:  # noqa: D102
-        return self._offline_duration
-
-    @property
-    def shift_start_time(self) -> float:  # noqa: D102
-        return self._shift_start_time
-
-    @property
-    def shift_end_time(self) -> float:  # noqa: D102
-        return self._shift_end_time
-
-    def update_shift_start_time(self) -> None:  # noqa: D102
-        time = self._env.now
-        self._shift_start_time = time
-
-        self.logger.debug("Shift has started.")
-
-    def update_shift_end_time(self) -> None:  # noqa: D102
-        time = self._env.now
-        self._shift_end_time = time
-
-        self.logger.debug("Shift has ended.")
-
-    def update_shift_duration(self) -> None:  # noqa: D102
-        self._shift_duration = self._env.now - self._shift_start_time
-
-    def update_offline_duration(self) -> None:  # noqa: D102
-        self._offline_duration = self._env.now - self._shift_end_time
-
-    def update_idle_time(self):  # TODO  # noqa: ANN201, D102
-        pass
-
-    def get_online(self) -> None:  # noqa: D102
-        self.state = VehicleState.PARKING
-        self.update_shift_start_time()
-        self._online_event.succeed()
-        self._online_event = self._env.event()
-        self.logger.debug("Driver gets online.")
-
-    def get_offline(self) -> None:  # noqa: D102
-        self.state = VehicleState.OFFLINE
-        self._shift_earn = 0
-        self.update_shift_end_time()
-        self._offline_event.succeed()
-        self._offline_event = self._env.event()
-        self.logger.debug("Driver gets offline.")
-
     # TODO: This whole logic should be decided by the operations, not the vehicle.
     def decide_to_get_online(self) -> bool:  # noqa: D102
         go_online = False
-        ### comment off when we have mode chioce variables
-        # self.update_offline_duration()
-        # time = self._env.now
-        # week_day = int((time % (24 * 60 * 7)) / (24 * 60))
-        # hour = int((time / 60) % 60)
-        # offline_duration = self.offline_duration
-        # shift_earned = self.shift_earn
-        # driver_on_off_model.predict([[0, week_day, hour, offline_duration, shift_earned]])
-        # if driver_on_off_model == 1:  # TODO: calibrate the parameters
-        #     go_online = True
         fleet_size_threshold = self._driver_availability_vector
         time = self._env.now
         hour = int(
@@ -505,7 +260,7 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         number_of_online_vehicles = len(
             self.fleet.vehicles_by_autonomy[AutonomyType.HUMAN_DRIVEN]
         ) - len(
-            self.fleet.vehicles_by_state[VehicleState.OFFLINE].intersection(
+            self.fleet.vehicles_by_state.get(VehicleStates.OFFLINE, set()).intersection(
                 self.fleet.vehicles_by_autonomy[AutonomyType.HUMAN_DRIVEN]
             )
         )
@@ -515,16 +270,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
 
     def decide_to_get_offline(self) -> bool:  # noqa: D102
         go_offline = False
-        ### comment off when we have mode chioce variables
-        # self.update_shift_duration()
-        # time = self._env.now
-        # week_day = int((time % (24 * 60 * 7)) / (24 * 60))
-        # hour = int((time / 60) % 60)
-        # shift_duration = self.shift_duration
-        # shift_earned = self.shift_earn
-        # driver_on_off_model.predict([[0, week_day, hour, shift_duration, shift_earned]])
-        # if driver_on_off_model == 1:  # TODO: calibrate the parameters
-        #     go_offline = True
         fleet_size_threshold = self._driver_availability_vector
         time = self._env.now
         hour = int(
@@ -533,7 +278,7 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         number_of_online_vehicles = len(
             self.fleet.vehicles_by_autonomy[AutonomyType.HUMAN_DRIVEN]
         ) - len(
-            self.fleet.vehicles_by_state[VehicleState.OFFLINE].intersection(
+            self.fleet.vehicles_by_state.get(VehicleStates.OFFLINE, set()).intersection(
                 self.fleet.vehicles_by_autonomy[AutonomyType.HUMAN_DRIVEN]
             )
         )
@@ -555,19 +300,18 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         """  # noqa: D205, D400
         while True:
             # If the driver is offline we check the decision of getting online
-            if self.state == VehicleState.OFFLINE:
+            if self.state is VehicleStates.OFFLINE:
                 go_online = self.decide_to_get_online()
                 if go_online:
-                    self.get_online()
+                    self._go_online()
             # If the driver is online we check the decision of getting offline
-            elif self.state in [VehicleState.PARKING]:
-                self.update_offline_duration()
+            elif self.state is VehicleStates.STANDBY:
                 go_offline = self.decide_to_get_offline()
                 if go_offline:
                     if (
-                        self.state == VehicleState.PARKING
+                        self.state is VehicleStates.STANDBY
                     ):  # TODO: Why are we checking for parking twice in a row?
-                        self.get_offline()
+                        self._go_offline()
                     # if the driver has a task to do we yield until its completion
                     else:
                         self.logger.debug(
@@ -579,6 +323,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
                             | self._vehicle_relocation_finished
                             | self._charging_station_plugged_out
                         )
-                        self.get_offline()
+                        self._go_offline()
             # we check driver decisions every one hour
             yield self._env.timeout(15)

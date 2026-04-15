@@ -5,9 +5,11 @@ from typing import TYPE_CHECKING
 from simulation.operator.search_engine import SearchEngine
 
 if TYPE_CHECKING:
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
     from simulation.operator.search_engine import SearchEngineDependencies
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.tasks.transport_task import TransportTask
 
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative import (
@@ -34,7 +36,7 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         }
 
     def search_for_transportation_alternatives(
-        self, transport_task: TransportTask
+        self, transport_task: TransportRequest
     ) -> TransportationAlternativeBrowser:
         """
         Spot all available vehicles to user
@@ -65,7 +67,7 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         # Add all available cars to alternative browser
         for vehicle in parking_vehicles_sorted:
             # Calc Duration
-            duration = distance / vehicle.velocity
+            duration = vehicle.calculate_travel_time(distance)
 
             # Calc Price
             price = duration * vehicle.price_per_minute + vehicle.price_per_trip
