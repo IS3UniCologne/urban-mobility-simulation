@@ -3,11 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from simulation.helper.configuration.configuration import VehicleConfig
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    PropulsionType,
-    VehicleType,
-)
+from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
 from simulation.vehicle.energy_system.battery_system import BatterySystem
 from simulation.vehicle.energy_system.human_powered_system import HumanPoweredSystem
 from simulation.vehicle.energy_system.internal_combustion_system import (
@@ -190,15 +186,15 @@ class TestEnergySystem:
         # Distance 201km -> 40.2 units. 50 - 10 >= 40.2 -> False
         assert ev.has_enough_energy(201000.0) is False
 
-        # 2. Test has_enough_energy with explicit buffer
-        # Explicit buffer 0.0. 50 >= 40.2 -> True
-        assert ev.has_enough_energy(201000.0, 0.0) is True
+        # 2. Test without reserve buffer
+        # No buffer: 50 >= 40.2 -> True
+        assert ev.has_enough_energy(201000.0, use_buffer=False) is True
 
-        # Explicit buffer 20% (20.0 units). 50 - 20 >= 20 -> 30 >= 20 -> True
-        assert ev.has_enough_energy(100000.0, 0.2) is True
+        # No buffer: 50 >= 50 -> True (exact boundary at 250km)
+        assert ev.has_enough_energy(250000.0, use_buffer=False) is True
 
-        # Explicit buffer 35% (35.0 units). 50 - 35 >= 20 -> 15 >= 20 -> False
-        assert ev.has_enough_energy(100000.0, 0.35) is False
+        # No buffer: 50 >= 50.2 -> False (just over capacity at 251km)
+        assert ev.has_enough_energy(251000.0, use_buffer=False) is False
 
         # 3. Test Refill
         # Current: 50.0. Capacity: 100.0.
@@ -261,6 +257,49 @@ class TestEnergySystem:
         next(gen)
         # Should be no-op or just yield timeout(0)
         sim.env.timeout.assert_called_with(0)
+
+    def test_should_use_predicted_energy_when_prediction_set(self, sim: Mock) -> None:
+        ev_config = VehicleConfig(
+            VELOCITY_KMH=50,
+            MAX_AVAILABLE_SEATS=4,
+            VEHICLE_TYPE=VehicleType.CAR,
+            AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
+            PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
+            ENERGY_CONSUMPTION_PER_KM=0.2,
+            ENERGY_CAPACITY=100.0,
+            INITIAL_CHARGE_RATIO=1.0,  # 100.0 units
+            ENERGY_RESERVE_RATIO=0.1,  # 10.0 units buffer
+            KG_CO2_PER_KM=0.0,
+            PRICE_PER_TRIP=0,
+        )
+        ev = BatterySystem(sim, ev_config)
+
+        # Without prediction: current=100, buffer=10, usable=90
+        # 400km -> 80 units required. 100 - 10 >= 80 -> True
+        assert ev.has_enough_energy(400000.0) is True
+
+        # Set predicted energy to 30.0 (vehicle mid-session, will have 30 after)
+        ev.predicted_energy = 30.0
+
+        # With prediction: predicted=30, buffer=10, usable=20
+        # 100km -> 20 units. 30 - 10 >= 20 -> True
+        assert ev.has_enough_energy(100000.0) is True
+
+        # 101km -> 20.2 units. 30 - 10 >= 20.2 -> False
+        assert ev.has_enough_energy(101000.0) is False
+
+        # 400km -> 80 units. 30 - 10 >= 80 -> False (would pass with current energy)
+        assert ev.has_enough_energy(400000.0) is False
+
+        # Without reserve also uses predicted: 30 >= 20.2 -> True
+        assert ev.has_enough_energy(101000.0, use_buffer=False) is True
+
+        # Without reserve: 30 >= 60.2 -> False
+        assert ev.has_enough_energy(301000.0, use_buffer=False) is False
+
+        # Clear prediction, falls back to current energy
+        ev.clear_predicted_energy()
+        assert ev.has_enough_energy(400000.0) is True
 
     def test_calculate_energy_required(self, sim: Mock) -> None:
         # Setup

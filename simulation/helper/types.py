@@ -6,7 +6,7 @@ from typing import NewType, TypeAlias
 SimTime: TypeAlias = float
 
 # RegionId represents a unique identifier for a spatial region (e.g., an H3 hex ID).
-RegionId = NewType("RegionId", str)
+RegionId: TypeAlias = str
 """Spatial region identifier (e.g., H3 hex ID)."""
 
 # SimId represents a unique identifier for simulation entities.

@@ -16,11 +16,13 @@ from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
     from simulation.operator.data_transfer_object.transportation_alternative_browser import (
         TransportationAlternativeBrowser,
     )
     from simulation.operator.interface.operator_interface import OperatorInterface
-    from simulation.tasks.transport_task import TransportTask
 
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
@@ -47,13 +49,13 @@ class MobilitySearchEngine(SimulationBase):
         self._operators.append(operator)
 
     def search_for_transportation_alternatives(
-        self, transport_task: TransportTask
+        self, transport_task: TransportRequest
     ) -> TransportationAlternativeBrowser:
         """Search for transportation alternatives across all registered operators.
 
         Parameters
         ----------
-        transport_task : TransportTask
+        transport_task : TransportRequest
             The task containing search parameters.
         """
         aggregated = TransportationAlternativeBrowser()

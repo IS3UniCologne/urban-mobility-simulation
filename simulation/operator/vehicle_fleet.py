@@ -13,24 +13,19 @@ from simulation.environment.geodesic_helper import (
     FastSpatialVehicleIndex,
 )
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    VehicleState,
-    VehicleType,
-)
+from simulation.helper.enums import AutonomyType, VehicleType
+from simulation.helper.exceptions import VehicleFleetError
 from simulation.helper.simulation_base import SimulationBase
+from simulation.helper.vehicle_states import VehicleStates
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import FleetConfig, VehicleConfig
     from simulation.helper.types import RegionId
+    from simulation.helper.vehicle_states import VehicleState
     from simulation.operator.interface.operator_interface import OperatorInterface
     from simulation.vehicle.vehicle import Vehicle
     from simulation.world.world import World
-
-
-class VehicleFleetError(Exception):
-    """Base class for all vehicle fleet-related exceptions."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -242,7 +237,20 @@ class VehicleFleet(SimulationBase, ABC):
         return self._vehicles
 
     @property
-    def vehicles_by_state(self) -> dict[VehicleState, set[Vehicle]]:  # noqa: D102
+    def vehicles_by_state(self) -> dict[VehicleState, set[Vehicle]]:
+        """Get vehicles grouped by state.
+
+        Supports hierarchical state queries - vehicles are indexed by both their
+        current leaf state and all ancestor states. This enables O(1) queries at
+        any hierarchy level.
+
+        Returns
+        -------
+        dict[VehicleState, set[Vehicle]]
+            Dictionary mapping states to sets of vehicles. Includes entries for:
+            - Leaf states (e.g., PICK_UP, DRIVING)
+            - Parent states (e.g., TRANSPORTING, SERVICING)
+        """
         return self._vehicles_by_state
 
     @property
@@ -261,20 +269,6 @@ class VehicleFleet(SimulationBase, ABC):
             region: len(vehicles)
             for region, vehicles in self._vehicles_by_region.items()
         }
-
-    def parking_vehicles_in_region(self, region: RegionId) -> set[Vehicle]:
-        """Retrieve all vehicles currently in the PARKING state within the specified region.
-
-        Parameters
-        ----------
-        region : RegionId
-            Region identifier (e.g., hexagon ID).
-
-        Returns
-        -------
-            Set of vehicles located in the region and currently parking.
-        """
-        return self.vehicles_in_region_with_state(region, VehicleState.PARKING)
 
     def vehicles_in_region(self, region: RegionId) -> set[Vehicle]:
         """Get all vehicles currently located in a specific region.
@@ -311,17 +305,22 @@ class VehicleFleet(SimulationBase, ABC):
     ) -> set[Vehicle]:
         """Get vehicles in a specific region with a specific state.
 
+        Supports hierarchical state queries - passing a parent state will return
+        all vehicles in any child state.
+
         Parameters
         ----------
-        region : str
+        region : RegionId
             Region identifier (e.g., hexagon ID).
         state : VehicleState
-            The state of the vehicle (e.g., PARKING, MOVING, etc.).
+            The state to query (e.g., STANDBY, TRANSPORTING, SERVICING).
+            Can be a leaf state or parent state in the hierarchy.
 
         Returns
         -------
         set[Vehicle]
-            Set of vehicles located in the specified region with the specified state.
+            Set of vehicles located in the specified region with the specified state
+            or any of its child states.
         """
         return self._vehicles_by_region[region].intersection(
             self._vehicles_by_state[state]
@@ -338,12 +337,13 @@ class VehicleFleet(SimulationBase, ABC):
         Returns
         -------
         set[Vehicle]
-            Set of vehicles with energy level below the threshold
+            Set of vehicles with energy level below the threshold once they complete
+            their current session.
         """
         return {
             vehicle
             for vehicle in self.vehicles
-            if vehicle.energy_system.current_energy_relative < energy_threshold
+            if vehicle.energy_system.predicted_energy_relative < energy_threshold
         }
 
     def vehicles_below_energy_threshold_in_region(
@@ -361,18 +361,17 @@ class VehicleFleet(SimulationBase, ABC):
         Returns
         -------
         list[Vehicle]
-            List of vehicles in the region with energy level below the threshold
+            List of vehicles in the region with energy level below the threshold once they complete
+            their current session.
         """
-        below_energy_level_vehicles = []
-        vehicles_in_region = self.vehicles_in_region(region)
-        # TODO: Check if this is necessary
-        vehicles_in_region_sorted = sorted(vehicles_in_region, key=lambda v: v.uid)
-
-        for vehicle in vehicles_in_region_sorted:
-            if vehicle.energy_system.current_energy_relative < energy_threshold:
-                below_energy_level_vehicles.append(vehicle)
-
-        return below_energy_level_vehicles
+        vehicles_in_region = sorted(
+            self.vehicles_in_region(region), key=lambda v: v.uid
+        )
+        return [
+            vehicle
+            for vehicle in vehicles_in_region
+            if vehicle.energy_system.predicted_energy_relative < energy_threshold
+        ]
 
     def register_vehicle(self, vehicle: Vehicle) -> None:
         """Register a new vehicle to the fleet."""
@@ -381,10 +380,14 @@ class VehicleFleet(SimulationBase, ABC):
         else:
             self._add_vehicle(vehicle)
             self._vehicles_by_state[vehicle.state].add(vehicle)
+            for ancestor in vehicle.state.get_ancestors():
+                self._vehicles_by_state[ancestor].add(vehicle)
             self._vehicles_by_region[vehicle.current_region].add(vehicle)
             self._vehicles_by_type[vehicle.vehicle_type].add(vehicle)
             self._vehicles_by_autonomy[vehicle.autonomy_type].add(vehicle)
             self._vehicles_by_id[vehicle.id] = vehicle
+            if vehicle.state == VehicleStates.STANDBY:
+                self._vehicles_spatial_index.insert(vehicle)
 
     def _add_vehicle(self, vehicle: Vehicle) -> None:
         """Add a vehicle to the fleet.
@@ -405,8 +408,9 @@ class VehicleFleet(SimulationBase, ABC):
         if vehicle in self._vehicles:
             self._vehicles.remove(vehicle)
             self._world.remove_vehicle(vehicle)
-            # Remove from all tracking collections
             self._vehicles_by_state[vehicle.state].remove(vehicle)
+            for ancestor in vehicle.state.get_ancestors():
+                self._vehicles_by_state[ancestor].remove(vehicle)
             self._vehicles_by_region[vehicle.current_region].remove(vehicle)
             self._vehicles_by_type[vehicle.vehicle_type].remove(vehicle)
             self._vehicles_by_autonomy[vehicle.autonomy_type].remove(vehicle)
@@ -414,29 +418,43 @@ class VehicleFleet(SimulationBase, ABC):
         else:
             raise VehicleFleetError(f"Vehicle {vehicle} is not registered in Fleet yet")
 
-    def update_vehicle_state(self, vehicle: Vehicle, new_state: VehicleState) -> None:
+    def update_vehicle_state(
+        self, vehicle: Vehicle, old_state: VehicleState, new_state: VehicleState
+    ) -> None:
         """Update the state of a vehicle in the fleet.
 
-        This is used when a vehicle's state changes (e.g., from PARKING to MOVING).
+        This is used when a vehicle's state changes (e.g., from IDLE to PICK_UP).
+
+        Updates both the leaf state and all ancestor states in the hierarchy.
 
         Parameters
         ----------
         vehicle : Vehicle
             The vehicle whose state is being updated.
+        old_state : VehicleState
+            The old state of the vehicle.
         new_state : VehicleState
-            The new state of the vehicle (e.g., PARKING, MOVING, etc.).
+            The new state of the vehicle (e.g., IDLE, PICK_UP, etc.).
 
         If this throws an exception, the vehicle state is probably being
         incorrectly set through the private attribute
         """
-        if vehicle.state == VehicleState.PARKING and new_state != VehicleState.PARKING:
-            self._vehicles_spatial_index.delete(vehicle)
-        elif (
-            vehicle.state != VehicleState.PARKING and new_state == VehicleState.PARKING
-        ):
-            self._vehicles_spatial_index.insert(vehicle)
-        self._vehicles_by_state[vehicle.state].remove(vehicle)
+        # Remove from old state and all its ancestors
+        self._vehicles_by_state[old_state].remove(vehicle)
+        for ancestor in old_state.get_ancestors():
+            self._vehicles_by_state[ancestor].remove(vehicle)
+
+        # Add to new state and all its ancestors
         self._vehicles_by_state[new_state].add(vehicle)
+        for ancestor in new_state.get_ancestors():
+            self._vehicles_by_state[ancestor].add(vehicle)
+
+        # Update spatial index if needed
+
+        if old_state == VehicleStates.STANDBY and new_state != VehicleStates.STANDBY:
+            self._vehicles_spatial_index.delete(vehicle)
+        elif old_state != VehicleStates.STANDBY and new_state == VehicleStates.STANDBY:
+            self._vehicles_spatial_index.insert(vehicle)
 
     def update_vehicle_region(self, vehicle: Vehicle, new_region_id: RegionId) -> None:
         """Update the region of a vehicle in the fleet.

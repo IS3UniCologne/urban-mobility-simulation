@@ -1,6 +1,6 @@
 from statsmodels.iolib.smpickle import load_pickle  # noqa: D100
 
-from simulation.helper.configuration.enums import VehicleType
+from simulation.helper.enums import VehicleType
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
     VehicleChoiceBehaviorInterface,

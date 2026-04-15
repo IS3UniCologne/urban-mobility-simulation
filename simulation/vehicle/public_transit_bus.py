@@ -3,9 +3,8 @@ from __future__ import annotations  # noqa: D100
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
-from simulation.vehicle.movement_stats import MovementStats
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 from tracking.tracking_interface import TrackingInterface
 
@@ -23,6 +22,7 @@ if TYPE_CHECKING:
     from simulation.infrastructure.route import PublicTransitRoute
     from simulation.infrastructure.transit_network.route_segment import RouteSegment
     from simulation.operator.vehicle_fleet import VehicleFleet
+    from simulation.vehicle.movement_stats import MovementStats
 
 
 class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
@@ -104,7 +104,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
         Time 00:03:00 - Departure 00:04:00 - next_day = False - wait
         Time 00:03:00 - Departure 00:04:00 - next_day = True - should not happen
         """  # noqa: D400
-        while self.state is not VehicleState.AT_TERMINAL_DESTINATION:
+        while self.state is not VehicleStates.AT_TERMINAL:
             strf = "%H:%M:%S"
             early_arrival = (
                 self._time.now_as_str() < self._current_stop.departure
@@ -115,7 +115,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
             )
 
             if (
-                self.state is VehicleState.AT_TERMINAL_ORIGIN
+                self.state is VehicleStates.AT_TERMINAL
                 and self._time.now_as_str() < self._current_stop.departure
             ):
                 # bus was pre-initialized by transit operator
@@ -164,17 +164,14 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
 
     def _move_to_next_stop(self) -> Generator[Event, None, None]:
         route_segment = self._route.route_segment_by_id(self._current_stop.stop_id)
-        yield self._env.process(self.move(route_segment))
+        yield self._env.process(self._move(route_segment))
 
-    def move(  # noqa: D102
+    def _move(
         self, route_segment: RouteSegment
     ) -> Generator[Event, None, MovementStats]:
         # TODO: use road network speed limits?
 
-        distance = route_segment.distance  # in meter
-        duration = distance / self._velocity_mm  # in minutes
-
-        self.state = VehicleState.EN_ROUTE_PLANNED
+        self._set_state(VehicleStates.EN_ROUTE)
 
         self.logger.debug(
             "Bus has started driving from stop %s to stop %s.",
@@ -182,40 +179,34 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
             route_segment.end.stop_id,
         )
 
-        yield self._env.timeout(duration)
+        stats = yield from super()._move(route_segment)
 
         self._current_stop = route_segment.end
-        self._update_positions(route_segment.end)
 
         if self._current_stop == self._route.destination:
-            self.state = VehicleState.AT_TERMINAL_DESTINATION
+            self._set_state(VehicleStates.AT_TERMINAL)
             self.logger.debug(
                 "Bus has arrived at its terminal destination - stop %s at time %s",
                 self._current_stop.stop_id,
                 self._time.now_as_str(),
             )
         else:
-            self.state = VehicleState.AT_STOP
+            self._set_state(VehicleStates.AT_STOP)
             self.logger.debug(
                 "Bus has arrived at stop %s at time %s",
                 self._current_stop.stop_id,
                 self._time.now_as_str(),
             )
 
-        energy_consumed = self.energy_system.consume_for_distance(distance)
-        return MovementStats(
-            energy_consumed=energy_consumed,
-            distance_travelled=distance,
-            time_taken=duration,
-        )
+        return stats
 
-    def _update_positions(self, new_position) -> None:  # noqa: ANN001
+    def _update_position(self, new_position) -> None:  # noqa: ANN001
         # Update Vehicle Position
         self.position = new_position
 
         # Update Position of Passengers
         for passenger in self._passengers:
-            passenger.position = new_position
+            passenger.on_vehicle_moved(new_position)
 
     # TODO: remove if everything works
     # @property
@@ -288,7 +279,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
     #
     #             if region_id == \
     #                     self._route.destination.get_region_id(self._action_res):
-    #                 self._state = VehicleState.AT_TERMINAL_DESTINATION
+    #                 self._state = VehicleStates.AT_TERMINAL_DESTINATION
     #                 self.logger.info(f'Bus has arrived at its terminal destination at time {self._time.now_as_str()}',
     #                              extra={"clazz": self.__class__.__name__, "oid": self._id})
     #         except simpy.Interrupt:
@@ -301,7 +292,7 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
     #     action = yield self._action_taken
     #
     #     self._rl_agent.reward = self._rl_agent.reward_state(self._env_state,
-    #                                                         self._state == VehicleState.AT_TERMINAL_DESTINATION)
+    #                                                         self._state == VehicleStates.AT_TERMINAL_DESTINATION)
     #     self._rl_agent.reward_sum = self._rl_agent.reward_sum + self._rl_agent.reward
     #
     #     self.logger.debug(f'Current reward: {self._rl_agent.reward}, overall reward: {self._rl_agent.reward_sum}',

@@ -20,6 +20,7 @@ class ChargingInfrastructure:  # noqa: D101
         "_capacity_list",
         "_charging_infra_config",
         "_charging_stations",
+        "_charging_stations_by_location",
         "_location_list",
         "_power_list",
         "_queue_size",
@@ -52,6 +53,9 @@ class ChargingInfrastructure:  # noqa: D101
         self._charging_infra_config = charging_infrastructure_config
 
         self._charging_stations = []  # a list of charger objects
+        self._charging_stations_by_location: dict[
+            str, ChargingStation
+        ] = {}  # a fast lookup of charging stations by location
         self._initialise_charging_stations()
 
         self._auction = self._initialize_auction()
@@ -82,6 +86,7 @@ class ChargingInfrastructure:  # noqa: D101
                 queue_size=self._queue_size[i],
             )
             self._charging_stations.append(charging_station)
+            self._charging_stations_by_location[location] = charging_station
 
     @property
     def charging_stations(self) -> list[ChargingStation]:  # noqa: D102
@@ -93,3 +98,6 @@ class ChargingInfrastructure:  # noqa: D101
 
     def get_locations(self) -> list[str]:  # noqa: D102
         return self._location_list
+
+    def get_charging_station_by_location(self, location: str) -> ChargingStation:  # noqa: D102
+        return self._charging_stations_by_location[location]

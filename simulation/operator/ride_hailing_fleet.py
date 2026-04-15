@@ -2,8 +2,9 @@ from __future__ import annotations  # noqa: D100
 
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import AutonomyType, VehicleState
+from simulation.helper.enums import AutonomyType
 from simulation.helper.time import SimulationTimeConverter
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 from simulation.vehicle.vehicle import Vehicle
@@ -61,88 +62,31 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
             at the specified origin location and have enough energy to complete the proposed trip
         """
         route_distance = origin << destination
-        # parking_cars: set[Vehicle] = self._vehicles_by_state[VehicleState.PARKING]
-
-        # parking_cars_not_suggested: list[Vehicle] = [
-        #     car
-        #     for car in parking_cars
-        #     # TODO: we should not acceess _suggested directly
-        #     if not car._suggested
-        # ]
-
-        # if not parking_cars_not_suggested:
-        #     parking_cars_in_area = []
-        # else:
-        #     # TODO: this is slow. unbelievably slow. use spatial index.
-        #     parking_cars_in_area = [
-        #         car
-        #         for car in parking_cars_not_suggested
-        #         if (car.position << origin)
-        #         <= self.operator.operations.config.MAX_PICKUP_DISTANCE
-        #         and car.energy_system.has_enough_energy(
-        #             (car.position << origin) + route_distance
-        #         )
-        #     ]
-
         parking_cars_in_area = self.parking_vehicles_in_radius(
-            origin, self.operator.operations.config.MAX_PICKUP_DISTANCE
+            origin, radius=self.operator.operations.config.MAX_PICKUP_DISTANCE
         )
+
         parking_cars_in_area = [
             car
             for car in parking_cars_in_area
-            if not car._suggested  # noqa: SLF001
-            and car.energy_system.has_enough_energy(
+            if car.energy_system.has_enough_energy(
                 (car.position << origin) + route_distance
             )
         ]
-
-        # serving_vehicles = self._vehicles_by_state[VehicleState.DRIVING]
-        # # hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
-        # # state_of_charge_threshold = self.operator.operations.config.RECHARGE_THRESHOLD[
-        # #     hour
-        # # ]
-
-        # # TODO: to decide whether to show vehicles that are potentially ready to charge (below threshold) is not job of the fleet!
-        # serving_cars = [
-        #     car
-        #     for car in serving_vehicles
-        #     if not car._suggested
-        #     # and car.current_relative_state_of_charge > state_of_charge_threshold
-        # ]
-
-        # serving_cars_in_area = [
-        #     car
-        #     for car in serving_cars
-        #     # distance_to_current_destination = (
-        #     #     car.estimated_completion_time - self._sim.env.now
-        #     # ) * car.velocity
-        #     if (car.current_task.destination << origin)
-        #     <= self.operator.operations.config.MAX_PICKUP_DISTANCE
-        #     and car.energy_system.has_enough_energy(
-        #         (car.current_task.origin << car.current_task.destination)
-        #         + (car.current_task.destination << origin)
-        #         + route_distance
-        #     )
-        # ]
-
         serving_cars_in_area = self.expected_arrivals_in_radius(
             origin,
             self.operator.operations.config.MAX_PICKUP_DISTANCE,
-            self._sim.time
-            + 5,  # TODO: The operator / fleet does not know the user preference for waiting time. It is an operational decision to make an educated guess here
+            self._sim.time + 5,
         )
-
         serving_cars_in_area = [
             car
             for car in serving_cars_in_area
-            if not car._suggested  # noqa: SLF001
-            and car.energy_system.has_enough_energy(
-                (car.current_task.origin << car.current_task.destination)
-                + (car.current_task.destination << origin)
+            if car.energy_system.has_enough_energy(
+                (car.current_request.origin << car.current_request.destination)
+                + (car.current_request.destination << origin)
                 + route_distance
             )
         ]
-
         return parking_cars_in_area + serving_cars_in_area
 
     def count_vehicles_below_soc_level(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
@@ -256,44 +200,47 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
                 if hex_id not in low_soc_supply:
                     low_soc_supply[hex_id] = dict(zip(available_vehicles, values))
 
-                if vehicle.current_relative_state_of_charge < state_of_charge_threshold:
+                if (
+                    vehicle.energy_system.current_energy_relative
+                    < state_of_charge_threshold
+                ):
                     low_soc_supply[hex_id][mode] += 1
 
         return low_soc_supply
 
     def mark_vehicles_to_be_charged(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
+        """Mark and return vehicles that need to be charged.
+
+        Checks all vehicles (STANDBY and in-use) and marks those below the SoC
+        threshold for charging. For vehicles in use, uses predicted energy
+        after task completion.
+
+        Parameters
+        ----------
+        state_of_charge_threshold : list
+            Hourly thresholds for state of charge (0 to 1).
+
+        Returns
+        -------
+        list
+            Vehicles marked for charging, sorted by current energy level.
         """
-        Return a list of number of vehicles that need to be charged in each area.
-
-        :param state_of_charge_threshold:
-        :return: List, vehicles with low SoC}
-        """
-        # available_vehicles = ["RideHailingCar"]
-        # values = [0] * len(available_vehicles)
-
-        # Set counter to 0 for all vehicle types
-        # vehicle_dict = dict(zip(available_vehicles, values))
-
-        low_soc_supply = []
+        # TODO: Does this really belong in the fleet?
         hour = SimulationTimeConverter.hour_of_day(self._sim.env.now)
-        state_of_charge_threshold = state_of_charge_threshold[hour]
+        threshold = state_of_charge_threshold[hour]
 
-        parking_vehicles = self._vehicles_by_state[VehicleState.PARKING]
-        # TODO: Check if this is necessary
-        parking_vehicles_sorted = sorted(parking_vehicles, key=lambda v: v.uid)
+        low_soc_vehicles = []
+        # Only check vehicles that are not OFFLINE
+        offline_vehicles = self._vehicles_by_state.get(VehicleStates.OFFLINE, set())
+        candidate_vehicles = set(self.vehicles) - offline_vehicles
 
-        for vehicle in parking_vehicles_sorted:
-            if (
-                vehicle.energy_system.current_energy_relative
-                < state_of_charge_threshold
-                and not vehicle._suggested  # noqa: SLF001
-            ):
-                low_soc_supply.append(vehicle)
+        for vehicle in sorted(candidate_vehicles, key=lambda v: v.uid):
+            if vehicle.is_reserved:
+                continue
+            if vehicle.energy_system.predicted_energy_relative < threshold:
+                low_soc_vehicles.append(vehicle)
 
-        low_soc_supply = sorted(
-            low_soc_supply, key=lambda x: x.energy_system.current_energy_relative
-        )
-        return low_soc_supply
+        return low_soc_vehicles
 
     def _create_vehicle(
         self,

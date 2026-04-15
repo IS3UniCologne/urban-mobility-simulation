@@ -29,6 +29,10 @@ class HumanPoweredSystem(EnergySystem):
 
     def __init__(self, sim: SimulationContext, vehicle_config: VehicleConfig) -> None:
         super().__init__(sim, vehicle_config)
+        if vehicle_config.ENERGY_CONSUMPTION_PER_KM > 0:
+            self.logger.warning(
+                "HumanPoweredSystem should have zero energy consumption."
+            )
         self._current_energy = 100.0
         self._capacity = 100.0
 
@@ -49,26 +53,6 @@ class HumanPoweredSystem(EnergySystem):
         self._lifetime_emissions += self.calculate_emissions_for_distance(distance)
         self.logger.debug("Human powered travel for %s meters", distance)
         return 0.0
-
-    def has_enough_energy(
-        self, distance: float, energy_reserve_ratio: float | None = None
-    ) -> bool:
-        """
-        Check if there is enough energy (Always True for human power).
-
-        Parameters
-        ----------
-        distance : float
-            Distance to travel in meters.
-        energy_reserve_ratio : float | None, optional
-            Energy reserve ratio to maintain. Default is 0.0.
-
-        Returns
-        -------
-        bool
-            Always True.
-        """
-        return True
 
     def refill(self, amount: float, duration: float) -> Generator[Event, None, None]:
         """

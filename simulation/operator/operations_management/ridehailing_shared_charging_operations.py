@@ -13,12 +13,14 @@ from simulation.operator.operations_management.algorithms.distance_based_bidding
 from simulation.operator.operations_management.ride_hailing_operations import (
     RideHailingOperations,
 )
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
+from simulation.operator.operations_management.ridehailing_greedy_charging_operations import (
+    RideHailingGreedyChargingOperations,
 )
 from simulation.world.markets.interfaces.bidder_interface import BidderInterface
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from simulation.operator.operations_management.operations import (
         OperationsDependencies,
     )
@@ -48,7 +50,9 @@ class RideHailingSharedChargingOperations(RideHailingOperations, BidderInterface
 
         BidderInterface.__init__(self, env=self._env, auction=self._auction)
 
-        self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
+        self._virtual_charging_infrastructure: VirtualChargingInfrastructure | None = (
+            None
+        )
         # self._bidding_strategy = bidding_strategy
         self._state_of_charge_threshold = self._config.RECHARGE_THRESHOLD
         self._charging_operations = None
@@ -66,16 +70,16 @@ class RideHailingSharedChargingOperations(RideHailingOperations, BidderInterface
             "VirtualOperator", ["fleet", "charging_infrastructure"]
         )
 
-        vo = VirtualOperator(
+        virtual_operator = VirtualOperator(
             fleet=self._operator.fleet,
             charging_infrastructure=self._virtual_charging_infrastructure,
         )
 
         patched_deps = dataclasses.replace(
-            self._deps, operator=vo
+            self._deps, operator=virtual_operator
         )  # shallow copy, as we want to retain references to sim and world
 
-        self._charging_operations = RideHailingBaseChargingOperations(patched_deps)
+        self._charging_operations = RideHailingGreedyChargingOperations(patched_deps)
 
         self._env.process(self._delay_charging_operations())
 
@@ -136,5 +140,5 @@ class RideHailingSharedChargingOperations(RideHailingOperations, BidderInterface
         self._env.process(self._charging_operations.execute())
 
     @property
-    def task_transactions(self):  # noqa: ANN201, D102
-        return self._charging_operations.task_transactions
+    def job_transactions(self) -> pd.DataFrame:  # noqa: D102
+        return self._charging_operations.job_transactions

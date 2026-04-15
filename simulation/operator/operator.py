@@ -19,9 +19,12 @@ if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import OperatorConfig
-    from simulation.helper.configuration.enums import VehicleType
+    from simulation.helper.enums import VehicleType
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
+    )
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
     )
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
@@ -36,10 +39,9 @@ if TYPE_CHECKING:
     from simulation.operator.interface.vehicle_allocation_engine_interface import (
         AllocationEngineInterface,
     )
-    from simulation.tasks.transport_task import TransportTask
     from simulation.world.world import World
 
-from simulation.helper.configuration.enums import (
+from simulation.helper.enums import (
     AutonomyType,
     OperatorMode,
     PropulsionType,
@@ -212,7 +214,7 @@ class Operator(OperatorInterface):
     def log_failed_allocation_attempt(
         self,
         user: User,
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         transportation_alternative: TransportationAlternative,
     ) -> None:
         """
@@ -226,7 +228,7 @@ class Operator(OperatorInterface):
         ----------
         user : User
             The user who attempted allocation.
-        transportation_task : TransportTask
+        transportation_task : TransportRequest
             The transportation task that was requested.
         transportation_alternative : TransportationAlternative
             The transportation alternative that was selected but could not be allocated.
@@ -239,7 +241,7 @@ class Operator(OperatorInterface):
 
     def log_transaction(
         self,
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         transportation_alternative: TransportationAlternative | None,
         state: TransactionState,
         energy_consumed: float | None = None,
@@ -249,7 +251,7 @@ class Operator(OperatorInterface):
 
         Parameters
         ----------
-        transportation_task : TransportTask
+        transportation_task : TransportRequest
             The transportation task that was fulfilled or missed.
         transportation_alternative : TransportationAlternative | None
             The transportation alternative that was selected for the task.
@@ -258,7 +260,6 @@ class Operator(OperatorInterface):
         energy_consumed : float | None
             The energy consumed during the trip.
         """
-        # TODO:Check if wait times are correct once user refactoring is done
         if state == TransactionState.MISSED or transportation_alternative is None:
             transaction = self._create_missed_transaction(
                 transportation_task, state, transportation_alternative
@@ -272,7 +273,7 @@ class Operator(OperatorInterface):
 
     def _create_missed_transaction(
         self,
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         state: TransactionState,
         transportation_alternative: TransportationAlternative,
     ) -> MissedOperatorLogEntry:
@@ -282,7 +283,7 @@ class Operator(OperatorInterface):
             destination=transportation_task.destination.get_region_id(),
             time_start=transportation_task.creation_time,
             time_end=self._env.now,
-            distance=transportation_task.origin >> transportation_task.destination,
+            distance=transportation_task.origin << transportation_task.destination,
             accepted_vehicle_types=transportation_task.accepted_vehicle_types,
             state=state,
             price=transportation_alternative.price,
@@ -290,7 +291,7 @@ class Operator(OperatorInterface):
 
     def _create_fulfilled_transaction(
         self,
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         transportation_alternative: TransportationAlternative,
         state: TransactionState,
         energy_consumed: float | None = None,
@@ -311,7 +312,12 @@ class Operator(OperatorInterface):
             duration=transportation_alternative.duration,
             vehicle_uid=transportation_alternative.vehicle.uid,
             selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,
-            pick_up_time=transportation_alternative.est_pickup_time,
+            est_pickup_wait=(
+                transportation_alternative.est_pickup_time
+                - transportation_task.creation_time
+                if transportation_alternative.est_pickup_time is not None
+                else 0.0
+            ),
             energy_consumption=energy_consumed if energy_consumed is not None else 0.0,
             selected_vehicle_EV=(
                 transportation_alternative.vehicle.propulsion_type
@@ -353,7 +359,7 @@ class Operator(OperatorInterface):
     def pay_for_fulfilled_transportation_task(  # noqa: D102
         self,
         user: User,
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         vehicle_allocation: VehicleAllocation,
     ) -> None:
         selected_transportation_alternative = (
@@ -371,7 +377,7 @@ class Operator(OperatorInterface):
         self.logger.debug("New Payment (%s) received from User %s.", payment, user.uid)
 
     def withdraw_transportation_task(  # noqa: D102
-        self, user: User, transportation_task: TransportTask, state: TransactionState
+        self, user: User, transportation_task: TransportRequest, state: TransactionState
     ) -> None:
         # Add Transaction to Log
         self.log_transaction(transportation_task, None, state=state)

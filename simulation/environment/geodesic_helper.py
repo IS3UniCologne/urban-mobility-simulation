@@ -13,7 +13,7 @@ from rtree.index import Index
 
 if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
-    from simulation.helper.configuration.enums import VehicleType
+    from simulation.helper.enums import VehicleType
     from simulation.vehicle.vehicle import Vehicle
 
 # Constant for meters per degree of latitude (approximately 111.32 km)
@@ -177,6 +177,10 @@ class FastSpatialDestinationIndex:
             The vehicle to insert.
         """
         if not hasattr(vehicle, "destination") or vehicle.destination is None:
+            return
+        if vehicle.destination == vehicle.position:
+            # a vehicle at its destination is not en-route; skip indexing
+            # TODO: warn caller?
             return
 
         if vehicle.id in self._coords:

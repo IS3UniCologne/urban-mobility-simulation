@@ -1,6 +1,6 @@
 from __future__ import annotations  # noqa: D100
 
-from simulation.helper.configuration.enums import OperatorMode
+from simulation.helper.enums import OperatorMode
 from simulation.operator.operator import Operator, OperatorDependencies
 from simulation.operator.operator_log import DemandMonitor
 

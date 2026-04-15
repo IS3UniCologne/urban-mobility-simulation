@@ -7,10 +7,12 @@ if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import TransitOperatorConfig
     from simulation.infrastructure.transit_network.stop import Stop
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
     from simulation.operator.public_transport_vehicle_fleet import (
         PublicTransportVehicleFleet,
     )
-    from simulation.tasks.transport_task import TransportTask
     from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 
 from simulation.helper.simulation_base import SimulationBase
@@ -146,7 +148,7 @@ class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):  # noq
         return viable_transit
 
     def search_for_transportation_alternatives(  # noqa: D102
-        self, transport_task: TransportTask
+        self, transport_task: TransportRequest
     ) -> TransportationAlternativeBrowser:
         browser = TransportationAlternativeBrowser()
         search_time = transport_task.creation_time

@@ -58,14 +58,16 @@ class InternalCombustionSystem(EnergySystem):
         float
             Amount of fuel consumed in liters.
         """
+        from simulation.helper.exceptions import EnergyDepletedError
+
         consumed = self.calculate_energy_required(distance)
         self._current_energy -= consumed
         if self._current_energy < 0:
-            self.logger.warning(
-                "Fuel level dropped below zero! Current energy: %s",
-                self._current_energy,
-            )
+            deficit = -self._current_energy
             self._current_energy = 0.0
+            raise EnergyDepletedError(
+                f"Fuel depleted after traveling {distance}m. Deficit: {deficit:.2f} L."
+            )
 
         self._lifetime_energy_consumed += consumed
         self._lifetime_emissions += (distance / 1000) * self._co2_per_km
@@ -78,32 +80,6 @@ class InternalCombustionSystem(EnergySystem):
             self.current_energy_relative * 100,
         )
         return consumed
-
-    def has_enough_energy(
-        self, distance: float, energy_reserve_ratio: float | None = None
-    ) -> bool:
-        """
-        Check if there is enough fuel for the distance.
-
-        Parameters
-        ----------
-        distance : float
-            Distance to travel in meters.
-        energy_reserve_ratio : float | None, optional
-            Energy reserve ratio to maintain. If None, uses the default buffer from config.
-
-        Returns
-        -------
-        bool
-            True if enough fuel is available.
-        """
-        if energy_reserve_ratio is None:
-            buffer = self._default_buffer
-        else:
-            buffer = energy_reserve_ratio * self._capacity
-
-        required = self.calculate_energy_required(distance)
-        return self._current_energy - buffer >= required
 
     def refill(self, amount: float, duration: float) -> Generator[Event, None, None]:
         """
