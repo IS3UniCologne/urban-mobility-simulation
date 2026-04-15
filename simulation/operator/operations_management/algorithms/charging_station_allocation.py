@@ -54,7 +54,7 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
         d = {}  # distance matrix
         for j in vehicles:
             for i in CSs:
-                d[i.cs_id, j.id] = i.centre << j.position
+                d[i.cs_id, j.id] = i.centre << j.destination
 
         Q = {}  # queueing time of the CS
         N = {}  # available capacity (excl queue)
@@ -70,7 +70,7 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
 
         SoC = {}  # state of charge for vehicles that need to charge
         for j in vehicles:
-            SoC[j.id] = j.energy_system.current_energy_relative
+            SoC[j.id] = j.energy_system.predicted_energy_relative
             # if isinstance(SoC[j.id], list):
             #     SoC[j.id] = float(SoC[j.id][0])
 
