@@ -2,15 +2,15 @@
 description     = "Urban Mobility Simulation"
 name            = "urban-mobility-simulation"
 readme          = "README.md"
-requires-python = ">=3.10, <3.13.0"
+requires-python = ">=3.11, <3.14.0"
 version         = "0.1.0"
 
 classifiers = [
   "Private :: Do Not Upload",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 
 
@@ -24,11 +24,10 @@ dependencies = [
   "matplotlib>=3.9.4",
   "pandas>=2.2.3",
   "pip>=25.0.1",
-  "pqdm>=0.2.0",
   "prettytable>=3.16.0",
   "pyarrow>=19.0.1",
   "pydantic>=2.11.4",
-  "pyinstrument>=5.0.2",
+  "rtree>=1.4.1",
   "shapely>=2.0.7",
   "simpy>=4.1.1",
   "statsmodels>=0.14.4",
@@ -42,7 +41,12 @@ dev = [
   { include-group = "typing" },
 ]
 
-performance = ["py-spy>=0.3.11", "pyperf>=2.9.0", "scalene>=1.5.51"]
+performance = [
+  "py-spy>=0.3.11",
+  "pyperf>=2.9.0",
+  "scalene>=1.5.51",
+  "pyinstrument>=5.1.1",
+]
 
 pre-commit = ["pre-commit>=4.2.0", "ruff>=0.11.0"]
 
@@ -129,7 +133,7 @@ convention = "numpy"
 "learning/*"      = ["D"]
 "planning/*"      = ["D"]
 "resources/*"     = ["D"]
-"tests/*"         = ["D", "SLF001"]
+"tests/*"         = ["D", "SLF001", "T201"]
 "visualization/*" = ["D"]
 
 # Pydantic needs type annotations at runtime, so we ignore TC001 in the configuration
@@ -170,7 +174,6 @@ module = [
   "simulation.agent.episodic_semi_gradient_sarsa",
   "simulation.agent.policy",
   "simulation.agent.rl_agent",
-  "simulation.agent.user",
   "simulation.environment.environment",
   "simulation.environment.geodesic_environment",
   "simulation.environment.geodesic_position",
@@ -178,7 +181,6 @@ module = [
   "simulation.helper.logging.extra_default_filter",
   "simulation.helper.logging.simulation_context_filter",
   "simulation.helper.random.random_manager",
-  "simulation.helper.singleton",
   "simulation.helper.time",
   "simulation.infrastructure.charging_stations.charging_infastructure",
   "simulation.infrastructure.charging_stations.charging_station",
@@ -189,9 +191,6 @@ module = [
   "simulation.infrastructure.route",
   "simulation.infrastructure.transit_network.route_segment",
   "simulation.infrastructure.transit_network.stop",
-  "simulation.operator.data_transfer_object.transportation_alternative",
-  "simulation.operator.data_transfer_object.transportation_alternative_browser",
-  "simulation.operator.data_transfer_object.transportation_alternative_ridehailing",
   "simulation.operator.data_transfer_object.vehicle_allocation",
   "simulation.operator.fleet_factory",
   "simulation.operator.interface.payment_interface",
@@ -205,6 +204,7 @@ module = [
   "simulation.operator.operations_management.operations_public_transport",
   "simulation.operator.operations_management.ridehailing_MP_charging_operations",
   "simulation.operator.operations_management.ridehailing_base_charging_operations",
+  "simulation.operator.operations_management.ridehailing_greedy_charging_operations",
   "simulation.operator.operations_management.ridehailing_shared_charging_operations",
   "simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations",
   "simulation.operator.operations_management.service_tasks.charging_task",
@@ -227,14 +227,12 @@ module = [
   "simulation.operator.shared_vehicle_allocation_engine",
   "simulation.operator.shared_vehicle_search_engine",
   "simulation.operator.walking_search_engine",
-  "simulation.tasks.transport_task",
+  "simulation.tasks.transport_request",
   "simulation.tasks.transportation_search_task",
   "simulation.vehicle.interfaces.driver_interface",
   "simulation.vehicle.interfaces.passenger_interface",
   "simulation.vehicle.public_transit_bus",
   "simulation.vehicle.public_transit_vehicle",
-  "simulation.vehicle.ride_hailing_AV",
-  "simulation.vehicle.ride_hailing_car",
   "simulation.vehicle.ride_hailing_vehicle",
   "simulation.vehicle.shared_vehicle",
   "simulation.vehicle.walking",
@@ -262,6 +260,7 @@ addopts = [
   "-ra",
 ]
 markers = [
+  "end_to_end: marks tests as end-to-end tests",
   "integration: Integration tests",
   "slow: Slow running tests (deselect with '-m \"not slow\"')",
   "unit: Unit tests",

@@ -1,17 +1,17 @@
 import ast
 import logging
+from collections.abc import Generator
 
 import h3
 import numpy as np
 from simpy import Environment, events
-from collections.abc import Generator
 
 from learning.interface.learning_interface import LearningInterface
 from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.configuration.enums import VehicleState
 from simulation.helper.time import SimulationTimeConverter
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.world.world import World
 from tracking.tracking import Tracking
 
@@ -224,7 +224,7 @@ class DynamicBusProblem(LearningInterface):
             )
             duration = distance / self.bus._velocity  # in minutes  # noqa: SLF001
 
-            self._state = VehicleState.EN_ROUTE_DETOUR
+            self._state = VehicleStates.EN_ROUTE
 
             yield self.env.timeout(duration)
 
@@ -243,7 +243,7 @@ class DynamicBusProblem(LearningInterface):
             if region_id == self.bus._route.destination.get_hexagon_id(  # noqa: SLF001
                 self._action_res
             ):
-                self.bus._state = VehicleState.AT_TERMINAL_DESTINATION  # noqa: SLF001
+                self.bus._state = VehicleStates.AT_TERMINAL  # noqa: SLF001
                 logging.info(
                     f"Bus has arrived at its terminal destination at time {self.bus._time.now_as_str()}",  # noqa: G004, SLF001
                     extra={
@@ -305,7 +305,7 @@ class DynamicBusProblem(LearningInterface):
 
     def _check_terminal(self):  # noqa: ANN202
         self.reached_destination = (
-            True if self.bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
+            True if self.bus.state is VehicleStates.AT_TERMINAL else False
         )
         self._reached_timelimit = (
             True if self.env.now - self.bus._spawned > self._timelimit else False  # noqa: SLF001

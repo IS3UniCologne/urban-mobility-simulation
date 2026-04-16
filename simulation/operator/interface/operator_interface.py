@@ -5,11 +5,19 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from simulation.helper.simulation_base import SimulationBase
+
 if TYPE_CHECKING:
     from simulation.agent.user import User
-    from simulation.helper.configuration.enums import OperatorMode
+    from simulation.helper.enums import OperatorMode, TransactionState
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
+    )
+    from simulation.operator.data_transfer_object.vehicle_allocation import (
+        VehicleAllocation,
     )
     from simulation.operator.interface.operations_interface import OperationsInterface
     from simulation.operator.interface.search_engine_interface import (
@@ -19,10 +27,9 @@ if TYPE_CHECKING:
         AllocationEngineInterface,
     )
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.tasks.transport_task import TransportTask
 
 
-class OperatorInterface(ABC):
+class OperatorInterface(SimulationBase, ABC):
     """
     Abstract interface for all transportation operators.
 
@@ -62,7 +69,7 @@ class OperatorInterface(ABC):
 
     @abstractmethod
     def withdraw_transportation_task(
-        self, user: User, transportation_task: TransportTask, state: str | None = None
+        self, user: User, transportation_task: TransportRequest, state: TransactionState
     ) -> None:
         """
         Withdraw a transportation task.
@@ -71,9 +78,9 @@ class OperatorInterface(ABC):
         ----------
         user : User
             The user who requested the task.
-        transportation_task : TransportTask
+        transportation_task : TransportRequest
             The task to withdraw.
-        state : str | None, optional
+        state : TransactionState
             The state of the task after withdrawal.
         """
         pass
@@ -82,8 +89,8 @@ class OperatorInterface(ABC):
     def pay_for_fulfilled_transportation_task(
         self,
         user: User,
-        transportation_task: TransportTask,
-        selected_transportation_alternative: TransportationAlternative,
+        transportation_task: TransportRequest,
+        vehicle_allocation: VehicleAllocation,
     ) -> None:
         """
         Process payment for a fulfilled transportation task.
@@ -92,9 +99,30 @@ class OperatorInterface(ABC):
         ----------
         user : User
             The user who requested the task.
-        transportation_task : TransportTask
+        transportation_task : TransportRequest
             The fulfilled task.
-        selected_transportation_alternative : TransportationAlternative
-            The selected transportation alternative for the task.
+        vehicle_allocation : VehicleAllocation
+            The vehicle allocation for the task.
+        """
+        pass
+
+    @abstractmethod
+    def log_failed_allocation_attempt(
+        self,
+        user: User,
+        transportation_task: TransportRequest,
+        transportation_alternative: TransportationAlternative,
+    ) -> None:
+        """
+        Log a failed vehicle allocation attempt.
+
+        Parameters
+        ----------
+        user : User
+            The user who requested the task.
+        transportation_task : TransportRequest
+                The task for which allocation failed.
+        transportation_alternative : TransportationAlternative
+            The transportation alternative that was selected but could not be allocated.
         """
         pass

@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
     from simulation.helper.configuration.configuration import Configuration
     from simulation.helper.logging.uid_logger_adapter import UidLoggerAdapter
+    from simulation.helper.types import SimId
 
 
 class LogManager:
@@ -62,10 +63,6 @@ class LogManager:
         file_level = getattr(logging, config.settings.FILE_LOG_LEVEL)
         logger.setLevel(min(console_level, file_level))
 
-        # Suppress verbose third-party loggers
-        logging.getLogger("fiona").setLevel(logging.WARNING)
-        logging.getLogger("pyomo").setLevel(logging.WARNING)
-
         logger.addHandler(self._shared_console_handler)
         logger.addHandler(self._shared_memory_handler)
 
@@ -75,6 +72,9 @@ class LogManager:
 
         logger.addFilter(self._uid_injector)
         logger.addFilter(self._env_time_injector)
+
+        # Keep noisy third-party loggers out of the simulation formatter.
+        self._silence_third_party_loggers()
 
     def get_class_logger(self, cls_name: str) -> logging.Logger:
         """
@@ -126,13 +126,13 @@ class LogManager:
 
         return self._loggers[cls_name]
 
-    def get_uid_logger(self, uid: str) -> UidLoggerAdapter:
+    def get_uid_logger(self, uid: SimId) -> UidLoggerAdapter:
         """
         Get a logger adapter that automatically includes UID in all log records.
 
         Parameters
         ----------
-        uid : str
+        uid : SimId
             The unique identifier to include in all log records.
 
         Returns
@@ -282,3 +282,11 @@ class LogManager:
             formatter = "%(asctime)s " + formatter
 
         return logging.Formatter(formatter)
+
+    def _silence_third_party_loggers(self) -> None:
+        for logger_name in ("bokeh", "tornado", "fiona", "pyomo"):
+            third_party_logger = logging.getLogger(logger_name)
+            third_party_logger.handlers.clear()
+            third_party_logger.addHandler(logging.NullHandler())
+            third_party_logger.setLevel(logging.WARNING)
+            third_party_logger.propagate = False

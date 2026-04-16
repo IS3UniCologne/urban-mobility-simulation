@@ -1,51 +1,72 @@
 from __future__ import annotations  # noqa: D100
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import TYPE_CHECKING
 
-from simulation.helper.configuration.enums import (
-    AutonomyType,
-    PropulsionType,
-    VehicleState,
-    VehicleType,
-)
+from simulation.helper.exceptions import VehicleError
 from simulation.helper.simulation_base import SimulationBase
+from simulation.helper.state_machine import StateMachine
+from simulation.helper.time import SimulationVelocityConverter
+from simulation.helper.vehicle_states import VehicleStates
+from simulation.vehicle.movement_stats import MovementStats
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from simpy import Event
 
+    from simulation.agent.user.user import User
     from simulation.context.simulation_context import SimulationContext
-    from simulation.environment.position import Position
+    from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import (
         Configuration,
         VehicleConfig,
     )
+    from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
+    from simulation.helper.types import RegionId
+    from simulation.helper.vehicle_states import VehicleState
     from simulation.infrastructure.network.edge import Edge
+    from simulation.infrastructure.route import Route
+    from simulation.infrastructure.transit_network.route_segment import RouteSegment
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.tasks.transport_task import TransportTask
-    from simulation.vehicle.interfaces.passenger_interface import PassengerInterface
-
-
-class VehicleError(Exception):
-    """Base class for all vehicle-related exceptions."""
+    from simulation.vehicle.energy_system import EnergySystem
 
 
 class Vehicle(SimulationBase, ABC):
-    """Base class for all vehicles.
+    """
+    Base class for all vehicles.
 
     Contains common properties and methods used by all vehicles.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        The simulation context.
+    fleet : VehicleFleet
+        The fleet to which the vehicle belongs.
+    position : GeodesicPosition
+        The initial position of the vehicle.
+    vehicle_config : VehicleConfig
+        The vehicle configuration.
     """
 
     __slots__ = (
         "__position",
-        "__state",
         "_autonomy_type",
         "_config",
         "_convenience",
         "_current_region",
-        "_current_task",
+        "_current_request",
+        "_destination",
         "_distance_travelled",
+        "_driver",
+        "_driver_unmounted",
+        "_energy_system",
         "_env",
+        "_estimated_completion_time",
         "_fleet",
         "_id",
         "_max_available_seats",
@@ -55,10 +76,10 @@ class Vehicle(SimulationBase, ABC):
         "_propulsion_type",
         "_seats",
         "_sim",
-        "_user_mounted",
-        "_user_unmounted",
+        "_state_machine",
+        "_vehicle_relocation_finished",
         "_vehicle_type",
-        "_velocity",
+        "_velocity_mm",
     )
 
     # We need to override __eq__ and __hash__ to use Vehicles in sets
@@ -74,7 +95,7 @@ class Vehicle(SimulationBase, ABC):
         self,
         sim: SimulationContext,
         fleet: VehicleFleet,
-        position: Position,
+        position: GeodesicPosition,
         vehicle_config: VehicleConfig,
     ) -> None:
         super().__init__(sim)
@@ -86,32 +107,47 @@ class Vehicle(SimulationBase, ABC):
         self._fleet: VehicleFleet = fleet
 
         # Vehicle Position, name is intentionally mangled. Do not set directly.
-        self.__position: Position = position
-        self._current_region: str = position.get_region_id()
-        self._velocity: float = vehicle_config.VELOCITY
+        self.__position: GeodesicPosition = position
+        self._current_region: RegionId = position.get_region_id()
+        self._velocity_mm: float = SimulationVelocityConverter.kmh_to_meters_per_minute(
+            vehicle_config.VELOCITY_KMH
+        )
         self._vehicle_type: VehicleType = vehicle_config.VEHICLE_TYPE
         self._autonomy_type = vehicle_config.AUTONOMY_TYPE
         self._propulsion_type = vehicle_config.PROPULSION_TYPE
 
+        # Energy System
+        from simulation.vehicle.energy_system import create_energy_system
+
+        self._energy_system = create_energy_system(sim, vehicle_config)
+
         # Seating information
         self._max_available_seats: int = vehicle_config.MAX_AVAILABLE_SEATS
         self._convenience: int = vehicle_config.CONVENIENCE
-        self._passengers: list[PassengerInterface] = []
+        self._passengers: list[User] = []
 
         # Vehicle Distance Travelled
         self._distance_travelled: float = 0
 
+        # Driver
+        self._driver: User | None = None
+
         # Common Events
         self._position_changed: Event = sim.env.event()
-        self._user_mounted: Event = sim.env.event()
-        self._user_unmounted: Event = sim.env.event()
+        self._driver_unmounted: Event = sim.env.event()
+        self._vehicle_relocation_finished: Event = sim.env.event()
 
-        # Initial State, name is intentionally mangled. Do not set directly.
-        self.__state: VehicleState = VehicleState.INITIALIZED
+        # TODO: Do we want different valid transitions per vehicle type?
+        self._state_machine: StateMachine[VehicleState] = StateMachine(
+            initial_state=VehicleStates.STANDBY,
+            allowed_transitions=VehicleStates.TRANSITIONS,
+        )
 
-        # Store current task (if any)
-        # TODO: Make this a generic task interface
-        self._current_task: None | TransportTask = None
+        self._current_request: None | TransportRequest = None
+
+        # Predicted state tracking for task completion
+        self._estimated_completion_time: float = 0
+        self._destination: GeodesicPosition | None = None
 
         # Add self to fleet
         self._fleet.register_vehicle(self)
@@ -150,6 +186,17 @@ class Vehicle(SimulationBase, ABC):
         return self._propulsion_type
 
     @property
+    def energy_system(self) -> EnergySystem:
+        """Get the energy system of the vehicle.
+
+        Returns
+        -------
+        EnergySystem
+            The energy system of the vehicle.
+        """
+        return self._energy_system
+
+    @property
     def velocity(self) -> float:
         """Get the velocity of the vehicle.
 
@@ -158,7 +205,22 @@ class Vehicle(SimulationBase, ABC):
         float
             The velocity of the vehicle.
         """
-        return self._velocity
+        return self._velocity_mm
+
+    def calculate_travel_time(self, distance: float) -> float:
+        """Calculate travel time for a given distance.
+
+        Parameters
+        ----------
+        distance : float
+            Distance in meters.
+
+        Returns
+        -------
+        float
+            Travel time in minutes.
+        """
+        return distance / self._velocity_mm
 
     @property
     def available_seats(self) -> int:
@@ -198,50 +260,68 @@ class Vehicle(SimulationBase, ABC):
 
     @property
     def state(self) -> VehicleState:
-        """Get current state of the vehicle.
+        """Current vehicle state (read-only).
 
         Returns
         -------
         VehicleState
             The current state of the vehicle.
         """
-        return self.__state
+        return self._state_machine.current_state
 
-    @state.setter
-    def state(self, state: VehicleState) -> None:
-        """Set current state of the vehicle.
+    def is_in_state_or_ancestor(self, category: VehicleState) -> bool:
+        """Check if vehicle is in state or state is descendant of category.
 
-        DO NOT CHANGE _state DIRECTLY.
-        This is to ensure that the fleet is notified of state changes.
+        Parameters
+        ----------
+        category : VehicleState
+            Category state (potential ancestor) to check.
+
+        Returns
+        -------
+        bool
+            True if vehicle is in category or a descendant of category.
+        """
+        return self._state_machine.is_in_state_or_descendant(category)
+
+    def _go_online(self) -> None:
+        self._set_state(VehicleStates.STANDBY)
+        self.logger.debug("Going online.")
+
+    def _go_offline(self) -> None:
+        self._set_state(VehicleStates.OFFLINE)
+        self.logger.debug("Going offline.")
+
+    def _set_state(self, state: VehicleState) -> None:
+        """Transition to a new state, validating and notifying fleet.
 
         Parameters
         ----------
         state : VehicleState
             The new state of the vehicle.
         """
-        if state == self.__state:
-            # No state change
+        if state is self._state_machine.current_state:
             return
-        # Notify fleet about state change
-        self._fleet.update_vehicle_state(self, state)
-        self.__state = state
+        old_state = self._state_machine.current_state
+        self._state_machine.transition_to(state)
+        self._fleet.update_vehicle_state(self, old_state, state)
 
     @property
-    def position(self) -> Position:
+    def position(self) -> GeodesicPosition:
         """Get the current position of the vehicle.
 
         Returns
         -------
-        Position
+        GeodesicPosition
             The current position of the vehicle.
         """
         return self.__position
 
     @position.setter
-    def position(self, position: Position) -> None:
+    def position(self, position: GeodesicPosition) -> None:
         old_position = self.__position
 
-        self._distance_travelled += self.__position >> position
+        self._distance_travelled += self.__position << position
 
         new_region = position.get_region_id()
 
@@ -266,15 +346,15 @@ class Vehicle(SimulationBase, ABC):
         )
 
     @property
-    def current_task(self) -> TransportTask | None:
-        """Get the current task of the vehicle.
+    def current_request(self) -> TransportRequest | None:
+        """Get the current request of the vehicle.
 
         Returns
         -------
-        TransportTask
-            The current task of the vehicle.
+        TransportRequest or None
+            The current request of the vehicle.
         """
-        return self._current_task
+        return self._current_request
 
     @property
     def fleet(self) -> VehicleFleet:
@@ -288,25 +368,62 @@ class Vehicle(SimulationBase, ABC):
         return self._fleet
 
     @property
-    def current_region(self) -> str:
+    def current_region(self) -> RegionId:
         """Get the current region of the vehicle.
 
         Returns
         -------
-        str
+        RegionId
             The identifier of the current region of the vehicle. (e.g., hexagon ID).
         """
         return self._current_region
 
+    @property
+    def estimated_completion_time(self) -> float:
+        """Estimated completion time of the current task.
+
+        Returns
+        -------
+        float
+            Simulation time when current task will complete (0 if idle).
+        """
+        return self._estimated_completion_time
+
+    @estimated_completion_time.setter
+    def estimated_completion_time(self, estimated_completion_time: float) -> None:
+        """Set the estimated completion time of the current task."""
+        self._estimated_completion_time = estimated_completion_time
+
+    @property
+    def destination(self) -> GeodesicPosition:
+        """Destination position of the current movement.
+
+        Returns
+        -------
+        GeodesicPosition or None
+            The destination position of the current movement (current position if not moving).
+        """
+        return self._destination if self._destination is not None else self.__position
+
+    @destination.setter
+    def destination(self, value: GeodesicPosition | None) -> None:
+        self._destination = value
+
+    def clear_predicted_state(self) -> None:
+        """Clear predicted state (energy, destination, time)."""
+        self._energy_system.clear_predicted_energy()
+        self._estimated_completion_time = 0
+        self._destination = None
+
     # Standard mount/unmount passenger logic
-    def mount_passenger(self, passenger: PassengerInterface) -> None:
+    def mount_passenger(self, passenger: User) -> None:
         """Mount a passenger to the vehicle.
 
         This method is used to add a passenger to the vehicle.
 
         Parameters
         ----------
-        passenger : PassengerInterface
+        passenger : User
             The passenger to be added to the vehicle.
 
         Raises
@@ -318,26 +435,20 @@ class Vehicle(SimulationBase, ABC):
             raise VehicleError(f"Passenger {passenger} is already in vehicle.")
         elif self.available_seats > 0:
             self._passengers.append(passenger)
-
-            self._user_mounted.succeed()
-            self._user_mounted = self._env.event()
-
-            self.logger.debug(
-                "Passenger: %s mounted vehicle.", passenger.identify_passenger()
-            )
+            self.logger.debug("Passenger: %s mounted vehicle.", passenger.uid)
         else:
             raise VehicleError(
                 f"Passenger {passenger} is trying to mount full vehicle {self}."
             )
 
-    def unmount_passenger(self, passenger: PassengerInterface) -> None:
+    def unmount_passenger(self, passenger: User) -> None:
         """Unmount a passenger from the vehicle.
 
         This method is used to remove a passenger from the vehicle.
 
         Parameters
         ----------
-        passenger : PassengerInterface
+        passenger : User
             The passenger to be removed from the vehicle.
 
         Raises
@@ -347,13 +458,7 @@ class Vehicle(SimulationBase, ABC):
         """
         if passenger in self._passengers:
             self._passengers.remove(passenger)
-
-            self._user_unmounted.succeed()
-            self._user_unmounted = self._env.event()
-            self.logger.debug(
-                "Passenger: %s unmounted vehicle.", passenger.identify_passenger()
-            )
-
+            self.logger.debug("Passenger: %s unmounted vehicle.", passenger.uid)
         else:
             raise VehicleError(
                 f"Trying to unmount passenger {passenger} not in vehicle {self}."
@@ -361,37 +466,134 @@ class Vehicle(SimulationBase, ABC):
 
         self.logger.debug("Driving stopped.")
 
+    def _update_position(self, new_position: GeodesicPosition) -> None:
+        """Update the position of the vehicle and notify driver and passengers."""
+        self.position = new_position
+
+        if self._driver:
+            self._driver.on_vehicle_moved(new_position)
+
+        for passenger in self._passengers:
+            passenger.on_vehicle_moved(new_position)
+
+        self.logger.debug(
+            "Current position %s in region %s.",
+            self.position,
+            self.position.get_region_id(),
+        )
+
+    def mount_driver(self, driver: User) -> None:
+        """Mount a driver to the vehicle.
+
+        Parameters
+        ----------
+        driver : User
+            The driver to mount.
+
+        Raises
+        ------
+        Exception
+            If the vehicle already has a driver.
+        """
+        if self._driver is not None:
+            raise Exception(
+                f"Vehicle {self.uid} has already a driver {self._driver}. Unable to mount driver."
+            )
+
+        self._driver = driver
+        self._set_state(VehicleStates.DRIVING)
+        self.logger.debug("Driver: %s mounted vehicle.", driver)
+
+    def unmount_driver(self) -> None:
+        """Unmount the current driver from the vehicle.
+
+        Raises
+        ------
+        Exception
+            If no driver is mounted.
+        """
+        if self._driver is None:
+            raise Exception("Vehicle has no driver to unmount.")
+
+        tmp_driver_id = str(self._driver)
+        self._driver = None
+        self._driver_unmounted.succeed()
+        self._driver_unmounted = self._env.event()
+        self._set_state(VehicleStates.STANDBY)
+        self.logger.debug("Driver: %s unmounted vehicle.", tmp_driver_id)
+
     def park(self) -> None:
         """Park the vehicle.
 
-        This method is used to set the vehicle to a parked state.
+        Clears the current request and sets state to STANDBY.
         """
-        self.state = VehicleState.PARKING
+        self.set_current_request(None)
+        self._set_state(VehicleStates.STANDBY)
 
         self.logger.debug("Parked.")
 
     # Methods
-    @abstractmethod
-    def move(self, route_segment: Edge) -> None:
+    def _move(
+        self, route_segment: Edge | RouteSegment
+    ) -> Generator[Event, None, MovementStats]:
         """Move the vehicle along a route segment.
 
         Parameters
         ----------
-        route_segment : Edge
+        route_segment : Edge | RouteSegment
             The route segment along which the vehicle will move.
-        """
 
-    # As of now, this is only used with TransportTask
-    # TODO: As part of the vehicle interface refactoring, this should be used to have transparency about a vehicles current task at all time
-    def set_current_task(self, task: TransportTask | None) -> None:
-        """Set the current task of the vehicle.
+        Returns
+        -------
+        MovementStats
+            The statistics of the movement.
+        """
+        distance = route_segment.distance
+        duration = self.calculate_travel_time(distance)
+
+        yield self._env.timeout(duration)
+
+        self._update_position(route_segment.destination)
+
+        energy_consumed = self.energy_system.consume_for_distance(distance)
+
+        return MovementStats(
+            energy_consumed=energy_consumed,
+            distance_travelled=distance,
+            time_taken=duration,
+        )
+
+    def traverse_route(self, route: Route) -> Generator[Event, None, float]:
+        """
+        Traverse a route and return total energy consumed.
 
         Parameters
         ----------
-        task : TransportTask
-            The task to be set as the current task of the vehicle.
+        route : Route
+            The route to traverse.
+
+        Returns
+        -------
+        float
+            Total energy consumed during traversal.
         """
-        self._current_task = task
+        total_energy = 0.0
+        for segment in route.route_segments:
+            stats = yield from self._move(segment)
+            total_energy += stats.energy_consumed
+
+        return total_energy
+
+    # TODO: As part of the vehicle interface refactoring, this should be used to have transparency about a vehicles current request at all time
+    def set_current_request(self, request: TransportRequest | None) -> None:
+        """Set the current request of the vehicle.
+
+        Parameters
+        ----------
+        request : TransportRequest or None
+            The request to set as the current request of the vehicle.
+        """
+        self._current_request = request
 
     def __str__(self) -> str:  # noqa: D105
         return self.uid

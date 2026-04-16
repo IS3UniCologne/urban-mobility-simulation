@@ -1,11 +1,12 @@
 from __future__ import annotations  # noqa: D100
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import h3
 import pandas as pd
 from beartype.door import is_bearable
 from simpy import AnyOf
+from typing_extensions import deprecated
 
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
@@ -13,20 +14,23 @@ from simulation.infrastructure.charging_stations.virtual_charging_infrastructure
 from simulation.infrastructure.charging_stations.virtual_charging_station import (
     VirtualChargingStation,
 )
+from simulation.operator.data_transfer_object import ChargingSession
 from simulation.operator.operations_management.ride_hailing_operations import (
     RideHailingOperations,
 )
-from simulation.operator.operations_management.service_tasks.charging_task_ridehailing import (
-    ChargingTaskRidehailing,
-)
-from simulation.operator.operations_management.task_queue import TaskQueue
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from simulation.operator.operations_management.operations import (
         OperationsDependencies,
     )
+    from simulation.vehicle.vehicle import Vehicle
 
 
+@deprecated(
+    "This class is deprecated and will be removed in future versions. Please use RideHailingGreedyChargingOperations instead until the refactor is complete."
+)
 class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
     __slots__ = (
         "_allow_queue",
@@ -36,16 +40,13 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
         "_config",
         "_distance_matrix",
         "_duration_of_operations",
+        "_job_executed",
+        "_job_transactions",
         "_operation_duration",
         "_operations_started",
         "_operator",
         "_recharge_threshold",
-        "_scheduled_tasks",
         "_sim",
-        "_task_executed",
-        "_task_queue",
-        "_task_transactions",
-        "_time_between_operations",
         "_time_between_operations",
         "_world",
     )
@@ -59,18 +60,14 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
 
         self._recharge_threshold = self._config.RECHARGE_THRESHOLD
 
-        self._allow_queue = self._config.ALLOW_QUEUE
+        self._allow_queue = self._config.ALLOWED_QUEUE_SIZE > 0
 
-        # Task List
-        self._task_queue = TaskQueue(self._sim)
-        self._scheduled_tasks = []
-
-        self._task_transactions = []
+        self._job_transactions: list[dict] = []
 
         # Events
         self._charging_plan_updated = self._sim.env.event()
         self._operations_started = self._sim.env.event()
-        self._task_executed = self._sim.env.event()
+        self._job_executed = self._sim.env.event()
 
         # When to start operations
         self._time_between_operations = self._config.TIME_BETWEEN_OPERATIONS
@@ -83,18 +80,16 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
         return self._charging_plan_updated
 
     @property
-    def task_executed(self):  # noqa: ANN201, D102
-        return self._task_executed
+    def job_executed(self):  # noqa: ANN201, D102
+        return self._job_executed
 
     @property
-    def task_transactions(self):  # noqa: ANN201, D102
-        return pd.DataFrame(self._task_transactions)
+    def job_transactions(self):  # noqa: ANN201, D102
+        return pd.DataFrame(self._job_transactions)
 
     def execute(self):  # noqa: ANN201
         """Below, we combine the old operational logic from operations_ridehailing.py and rebalancing_scheduler_ridehailing.py"""  # noqa: D400
         while True:
-            # Operations begin after first day
-            self._scheduled_tasks = []
             yield self._env.timeout(self._time_between_operations)
 
             # Retrieve Vehicle Transactions
@@ -104,15 +99,9 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
             if not charging_plans:
                 continue
 
+            scheduled_sessions: list[ChargingSession] = []
             for charging_plan in charging_plans:
-                (
-                    origin,
-                    destination,
-                    no_vehicle_to_charge,
-                    distance_to_base,
-                    charging_station,
-                    vehicle,
-                ) = charging_plan[0]
+                *_, charging_station, vehicle = charging_plan[0]
 
                 # we need to do some differentiation here, because we need to check if the charging station is virtual, and if it is, we need to check if we are in a context with reserved timeslots
                 scheduled_time = None
@@ -124,60 +113,30 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
                         # 'NoneType' object is not subscriptable > not using reservation timeslots
                         scheduled_time = None
 
-                charging_task = ChargingTaskRidehailing(
+                session = ChargingSession.create(
                     sim=self._sim,
-                    origin=origin,
-                    destination=destination,
-                    number_of_vehicles_to_charge=no_vehicle_to_charge,
-                    distance_to_fleet_base=distance_to_base,
-                    state_of_charge_threshold=self._recharge_threshold,
-                    charging_station=charging_station,
                     vehicle=vehicle,
+                    charging_station=charging_station,
                     scheduled_time=scheduled_time,
                 )
 
-                # Schedule to Queue
-                self._scheduled_tasks.append(charging_task)
-                # update virtual charging infrastructure
-                # if is_bearable(
-                #     self._operator.charging_infrastructure,
-                #     VirtualChargingInfrastructure,
-                # ):
-                #     charging_station.update_capacity(
-                #         charging_station.capacity - 1, charging_station.valid_timeframe
-                #     )
+                scheduled_sessions.append(session)
 
-                # Track task completion
-                self._env.process(self._track_task(charging_task))
+                # Track session completion
+                self._env.process(self._track_session(session))
 
-                # Count Vehicles to be charged
-                # no_vehicles_scheduled_to_charge['a'] += no_vehicle_to_charge
-            # Insert Tasks into Task Queue
-            self._task_queue.bulk_append(self._scheduled_tasks)
-
-            self.logger.info(
-                "There are %s vehicles with low state of charge.",
-                self._operator.fleet.count_vehicles_below_soc_level(
-                    self._recharge_threshold
-                ),
-            )
-
-            self.logger.info(
-                "Charging Tasks scheduled. In total %s charging tasks are generated.",
-                len(charging_plans),
-            )
+            self.logger.debug("Charging sessions scheduled: %s.", len(charging_plans))
             # Notify listeners
             self._charging_plan_updated.succeed()
             self._charging_plan_updated = self._env.event()
 
-            while self._task_queue.count > 0:
-                next_task = self._task_queue.popleft()
-                self.logger.debug("Processing following task: %s.", next_task)
-                self._env.process(next_task.execute())
-                self._task_executed.succeed(next_task)
-                self._task_executed = self._env.event()
-
-            # ### TODO: activate relocation for ridehailing later
+            for session in scheduled_sessions:
+                self.logger.debug(
+                    "Processing charging session for vehicle %s.", session.vehicle.uid
+                )
+                self._env.process(self._execute_autonomous_charging_session(session))
+                self._job_executed.succeed(session)
+                self._job_executed = self._env.event()
 
     def generate_charging_plan(self):  # noqa: ANN201
         """
@@ -193,11 +152,19 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
         # if config.settings.PERSIST_RESULTS:
         #     state.to_csv(os.path.join(config.output_path, config.fleet_state_file), index = False)
 
+        self.logger.debug(
+            "There are %s vehicles currently below SOC threshold and an additional %s after task completion.",
+            self._operator.fleet.count_vehicles_below_soc_level(
+                self._recharge_threshold
+            ),
+            len(vehicles_to_charge),
+        )
+
         charging_plans = self.calculate_charging_plan(vehicles_to_charge)
 
         return charging_plans
 
-    def calculate_charging_plan(self, vehicles_to_charge):  # noqa: ANN001, ANN201
+    def calculate_charging_plan(self, vehicles_to_charge: list[Vehicle]):  # noqa: ANN201
         """
         :param vehicles_to_charge: List of vehicles to be charged
         :return: all_charging_plans and used capacity per mode
@@ -260,8 +227,8 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
                 # add safety buffer when vehicle is unluckily positioned at the very edge of the hexagon
                 selected_base_distance += self._base_buffer
                 selected_base = sorted_base_list.index[0]
-                if not vehicle.has_enough_state_of_charge(
-                    selected_base_distance, consider_buffer=False
+                if not vehicle.energy_system.has_enough_energy(
+                    distance=selected_base_distance, use_buffer=False
                 ):
                     self.logger.debug(
                         "Vehicle %s considered for charging at %s has not enough state of charge to relocate there, skipping.",
@@ -279,7 +246,9 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
                     self._operator.charging_infrastructure.get_locations()
                 ][[hex]].sort_values(by=hex, ascending=True)
 
+                selected_base = None
                 selected_base_distance = None
+                selected_charging_station = None
                 if vehicle.is_electric:
                     # we prioritize based on the queue
                     # TODO: priorize based on CS.current_queue_time
@@ -311,7 +280,7 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
                         break
 
                     # sometimes the queue is too long and we have to disregard it
-                    if not selected_base_distance:
+                    if selected_base_distance is None:
                         for index_base, row_base in sorted_base_list.iterrows():
                             selected_base = index_base
                             available_charging_stations = [
@@ -332,8 +301,19 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
                                     selected_base_distance += self._base_buffer
                                     break
 
-                    if not vehicle.has_enough_state_of_charge(
-                        selected_base_distance, consider_buffer=False
+                    if (
+                        selected_base_distance is None
+                        or selected_charging_station is None
+                        or selected_base is None
+                    ):
+                        self.logger.debug(
+                            "No charging station found for vehicle %s in queue mode, skipping.",
+                            vehicle.uid,
+                        )
+                        continue
+
+                    if not vehicle.energy_system.has_enough_energy(
+                        distance=selected_base_distance, use_buffer=False
                     ):
                         self.logger.debug(
                             "Vehicle %s considered for charging at %s has not enough state of charge to relocate there, skipping.",
@@ -357,15 +337,25 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
                             ][0]
                             selected_base_distance = row_base[hex]
                             break
+                    # How many vehicles can we move to the base and charge?
+                    if (
+                        selected_base_distance is None
+                        or selected_charging_station is None
+                        or selected_base is None
+                    ):
+                        self.logger.debug(
+                            "No charging station found for non-electric vehicle %s, skipping.",
+                            vehicle.uid,
+                        )
+                        continue
 
-            # How many vehicles can we move to the base and charge?
             pick_up_vehicles = 1
 
             # Collection of Charging Tasks per Service Worker
-            chargings_tasks = []
+            charging_entries = []
 
             # Charging Task from current region to fleet base
-            charging_task = (
+            charging_entry = (
                 hex,
                 selected_base,
                 pick_up_vehicles,
@@ -381,33 +371,31 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
 
             # Add main chargin task to charging tasks
             if pick_up_vehicles > 0:
-                chargings_tasks.append(charging_task)
+                charging_entries.append(charging_entry)
 
             # Store Charging Task
-            if len(chargings_tasks) > 0:
-                charging_plan.append(chargings_tasks)
-
+            if len(charging_entries) > 0:
+                charging_plan.append(charging_entries)
             # Save Charging Plan of Vehicle Mode
 
         return charging_plan
 
-    def _track_task(self, task):  # noqa: ANN001, ANN202
-        yield AnyOf(self._env, [task.task_finished, self._world.simulation_finished])
+    def _track_session(self, session: ChargingSession) -> Generator[AnyOf, Any, None]:
+        yield AnyOf(self._env, [session.finished, self._world.simulation_finished])
 
         # TODO: This should use new transactions
-        self._task_transactions.append(
+        self._job_transactions.append(
             {
-                "start_time": task._start_time,  # noqa: SLF001
-                "estimated_arrival_time": task._estimated_arrival_time,  # noqa: SLF001
-                "scheduled_time": task._scheduled_time,  # noqa: SLF001
+                "start_time": session.start_time,
+                "estimated_arrival_time": session.estimated_arrival_time,
+                "scheduled_time": session.scheduled_time,
                 "end_time": self._env.now,
-                "vehicle": task._vehicle.uid,  # noqa: SLF001
-                "state": task.state,
-                "fleet": task._vehicle.fleet.uid,  # noqa: SLF001
-                "charging_station": task._charging_station.location,  # noqa: SLF001
-                "waiting_time": task.waiting_time,
-                "charging_duration": task.charging_duration,
-                "estimated_completion_time": task._estimated_completion_time,  # noqa: SLF001
-                "kWh_charged": task.kWh_charged,
+                "vehicle": session.vehicle.uid,
+                "fleet": session.vehicle.fleet.uid,
+                "charging_station": session.charging_station.location,
+                "waiting_time": session.waiting_time,
+                "charging_duration": session.charging_duration,
+                "estimated_completion_time": session.estimated_completion_time,
+                "kWh_charged": session.kWh_charged,
             }
         )

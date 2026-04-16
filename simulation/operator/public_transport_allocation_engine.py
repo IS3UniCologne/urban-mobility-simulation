@@ -51,8 +51,3 @@ class PublicTransportAllocationEngine(AllocationEngineInterface):  # noqa: D101
             )
         else:
             return None
-
-    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201, D102
-        self, vehicle_assignment: VehicleAllocation
-    ):
-        pass

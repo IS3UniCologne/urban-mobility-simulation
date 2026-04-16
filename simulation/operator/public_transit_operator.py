@@ -4,6 +4,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -15,9 +18,8 @@ if TYPE_CHECKING:
         AllocationEngineInterface,
     )
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.tasks.transport_task import TransportTask
 
-from simulation.helper.configuration.enums import TransactionState
+from simulation.helper.enums import TransactionState
 from simulation.helper.time import SimulationTime
 from simulation.infrastructure.helper import timetable
 from simulation.operator.operator import Operator
@@ -58,7 +60,7 @@ class PublicTransitOperator(Operator):  # noqa: D101
     def pay_for_fulfilled_transportation_task(  # noqa: D102
         self,
         user,  # noqa: ANN001
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         selected_transportation_alternative: TransportationAlternative,
     ) -> None:
         # Check the price of the bus
@@ -75,7 +77,7 @@ class PublicTransitOperator(Operator):  # noqa: D101
     def withdraw_transportation_task(  # noqa: D102
         self,
         user,  # noqa: ANN001
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         state: TransactionState = TransactionState.WITHDRAWN,
     ) -> None:
         self.log_transaction(transportation_task, None, state=state)

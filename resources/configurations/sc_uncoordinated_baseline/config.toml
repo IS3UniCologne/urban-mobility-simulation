@@ -1,0 +1,71 @@
+##############################################################################################
+### This is the default configuration file template                                        ###
+### for instructions on adding new configuration parameters, check the Configuration class ###
+##############################################################################################
+
+
+[SETTINGS]
+
+# Logging
+# WARNING: Setting log levels to DEBUG will SIGNIFICANTLY slow down the simulation!
+LOG_LEVEL      = "INFO"
+FILE_LOG_LEVEL = "DEBUG"
+LOG_TIMESTAMPS = false
+# Set class specific log levels. This takes precedence over the global log levels and applies to console and log files.
+# LOG_CLASS_OVERRIDES = { RideHailingUser = "DEBUG", RideHailingOperator = "INFO" }
+# Output
+PERSIST_RESULTS = false
+
+
+[EXPERIMENT_MANAGEMENT]
+START_TIME = 0
+END_TIME   = 1440
+
+
+[RANDOM_MANAGER]
+# Main seed, set to 0 to generate a new seed on every run
+SEED = 42
+# Component seeds. If commented out, they will be generated from the main seed. (default for reproducibility)
+# Set to 0 to generate a new seed for the component on every run, independent of the main seed.
+# Set to any other value to use that value as the seed for the component.
+[RANDOM_MANAGER.COMPONENT_SEEDS]
+# POPULATIONFACTORY = 0
+# FLEETFACTORY      = 0
+# DEMANDFACTORY     = 0
+# INITIALSOC        = 0
+# GEOENV            = 0
+# SOC_DISTRIBUTION = 42
+
+
+[WORLD]
+SPATIAL_RESOLUTION  = 7
+TEMPORAL_RESOLUTION = 4
+DAILY_RESOLUTION    = "weekday_weekend"
+CITY                = "chicago"
+
+
+[PATH]
+# Environment paths
+PATH_ENV_BOUNDING_BOX    = "./data/environment/geodesic/{city}/env_bounding_box.geojson"
+PATH_ENV_HEX_LAYER_RES_7 = "./data/environment/geodesic/{city}/env_hex_7.geojson"
+PATH_ENV_HEX_LAYER_RES_8 = "./data/environment/geodesic/{city}/env_hex_8.geojson"
+PATH_ENV_HEX_LAYER_RES_9 = "./data/environment/geodesic/{city}/env_hex_9.geojson"
+
+# Public transit paths
+PATH_TRANSIT_TIMETABLE = "./data/infrastructure/transit_timetable.csv"
+PATH_TRANSIT_SHAPES    = "./data/infrastructure/transit_shapes.csv"
+
+# Supply paths
+PATH_VEHICLE_SUPPLY = "./data/supply/{city}_vehicle_supply_distribution_hex_7.csv"
+
+# Mode Choice Model paths
+PATH_TO_MODE_CHOICE_MODEL = "./data/choice_model/distance_based_shared_vehicles.pickle"
+
+# Output paths
+OUTPUT_FOLDER    = "./data/output"
+TRANSACTION_FILE = "transactions.csv"
+FLEET_STATE_FILE = "fleet_state.csv"
+
+# Demand Paths
+PATH_TRIP_DEMAND      = "./data/demand/{city}_shared_vehicle_trips.csv"
+PATH_DEMAND_MODIFIERS = ["./data/demand/{city}__zero_demand.geojson", "./data/demand/{city}_line200bufferROUTE.geojson"]

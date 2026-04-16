@@ -5,7 +5,10 @@ from typing import TYPE_CHECKING
 import simpy
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     import pandas as pd
+    from simpy import Event
 
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import OperatorConfig
@@ -51,9 +54,9 @@ class OperationsPublicTransport(OperationsInterface):  # noqa: D101
         self._fleet = fleet
         self._operator_config = operator_config
         self._walking_speed = self._config.user.WALKING_SPEED
-        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY
+        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY_KMH
 
-    def execute(self):  # noqa: ANN201
+    def execute(self) -> Generator[Event, None, None]:
         """
         TransitOperator Lifecycle
         """  # noqa: D200, D400

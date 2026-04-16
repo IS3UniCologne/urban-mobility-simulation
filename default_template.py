@@ -38,9 +38,18 @@ def main() -> None:
     viz = VisualizationManager(simulation=simulation, interval=10)
 
     # 2. Declaratively add the plots you want to see
-    viz.add_plot(viz.world.active_user_processes)
-    viz.add_plot(viz.operators.total_revenue)
-    viz.add_plot(viz.world.vehicle_state_distribution)
+    viz.add_plot(
+        viz.world.active_user_processes
+    )  # Example for simple metric value line plot
+    viz.add_plot(
+        viz.operators.total_revenue
+    )  # Example for indexed metric plot (one line per operator + aggregate)
+    viz.add_plot(
+        viz.world.vehicle_state_distribution
+    )  # Example for custom indexed metric plot
+    viz.add_plot(
+        viz.world.wall_time_per_metric_evaluation
+    )  # Example for runtime performance monitoring
 
     # Don't forget to start the visualization server, optionally set timeout and port
     viz.start()
