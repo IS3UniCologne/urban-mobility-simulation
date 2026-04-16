@@ -52,15 +52,11 @@ class ChargingStationMetrics(IndexedMetricsBase):
             return MetricsDict()
 
         metrics = MetricsDict()
-        aggregate = {
-            "total_stations": 0,
-            "total_capacity": 0,
-            "total_queue_capacity": 0,
-            "total_current_users": 0,
-            "total_current_queue_size": 0,
-            "average_utilization": 0.0,
-            "average_queue_utilization": 0.0,
-        }
+        total_stations = 0
+        total_capacity = 0
+        total_queue_capacity = 0
+        total_current_users = 0
+        total_current_queue_size = 0
 
         stations = [cs for infra in infrastructures for cs in infra.charging_stations]
         for station in stations:
@@ -68,26 +64,37 @@ class ChargingStationMetrics(IndexedMetricsBase):
             metrics[station.location] = station_metrics
 
             # Add to aggregate metrics
-            aggregate["total_stations"] += 1
-            aggregate["total_capacity"] += station.capacity
-            aggregate["total_queue_capacity"] += station.queue_size
-            aggregate["total_current_users"] += len(station.plugs.users)
-            aggregate["total_current_queue_size"] += len(station.plugs.queue)
+            total_stations += 1
+            total_capacity += station.capacity
+            total_queue_capacity += station.queue_size
+            total_current_users += len(station.plugs.users)
+            total_current_queue_size += len(station.plugs.queue)
 
         # Calculate averages
-        if aggregate["total_stations"] > 0:
-            total_possible_capacity = aggregate["total_capacity"]
-            total_possible_queue = aggregate["total_queue_capacity"]
+        average_utilization = 0.0
+        average_queue_utilization = 0.0
+
+        if total_stations > 0:
+            total_possible_capacity = total_capacity
+            total_possible_queue = total_queue_capacity
 
             if total_possible_capacity > 0:
-                aggregate["average_utilization"] = (
-                    aggregate["total_current_users"] / total_possible_capacity
-                )
+                average_utilization = total_current_users / total_possible_capacity
 
             if total_possible_queue > 0:
-                aggregate["average_queue_utilization"] = (
-                    aggregate["total_current_queue_size"] / total_possible_queue
+                average_queue_utilization = (
+                    total_current_queue_size / total_possible_queue
                 )
+
+        aggregate = {
+            "total_stations": total_stations,
+            "total_capacity": total_capacity,
+            "total_queue_capacity": total_queue_capacity,
+            "total_current_users": total_current_users,
+            "total_current_queue_size": total_current_queue_size,
+            "average_utilization": average_utilization,
+            "average_queue_utilization": average_queue_utilization,
+        }
 
         metrics["aggregate"] = MetricsDict(aggregate)
         return metrics
