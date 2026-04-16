@@ -166,9 +166,10 @@ class LogManager:
             logger = logging.getLogger(logger_name)
             logger.propagate = False
 
-            system_formatter = logging.Formatter("[%(levelname)s]: %(message)s")
+            system_format_string = "[%(levelname)s]: %(message)s"
             if self._config.settings.LOG_TIMESTAMPS:
-                system_formatter = "%(asctime)s " + system_formatter
+                system_format_string = "%(asctime)s " + system_format_string
+            system_formatter = logging.Formatter(system_format_string)
 
             # Create console handler for system messages
             system_console_handler = logging.StreamHandler()
