@@ -36,7 +36,7 @@ def main() -> None:
     simulation.metrics.tracker.stop_job("fleet_metrics")
 
     # Save tracked metrics to file
-    simulation.metrics.tracker.export_all("tracked_metrics")
+    simulation.metrics.tracker.export_all_jobs("tracked_metrics")
 
     simulation.metrics.to_log()
 

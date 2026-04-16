@@ -37,7 +37,16 @@ from pydantic import (
     model_validator,
 )
 
-from simulation.helper.configuration.enums import (
+from simulation.agent.user.choice_model.choice_model_interface import (
+    ChoiceModelInterface,
+)
+from simulation.agent.user.choice_model.min_pickup_time_vehicle_choice_model import (
+    MinPickupTimeVehicleChoiceModel,
+)
+from simulation.agent.user.choice_model.random_nearest_vehicle_choice_model import (
+    RandomModeNearestVehicleChoiceModel,
+)
+from simulation.helper.enums import (
     AutonomyType,
     DailyResolution,
     ModeChoiceStrategy,
@@ -47,13 +56,27 @@ from simulation.helper.configuration.enums import (
     VehicleType,
 )
 from simulation.helper.time import SimulationVelocityConverter
+from simulation.helper.types import RegionId
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
 )
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+from simulation.operator.operations_management.integrated_shared_mobility_operations import (
+    IntegratedSharedMobilityOperations,
+)
 from simulation.operator.operations_management.operations import Operations
 from simulation.operator.operator import Operator
+from simulation.operator.ride_hailing_allocation_engine import (
+    RideHailingAllocationEngine,
+)
+from simulation.operator.ride_hailing_operator import RideHailingOperator
+from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 from simulation.operator.search_engine import SearchEngine
+from simulation.operator.shared_mobility_operator import SharedMobilityOperator
+from simulation.operator.shared_vehicle_allocation_engine import (
+    SharedVehicleAllocationEngine,
+)
+from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
 from simulation.operator.vehicle_allocation_engine import AllocationEngine
 from simulation.operator.vehicle_fleet import VehicleFleet
 from simulation.world.markets.auction import Auction
@@ -61,8 +84,6 @@ from simulation.world.markets.auction import Auction
 if TYPE_CHECKING:
     # Careful moving stuff here, pydantic needs to check type hints at runtime!
     from types import ModuleType
-
-    from pyparsing import Any
 
 
 try:
@@ -147,7 +168,7 @@ class PathConfig(ConfigBaseModel):
     PATH_TRANSIT_TIMETABLE: Path
     PATH_TRANSIT_SHAPES: Path
     PATH_VEHICLE_SUPPLY: Path
-    PATH_TO_MODE_CHOICE_MODEL: Path
+    PATH_TO_MODE_CHOICE_MODEL: Path  # deprecated, remove
     OUTPUT_FOLDER: Path
     TRANSACTION_FILE: Path
     FLEET_STATE_FILE: Path
@@ -166,93 +187,103 @@ class PathConfig(ConfigBaseModel):
             return Path(os.path.normpath(os.path.expanduser(v)))
 
 
-class PopulationConfig(ConfigBaseModel):
-    """Configuration for population demographics and probabilities."""
-
-    POPULATION_PROBABILITIES: list[float] = Field(min_length=1)
-    RIDE_HAILING_POPULATION_PROBABILITIES: list[float] | None = None
-    SHARED_VEHICLE_POPULATION_PROBABILITIES: list[float] | None = None
-    TRANSIT_POPULATION_PROBABILITIES: list[float] | None = None
-
-    @field_validator(
-        "POPULATION_PROBABILITIES",
-        # "RIDE_HAILING_POPULATION_PROBABILITIES",
-        # "SHARED_VEHICLE_POPULATION_PROBABILITIES",
-        # "TRANSIT_POPULATION_PROBABILITIES",
-        mode="after",
-    )
-    @classmethod
-    def validate_probabilities(cls, v: list[float] | None) -> list[float] | None:
-        """Validate that probabilities are between 0.0 and 1.0 and sum to 1.0."""
-        if v is None:
-            return v
-        if not all(0.0 <= prob <= 1.0 for prob in v):
-            raise ValueError("All probabilities must be between 0.0 and 1.0")
-        if abs(sum(v) - 1.0) > 1e-6:
-            raise ValueError("Probabilities must sum to 1.0")
-        return v
-
-
 class UserConfig(ConfigBaseModel):
     """Configuration for user behavior and preferences."""
 
     TRANSIT_MAX_WAIT: int = Field(
         gt=0, description="Maximum wait time for transit in minutes"
-    )
+    )  # TODO: this is directly read in the public transport search engine. Either move it to that config or make it a user parameter
     SPATIAL_STRATEGY: str
-    WALKING_SPEED: float = Field(gt=0)
+    WALKING_SPEED_KMH: float = Field(gt=0)
+    MAX_SEARCH_DURATION_MIN: int = Field(gt=0)
+    CHOICE_MODEL_CONFIG: ChoiceModelConfig
 
-    @field_validator("WALKING_SPEED", mode="after")
-    @classmethod
-    def convert_walking_speed(cls, v: float) -> float:
-        """Convert walking speed from km/h to m/s."""
-        return SimulationVelocityConverter().convert_kmh(v)
+
+class ChoiceModelConfig(ConfigBaseModel):
+    """Configuration for choice model parameters."""
+
+    CHOICE_MODEL_TYPE: type[ChoiceModelInterface]
+
+
+class RandomModeNearestVehicleChoiceModelConfig(ChoiceModelConfig):
+    """Configuration for Random Mode Nearest Vehicle Choice Model parameters."""
+
+    CHOICE_MODEL_TYPE: type[ChoiceModelInterface] = RandomModeNearestVehicleChoiceModel
+
+
+class MinPickupTimeVehicleChoiceModelConfig(ChoiceModelConfig):
+    """Configuration for Minimum Pickup Time Vehicle Choice Model parameters."""
+
+    CHOICE_MODEL_TYPE: type[ChoiceModelInterface] = MinPickupTimeVehicleChoiceModel
+
+
+class PopulationSegmentConfig(ConfigBaseModel):
+    """Configuration for a population segment.
+
+    A segment represents a subset of the user population with distinct behavioral
+    characteristics and choice models.
+    """
+
+    PROPORTION: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Proportion of total population in this segment. Must sum to 1.0 across all segments.",
+    )
+    USER_CONFIG: UserConfig
+
+
+class PopulationConfig(ConfigBaseModel):
+    """Configuration for heterogeneous population of multiple segments.
+
+    Validates that segment proportions sum to 1.0.
+    """
+
+    SEGMENTS: list[PopulationSegmentConfig] = Field(
+        min_length=1, description="List of population segments"
+    )
+
+    @model_validator(mode="after")
+    def validate_proportions(self) -> PopulationConfig:
+        """Ensure segment proportions sum to 1.0."""
+        total = sum(seg.PROPORTION for seg in self.SEGMENTS)
+        if not total == 1.0:
+            raise ValueError(
+                f"Segment proportions must sum to 1.0, got {total:.4f}. "
+                f"Segments: {[seg.PROPORTION for seg in self.SEGMENTS]}"
+            )
+        return self
 
 
 class VehicleConfig(ConfigBaseModel):
     """Configuration for vehicle properties and behavior."""
 
+    # TODO: check what can be moved to subclasses
+
     # Make frozen so we can use VehicleConfig in fleet dict
     model_config = ConfigDict(frozen=True)
 
-    VELOCITY: float = Field(gt=0)
+    VELOCITY_KMH: float = Field(gt=0)
     MAX_AVAILABLE_SEATS: int
     VEHICLE_TYPE: VehicleType
     AUTONOMY_TYPE: AutonomyType = AutonomyType.HUMAN_DRIVEN
     PROPULSION_TYPE: PropulsionType = PropulsionType.BATTERY_ELECTRIC
-    WALKING_DISTANCE: int | None = Field(default=None, ge=0, le=10000)
+    ENERGY_CAPACITY: float = Field(default=None, gt=0)  # kWh or Liters
+    ENERGY_CONSUMPTION_PER_KM: float = Field(default=None, ge=0)  # kWh/km or Liters/km
+    INITIAL_CHARGE_RATIO: float = Field(default=None, ge=0, le=1)
+    ENERGY_RESERVE_RATIO: float | None = Field(
+        default=None, ge=0, le=1, description="Reserve energy ratio to maintain"
+    )
+    WALKING_DISTANCE: int | None = Field(
+        default=None, ge=0, le=10000
+    )  # TODO: Move this to users
     CONVENIENCE: int = Field(default=1, ge=1)
-    MAX_STATE_OF_CHARGE: float | None = Field(default=None, gt=0)
-    ENERGY_CONSUMPTION: float | None = Field(default=None, ge=0)
-    EV_RELATIVE_ENERGY_CONSUMPTION: float | None = Field(default=None, gt=0)
-    INITIAL_SOC: float | None = Field(default=None, gt=0)
-    EMERGENCY_SOC_BUFFER: float | None = Field(default=None, gt=0)
-    PRICE_PER_MIN: float | None = Field(default=None, gt=0)
+    PRICE_PER_MIN: float | None = Field(default=None, ge=0)
     PRICE_PER_TRIP: float = Field(default=0, ge=0)
-    DAILY_TOTAL_COST: float | None = Field(default=None, gt=0)
-    COST_PER_KM: float | None = Field(default=None, gt=0)
-    PRICE_PER_KM: float | None = Field(default=None, gt=0)
-    CHARGING_COST_PER_KWH: float | None = Field(default=None, gt=0)
-    KG_CO2_PER_KM: float | None = Field(default=None, gt=0)
-
-    @field_validator("VELOCITY", mode="after")
-    @classmethod
-    def convert_velocity(cls, v: float) -> float:
-        """Convert vehicle velocity from km/h to m/s."""
-        return SimulationVelocityConverter().convert_kmh(v)
-
-    # TODO: Add more validators for other vehicles etc. This is just an example of what we could be doing. Or don't :)
-    @model_validator(mode="after")
-    def validate_electric_vehicle_fields(self) -> VehicleConfig:
-        """Validate fields specific to electric vehicles."""
-        if self.PROPULSION_TYPE == PropulsionType.BATTERY_ELECTRIC:
-            if self.MAX_STATE_OF_CHARGE is None:
-                raise ValueError(
-                    "MAX_STATE_OF_CHARGE is required for electric vehicles"
-                )
-            if self.ENERGY_CONSUMPTION is None:
-                raise ValueError("ENERGY_CONSUMPTION is required for electric vehicles")
-        return self
+    DAILY_TOTAL_COST: float | None = Field(default=None, ge=0)
+    COST_PER_KM: float | None = Field(default=0, ge=0)
+    PRICE_PER_KM: float | None = Field(default=None, ge=0)
+    CHARGING_COST_PER_KWH: float | None = Field(default=None, ge=0)
+    KG_CO2_PER_KM: float | None = Field(default=None, ge=0)
 
 
 class RideHailingVehicleConfig(VehicleConfig):
@@ -262,6 +293,8 @@ class RideHailingVehicleConfig(VehicleConfig):
 class SharedVehicleConfig(VehicleConfig):
     """Configuration for shared vehicle parameters."""
 
+    PRICE_PER_TRIP: float = Field(default=0)
+
 
 class FleetConfig(ConfigBaseModel):
     """Configuration for fleet parameters."""
@@ -270,11 +303,24 @@ class FleetConfig(ConfigBaseModel):
 
     VEHICLES: dict[VehicleConfig, int]  # TODO: update this to use distributions
 
+    ENABLE_EN_ROUTE_INDEX: bool = Field(default=False)
+
 
 class RideHailingFleetConfig(FleetConfig):
     """Configuration for ride-hailing fleet parameters."""
 
     RH_AVAILABILITY: list[float]
+    ENABLE_EN_ROUTE_INDEX: bool = Field(default=True)
+
+    @field_validator("RH_AVAILABILITY", mode="after")
+    @classmethod
+    def validate_availability_length(cls, v: list[float]) -> list[float]:
+        """Validate that RH_AVAILABILITY has exactly 24 elements (one per hour)."""
+        if len(v) != 24:
+            raise ValueError(
+                f"RH_AVAILABILITY must have exactly 24 elements (one per hour), got {len(v)}"
+            )
+        return v
 
 
 class SharedVehicleFleetConfig(FleetConfig):
@@ -304,7 +350,7 @@ class ChargingInfrastructureConfig(BaseModel):
     )
 
     NUMBER_OF_CHARGING_STATIONS: int
-    LOCATIONS: list[str]
+    LOCATIONS: list[RegionId]
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
@@ -363,10 +409,9 @@ class OperationsConfig(ConfigBaseModel):
     RECHARGE_THRESHOLD: list[float] | float | None = Field(
         default=None
     )  # TODO: unify this between sv and rh
-    VEHICLE_RELOCATION_VELOCITY: float | None = Field(gt=0, default=None)
+    VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0, default=0)
 
-    # TODO: allow_queue was both explicitly defined in the config, but also derived from queue size > 0. How do we want to handle this?
-    ALLOW_QUEUE: bool | None = Field(default=False)
+    ALLOWED_QUEUE_SIZE: int | None = Field(default=0, ge=0)
 
     PLANNING_LOOKAHEAD: int | None = Field(default=None, gt=0)
 
@@ -380,14 +425,15 @@ class OperationsConfig(ConfigBaseModel):
     @classmethod
     def convert_velocity(cls, v: float) -> float:
         """Convert vehicle relocation velocity from km/h to m/s."""
-        return SimulationVelocityConverter().convert_kmh(v)
+        return SimulationVelocityConverter.kmh_to_meters_per_minute(v)
 
 
 class RideHailingOperationsConfig(OperationsConfig):
     """Configuration for ride-hailing operations parameters."""
 
+    # OPERATOR_TYPE: type[Operator] =
+
     DRIVER_PAYMENT_SHARE: float = Field(gt=0)
-    DISCOUNT_RATE: float = Field(ge=0)
     AV_PRICE_REDUCTION: float = Field(gt=0)
     MAX_PICKUP_DISTANCE: int = Field(gt=0)
     PRICE_ENTERING: float = Field(ge=0)
@@ -395,31 +441,21 @@ class RideHailingOperationsConfig(OperationsConfig):
     PRICE_PER_KM: float = Field(ge=0)
     MINIMUM_PRICE: float = Field(ge=0)
 
-    @model_validator(mode="after")
-    def apply_discount_and_availability(self) -> RideHailingGlobalConfig:
-        """
-        Apply discount to price fields and compute driver availability vector.
-
-        Returns
-        -------
-        RideHailingOperationsConfig
-            A new instance with updated price fields and driver availability vector.
-        """
-        # TODO: Is this functionality really necessary ?
-        discount = 1.0 - self.DISCOUNT_RATE
-        # TODO: Do this in fleet creation, store in vehicle
-        return self.model_copy(
-            update={
-                "PRICE_ENTERING": self.PRICE_ENTERING * discount,
-                "PRICE_PER_MINUTE": self.PRICE_PER_MINUTE * discount,
-                "PRICE_PER_KM": self.PRICE_PER_KM * discount,
-                "MINIMUM_PRICE": self.MINIMUM_PRICE * discount,
-            }
-        )
-
 
 class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for ride-hailing base charging operations."""
+
+
+class RideHailingGreedyChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for ride-hailing greedy charging operations."""
+
+
+class RideHailingUncoordinatedChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for shared, uncoordinated charging operations."""
+
+
+class RideHailingSharedChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for shared, coordinated charging operations."""
 
 
 class RideHailingMPChargingOperationsConfig(RideHailingOperationsConfig):
@@ -432,30 +468,14 @@ class RideHailingMPChargingOperationsConfig(RideHailingOperationsConfig):
 class IntegratedSharedMobilityOperationsConfig(OperationsConfig):
     """Configuration for integrated shared mobility operations."""
 
+    OPERATIONS_TYPE: type[Operations] = IntegratedSharedMobilityOperations
+
     NUMBER_OF_SERVICE_WORKERS: int = Field(gt=0)
 
     CHARGING_STATION_POWER: float | None = Field(default=None)
     NUMBER_OF_BASE_REGIONS: int | None = Field(default=None)
     BASE_CAPACITY: int | None = Field(default=None)
     BASE_REGIONS: list[str] | None = Field(default=None)
-
-    @model_validator(mode="after")
-    def clamp_base_regions(self) -> IntegratedSharedMobilityOperationsConfig:
-        """
-        Clamp base regions list to match the number of base regions.
-
-        TODO: Same as above, not super intuitive.
-
-        Returns
-        -------
-        IntegratedSharedMobilityOperationsConfig
-            A new instance with updated BASE_REGIONS.
-        """
-        if self.BASE_REGIONS is None or self.NUMBER_OF_BASE_REGIONS is None:
-            return self
-        return self.model_copy(
-            update={"BASE_REGIONS": self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]}
-        )
 
 
 class OperatorConfig(ConfigBaseModel):
@@ -482,9 +502,13 @@ class OperatorConfig(ConfigBaseModel):
 class RideHailingOperatorConfig(OperatorConfig):
     """Configuration for ride-hailing operator parameters."""
 
+    OPERATOR_TYPE: type[Operator] = RideHailingOperator
+
 
 class SharedVehicleOperatorConfig(OperatorConfig):
     """Configuration for shared vehicle operator parameters."""
+
+    OPERATOR_TYPE: type[Operator] = SharedMobilityOperator
 
 
 class SearchEngineConfig(ConfigBaseModel):
@@ -496,9 +520,13 @@ class SearchEngineConfig(ConfigBaseModel):
 class RideHailingSearchEngineConfig(SearchEngineConfig):
     """Configuration for ride-hailing search engine parameters."""
 
+    SEARCH_ENGINE_TYPE: type[SearchEngine] = RideHailingSearchEngine
+
 
 class SharedVehicleSearchEngineConfig(SearchEngineConfig):
     """Configuration for shared vehicle search engine parameters."""
+
+    SEARCH_ENGINE_TYPE: type[SearchEngine] = SharedVehicleSearchEngine
 
 
 class AllocationEngineConfig(ConfigBaseModel):
@@ -510,9 +538,15 @@ class AllocationEngineConfig(ConfigBaseModel):
 class RideHailingAllocationEngineConfig(AllocationEngineConfig):
     """Configuration for ride-hailing vehicle allocation engine parameters."""
 
+    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine] = RideHailingAllocationEngine
+
 
 class SharedVehicleAllocationEngineConfig(AllocationEngineConfig):
     """Configuration for shared vehicle allocation engine parameters."""
+
+    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine] = (
+        SharedVehicleAllocationEngine
+    )
 
 
 class RideHailingGlobalConfig(ConfigBaseModel):
@@ -754,30 +788,6 @@ class Configuration:
         return self._get_section("population", PopulationConfig)
 
     @property
-    def user(self) -> UserConfig:
-        """
-        Get the user configuration section.
-
-        Returns
-        -------
-        UserConfig
-            The user configuration section.
-        """
-        return self._get_section("user", UserConfig)
-
-    @property
-    def mode_choice_model(self) -> ModeChoiceModelConfig:
-        """
-        Get the mode choice model configuration section.
-
-        Returns
-        -------
-        ModeChoiceModelConfig
-            The mode choice model configuration section.
-        """
-        return self._get_section("mode_choice_model", ModeChoiceModelConfig)
-
-    @property
     def charging_infrastructures(self) -> list[ChargingInfrastructureConfig]:
         """
         Get the charging infrastructure configuration section.
@@ -929,42 +939,75 @@ class Configuration:
         return self._get_section("dqn", DQNConfig)
 
     def _load_config_from_py(self, base_path: Path) -> None:
-        op_file = base_path / "operators.py"
-        if not op_file.exists():
-            raise FileNotFoundError(f'Could not find "operators.py" in {base_path}')
+        """Load configuration from Python module files."""
+        # Define files to load: (filename, required)
+        config_files = [("operators.py", True), ("population.py", True)]
 
-        module = self._import_module_file(op_file)
-
-        section_buckets: dict[str, list[Any]] = {
-            "operator": [],
-            "charging_infrastructure": [],
-        }
-
+        # Map model types to their config section names
         model_to_section: dict[type[BaseModel], str] = {
             OperatorConfig: "operator",
             ChargingInfrastructureConfig: "charging_infrastructure",
+            PopulationConfig: "population",
         }
         model_classes = tuple(model_to_section.keys())
 
-        def collect(obj: object) -> None:
-            if isinstance(obj, model_classes):
-                for cls in model_to_section:
-                    if isinstance(obj, cls):
-                        section_buckets[model_to_section[cls]].append(obj)
-                        return
-            if isinstance(obj, list | tuple):
-                for elem in obj:
-                    collect(elem)
-                return
-            # nothing matches, ignore
+        # Collect instances from all files
+        section_buckets: dict[str, list[BaseModel]] = {
+            section: [] for section in set(model_to_section.values())
+        }
 
-        for name, value in vars(module).items():
-            if name.startswith("_"):
+        for filename, required in config_files:
+            file_path = base_path / filename
+            if not file_path.exists():
+                if required:
+                    raise FileNotFoundError(
+                        f'Could not find required configuration file "{filename}" in {base_path}'
+                    )
                 continue
-            collect(value)
 
-        for section_name, items in section_buckets.items():
-            self._cache[section_name] = items
+            module = self._import_module_file(file_path)
+
+            # Collect config instances from this module
+            for name, value in vars(module).items():
+                if name.startswith("_"):
+                    continue
+                self._collect_config_instance(
+                    value, model_classes, model_to_section, section_buckets
+                )
+
+        # Store collected instances in cache
+        self._cache["operator"] = section_buckets.get("operator", [])
+        self._cache["charging_infrastructure"] = section_buckets.get(
+            "charging_infrastructure", []
+        )
+        population_configs = section_buckets.get("population", [])
+        if len(population_configs) == 0:
+            raise ValueError("No PopulationConfig instance found in population.py. ")
+        if len(population_configs) > 1:
+            raise ValueError(
+                "Multiple PopulationConfig instances found in population.py. "
+            )
+        self._cache["population"] = population_configs[0]
+
+    def _collect_config_instance(
+        self,
+        obj: object,
+        model_classes: tuple[type[BaseModel], ...],
+        model_to_section: dict[type[BaseModel], str],
+        section_buckets: dict[str, list[BaseModel]],
+    ) -> None:
+        """Recursively collect config instances from an object."""
+        if isinstance(obj, model_classes):
+            for cls, section in model_to_section.items():
+                if isinstance(obj, cls):
+                    section_buckets[section].append(obj)
+                    return
+        # Recurse into containers
+        if isinstance(obj, list | tuple):
+            for elem in obj:
+                self._collect_config_instance(
+                    elem, model_classes, model_to_section, section_buckets
+                )
 
     def _import_module_file(self, file_path: Path) -> ModuleType:
         """Import a module from a filesystem .py file path."""

@@ -1,10 +1,10 @@
 from __future__ import annotations  # noqa: D100
 
 from abc import ABC, abstractmethod
-from typing import NewType
+from typing import TYPE_CHECKING
 
-# RegionId represents a unique identifier for a spatial region (e.g., an H3 hex ID).
-RegionId = NewType("RegionId", str)
+if TYPE_CHECKING:
+    from simulation.helper.types import RegionId
 
 
 class Position(ABC):  # noqa: D101

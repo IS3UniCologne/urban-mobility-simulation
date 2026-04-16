@@ -6,19 +6,22 @@ from typing import TYPE_CHECKING
 
 from simulation.helper.simulation_base import SimulationBase
 
-from .charging_station_metrics import ChargingStationMetrics
-from .fleet_metrics import FleetMetrics
+from .metrics_base import MetricsBase
 from .metrics_dict import MetricsDict
 from .metrics_tracker import MetricsTracker
-from .operator_metrics import OperatorMetrics
-from .world_metrics import WorldMetrics
+from .providers import (
+    AuctionMetrics,
+    ChargingStationMetrics,
+    FleetMetrics,
+    OperatorMetrics,
+    UserMetrics,
+    WorldMetrics,
+)
 
 if TYPE_CHECKING:
     import logging
 
     from simulation.simulation import Simulation
-
-    from .metrics_base import MetricsBase
 
 
 class Metrics(SimulationBase):
@@ -27,6 +30,26 @@ class Metrics(SimulationBase):
 
     This class serves as the main entry point for accessing all simulation metrics,
     coordinating between different metrics classes and providing unified access.
+
+    Parameters
+    ----------
+    simulation : Simulation
+        The main simulation instance.
+
+    Attributes
+    ----------
+    world_metrics : WorldMetrics
+        Metrics related to the simulation world.
+    operator_metrics : OperatorMetrics
+        Metrics related to operators.
+    user_metrics : UserMetrics
+        Metrics related to users.
+    charging_station_metrics : ChargingStationMetrics
+        Metrics related to charging stations.
+    fleet_metrics : FleetMetrics
+        Metrics related to fleets.
+    auction_metrics : AuctionMetrics
+        Metrics related to auctions.
     """
 
     def __init__(self, simulation: Simulation) -> None:
@@ -35,10 +58,12 @@ class Metrics(SimulationBase):
         # Initialize individual metrics classes
         self.world_metrics = WorldMetrics(simulation)
         self.operator_metrics = OperatorMetrics(simulation)
+        self.user_metrics = UserMetrics(simulation)
         self.charging_station_metrics = ChargingStationMetrics(simulation)
         self.fleet_metrics = FleetMetrics(simulation)
+        self.auction_metrics = AuctionMetrics(simulation)
 
-        # Initialize metrics tracker TODO: Is there a case where we want multiple trackers?
+        # Initialize metrics tracker
         self._tracker = MetricsTracker(simulation)
 
         self._metrics_classes_cache: dict[str, MetricsBase] | None = None
@@ -65,8 +90,8 @@ class Metrics(SimulationBase):
 
         Returns
         -------
-        dict[str, MetricsBase]
-            Dictionary mapping class names to metrics instances.
+        dict
+            Mapping of class name (str) to a metrics instance (MetricsBase).
         """
         if self._metrics_classes_cache is not None:
             return self._metrics_classes_cache
@@ -81,9 +106,7 @@ class Metrics(SimulationBase):
                 metrics_instance = getattr(self, attr_name)
 
                 # Only include if it's a MetricsBase instance
-                if hasattr(metrics_instance, "to_dict") and hasattr(
-                    metrics_instance, "to_log"
-                ):
+                if isinstance(metrics_instance, MetricsBase):
                     metrics_classes[class_name] = metrics_instance
 
         self._metrics_classes_cache = metrics_classes
@@ -95,7 +118,7 @@ class Metrics(SimulationBase):
 
         Returns
         -------
-        list[str]
+        list of str
             List of available metrics class names.
         """
         return list(self.get_metrics_classes().keys())
@@ -106,13 +129,13 @@ class Metrics(SimulationBase):
 
         Parameters
         ----------
-        class_names : list[str]
+        class_names : list of str
             List of metrics class names to include.
 
         Returns
         -------
         MetricsDict
-            Dictionary containing metrics from specified classes.
+            A MetricsDict containing metrics for the specified classes.
         """
         result = MetricsDict()
         available_classes = self.get_metrics_classes()

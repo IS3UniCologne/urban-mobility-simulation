@@ -6,23 +6,20 @@ from typing import TYPE_CHECKING, Any
 import h3
 import pandas as pd
 
-from simulation.helper.configuration.configuration import (
-    IntegratedSharedMobilityOperationsConfig,
-)
-from simulation.helper.configuration.enums import VehicleType
+from simulation.helper.enums import VehicleType
 from simulation.helper.solvers.tsp_solver_2opt import solve_tsp
 from simulation.operator.operations_management.operations import (
     Operations,
     OperationsDependencies,
 )
-from simulation.operator.operations_management.service_tasks.charging_task import (
-    ChargingTask,
+from simulation.operator.operations_management.service_jobs.composite_service_job import (
+    CompositeServiceJob,
 )
-from simulation.operator.operations_management.service_tasks.multi_service_task import (
-    MultiServiceTask,
+from simulation.operator.operations_management.service_jobs.fleet_base_charging_job import (
+    FleetBaseChargingJob,
 )
-from simulation.operator.operations_management.service_tasks.relocation_task import (
-    RelocationTask,
+from simulation.operator.operations_management.service_jobs.relocation_job import (
+    RelocationJob,
 )
 from simulation.operator.service_workforce import ServiceWorkforce
 
@@ -32,9 +29,10 @@ if TYPE_CHECKING:
     import simpy
 
     from simulation.environment.position import Position
+    from simulation.helper.configuration.configuration import OperationsConfig
     from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
-    from simulation.operator.transactions import DemandMonitor
-    from simulation.operator.transactions.demand_monitor import VehicleDemandByRegion
+    from simulation.operator.operator_log import DemandMonitor
+    from simulation.operator.operator_log.demand_monitor import VehicleDemandByRegion
 
 
 class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
@@ -48,12 +46,14 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         "_duration_of_operations",
         "_geo_env",
         "_max_vehicle_supply",
+        "_operations_start",
         "_operations_started",
         "_ordered_max_vehicle_supply",
-        "_scheduled_tasks",
+        "_scheduled_jobs",
         "_sim",
         "_state_of_charge_threshold",
         "_time_between_operations",
+        "_workforce",
         "operation_duration",
     )
 
@@ -70,24 +70,30 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         # For example: If we observe a demand for KickScooter and Scooter, we count that
         # demand to KickScooter. This ordering is defined according to the following list
         # (from left to right)
-        self._available_vehicle_types: list[VehicleType] = list(
-            self.operator.fleet.count_by_type.keys()
-        )  # TODO: Remove dependency on ordering, what is the dependency even?
-        self._max_vehicle_supply: list[int] = list(
-            self.operator.fleet.count_by_type.values()
+        count_by_type = self.operator.fleet.count_by_type
+        self._available_vehicle_types: list[VehicleType] = sorted(
+            count_by_type.keys(), key=str
         )  # TODO: Remove dependency on ordering
+        self._max_vehicle_supply: list[int] = [
+            count_by_type[t] for t in self._available_vehicle_types
+        ]  # TODO: Remove dependency on ordering
 
-        ops_config = deps.operations_config
-        if not isinstance(ops_config, IntegratedSharedMobilityOperationsConfig):
-            raise TypeError(
-                "IntegratedSharedMobilityOperations requires a IntegratedSharedMobilityOperationsConfig."
-            )
+        ops_config: OperationsConfig = deps.operations_config
+
         self._base_regions = ops_config.BASE_REGIONS
+        if (
+            self._base_regions is not None
+            and ops_config.NUMBER_OF_BASE_REGIONS is not None
+        ):
+            self._base_regions = self._base_regions[: ops_config.NUMBER_OF_BASE_REGIONS]
+
         self._base_capacity = ops_config.BASE_CAPACITY
+
+        self._operations_start = ops_config.OPERATIONS_START
 
         self._state_of_charge_threshold = ops_config.RECHARGE_THRESHOLD
 
-        self._scheduled_tasks: list = []  # TODO: move to workforce? or internal schedule?
+        self._scheduled_jobs: list = []  # TODO: move to workforce? or internal schedule?
 
         # Events
         self._charging_plan_updated: simpy.Event = self._env.event()
@@ -119,16 +125,23 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         """
         Below, we combine the old operational logic from operations.py and relocation_strategy.py
         """  # noqa: D200, D400
+        # Wait for operations to start
+        if self._operations_start > 0:
+            yield self._env.timeout(self._operations_start)
+
         while True:
-            yield self._env.timeout(self._time_between_operations)
+            cycle_start = self._env.now
+            cycle_end = cycle_start + self._duration_of_operations
 
             # Clean old jobs (if there are some left)
-            self._workforce.task_queue.clear()
+            self._scheduled_jobs.clear()
+            self._workforce.job_queue.clear()
 
-            if not self.operator.transaction_log.has_successful_transaction:
+            if not self.operator.operator_log.has_successful_transaction:
                 self.logger.debug(
-                    "Skip operations, cause there has not been one successful transaction yet"
+                    "No successful transactions yet, skipping operations cycle."
                 )
+                yield self._env.timeout(self._time_between_operations)
                 continue
 
             # Retrieve Charging Plan to Charge Vehicles with low State of Charge
@@ -149,17 +162,17 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
 
                 for charging_plan in charging_plans_for_current_type:
                     if len(charging_plan) > 1:
-                        multi_service_task = MultiServiceTask(self._sim)
+                        composite_job = CompositeServiceJob(self._sim)
                         # Pooled Task
-                        for task in charging_plan:
+                        for entry in charging_plan:
                             (
                                 origin,
                                 destination,
                                 no_vehicle_to_charge,
                                 distance_to_base,
-                            ) = task
+                            ) = entry
 
-                            charging_task = ChargingTask(
+                            charging_job = FleetBaseChargingJob(
                                 sim=self._sim,
                                 origin=origin,
                                 destination=destination,
@@ -170,7 +183,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                 state_of_charge_threshold=self._state_of_charge_threshold,
                             )
 
-                            multi_service_task.append_task(charging_task)
+                            composite_job.append_job(charging_job)
 
                             # Count Vehicles to be charged
                             no_vehicles_scheduled_to_charge[type] += (
@@ -178,17 +191,17 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                             )
 
                         # Schedule to Queue
-                        self._scheduled_tasks.append(multi_service_task)
+                        self._scheduled_jobs.append(composite_job)
 
                         # Remember event for multi service tasks
-                        charging_events.append(multi_service_task.task_finished)
+                        charging_events.append(composite_job.finished)
                     else:
                         # Single Task
                         origin, destination, no_vehicle_to_charge, distance_to_base = (
                             charging_plan[0]
                         )
 
-                        charging_task = ChargingTask(
+                        charging_job = FleetBaseChargingJob(
                             sim=self._sim,
                             origin=origin,
                             destination=destination,
@@ -200,28 +213,28 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                         )
 
                         # Schedule to Queue
-                        self._scheduled_tasks.append(charging_task)
+                        self._scheduled_jobs.append(charging_job)
 
                         # Remember event for multi service tasks
-                        charging_events.append(charging_task.task_finished)
+                        charging_events.append(charging_job.finished)
 
                         # Count Vehicles to be charged
                         no_vehicles_scheduled_to_charge[type] += no_vehicle_to_charge
 
             # Insert Tasks into Task Queue
-            self._workforce.task_queue.bulk_append(self._scheduled_tasks)
+            self._workforce.job_queue.bulk_append(self._scheduled_jobs)
 
             self.logger.info(
                 "There are %s vehicles with low state of charge.",
                 len(
-                    self._operator.fleet.vehicles_below_soc_threshold(
+                    self._operator.fleet.vehicles_below_energy_threshold(
                         self._state_of_charge_threshold
                     )
                 ),
             )
 
             self.logger.info(
-                "Charging Tasks scheduled. In total %s charging tasks are generated. Count: %s",
+                "Charging jobs scheduled. In total %s generated. Count: %s",
                 len(charging_events),
                 no_vehicles_scheduled_to_charge,
             )
@@ -230,15 +243,12 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
             self._charging_plan_updated.succeed()
             self._charging_plan_updated = self._env.event()
 
-            # While Shift is not over, recalculate relocation plans and execute them.
-            while (
-                self._env.now % self._time_between_operations
-                < self._duration_of_operations
-            ):
+            # Relocation phase (while within operations window)
+            while self._env.now < cycle_end:
                 self.logger.info("Planning next relocation schedule.")
 
                 # Reset Scheduled Tasks
-                self._scheduled_tasks.clear()
+                self._scheduled_jobs.clear()
 
                 # Wait 2 Minutes, then (re-)schedule relocation
                 yield self._env.timeout(2)
@@ -260,17 +270,17 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
 
                     for relocation_plan in relocation_plans_for_current_type:
                         if len(relocation_plan) > 1:
-                            multi_service_task = MultiServiceTask(self._sim)
+                            composite_job = CompositeServiceJob(self._sim)
                             # Pooled Task
-                            for task in relocation_plan:
+                            for entry in relocation_plan:
                                 (
                                     origin,
                                     destination,
                                     no_vehicle_to_relocate,
                                     relocation_distance,
-                                ) = task
+                                ) = entry
 
-                                relocation_task = RelocationTask(
+                                relocation_job = RelocationJob(
                                     sim=self._sim,
                                     origin=origin,
                                     destination=destination,
@@ -280,7 +290,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                     vehicle_fleet=self._operator.fleet,
                                 )
 
-                                multi_service_task.append_task(relocation_task)
+                                composite_job.append_job(relocation_job)
 
                                 # Count Vehicles to be charged
                                 no_vehicles_scheduled_to_relocate[type] += (
@@ -288,10 +298,10 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                 )
 
                             # Schedule to Queue
-                            self._scheduled_tasks.append(multi_service_task)
+                            self._scheduled_jobs.append(composite_job)
 
                             # Remember event for multi service tasks
-                            relocation_events.append(multi_service_task.task_finished)
+                            relocation_events.append(composite_job.finished)
                         else:
                             # Single Task
                             (
@@ -301,7 +311,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                 relocation_distance,
                             ) = relocation_plan[0]
 
-                            relocation_task = RelocationTask(
+                            relocation_job = RelocationJob(
                                 sim=self._sim,
                                 origin=origin,
                                 destination=destination,
@@ -312,10 +322,10 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                             )
 
                             # Schedule to Queue
-                            self._scheduled_tasks.append(relocation_task)
+                            self._scheduled_jobs.append(relocation_job)
 
                             # Remember event for multi service tasks
-                            relocation_events.append(relocation_task.task_finished)
+                            relocation_events.append(relocation_job.finished)
 
                             # Count Vehicles to be charged
                             no_vehicles_scheduled_to_relocate[type] += (
@@ -323,22 +333,27 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                             )
 
                 # Insert Tasks into Task Queue
-                self._workforce.task_queue.bulk_append(self._scheduled_tasks)
+                self._workforce.job_queue.bulk_append(self._scheduled_jobs)
 
                 if len(charging_events):
                     # Wait for Charging events
                     yield self._env.all_of(charging_events)
 
                     self.logger.info(
-                        "All Charging Tasks have been fulfilled. Re-Generating Relocation Plan."
+                        "All charging jobs have been fulfilled. Re-generating relocation plan."
                     )
 
                 # Wait for relocation events to be processed
                 yield self._env.all_of(relocation_events)
 
                 self.logger.info(
-                    "Planned Relocation Tasks have been fulfilled. Re-Generating Relocation Plan."
+                    "All relocation jobs have been fulfilled. Re-generating relocation plan."
                 )
+
+            # Wait until next cycle
+            next_cycle = cycle_start + self._time_between_operations
+            wait_time = max(0, next_cycle - self._env.now)
+            yield self._env.timeout(wait_time)
 
     def generate_relocation_plan(
         self,
@@ -915,7 +930,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                     hexagons = {}
 
                     for tuple_idx, tuple in enumerate(relocation):
-                        origin, destination, vehicle_count, distance = tuple  # noqa: RUF059
+                        origin, destination, _, _ = tuple
 
                         # We relocate vehicles to this position => Index 0
                         if tuple_idx == 0:
@@ -1120,7 +1135,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
             else:
                 fleet_state[f"Residual_Supply_{vehicle}"] = (
                     fleet_state[vehicle]
-                    - (fleet_state[f"{vehicle}_Low_SoC"] if low_soc_supply else 0)
+                    - (fleet_state[f"{vehicle}_Low_SoC"])
                     + fleet_state[f"Delta_{vehicle}"]
                 )
 
@@ -1161,12 +1176,11 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         - A positive delta indicates a vehicle surplus (more arrivals than departures).
         """
         vehicle_demand: VehicleDemandByRegion = demand_monitor.get_demand_data()
-        ordered_available_vehicle = demand_monitor.ordered_available_vehicles
 
         rows = []
-        for hex_id in vehicle_demand.keys():
+        for hex_id in sorted(vehicle_demand.keys()):
             row: dict[str, int | str] = {"hex_id": hex_id}
-            for vehicle in ordered_available_vehicle:
+            for vehicle in self._available_vehicle_types:
                 inflow = (
                     vehicle_demand.get(hex_id, {}).get(vehicle, {}).get("inflow", 0)
                 )

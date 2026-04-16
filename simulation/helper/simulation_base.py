@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.logging.uid_logger_adapter import UidLoggerAdapter
+    from simulation.helper.types import SimId
 
 
 class SimulationBase:
@@ -18,13 +19,16 @@ class SimulationBase:
     in all log records without needing to specify it manually.
     """
 
-    __slots__ = ("_id", "_logger", "_uid")
+    __slots__ = ("__weakref__", "_id", "_logger", "_uid")
 
     def __init__(self, sim: SimulationContext) -> None:
         # Initialize the unique identifier for the instance.
         cls = self.__class__
         self._id, self._uid = sim.uid_manager.generate_uid(cls)
         self._logger: UidLoggerAdapter = sim.log_manager.get_uid_logger(self._uid)
+
+        # Register the instance with the UID manager for lookup.
+        sim.uid_manager.register_object(self._uid, self)
 
     @property
     def id(self) -> int:
@@ -36,7 +40,7 @@ class SimulationBase:
         return self._id
 
     @property
-    def uid(self) -> str:
+    def uid(self) -> SimId:
         """Return the unique identifier for the instance."""
         return self._uid
 

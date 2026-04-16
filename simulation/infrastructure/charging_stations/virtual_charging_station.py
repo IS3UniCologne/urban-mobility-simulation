@@ -18,19 +18,21 @@ if TYPE_CHECKING:
 
 
 class VirtualChargingStation(SimulationBase):  # noqa: D101
-    __slots = (
-        "_env",
-        "_valid_timeframe",
+    __slots__ = (
+        "_blocked_capacity",
         "_capacity",
-        "_polygon",
         "_centre",
-        "_plugs",
         "_cs_id",
+        "_current_queue_time",
+        "_env",
         "_location",
+        "_physical_charging_station",
+        "_plugs",
+        "_polygon",
         "_power",
         "_queue",
         "_queue_size",
-        "_current_queue_time",
+        "_valid_timeframe",
         "_virtual_charging_infrastructure",
     )
 
@@ -45,6 +47,7 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
         self._physical_charging_station = charging_station
         self._valid_timeframe = None
         self._capacity = charging_station.capacity
+        self._blocked_capacity = 0
         self._polygon = charging_station.polygon
         self._centre = charging_station.centre
         self._plugs = charging_station.plugs  # reference, mutable object
@@ -66,12 +69,39 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
     def update_capacity(  # noqa: D102
         self, capacity: int, valid_timeframe: tuple[float, float] | None
     ) -> None:
-        self._capacity = capacity
+        self._capacity = max(0, min(capacity, self._physical_charging_station.capacity))
+        if capacity < 0:
+            self._blocked_capacity = -capacity
+        else:
+            self._blocked_capacity = 0
         self._valid_timeframe = valid_timeframe
 
     @property
     def virtual_charging_infrastructure(self) -> VirtualChargingInfrastructure:  # noqa: D102
         return self._virtual_charging_infrastructure
+
+    @property
+    def timeslot_duration(self) -> int | None:
+        """Duration of one coordination timeslot in minutes."""
+        return self._virtual_charging_infrastructure._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION  # noqa: SLF001
+
+    def timeslot_end(self, scheduled_time: float | None) -> float | None:
+        """Return scheduled_time + timeslot_duration if a valid timeframe exists, else None.
+
+        Parameters
+        ----------
+        scheduled_time : float or None
+            The scheduled start time of the timeslot.
+
+        Returns
+        -------
+        float or None
+            End of the timeslot, or None if no active timeslot or scheduled_time is None.
+        """
+        if self._valid_timeframe is None or scheduled_time is None:
+            return None
+        assert self.timeslot_duration is not None
+        return scheduled_time + self.timeslot_duration
 
     @property
     def cs_id(self) -> int:
@@ -81,12 +111,17 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
         For a globally unique identifier, use the `uid` property inherited from SimulationBase."""  # noqa: D209
         return self._cs_id
 
+    @property
     def valid_timeframe(self) -> tuple[float, float] | None:  # noqa: D102
         return self._valid_timeframe
 
     @property
     def capacity(self) -> int:  # noqa: D102
         return self._capacity
+
+    @property
+    def blocked_capacity(self) -> int:  # noqa: D102
+        return self._blocked_capacity
 
     @property
     def plugs(self) -> simpy.PriorityResource:  # noqa: D102

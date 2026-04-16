@@ -4,6 +4,10 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
     from simulation.helper.configuration.configuration import OperationsConfig
     from simulation.operator.operator import Operator
 
@@ -20,5 +24,5 @@ class OperationsInterface(ABC):  # noqa: D101
         pass
 
     @abstractmethod
-    def execute(self) -> None:  # noqa: D102
+    def execute(self) -> Generator[Event, None, None]:  # noqa: D102
         pass

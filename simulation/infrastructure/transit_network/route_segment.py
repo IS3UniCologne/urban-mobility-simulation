@@ -1,4 +1,9 @@
-from simulation.infrastructure.transit_network.stop import Stop  # noqa: D100
+from __future__ import annotations  # noqa: D100
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.infrastructure.transit_network.stop import Stop
 
 
 class RouteSegment:  # noqa: D101
@@ -14,6 +19,15 @@ class RouteSegment:  # noqa: D101
     @property
     def start(self) -> Stop:  # noqa: D102
         return self._start
+
+    @property
+    def destination(self) -> Stop:
+        """Get the destination stop of the route segment.
+
+        This is the same as end, but we need it to avoid extra checks in Vehicle.
+        TODO: Create common interface for this.
+        """
+        return self._end
 
     @property
     def end(self) -> Stop:  # noqa: D102
