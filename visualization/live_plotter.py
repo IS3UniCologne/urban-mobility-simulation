@@ -9,11 +9,16 @@ import threading
 import time
 from typing import TYPE_CHECKING, Any
 
-from bokeh.layouts import column
-from bokeh.models import ColumnDataSource
-from bokeh.palettes import Bokeh
-from bokeh.plotting import figure
-from bokeh.server.server import Server
+try:
+    from bokeh.layouts import column
+    from bokeh.models import ColumnDataSource
+    from bokeh.palettes import Bokeh
+    from bokeh.plotting import figure
+    from bokeh.server.server import Server
+except ImportError as e:
+    raise ImportError(
+        "Bokeh is required for live visualization. Install with: uv sync --extra viz"
+    ) from e
 
 if TYPE_CHECKING:
     from logging import Logger
