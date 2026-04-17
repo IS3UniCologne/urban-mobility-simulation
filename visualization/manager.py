@@ -1,20 +1,25 @@
 """The main entry point for the live visualization system."""
 
+from __future__ import annotations
+
 import threading
 import webbrowser
 from queue import Queue
+from typing import TYPE_CHECKING
 
-from simulation.context.simulation_context import SimulationContext
 from visualization.adapters.fleet_metrics_adapter import FleetMetricsPlotAdapter
 from visualization.adapters.operator_metrics_adapter import OperatorMetricsPlotAdapter
 from visualization.adapters.world_metrics_adapter import WorldMetricsPlotAdapter
 from visualization.live_plotter import LivePlotter, MetricsAdapter
 
+if TYPE_CHECKING:
+    from simulation.simulation import Simulation
+
 
 class VisualizationManager:
     """A high-level manager for the live visualization system."""
 
-    def __init__(self, simulation: SimulationContext, interval: float = 10.0) -> None:
+    def __init__(self, simulation: Simulation, interval: float = 10.0) -> None:
         # TODO: make optional rollover configurable
         self._job = simulation.metrics.tracker.create_job(
             name="visualization", interval=interval, start_now=True, replace=True
