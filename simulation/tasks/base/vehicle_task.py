@@ -42,7 +42,15 @@ class VehicleTask(SimulationBase, ABC, Generic[VehicleT]):
         Optional destination for the task.
     """
 
-    __slots__ = ("_destination", "_env", "_sim", "_state", "_vehicle")
+    __slots__ = (
+        "_destination",
+        "_end_time",
+        "_env",
+        "_sim",
+        "_start_time",
+        "_state",
+        "_vehicle",
+    )
 
     def __init__(
         self,
@@ -56,6 +64,8 @@ class VehicleTask(SimulationBase, ABC, Generic[VehicleT]):
         self._destination: GeodesicPosition | None = destination
         self._vehicle: VehicleT = vehicle
         self._state: TaskState = TaskState.INITIALIZED
+        self._start_time: float | None = None
+        self._end_time: float | None = None
 
     @property
     def destination(self) -> GeodesicPosition | None:
@@ -66,6 +76,28 @@ class VehicleTask(SimulationBase, ABC, Generic[VehicleT]):
     def state(self) -> TaskState:
         """Get the current state of the task."""
         return self._state
+
+    @property
+    def start_time(self) -> float | None:
+        """Get the simulation time when the task started.
+
+        Returns
+        -------
+        float or None
+            Simulation time when the task started, or None if not started yet.
+        """
+        return self._start_time
+
+    @property
+    def end_time(self) -> float | None:
+        """Get the simulation time when the task ended.
+
+        Returns
+        -------
+        float or None
+            Simulation time when the task ended, or None if not finished yet or aborted.
+        """
+        return self._end_time
 
     @property
     def vehicle(self) -> VehicleT:
@@ -94,6 +126,7 @@ class VehicleTask(SimulationBase, ABC, Generic[VehicleT]):
             SimPy events during task execution.
         """
         self._state = TaskState.EXECUTING
+        self._start_time = self._env.now
 
         self.logger.debug(
             "%s starting for vehicle %s.", self.__class__.__name__, self._vehicle.uid
@@ -102,6 +135,7 @@ class VehicleTask(SimulationBase, ABC, Generic[VehicleT]):
         try:
             yield from self._run()
             self._state = TaskState.FINISHED
+            self._end_time = self._env.now
             self.logger.debug(
                 "%s finished for vehicle %s.",
                 self.__class__.__name__,

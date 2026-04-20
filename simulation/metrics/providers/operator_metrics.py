@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 if TYPE_CHECKING:
     from simulation.helper.types import SimId
     from simulation.operator.operator import Operator
@@ -39,16 +41,15 @@ class OperatorMetrics(IndexedMetricsBase):
     def to_dict(self) -> MetricsDict:
         """Return metrics for all operators plus aggregate metrics."""
         metrics = MetricsDict()
-        aggregate = {
-            "total_revenue": 0.0,
-            "total_transaction_count": 0,
-            "total_fulfilled_trips": 0,
-            "total_missed_allocations": 0,
-            "total_missed_revenue": 0.0,
-            "total_trip_duration": 0.0,
-            "total_trip_distance": 0.0,
-            "total_energy_consumption": 0.0,
-        }
+        total_revenue = 0.0
+        total_transaction_count = 0
+        total_fulfilled_trips = 0
+        trip_fulfillment_rates: list[float] = []
+        total_missed_allocations = 0
+        total_missed_revenue = 0.0
+        total_trip_duration = 0.0
+        total_trip_distance = 0.0
+        total_energy_consumption = 0.0
 
         for operator in self._simulation.world.operators:
             op_metrics = self._get_operator_metrics(operator)
@@ -56,23 +57,30 @@ class OperatorMetrics(IndexedMetricsBase):
 
             # Add to aggregate metrics
             operator_log_stats = operator.operator_log.metrics
-            aggregate["total_revenue"] += operator_log_stats.total_revenue
-            aggregate["total_transaction_count"] += (
-                operator.operator_log.transaction_count
-            )
-            aggregate["total_fulfilled_trips"] += (
-                operator_log_stats.total_fulfilled_trips
-            )
-            aggregate["total_missed_allocations"] += (
-                operator_log_stats.total_missed_trips
-            )
-            aggregate["total_missed_revenue"] += operator_log_stats.total_missed_revenue
-            aggregate["total_trip_duration"] += operator_log_stats.total_trip_duration
-            aggregate["total_trip_distance"] += operator_log_stats.total_trip_distance
-            aggregate["total_energy_consumption"] += (
-                operator_log_stats.total_energy_consumption
-            )
+            total_revenue += operator_log_stats.total_revenue
+            total_transaction_count += operator.operator_log.transaction_count
+            total_fulfilled_trips += operator_log_stats.total_fulfilled_trips
+            trip_fulfillment_rates.append(operator_log_stats.trip_fulfillment_rate)
+            total_missed_allocations += operator_log_stats.total_missed_trips
+            total_missed_revenue += operator_log_stats.total_missed_revenue
+            total_trip_duration += operator_log_stats.total_trip_duration
+            total_trip_distance += operator_log_stats.total_trip_distance
+            total_energy_consumption += operator_log_stats.total_energy_consumption
 
+        average_trip_fulfillment_rate = (
+            float(np.mean(trip_fulfillment_rates)) if trip_fulfillment_rates else 0.0
+        )
+        aggregate = {
+            "total_revenue": total_revenue,
+            "total_transaction_count": total_transaction_count,
+            "total_fulfilled_trips": total_fulfilled_trips,
+            "trip_fulfillment_rate": average_trip_fulfillment_rate,
+            "total_missed_allocations": total_missed_allocations,
+            "total_missed_revenue": total_missed_revenue,
+            "total_trip_duration": total_trip_duration,
+            "total_trip_distance": total_trip_distance,
+            "total_energy_consumption": total_energy_consumption,
+        }
         metrics["aggregate"] = MetricsDict(aggregate)
         return metrics
 
