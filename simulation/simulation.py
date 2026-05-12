@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, Any
-
-import pandas as pd
-from pandas import DataFrame
 
 from simulation.context.simulation_context import SimulationContext
 from simulation.metrics.metrics import Metrics
@@ -39,7 +35,6 @@ class Simulation:
         self.demand_profile: Any = None
         self.output_timestamp: str = ""
 
-        self.supply_prob: DataFrame = self._load_supply_data()
         self.world = World(self.sim)
         self.metrics: Metrics = Metrics(simulation=self)
 
@@ -63,11 +58,6 @@ class Simulation:
         self.logger.info("Ending Simulation.")
 
         self._post_simulation_processing()
-
-    def _load_supply_data(self) -> DataFrame:
-        """Load vehicle supply probability data."""
-        supply_path = os.path.normpath(self.config.path.PATH_VEHICLE_SUPPLY)
-        return pd.read_csv(supply_path)
 
     def _create_demand_factory(self) -> DemandFactory:
         """Create demand factory for the simulation."""
