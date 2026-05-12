@@ -173,9 +173,7 @@ env.process(track_charging_stations())
 # # # # # # # # # # # # # # # # # # # # # #
 
 geodesic_environment = GeodesicEnvironment.getInstance()
-hexagons = geodesic_environment.getLayer(
-    f"hex_{config.world.SPATIAL_RESOLUTION_VALUE}"
-).index.tolist()
+hexagons = geodesic_environment.getLayer("hex").index.tolist()
 dmi = DistanceMatrixImporter(
     hexagons,
     config.world.SPATIAL_RESOLUTION_VALUE,
