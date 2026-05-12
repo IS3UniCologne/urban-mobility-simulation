@@ -1,13 +1,12 @@
-"""
-Unit tests for the DemandProcessor class.
-"""
+"""Unit tests for the DemandProcessor class."""
 
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from simulation.world.demand.demand_processor import DemandProcessor
+from scripts.process_demand import DemandProcessor
+from simulation.world.demand import demand_schema
 
 
 def make_synthetic_trip_data(tmp_path: Path) -> Path:
@@ -130,28 +129,29 @@ def test_demand_processor_basic(tmp_path: Path) -> None:
     and normalize the origin-destination probabilities correctly."""
     csv_path = make_synthetic_trip_data(tmp_path)
     processor = DemandProcessor(
-        spatial_columns=("h3_start_7", "h3_end_7"),
+        origin_column="h3_start_7",
+        destination_column="h3_end_7",
         temporal_column="time_bucket_4h",
         day_column="is_holiday",
     )
     result = processor.process_trip_data(csv_path)
-    # Check required columns
+    # Check required output columns (standardized names)
     required = {
-        "h3_start_7",
-        "h3_end_7",
-        "time_bucket_4h",
-        "is_holiday",
-        "od_multinom_p_est",
-        "o_poisson_est",
+        demand_schema.ORIGIN,
+        demand_schema.DESTINATION,
+        demand_schema.TIME_BUCKET,
+        demand_schema.IS_WEEKEND,
+        demand_schema.DESTINATION_PROBABILITY,
+        demand_schema.ORIGIN_ARRIVAL_RATE,
     }
     assert required.issubset(result.columns)
-    # Check that all (day, bucket, origin) groups sum to 1 for od_multinom_p_est
-    grouped = result.groupby(["is_holiday", "time_bucket_4h", "h3_start_7"])[
-        "od_multinom_p_est"
-    ].sum()
+    # Check that all (day, bucket, origin) groups sum to 1 for destination_probability
+    grouped = result.groupby(
+        [demand_schema.IS_WEEKEND, demand_schema.TIME_BUCKET, demand_schema.ORIGIN]
+    )[demand_schema.DESTINATION_PROBABILITY].sum()
     np.testing.assert_allclose(np.array(grouped.values), 1.0, rtol=1e-6)
-    # Check that o_poisson_est is not null
-    assert result["o_poisson_est"].notnull().all()
+    # Check that origin_arrival_rate is not null
+    assert result[demand_schema.ORIGIN_ARRIVAL_RATE].notnull().all()
 
 
 def test_demand_processor_missing_od(tmp_path: Path) -> None:
@@ -169,19 +169,22 @@ def test_demand_processor_missing_od(tmp_path: Path) -> None:
     new_csv = tmp_path / "trips_missing.csv"
     df.to_csv(new_csv, index=False)
     processor = DemandProcessor(
-        spatial_columns=("h3_start_7", "h3_end_7"),
+        origin_column="h3_start_7",
+        destination_column="h3_end_7",
         temporal_column="time_bucket_4h",
         day_column="is_holiday",
     )
     result = processor.process_trip_data(new_csv)
     # All (day, time, origin) groups should still sum to 1
-    grouped = result.groupby(["is_holiday", "time_bucket_4h", "h3_start_7"])[
-        "od_multinom_p_est"
-    ].sum()
+    grouped = result.groupby(
+        [demand_schema.IS_WEEKEND, demand_schema.TIME_BUCKET, demand_schema.ORIGIN]
+    )[demand_schema.DESTINATION_PROBABILITY].sum()
     np.testing.assert_allclose(np.array(grouped.values), 1.0, rtol=1e-6)
-    # There should be rows for B->B, but with od_multinom_p_est==0
-    mask = (result["h3_start_7"] == "B") & (result["h3_end_7"] == "B")
-    assert (result.loc[mask, "od_multinom_p_est"] == 0).all()
+    # There should be rows for B->B, but with destination_probability==0
+    mask = (result[demand_schema.ORIGIN] == "B") & (
+        result[demand_schema.DESTINATION] == "B"
+    )
+    assert (result.loc[mask, demand_schema.DESTINATION_PROBABILITY] == 0).all()
 
 
 def test_demand_processor_incomplete_hexagon(tmp_path: Path) -> None:
@@ -205,12 +208,13 @@ def test_demand_processor_incomplete_hexagon(tmp_path: Path) -> None:
     new_csv = tmp_path / "trips_incomplete.csv"
     df.to_csv(new_csv, index=False)
     processor = DemandProcessor(
-        spatial_columns=("h3_start_7", "h3_end_7"),
+        origin_column="h3_start_7",
+        destination_column="h3_end_7",
         temporal_column="time_bucket_4h",
         day_column="is_holiday",
     )
     result = processor.process_trip_data(new_csv)
     # B should not appear as origin
-    assert not (result["h3_start_7"] == "B").any()
+    assert not (result[demand_schema.ORIGIN] == "B").any()
     # A should still be present
-    assert (result["h3_start_7"] == "A").any()
+    assert (result[demand_schema.ORIGIN] == "A").any()
