@@ -13,6 +13,9 @@ import pandas as pd
 # Third-party library imports
 import simpy
 
+# Custom module imports
+from utils import load_geodesic_environment
+
 # Imports world related modules
 from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -51,9 +54,6 @@ from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 from tracking.tracking import Tracking
-
-# Custom module imports
-from utils import load_geodesic_environment
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -133,10 +133,10 @@ tracking = Tracking.init(env)
 
 charging_infrastructure = ChargingInfrastructure(
     env,
-    config.charging_infrastructure.LOCATIONS,
-    config.charging_infrastructure.CHARGING_STATION_POWER,
-    config.charging_infrastructure.CHARGING_STATION_CAPACITY,
-    config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE,
+    config.charging_infrastructures.LOCATIONS,
+    config.charging_infrastructures.CHARGING_STATION_POWER,
+    config.charging_infrastructures.CHARGING_STATION_CAPACITY,
+    config.charging_infrastructures.CHARGING_STATION_QUEUE_SIZE,
     reset=True,
 )
 
@@ -281,7 +281,7 @@ search_engine["ride_hailing_1"].register_fleet(ride_hailing_fleet_1)
 
 # if queue sizes at charging stations are all zero, we should account for that in the operations
 # there can be more clever and nuanced approaches, but as a rule of thumb, we should not allow operations to send vehicles to charging stations that are full if we don't allow queueing
-allow_queue = sum(config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE) > 0
+allow_queue = sum(config.charging_infrastructures.CHARGING_STATION_QUEUE_SIZE) > 0
 
 # Initialize fleet operations
 ridehailing_operations_0 = RideHailingUncoordinatedChargingOperations(
@@ -386,7 +386,7 @@ pd.DataFrame.from_records(charging_stations_track).to_csv(
 
 avg_infra_util = (
     pd.DataFrame.from_records(charging_stations_track)["_plugs.count"]
-    / config.charging_infrastructure.CHARGING_STATION_CAPACITY[0]
+    / config.charging_infrastructures.CHARGING_STATION_CAPACITY[0]
 ).mean()
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -415,8 +415,8 @@ service_rate_fleet_1 = (
     / fleet_1_transactions.shape[0]
 )
 
-fleet_0_task_transactions = ridehailing_operations_0.task_transactions
-fleet_1_task_transactions = ridehailing_operations_1.task_transactions
+fleet_0_task_transactions = ridehailing_operations_0.job_transactions
+fleet_1_task_transactions = ridehailing_operations_1.job_transactions
 
 fleet_0_task_transactions.to_csv(
     f"data/output/transactions/{output_timestamp}_fleet_0_task_transactions.csv",
@@ -442,14 +442,14 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             config.experiment_management.END_TIME,
             time.time() - real_start_time,
             config.ride_hailing_global.N_AUTONOMOUS_CARS,
-            config.charging_infrastructure.NUMBER_OF_CHARGING_STATIONS,
-            config.charging_infrastructure.CHARGING_STATION_CAPACITY[0],
-            config.charging_infrastructure.CHARGING_STATION_POWER[0],
+            config.charging_infrastructures.NUMBER_OF_CHARGING_STATIONS,
+            config.charging_infrastructures.CHARGING_STATION_CAPACITY[0],
+            config.charging_infrastructures.CHARGING_STATION_POWER[0],
             config.random_manager.SEED,
             service_rate_fleet_0,
             service_rate_fleet_1,
             avg_infra_util,
             None,
-            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''}, queue_size:{config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}",
+            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''}, queue_size:{config.charging_infrastructures.CHARGING_STATION_QUEUE_SIZE[0]}",
         ]
     )

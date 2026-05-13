@@ -1,4 +1,4 @@
-import logging
+import logging  # noqa: D100
 from abc import ABC, abstractmethod
 
 
@@ -7,18 +7,18 @@ class TrackingInterface(ABC):
     This interface must be implemented by every agent in the simulation that should be trackable by any means from
     outside the main simulation. Trackable objects must explicitly initialize the "exposes" attribute with a list of
     attributes (non-private) that are exposed.
-    """
+    """  # noqa: D205, D404
 
     exposes: list = NotImplemented
 
-    def __init_subclass__(cls, **kwargs):  # noqa: ANN003, ANN204
+    def __init_subclass__(cls, **kwargs):  # noqa: ANN003, ANN204, D105
         super().__init_subclass__(**kwargs)
         if cls.exposes is NotImplemented:
             raise NotImplementedError(
                 "Please implement the `exposes` class variable for any class that implements the TrackingInterface AbstractBaseClass"
             )
 
-    def get(self, attribute: str):  # noqa: ANN201
+    def get(self, attribute: str):  # noqa: ANN201, D102
         if attribute in self.exposes and hasattr(self, attribute):
             return getattr(self, attribute)
         else:
@@ -44,5 +44,5 @@ class TrackingInterface(ABC):
         :param exposed_only: Can optionally be set to False to dump more than only explicitly exposed attributes,
         subject to the implementation of this method. Default: True
         :return: dictionary of type {attribute name: attribute value}
-        """
+        """  # noqa: D205, D401, D404
         pass

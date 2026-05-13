@@ -1,5 +1,4 @@
-import logging
-from copy import deepcopy
+from copy import deepcopy  # noqa: D100
 from math import sqrt
 
 import h3
@@ -11,10 +10,11 @@ from simulation.agent.episodic_semi_gradient_sarsa import ValueFunctionApproxima
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.simulation_base import SimulationBase
+from simulation.helper.vehicle_states import VehicleStates
 
 
-class EpisodicSemiGradientNStepSarsa(RLAgent):
+class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):  # noqa: D101
     __slots__ = (
         "_G",
         "_actions",
@@ -28,7 +28,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
     )
 
     def __init__(self, env: simpy.Environment, q_hat: ValueFunctionApproximator):  # noqa: ANN204
-        super(EpisodicSemiGradientNStepSarsa, self).__init__(env)  # noqa: UP008
+        super().__init__(env)
 
         # Configuration
         self._alpha = self._config.transit_agent_config.alpha
@@ -47,7 +47,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
         # n-step return
         self._G = 0
 
-    def run(self, bus):  # noqa: ANN001, ANN201
+    def run(self, bus):  # noqa: ANN001, ANN201, D102
         s0 = deepcopy(bus._env_state)  # noqa: SLF001
         self._states.append(s0)
         self._decide_next_action(bus, s0)
@@ -64,7 +64,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
                 yield self._env.process(self._take_action(bus, self._actions[t]))  # A_t
                 self._rewards.append(self._reward)  # R_t+1
                 self._states.append(deepcopy(bus._env_state))  # S_t+1  # noqa: SLF001
-                if bus.state is VehicleState.AT_TERMINAL_DESTINATION:
+                if bus.state is VehicleStates.AT_TERMINAL:
                     T = t + 1
                 else:
                     self._decide_next_action(bus, self._states[t + 1])  # A_t+1
@@ -99,19 +99,13 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
                 bus.test_action(a)
             except NotImplementedError:
                 # hexagon is out of layer bounding box - action is forbidden
-                logging.debug(
-                    "Action %s is forbidden, sampling again",
-                    a,
-                    extra={"clazz": self.__class__.__name__, "oid": bus.id},
+                self.logger.debug(
+                    "Action %s is forbidden to bus %s, sampling again", a, bus.id
                 )
                 continue
             break
 
-        logging.debug(
-            "Bus takes action %s",
-            a,
-            extra={"clazz": self.__class__.__name__, "oid": bus.id},
-        )
+        self.logger.debug("Bus %s takes action %s", bus.id, a)
 
         self._actions.append(a)
 
@@ -125,7 +119,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
         down-left  \\ __ /  down-right
                     down
 
-        """
+        """  # noqa: D202, D301
 
         if action == "STAY":
             yield self._env.timeout(0.01)
@@ -144,7 +138,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
             distance = bus.position >> new_position
             duration = distance / bus._velocity  # in minutes  # noqa: SLF001
 
-            self._state = VehicleState.EN_ROUTE_DETOUR
+            self._state = VehicleStates.EN_ROUTE
 
             yield self._env.timeout(duration)
 
@@ -171,7 +165,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent):
         :param state: env state as given by the bus agent
         :param terminal: bool, is the state a terminal one?
         :return: numerical reward +/- or 0
-        """
+        """  # noqa: D202, D401, D404
 
         if terminal:
             return 10

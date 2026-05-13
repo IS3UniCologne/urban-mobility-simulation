@@ -1,87 +1,103 @@
-from typing import List  # noqa: UP035
+from __future__ import annotations  # noqa: D100
 
-from simulation.environment.environment import Environment
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import (
+        ChargingInfrastructureConfig,
+    )
+    from simulation.world.markets.auction import Auction
+
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
-from tracking.tracking import Tracking
 
 
-class ChargingInfrastructure:
+class ChargingInfrastructure:  # noqa: D101
     __instance = None
 
     __slots__ = (
+        "_auction",
         "_capacity_list",
+        "_charging_infra_config",
         "_charging_stations",
-        "_env",
+        "_charging_stations_by_location",
         "_location_list",
         "_power_list",
         "_queue_size",
+        "_sim",
         "_tracking",
     )
 
-    @staticmethod
-    def instance() -> "ChargingInfrastructure":
-        """Static access method."""
-        if ChargingInfrastructure.__instance is None:
-            raise Exception("ChargingInfrastructure was not initialized")
-        else:
-            return ChargingInfrastructure.__instance
-
-    @staticmethod
-    def init(
-        env: Environment,
-        location_list: List[str],  # noqa: UP006
-        power_list: List[float],  # noqa: UP006
-        capacity_list: List[int],  # noqa: UP006
-        queue_size: List[int],  # noqa: UP006
-        reset: bool = False,
-    ) -> "ChargingInfrastructure":
-        """Static access method."""
-        if ChargingInfrastructure.__instance is None or reset is True:
-            ChargingInfrastructure(
-                env, location_list, power_list, capacity_list, queue_size, reset
-            )
-        return ChargingInfrastructure.__instance
-
     def __init__(
         self,
-        env: Environment,
-        location_list: List[str],  # noqa: UP006
-        power_list: List[float],  # noqa: UP006
-        capacity_list: List[int],  # noqa: UP006
-        queue_size: List[int],  # noqa: UP006
-        reset: bool = False,
+        sim: SimulationContext,
+        charging_infrastructure_config: ChargingInfrastructureConfig,
     ) -> None:
-        """Virtually private constructor."""
-        if ChargingInfrastructure.__instance is not None and not reset:
-            raise Exception("This class is a singleton!")
-        else:
-            ChargingInfrastructure.__instance = self
-            super(ChargingInfrastructure, self).__init__()  # noqa: UP008
-        self._env = env
-        self._tracking = Tracking.instance()
-        self._location_list = location_list
-        self._power_list = power_list
-        self._capacity_list = capacity_list
-        self._queue_size = queue_size
+        self._sim = sim
+        self._location_list = charging_infrastructure_config.LOCATIONS
+        self._power_list = charging_infrastructure_config.CHARGING_STATION_POWER
+        self._capacity_list = charging_infrastructure_config.CHARGING_STATION_CAPACITY
+        self._queue_size = charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
+
+        if charging_infrastructure_config.AUCTION_CONFIG:
+            charging_infrastructure_config.COORDINATION_LOOKAHEAD = (
+                charging_infrastructure_config.AUCTION_CONFIG.AUCTION_LOOKAHEAD
+            )
+            charging_infrastructure_config.COORDINATION_INTERVAL = (
+                charging_infrastructure_config.AUCTION_CONFIG.AUCTION_INTERVAL
+            )
+            charging_infrastructure_config.COORDINATION_TIMESLOT_DURATION = (
+                charging_infrastructure_config.AUCTION_CONFIG.TIMESLOT_DURATION
+            )
+
+        self._charging_infra_config = charging_infrastructure_config
+
         self._charging_stations = []  # a list of charger objects
+        self._charging_stations_by_location: dict[
+            str, ChargingStation
+        ] = {}  # a fast lookup of charging stations by location
         self._initialise_charging_stations()
+
+        self._auction = self._initialize_auction()
+
+    def _initialize_auction(self) -> Auction | None:
+        # TODO: @janikmu decouple VCI and auction - go for "coordination" or something
+
+        if self._charging_infra_config.AUCTION_CONFIG:
+            auction = self._charging_infra_config.AUCTION_CONFIG.AUCTION_TYPE(
+                sim=self._sim,
+                charging_infrastructure=self,
+                shared_charging_config=self._charging_infra_config.AUCTION_CONFIG,
+            )
+
+            return auction
+
+        else:
+            return None
 
     def _initialise_charging_stations(self) -> None:
         for i, location in enumerate(self._location_list):
             charging_station = ChargingStation(
-                id=i,
-                env=self._env,
+                sim=self._sim,
+                cs_id=i,
                 location=location,
                 power=self._power_list[i],
                 capacity=self._capacity_list[i],
                 queue_size=self._queue_size[i],
             )
             self._charging_stations.append(charging_station)
-            self._tracking.register(charging_station)
+            self._charging_stations_by_location[location] = charging_station
 
     @property
-    def charging_stations(self) -> list[ChargingStation]:
+    def charging_stations(self) -> list[ChargingStation]:  # noqa: D102
         return self._charging_stations
 
-    def get_locations(self) -> list[str]:
+    @property
+    def auction(self) -> Auction | None:  # noqa: D102
+        return self._auction
+
+    def get_locations(self) -> list[str]:  # noqa: D102
         return self._location_list
+
+    def get_charging_station_by_location(self, location: str) -> ChargingStation:  # noqa: D102
+        return self._charging_stations_by_location[location]

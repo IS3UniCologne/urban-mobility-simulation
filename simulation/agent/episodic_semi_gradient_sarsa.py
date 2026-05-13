@@ -1,17 +1,24 @@
-import logging
+from __future__ import annotations  # noqa: D100
+
 from copy import deepcopy
 from math import sqrt
+from typing import TYPE_CHECKING
 
 import numpy as np
-import simpy
 
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.simulation_base import SimulationBase
+from simulation.helper.vehicle_states import VehicleStates
+
+if TYPE_CHECKING:
+    import simpy
+
+    from simulation.context.simulation_context import SimulationContext
 
 
-class ValueFunctionApproximator:
+class ValueFunctionApproximator(SimulationBase):  # noqa: D101
     __slots__ = ("_weights",)
     # this function only looks at (d_terminal_x, d_terminal_y)
     function = (
@@ -43,27 +50,34 @@ class ValueFunctionApproximator:
         "])"
     )
 
-    def __init__(self, state_dim, action_dim, init_values=None):  # noqa: ANN001, ANN204
+    def __init__(
+        self,
+        sim: SimulationContext,
+        state_dim,  # noqa: ANN001
+        action_dim,  # noqa: ANN001
+        init_values=None,  # noqa: ANN001
+    ) -> None:
+        super().__init__(sim)
         if init_values is not None:
             assert state_dim * action_dim == len(init_values)
             self._weights = np.zeros(state_dim * action_dim) + init_values
         else:
             self._weights = np.zeros(state_dim * action_dim)
 
-    def evaluate_value(self, state, action):  # noqa: ANN001, ANN201
+    def evaluate_value(self, state, action):  # noqa: ANN001, ANN201, D102
         s = state  # vector [d_terminal_x, d_terminal_y] # noqa: F841
         a = action  # binary vector [1, 2, 3, 4, 5, 6] # noqa: F841
         w = self._weights  # noqa: F841
         return eval(ValueFunctionApproximator.function)
 
     @staticmethod
-    def evaluate_gradient(state, action):  # noqa: ANN001, ANN205
+    def evaluate_gradient(state, action):  # noqa: ANN001, ANN205, D102
         s = state  # vector [d_terminal_x, d_terminal_y] # noqa: F841
         a = action  # binary vector [1, 2, 3, 4, 5, 6] # noqa: F841
         return eval(ValueFunctionApproximator.gradient)
 
     @property
-    def weights(self):  # noqa: ANN201
+    def weights(self):  # noqa: ANN201, D102
         return self._weights
 
     @weights.setter
@@ -71,9 +85,11 @@ class ValueFunctionApproximator:
         self._weights = w
 
 
-class EpisodicSemiGradientSarsa(RLAgent):
-    def __init__(self, env: simpy.Environment, q_hat: ValueFunctionApproximator):  # noqa: ANN204
-        super(EpisodicSemiGradientSarsa, self).__init__(env)  # noqa: UP008
+class EpisodicSemiGradientSarsa(RLAgent, SimulationBase):  # noqa: D101
+    def __init__(
+        self, env: simpy.Environment, q_hat: ValueFunctionApproximator
+    ) -> None:
+        super().__init__(env)
 
         # Configuration
         self._alpha = self._config.transit_agent_config.alpha
@@ -83,8 +99,8 @@ class EpisodicSemiGradientSarsa(RLAgent):
         # Value function
         self._q_hat = q_hat
 
-    def run(self, bus):  # noqa: ANN001, ANN201
-        while not bus.state == VehicleState.AT_TERMINAL_DESTINATION:
+    def run(self, bus):  # noqa: ANN001, ANN201, D102
+        while not bus.is_in_state_or_ancestor(VehicleStates.AT_TERMINAL):
             # to get a value copy of a state we need to deepcopy, otherwise modifying self._env_state results in
             # modifying the "copy" which really is just a reference
             before_state = deepcopy(bus._env_state)  # noqa: SLF001
@@ -94,7 +110,7 @@ class EpisodicSemiGradientSarsa(RLAgent):
             s = self._vectorize_state(before_state)
             s_ = self._vectorize_state(bus._env_state)  # noqa: SLF001
             a = self._action_space.action_as_binary_vector(action)
-            if bus.state is VehicleState.AT_TERMINAL_DESTINATION:
+            if bus.state is VehicleStates.AT_TERMINAL:
                 # update weights
                 self._update_policy(s, a, terminal=True)
                 # and go to next episode
@@ -123,7 +139,7 @@ class EpisodicSemiGradientSarsa(RLAgent):
         down-left  \\ __ /  down-right
                     down
 
-        """
+        """  # noqa: D202, D301
 
         new_centroid = None
 
@@ -141,19 +157,15 @@ class EpisodicSemiGradientSarsa(RLAgent):
                     new_centroid = bus.test_action(action)
                 except NotImplementedError:
                     # hexagon is out of layer bounding box - action is forbidden
-                    logging.debug(
-                        "Action %s is forbidden, sampling again",
+                    self.logger.debug(
+                        "Action %s is forbidden to bus %s, sampling again",
                         action,
-                        extra={"clazz": self.__class__.__name__, "oid": bus.id},
+                        bus.id,
                     )
                     continue
                 break
 
-        logging.debug(
-            "Bus takes action %s",
-            action,
-            extra={"clazz": self.__class__.__name__, "oid": bus.id},
-        )
+        self.logger.debug("Bus %s takes action %s", bus.id, action)
 
         if new_centroid is None:
             yield self._env.timeout(0.01)
@@ -163,7 +175,7 @@ class EpisodicSemiGradientSarsa(RLAgent):
             distance = bus.position >> new_position
             duration = distance / bus._velocity  # in minutes  # noqa: SLF001
 
-            self._state = VehicleState.EN_ROUTE_DETOUR
+            self._state = VehicleStates.EN_ROUTE
 
             yield self._env.timeout(duration)
 
@@ -197,7 +209,7 @@ class EpisodicSemiGradientSarsa(RLAgent):
         :param state: env state as given by the bus agent
         :param terminal: bool, is the state a terminal one?
         :return: numerical reward +/- or 0
-        """
+        """  # noqa: D202, D401, D404
 
         if terminal:
             return 10

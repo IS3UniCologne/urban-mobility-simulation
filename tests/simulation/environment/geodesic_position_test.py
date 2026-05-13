@@ -2,17 +2,26 @@
 
 import random
 import statistics
+from unittest.mock import Mock
 
 import pytest
 
 from simulation.environment.geodesic_position import GeodesicPosition
 
 
+@pytest.fixture
+def mock_sim() -> Mock:
+    """Create a mock simulation context for testing."""
+    mock_sim = Mock()
+    mock_sim.config.world.SPATIAL_RESOLUTION = 7
+    return mock_sim
+
+
 @pytest.mark.unit
 class TestGeodesicPositionDistance:
     """Tests for GeodesicPosition distance calculations."""
 
-    def test_distance_calculation_speed(self) -> None:
+    def test_distance_calculation_speed(self, mock_sim: Mock) -> None:
         """Test that euclidean distance calculation is faster than haversine."""
         # Berlin's approximate bounding box
         min_lat, max_lat = 52.3, 52.7  # latitude range
@@ -26,7 +35,7 @@ class TestGeodesicPositionDistance:
         for _ in range(n_samples * 2):
             lat = random.uniform(min_lat, max_lat)
             lng = random.uniform(min_lng, max_lng)
-            positions.append(GeodesicPosition(lat, lng))
+            positions.append(GeodesicPosition(mock_sim, lat, lng))
 
         # Measure haversine distance calculations
         import time
@@ -47,7 +56,7 @@ class TestGeodesicPositionDistance:
             "Euclidean distance calculation should be faster than haversine"
         )
 
-    def test_distance_calculation_accuracy(self) -> None:
+    def test_distance_calculation_accuracy(self, mock_sim: Mock) -> None:
         """Test accuracy of euclidean approximation vs haversine for Berlin distances."""
         # Berlin's approximate bounding box
         min_lat, max_lat = 52.3, 52.7  # latitude range
@@ -61,7 +70,7 @@ class TestGeodesicPositionDistance:
         for _ in range(n_samples * 2):
             lat = random.uniform(min_lat, max_lat)
             lng = random.uniform(min_lng, max_lng)
-            positions.append(GeodesicPosition(lat, lng))
+            positions.append(GeodesicPosition(mock_sim, lat, lng))
 
         # Calculate distances using both methods
         haversine_distances = []
@@ -90,11 +99,11 @@ class TestGeodesicPositionDistance:
             f"Average absolute error should be less than 100 meters, got {avg_abs_error:.2f} meters"
         )
 
-    def test_basic_distance_calculations(self) -> None:
+    def test_basic_distance_calculations(self, mock_sim: Mock) -> None:
         """Test basic distance calculation functionality."""
         # Create two positions in Berlin
-        pos1 = GeodesicPosition(52.5200, 13.4050)  # Berlin center
-        pos2 = GeodesicPosition(52.5170, 13.3888)  # Brandenburg Gate
+        pos1 = GeodesicPosition(mock_sim, 52.5200, 13.4050)  # Berlin center
+        pos2 = GeodesicPosition(mock_sim, 52.5170, 13.3888)  # Brandenburg Gate
 
         # Calculate distances
         haversine_distance = pos1 >> pos2
@@ -113,9 +122,9 @@ class TestGeodesicPositionDistance:
             f"got {relative_error * 100:.2f}%"
         )
 
-    def test_same_position_distance(self) -> None:
+    def test_same_position_distance(self, mock_sim: Mock) -> None:
         """Test that distance from a position to itself is zero."""
-        pos = GeodesicPosition(52.5200, 13.4050)
+        pos = GeodesicPosition(mock_sim, 52.5200, 13.4050)
 
         haversine_distance = pos >> pos
         euclidean_distance = pos << pos
@@ -136,11 +145,11 @@ class TestGeodesicPositionDistance:
         ],
     )
     def test_distance_symmetry(
-        self, lat1: float, lng1: float, lat2: float, lng2: float
+        self, mock_sim: Mock, lat1: float, lng1: float, lat2: float, lng2: float
     ) -> None:
         """Test that distance calculation is symmetric."""
-        pos1 = GeodesicPosition(lat1, lng1)
-        pos2 = GeodesicPosition(lat2, lng2)
+        pos1 = GeodesicPosition(mock_sim, lat1, lng1)
+        pos2 = GeodesicPosition(mock_sim, lat2, lng2)
 
         # Distance from pos1 to pos2 should equal distance from pos2 to pos1
         assert (pos1 >> pos2) == (pos2 >> pos1), (
@@ -150,11 +159,11 @@ class TestGeodesicPositionDistance:
             "Euclidean distance should be symmetric"
         )
 
-    def test_distance_triangle_inequality(self) -> None:
+    def test_distance_triangle_inequality(self, mock_sim: Mock) -> None:
         """Test that distances satisfy triangle inequality."""
-        pos1 = GeodesicPosition(52.5200, 13.4050)  # Berlin center
-        pos2 = GeodesicPosition(52.5170, 13.3888)  # Brandenburg Gate
-        pos3 = GeodesicPosition(52.5243, 13.4105)  # Museum Island
+        pos1 = GeodesicPosition(mock_sim, 52.5200, 13.4050)  # Berlin center
+        pos2 = GeodesicPosition(mock_sim, 52.5170, 13.3888)  # Brandenburg Gate
+        pos3 = GeodesicPosition(mock_sim, 52.5243, 13.4105)  # Museum Island
 
         # Triangle inequality: distance(A,C) <= distance(A,B) + distance(B,C)
         haversine_ac = pos1 >> pos3

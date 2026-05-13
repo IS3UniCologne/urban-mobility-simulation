@@ -1,36 +1,50 @@
-"""Global test configuration and shared fixtures for urban mobility simulation tests."""
+# """Global test configuration and shared fixtures for urban mobility simulation tests."""
 
-import sys
-from collections.abc import Generator
-from pathlib import Path
+# from collections.abc import Generator
+# from unittest.mock import Mock, patch
 
-import pytest
+# import pytest
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_environment() -> Generator[None, None, None]:
-    """Set up the test environment for all tests.
+# @pytest.fixture(scope="function", autouse=True)
+# def mock_logging(request: pytest.FixtureRequest) -> Generator[Mock, None, None]:
+#     """Mock logging functionality for all unit tests.
 
-    This fixture automatically configures the test environment by setting
-    the configuration file path and performs cleanup after tests complete.
+#     This fixture automatically mocks the LogManager to avoid logging setup
+#     complexity in unit tests.
 
-    Yields
-    ------
-    None
-        Control is yielded to the test execution.
-    """
-    # Store original arguments
-    original_argv = sys.argv.copy()
+#     For LogManager-specific tests, this fixture is skipped to allow direct
+#     testing of the LogManager functionality.
 
-    # Set the configuration file path for testing
-    config_path = Path("tests/configurations/testing_config_res7.toml")
-    if config_path.exists():
-        sys.argv = [sys.argv[0], str(config_path)]
-    else:
-        # Fallback to template config
-        sys.argv = [sys.argv[0], "resources/configurations/config_template.toml"]
+#     Parameters
+#     ----------
+#     request : pytest.FixtureRequest
+#         Pytest request object to get test information.
 
-    yield
+#     Yields
+#     ------
+#     Mock
+#         A mock logger that can be used for assertions if needed.
+#     """
+#     # Check if this is a LogManager specific test by looking at the test file path
+#     # If it is, skip the automatic mocking to allow testing the actual LogManager
+#     test_file = str(request.fspath)
+#     if "log_manager" in test_file.lower() and "test" in test_file.lower():
+#         yield Mock()  # Return a basic mock but don't patch anything
+#         return
 
-    # Restore original arguments after tests complete
-    sys.argv = original_argv
+#     mock_logger = Mock()
+#     mock_logger.info = Mock()
+#     mock_logger.debug = Mock()
+#     mock_logger.warning = Mock()
+#     mock_logger.error = Mock()
+#     mock_logger.critical = Mock()
+#     mock_logger.exception = Mock()
+
+#     # Mock the LogManager class methods to avoid initialization complexity
+#     with patch(
+#         "simulation.helper.logging.log_manager.LogManager.get_uid_logger"
+#     ) as mock_get_logger:
+#         mock_get_logger.return_value = mock_logger
+
+#         yield mock_logger

@@ -1,5 +1,4 @@
-import logging
-import os
+import os  # noqa: D100
 import random
 from collections import deque
 from copy import deepcopy
@@ -19,12 +18,13 @@ from simulation.agent.action_space import ActionSpace
 from simulation.agent.policy import Policy
 from simulation.agent.rl_agent import RLAgent
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.enums import VehicleState
+from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTimeConverter
+from simulation.helper.vehicle_states import VehicleStates
 from simulation.vehicle.public_transit_bus import Bus
 
 
-class ModifiedTensorBoard(TensorBoard):
+class ModifiedTensorBoard(TensorBoard, SimulationBase):  # noqa: D101
     __slots__ = ("_log_write_dir", "_step", "_writer")
 
     def __init__(self, **kwargs):  # noqa: ANN003, ANN204
@@ -33,7 +33,7 @@ class ModifiedTensorBoard(TensorBoard):
         self.writer = tf.summary.create_file_writer(self.log_dir)
         self._log_write_dir = self.log_dir
 
-    def set_model(self, model):  # noqa: ANN001, ANN201
+    def set_model(self, model):  # noqa: ANN001, ANN201, D102
         self.model = model
 
         self._train_dir = os.path.join(self._log_write_dir, "train")
@@ -44,23 +44,23 @@ class ModifiedTensorBoard(TensorBoard):
 
         self._should_write_train_graph = False
 
-    def on_epoch_end(self, epoch, logs=None):  # noqa: ANN001, ANN201
+    def on_epoch_end(self, epoch, logs=None):  # noqa: ANN001, ANN201, D102
         self.update_stats(**logs)
 
-    def on_batch_end(self, batch, logs=None):  # noqa: ANN001, ANN201
+    def on_batch_end(self, batch, logs=None):  # noqa: ANN001, ANN201, D102
         pass
 
-    def on_train_end(self, _):  # noqa: ANN001, ANN201
+    def on_train_end(self, _):  # noqa: ANN001, ANN201, D102
         pass
 
-    def update_stats(self, **stats):  # noqa: ANN003, ANN201
+    def update_stats(self, **stats):  # noqa: ANN003, ANN201, D102
         with self.writer.as_default():
             for key, value in stats.items():
                 tf.summary.scalar(key, value, step=self.step)
                 self.writer.flush()
 
 
-class DQN(RLAgent):
+class DQN(RLAgent, SimulationBase):  # noqa: D101
     __slots__ = (
         "_action_space",
         "_alpha",
@@ -172,11 +172,7 @@ class DQN(RLAgent):
         if weights is not None:
             if type(weights) is str:
                 # filepath is given
-                logging.info(
-                    "Loading weights from %s ...",
-                    weights,
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
-                )
+                self.logger.info("Loading weights from %s ...", weights)
                 self._q_net.load_weights(weights)
                 self._target_q_net.load_weights(weights)
             else:
@@ -185,10 +181,7 @@ class DQN(RLAgent):
                 self._q_net.set_weights(eval_weights)
                 self._target_q_net.set_weights(target_weights)
         else:
-            logging.debug(
-                self._q_net.summary(),
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
+            self.logger.debug(self._q_net.summary())
 
             # in the first episode, initialize target q net weights = q net weights
             self._target_q_net.set_weights(self._q_net.get_weights())
@@ -238,7 +231,7 @@ class DQN(RLAgent):
 
         return model
 
-    def run(self, bus: Bus):  # noqa: ANN201
+    def run(self, bus: Bus):  # noqa: ANN201, D102
         # set timelimit to multiplier specified in config * planned route total time
         route_duration = SimulationTimeConverter.duration_between(
             bus.route.origin.departure, bus.route.destination.departure
@@ -271,7 +264,7 @@ class DQN(RLAgent):
             )  # S_t, as numpy 3d matrix
 
             reached_destination = (
-                True if bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
+                True if bus.state is VehicleStates.AT_TERMINAL else False
             )
             reached_timelimit = (
                 True if self._env.now - bus._spawned > self._timelimit else False  # noqa: SLF001
@@ -317,28 +310,25 @@ class DQN(RLAgent):
 
         # retain decayed epsilon
         self._config.transit_agent_config.eps = self._eps
-        logging.debug(
+        self.logger.debug(
             "Saving decayed epsilon into config: %s",
             self._eps,
-            extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
+            extra={f"Episode {self._episode}"},
         )
 
         # retain optimizer steps for decayed learning rate
         self._config.transit_agent_config.optimizer = self._optimizer
         if self._config.transit_agent_config.lr_decay:
-            logging.debug(
+            self.logger.debug(
                 "Saving decayed learning rate into config: %s",
                 self._learning_rate(self._optimizer.iterations),
-                extra={
-                    "clazz": self.__class__.__name__,
-                    "oid": f"Episode {self._episode}",
-                },
+                extra={f"Episode {self._episode}"},
             )
 
-        logging.debug(
+        self.logger.debug(
             "Current Replay Buffer size: %s",
             len(self._replay_buffer),
-            extra={"clazz": self.__class__.__name__, "oid": f"Episode {self._episode}"},
+            extra={f"Episode {self._episode}"},
         )
 
         # clean up processes
@@ -466,19 +456,11 @@ class DQN(RLAgent):
 
             if not bus.test_action(a, corridor=True):
                 # hexagon is out of layer bounding box - action is forbidden
-                logging.debug(
-                    "Action %s is forbidden, sampling again",
-                    a,
-                    extra={"clazz": self.__class__.__name__, "oid": bus.id},
-                )
+                self.logger.debug("Action %s is forbidden, sampling again", a)
                 continue
             break
 
-        logging.debug(
-            "Bus takes action %s",
-            a,
-            extra={"clazz": self.__class__.__name__, "oid": bus.id},
-        )
+        self.logger.debug("Bus takes action %s", a)
 
         return a
 
@@ -492,7 +474,7 @@ class DQN(RLAgent):
         down-left  \\ __ /  down-right
                     down
 
-        """
+        """  # noqa: D202, D301
 
         if action == "STAY":
             # even though the bus does not move, timeout for the average movement duration
@@ -521,7 +503,7 @@ class DQN(RLAgent):
             )
             duration = distance / bus._velocity  # in minutes  # noqa: SLF001
 
-            self._state = VehicleState.EN_ROUTE_DETOUR
+            self._state = VehicleStates.EN_ROUTE
 
             yield self._env.timeout(duration)
 
@@ -537,9 +519,7 @@ class DQN(RLAgent):
             self._env.event()
         )  # only reset it after we have entered the method
 
-        reached_destination = (
-            True if bus.state is VehicleState.AT_TERMINAL_DESTINATION else False
-        )
+        reached_destination = True if bus.state is VehicleStates.AT_TERMINAL else False
         reached_timelimit = (
             True if self._env.now - bus._spawned > self._timelimit else False  # noqa: SLF001
         )
@@ -550,30 +530,24 @@ class DQN(RLAgent):
         unreachable_destination = True if remaining_time < timeto_destination else False
         # unreachable_destination = False # JUST FOR DEBUGGING
         if unreachable_destination:
-            logging.info(
-                "Episode is cancelled, destination is unreachable within time limit",
-                extra={"clazz": self.__class__.__name__, "oid": ""},
+            self.logger.info(
+                "Episode is cancelled, destination is unreachable within time limit"
             )
 
         # reward is service level (1 drop off = +1 reward)
         self._latest_reward = bus._dropoffs * self._reward  # noqa: SLF001
         if self._latest_reward > 0:
-            logging.debug(
-                "Service Level was increased by %s",
-                self._latest_reward,
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
+            self.logger.debug("Service Level was increased by %s", self._latest_reward)
 
         if (reached_timelimit and not reached_destination) or unreachable_destination:
             self._latest_reward -= self._penalty
 
         self._reward_sum = self._reward_sum + self._latest_reward
 
-        logging.debug(
+        self.logger.debug(
             "Current reward: %s, overall reward: %s",
             self._latest_reward,
             self._reward_sum,
-            extra={"clazz": self.__class__.__name__, "oid": bus.id},
         )
 
         # reset drop offs

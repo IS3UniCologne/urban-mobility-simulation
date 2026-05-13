@@ -1,440 +1,356 @@
-import logging
+from __future__ import annotations  # noqa: D100
 
-import simpy
-from numpy.random import normal
-from simpy import Environment
+import os
+from typing import TYPE_CHECKING
 
-from simulation.agent import user
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.configuration.enums import (
-    DailyResolution,
-    SpatialResolution,
-    TemporalResolution,
+from simulation.agent.user.user_log import UserLog
+from simulation.helper.simulation_base import SimulationBase
+from simulation.infrastructure.charging_stations.charging_infastructure import (
+    ChargingInfrastructure,
 )
-from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
+from simulation.infrastructure.helper.distance_matrix_importer import (
+    DistanceMatrixImporter,
 )
-from simulation.tasks.transport_task import TransportTask
+from simulation.operator.operator import Operator, OperatorDependencies
 from simulation.vehicle.vehicle import Vehicle
-from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
-from simulation.vehicle_choice_model.vehicle_choice_behavior_interface import (
-    VehicleChoiceBehaviorInterface,
-)
-from simulation.world.population.PopulationFactory import PopulationFactory
-from tracking.tracking import Tracking
+from simulation.world.mobility_search_engine import MobilitySearchEngine
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    import simpy
+    from pandas import DataFrame
+
+    from simulation.agent.user import user
+    from simulation.agent.user.user import User
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.geodesic_environment import GeodesicEnvironment
+    from simulation.helper.configuration.configuration import Configuration
+    from simulation.helper.random.random_manager import RandomManager
+    from simulation.infrastructure.helper.timetable import Timetable
+    from simulation.operator.operations_management.operations_public_transport import (
+        OperationsPublicTransport,
+    )
+    from simulation.operator.public_transit_operator import PublicTransitOperator
+    from simulation.operator.public_transport_allocation_engine import (
+        PublicTransportAllocationEngine,
+    )
+    from simulation.operator.public_transport_search_engine import (
+        PublicTransportSearchEngine,
+    )
+    from simulation.operator.public_transport_vehicle_fleet import (
+        PublicTransportVehicleFleet,
+    )
+    from simulation.operator.vehicle_fleet import VehicleFleet
+    from simulation.vehicle.vehicle import Vehicle
 
 
-class World:
+class World(SimulationBase):  # noqa: D101
     # There is only one instance of this class.
     __instance = None
     __slots__ = (
         "_changed",
-        "_charging_infrastructure",
+        "_charging_infrastructures",
         "_config",
         "_daily_resolution",
         "_demand_processes",
+        "_distance_matrix",
         "_env",
+        "_fleets",
+        "_geo_env",
+        "_market",
+        "_mobility_search",
+        "_operators",
         "_payment_engine",
-        "_population_factory",
+        "_random_manager",
         "_search_engine",
+        "_sim",
         "_simulation_finished",
         "_spatial_resolution",
         "_temporal_resolution",
+        "_total_users",
         "_tracking",
-        "_user_limit",
-        "_user_processes",
+        "_user_log",
         "_users",
         "_vehicle_assignment_engine",
-        "_vehicle_choice_behavior",
-        "_vehicle_processes",
         "_vehicles",
     )
 
-    @staticmethod
-    def instance() -> "World":
-        """Static access method."""
-        if World.__instance is None:
-            raise Exception("World was not initialized")
-        else:
-            return World.__instance
+    def __init__(self, sim: SimulationContext) -> None:
+        super().__init__(sim)
+        self._sim: SimulationContext = sim
+        self._config: Configuration = sim.config
+        self._geo_env: GeodesicEnvironment = sim.geo_env
+        self._env: simpy.Environment = sim.env
+        self._random_manager = sim.random_manager
 
-    @staticmethod
-    def init(  # noqa: ANN205
-        env,  # noqa: ANN001
-        search_engine,  # noqa: ANN001
-        payment_engine,  # noqa: ANN001
-        vehicle_assignment_engine,  # noqa: ANN001
-        vehicle_choice_behavior,  # noqa: ANN001
-        population_factory,  # noqa: ANN001
-        charging_infrastructure,  # noqa: ANN001
-        reset=False,  # noqa: ANN001
-    ):
-        """Static access method."""
-        if World.__instance is None or reset is True:
-            World(
-                env,
-                search_engine,
-                payment_engine,
-                vehicle_assignment_engine,
-                vehicle_choice_behavior,
-                population_factory,
-                charging_infrastructure,
-                reset,
-            )
-        return World.__instance
+        self._distance_matrix: DataFrame = self._load_distance_matrix()
 
-    def __init__(  # noqa: ANN204
-        self,
-        env: Environment,
-        search_engine: SearchEngineInterface,
-        payment_engine,  # noqa: ANN001
-        vehicle_assignment_engine: VehicleAllocationEngineInterface,
-        vehicle_choice_behavior: VehicleChoiceBehaviorInterface,
-        population_factory: PopulationFactory,
-        charging_infrastructure,  # noqa: ANN001
-        reset: bool = False,
-    ):
-        """Virtually private constructor."""
-        if World.__instance is not None and not reset:
-            raise Exception("This class is a singleton!")
-        else:
-            World.__instance = self
-            super(World, self).__init__()  # noqa: UP008
-
-        self._config = Configuration()
-
-        self._spatial_resolution: SpatialResolution = (
-            self._config.world.SPATIAL_RESOLUTION
-        )
-        self._temporal_resolution: TemporalResolution = (
-            self._config.world.TEMPORAL_RESOLUTION
-        )
-
-        self._daily_resolution: DailyResolution = self._config.world.DAILY_RESOLUTION
-
-        self._env = env
-        self._search_engine = search_engine  # Allows users to search for vehicles
-        self._payment_engine = payment_engine  # Allows users to pay
-        self._vehicle_assignment_engine = (
-            vehicle_assignment_engine  # Allows vehicle allocations
-        )
-
-        self._vehicle_choice_behavior = vehicle_choice_behavior
+        self._operators: list[Operator] = []
 
         self._demand_processes = []
 
+        self._search_engine = {}
+        self._payment_engine = {}
+
         # Store all current users
         self._users: set[user.User] = set()
-        self._user_processes: dict[int, simpy.Process] = {}
+        self._total_users: int = 0
 
         # Store all current vehicles
+        # TODO: Probably redundant with fleets
         self._vehicles: set[Vehicle] = set()
-        self._vehicle_processes: dict[int, simpy.Process] = {}
 
-        # TODO: keep track of fleets here as well
+        self._fleets: list[VehicleFleet] = []
 
-        # tracking
-        self._tracking = Tracking.instance()
+        self._mobility_search: MobilitySearchEngine = MobilitySearchEngine(
+            sim=self._sim
+        )
 
-        # charging infra
-        self._charging_infrastructure = charging_infrastructure
+        self._user_log: UserLog = UserLog(sim=self._sim)
 
-        # Config
-        self._config = Configuration()
+        self._charging_infrastructures: list[ChargingInfrastructure] | None = (
+            self._initialize_charging_infrastructures()
+        )
 
-        # Add Population Factory
-        self._population_factory = population_factory
+        self._setup_operators()
 
         # Events
         self._changed = self._env.event()
         self._simulation_finished = self._env.event()
 
-        self._user_limit = 10_000_000
-
     @property
-    def spatial_resolution(self) -> SpatialResolution:
-        """
-        Get the spatial resolution of the world.
+    def user_log(self) -> UserLog:
+        """Get the user log.
 
         Returns
         -------
-        SpatialResolution
-            The spatial resolution of the world, which is an instance of SpatialResolution.
+        UserLog
+            The user log instance for system-level trip tracking.
         """
-        return self._spatial_resolution
+        return self._user_log
 
     @property
-    def temporal_resolution(self) -> TemporalResolution:
-        return self._temporal_resolution
+    def mobility_search(self) -> MobilitySearchEngine:
+        """Get the mobility search provider.
+
+        Returns
+        -------
+        MobilitySearch
+            The mobility search instance.
+        """
+        return self._mobility_search
 
     @property
-    def daily_resolution(self) -> DailyResolution:
-        return self._daily_resolution
+    def random_manager(self) -> RandomManager:
+        """Get the random manager."""
+        return self._random_manager
 
     @property
-    def user_processes(self):  # noqa: ANN201
-        return self._user_processes
+    def geo_env(self) -> GeodesicEnvironment:  # noqa: D102
+        return self._geo_env
 
     @property
-    def demand_processes(self):  # noqa: ANN201
+    def distance_matrix(self) -> DataFrame:
+        """Get the distance matrix."""
+        return self._distance_matrix
+
+    @property
+    def demand_processes(self):  # noqa: ANN201, D102
         return self._demand_processes
 
     @property
-    def vehicle_processes(self):  # noqa: ANN201
-        return self._vehicle_processes
+    def operators(self) -> list[Operator]:
+        """Get a list of operators in the world."""
+        return self._operators
 
-    def add_user(self, mode, fleet, origin, destination):  # noqa: ANN001, ANN201
-        """
-        Add a user agent to the world with an origin and a destination.
+    @property
+    def fleets(self) -> list[VehicleFleet]:
+        """Get a list of all vehicle fleets in the world."""
+        return self._fleets
 
-        :param mode: which type of request
-        :param fleet: which fleet
-        :param origin: Spatial Unit ID (e.g., hex_id)
-        :param destination: Spatial Unit ID (e.g., hex_id)
-        :return: None
-        """
+    def _initialize_charging_infrastructures(
+        self,
+    ) -> list[ChargingInfrastructure] | None:
+        # TODO: This is currently completely ignored by shared vehicle operators, while ridehailing operators all use the same charging infrastructure.
+        # This probably needs some refactoring depending on what we want to do with charging infrastructure in the future.
 
-        if len(self._users) < self._user_limit:
-            # Get Origin and Destination based on underlying environment
-            geo_env = GeodesicEnvironment.getInstance()
+        if len(self._config.charging_infrastructures) > 0:
+            charging_infrastructures = []
 
-            origin_lat, origin_lng = geo_env.get_random_position(
-                origin, f"hex_{self._config.world.SPATIAL_RESOLUTION_VALUE}"
+            for ci_conf in self._config.charging_infrastructures:
+                charging_infrastructure = ChargingInfrastructure(
+                    sim=self._sim, charging_infrastructure_config=ci_conf
+                )
+                # Assign the charging infrastructure object to the config so operators can access it
+                ci_conf.instance = charging_infrastructure
+                charging_infrastructures.append(charging_infrastructure)
+            return charging_infrastructures
+        else:
+            return None
+
+    def _setup_operators(self) -> None:
+        if not self._config.operators or len(self._config.operators) == 0:
+            raise ValueError("No operators defined in configuration.")
+        operators = self._config.operators
+        for operator_config in operators:
+            operator = Operator.from_deps(
+                deps=OperatorDependencies(
+                    sim=self._sim, config=operator_config, world=self
+                )
             )
-            destination_lat, destination_lng = geo_env.get_random_position(
-                destination, f"hex_{self._config.world.SPATIAL_RESOLUTION_VALUE}"
-            )
+            self._operators.append(operator)
 
-            origin_position = GeodesicPosition(
-                origin_lat, origin_lng, origin
-            )  # (Lat, Lng)
-            destination_position = GeodesicPosition(
-                destination_lat, destination_lng, destination
-            )  # (Lat, Lng)
+    def _load_distance_matrix(self) -> None:
+        hexagons = self.geo_env.getLayer(
+            f"hex_{self._config.world.SPATIAL_RESOLUTION}"
+        ).index.tolist()
 
-            # Vehicle Choice
-            distance = origin_position >> destination_position
-            tc = TripCharacteristics(distance)
-            viable_vehicle_modes = self._vehicle_choice_behavior.choose_vehicle(tc)
+        # TODO: Remove hardcoded path
+        dmi = DistanceMatrixImporter(
+            hexagons,
+            self._config.world.SPATIAL_RESOLUTION,
+            os.path.normpath(os.path.join(".", "data", "infrastructure")),
+            self._config.world.CITY,
+        )
+        return dmi.load_distance_matrix()
 
-            # Determine Consumer Type
-            if mode == "public_transport":
-                # User Preferences
-                max_wait_time = normal(
-                    self._config.user.TRANSIT_MAX_WAIT
-                )  # sample from normal dist centered on config
-
-                # Generate Transportation Task
-                task = TransportTask(
-                    self._env.now,
-                    origin_position,
-                    destination_position,
-                    viable_vehicle_modes,
-                    max_wait_time,
-                )
-
-                # new_user = user.TransitUser(origin_position, task, self._search_engine, self._payment_engine,
-                #                             self._vehicle_assignment_engine, self._vehicle_choice_behavior, self._env,
-                #                             passive=True if not self._config.transit_agent_config.dumb else False)
-                population_type = None
-
-                new_user = user.TransitUser(
-                    origin_position,
-                    task,
-                    self._search_engine,
-                    self._payment_engine,
-                    self._vehicle_assignment_engine,
-                    self._vehicle_choice_behavior,
-                    population_type,
-                    self._env,
-                )
-            elif mode == "shared_vehicle":
-                # Generate Transportation Task
-                task = TransportTask(
-                    self._env.now,
-                    origin_position,
-                    destination_position,
-                    viable_vehicle_modes,
-                )
-
-                # Determine Consumer Type
-                population_type = self._population_factory.generatePopulationType()
-
-                new_user = user.User(
-                    fleet,
-                    origin_position,
-                    task,
-                    self._search_engine,
-                    self._payment_engine,
-                    self._vehicle_assignment_engine,
-                    self._vehicle_choice_behavior,
-                    population_type,
-                    self._env,
-                )
-                logging.debug(
-                    " Shared-vehicle user %s starts searching for fleet %s at %s.",
-                    new_user.user_id,
-                    fleet,
-                    self._env.now,
-                    extra={"clazz": self.__class__.__name__, "oid": " "},
-                )
-            elif mode == "ride_hailing":
-                task = TransportTask(
-                    self._env.now,
-                    origin_position,
-                    destination_position,
-                    viable_vehicle_modes,
-                )
-
-                # Determine Consumer Type
-                population_type = (
-                    self._population_factory.generatePopulationTypeRideHailing()
-                )
-
-                new_user = user.RideHailingUser(
-                    fleet,
-                    origin_position,
-                    task,
-                    self._search_engine[f"ride_hailing_{fleet}"],
-                    self._payment_engine[f"ride_hailing_{fleet}"],
-                    self._vehicle_assignment_engine[f"ride_hailing_{fleet}"],
-                    self._vehicle_choice_behavior,
-                    population_type,
-                    self._env,
-                )
-                logging.debug(
-                    "Ride-hailing user %s, %s request a vehicle at %s.",
-                    new_user.user_id,
-                    population_type,
-                    self._env.now,
-                    extra={"clazz": self.__class__.__name__, "oid": " "},
-                )
-            elif mode == "walking":
-                # Generate Transportation Task
-                task = TransportTask(
-                    self._env.now,
-                    origin_position,
-                    destination_position,
-                    viable_vehicle_modes,
-                )
-
-                # Determine Consumer Type
-                population_type = self._population_factory.generatePopulationType()
-
-                new_user = user.User(
-                    fleet,
-                    origin_position,
-                    task,
-                    self._search_engine["walking"],
-                    self._payment_engine["walking"],
-                    self._vehicle_assignment_engine["walking"],
-                    self._vehicle_choice_behavior,
-                    population_type,
-                    self._env,
-                )
-            else:
-                raise NotImplementedError('User mode "{mode}" not implemented.')
-
-            # Add user to user set
-            self._users.add(new_user)
-            # register user with tracking
-            new_user_uid = self._tracking.register(new_user)
-
-            # Start Process for each new user
-            self._user_processes[new_user.id] = self._env.process(new_user.run())
-
-            # Spawn cleanup process for that user
-            self._env.process(self._cleanup_user(new_user, new_user_uid))
-
-            if len(self._users) == self._user_limit:
-                logging.info(
-                    "Reached User Limit of %s. Not adding more users to world.",
-                    self._user_limit,
-                    extra={"clazz": self.__class__.__name__, "oid": " "},
-                )
-
-    def _cleanup_user(self, user, user_uid: str):  # noqa: ANN001, ANN202
+    def add_user(self, user: user.User) -> Generator[simpy.Event, None, None]:
         """
-        Wait for the user process to finish, then remove the user from the simulation.
+        Add a User object to the world.
 
         Parameters
         ----------
         user : User or subclass
             The user agent to clean up.
-        user_uid : str
-            The unique identifier for tracking.
         """
-        yield user.process_finished
+        self._users.add(user)
+        self._total_users += 1
 
-        # Remove user from tracking
-        self._tracking.unregister_by_uid(user_uid)
+        self.logger.debug("User %s added to world.", user.uid)
 
-        # Remove user from self._users
-        self._users.discard(user)
+        # Start process for automatic cleanup
+        self._env.process(self._monitor_user_lifecycle(user))
 
-        # Remove user process from self._user_processes
-        if user.id in self._user_processes:
-            del self._user_processes[user.id]
-
-        logging.debug(
-            "User %s removed from simulation after process finished.",
-            user.id,
-            extra={"clazz": self.__class__.__name__, "oid": " "},
-        )
-
-    def add_vehicle(self, vehicle: Vehicle):  # noqa: ANN201
+    def add_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
         self._vehicles.add(vehicle)
 
-        # TODO: register vehicle with tracking
-
-    def remove_vehicle(self, vehicle: Vehicle):  # noqa: ANN201
+    def remove_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
         self._vehicles.discard(vehicle)
 
-        # TODO: de-register vehicle with tracking
-
     @property
-    def users(self):  # noqa: ANN201
+    def users(self) -> set[User]:
+        """Get the set of current users in the world."""
         return self._users
 
     @property
-    def vehicles(self):  # noqa: ANN201
+    def total_users(self) -> int:
+        """Get total number of users that have been added to the world so far."""
+        return self._total_users
+
+    # TODO: get rid of this, only one user uses it and it should be dealt with differently
+    @property
+    def vehicles(self) -> set[Vehicle]:  # noqa: D102
         return self._vehicles
 
     @property
-    def charging_infrastructure(self):  # noqa: ANN201
-        return self._charging_infrastructure
+    def charging_infrastructures(self) -> list[ChargingInfrastructure] | None:  # noqa: D102
+        return self._charging_infrastructures
 
     @property
-    def simulation_finished(self):  # noqa: ANN201
+    def simulation_finished(self):  # noqa: ANN201, D102
         return self._simulation_finished
 
     @property
-    def changed(self):  # noqa: ANN201
+    def changed(self):  # noqa: ANN201, D102
         return self._changed
 
     @changed.setter
     def changed(self, event):  # noqa: ANN001, ANN202
         self._changed = event
 
-    def stop_all_processes(self):  # noqa: ANN201
-        # stop demand generation
-        for d in self.demand_processes:
-            try:
-                d.interrupt()
-            except RuntimeError:
-                # already terminated
-                pass
+    def _monitor_user_lifecycle(
+        self, user: user.User
+    ) -> Generator[simpy.Event, None, None]:
+        """
+        Monitor a user's lifecycle and clean up when it's finished.
 
-        # clean up user demands
-        for process in self.user_processes.values():
-            try:
-                process.interrupt()
-            except RuntimeError:
-                # already terminated
-                pass
+        Parameters
+        ----------
+        user : User
+            The user to monitor.
+        """
+        # Wait for user process to finish
+        yield user.process_finished
 
-    def user_process_by_id(self, user_id):  # noqa: ANN001, ANN201
-        return self._user_processes.get(user_id)  # returns the process or None
+        # Remove user from tracking
+        self._users.discard(user)
+
+        self.logger.debug(
+            "User %s removed from world after process finished.", user.uid
+        )
+
+    def _load_timetable(self) -> Timetable | None:
+        if not hasattr(self._config.path, "PATH_TRANSIT_TIMETABLE"):
+            self.logger.warning("No timetable path configured for public transport")
+            return None
+
+        from simulation.infrastructure.helper.timetable import Timetable
+
+        timetable_path = os.path.normpath(self._config.path.PATH_TRANSIT_TIMETABLE)
+        timetable = Timetable(data_path=timetable_path, sim=self._sim)
+        timetable.import_timetable()
+        self.logger.info("Loaded public transport timetable from %s", timetable_path)
+        return timetable
+
+    def _initialize_public_transport_fleet(self) -> PublicTransportVehicleFleet:
+        from simulation.operator.public_transport_vehicle_fleet import (
+            PublicTransportVehicleFleet,
+        )
+
+        return PublicTransportVehicleFleet(sim=self._sim, world=self)
+
+    def _create_public_transport_search_engine(
+        self, operator_config: dict, fleet: PublicTransportVehicleFleet
+    ) -> PublicTransportSearchEngine:
+        from simulation.operator.public_transport_search_engine import (
+            PublicTransportSearchEngine,
+        )
+
+        return PublicTransportSearchEngine(
+            sim=self._sim, fleet=fleet, operator_config=operator_config
+        )
+
+    def _create_public_transport_operations(
+        self,
+        operator_config: dict,
+        timetable: Timetable,
+        fleet: PublicTransportVehicleFleet,
+    ) -> OperationsPublicTransport:
+        from simulation.operator.operations_management.operations_public_transport import (
+            OperationsPublicTransport,
+        )
+
+        return OperationsPublicTransport(
+            sim=self._sim,
+            timetable=timetable,
+            fleet=fleet,
+            operator_config=operator_config,
+        )
+
+    def _create_public_transit_operator(
+        self,
+        fleet: PublicTransportVehicleFleet,
+        operations: OperationsPublicTransport,
+        search_engine: PublicTransportSearchEngine,
+        allocation_engine: PublicTransportAllocationEngine,
+    ) -> PublicTransitOperator:
+        from simulation.operator.public_transit_operator import PublicTransitOperator
+
+        return PublicTransitOperator(
+            sim=self._sim,
+            fleet=fleet,
+            operations=operations,
+            search_engine=search_engine,
+            allocation_engine=allocation_engine,
+        )

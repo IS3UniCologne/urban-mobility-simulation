@@ -1,24 +1,19 @@
+from __future__ import annotations  # noqa: D100
+
 from abc import ABC, abstractmethod
-from typing import NewType
+from typing import TYPE_CHECKING
 
-# RegionId represents a unique identifier for a spatial region (e.g., an H3 hex ID).
-RegionId = NewType("RegionId", str)
+if TYPE_CHECKING:
+    from simulation.helper.types import RegionId
 
 
-class Position(ABC):
-    __slots__ = ("_x", "_y")
-
+class Position(ABC):  # noqa: D101
     @abstractmethod
-    def __init__(self) -> None:
-        self._x: str = "I have a x position"
-        self._y: str = "I have a y position"
-
-    @abstractmethod
-    def getExactLocation(self) -> tuple[float, float]:
+    def getExactLocation(self) -> tuple[float, float]:  # noqa: D102
         pass
 
     @abstractmethod
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         pass
 
     @abstractmethod
@@ -26,10 +21,10 @@ class Position(ABC):
         """
         Get the region ID of the position
         :return: RegionId
-        """
+        """  # noqa: D205, D400
         pass
 
     @abstractmethod
-    def __rshift__(self, other: object) -> float:
+    def __rshift__(self, other: Position) -> float:  # noqa: D105
         # Calculate distance between two positions
         pass

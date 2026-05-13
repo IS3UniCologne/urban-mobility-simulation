@@ -1,0 +1,305 @@
+##############################################################################################
+### This is the default configuration file template                                        ###
+### for instructions on adding new configuration parameters, check the Configuration class ###
+##############################################################################################
+
+
+[SETTINGS]
+# Logging
+LOG_LEVEL      = "DEBUG"
+FILE_LOG_LEVEL = "DEBUG"
+LOG_TIMESTAMPS = true
+
+# Output
+PERSIST_RESULTS = false
+# TRACK_AGENT     = true
+
+
+[EXPERIMENT_MANAGEMENT]
+START_TIME = 0
+END_TIME   = 500
+
+
+[RANDOM_MANAGER]
+# Main seed, set to 0 to generate a new seed on every run
+SEED = 0
+# Component seeds. If commented out, they will be generated from the main seed. (default for reproducibility)
+# Set to 0 to generate a new seed for the component on every run, independent of the main seed.
+# Set to any other value to use that value as the seed for the component.
+[RANDOM_MANAGER.COMPONENT_SEEDS]
+# POPULATIONFACTORY = 0
+# FLEETFACTORY      = 0
+# DEMANDFACTORY     = 0
+# INITIALSOC        = 0
+# GEOENV            = 0
+
+
+[WORLD]
+SPATIAL_RESOLUTION  = 7
+TEMPORAL_RESOLUTION = 4
+DAILY_RESOLUTION    = "weekday_weekend"
+CITY                = "chicago"
+
+
+[PATH]
+# Environment paths
+PATH_ENV_BOUNDING_BOX    = "./data/environment/geodesic/{city}/env_bounding_box.geojson"
+PATH_ENV_HEX_LAYER_RES_7 = "./data/environment/geodesic/{city}/env_hex_7.geojson"
+PATH_ENV_HEX_LAYER_RES_8 = "./data/environment/geodesic/{city}/env_hex_8.geojson"
+PATH_ENV_HEX_LAYER_RES_9 = "./data/environment/geodesic/{city}/env_hex_9.geojson"
+
+# Public transit paths
+PATH_TRANSIT_TIMETABLE = "./data/infrastructure/transit_timetable.csv"
+PATH_TRANSIT_SHAPES    = "./data/infrastructure/transit_shapes.csv"
+
+# Supply paths
+PATH_VEHICLE_SUPPLY = "./data/supply/{city}_vehicle_supply_distribution_hex_7.csv"
+
+# Mode Choice Model paths
+PATH_TO_MODE_CHOICE_MODEL = "./data/choice_model/distance_based_shared_vehicles.pickle"
+
+# Output paths
+OUTPUT_FOLDER    = "./data/output"
+TRANSACTION_FILE = "transactions.csv"
+FLEET_STATE_FILE = "fleet_state.csv"
+
+# Demand Paths
+PATH_TRIP_DEMAND      = "./data/demand/{city}_shared_vehicle_trips.csv"
+PATH_DEMAND_MODIFIERS = ["./data/demand/{city}_high_demand.geojson"]
+
+
+[POPULATION]
+POPULATION_PROBABILITIES = [0.2, 0.3, 0.5]
+
+#TODO: These should probably be phased out or become part of user config
+RIDE_HAILING_POPULATION_PROBABILITIES   = [0.247, 0.237, 0.19, 0.325]
+SHARED_VEHICLE_POPULATION_PROBABILITIES = [0.0]
+TRANSIT_POPULATION_PROBABILITIES        = [0.0]
+
+
+[USER]
+# how many minutes is the TransitUser willing to wait (incl. time to get there) before boarding a transit alternative
+# this also includes the required time of getting from drop-off to real destination
+TRANSIT_MAX_WAIT = 10
+# how are vehicles / transit stops considered in vicinity / reachable? valid: 'hexagon', 'euclidean', 'walk'
+SPATIAL_STRATEGY = "hexagon"
+# walking speed in kilometers per hour (kph)
+WALKING_SPEED = 5.0
+
+
+[MODE_CHOICE_MODEL]
+# random (Random Vehicle Selection), substitution (Substitution Aware), no_sub (No Substitution Effect)
+MODE_CHOICE_STRATEGY = "SubstitutionAware"
+# Only Relevant for substitution strategy (default)
+SUBSTITUTION_BOUNDARY = 0.1
+AV_TRUST              = [4.689116343, 4.681377435, 3.925968992, 4.442471303]
+
+# Mode Choice Coefficients
+# [cst, price, waiting_time, EV, trip_duration, cst_AV, cst_HV, trust_AV, trust_HV]
+# TODO: Better description of what these are and do, maybe put in different file ?
+MOD_COEFFICIENTS                  = [[-0.273671504, -0.353911557, -0.103573505, -1.128132785, 0.150429623, -0.576113819, 7.297866296, 0.631438368, -1.011643365], [-0.318885388, -1.281672341, -0.454985255, 0.123860882, 1.060810562, 5.74223911, 12.76153448, 0.579730247, -0.746119133], [-0.529871517, -0.176603082, -0.624049182, -0.094335042, -0.07608058, 6.357501057, 3.73756425, 1.017193094, 1.048363966], [0.00, -0.228709544, -0.161649449, -0.069096605, 0.133775179, -0.802892154, 7.325820705, 0.729678667, -0.735175789]]
+MOD_COEFFICIENTS_CI_LOWER         = [[-0.670, -0.463, -0.198, -1.721, 0.083, -1.960, 5.347, 0.409, -1.415], [-0.695, -1.702, -0.601, -0.588, 0.278, -0.573, 6.894, -0.175, -1.747], [-0.941, -0.320, -0.805, -0.917, -0.205, 3.597, 0.648, 0.498, 0.447], [0.000, -0.307, -0.237, -0.425, 0.068, -2.626, 5.734, 0.330, -1.036]]
+MOD_COEFFICIENTS_CI_UPPER         = [[0.122, -0.245, -0.009, -0.535, 0.218, 0.808, 9.248, 0.853, -0.608], [0.057, -0.862, -0.309, 0.835, 1.844, 12.057, 18.629, 1.335, 0.254], [-0.119, -0.033, -0.443, 0.729, 0.053, 9.118, 6.827, 1.537, 1.650], [0.000, -0.150, -0.086, 0.286, 0.199, 1.019, 8.917, 1.129, -0.434]]
+MOD_P_VALUES                      = [[0.00, 0.03, 0.00, 0.00, 0.42, 0.00, 0.00, 0.00, 0.18], [0.00, 0.00, 0.73, 0.01, 0.08, 0.00, 0.13, 0.14, 0.10], [0.02, 0.00, 0.82, 0.25, 0.00, 0.02, 0.00, 0.00, 0.01], [0.00, 0.00, 0.70, 0.00, 0.39, 0.00, 0.00, 0.00, 0.00]]
+MOD_COEFFICIENT_INTERVAL_ADJUSTER = 0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      #what is this?
+
+
+###########################
+# Operator Configurations #
+###########################
+
+
+[RIDE_HAILING_GLOBAL]
+# Driver payment share for ride-hailing
+DRIVER_PAYMENT_SHARE = 0.75
+AV_PRICE_REDUCTION   = 0.90
+MAX_PICKUP_DISTANCE  = 10000
+
+PRICE_ENTERING   = 2
+PRICE_PER_MINUTE = 0.35
+PRICE_PER_KM     = 1.3
+MINIMUM_PRICE    = 5
+
+ALLOCATION = 0
+
+DISCOUNT_RATE = 0
+
+#TODO rework this analogous to shared vehicles when we decide how to do #108
+#TODO: Change name of these? Techincally all cars are ride hailing (Rename)
+N_RIDE_HAILING_CARS = 500
+#TODO: This is completely ignored/overwritten by the AV_PENETRATION variable
+N_AUTONOMOUS_CARS = 500
+
+#Suppply
+EV_PENETRATION  = 1
+AV_PENETRATION  = 1
+RH_AVAILABILITY = [0.084238, 0.058132, 0.035717, 0.024728, 0.027128, 0.043823, 0.078576, 0.128257, 0.176352, 0.214981, 0.241122, 0.255754, 0.275117, 0.293370, 0.306846, 0.318127, 0.323715, 0.326972, 0.318448, 0.290888, 0.242649, 0.187925, 0.142973, 0.111224]
+
+
+##########################
+# Vehicle Configurations #
+##########################
+
+[EXAMPLE_VEHICLES.ExampleCar]
+# This is an example vehicle with all possible parameters
+# General parameters
+VELOCITY            = 9.54
+MAX_AVAILABLE_SEATS = 4
+
+# Energy parameters
+MAX_STATE_OF_CHARGE            = 50.0
+ENERGY_CONSUMPTION             = 0.20
+EV_RELATIVE_ENERGY_CONSUMPTION = 0.3
+INITIAL_SOC                    = 0.50
+# percentage (State of Charge) that a vehicle should not drop below
+EMERGENCY_SOC_BUFFER = 0.05
+
+# Economic parameters
+PRICE_PER_MIN         = 0.35
+DAILY_TOTAL_COST      = 29.0
+COST_PER_KM           = 0.45
+PRICE_PER_KM          = 1.3
+CHARGING_COST_PER_KWH = 0.43
+KG_CO2_PER_KM         = 0.105
+
+#Other parameters
+# Maximum distance a user is willing to walk to get to a vehicle
+WALKING_DISTANCE = 500
+
+
+[RIDE_HAILING_VEHICLES.AutonomousCar]
+VELOCITY            = 32.16
+MAX_AVAILABLE_SEATS = 4
+
+VEHICLE_TYPE    = "Car"
+AUTONOMY_TYPE   = "Autonomous"
+PROPULSION_TYPE = "BatteryElectric"
+
+
+MAX_STATE_OF_CHARGE            = 50.0
+ENERGY_CONSUMPTION             = 0.20
+EV_RELATIVE_ENERGY_CONSUMPTION = 0.3
+CHARGING_COST_PER_KWH          = 0.43
+EMERGENCY_SOC_BUFFER           = 0.05
+
+PRICE_PER_MIN    = 0.35
+DAILY_TOTAL_COST = 29.0
+COST_PER_KM      = 0.45
+PRICE_PER_KM     = 1.3
+# zero denotes random SOC between 0.2 and 0.8, for ridehailing vehicles only
+# TODO: Make sure this works again ?
+INITIAL_SOC = 0.5
+
+
+[RIDE_HAILING_VEHICLES.RideHailingCar]
+VELOCITY            = 9.54
+MAX_AVAILABLE_SEATS = 4
+
+VEHICLE_TYPE    = "Car"
+AUTONOMY_TYPE   = "Autonomous"
+PROPULSION_TYPE = "BatteryElectric"
+
+MAX_STATE_OF_CHARGE            = 50.0
+ENERGY_CONSUMPTION             = 0.20
+EV_RELATIVE_ENERGY_CONSUMPTION = 0.3
+INITIAL_SOC                    = 0.50
+# percentage (State of Charge) that a vehicle should not drop below
+EMERGENCY_SOC_BUFFER = 0.05
+
+PRICE_PER_MIN         = 0.35
+DAILY_TOTAL_COST      = 29.0
+COST_PER_KM           = 0.45
+PRICE_PER_KM          = 1.3
+CHARGING_COST_PER_KWH = 0.43
+
+
+##############################
+# Experiment Configurations #
+##############################
+
+# Problem Abstraction Configurations
+[DYNAMIC_ROUTING]
+# what actions the bus agent can take
+ACTION_SPACE = ["UP", "DOWN", "UP_LEFT", "UP_RIGHT", "DOWN_LEFT", "DOWN_RIGHT"]
+# in what resolution the bus agent takes the above actions
+ACTION_SPACE_RESOLUTION = 8
+# if given, don't construct action corridor from line of sight, but use this, must be ast-parseable set of hex ids
+CORRIDOR_PATH = "./data/environment/line200_action_corridor.txt"
+# negative reward for not reaching the terminal destination
+PENALTY = 20
+# positive reward for successfully serving a passenger
+REWARD = 2
+# additional time a dynamic bus is granted, multiplier of the planned route's time
+TIMELIMIT = 1.5
+
+[DYNAMIC_CHECKPOINT_ROUTING]
+# what actions the bus agent can take
+ACTION_SPACE = ["UP", "DOWN", "UP_LEFT", "UP_RIGHT", "DOWN_LEFT", "DOWN_RIGHT"]
+# in what resolution the bus agent takes the above actions
+ACTION_SPACE_RESOLUTION = 8
+# checkpoints as list of ints, references stop_sequence number of timetable
+# starts at possible checkpoint 1, origin = 0, destination = -1, will be added automatically
+# CHECKPOINTS = 5,10,17,22
+CHECKPOINTS = [16]
+# if given, don't construct action corridor from line of sight, but use this, must be ast-parseable set of hex ids
+CORRIDOR_PATH = "./data/environment/line200_action_corridor_8_single.txt"
+# negative reward for not reaching a checkpoint in time, multiplier of exceded time
+PENALTY_CHECKPOINTS = 1
+# negative reward for not reaching the terminal destination
+PENALTY_UNREACHABLE = 20
+# negative reward for taking bad actions (going back)
+PENALTY_GOINGBACK = 1
+# positive reward for successfully serving a passenger
+REWARD = 5
+# additional time a dynamic bus is granted, multiplier of the planned route's time
+# this is granted uniformly to all checkpoints as well, based on the planned travel time to them
+TIMELIMIT = 1.2
+# if given, check at each x-th episode the current policy (Q network) for one episode without exploration
+PERIODIC_TESTING = 50
+
+# Learning Agent Configurations
+[DQN]
+# learning rate decay, possible values True or False
+LR_DECAY = false
+# learning rate decay steps, if LR_DECAY is True, then over how many steps should it decay
+LR_DECAY_STEPS = 100000
+# if given, where to load DQN weights from,fully qualified path from project root
+# WEIGHTS_PATH = ./data/output/1000_episodes_weights_20211101-185128.keras
+# layer configuration for DQN, tuple of dim (1, n hidden layers+1 for input layer, output layer is fixed)
+# DQN_LAYERS = (22,22)
+# DQN_LAYERS = (340,335) # action resolution 9
+DQN_LAYERS = "(114,109)" # Evaluated to a tuple
+# how many episodes to run
+EPISODES = 1000
+# alpha for gradient descent step-size
+ALPHA = 0.05
+# epsilon for epsilon-greedy action selection
+EPS = 1
+# epsilon decay strategy, one of "none", "linear", "exp"
+EPS_DECAY_STRATEGY = "exp"
+# epsilon decay speed for exponential decay
+EPS_DECAY = 0.99
+# upper boundary for epsilon decay
+EPS_MAX = 0.6
+# lower boundary for epsilon decay
+EPS_MIN = 0.01
+# experience replay buffer size in episodes
+BUFFERSIZE = 500
+# warm start replaybuffer, given pkl path
+REPLAYBUFFER = "./data/learning/replaybuffer_torch_500.pkl"
+# minimum experience in episodes before q network training starts,
+# is ignored when replay buffer is warm-started
+MIN_EXPERIENCE = 100
+# only train at n-th step of running the agent
+# TODO: not recognized by torch version of DQN
+TRAIN_FREQUENCY = 5
+# usage of double Q learning (if False, vanilla DQN is used with target network)
+USE_DOUBLE_Q = false
+# how many training steps (torch: episodes) before target q network is updated from q network
+TARGET_UPDATE_THRESHOLD = 20
+# tau, if given, is the parameters for soft-updating the target network only slightly in the direction of the q net
+# TAU = 0.001
+# minibatch size for training of the q network
+BATCHSIZE = 256
+# gamma for discounting rate
+GAMMA = 0.99

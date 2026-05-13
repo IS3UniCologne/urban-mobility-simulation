@@ -1,37 +1,34 @@
-from simulation.infrastructure.route import Route
+from simulation.infrastructure.route import Route  # noqa: D100
+from simulation.operator.data_transfer_object.transport_request import TransportRequest
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
 )
-from simulation.operator.interface.payment_interface import PaymentInterface
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.tasks.transport_task import TransportTask
-from simulation.tasks.transportation_search_task import TransportationSearchTask
 from simulation.vehicle.walking import Walking
 
 
-class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
+class WalkingSearchEngine(SearchEngineInterface):  # noqa: D101
     __slots__ = ("_env", "_walking")
 
     def __init__(self, env):  # noqa: ANN001, ANN204
-        PaymentInterface.__init__(self)
         self._env = env
         self._walking = Walking(env)
 
     def search_for_transportation_alternatives(
-        self, vehicle_search_task: TransportationSearchTask
+        self, transport_task: TransportRequest
     ) -> TransportationAlternativeBrowser:
         """
         Spot all available vehicles to user
-        :param vehicle_search_task:
+        :param transport_task:
         :return: Available Alternatives along with auxilary information regarding trip
-        """
+        """  # noqa: D205, D400
         browser = TransportationAlternativeBrowser()
 
-        origin = vehicle_search_task.transport_task.origin
-        destination = vehicle_search_task.transport_task.destination
+        origin = transport_task.origin
+        destination = transport_task.destination
 
         # Calc Route
         route = Route(origin, destination)
@@ -40,7 +37,7 @@ class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
         distance = route.distance  # Euclidean Distance
 
         # Calc Duration
-        duration = distance / self._walking.velocity
+        duration = self._walking.calculate_travel_time(distance)
 
         # Calc Price
         price = 0
@@ -54,13 +51,10 @@ class WalkingSearchEngine(SearchEngineInterface, PaymentInterface):
 
         return browser
 
-    def pay_for_fulfilled_transportation_task(  # noqa: ANN201
+    def pay_for_fulfilled_transportation_task(  # noqa: ANN201, D102
         self,
         user,  # noqa: ANN001
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         selected_transportation_alternative: TransportationAlternative,
     ):
-        pass
-
-    def withdraw_transportation_task(self, user, transportation_task: TransportTask):  # noqa: ANN001, ANN201
         pass

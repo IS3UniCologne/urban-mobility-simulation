@@ -13,6 +13,9 @@ import pandas as pd
 # Third-party library imports
 import simpy
 
+# Custom module imports
+from utils import load_geodesic_environment
+
 # Imports world related modules
 from simulation.agent.user import User
 from simulation.environment.geodesic_environment import GeodesicEnvironment
@@ -54,9 +57,6 @@ from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.population.PopulationFactory import PopulationFactory
 from simulation.world.world import World
 from tracking.tracking import Tracking
-
-# Custom module imports
-from utils import load_geodesic_environment
 
 # # # # # # # # # # # # # # # # # # # # # #
 #                                         #
@@ -131,24 +131,24 @@ tracking = Tracking.init(env)
 
 # for this scenario, we assume same locations, but split up capacity
 separate_charging_capacity_list = [
-    c / 2 for c in config.charging_infrastructure.CHARGING_STATION_CAPACITY
+    c / 2 for c in config.charging_infrastructures.CHARGING_STATION_CAPACITY
 ]
 
 charging_infrastructure_0 = ChargingInfrastructure(
     env=env,
-    location_list=config.charging_infrastructure.LOCATIONS,
-    power_list=config.charging_infrastructure.CHARGING_STATION_POWER,
+    location_list=config.charging_infrastructures.LOCATIONS,
+    power_list=config.charging_infrastructures.CHARGING_STATION_POWER,
     capacity_list=separate_charging_capacity_list,
-    queue_size=config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE,
+    queue_size=config.charging_infrastructures.CHARGING_STATION_QUEUE_SIZE,
     reset=True,
 )
 
 charging_infrastructure_1 = ChargingInfrastructure(
     env=env,
-    location_list=config.charging_infrastructure.LOCATIONS,
-    power_list=config.charging_infrastructure.CHARGING_STATION_POWER,
+    location_list=config.charging_infrastructures.LOCATIONS,
+    power_list=config.charging_infrastructures.CHARGING_STATION_POWER,
     capacity_list=separate_charging_capacity_list,
-    queue_size=config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE,
+    queue_size=config.charging_infrastructures.CHARGING_STATION_QUEUE_SIZE,
     reset=True,
 )
 
@@ -441,8 +441,8 @@ service_rate_fleet_1 = (
     / fleet_1_transactions.shape[0]
 )
 
-fleet_0_task_transactions = ridehailing_operations_0.task_transactions
-fleet_1_task_transactions = ridehailing_operations_1.task_transactions
+fleet_0_task_transactions = ridehailing_operations_0.job_transactions
+fleet_1_task_transactions = ridehailing_operations_1.job_transactions
 
 fleet_0_task_transactions.to_csv(
     f"data/output/transactions/{output_timestamp}_fleet_0_task_transactions.csv",
@@ -468,14 +468,14 @@ with open("data/output/run_configs.csv", "a", newline="\n", encoding="utf-8") as
             config.experiment_management.END_TIME,
             time.time() - real_start_time,
             config.ride_hailing_global.N_AUTONOMOUS_CARS,
-            config.charging_infrastructure.NUMBER_OF_CHARGING_STATIONS,
+            config.charging_infrastructures.NUMBER_OF_CHARGING_STATIONS,
             separate_charging_capacity_list[0],
-            config.charging_infrastructure.CHARGING_STATION_POWER[0],
+            config.charging_infrastructures.CHARGING_STATION_POWER[0],
             config.random_manager.SEED,
             service_rate_fleet_0,
             service_rate_fleet_1,
             avg_infra_util_0,
             avg_infra_util_1,
-            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''}, queue_size: {config.charging_infrastructure.CHARGING_STATION_QUEUE_SIZE[0]}, allocation_penalty: {config.ride_hailing_global.LOW_SOC_PENALTY}",
+            f"{'random_SOC_init' if config.ride_hailing_vehicles.get('AutonomousCar').INITIAL_SOC == 0 else ''}, queue_size: {config.charging_infrastructures.CHARGING_STATION_QUEUE_SIZE[0]}, allocation_penalty: {config.ride_hailing_global.LOW_SOC_PENALTY}",
         ]
     )
