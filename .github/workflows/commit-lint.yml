@@ -1,0 +1,38 @@
+name: commit-lint
+
+on:
+  pull_request:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+      - name: Lint commits in PR
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          failed=0
+          while IFS= read -r line; do
+            sha="${line%% *}"
+            msg="${line#* }"
+            case "$msg" in
+              "Merge "*) continue ;;
+            esac
+            echo "$msg" > /tmp/commit-msg
+            if ! uvx conventional-pre-commit /tmp/commit-msg; then
+              echo "::error::Commit $sha has non-conventional subject: $msg"
+              failed=1
+            fi
+          done < <(git log --format='%H %s' "$base..$head")
+          exit $failed
