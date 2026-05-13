@@ -1,11 +1,11 @@
-"""Logging filter that ensures default 'clazz' and 'oid' attributes are present in log records."""
+"""Logging filter that ensures 'uid' attribute is present in log records."""
 
 import logging
 
 
-class ExtraDefaultFilter(logging.Filter):
+class UidInjector(logging.Filter):
     """
-    Logging filter that adds default 'clazz' and 'oid' attributes to log records.
+    Logging filter that adds 'uid' attribute to log records.
 
     Parameters
     ----------
@@ -15,7 +15,7 @@ class ExtraDefaultFilter(logging.Filter):
 
     def __init__(self, filter_name: str) -> None:
         """
-        Initialize the ExtraDefaultFilter.
+        Initialize the UidInjector.
 
         Parameters
         ----------
@@ -26,7 +26,7 @@ class ExtraDefaultFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         """
-        Add default 'clazz' and 'oid' attributes to the log record if they are missing.
+        Add 'uid' attribute to the log record if it is missing.
 
         Parameters
         ----------
@@ -38,9 +38,6 @@ class ExtraDefaultFilter(logging.Filter):
         bool
             Always returns True to allow the record to be logged.
         """
-        if not hasattr(record, "clazz"):
-            record.clazz = "Unknown"
-
-        if not hasattr(record, "oid"):
-            record.oid = "-"
+        if not hasattr(record, "uid"):
+            record.uid = record.name
         return True

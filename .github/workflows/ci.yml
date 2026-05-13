@@ -57,10 +57,10 @@ jobs:
         run: |
           nox -rs pytest -- --durations=10 -m unit
 
-  integration-test:
+  end-to-end-test:
     runs-on: self-hosted
-    name: Integration Test
-    needs: unit-test # Ensure unit tests pass before running integration tests
+    name: End-to-End Test
+    needs: unit-test # Ensure unit tests pass before running end-to-end tests
     steps:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
@@ -77,17 +77,17 @@ jobs:
         run: |
           uv tool install nox
 
-      - name: Run Integration Tests
-        id: integration_test
+      - name: Run End-to-End Tests
+        id: end_to_end_test
         run: |
-          nox -rs pytest -- --durations=10 -m integration
+          nox -rs pytest -- --durations=10 -m end_to_end
 
       - name: Copy simulation logs on failure
         if: failure()
         run: |
           # Get short commit SHA (first 7 characters)
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          echo "Integration test failed. Copying simulation logs for debugging..."
+          echo "End-to-End test failed. Copying simulation logs for debugging..."
           mkdir -p /home/ci/test_runner_data/failed_logs_${{github.run_number}}_${SHORT_SHA}
           cp -r data/test_output/logs/* /home/ci/test_runner_data/failed_logs_${{github.run_number}}_${SHORT_SHA}/
           echo "Logs copied to /home/ci/test_runner_data/failed_logs_${{github.run_number}}_${SHORT_SHA}/"

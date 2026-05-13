@@ -1,19 +1,25 @@
-from abc import ABC, abstractmethod
+from __future__ import annotations  # noqa: D100
 
-from simulation.operator.data_transfer_object.transportation_alternative_browser import (
-    TransportationAlternativeBrowser,
-)
-from simulation.operator.vehicle_fleet import VehicleFleet
-from simulation.tasks.transportation_search_task import TransportationSearchTask
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
+    from simulation.operator.data_transfer_object.transportation_alternative_browser import (
+        TransportationAlternativeBrowser,
+    )
 
 
 class SearchEngineInterface(ABC):
-    def register_fleet(self, fleet: VehicleFleet):  # noqa: ANN201
-        # TODO: can we omit this and have search engines always refer to the operator's fleet?
-        self._fleet = fleet
+    """Interface for search engines.
+
+    This defines the contract for all search engines in the simulation.
+    """
 
     @abstractmethod
-    def search_for_transportation_alternatives(
-        self, vehicle_search_task: TransportationSearchTask
+    def search_for_transportation_alternatives(  # noqa: D102
+        self, transport_task: TransportRequest
     ) -> TransportationAlternativeBrowser:
         pass  # Implement filtering

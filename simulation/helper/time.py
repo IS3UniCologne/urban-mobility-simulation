@@ -1,4 +1,4 @@
-import datetime
+import datetime  # noqa: D100
 
 from simpy import Environment
 
@@ -17,93 +17,97 @@ class SimulationTime:
     """
     Implements easy access to simpy's environment time.
     While simpy's time is unitless, we assume it to be minutes.
-    """
+    """  # noqa: D205
 
     __slots__ = ("_env",)
 
     def __init__(self, env: Environment):  # noqa: ANN204
         self._env = env
 
-    def now(self):  # noqa: ANN201
+    def now(self):  # noqa: ANN201, D102
         return self._env.now
 
-    def seconds(self):  # noqa: ANN201
+    def seconds(self):  # noqa: ANN201, D102
         return SimulationTimeConverter.seconds(self._env.now)
 
-    def minutes(self):  # noqa: ANN201
+    def minutes(self):  # noqa: ANN201, D102
         return SimulationTimeConverter.minutes(self._env.now)
 
-    def hours(self):  # noqa: ANN201
+    def hours(self):  # noqa: ANN201, D102
         return SimulationTimeConverter.hours(self._env.now)
 
-    def dayofweek(self):  # noqa: ANN201
+    def dayofweek(self):  # noqa: ANN201, D102
         return SimulationTimeConverter.dayofweek(self._env.now)
 
-    def dayofweek_as_str(self) -> str:
+    def dayofweek_as_str(self) -> str:  # noqa: D102
         return SimulationTimeConverter.dayofweek_as_str(self._env.now)
 
-    def next_dayofweek_as_str(self) -> str:
+    def next_dayofweek_as_str(self) -> str:  # noqa: D102
         return SimulationTimeConverter.next_dayofweek_as_str(self._env.now)
 
-    def last_dayofweek_as_str(self) -> str:
+    def last_dayofweek_as_str(self) -> str:  # noqa: D102
         return SimulationTimeConverter.last_dayofweek_as_str(self._env.now)
 
-    def now_as_str(self, strf: str = "%H:%M:%S"):  # noqa: ANN201
+    def now_as_str(self, strf: str = "%H:%M:%S"):  # noqa: ANN201, D102
         return SimulationTimeConverter.as_str(self._env.now, strf)
 
-    def now_as_time(self):  # noqa: ANN201
+    def now_as_time(self):  # noqa: ANN201, D102
         return SimulationTimeConverter.as_time(self._env.now)
 
-    def convert_to_day_of_week_bucket(self):  # noqa: ANN201
+    def convert_to_day_of_week_bucket(self):  # noqa: ANN201, D102
         return
 
 
-class SimulationTimeConverter:
+class SimulationTimeConverter:  # noqa: D101
     @staticmethod
-    def seconds(time: float):  # noqa: ANN205
+    def seconds(time: float) -> int:  # noqa: D102
         # seconds are not well defined, but it may happen that a time step is < 1 (minutes)
         return int((time - int(time)) * 60)
 
     @staticmethod
-    def minutes(time: float):  # noqa: ANN205
+    def minutes(time: float) -> int:  # noqa: D102
         return int(time % 60)
 
     @staticmethod
-    def hours(time: float):  # noqa: ANN205
+    def hours(time: float) -> int:  # noqa: D102
         return int((time / 60) % 24)
 
     @staticmethod
-    def days(time: float):  # noqa: ANN205
+    def hour_of_day(time: float) -> int:  # noqa: D102
+        return int((time % 1440 - time % 60) / 60)
+
+    @staticmethod
+    def days(time: float) -> int:  # noqa: D102
         return int(time / (24 * 60)) + 1
 
     @staticmethod
-    def dayofweek(time: float):  # noqa: ANN205
+    def dayofweek(time: float) -> int:  # noqa: D102
         return int((time % (24 * 60 * 7)) / (24 * 60))
 
     @classmethod
-    def dayofweek_as_str(cls, time: float) -> str:
+    def dayofweek_as_str(cls, time: float) -> str:  # noqa: D102
         return WEEKDAYS[cls.dayofweek(time)]
 
     @classmethod
-    def next_dayofweek_as_str(cls, time: float) -> str:
+    def next_dayofweek_as_str(cls, time: float) -> str:  # noqa: D102
         return WEEKDAYS[(cls.dayofweek(time) + 1) % 7]
 
     @classmethod
-    def last_dayofweek_as_str(cls, time: float) -> str:
+    def last_dayofweek_as_str(cls, time: float) -> str:  # noqa: D102
         return WEEKDAYS[
             (cls.dayofweek(time) + 6) % 7
         ]  # add 6 instead of subtracting 1 and let modulo do the work
 
     @classmethod
-    def as_str(cls, time: float, strf: str = "%H:%M:%S"):  # noqa: ANN206
+    def as_str(cls, time: float, strf: str = "%H:%M:%S"):  # noqa: ANN206, D102
         return cls.as_time(time).strftime(strf)
 
     @classmethod
-    def as_time(cls, time: float):  # noqa: ANN206
+    def as_time(cls, time: float):  # noqa: ANN206, D102
         return datetime.time(cls.hours(time), cls.minutes(time), cls.seconds(time))
 
     @classmethod
-    def as_datetime(cls, time: float):  # noqa: ANN206
+    def as_datetime(cls, time: float):  # noqa: ANN206, D102
         # ATTENTION:
         # 1. we use some month where the first day is a monday, this does not align with seasons or anything
         # 2. simulation times of more than one month are not well defined
@@ -132,7 +136,7 @@ class SimulationTimeConverter:
         :param end: strf-formatted timestamp
         :param strf: strf formatting
         :return: float - minutes
-        """
+        """  # noqa: D205, D400, D401
         # try to infer end_next_day if not explicitly given
         if end_next_day is None:
             end_next_day = end < start
@@ -150,21 +154,34 @@ class SimulationTimeConverter:
             ).total_seconds() / 60
 
     @classmethod
-    def convert_to_day_of_week_bucket(cls, time: float):  # noqa: ANN206
+    def convert_to_day_of_week_bucket(cls, time: float):  # noqa: ANN206, D102
         if cls.dayofweek(time) < 5:
             return False  # Non_Working_Day? No => weekday
         else:
             return True  # Non_Working_Day? Yes (i.e., holidays, weekends)
 
     @staticmethod
-    def convert_to_temporal_bucket(time: float, temporal_resolution):  # noqa: ANN001, ANN205
+    def convert_to_temporal_bucket(time: float, temporal_resolution):  # noqa: ANN001, ANN205, D102
         return (time % (24 * 60)) // (
             temporal_resolution * 60
         )  # Reduce to one day, then get day of week
 
 
-class SimulationVelocityConverter:
+class SimulationVelocityConverter:  # noqa: D101
+    # TODO: A class for this seems overkill.
     # Convert the velocity of kilometer/hour to simulation velocity of meter/minute
     @staticmethod
-    def convert_kmh(velocity: float):  # noqa: ANN205
+    def kmh_to_meters_per_minute(velocity: float) -> float:
+        """Convert velocity from kilometers per hour to meters per minute.
+
+        Parameters
+        ----------
+        velocity : float
+            Velocity in kilometers per hour.
+
+        Returns
+        -------
+        float
+            Velocity in meters per minute.
+        """
         return (velocity * 1000) / 60

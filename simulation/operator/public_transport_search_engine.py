@@ -1,10 +1,22 @@
-import logging
+from __future__ import annotations  # noqa: D100
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.configuration.configuration import Configuration
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.helper.configuration.configuration import TransitOperatorConfig
+    from simulation.infrastructure.transit_network.stop import Stop
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
+    from simulation.operator.public_transport_vehicle_fleet import (
+        PublicTransportVehicleFleet,
+    )
+    from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
+
+from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTimeConverter
-from simulation.infrastructure.transit_network.stop import Stop
 from simulation.operator.data_transfer_object.transportation_alternative import (
     TransportationAlternative,
 )
@@ -12,34 +24,33 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
     TransportationAlternativeBrowser,
 )
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.public_transport_vehicle_fleet import (
-    PublicTransportVehicleFleet,
-)
-from simulation.tasks.transportation_search_task import TransportationSearchTask
-from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 
 
-class PublicTransportSearchEngine(SearchEngineInterface):
+class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):  # noqa: D101
     __slots__ = (
-        "_config",
         "_env",
         "_fleet",
         "_geo_env",
         "_operator_config",
+        "_sim",
         "_user_config",
     )
 
-    def __init__(self, env, fleet: PublicTransportVehicleFleet):  # noqa: ANN001, ANN204
-        self._env = env
+    def __init__(
+        self,
+        sim: SimulationContext,
+        fleet: PublicTransportVehicleFleet,
+        operator_config: TransitOperatorConfig,
+    ) -> None:
+        super().__init__(sim=sim)
+        self._sim = sim
+        self._env = sim.env
         self._fleet = fleet
-        self._config = Configuration()
-        self._operator_config = self._config.transit_operators[
-            0
-        ]  # TODO: multiple operators
-        self._user_config = self._config.user
-        self._geo_env = GeodesicEnvironment.getInstance()
+        self._operator_config = operator_config
+        self._user_config = self._sim.config.user
+        self._geo_env = sim.geo_env
 
-    def find_viable_transit(  # noqa: ANN201
+    def find_viable_transit(  # noqa: ANN201, D102
         self,
         transportation_search_task,  # noqa: ANN001
         spatial_strategy="hexagon",  # noqa: ANN001
@@ -60,7 +71,10 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         if not busses:
             # No busses are en-route, report no viable alternative
             # TODO: fallback to timetable if temporal_lookahead > transit operator planning window?
-            if temporal_lookahead > self._operator_config.PLANNING_LOOKAHEAD:
+            if (
+                temporal_lookahead
+                > self._operator_config.OPERATIONS_CONFIG.PLANNING_LOOKAHEAD
+            ):
                 raise NotImplementedError(
                     "temporal lookahead of user > planning lookahead of operator currently not supported"
                 )
@@ -89,12 +103,11 @@ class PublicTransportSearchEngine(SearchEngineInterface):
                         )  # tuple of (Stop, walking distance to/from)
 
                 if reachable_stops:
-                    logging.debug(
+                    self.logger.debug(
                         "Bus %s is a viable transport alternative from %s to %s!",
-                        vehicle.id,
+                        vehicle.uid,
                         transportation_search_task.transport_task.origin,
                         transportation_search_task.transport_task.destination,
-                        extra={"clazz": self.__class__.__name__, "oid": ""},
                     )
 
                     # build all possible combinations of viable subroutes
@@ -134,14 +147,14 @@ class PublicTransportSearchEngine(SearchEngineInterface):
 
         return viable_transit
 
-    def search_for_transportation_alternatives(
-        self, transportation_search_task: TransportationSearchTask
+    def search_for_transportation_alternatives(  # noqa: D102
+        self, transport_task: TransportRequest
     ) -> TransportationAlternativeBrowser:
         browser = TransportationAlternativeBrowser()
-        search_time = transportation_search_task.transport_task.time
+        search_time = transport_task.creation_time
 
         for viable_transit in self.find_viable_transit(
-            transportation_search_task,
+            transport_task,
             self._user_config.SPATIAL_STRATEGY,
             self._user_config.TRANSIT_MAX_WAIT,
         ):
@@ -186,7 +199,7 @@ class PublicTransportSearchEngine(SearchEngineInterface):
         :param origin: GeodesicPosition
         :param destination: GeodesicPosition
         :return: dict
-        """
+        """  # noqa: D205, D400
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon as origin and destination
             origin_poly = self._geo_env.get_hexagon(origin.get_region_id())

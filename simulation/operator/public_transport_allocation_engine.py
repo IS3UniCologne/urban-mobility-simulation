@@ -1,19 +1,27 @@
-from simulation.operator.data_transfer_object.transportation_alternative import (
-    TransportationAlternative,
-)
+from __future__ import annotations  # noqa: D100
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
+    )
+
 from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
 from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
+    AllocationEngineInterface,
 )
 
 
-class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
-    __slots__ = ("_env", "_vehicles_assigned_to_users")
+class PublicTransportAllocationEngine(AllocationEngineInterface):  # noqa: D101
+    __slots__ = ("_env", "_sim", "_vehicles_assigned_to_users")
 
-    def __init__(self, env):  # noqa: ANN001, ANN204
-        self._env = env
+    def __init__(self, sim: SimulationContext) -> None:
+        self._sim = sim
+        self._env = sim.env
         self._vehicles_assigned_to_users = self._env.event()
 
     def request_vehicle_allocation(
@@ -26,7 +34,7 @@ class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
         :param user:
         :param selected_transportation_alternative:
         :return:
-        """
+        """  # noqa: D205, D400
         selected_vehicle = selected_transportation_alternative.vehicle
 
         yield self._env.timeout(
@@ -43,8 +51,3 @@ class PublicTransportAllocationEngine(VehicleAllocationEngineInterface):
             )
         else:
             return None
-
-    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201
-        self, vehicle_assignment: VehicleAllocation
-    ):
-        pass

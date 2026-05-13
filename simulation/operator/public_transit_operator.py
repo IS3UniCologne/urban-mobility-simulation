@@ -1,27 +1,31 @@
-import logging
+from __future__ import annotations  # noqa: D100
 
-from simpy import Environment
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
+    )
+    from simulation.operator.interface.operations_interface import OperationsInterface
+    from simulation.operator.interface.search_engine_interface import (
+        SearchEngineInterface,
+    )
+    from simulation.operator.interface.vehicle_allocation_engine_interface import (
+        AllocationEngineInterface,
+    )
+    from simulation.operator.vehicle_fleet import VehicleFleet
+
+from simulation.helper.enums import TransactionState
 from simulation.helper.time import SimulationTime
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
-)
 from simulation.infrastructure.helper import timetable
-from simulation.operator.data_transfer_object.transportation_alternative import (
-    TransportationAlternative,
-)
-from simulation.operator.interface.payment_interface import PaymentInterface
-from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
-)
-from simulation.operator.operations_management.operations import OperationsInterface
 from simulation.operator.operator import Operator
-from simulation.operator.vehicle_fleet import VehicleFleet
-from simulation.tasks.transport_task import TransportTask
 
 
-class PublicTransitOperator(Operator):
+class PublicTransitOperator(Operator):  # noqa: D101
     __slots__ = (
         "_busses",
         "_time",
@@ -30,40 +34,37 @@ class PublicTransitOperator(Operator):
         "_tracked_demands",
     )
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
-        env: Environment,
+        sim: SimulationContext,
         fleet: VehicleFleet,
-        charging_infrastructure: ChargingInfrastructure,
         operations: OperationsInterface,
         search_engine: SearchEngineInterface,
-        allocation_engine: VehicleAllocationEngineInterface,
-    ):
+        allocation_engine: AllocationEngineInterface,
+    ) -> None:
         super().__init__(
-            env,
-            fleet,
-            charging_infrastructure,
-            operations,
-            search_engine,
-            allocation_engine,
+            sim=sim,
+            fleet=fleet,
+            operations=operations,
+            search_engine=search_engine,
+            allocation_engine=allocation_engine,
         )
-        PaymentInterface.__init__(self)
+
+        # TODO: Do we need this? Isn't this already covered by the transaction log?
+        self._tracked_demands = set()
+
         self._timetable = timetable
-        self._env = env
-        self._fleet = fleet
-        self._time = SimulationTime(env)
+        self._time = SimulationTime(self._env)
         self._busses = []
 
-    def pay_for_fulfilled_transportation_task(  # noqa: ANN201
+    def pay_for_fulfilled_transportation_task(  # noqa: D102
         self,
         user,  # noqa: ANN001
-        transportation_task: TransportTask,
+        transportation_task: TransportRequest,
         selected_transportation_alternative: TransportationAlternative,
-    ):
+    ) -> None:
         # Check the price of the bus
         payment = selected_transportation_alternative.price
-
-        self.increase_total_revenue(payment)
 
         # Add Transaction to Log
         # Check that all variables do really exist for the bus
@@ -71,31 +72,14 @@ class PublicTransitOperator(Operator):
             transportation_task, selected_transportation_alternative, "Fulfilled"
         )
 
-        logging.info(
-            "New Payment (%s) received from User %s. Current Total Revenue: %s.",
-            payment,
-            user.id,
-            self.total_revenue,
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )
+        self.logger.info("New Payment (%s) received from User %s.", payment, user.uid)
 
-    def withdraw_transportation_task(  # noqa: ANN201
+    def withdraw_transportation_task(  # noqa: D102
         self,
         user,  # noqa: ANN001
-        transportation_task: TransportTask,
-        state="Widthdrawn",  # noqa: ANN001
-    ):
-        self.increase_total_missed_trips(0)
-
-        self.increase_total_missed_trips(1)
-
+        transportation_task: TransportRequest,
+        state: TransactionState = TransactionState.WITHDRAWN,
+    ) -> None:
         self.log_transaction(transportation_task, None, state=state)
 
-        logging.debug(
-            "Missed trip of User %s. Current Total Revenue: %s - Total Trips: %s - Missed Trips %s.",
-            user.id,
-            self.total_revenue,
-            self.total_fulfilled_trips,
-            self.total_missed_trips,
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )
+        self.logger.debug("Missed trip of User %s.", user.uid)

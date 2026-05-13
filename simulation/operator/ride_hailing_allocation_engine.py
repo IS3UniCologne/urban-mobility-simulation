@@ -1,120 +1,167 @@
-import logging
+from __future__ import annotations  # noqa: D100
 
-from simulation.agent.user import RideHailingUser
-from simulation.helper.configuration.enums import VehicleState
-from simulation.operator.data_transfer_object.transportation_alternative import (
-    TransportationAlternative,
+from typing import TYPE_CHECKING, Any
+
+from simulation.helper.vehicle_states import VehicleStates
+from simulation.operator.vehicle_allocation_engine import (
+    AllocationEngine,
+    AllocationEngineDependencies,
 )
+from simulation.vehicle.interfaces.reservable_interface import ReservableInterface
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
+    from simulation.agent.user import User
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
+    )
+
 from simulation.operator.data_transfer_object.vehicle_allocation import (
     VehicleAllocation,
 )
-from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
-)
 
 
-class RideHailingAllocationEngine(VehicleAllocationEngineInterface):
-    __slots__ = (
-        "_env",
-        "_vehicle_assignment_ids",
-        "_vehicle_assignment_requests",
-        "_vehicles_assigned_to_users",
-    )
+class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
+    __slots__ = ("_env", "_vehicle_assignment_requests", "_vehicles_assigned_to_users")
 
-    def __init__(self, env):  # noqa: ANN001, ANN204
-        self._env = env
+    def __init__(self, deps: AllocationEngineDependencies) -> None:
+        super().__init__(deps)
+        self._env = deps.sim.env
         self._vehicles_assigned_to_users = self._env.event()
         self._env.process(self.run())
-        self._vehicle_assignment_requests = []
-        self._vehicle_assignment_ids = set()
+        self._vehicle_assignment_requests: list[
+            tuple[User, TransportationAlternative]
+        ] = []
 
-    def run(self):  # noqa: ANN201
+    def run(self):  # noqa: ANN201, D102
         while True:
             yield self._env.timeout(1)
+
+            if not self._vehicle_assignment_requests:
+                # no requests to process
+                continue
 
             # ################## # ###################### #
             # Matching Algorithm : First Come First Serve #
             # ################## # ###################### #
 
             # First Come First Serve - Assign vehicles to first request
-            for user, requests in self._vehicle_assignment_requests:
-                if requests.vehicle.state == VehicleState.PARKING:
-                    requests.vehicle.reserve(user)
+            for user, requested_alternative in self._vehicle_assignment_requests:
+                vehicle = requested_alternative.vehicle
+                if isinstance(vehicle, ReservableInterface):
+                    reservable = (
+                        vehicle.is_in_use or vehicle.state is VehicleStates.STANDBY
+                    )
+                    pickup_distance = (
+                        requested_alternative.route_to_pickup.distance
+                        if requested_alternative.route_to_pickup
+                        else 0.0
+                    )
+                    total_distance = requested_alternative.distance + pickup_distance
+                    if (
+                        not vehicle.is_reserved
+                        and reservable
+                        and vehicle.energy_system.has_enough_energy(total_distance)
+                    ):
+                        vehicle.reserve(user)
+                    else:
+                        self.logger.debug(
+                            "Vehicle %s not available for assignment.", vehicle.uid
+                        )
+                else:
+                    self.logger.warning(
+                        "Vehicle %s does not support reservation.",
+                        requested_alternative.vehicle.uid,
+                    )
 
             # Implement: First come First Serve
             self._vehicles_assigned_to_users.succeed()
             self._vehicles_assigned_to_users = self._env.event()
             self._vehicle_assignment_requests.clear()
-            self._vehicle_assignment_ids.clear()
 
     def request_vehicle_allocation(
-        self,
-        user: RideHailingUser,
-        selected_transportation_alternative: TransportationAlternative,
-    ) -> VehicleAllocation:
+        self, user: User, selected_transportation_alternative: TransportationAlternative
+    ) -> Generator[Event, Any, VehicleAllocation | None]:
         """
-            Assign vehicle in transportation alternative to user
-        :param user:
-        :param selected_transportation_alternative:
-        :return:
+        Allocate vehicle in transportation alternative to the user.
+
+        Parameters
+        ----------
+        user : User
+            The user requesting vehicle allocation.
+        selected_transportation_alternative : TransportationAlternative
+            The selected transportation alternative containing the vehicle.
+
+        Returns
+        -------
+        VehicleAllocation or None
+            Vehicle allocation if successful, None otherwise.
         """
+        selected_vehicle = selected_transportation_alternative.vehicle
+        pickup_distance = (
+            selected_transportation_alternative.route_to_pickup.distance
+            if selected_transportation_alternative.route_to_pickup
+            else 0.0
+        )
+        total_distance = selected_transportation_alternative.distance + pickup_distance
 
-        try:
-            self._add_request(user, selected_transportation_alternative)
-        except Exception:
-            # TODO: Is this an error or expected behavior? Should we change the way we reserve vehicles?
-            logging.error(
-                "Vehicle %s already assigned to other user",
-                selected_transportation_alternative.vehicle.id,
-                extra={"clazz": self.__class__.__name__, "oid": ""},
-            )
-
+        self._add_request(user, selected_transportation_alternative)
         yield self._vehicles_assigned_to_users
 
-        selected_vehicle = selected_transportation_alternative.vehicle
-
-        # No Vehicle Allocation
+        # No Vehicle Allocation - vehicle was allocated to a different user in the batch
         if selected_vehicle.reserved_for_user != user:
-            # print(selected_vehicle.reserved_for_user, user)
+            self.logger.debug(
+                "Vehicle %s was allocated to user %s instead of %s",
+                selected_vehicle.uid,
+                selected_vehicle.reserved_for_user.uid
+                if selected_vehicle.reserved_for_user
+                else "None",
+                user.uid,
+            )
+            # Log failed allocation attempt
+            self._operator.log_failed_allocation_attempt(
+                user=user,
+                transportation_task=user.transport_request,
+                transportation_alternative=selected_transportation_alternative,
+            )
             return None
 
-        # Vehicle was successfully allocated
-        return VehicleAllocation(
+        # Revalidate feasibility at grant time for queued reservations on in-use vehicles.
+        if (
+            selected_vehicle.is_in_use
+            and not selected_vehicle.energy_system.has_enough_energy(total_distance)
+        ):
+            canceled = selected_vehicle.cancel_queued_user_reservation(
+                reason="allocation-revalidation:insufficient-energy"
+            )
+            self.logger.debug(
+                "Allocation revalidation failed for vehicle %s and user %s (required_distance=%.2f, current=%.2f, predicted=%.2f, canceled=%s).",
+                selected_vehicle.uid,
+                user.uid,
+                total_distance,
+                selected_vehicle.energy_system.current_energy_absolute,
+                selected_vehicle.energy_system.predicted_energy,
+                canceled,
+            )
+            self._operator.log_failed_allocation_attempt(
+                user=user,
+                transportation_task=user.transport_request,
+                transportation_alternative=selected_transportation_alternative,
+            )
+            return None
+
+        vehicle_allocation = VehicleAllocation(
             user,
-            selected_vehicle,
             selected_transportation_alternative,
             selected_vehicle.position,
-            selected_transportation_alternative.pick_up_time,
+            selected_transportation_alternative.est_pickup_time,
         )
 
-    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201
-        self, vehicle_assignment: VehicleAllocation
-    ):
-        pass
-
-        # For Autonomous Vehicles or Mass Transit (i.e., listen to position of vehicle)
-        # old_position = vehicle_assignment.vehicle.position
-        # from simulation.environment.geodesic_position import GeodesicPosition
-        # vehicle_assignment.vehicle.position = GeodesicPosition(65.3, 13.3)
-        # self._env.process(self.test(vehicle_assignment, old_position))
+        # Vehicle was successfully allocated
+        return vehicle_allocation
 
     def _add_request(self, user, vehicle_assignment):  # noqa: ANN001, ANN202
-        if vehicle_assignment.vehicle.id not in self._vehicle_assignment_ids:
-            self._vehicle_assignment_requests.append((user, vehicle_assignment))
-            self._vehicle_assignment_ids.add(vehicle_assignment.vehicle.id)
-        else:
-            raise Exception
-
-    def test(self, vehicle_assignment, old_position):  # noqa: ANN001, ANN201
-        # Notify operator that user has arrived at location
-
-        # self._env.process()
-        yield self._env.timeout(10)
-
-        from simulation.environment.geodesic_position import GeodesicPosition
-
-        vehicle_assignment.vehicle.position = GeodesicPosition(55.3, 13.3)
-
-        yield self._env.timeout(10)
-
-        vehicle_assignment.vehicle.position = old_position
+        self._vehicle_assignment_requests.append((user, vehicle_assignment))

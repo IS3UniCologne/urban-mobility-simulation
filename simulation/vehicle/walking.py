@@ -1,36 +1,36 @@
-from simpy import Environment
-import logging
+from collections.abc import Generator  # noqa: D100
+
+from simpy import Environment, Event
+
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.infrastructure.network.edge import Edge
+from simulation.vehicle.movement_stats import MovementStats
 from simulation.vehicle.vehicle import Vehicle
 
 
+# TODO: We should probably delete this.
 ### Basically a singleton that is used as a placeholder in the vehicle slot for search and allocations signifying that a user is walking this route.
-class Walking(Vehicle):
-    walking_id = 0
-
+class Walking(Vehicle):  # noqa: D101
     __slots__ = ("_id", "_velocity")
 
     def __init__(self, env: Environment, velocity: float = 83.33) -> None:
         # Position of Walking actually just takes user position, so it does not matter
         super(Walking, self).__init__(env, GeodesicPosition(0, 0, None))  # noqa: UP008
 
-        self._id: int = Walking.walking_id
-        self._velocity: float = velocity
+        self._velocity_mm = velocity
 
     @property
-    def id(self) -> int:
-        return self._id
+    def velocity(self) -> float:  # noqa: D102
+        return self._velocity_mm
 
-    @property
-    def velocity(self) -> float:
-        return self._velocity
-
-    def move(self, route_segment: Edge):  # noqa: ANN201
-        logging.warning(
-            "Warning: Method 'move' for walking called, even though it is not implemented!",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
+    def _move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
+        self.logger.warning(
+            "Warning: Method 'move' for walking called, even though it is not implemented!"
         )
 
-    def __str__(self) -> str:
+        if False:
+            yield self._env.timeout(0)
+        return MovementStats(0, 0, 0)
+
+    def __str__(self) -> str:  # noqa: D105
         return "I am walking!"

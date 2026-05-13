@@ -1,72 +1,84 @@
-import logging
+from __future__ import annotations  # noqa: D100
+
 import random
 from collections import Counter
-from typing import Dict, List, Tuple  # noqa: UP035
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from beartype.door import die_if_unbearable  # like "assert isinstance(...)"
 from beartype.roar import BeartypeDoorHintViolation
-from simpy import AllOf, Environment
+from simpy import AllOf
 
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
-)
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
 from simulation.world.markets.auction import Auction
-from simulation.world.markets.interfaces.bidder_interface import BidderInterface
-from tracking.tracking_interface import TrackingInterface
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import (
+        SharedChargingAuctionConfig,
+    )
+    from simulation.infrastructure.charging_stations.charging_infastructure import (
+        ChargingInfrastructure,
+    )
+    from simulation.world.markets.interfaces.bidder_interface import BidderInterface
 
 
-class SharedChargingAuction(Auction, TrackingInterface):
+class SharedChargingAuction(Auction):  # noqa: D101
     __slots__ = (
+        "_charging_infrastructure",
         "_charging_locations",
+        "_last_auction_state",
         "_location_results",
         "_next_timeslot",
         "_participants",
+        "_shared_charging_config",
     )
 
     exposes = ["_next_timeslot", "_bids", "_location_results"]  # noqa: RUF012
 
     def __init__(
         self,
-        env: Environment,
-        start_condition,  # noqa: ANN001
-        end_condition,  # noqa: ANN001
+        sim: SimulationContext,
         charging_infrastructure: ChargingInfrastructure,
+        shared_charging_config: SharedChargingAuctionConfig,
     ) -> None:
-        super().__init__(env, start_condition, end_condition)
+        super().__init__(sim)
 
+        self._env = sim.env
         # bids are a list of n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
-        self._bid_syntax = Dict[str, List[Tuple[int, int | float, int]]]  # noqa: UP006
+
+        self._shared_charging_config = shared_charging_config
+        self._bid_syntax = dict[str, list[tuple[int, int | float, int]]]
 
         # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
-        self._result_syntax = Dict[int, Dict[str, Tuple[int, float]]]  # noqa: UP006
+        self._result_syntax = dict[int, dict[str, tuple[int, float]]]
 
         self._participants = []
         self._bids = {}
+        self._last_auction_state = {}
         self._location_results = {}
         self._next_timeslot = (
-            self._config.auction.AUCTION_START
-            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD
+            self._shared_charging_config.AUCTION_START
+            + self._shared_charging_config.AUCTION_LOOKAHEAD
         )
 
         # init auction view on charging infrastructure
         # this is a view that tells the auctioneer how much capacity is up for auction
         self._charging_infrastructure = VirtualChargingInfrastructure(
-            env=self._env,
+            sim=sim,
             charging_infrastructure=charging_infrastructure,
-            lookahead=self._config.auction.AUCTION_START
-            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD,
+            lookahead=self._shared_charging_config.AUCTION_START
+            + self._shared_charging_config.AUCTION_LOOKAHEAD,
             use_virtual_cs=False,
         )
         for timeslot in range(
-            self._config.auction.AUCTION_START
-            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD,
-            self._config.auction.AUCTION_END
-            + self._config.shared_charging_auction.AUCTION_INTERVAL,
-            self._config.shared_charging_auction.AUCTION_INTERVAL,
+            self._shared_charging_config.AUCTION_START
+            + self._shared_charging_config.AUCTION_LOOKAHEAD,
+            self._shared_charging_config.AUCTION_END
+            + self._shared_charging_config.AUCTION_INTERVAL,
+            self._shared_charging_config.AUCTION_INTERVAL,
         ):
             self._charging_infrastructure.update(
                 availability={
@@ -76,22 +88,18 @@ class SharedChargingAuction(Auction, TrackingInterface):
                 timeslot=timeslot,
             )
 
-    def run(self):  # noqa: ANN201
+    def run(self):  # noqa: ANN201, D102
         while True:
             if (
                 self._next_timeslot
-                > self._config.auction.AUCTION_END
-                - self._config.shared_charging_auction.TIMESLOT_DURATION
+                > self._shared_charging_config.AUCTION_END
+                - self._shared_charging_config.TIMESLOT_DURATION
             ):
-                logging.info(
-                    "Auction stops, last timeslot reached.",
-                    extra={"clazz": self.__class__.__name__, "oid": " "},
-                )
+                self.logger.info("Auction stops, last timeslot reached.")
                 break
 
             open_at = (
-                self._next_timeslot
-                - self._config.shared_charging_auction.AUCTION_LOOKAHEAD
+                self._next_timeslot - self._shared_charging_config.AUCTION_LOOKAHEAD
             )
 
             if self._env.now <= open_at:
@@ -99,7 +107,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
             self._is_open = True
             self.open_for_bidding.succeed()
-            logging.info(
+            self.logger.info(
                 "Auction open. Auctionable capacity for next timeslot (%s): %s",
                 self._next_timeslot,
                 sum(
@@ -107,45 +115,50 @@ class SharedChargingAuction(Auction, TrackingInterface):
                         self._next_timeslot
                     ).values()
                 ),
-                extra={"clazz": self.__class__.__name__, "oid": " "},
             )
 
             yield AllOf(self._env, [x.bidding_done for x in self._participants])
-            logging.debug(
-                "Bids received. Starting clearing",
-                extra={"clazz": self.__class__.__name__, "oid": " "},
-            )
+            self.logger.debug("Bids received. Starting clearing")
+
+            auctioned_timeslot = self._next_timeslot
+            auctioned_capacity = self._charging_infrastructure.get_available_capacity(
+                self._next_timeslot
+            ).copy()
 
             self.clear()
             try:
                 die_if_unbearable(self._result, self._result_syntax)
             except BeartypeDoorHintViolation:
-                logging.error(
-                    "Result of SharedChargingAuction must be a dict of (participant id, dict of (location id, (capacity, clearing price)))",
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                self.logger.error(
+                    "Result of SharedChargingAuction must be a dict of (participant id, dict of (location id, (capacity, clearing price)))"
                 )
             self._announce_results()
+
+            self._last_auction_state = {
+                "timeslot": auctioned_timeslot,
+                "available_capacity": auctioned_capacity,
+                "bids": self._bids.copy(),
+                "results": self._location_results.copy(),
+            }
+
             self._bids = {}
             self._update_auctionable_capacity()
 
             self._next_timeslot = (
-                self._next_timeslot
-                + self._config.shared_charging_auction.AUCTION_INTERVAL
+                self._next_timeslot + self._shared_charging_config.AUCTION_INTERVAL
             )
-            logging.debug(
-                "Results announced. Closing auction until %s",
-                self._next_timeslot,
-                extra={"clazz": self.__class__.__name__, "oid": " "},
+            self.logger.debug(
+                "Results announced. Closing auction until %s", self._next_timeslot
             )
 
             self._is_open = False
             self.open_for_bidding = self._env.event()
 
-    def register_participant(self, participant: BidderInterface) -> int:
+    def register_participant(self, participant: BidderInterface) -> int:  # noqa: D102
         self._participants.append(participant)
         return len(self._participants) - 1
 
-    def clear(self) -> None:
+    def clear(self) -> None:  # noqa: D102
         self._location_results = {}
         for location, capacity in self._charging_infrastructure.get_available_capacity(
             self._next_timeslot
@@ -257,7 +270,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
         for p in self._participants:
             p.result_announced.succeed(self._result[p.auction_participant_id])
 
-        logging.debug(
+        self.logger.debug(
             "Total Capacity Auctioned: %s",
             sum(
                 [
@@ -266,7 +279,6 @@ class SharedChargingAuction(Auction, TrackingInterface):
                     for participant, result in location.items()
                 ]
             ),
-            extra={"clazz": self.__class__.__name__, "oid": ""},
         )
 
         self.cleared.succeed()
@@ -281,9 +293,8 @@ class SharedChargingAuction(Auction, TrackingInterface):
 
         for timeslot in range(
             self._next_timeslot,
-            self._next_timeslot
-            + self._config.shared_charging_auction.TIMESLOT_DURATION,
-            self._config.shared_charging_auction.AUCTION_INTERVAL,
+            self._next_timeslot + self._shared_charging_config.TIMESLOT_DURATION,
+            self._shared_charging_config.AUCTION_INTERVAL,
         ):
             remaining_capacity = {
                 k: v - auctioned_capacity[k]
@@ -296,17 +307,17 @@ class SharedChargingAuction(Auction, TrackingInterface):
             )
 
     @property
-    def result(self):  # noqa: ANN201
+    def result(self):  # noqa: ANN201, D102
         # it is illegal for other participants to know the full results in this type of auction
         raise NotImplementedError(
             "Not implemented for FleetChargingAuction, results are distributed through events"
         )
 
     @property
-    def next_timeslot(self):  # noqa: ANN201
+    def next_timeslot(self):  # noqa: ANN201, D102
         return self._next_timeslot
 
-    def get_auctioned_capacity(self) -> Dict[str, int]:  # noqa: UP006
+    def get_auctioned_capacity(self) -> dict[str, int]:  # noqa: D102
         return self._charging_infrastructure.get_available_capacity(self._next_timeslot)
 
     def _update_bids(self, single_bid):  # noqa: ANN001, ANN202
@@ -334,7 +345,7 @@ class SharedChargingAuction(Auction, TrackingInterface):
             )
             return allocated_ids
 
-    def dump(self, exposed_only: bool = True) -> Dict:  # noqa: UP006
+    def dump(self, exposed_only: bool = True) -> dict:  # noqa: D102
         return {
             "_next_timeslot": self._next_timeslot,
             "_bids": self._bids,

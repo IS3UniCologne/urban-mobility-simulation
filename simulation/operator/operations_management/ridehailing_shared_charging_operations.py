@@ -1,87 +1,85 @@
-import logging
+from __future__ import annotations  # noqa: D100
+
+import dataclasses
 from collections import namedtuple
+from typing import TYPE_CHECKING
 
-from simpy import Environment
-
-from simulation.helper.configuration.configuration import Configuration
 from simulation.infrastructure.charging_stations.virtual_charging_infrastructure import (
     VirtualChargingInfrastructure,
 )
 from simulation.operator.operations_management.algorithms.distance_based_bidding_strategy import (
     get_bid,
 )
-from simulation.operator.operations_management.operations import OperationsInterface
-from simulation.operator.operations_management.ridehailing_base_charging_operations import (
-    RideHailingBaseChargingOperations,
+from simulation.operator.operations_management.ride_hailing_operations import (
+    RideHailingOperations,
 )
-from simulation.world.markets.auction import Auction
+from simulation.operator.operations_management.ridehailing_greedy_charging_operations import (
+    RideHailingGreedyChargingOperations,
+)
 from simulation.world.markets.interfaces.bidder_interface import BidderInterface
 
+if TYPE_CHECKING:
+    import pandas as pd
 
-class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
+    from simulation.operator.operations_management.operations import (
+        OperationsDependencies,
+    )
+
+
+class RideHailingSharedChargingOperations(RideHailingOperations, BidderInterface):  # noqa: D101
     __slots__ = (
         "_auction",
         "_bidding_parameters",
         "_charging_operations",
         "_config",
+        "_deps",
         "_distance_matrix",
+        "_operations_config",
+        "_sim",
         "_state_of_charge_threshold",
         "_virtual_charging_infrastructure",
+        "_world",
     )
 
-    def __init__(  # noqa: ANN204
-        self,
-        env: Environment,
-        auction: Auction,
-        # bidding_strategy,
-        bidding_parameters: dict,
-        state_of_charge_threshold: float,
-        distance_matrix=None,  # noqa: ANN001
-    ):
-        OperationsInterface.__init__(self, env)
-        BidderInterface.__init__(self, env, auction)
+    def __init__(self, deps: OperationsDependencies) -> None:
+        super().__init__(deps)
 
-        self._virtual_charging_infrastructure: VirtualChargingInfrastructure = None
+        self._deps = deps
+
+        self._auction = self._operator.charging_infrastructure.auction
+
+        BidderInterface.__init__(self, env=self._env, auction=self._auction)
+
+        self._virtual_charging_infrastructure: VirtualChargingInfrastructure | None = (
+            None
+        )
         # self._bidding_strategy = bidding_strategy
-        self._bidding_parameters = bidding_parameters
-        self._state_of_charge_threshold = state_of_charge_threshold
-        self._distance_matrix = distance_matrix
-
-        self._config = Configuration()
-
+        self._state_of_charge_threshold = self._config.RECHARGE_THRESHOLD
         self._charging_operations = None
 
-    def execute(self):  # noqa: ANN201
+    def execute(self):  # noqa: ANN201, D102
         # defer some of the initialization to after the operator has registered everything
         self._virtual_charging_infrastructure = VirtualChargingInfrastructure(
-            env=self._env,
-            charging_infrastructure=self._operator_reference.charging_infrastructure,
-            lookahead=self._config.auction.AUCTION_START
-            + self._config.shared_charging_auction.AUCTION_LOOKAHEAD,
-        )
-
-        self._charging_operations = RideHailingBaseChargingOperations(
-            env=self._env,
-            distance_matrix=self._distance_matrix,
-            time_between_operations=self._config.shared_charging_auction.AUCTION_INTERVAL,
-            operation_duration=None,  # does not matter
-            available_modes=self._config.ride_hailing_global.AVAILABLE_VEHICLE_MODES,
-            available_modes_supply=self._config.ride_hailing_global.AVAILABLE_MODES_SUPPLY,
-            state_of_charge_threshold=self._state_of_charge_threshold,
-            allow_queue=False,  # no queue, only reserved slots
+            sim=self._sim,
+            charging_infrastructure=self._operator.charging_infrastructure,
+            lookahead=self._auction._shared_charging_config.AUCTION_LOOKAHEAD,  # noqa: SLF001
         )
 
         # hack a virtual operator reference into it?
         VirtualOperator = namedtuple(
-            "VirtualOperator", ["id", "fleet", "charging_infrastructure"]
+            "VirtualOperator", ["fleet", "charging_infrastructure"]
         )
-        self._charging_operations.register_operator_reference(
-            VirtualOperator(
-                id=self._operator_reference.id,
-                fleet=self._operator_reference.fleet,
-                charging_infrastructure=self._virtual_charging_infrastructure,
-            )
+
+        virtual_operator = VirtualOperator(
+            fleet=self._operator.fleet,
+            charging_infrastructure=self._virtual_charging_infrastructure,
         )
+
+        patched_deps = dataclasses.replace(
+            self._deps, operator=virtual_operator
+        )  # shallow copy, as we want to retain references to sim and world
+
+        self._charging_operations = RideHailingGreedyChargingOperations(patched_deps)
 
         self._env.process(self._delay_charging_operations())
 
@@ -97,22 +95,18 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         # timeslots are denoted by their start time and have length `self._config.shared_charging_auction.TIMESLOT_DURATION`
         auctioned_timeslot = self._auction.next_timeslot
         auctioned_capacity = self._auction.get_auctioned_capacity()
-        logging.debug(
-            "Auction opened for timeslot %s",
-            auctioned_timeslot,
-            extra={
-                "clazz": self.__class__.__name__,
-                "oid": self._auction_participant_id,
-            },
-        )
+        self.logger.debug("Auction opened for timeslot %s", auctioned_timeslot)
 
         # TODO: refactor to be a method of somethign like "BiddingStrategy"
         # TODO: right now we track bids through the auction, maybe we can use transactions for that?
         self._bids = get_bid(
             auctioned_timeslot=auctioned_timeslot,
             auctioned_capacity=auctioned_capacity,
-            bidding_parameters=self._bidding_parameters,
-            operator_referece=self._operator_reference,
+            bid_decay=self._config.BID_DECAY,
+            random_overbidding=self._config.RANDOM_OVERBIDDING,
+            overbid_prob=self._config.OVERBID_PROB,
+            bid_default=self._config.BID_DEFAULT,
+            operator_reference=self._operator,
             state_of_charge_threshold=self._state_of_charge_threshold,
             participant_id=self._auction_participant_id,
             distance_matrix=self._distance_matrix,
@@ -128,25 +122,11 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
 
         self.bidding_done.succeed()
         self.bidding_done = self._env.event()
-        logging.debug(
-            "Bids placed for timeslot %s",
-            auctioned_timeslot,
-            extra={
-                "clazz": self.__class__.__name__,
-                "oid": self._auction_participant_id,
-            },
-        )
+        self.logger.debug("Bids placed for timeslot %s", auctioned_timeslot)
 
         self._result = yield self.result_announced
         self.result_announced = self._env.event()
-        logging.debug(
-            "Results received for timeslot %s",
-            auctioned_timeslot,
-            extra={
-                "clazz": self.__class__.__name__,
-                "oid": self._auction_participant_id,
-            },
-        )
+        self.logger.debug("Results received for timeslot %s", auctioned_timeslot)
 
         self._virtual_charging_infrastructure.update(
             availability={k: v[0] for k, v in self._result.items()},
@@ -160,5 +140,5 @@ class RideHailingSharedChargingOperations(OperationsInterface, BidderInterface):
         self._env.process(self._charging_operations.execute())
 
     @property
-    def task_transactions(self):  # noqa: ANN201
-        return self._charging_operations.task_transactions
+    def job_transactions(self) -> pd.DataFrame:  # noqa: D102
+        return self._charging_operations.job_transactions

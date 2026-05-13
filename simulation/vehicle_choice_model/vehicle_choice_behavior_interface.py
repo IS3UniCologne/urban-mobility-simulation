@@ -1,12 +1,11 @@
-from abc import ABC, abstractmethod
-from typing import Dict  # noqa: UP035
+from abc import ABC, abstractmethod  # noqa: D100
 
 from simulation.vehicle_choice_model.trip_characteristics import TripCharacteristics
 
 
-class VehicleChoiceBehaviorInterface(ABC):
+class VehicleChoiceBehaviorInterface(ABC):  # noqa: D101
     @abstractmethod
-    def choose_vehicle(
+    def choose_vehicle(  # noqa: D102
         self, trip_characteristics: TripCharacteristics
-    ) -> Dict[str, int]:  # noqa: UP006
+    ) -> dict[str, int]:
         pass

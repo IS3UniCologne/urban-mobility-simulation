@@ -1,8 +1,8 @@
-class TripCharacteristics:
+class TripCharacteristics:  # noqa: D100
     """
 
     INFO: Extend this class to add more granular trip chars (e.g., temperature, precipitation)
-    """
+    """  # noqa: D200, D400
 
     __slots__ = ("_distance",)
 
@@ -10,5 +10,5 @@ class TripCharacteristics:
         self._distance = distance
 
     @property
-    def distance(self):  # noqa: ANN201
+    def distance(self):  # noqa: ANN201, D102
         return self._distance

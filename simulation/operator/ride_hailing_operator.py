@@ -1,101 +1,59 @@
-import logging
+from __future__ import annotations  # noqa: D100
 
-from simpy import Environment
+from typing import TYPE_CHECKING
 
-from simulation.agent.user import User
-from simulation.helper.configuration.configuration import Configuration
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
-)
-from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
-    TransportationAlternativeRideHailing,
-)
-from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
-)
-from simulation.operator.operations_management.operations import OperationsInterface
-from simulation.operator.operator import Operator
-from simulation.operator.vehicle_fleet import VehicleFleet
-from simulation.tasks.transport_task import TransportTask
+if TYPE_CHECKING:
+    from simulation.agent.user import User
+    from simulation.infrastructure.charging_stations.charging_infastructure import (
+        ChargingInfrastructure,
+    )
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
+    from simulation.operator.data_transfer_object.vehicle_allocation import (
+        VehicleAllocation,
+    )
+
+
+from simulation.helper.enums import OperatorMode, TransactionState
+from simulation.operator.operator import Operator, OperatorDependencies
 
 
 class RideHailingOperator(Operator):
-    __slots__ = ("_driver_payment_share",)
+    """Operator for ride-hailing services."""
 
-    def __init__(  # noqa: ANN204
+    __slots__ = ("_charging_infrastructure",)
+
+    def __init__(self, deps: OperatorDependencies) -> None:
+        super().__init__(deps=deps)
+        self._mode = OperatorMode.RIDE_HAILING
+
+    @property
+    def charging_infrastructure(self) -> ChargingInfrastructure:
+        """Return the charging infrastructure for electric vehicles."""
+        if self._charging_infrastructure is None:
+            raise ValueError(
+                "Charging infrastructure must be provided for ride-hailing."
+            )
+        return self._charging_infrastructure
+
+    def pay_for_fulfilled_transportation_task(  # noqa: ANN201, D102
         self,
-        env: Environment,
-        fleet: VehicleFleet,
-        charging_infrastructure: ChargingInfrastructure,
-        operations: OperationsInterface,
-        search_engine: SearchEngineInterface,
-        allocation_engine: VehicleAllocationEngineInterface,
+        user: User,
+        transportation_task: TransportRequest,
+        vehicle_allocation: VehicleAllocation,
     ):
-        super().__init__(
-            env,
-            fleet,
-            charging_infrastructure,
-            operations,
-            search_engine,
-            allocation_engine,
+        selected_transportation_alternative = (
+            vehicle_allocation.transportation_alternative
         )
-
-        self._driver_payment_share = (
-            Configuration().ride_hailing_global.DRIVER_PAYMENT_SHARE
-        )
-
-    def pay_for_fulfilled_transportation_task(  # noqa: ANN201
-        self,
-        user,  # noqa: ANN001
-        transportation_task: TransportTask,
-        selected_transportation_alternative: TransportationAlternativeRideHailing,
-    ):
         payment = selected_transportation_alternative.price
-        vehicle = selected_transportation_alternative.vehicle
-        # we need to pay the driver costs
-        if vehicle.__class__.__name__ == "RideHailingCar":
-            self.increase_total_revenue(payment * (1 - self._driver_payment_share))
-            vehicle.update_earned_money(payment)
-
-        else:
-            self.increase_total_revenue(payment)
 
         # Add Transaction to Log
         self.log_transaction(
             transportation_task=transportation_task,
             transportation_alternative=selected_transportation_alternative,
-            state="Fulfilled",
+            state=TransactionState.FULFILLED,
+            energy_consumed=vehicle_allocation.energy_consumed,
         )
 
-        logging.info(
-            "New Payment (%s) received from User %s. Current Total Revenue: %s.",
-            payment,
-            user.id,
-            self.total_revenue,
-            extra={"clazz": self.__class__.__name__, "oid": self._fleet.id},
-        )
-
-    def withdraw_transportation_task(  # noqa: ANN201
-        self, user: User, transportation_task: TransportTask, state: str | None = None
-    ):
-        # distance = transportation_task.origin >> transportation_task.destination
-        # TODO: define price of the trip
-
-        self.increase_total_missed_trips(1)
-
-        # Add Transaction to Log
-        self.log_transaction(
-            transportation_task=transportation_task,
-            transportation_alternative=None,
-            state=state,
-        )
-
-        logging.info(
-            "Missed trip of User %s. Current Total Revenue: %s - Total Trips: %s - Missed Trips %s.",
-            user.id,
-            self.total_revenue,
-            self.total_fulfilled_trips,
-            self.total_missed_trips,
-            extra={"clazz": self.__class__.__name__, "oid": self._fleet.id},
-        )
+        self.logger.debug("New Payment (%s) received from User %s.", payment, user.uid)

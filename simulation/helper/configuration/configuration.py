@@ -1,569 +1,578 @@
-import ast
+"""
+Configuration module for simulation settings.
+
+This module provides a Configuration class that loads and manages all simulation parameters from a TOML file using Pydantic models.
+
+Each configuration section is represented by a dedicated class, which loads the TOML file, validates its contents,
+and exposes each section as a lazily loaded property.
+
+Validation and type checking are handled by Pydantic. To add a new configuration section:
+
+1. Add the section to the TOML config file as a new table (e.g., [new_section]).
+2. Create a new Pydantic model for the section in this file, using ConfigBaseModel.
+3a. Add a property to the Configuration class that uses _get_section to load and validate the new section.
+3b. If the section contains a list or dictionary, use _get_section_list or _get_section_dict respectively.
+
+To add a new parameter to an existing section:
+1. Add the parameter to the TOML config file under the appropriate section.
+2. Add the parameter to the corresponding Pydantic model, with an appropriate type hint.
+
+All validation, type conversion, and defaults should be handled using Pydantic features (validators, model_config, etc.).
+# TODO: cleanup, with more and more being config-as-code, some of the sections are obsolete
+"""
+
+from __future__ import annotations
+
+import importlib.util
 import os
-import sys
-from dataclasses import dataclass, fields
-from functools import wraps
-from typing import Any, TypeVar
+from pathlib import Path
+from typing import TYPE_CHECKING, TypeVar, cast
 
-import numpy as np
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
-from simulation.helper.configuration.enums import (
+from simulation.agent.user.choice_model.choice_model_interface import (
+    ChoiceModelInterface,
+)
+from simulation.agent.user.choice_model.min_pickup_time_vehicle_choice_model import (
+    MinPickupTimeVehicleChoiceModel,
+)
+from simulation.agent.user.choice_model.random_nearest_vehicle_choice_model import (
+    RandomModeNearestVehicleChoiceModel,
+)
+from simulation.helper.enums import (
+    AutonomyType,
     DailyResolution,
     ModeChoiceStrategy,
-    PopulationType,
+    PropulsionType,
     SpatialResolution,
     TemporalResolution,
-    VehicleMode,
+    VehicleType,
 )
-from simulation.helper.singleton import Singleton
 from simulation.helper.time import SimulationVelocityConverter
+from simulation.helper.types import RegionId
+from simulation.infrastructure.charging_stations.charging_infastructure import (
+    ChargingInfrastructure,
+)
+from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
+from simulation.operator.operations_management.integrated_shared_mobility_operations import (
+    IntegratedSharedMobilityOperations,
+)
+from simulation.operator.operations_management.operations import Operations
+from simulation.operator.operator import Operator
+from simulation.operator.ride_hailing_allocation_engine import (
+    RideHailingAllocationEngine,
+)
+from simulation.operator.ride_hailing_operator import RideHailingOperator
+from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
+from simulation.operator.search_engine import SearchEngine
+from simulation.operator.shared_mobility_operator import SharedMobilityOperator
+from simulation.operator.shared_vehicle_allocation_engine import (
+    SharedVehicleAllocationEngine,
+)
+from simulation.operator.shared_vehicle_search_engine import SharedVehicleSearchEngine
+from simulation.operator.vehicle_allocation_engine import AllocationEngine
+from simulation.operator.vehicle_fleet import VehicleFleet
+from simulation.world.markets.auction import Auction
+
+if TYPE_CHECKING:
+    # Careful moving stuff here, pydantic needs to check type hints at runtime!
+    from types import ModuleType
+
 
 try:
     import tomllib  # future proofing for python 3.11+
 except ModuleNotFoundError:
     import pip._vendor.tomli as tomllib
 
-from beartype import BeartypeConf, beartype
-from beartype.door import die_if_unbearable
-
-# remove color from beartype exceptions to avoid unreadable debug output,
-# might want to move this to the templates to apply it to all beartype exceptions
-BeartypeConf.is_color = False  # type: ignore
+T = TypeVar("T", bound=BaseModel)
 
 
-"""
-The configuration class holds all the configuration parameters for the simulation and is loaded from the config toml file.
-The class is a singleton, meaning that there is only one instance of the class that is shared across the entire simulation.
-The config classes are lazy loaded, meaning that the configuration objects are only created when they are accessed for the first time.
-The input from the config file is validated using beartype.
+class ConfigBaseModel(BaseModel):
+    """Base model for all configuration models."""
 
-To add a new configuration parameter to an existing configuration class, follow these steps:
-1. Add the parameter to the config.toml file in the correct table.
-2. Add the parameter to the Configuration class. Make sure to include a type hint.
-3. If the parameter is optional, add the None type hint and set the default value to None. (e.g.  OPTIONAL_LIST: None | list[str] = None)
-    All optional parameters have to be at the end of the dataclass. This is a limitation of dataclasses.
-4. Types that are not supported by toml (e.g. Enums,Tuples) should be converted to their respective types in the __post_init__ method. Make sure to use
-    the @beartype_after_post_init decorator if you do this.
-
-To add a new configuration class, follow these steps:
-1. Create a new table int the config file, e.g. [NEW_TABLE].
-2. Create a new dataclass in this file, e.g. class NewTableConfig. Please keep the order of dataclasses the same as in the config file.
-3. Add the dataclass to the Configuration class as a property.
-Example:
-@property
-    def new_table(self) -> NewTableConfig:
-        return self._get_lazy_object("new_table", NewTableConfig)
-
-For an exmaple of how to implement Lists, look at the Operator configs.
-For an example of how to implement nested dictionaries, look at the Vehicle configs.
-"""
-
-# Generic type variable for type hinting
-T = TypeVar("T", bound=type)
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
 
-def beartype_after_post_init(cls: T) -> T:
-    """Decorator to that delays the beartype check until after the __post_init__ method is called."""
-    original_post_init = getattr(cls, "__post_init__", None)
+class SettingsConfig(ConfigBaseModel):
+    """Global settings for the simulation environment."""
 
-    if original_post_init:
-
-        @wraps(original_post_init)
-        def wrapped_post_init(self: Any) -> None:  # noqa: ANN401
-            original_post_init(self)
-            for field in fields(self):
-                value = getattr(self, field.name)
-                die_if_unbearable(
-                    obj=value,
-                    hint=field.type,
-                    exception_prefix=f"Field '{field.name}' in {self.__class__.__name__} is not of type {field.type}: ",
-                )
-
-        setattr(cls, "__post_init__", wrapped_post_init)
-    else:
-        # If no original post_init, create a function without @wraps
-        def default_post_init(self: Any) -> None:  # noqa: ANN401
-            for field in fields(self):
-                value = getattr(self, field.name)
-                die_if_unbearable(
-                    obj=value,
-                    hint=field.type,
-                    exception_prefix=f"Field '{field.name}' in {self.__class__.__name__} is not of type {field.type}: ",
-                )
-
-        setattr(cls, "__post_init__", default_post_init)
-    return cls
-
-
-@beartype
-@dataclass(slots=True, frozen=True)
-class SettingsConfig:
-    LOG_LEVEL: str
-    FILE_LOG_LEVEL: str
+    LOG_LEVEL: str = Field(pattern=r"^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
+    FILE_LOG_LEVEL: str = Field(pattern=r"^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
     LOG_TIMESTAMPS: bool
+    LOG_CLASS_OVERRIDES: dict[str, str] | None = None
+    PERSIST_RESULTS: bool  # TODO: Remove or properly implement
 
-    PERSIST_RESULTS: bool
-    TRACK_AGENT: bool
+    @field_validator("LOG_CLASS_OVERRIDES", mode="after")
+    @classmethod
+    def validate_log_overrides(cls, v: dict[str, str] | None) -> dict[str, str] | None:
+        """Validate log class overrides."""
+        if v is None:
+            return v
+        valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        for class_name, level in v.items():
+            if level not in valid_levels:
+                raise ValueError(
+                    f"Invalid log level '{level}' for class '{class_name}'"
+                )
+        return v
 
 
-@beartype
-@dataclass(slots=True, frozen=True)
-class ExperimentManagementConfig:
-    START_TIME: int
-    END_TIME: int
+class ExperimentManagementConfig(ConfigBaseModel):
+    """Configuration for experiment management."""
+
+    START_TIME: int = Field(ge=0)
+    END_TIME: int = Field(gt=0)
 
 
-@beartype
-@dataclass(slots=True, frozen=True)
-class RandomManagerConfig:
-    SEED: int
+class RandomManagerConfig(ConfigBaseModel):
+    """Configuration for random number generation."""
+
+    SEED: int = Field(ge=0)
     COMPONENT_SEEDS: dict[str, int]
 
+    @field_validator("COMPONENT_SEEDS", mode="after")
+    @classmethod
+    def validate_component_seeds(cls, v: dict[str, int]) -> dict[str, int]:
+        """Validate that all component seeds are within the valid range."""
+        for component, seed in v.items():
+            if not (0 <= seed <= 2**32 - 1):
+                raise ValueError(
+                    f"Seed for component '{component}' must be between 0 and {2**32 - 1}"
+                )
+        return v
 
-@beartype_after_post_init
-@dataclass(slots=True, frozen=True)
-class WorldConfig:
+
+class WorldConfig(ConfigBaseModel):
+    """Configuration for the simulation world."""
+
     SPATIAL_RESOLUTION: SpatialResolution
-    TEMPORAL_RESOLUTION: TemporalResolution
     DAILY_RESOLUTION: DailyResolution
+    TEMPORAL_RESOLUTION: TemporalResolution
     CITY: str
 
-    def __post_init__(self) -> None:
-        # convert ints to enums
-        object.__setattr__(
-            self, "SPATIAL_RESOLUTION", SpatialResolution(self.SPATIAL_RESOLUTION)
-        )
-        object.__setattr__(
-            self, "TEMPORAL_RESOLUTION", TemporalResolution(self.TEMPORAL_RESOLUTION)
-        )
-        object.__setattr__(
-            self, "DAILY_RESOLUTION", DailyResolution(self.DAILY_RESOLUTION)
-        )
 
-    # TODO: get rid of these
-    @property
-    def SPATIAL_RESOLUTION_VALUE(self) -> int:
-        return self.SPATIAL_RESOLUTION.value
+class PathConfig(ConfigBaseModel):
+    """Configuration for file paths used in the simulation."""
 
-    # TODO: get rid of these
-    @property
-    def SPATIAL_RESOLUTION_COLUMN(self) -> str:
-        """Returns the column name for the spatial resolution. E.g. 'hex_id_7'
+    PATH_ENV_BOUNDING_BOX: Path
+    PATH_ENV_HEX_LAYER_RES_7: Path
+    PATH_ENV_HEX_LAYER_RES_8: Path
+    PATH_ENV_HEX_LAYER_RES_9: Path
+    PATH_TRANSIT_TIMETABLE: Path
+    PATH_TRANSIT_SHAPES: Path
+    PATH_VEHICLE_SUPPLY: Path
+    PATH_TO_MODE_CHOICE_MODEL: Path  # deprecated, remove
+    OUTPUT_FOLDER: Path
+    TRANSACTION_FILE: Path
+    FLEET_STATE_FILE: Path
+    PATH_TRIP_DEMAND: Path
+    PATH_DEMAND_MODIFIERS: list[Path] | None = None
 
-        Returns:
-            str: Column name, e.g. 'hex_id_7'
-        """
-        return f"hex_id_{self.SPATIAL_RESOLUTION_VALUE}"
-
-
-@beartype
-@dataclass(slots=True, frozen=True)
-class PathConfig:
-    PATH_ENV_BOUNDING_BOX: str
-    PATH_ENV_HEX_LAYER_RES_7: str
-    PATH_ENV_HEX_LAYER_RES_8: str
-    PATH_ENV_HEX_LAYER_RES_9: str
-
-    PATH_TRANSIT_TIMETABLE: str
-    PATH_TRANSIT_SHAPES: str
-
-    PATH_VEHICLE_SUPPLY: str
-
-    PATH_TO_MODE_CHOICE_MODEL: str
-
-    OUTPUT_FOLDER: str
-    TRANSACTION_FILE: str
-    FLEET_STATE_FILE: str
-
-    PATH_TRIP_DEMAND: str
-    PATH_DEMAND_MODIFIERS: list[str] | None = None
-
-    def __post_init__(self) -> None:
-        city = Configuration().world.CITY
-        for field_obj in fields(self):
-            field_name = field_obj.name
-            value = getattr(self, field_name)
-            # Format city placeholder if present
-            if isinstance(value, str) and "{city}" in value:
-                object.__setattr__(self, field_name, value.format(city=city))
-                value = getattr(self, field_name)
-            # Normalize all string paths
-            if isinstance(value, str):
-                object.__setattr__(self, field_name, os.path.normpath(value))
-        # Format and normalize demand modifiers if present
-        if self.PATH_DEMAND_MODIFIERS:
-            formatted_modifiers = [
-                os.path.normpath(value.format(city=city))
-                for value in self.PATH_DEMAND_MODIFIERS
-            ]
-            object.__setattr__(self, "PATH_DEMAND_MODIFIERS", formatted_modifiers)
+    @field_validator("*", mode="after")
+    @classmethod
+    def normalize_paths(cls, v: str | Path | list[Path]) -> Path | list[Path]:
+        """Normalize and expand paths."""
+        if isinstance(v, list):
+            return [Path(os.path.normpath(str(item.expanduser()))) for item in v]
+        if isinstance(v, Path):
+            return Path(os.path.normpath(str(v.expanduser())))
+        if isinstance(v, str):
+            return Path(os.path.normpath(os.path.expanduser(v)))
 
 
-@beartype
-@dataclass(slots=True, frozen=True)
-class PopulationConfig:
-    POPULATION_PROBABILITIES: list[float]
-    RIDE_HAILING_POPULATION_PROBABILITIES: list[float]
-    SHARED_VEHICLE_POPULATION_PROBABILITIES: list[float]
-    TRANSIT_POPULATION_PROBABILITIES: list[float]
+class UserConfig(ConfigBaseModel):
+    """Configuration for user behavior and preferences."""
 
-
-@beartype_after_post_init
-@dataclass(slots=True, frozen=True)
-class UserConfig:
-    TRANSIT_MAX_WAIT: int
+    TRANSIT_MAX_WAIT: int = Field(
+        gt=0, description="Maximum wait time for transit in minutes"
+    )  # TODO: this is directly read in the public transport search engine. Either move it to that config or make it a user parameter
     SPATIAL_STRATEGY: str
-    WALKING_SPEED: float
-
-    def __post_init__(self) -> None:
-        # convert km/h to m/s
-        object.__setattr__(
-            self,
-            "WALKING_SPEED",
-            SimulationVelocityConverter.convert_kmh(self.WALKING_SPEED),
-        )
+    WALKING_SPEED_KMH: float = Field(gt=0)
+    MAX_SEARCH_DURATION_MIN: int = Field(gt=0)
+    CHOICE_MODEL_CONFIG: ChoiceModelConfig
 
 
-@beartype_after_post_init
-@dataclass(slots=True, frozen=True)
-class VehicleConfig:
-    VELOCITY: float
+class ChoiceModelConfig(ConfigBaseModel):
+    """Configuration for choice model parameters."""
+
+    CHOICE_MODEL_TYPE: type[ChoiceModelInterface]
+
+
+class RandomModeNearestVehicleChoiceModelConfig(ChoiceModelConfig):
+    """Configuration for Random Mode Nearest Vehicle Choice Model parameters."""
+
+    CHOICE_MODEL_TYPE: type[ChoiceModelInterface] = RandomModeNearestVehicleChoiceModel
+
+
+class MinPickupTimeVehicleChoiceModelConfig(ChoiceModelConfig):
+    """Configuration for Minimum Pickup Time Vehicle Choice Model parameters."""
+
+    CHOICE_MODEL_TYPE: type[ChoiceModelInterface] = MinPickupTimeVehicleChoiceModel
+
+
+class PopulationSegmentConfig(ConfigBaseModel):
+    """Configuration for a population segment.
+
+    A segment represents a subset of the user population with distinct behavioral
+    characteristics and choice models.
+    """
+
+    PROPORTION: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Proportion of total population in this segment. Must sum to 1.0 across all segments.",
+    )
+    USER_CONFIG: UserConfig
+
+
+class PopulationConfig(ConfigBaseModel):
+    """Configuration for heterogeneous population of multiple segments.
+
+    Validates that segment proportions sum to 1.0.
+    """
+
+    SEGMENTS: list[PopulationSegmentConfig] = Field(
+        min_length=1, description="List of population segments"
+    )
+
+    @model_validator(mode="after")
+    def validate_proportions(self) -> PopulationConfig:
+        """Ensure segment proportions sum to 1.0."""
+        total = sum(seg.PROPORTION for seg in self.SEGMENTS)
+        if not total == 1.0:
+            raise ValueError(
+                f"Segment proportions must sum to 1.0, got {total:.4f}. "
+                f"Segments: {[seg.PROPORTION for seg in self.SEGMENTS]}"
+            )
+        return self
+
+
+class VehicleConfig(ConfigBaseModel):
+    """Configuration for vehicle properties and behavior."""
+
+    # TODO: check what can be moved to subclasses
+
+    # Make frozen so we can use VehicleConfig in fleet dict
+    model_config = ConfigDict(frozen=True)
+
+    VELOCITY_KMH: float = Field(gt=0)
     MAX_AVAILABLE_SEATS: int
-
-    WALKING_DISTANCE: int | None = None
-    CONVENIENCE: int | None = None
-
-    MAX_STATE_OF_CHARGE: float | None = None
-    ENERGY_CONSUMPTION: float | None = None
-    EV_RELATIVE_ENERGY_CONSUMPTION: float | None = None
-    INITIAL_SOC: float | None = None
-    EMERGENCY_SOC_BUFFER: float | None = None
-
-    PRICE_PER_MIN: float | None = None
-    PRICE_PER_TRIP: float | None = None
-    DAILY_TOTAL_COST: float | None = None
-    COST_PER_KM: float | None = None
-    PRICE_PER_KM: float | None = None
-    CHARGING_COST_PER_KWH: float | None = None
-    KG_CO2_PER_KM: float | None = None
-
-    def __post_init__(self) -> None:
-        # convert velocity km/h to m/s
-        object.__setattr__(
-            self, "VELOCITY", SimulationVelocityConverter.convert_kmh(self.VELOCITY)
-        )
+    VEHICLE_TYPE: VehicleType
+    AUTONOMY_TYPE: AutonomyType = AutonomyType.HUMAN_DRIVEN
+    PROPULSION_TYPE: PropulsionType = PropulsionType.BATTERY_ELECTRIC
+    ENERGY_CAPACITY: float = Field(default=None, gt=0)  # kWh or Liters
+    ENERGY_CONSUMPTION_PER_KM: float = Field(default=None, ge=0)  # kWh/km or Liters/km
+    INITIAL_CHARGE_RATIO: float = Field(default=None, ge=0, le=1)
+    ENERGY_RESERVE_RATIO: float | None = Field(
+        default=None, ge=0, le=1, description="Reserve energy ratio to maintain"
+    )
+    WALKING_DISTANCE: int | None = Field(
+        default=None, ge=0, le=10000
+    )  # TODO: Move this to users
+    CONVENIENCE: int = Field(default=1, ge=1)
+    PRICE_PER_MIN: float | None = Field(default=None, ge=0)
+    PRICE_PER_TRIP: float = Field(default=0, ge=0)
+    DAILY_TOTAL_COST: float | None = Field(default=None, ge=0)
+    COST_PER_KM: float | None = Field(default=0, ge=0)
+    PRICE_PER_KM: float | None = Field(default=None, ge=0)
+    CHARGING_COST_PER_KWH: float | None = Field(default=None, ge=0)
+    KG_CO2_PER_KM: float | None = Field(default=None, ge=0)
 
 
-@beartype_after_post_init
-@dataclass(slots=True, frozen=True)
-class ModeChoiceModelConfig:
+class RideHailingVehicleConfig(VehicleConfig):
+    """Configuration for ride-hailing vehicle parameters."""
+
+
+class SharedVehicleConfig(VehicleConfig):
+    """Configuration for shared vehicle parameters."""
+
+    PRICE_PER_TRIP: float = Field(default=0)
+
+
+class FleetConfig(ConfigBaseModel):
+    """Configuration for fleet parameters."""
+
+    FLEET_TYPE: type[VehicleFleet]
+
+    VEHICLES: dict[VehicleConfig, int]  # TODO: update this to use distributions
+
+    ENABLE_EN_ROUTE_INDEX: bool = Field(default=False)
+
+
+class RideHailingFleetConfig(FleetConfig):
+    """Configuration for ride-hailing fleet parameters."""
+
+    RH_AVAILABILITY: list[float]
+    ENABLE_EN_ROUTE_INDEX: bool = Field(default=True)
+
+    @field_validator("RH_AVAILABILITY", mode="after")
+    @classmethod
+    def validate_availability_length(cls, v: list[float]) -> list[float]:
+        """Validate that RH_AVAILABILITY has exactly 24 elements (one per hour)."""
+        if len(v) != 24:
+            raise ValueError(
+                f"RH_AVAILABILITY must have exactly 24 elements (one per hour), got {len(v)}"
+            )
+        return v
+
+
+class SharedVehicleFleetConfig(FleetConfig):
+    """Configuration for shared vehicle fleet parameters."""
+
+    FLEET_TYPE: type[VehicleFleet] = MixedSharedVehicleFleet
+
+
+class ModeChoiceModelConfig(ConfigBaseModel):
+    """Configuration for mode choice model parameters."""
+
     SUBSTITUTION_BOUNDARY: float
     AV_TRUST: list[float]
     MODE_CHOICE_STRATEGY: ModeChoiceStrategy
-
-    # MoD
     MOD_COEFFICIENTS: list[list[float]]
     MOD_COEFFICIENTS_CI_LOWER: list[list[float]]
     MOD_COEFFICIENTS_CI_UPPER: list[list[float]]
     MOD_P_VALUES: list[list[float]]
     MOD_COEFFICIENT_INTERVAL_ADJUSTER: float
 
-    rng: np.random.Generator | None = None
 
-    def __post_init__(self) -> None:
-        # convert from str to enum
-        object.__setattr__(
-            self,
-            "MODE_CHOICE_STRATEGY",
-            ModeChoiceStrategy[str(self.MODE_CHOICE_STRATEGY)],
-        )
-        # Import here to avoid circular dependency
-        from simulation.helper.random.random_manager import RandomManager
+class ChargingInfrastructureConfig(BaseModel):
+    """Configuration for charging infrastructure parameters."""
 
-        # Use object.__setattr__ to bypass frozen dataclass restriction
-        object.__setattr__(self, "rng", RandomManager().get_rng("MODE_CHOICE_MODEL"))
+    model_config = ConfigDict(
+        extra="forbid", validate_assignment=False, arbitrary_types_allowed=True
+    )
 
-    def generate_mode_choice_coefficients(
-        self, population_type: PopulationType
-    ) -> np.ndarray:
-        mode_choice_coefficients_ci_lower = self.MOD_COEFFICIENTS_CI_LOWER[
-            population_type.value
-        ]
-        mode_choice_coefficients_ci_upper = self.MOD_COEFFICIENTS_CI_UPPER[
-            population_type.value
-        ]
-        # turn into np arrays for computation
-        mode_choice_coefficients_ci_lower = np.array(mode_choice_coefficients_ci_lower)
-        mode_choice_coefficients_ci_upper = np.array(mode_choice_coefficients_ci_upper)
-
-        interval_adjuster = self.MOD_COEFFICIENT_INTERVAL_ADJUSTER
-
-        adjuster = (
-            (mode_choice_coefficients_ci_upper - mode_choice_coefficients_ci_lower)
-            / 2
-            * interval_adjuster
-        )
-        mode_choice_coefficients_ci_lower = mode_choice_coefficients_ci_lower + adjuster
-        mode_choice_coefficients_ci_upper = mode_choice_coefficients_ci_upper - adjuster
-        mode_choice_coefficients = self.rng.uniform(
-            mode_choice_coefficients_ci_lower, mode_choice_coefficients_ci_upper
-        )
-        return mode_choice_coefficients
-
-    def generate_AV_trust(self, population_type: PopulationType) -> float:
-        trust_value_lower = self.AV_TRUST[population_type.value] - 0.5
-        trust_value_upper = self.AV_TRUST[population_type.value] + 0.5
-        trust_value = self.rng.uniform(trust_value_lower, trust_value_upper)
-        return trust_value
-
-
-@beartype
-@dataclass(slots=True, frozen=True)
-class ChargingInfrastructureConfig:
     NUMBER_OF_CHARGING_STATIONS: int
-    LOCATIONS: list[str]
+    LOCATIONS: list[RegionId]
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
 
-    def __post_init__(self) -> None:
-        # clamplocations to number of charging stations
-        object.__setattr__(
-            self, "LOCATIONS", self.LOCATIONS[: self.NUMBER_OF_CHARGING_STATIONS]
-        )
+    # fallback if there is no auction
+    COORDINATION_INTERVAL: int | None = Field(gt=0, default=None)
+    COORDINATION_TIMESLOT_DURATION: int | None = Field(gt=0, default=None)
+    COORDINATION_LOOKAHEAD: int | None = Field(ge=0, default=None)
 
-        # If power, capacity, and queue size are single values, repeat them for all locations
+    # market
+    AUCTION_CONFIG: AuctionConfig | None = Field(default=None)
+
+    # Instance is put here after creation, so the operator gets a reference
+    instance: ChargingInfrastructure | None = Field(default=None, exclude=True)
+
+    @model_validator(mode="after")
+    def clamp_and_expand(self) -> ChargingInfrastructureConfig:
+        """
+        Clamp and expand charging infrastructure lists to match the number of stations.
+
+        This method ensures that the LOCATIONS, CHARGING_STATION_POWER, CHARGING_STATION_CAPACITY,
+        and CHARGING_STATION_QUEUE_SIZE lists are all of the same length as NUMBER_OF_CHARGING_STATIONS.
+        If any of these lists have only a single element, it will be expanded to match the number of stations by
+        repeating the single element.
+
+        #TODO: This system is not very intuitive, consider changing it.
+
+        Returns
+        -------
+        ChargingInfrastructureConfig
+            The same instance with updated fields.
+        """
+        n = self.NUMBER_OF_CHARGING_STATIONS
+
+        self.LOCATIONS = self.LOCATIONS[:n]
+
         if len(self.CHARGING_STATION_POWER) == 1:
-            object.__setattr__(
-                self,
-                "CHARGING_STATION_POWER",
-                self.CHARGING_STATION_POWER * len(self.LOCATIONS),
-            )
+            self.CHARGING_STATION_POWER = self.CHARGING_STATION_POWER * n
         if len(self.CHARGING_STATION_CAPACITY) == 1:
-            object.__setattr__(
-                self,
-                "CHARGING_STATION_CAPACITY",
-                self.CHARGING_STATION_CAPACITY * len(self.LOCATIONS),
-            )
+            self.CHARGING_STATION_CAPACITY = self.CHARGING_STATION_CAPACITY * n
         if len(self.CHARGING_STATION_QUEUE_SIZE) == 1:
-            object.__setattr__(
-                self,
-                "CHARGING_STATION_QUEUE_SIZE",
-                self.CHARGING_STATION_QUEUE_SIZE * len(self.LOCATIONS),
-            )
+            self.CHARGING_STATION_QUEUE_SIZE = self.CHARGING_STATION_QUEUE_SIZE * n
 
-        # make sure all lists have the same length
-        if len(self.CHARGING_STATION_POWER) != len(self.LOCATIONS):
-            raise ValueError(
-                "Charging station power and locations must have the same length or be a single value"
-            )
-        if len(self.CHARGING_STATION_CAPACITY) != len(self.LOCATIONS):
-            raise ValueError(
-                "Charging station capacity and locations must have the same length or be a single value"
-            )
-        if len(self.CHARGING_STATION_QUEUE_SIZE) != len(self.LOCATIONS):
-            raise ValueError(
-                "Charging station queue size and locations must have the same length or be a single value"
-            )
+        return self
 
 
-@beartype_after_post_init
-@dataclass(slots=True, frozen=True)
-class SharedVehicleOperatorConfig:
-    RECHARGE_THRESHOLD: float
-    CHARGING_STATION_POWER: float
-    NUMBER_OF_BASE_REGIONS: int
-    NUMBER_OF_SERVICE_WORKERS: int
-    BASE_CAPACITY: int
-    OPERATIONS_START: int
-    OPERATIONS_DURATION: int
-    VEHICLE_RELOCATION_VELOCITY: float
-    BASE_REGIONS: list[str]
+class OperationsConfig(ConfigBaseModel):
+    """Configuration for operations parameters."""
 
-    N_VEHICLES: dict[VehicleMode, int]
+    OPERATIONS_TYPE: type[Operations]
 
-    def __post_init__(self) -> None:
-        # clamp to number of base regions
-        object.__setattr__(
-            self, "BASE_REGIONS", self.BASE_REGIONS[: self.NUMBER_OF_BASE_REGIONS]
-        )
+    OPERATIONS_START: int | None = Field(ge=0, default=None)
+    OPERATIONS_DURATION: int | None = Field(gt=0, default=None)
+    TIME_BETWEEN_OPERATIONS: int | None = Field(gt=0, default=None)
 
-        # convert km/h to m/s
-        object.__setattr__(
-            self,
-            "VEHICLE_RELOCATION_VELOCITY",
-            SimulationVelocityConverter.convert_kmh(self.VEHICLE_RELOCATION_VELOCITY),
-        )
+    RECHARGE_THRESHOLD: list[float] | float | None = Field(
+        default=None
+    )  # TODO: unify this between sv and rh
+    VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0, default=0)
 
-        # Convert strings in VEHICLES to enum
-        object.__setattr__(
-            self,
-            "N_VEHICLES",
-            {VehicleMode[str(mode)]: count for mode, count in self.N_VEHICLES.items()},
-        )
+    ALLOWED_QUEUE_SIZE: int | None = Field(default=0, ge=0)
 
-    @property
-    def AVAILABLE_VEHICLE_MODES(self) -> list[str]:
-        # return list of vehicle modes as strings, probably change this later once we have enums everywhere
-        return [mode.name for mode in self.N_VEHICLES.keys()]
+    PLANNING_LOOKAHEAD: int | None = Field(default=None, gt=0)
 
-    @property
-    def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
-        return list(self.N_VEHICLES.values())
+    BID_DEFAULT: float | None = Field(gt=0, default=None)
+    BID_DECAY: float | None = Field(gt=0, default=None)
+    RANDOM_OVERBIDDING: bool | None = Field(default=None)
+    OVERBID_PROB: float | None = Field(gt=0, default=None)
+    LOW_SOC_PENALTY: int | None = Field(gt=0, default=None)
+
+    @field_validator("VEHICLE_RELOCATION_VELOCITY", mode="after")
+    @classmethod
+    def convert_velocity(cls, v: float) -> float:
+        """Convert vehicle relocation velocity from km/h to m/s."""
+        return SimulationVelocityConverter.kmh_to_meters_per_minute(v)
 
 
-@beartype_after_post_init
-@dataclass(slots=True, frozen=True)
-class RideHailingOperatorConfig:
-    RECHARGE_THRESHOLD: list[float]
-    OPERATIONS_START: int
-    OPERATIONS_DURATION: int
-    VEHICLE_RELOCATION_VELOCITY: float
+class RideHailingOperationsConfig(OperationsConfig):
+    """Configuration for ride-hailing operations parameters."""
 
-    def __post_init__(self) -> None:
-        # convert velocity km/h to m/s
-        object.__setattr__(
-            self,
-            "VEHICLE_RELOCATION_VELOCITY",
-            SimulationVelocityConverter.convert_kmh(self.VEHICLE_RELOCATION_VELOCITY),
-        )
+    # OPERATOR_TYPE: type[Operator] =
+
+    DRIVER_PAYMENT_SHARE: float = Field(gt=0)
+    AV_PRICE_REDUCTION: float = Field(gt=0)
+    MAX_PICKUP_DISTANCE: int = Field(gt=0)
+    PRICE_ENTERING: float = Field(ge=0)
+    PRICE_PER_MINUTE: float = Field(ge=0)
+    PRICE_PER_KM: float = Field(ge=0)
+    MINIMUM_PRICE: float = Field(ge=0)
 
 
-@beartype
-@dataclass(slots=True, frozen=True)
-class TransitOperatorConfig:
-    PLANNING_LOOKAHEAD: int
-    MAX_BUSSES: int
+class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for ride-hailing base charging operations."""
 
 
-@beartype_after_post_init
-@dataclass(slots=True, frozen=True)
-class RideHailingGlobalConfig:
-    DRIVER_PAYMENT_SHARE: float
-    AV_PRICE_REDUCTION: float
-    MAX_PICKUP_DISTANCE: int
-
-    PRICE_ENTERING: float
-    PRICE_PER_MINUTE: float
-    PRICE_PER_KM: float
-    MINIMUM_PRICE: float
-
-    ALLOCATION: float
-
-    DISCOUNT_RATE: float
-    N_RIDE_HAILING_CARS: int
-    N_AUTONOMOUS_CARS: int
-    AVAILABLE_VEHICLE_MODES: list[str]
-
-    # Supply
-    EV_PENETRATION: float
-    AV_PENETRATION: float
-    RH_AVAILABILITY: list[float]
-
-    BID_DEFAULT: float
-    BID_DECAY: float
-    RANDOM_OVERBIDDING: bool
-    OVERBID_PROB: float
-
-    LOW_SOC_PENALTY: int
-
-    DRIVER_AVAILABILITY_VECTOR: list[int] = None  # type: ignore
-
-    def __post_init__(self) -> None:
-        # apply the discount rate to all prices
-        object.__setattr__(
-            self, "PRICE_ENTERING", self.PRICE_ENTERING * (1 - self.DISCOUNT_RATE)
-        )
-        object.__setattr__(
-            self, "PRICE_PER_MINUTE", self.PRICE_PER_MINUTE * (1 - self.DISCOUNT_RATE)
-        )
-        object.__setattr__(
-            self, "PRICE_PER_KM", self.PRICE_PER_KM * (1 - self.DISCOUNT_RATE)
-        )
-        object.__setattr__(
-            self, "MINIMUM_PRICE", self.MINIMUM_PRICE * (1 - self.DISCOUNT_RATE)
-        )
-        object.__setattr__(
-            self,
-            "DRIVER_AVAILABILITY_VECTOR",
-            [
-                round(float(x) * self.N_RIDE_HAILING_CARS * (1 - self.AV_PENETRATION))
-                for x in self.RH_AVAILABILITY
-            ],
-        )
-
-    @property
-    def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
-        # TODO: This has to be inferred instead of doing it this way. This is very error prone
-        return [self.N_AUTONOMOUS_CARS, self.N_RIDE_HAILING_CARS]
+class RideHailingGreedyChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for ride-hailing greedy charging operations."""
 
 
-@beartype_after_post_init
-@dataclass(slots=True, frozen=True)
-class SharedVehicleGlobalConfig:
-    VEHICLES: dict[VehicleMode, int] | None = None
-
-    def __post_init__(self) -> None:
-        # Calculate vehicles as totals from all operators
-        operators = Configuration().shared_vehicle_operators
-
-        if not operators:
-            object.__setattr__(self, "VEHICLES", {})
-        else:
-            available_modes = set()
-            for operator in operators:
-                available_modes.update(operator.N_VEHICLES.keys())
-
-            vehicles_by_mode = {}
-            for mode in available_modes:
-                vehicles_by_mode[mode] = sum(
-                    operator.N_VEHICLES.get(mode, 0) for operator in operators
-                )
-
-            object.__setattr__(self, "VEHICLES", vehicles_by_mode)
-
-    @property
-    def AVAILABLE_VEHICLE_MODES(self) -> list[VehicleMode]:
-        if not self.VEHICLES:
-            return []
-        else:
-            return list(self.VEHICLES.keys())
+class RideHailingUncoordinatedChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for shared, uncoordinated charging operations."""
 
 
-# @beartype
-# @dataclass(slots=True, frozen=True)
-# class TransitGlobalConfig:
-#     @property
-#     def AVAILABLE_VEHICLE_MODES(self) -> list[str]:
-#         # TODO: Use enum for this
-#         available_modes = []
-#         if self.N_BUSES_TOTAL > 0:
-#             available_modes.append("Bus")
-#         return available_modes
-
-#     @property
-#     def AVAILABLE_MODES_SUPPLY(self) -> list[int]:
-#         return [self.N_BUSES_TOTAL]
+class RideHailingSharedChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for shared, coordinated charging operations."""
 
 
-@beartype
-@dataclass(slots=True, frozen=True)
-class AuctionConfig:
-    AUCTION_START: int
-    AUCTION_END: int
+class RideHailingMPChargingOperationsConfig(RideHailingOperationsConfig):
+    """Configuration for ride-hailing multi-party charging operations."""
+
+    # TODO add base type once we have one
+    CHARGING_ALGORITHM_TYPE: type
 
 
-@beartype
-@dataclass(slots=True, frozen=True)
-class SharedChargingAuctionConfig:
-    AUCTION_INTERVAL: int
-    TIMESLOT_DURATION: int
-    AUCTION_LOOKAHEAD: int
+class IntegratedSharedMobilityOperationsConfig(OperationsConfig):
+    """Configuration for integrated shared mobility operations."""
+
+    OPERATIONS_TYPE: type[Operations] = IntegratedSharedMobilityOperations
+
+    NUMBER_OF_SERVICE_WORKERS: int = Field(gt=0)
+
+    CHARGING_STATION_POWER: float | None = Field(default=None)
+    NUMBER_OF_BASE_REGIONS: int | None = Field(default=None)
+    BASE_CAPACITY: int | None = Field(default=None)
+    BASE_REGIONS: list[str] | None = Field(default=None)
 
 
-@beartype
-@dataclass(slots=True, frozen=True)
-class DynamicRoutingConfig:
+class OperatorConfig(ConfigBaseModel):
+    """Configuration for operator parameters."""
+
+    # TODO: https://github.com/IS3UniCologne/urban-mobility-simulation/issues/211 should go here
+
+    # AVAILABLE_MODES: list[AutonomyType]
+    # AVAILABLE_MODES_SUPPLY: list[int]
+    OPERATOR_TYPE: type[Operator]
+
+    FLEET_CONFIG: FleetConfig
+
+    OPERATIONS_CONFIG: OperationsConfig
+    SEARCH_ENGINE_CONFIG: SearchEngineConfig
+    ALLOCATION_ENGINE_CONFIG: AllocationEngineConfig
+
+    CHARGING_INFRASTRUCTURE: ChargingInfrastructureConfig | None = Field(default=None)
+
+    # Public transit stuff
+    MAX_BUSSES: int | None = Field(default=None, gt=0)
+
+
+class RideHailingOperatorConfig(OperatorConfig):
+    """Configuration for ride-hailing operator parameters."""
+
+    OPERATOR_TYPE: type[Operator] = RideHailingOperator
+
+
+class SharedVehicleOperatorConfig(OperatorConfig):
+    """Configuration for shared vehicle operator parameters."""
+
+    OPERATOR_TYPE: type[Operator] = SharedMobilityOperator
+
+
+class SearchEngineConfig(ConfigBaseModel):
+    """Configuration for search engine parameters."""
+
+    SEARCH_ENGINE_TYPE: type[SearchEngine]
+
+
+class RideHailingSearchEngineConfig(SearchEngineConfig):
+    """Configuration for ride-hailing search engine parameters."""
+
+    SEARCH_ENGINE_TYPE: type[SearchEngine] = RideHailingSearchEngine
+
+
+class SharedVehicleSearchEngineConfig(SearchEngineConfig):
+    """Configuration for shared vehicle search engine parameters."""
+
+    SEARCH_ENGINE_TYPE: type[SearchEngine] = SharedVehicleSearchEngine
+
+
+class AllocationEngineConfig(ConfigBaseModel):
+    """Configuration for vehicle allocation engine parameters."""
+
+    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine]
+
+
+class RideHailingAllocationEngineConfig(AllocationEngineConfig):
+    """Configuration for ride-hailing vehicle allocation engine parameters."""
+
+    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine] = RideHailingAllocationEngine
+
+
+class SharedVehicleAllocationEngineConfig(AllocationEngineConfig):
+    """Configuration for shared vehicle allocation engine parameters."""
+
+    VEHICLE_ALLOCATION_ENGINE_TYPE: type[AllocationEngine] = (
+        SharedVehicleAllocationEngine
+    )
+
+
+class RideHailingGlobalConfig(ConfigBaseModel):
+    """Global configuration for ride-hailing parameters."""
+
+
+class AuctionConfig(ConfigBaseModel):
+    """Configuration for auction parameters."""
+
+    AUCTION_TYPE: type[Auction]
+
+    AUCTION_START: int = Field(ge=0)
+    AUCTION_END: int = Field(gt=0)
+
+
+class SharedChargingAuctionConfig(AuctionConfig):
+    """Configuration for shared charging auction parameters."""
+
+    AUCTION_INTERVAL: int = Field(gt=0)
+    TIMESLOT_DURATION: int = Field(gt=0)
+    AUCTION_LOOKAHEAD: int = Field(ge=0)
+
+
+class DynamicRoutingConfig(ConfigBaseModel):
+    """Configuration for dynamic routing parameters."""
+
     ACTION_SPACE: list[str]
     ACTION_SPACE_RESOLUTION: int
     CORRIDOR_PATH: str
@@ -572,9 +581,9 @@ class DynamicRoutingConfig:
     TIMELIMIT: float
 
 
-@beartype
-@dataclass(slots=True, frozen=True)
-class DynamicCheckpointRoutingConfig:
+class DynamicCheckpointRoutingConfig(ConfigBaseModel):
+    """Configuration for dynamic checkpoint routing parameters."""
+
     ACTION_SPACE: list[str]
     ACTION_SPACE_RESOLUTION: int
     CHECKPOINTS: list[int]
@@ -587,9 +596,9 @@ class DynamicCheckpointRoutingConfig:
     PERIODIC_TESTING: int
 
 
-@beartype_after_post_init
-@dataclass(slots=True, frozen=True)
-class DQNConfig:
+class DQNConfig(ConfigBaseModel):
+    """Configuration for DQN parameters."""
+
     LR_DECAY: bool
     LR_DECAY_STEPS: int
     DQN_LAYERS: tuple[int, int]
@@ -609,181 +618,402 @@ class DQNConfig:
     BATCHSIZE: int
     GAMMA: float
 
-    def __post_init__(self) -> None:
-        # evaluate DQN_LAYERS string to tuple
-        if isinstance(self.DQN_LAYERS, str):
-            self.DQN_LAYERS = ast.literal_eval(self.DQN_LAYERS)
+
+def _patch_path_city_fields(
+    path_data: dict[str, str | list[str]], city: str
+) -> dict[str, str | list[str]]:
+    """Replace {city} in all string fields of path_data with the given city name."""
+    patched = path_data.copy()
+    for k, v in patched.items():
+        if isinstance(v, str) and "{city}" in v:
+            patched[k] = v.format(city=city)
+    if patched.get("PATH_DEMAND_MODIFIERS"):
+        patched["PATH_DEMAND_MODIFIERS"] = [
+            s.format(city=city) for s in patched["PATH_DEMAND_MODIFIERS"]
+        ]
+    return patched
 
 
-class Configuration(metaclass=Singleton):
-    # There is only one instance of this class.
-    def __init__(self) -> None:
-        if (
-            len(sys.argv) >= 2
-            and sys.argv[1].endswith(".toml")
-            and os.path.isfile(sys.argv[1])
-        ):
-            config_file = sys.argv[1]
-        else:
-            config_file = "resources/configurations/config_template.toml"
+class Configuration:
+    """
+    Configuration class for simulation parameters.
+
+    Lazily loads and validates each configuration section only when accessed.
+    Preserves type checking and IDE auto-completion for each section property.
+    """
+
+    def __init__(self, experiment_dir: str | Path) -> None:
+        base = Path(experiment_dir)
+        if not base.is_dir():
+            raise NotADirectoryError(f"Expected a directory: {base}")
+
+        config_file = base / "config.toml"
+        if not config_file.exists():
+            raise FileNotFoundError(f'Could not find "config.toml" in {base}')
+
         with open(config_file, "rb") as f:
-            self._config_data = tomllib.load(f)  # type: ignore
-        self._lazy_objects = {}  # lazy loaded objects are stored here
+            data = tomllib.load(f)
 
-    @staticmethod
-    def _convert_types(params: dict, config_type: type) -> dict:
-        """Converts the types of the parameters in the dictionary to the types specified in the dataclass."""
-        for field in fields(config_type):
-            # cast int to float where applicable
-            if field.type == float and field.name in params:
-                if isinstance(params[field.name], int):
-                    params[field.name] = float(params[field.name])
-        return params
+        self._data = {k.lower(): v for k, v in data.items()}
+        self._cache: dict[str, object] = {}
 
-    def _get_lazy_config(
-        self, name: str, config_type: type, is_dict: bool = False
-    ) -> Any:  # noqa: ANN401
-        """
-        This method will lazily instantiate and return the config object from the config file.
-        If the object has already been instantiated, it will return the cached object.
-        Args:
-            name (str): Config name, should be lower case equivalent to the toml table name (e.g. "world").
-            type (type): Type of the Config object.
-            is_dict (bool, optional): Set to true for nested dictionaries (e.g. vehicles). Defaults to False.
+        # Eagerly load world and path so we can patch path fields
+        world_config = WorldConfig.model_validate(self._data["world"])
+        self._cache["world"] = world_config
+        city = world_config.CITY
+        patched_path = _patch_path_city_fields(self._data["path"], city)
+        self._cache["path"] = PathConfig.model_validate(patched_path)
 
-        Returns:
-            _type_: Cached Config Object.
-        """
-        if name not in self._lazy_objects:
-            params = self._config_data.get(name.upper(), None)
-            if params is None:
-                self._lazy_objects[name] = None
-            elif is_dict:
-                self._lazy_objects[name] = {
-                    k: config_type(**self._convert_types(v, config_type))
-                    for k, v in params.items()
-                }
-            elif isinstance(params, list):
-                self._lazy_objects[name] = [
-                    config_type(**self._convert_types(param, config_type))
-                    for param in params
-                ]
-            else:
-                self._lazy_objects[name] = config_type(
-                    **self._convert_types(params, config_type)
-                )
-        return self._lazy_objects[name]
+        # Load components that are configured as Python modules
+        self._load_config_from_py(base)
+
+    def _get_section(self, section: str, model: type[T]) -> T:
+        if section in self._cache:
+            return cast("T", self._cache[section])
+        if section not in self._data:
+            raise AttributeError(f"Config section '{section}' not found")
+        try:
+            validated_model = model.model_validate(self._data[section])
+            self._cache[section] = validated_model
+            return cast("T", validated_model)
+        except ValidationError as e:
+            raise ValueError(
+                f"Config validation error in section '{section}': {e}"
+            ) from e  # Preserve the exception chain
+        except Exception as e:
+            raise ValueError(
+                f"Unexpected error validating section '{section}': {e}"
+            ) from e
+
+    def _get_section_list(self, section: str, model: type[T]) -> list[T]:
+        """Get a section that contains a list of items."""
+        if section in self._cache:
+            return self._cache[section]
+
+        items = self._data.get(section)
+        if items is None:
+            result = []
+        else:
+            result = [model.model_validate(item) for item in items]
+
+        self._cache[section] = result
+        return result
+
+    def _get_section_dict(
+        self, section: str, model: type[T], allow_none: bool = False
+    ) -> dict[str, T] | None:
+        """Get a section that contains a dictionary of items."""
+        if section in self._cache:
+            return self._cache[section]
+
+        items = self._data.get(section)
+        if items is None:
+            result = None if allow_none else {}
+        else:
+            result = {k: model.model_validate(v) for k, v in items.items()}
+
+        self._cache[section] = result
+        return result
 
     @property
     def settings(self) -> SettingsConfig:
-        return self._get_lazy_config("settings", SettingsConfig)
+        """
+        Get the settings configuration section.
+
+        Returns
+        -------
+        SettingsConfig
+            The settings configuration section.
+        """
+        return self._get_section("settings", SettingsConfig)
 
     @property
     def experiment_management(self) -> ExperimentManagementConfig:
-        return self._get_lazy_config(
-            "experiment_management", ExperimentManagementConfig
-        )
+        """
+        Get the experiment management configuration section.
+
+        Returns
+        -------
+        ExperimentManagementConfig
+            The experiment management configuration section.
+        """
+        return self._get_section("experiment_management", ExperimentManagementConfig)
 
     @property
     def random_manager(self) -> RandomManagerConfig:
-        return self._get_lazy_config("random_manager", RandomManagerConfig)
+        """
+        Get the random manager configuration section.
+
+        Returns
+        -------
+        RandomManagerConfig
+            The random manager configuration section.
+        """
+        return self._get_section("random_manager", RandomManagerConfig)
 
     @property
     def world(self) -> WorldConfig:
-        return self._get_lazy_config("world", WorldConfig)
+        """
+        Get the world configuration section.
+
+        Returns
+        -------
+        WorldConfig
+            The world configuration section.
+        """
+        return self._get_section("world", WorldConfig)
 
     @property
     def path(self) -> PathConfig:
-        return self._get_lazy_config("path", PathConfig)
+        """
+        Get the path configuration section.
+
+        Returns
+        -------
+        PathConfig
+            The path configuration section.
+        """
+        return self._get_section("path", PathConfig)
 
     @property
     def population(self) -> PopulationConfig:
-        return self._get_lazy_config("population", PopulationConfig)
+        """
+        Get the population configuration section.
+
+        Returns
+        -------
+        PopulationConfig
+            The population configuration section.
+        """
+        return self._get_section("population", PopulationConfig)
 
     @property
-    def user(self) -> UserConfig:
-        return self._get_lazy_config("user", UserConfig)
+    def charging_infrastructures(self) -> list[ChargingInfrastructureConfig]:
+        """
+        Get the charging infrastructure configuration section.
 
-    @property
-    def mode_choice_model(self) -> ModeChoiceModelConfig:
-        return self._get_lazy_config("mode_choice_model", ModeChoiceModelConfig)
-
-    @property
-    def charging_infrastructure(self) -> ChargingInfrastructureConfig:
-        return self._get_lazy_config(
+        Returns
+        -------
+        ChargingInfrastructureConfig
+            The charging infrastructure configuration section.
+        """
+        return self._get_section_list(
             "charging_infrastructure", ChargingInfrastructureConfig
         )
 
     @property
-    def shared_vehicle_operators(self) -> list[SharedVehicleOperatorConfig]:
-        return self._get_lazy_config(
-            "shared_vehicle_operator", SharedVehicleOperatorConfig
-        )
+    def operators(self) -> list[OperatorConfig]:
+        """
+        Get the operators configuration section.
 
-    @property
-    def ride_hailing_operators(self) -> list[RideHailingOperatorConfig]:
-        return self._get_lazy_config("ride_hailing_operator", RideHailingOperatorConfig)
-
-    @property
-    def transit_operators(self) -> list[TransitOperatorConfig]:
-        return self._get_lazy_config("transit_operator", TransitOperatorConfig)
-
-    @property
-    def ride_hailing_global(self) -> RideHailingGlobalConfig:
-        return self._get_lazy_config("ride_hailing_global", RideHailingGlobalConfig)
-
-    @property
-    def shared_vehicle_global(self) -> SharedVehicleGlobalConfig:
-        return self._get_lazy_config("shared_vehicle_global", SharedVehicleGlobalConfig)
+        Returns
+        -------
+        list[OperatorConfig]
+            The operators configuration section.
+        """
+        return self._get_section_list("operator", OperatorConfig)
 
     @property
     def ride_hailing_vehicles(self) -> dict[str, VehicleConfig]:
-        return self._get_lazy_config(
-            "ride_hailing_vehicles", VehicleConfig, is_dict=True
-        )
+        """
+        Get the ride hailing vehicles configuration section.
+
+        Returns
+        -------
+        dict[str, VehicleConfig]
+            The ride hailing vehicles configuration section.
+        """
+        return self._get_section_dict("ride_hailing_vehicles", VehicleConfig)
 
     @property
-    def shared_vehicles(self) -> dict[VehicleMode, VehicleConfig]:
-        """Dictionary containing VehicleConfig objects for shared vehicles.
-
-        Returns:
-            Optional[dict[str, VehicleConfig]]: _description_
+    def shared_vehicles(self) -> dict[VehicleType, VehicleConfig]:
         """
-        config = self._get_lazy_config("shared_vehicles", VehicleConfig, is_dict=True)
+        Get the shared vehicles configuration section.
 
-        return {VehicleMode[key]: value for key, value in config.items()}
+        Returns
+        -------
+        dict[VehicleType, VehicleConfig]
+            The shared vehicles configuration section.
+        """
+        section_name = "shared_vehicles"
+        if section_name in self._cache:
+            return cast("dict[VehicleType, VehicleConfig]", self._cache[section_name])
+
+        items = self._data.get(section_name)
+        if items is None:
+            result = {}
+        else:
+            result = {
+                VehicleType(k): VehicleConfig.model_validate(v)
+                for k, v in items.items()
+            }
+
+        self._cache[section_name] = result
+        return result
 
     @property
     def transit_vehicles(self) -> dict[str, VehicleConfig] | None:
-        """Dictionary containing VehicleConfig objects for shared vehicles.
+        """Get the transit vehicles configuration section.
 
-        Returns:
-            Optional[dict[str, VehicleConfig]]: _description_
+        Returns
+        -------
+        dict[str, VehicleConfig] | None
+            The transit vehicles configuration section, or None if not defined.
         """
-        return self._get_lazy_config("transit_vehicles", VehicleConfig, is_dict=True)
+        return self._get_section_dict(
+            "transit_vehicles", VehicleConfig, allow_none=True
+        )
+
+    @property
+    def ride_hailing_global(self) -> RideHailingGlobalConfig:
+        """Get the global ride hailing configuration section.
+
+        Returns
+        -------
+        RideHailingGlobalConfig
+            The global ride hailing configuration section.
+        """
+        return self._get_section("ride_hailing_global", RideHailingGlobalConfig)
 
     @property
     def auction(self) -> AuctionConfig:
-        return self._get_lazy_config("auction", AuctionConfig)
+        """Get the auction configuration section.
+
+        Returns
+        -------
+        AuctionConfig
+            The auction configuration section.
+        """
+        return self._get_section("auction", AuctionConfig)
 
     @property
-    def shared_charging_auction(self) -> SharedChargingAuctionConfig:
-        return self._get_lazy_config(
-            "shared_charging_auction", SharedChargingAuctionConfig
-        )
+    def shared_charging_auction(self) -> SharedChargingAuctionConfig | None:
+        """Get the shared charging auction configuration section.
 
-    ##### Experiment Specific Configurations #####
+        Returns
+        -------
+        SharedChargingAuctionConfig | None
+            The shared charging auction configuration section, or None if not defined.
+        """
+        section = "shared_charging_auction"
+        if section in self._cache:
+            return cast("SharedChargingAuctionConfig | None", self._cache[section])
+        if section not in self._data:
+            self._cache[section] = None
+            return None
+        return self._get_section(section, SharedChargingAuctionConfig)
 
     @property
     def dynamic_routing(self) -> DynamicRoutingConfig:
-        return self._get_lazy_config("dynamic_routing", DynamicRoutingConfig)
+        """Get the dynamic routing configuration section.
+
+        Returns
+        -------
+        DynamicRoutingConfig
+            The dynamic routing configuration section.
+        """
+        return self._get_section("dynamic_routing", DynamicRoutingConfig)
 
     @property
     def dynamic_checkpoint_routing(self) -> DynamicCheckpointRoutingConfig:
-        return self._get_lazy_config(
+        """Get the dynamic checkpoint routing configuration section.
+
+        Returns
+        -------
+        DynamicCheckpointRoutingConfig
+            The dynamic checkpoint routing configuration section.
+        """
+        return self._get_section(
             "dynamic_checkpoint_routing", DynamicCheckpointRoutingConfig
         )
 
     @property
     def dqn(self) -> DQNConfig:
-        return self._get_lazy_config("dqn", DQNConfig)
+        """Get the DQN configuration section.
+
+        Returns
+        -------
+        DQNConfig
+            The DQN configuration section.
+        """
+        return self._get_section("dqn", DQNConfig)
+
+    def _load_config_from_py(self, base_path: Path) -> None:
+        """Load configuration from Python module files."""
+        # Define files to load: (filename, required)
+        config_files = [("operators.py", True), ("population.py", True)]
+
+        # Map model types to their config section names
+        model_to_section: dict[type[BaseModel], str] = {
+            OperatorConfig: "operator",
+            ChargingInfrastructureConfig: "charging_infrastructure",
+            PopulationConfig: "population",
+        }
+        model_classes = tuple(model_to_section.keys())
+
+        # Collect instances from all files
+        section_buckets: dict[str, list[BaseModel]] = {
+            section: [] for section in set(model_to_section.values())
+        }
+
+        for filename, required in config_files:
+            file_path = base_path / filename
+            if not file_path.exists():
+                if required:
+                    raise FileNotFoundError(
+                        f'Could not find required configuration file "{filename}" in {base_path}'
+                    )
+                continue
+
+            module = self._import_module_file(file_path)
+
+            # Collect config instances from this module
+            for name, value in vars(module).items():
+                if name.startswith("_"):
+                    continue
+                self._collect_config_instance(
+                    value, model_classes, model_to_section, section_buckets
+                )
+
+        # Store collected instances in cache
+        self._cache["operator"] = section_buckets.get("operator", [])
+        self._cache["charging_infrastructure"] = section_buckets.get(
+            "charging_infrastructure", []
+        )
+        population_configs = section_buckets.get("population", [])
+        if len(population_configs) == 0:
+            raise ValueError("No PopulationConfig instance found in population.py. ")
+        if len(population_configs) > 1:
+            raise ValueError(
+                "Multiple PopulationConfig instances found in population.py. "
+            )
+        self._cache["population"] = population_configs[0]
+
+    def _collect_config_instance(
+        self,
+        obj: object,
+        model_classes: tuple[type[BaseModel], ...],
+        model_to_section: dict[type[BaseModel], str],
+        section_buckets: dict[str, list[BaseModel]],
+    ) -> None:
+        """Recursively collect config instances from an object."""
+        if isinstance(obj, model_classes):
+            for cls, section in model_to_section.items():
+                if isinstance(obj, cls):
+                    section_buckets[section].append(obj)
+                    return
+        # Recurse into containers
+        if isinstance(obj, list | tuple):
+            for elem in obj:
+                self._collect_config_instance(
+                    elem, model_classes, model_to_section, section_buckets
+                )
+
+    def _import_module_file(self, file_path: Path) -> ModuleType:
+        """Import a module from a filesystem .py file path."""
+        spec = importlib.util.spec_from_file_location("ums_py_config", file_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not load spec for {file_path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module

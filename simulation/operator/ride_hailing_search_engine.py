@@ -1,18 +1,34 @@
-from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.configuration.enums import VehicleState
+from __future__ import annotations  # noqa: D100
+
+from typing import TYPE_CHECKING, cast
+
+from simulation.helper.vehicle_states import VehicleStates
+from simulation.operator.data_transfer_object.transportation_alternative import (
+    TransportationAlternative,
+)
+from simulation.operator.ride_hailing_fleet import RideHailingFleet
+from simulation.operator.search_engine import SearchEngine, SearchEngineDependencies
+
+if TYPE_CHECKING:
+    from simulation.helper.configuration.configuration import (
+        RideHailingOperationsConfig,
+    )
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
+    from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
+    from simulation.vehicle.vehicle import Vehicle
+
+from simulation.helper.enums import AutonomyType
 from simulation.infrastructure.route import Route
 from simulation.operator.data_transfer_object.transportation_alternative_browser import (
     TransportationAlternativeBrowser,
 )
-from simulation.operator.data_transfer_object.transportation_alternative_ridehailing import (
-    TransportationAlternativeRideHailing,
-)
-from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.mixed_ride_hailing_fleet import MixedRideHailingFleet
-from simulation.tasks.transportation_search_task import TransportationSearchTask
 
 
-class RideHailingSearchEngine(SearchEngineInterface):
+class RideHailingSearchEngine(SearchEngine):
+    """Search engine for ride-hailing vehicles."""
+
     __slots__ = (
         "_AV_price_reduction",
         "_env",
@@ -21,65 +37,79 @@ class RideHailingSearchEngine(SearchEngineInterface):
         "_price_entering",
         "_price_per_km",
         "_price_per_minute",
+        "_sim",
     )
 
-    def __init__(self, env):  # noqa: ANN001, ANN204
-        self._env = env
-        self._fleet: MixedRideHailingFleet = None
+    def __init__(self, deps: SearchEngineDependencies) -> None:
+        super().__init__(deps)
+        self._sim = deps.sim
+        self._env = deps.sim.env
 
-        config = Configuration()
+        ops_config = cast(
+            "RideHailingOperationsConfig", deps.operator.operations.config
+        )
 
-        self._AV_price_reduction = config.ride_hailing_global.AV_PRICE_REDUCTION
+        if not isinstance(deps.operator.fleet, RideHailingFleet):
+            raise TypeError("Fleet must be of type RideHailingFleet")
 
-        self._price_entering = config.ride_hailing_global.PRICE_ENTERING
-        self._price_per_minute = config.ride_hailing_global.PRICE_PER_MINUTE
-        self._price_per_km = config.ride_hailing_global.PRICE_PER_KM
-        self._min_price = config.ride_hailing_global.MINIMUM_PRICE
+        self._fleet: RideHailingFleet = deps.operator.fleet
+
+        self._AV_price_reduction = ops_config.AV_PRICE_REDUCTION
+        self._price_entering = ops_config.PRICE_ENTERING
+        self._price_per_minute = ops_config.PRICE_PER_MINUTE
+        self._price_per_km = ops_config.PRICE_PER_KM
+        self._min_price = ops_config.MINIMUM_PRICE
 
     def search_for_transportation_alternatives(
-        self, vehicle_search_task: TransportationSearchTask
+        self, transport_task: TransportRequest
     ) -> TransportationAlternativeBrowser:
-        """
-        Spot all available vehicles to user
-        :param vehicle_search_task:
+        """Spot all available vehicles to user.
+
+        :param transport_task:
         :return: Available Alternatives along with auxilary information regarding trip
         """
         browser = TransportationAlternativeBrowser()
 
         # hexagon_origin = vehicle_search_task.agent_position.get_default_hexagon()
 
-        origin = vehicle_search_task.transport_task.origin
+        origin = transport_task.origin
+        destination = transport_task.destination
 
-        cars_in_area = self._fleet.get_available_vehicles_to_user(origin)
-
-        destination = vehicle_search_task.transport_task.destination
+        cars_in_area = self._fleet.get_available_vehicles_to_user(origin, destination)
 
         # Info about the route - if we distinguish between car/scooter and ks/bike routes, move to for loop
         # Calc Route
-        route = Route(origin, destination)
+        route = Route(origin=origin, destination=destination)
 
         # Calc Distance
         distance = route.distance  # Euclidean Distance
 
+        # TODO: check for more efficient way of doing this
         # Add all available cars to alternative browser
         AVs_in_area = [
-            car for car in cars_in_area if car.__class__.__name__ == "RideHailingAV"
+            car for car in cars_in_area if car.autonomy_type == AutonomyType.AUTONOMOUS
         ]
-        CVs_in_area = [
-            car for car in cars_in_area if car.__class__.__name__ == "RideHailingCar"
+        CVs_in_area: list[RideHailingVehicle] = [
+            car
+            for car in cars_in_area
+            if car.autonomy_type == AutonomyType.HUMAN_DRIVEN
         ]
         # if vehicle_search_task.transport_task.viable_vehicle_modes['RideHailingCar'] == 1:
         for car in CVs_in_area:
             # Calc waiting time
-            if car.state == VehicleState.PARKING:
+            if car.is_reserved:
+                continue
+
+            if car.state is VehicleStates.STANDBY:
                 route_to_pick_up = Route(car.position, origin)
             else:
-                route_to_pick_up = Route(car.current_task.destination, origin)
-
-            distance_to_pick_up = route_to_pick_up.distance
+                if car.current_request is None:
+                    self._logger.warning("search found non-parking car without request")
+                    continue
+                route_to_pick_up = Route(car.current_request.destination, origin)
 
             # Calc Duration
-            trip_duration = distance / car.velocity
+            trip_duration = car.calculate_travel_time(distance)
 
             # Calc Price
             price = max(
@@ -89,33 +119,42 @@ class RideHailingSearchEngine(SearchEngineInterface):
                 self._min_price,
             )
 
-            # Put together
-            transportation_alternative = TransportationAlternativeRideHailing(
-                car, route, price, trip_duration, distance, 3, route_to_pick_up
+            # calculate pick up time
+            pickup_time = self._calculate_pickup_time(
+                vehicle=car, route_to_pick_up=route_to_pick_up
             )
 
-            total_distance = distance + distance_to_pick_up
-            if car.has_enough_state_of_charge(total_distance) and car.state in [
-                VehicleState.PARKING,
-                VehicleState.DRIVING,
-            ]:
-                browser.add_transportation_alternative(transportation_alternative)
+            # Put together
+            transportation_alternative = TransportationAlternative(
+                vehicle=car,
+                route=route,
+                price=price,
+                duration=trip_duration,
+                distance=distance,
+                convenience=3,
+                operator=self.operator,
+                route_to_pickup=route_to_pick_up,
+                est_pickup_time=pickup_time,
+            )
+
+            browser.add_transportation_alternative(transportation_alternative)
 
         # if vehicle_search_task.transport_task.viable_vehicle_modes['AutonomousCar'] == 1:
         for car in AVs_in_area:
             # Calc waiting time
-            if car.state == VehicleState.PARKING:
+            if car.state is VehicleStates.STANDBY:
                 route_to_pick_up = Route(car.position, origin)
             else:
-                route_to_pick_up = Route(car.current_task.destination, origin)
-
-            distance_to_pick_up = route_to_pick_up.distance
+                if car.current_request is None:
+                    # This should not happen, but just in case
+                    self._logger.warning("search found non-parking car without request")
+                    continue
+                route_to_pick_up = Route(car.current_request.destination, origin)
 
             # Calc Duration
-            trip_duration = distance / car.velocity
+            trip_duration = car.calculate_travel_time(distance)
 
             # Calc Price
-            # TODO: update the price for ride-hailing
             price = (
                 max(
                     self._price_entering
@@ -126,16 +165,56 @@ class RideHailingSearchEngine(SearchEngineInterface):
                 * self._AV_price_reduction
             )
 
-            # Put together
-            transportation_alternative = TransportationAlternativeRideHailing(
-                car, route, price, trip_duration, distance, 3, route_to_pick_up
+            pickup_time = self._calculate_pickup_time(
+                vehicle=car, route_to_pick_up=route_to_pick_up
             )
 
-            total_distance = distance + distance_to_pick_up
-            if car.has_enough_state_of_charge(total_distance) and car.state in [
-                VehicleState.PARKING,
-                VehicleState.DRIVING,
-            ]:
-                browser.add_transportation_alternative(transportation_alternative)
+            # Put together
+            transportation_alternative = TransportationAlternative(
+                vehicle=car,
+                route=route,
+                price=price,
+                duration=trip_duration,
+                distance=distance,
+                convenience=3,
+                operator=self.operator,
+                route_to_pickup=route_to_pick_up,
+                est_pickup_time=pickup_time,
+            )
+
+            browser.add_transportation_alternative(transportation_alternative)
 
         return browser
+
+    def _calculate_pickup_time(
+        self, vehicle: Vehicle, route_to_pick_up: Route
+    ) -> float:
+        """
+        Calculate the estimated pickup time for a vehicle.
+
+        If the vehicle is currently parking, the pickup time is calculated as the time it takes to drive to the pickup location plus the current simulation time.
+        If the vehicle is currently driving, the pickup time is calculated as the time it takes to drive to the pickup location plus the estimated completion time of the vehicle's current task.
+
+        Parameters
+        ----------
+        vehicle : Vehicle
+            The vehicle for which to calculate the pickup time.
+        route_to_pick_up : Route
+            The route from the vehicle's current position to the pickup location.
+
+        Returns
+        -------
+        float
+            The estimated pickup time in simulation time units (absolute).
+        """
+        if vehicle.state is VehicleStates.STANDBY:
+            return (
+                vehicle.calculate_travel_time(route_to_pick_up.distance)
+                + self._sim.time
+            )
+
+        elif vehicle.is_in_use:
+            return (
+                vehicle.calculate_travel_time(route_to_pick_up.distance)
+                + vehicle.estimated_completion_time
+            )

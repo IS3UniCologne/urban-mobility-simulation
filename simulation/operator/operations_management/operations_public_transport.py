@@ -1,78 +1,75 @@
-import logging
+from __future__ import annotations  # noqa: D100
 
-import pandas as pd
+from typing import TYPE_CHECKING
+
 import simpy
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.configuration.configuration import Configuration
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    import pandas as pd
+    from simpy import Event
+
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import OperatorConfig
+    from simulation.operator.public_transport_vehicle_fleet import (
+        PublicTransportVehicleFleet,
+    )
+
 from simulation.helper.time import SimulationTime
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
 from simulation.infrastructure.transit_network.stop import Stop
-from simulation.operator.operations_management.operations import OperationsInterface
-from simulation.operator.public_transport_vehicle_fleet import (
-    PublicTransportVehicleFleet,
-)
-from simulation.world.world import World
-from tracking.tracking import Tracking
+from simulation.operator.interface.operations_interface import OperationsInterface
 
 
-class OperationsPublicTransport(OperationsInterface):
+# TODO: rename this to ____Operations like the others ?
+class OperationsPublicTransport(OperationsInterface):  # noqa: D101
     __slots__ = (
         "_bus_velocity",
         "_config",
         "_fleet",
-        "_geodesic_env",
+        "_geo_env",
         "_operator_config",
+        "_sim",
         "_time",
         "_timetable",
-        "_tracking",
         "_walking_speed",
-        "_world",
     )
 
-    def __init__(self, env, timetable, fleet: PublicTransportVehicleFleet):  # noqa: ANN001, ANN204
-        super(OperationsPublicTransport, self).__init__(env=env)  # noqa: UP008
-        self._env = env
+    def __init__(
+        self,
+        sim: SimulationContext,
+        timetable: object,
+        fleet: PublicTransportVehicleFleet,
+        operator_config: OperatorConfig,
+    ) -> None:
+        super().__init__(sim=sim)
+
+        self._geo_env = sim.geo_env
+        self._sim = sim
+        self._config = sim.config
         self._timetable = timetable
-        self._time = SimulationTime(env)
+        self._time = SimulationTime(self._env)
         self._fleet = fleet
-
-        # Config
-        self._config = Configuration()
-        self._operator_config = self._config.transit_operators[
-            0
-        ]  # TODO: This should not be hardcoded, pass an operator object instead
-        # Environment
-        self._geodesic_env = GeodesicEnvironment.getInstance()
-        self._world = (
-            None  # defer loading to run process, otherwise circular dependency
-        )
-        # Tracking
-        self._tracking = (
-            None  # defer loading to run process, otherwise circular dependency
-        )
+        self._operator_config = operator_config
         self._walking_speed = self._config.user.WALKING_SPEED
-        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY
+        self._bus_velocity = self._config.transit_vehicles["Bus"].VELOCITY_KMH
 
-    def execute(self):  # noqa: ANN201
+    def execute(self) -> Generator[Event, None, None]:
         """
         TransitOperator Lifecycle
-        """
-        self._world = World.instance()
-        self._tracking = Tracking.instance()
-
+        """  # noqa: D200, D400
         while True:
             try:
-                logging.debug(
-                    "TransitOperator is at time %s",
-                    self._time.now_as_str(),
-                    extra={"clazz": self.__class__.__name__, "oid": ""},
+                self.logger.debug(
+                    "TransitOperator is at time %s", self._time.now_as_str()
                 )
 
                 if len(self._fleet._busses) < self._operator_config.MAX_BUSSES:  # noqa: SLF001
                     trips = self._timetable.next_trips(
-                        self._time, self._operator_config.PLANNING_LOOKAHEAD
+                        self._time,
+                        self._operator_config.OPERATIONS_CONFIG.PLANNING_LOOKAHEAD,
                     )
 
                     if trips:  # non-empty list is True
@@ -106,6 +103,7 @@ class OperationsPublicTransport(OperationsInterface):
         destination_row = trip.iloc[-1]
 
         origin = Stop(
+            self._sim,
             0,
             origin_row["stop_id"],
             origin_row["stop_lat"],
@@ -114,6 +112,7 @@ class OperationsPublicTransport(OperationsInterface):
             origin_row["dep_next_day"],
         )
         destination = Stop(
+            self._sim,
             len(trip.index) - 1,
             destination_row["stop_id"],
             destination_row["stop_lat"],
@@ -135,6 +134,7 @@ class OperationsPublicTransport(OperationsInterface):
         # skip origin as it is already added
         for stop_id, row in enumerate(trip[1:].itertuples(index=False), start=1):
             stop = Stop(
+                self._sim,
                 stop_id,
                 row.stop_id,
                 row.stop_lat,

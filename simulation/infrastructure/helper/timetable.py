@@ -1,32 +1,45 @@
+from __future__ import annotations  # noqa: D100
+
 import datetime
-import logging
+from typing import TYPE_CHECKING
 
 import geopandas as gpd
 import pandas as pd
 
-from simulation.environment.geodesic_environment import GeodesicEnvironment
 from simulation.environment.geodesic_position import GeodesicPosition
+from simulation.helper.exceptions import AmbiguousTripException
+from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
-from simulation.tasks.transportation_search_task import TransportationSearchTask
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.operator.data_transfer_object.transport_request import (
+        TransportRequest,
+    )
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from simulation.context.simulation_context import SimulationContext
 
 
-class AmbiguousTripException(Exception):
-    pass
+class Timetable(SimulationBase):  # noqa: D101
+    __slots__ = ("_data_path", "_geo_env", "_sim", "_trips")
 
-
-class Timetable:
-    __slots__ = ("_data_path", "_geo_env", "_trips")
-
-    def __init__(self, data_path: str) -> None:
+    def __init__(self, data_path: Path, sim: SimulationContext) -> None:
+        super().__init__(sim)
         self._data_path = data_path
-        self._trips: pd.DataFrame = None
-        self._geo_env: GeodesicEnvironment = GeodesicEnvironment.getInstance()
+        self._trips = None
+        self._geo_env = sim.geo_env
+        self._sim = sim
 
     @property
-    def trips(self) -> pd.DataFrame:
+    def trips(self) -> pd.DataFrame:  # noqa: D102
         return self._trips
 
-    def trip_by_id(self, trip_id: str) -> pd.DataFrame:
+    def trip_by_id(self, trip_id: str) -> pd.DataFrame:  # noqa: D102
         trip = self._trips[self._trips["trip_id"] == trip_id]
         trip = trip.sort_values(by="stop_sequence")
 
@@ -38,19 +51,15 @@ class Timetable:
 
         return trip
 
-    def import_timetable(self) -> None:
-        logging.debug(
-            "Importing GTFS data...",
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )
+    def import_timetable(self) -> None:  # noqa: D102
+        self.logger.debug("Importing GTFS data...")
 
         try:
             self._trips = pd.read_csv(self._data_path)
         except FileNotFoundError:
-            logging.error(
+            self.logger.error(
                 "%s does not exist, use Prepare_Transit_Data notebook to generate first.",
                 self._data_path,
-                extra={"clazz": self.__class__.__name__, "oid": ""},
             )
 
         self._trips = gpd.GeoDataFrame(
@@ -61,7 +70,7 @@ class Timetable:
         )
         self._trips.sort_values(by=["trip_id", "stop_sequence"], inplace=True)
 
-    def next_trips(self, time: SimulationTime, lookahead: int) -> list[str]:
+    def next_trips(self, time: SimulationTime, lookahead: int) -> list[str]:  # noqa: D102
         # look ahead 'lookahead' minutes, simulation time is in minutes
         # yield all trips that start (on this weekday) within the next lookahead minutes
         lookahead = int(lookahead)
@@ -96,7 +105,7 @@ class Timetable:
 
     def find_viable_trips(
         self,
-        transportation_search_task: TransportationSearchTask,
+        transport_task: TransportRequest,
         spatial_strategy: str = "hexagon",
         temporal_lookahead: int = 10,
     ) -> gpd.GeoDataFrame:
@@ -106,8 +115,8 @@ class Timetable:
         :param spatial_strategy:
         :param temporal_lookahead: How many minutes to look into the future for latest possible departure (currently this does not account for walking time)
         :return:
-        """
-        search_time = transportation_search_task.transport_task.time
+        """  # noqa: D205, D400
+        search_time = transport_task.creation_time
         latest_departure = SimulationTimeConverter.as_str(
             search_time + temporal_lookahead
         )
@@ -118,9 +127,7 @@ class Timetable:
 
         # find viable stops in vicinity given a strategy, e.g. hexagon, euclidean distance, walking distance (street network), ...
         viable_trips = self._find_viable_stops(
-            viable_trips,
-            spatial_strategy,
-            transportation_search_task.transport_task.origin,
+            viable_trips, spatial_strategy, transport_task.origin
         )
 
         # calc walk distance and duration
@@ -128,8 +135,8 @@ class Timetable:
             # if stops in vicinity were found by hexagon, no distance has been calculated, use euclidean
             viable_trips["walk_dist"] = viable_trips.apply(
                 lambda x: (
-                    transportation_search_task.transport_task.origin
-                    >> GeodesicPosition(x["stop_lat"], x["stop_lon"])
+                    transport_task.origin
+                    >> GeodesicPosition(self._sim, x["stop_lat"], x["stop_lon"])
                 ),
                 axis=1,
             )

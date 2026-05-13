@@ -1,9 +1,10 @@
 """Unit tests for RandomManager class."""
 
+from unittest.mock import Mock
+
 import numpy as np
 import pytest
 
-from simulation.helper.configuration.configuration import Configuration
 from simulation.helper.random.random_manager import RandomManager
 
 
@@ -15,30 +16,21 @@ class TestRandomManager:
     def setup_method(self) -> None:
         """Set up test environment before each test method.
 
-        This fixture automatically runs before each test method to ensure
-        clean state and proper configuration setup.
+        We set up a mock simulation context with a mock configuration.
         """
-        # Reset configuration to default state
-        self.original_seed = Configuration().random_manager.SEED
-        self.original_component_seeds = (
-            Configuration().random_manager.COMPONENT_SEEDS.copy()
-        )
+        self.config = Mock()
+        self.config.random_manager = Mock()
+        self.config.random_manager.SEED = 42
+        self.config.random_manager.COMPONENT_SEEDS = {}
 
-    def teardown_method(self) -> None:
-        """Clean up after each test method.
-
-        Restores original configuration values to prevent test interference.
-        """
-        # Restore original configuration
-        object.__setattr__(Configuration().random_manager, "SEED", self.original_seed)
-        Configuration().random_manager.COMPONENT_SEEDS.clear()
-        Configuration().random_manager.COMPONENT_SEEDS.update(
-            self.original_component_seeds
-        )
+        self.sim = Mock()
+        self.sim.config = self.config
+        self.sim.uid_manager = Mock()
+        self.sim.uid_manager.generate_uid.return_value = (1, "RandomManager_1")
 
     def test_component_seed_generation(self) -> None:
         """Test that component seeds are generated consistently and uniquely."""
-        random_manager = RandomManager()
+        random_manager = RandomManager(self.sim)
 
         # Same component should get same seed
         seed1 = random_manager._generate_component_seed("test_component")
@@ -55,7 +47,7 @@ class TestRandomManager:
 
     def test_get_rng_default(self) -> None:
         """Test that get_rng returns the main RNG when no component is specified."""
-        random_manager = RandomManager()
+        random_manager = RandomManager(self.sim)
 
         # Check that default RNG is the main RNG
         assert random_manager.get_rng() is random_manager._main_rng
@@ -65,7 +57,7 @@ class TestRandomManager:
 
     def test_get_rng_component(self) -> None:
         """Test that get_rng creates and returns component-specific RNGs."""
-        random_manager = RandomManager()
+        random_manager = RandomManager(self.sim)
         component_name = "test_component"
 
         # Getting a component RNG should create a new one
@@ -80,9 +72,7 @@ class TestRandomManager:
 
     def test_rng_reproducibility(self) -> None:
         """Test that RNGs with the same seed produce the same sequence of numbers."""
-        random_manager = RandomManager()
-        object.__setattr__(Configuration().random_manager, "SEED", 42)
-        random_manager.reset_all_rng()
+        random_manager = RandomManager(self.sim)
 
         # Generate some random numbers
         numbers1 = [random_manager.uniform() for _ in range(10)]
@@ -92,13 +82,11 @@ class TestRandomManager:
         numbers2 = [random_manager.uniform() for _ in range(10)]
 
         # Should get exactly the same sequence
-        np.testing.assert_array_equal(numbers1, numbers2)
+        np.testing.assert_array_equal(np.array(numbers1), np.array(numbers2))
 
     def test_component_rng_reproducibility(self) -> None:
         """Test that component RNGs with the same seed produce the same sequence."""
-        random_manager = RandomManager()
-        object.__setattr__(Configuration().random_manager, "SEED", 42)
-        random_manager.reset_all_rng()
+        random_manager = RandomManager(self.sim)
 
         component = "test_component"
 
@@ -110,13 +98,11 @@ class TestRandomManager:
         numbers2 = [random_manager.uniform(component=component) for _ in range(10)]
 
         # Should get exactly the same sequence
-        np.testing.assert_array_equal(numbers1, numbers2)
+        np.testing.assert_array_equal(np.array(numbers1), np.array(numbers2))
 
     def test_different_components_different_sequences(self) -> None:
         """Test that different components get different random sequences."""
-        random_manager = RandomManager()
-        object.__setattr__(Configuration().random_manager, "SEED", 42)
-        random_manager.reset_all_rng()
+        random_manager = RandomManager(self.sim)
 
         # Generate numbers from two different components
         component1 = "component_1"
@@ -127,13 +113,11 @@ class TestRandomManager:
 
         # Should NOT be the same sequence
         with pytest.raises(AssertionError):
-            np.testing.assert_array_equal(numbers1, numbers2)
+            np.testing.assert_array_equal(np.array(numbers1), np.array(numbers2))
 
     def test_component_independence(self) -> None:
         """Test that component RNGs are independent of each other."""
-        random_manager = RandomManager()
-        object.__setattr__(Configuration().random_manager, "SEED", 42)
-        random_manager.reset_all_rng()
+        random_manager = RandomManager(self.sim)
 
         component1 = "component_1"
         component2 = "component_2"
@@ -159,14 +143,14 @@ class TestRandomManager:
 
         # The component1 sequence should be unaffected by component2 usage
         np.testing.assert_array_equal(
-            numbers1_before + numbers1_after, expected_numbers
+            np.array(numbers1_before + numbers1_after), np.array(expected_numbers)
         )
 
     def test_seed_zero_generates_random_seed(self) -> None:
         """Test that setting seed to zero generates a random seed."""
-        random_manager = RandomManager()
-        object.__setattr__(Configuration().random_manager, "SEED", 0)
-        random_manager.reset_all_rng()
+        # Set seed to 0 in config
+        object.__setattr__(self.config.random_manager, "SEED", 0)
+        random_manager = RandomManager(self.sim)
 
         # Should not be zero
         main_seed1 = random_manager._main_seed
@@ -180,9 +164,7 @@ class TestRandomManager:
 
     def test_uniform_distribution_properties(self) -> None:
         """Test that the uniform method returns values with correct properties."""
-        random_manager = RandomManager()
-        object.__setattr__(Configuration().random_manager, "SEED", 42)
-        random_manager.reset_all_rng()
+        random_manager = RandomManager(self.sim)
 
         # Generate sample of random numbers
         sample_size = 1000
@@ -194,14 +176,12 @@ class TestRandomManager:
         )
 
         # Check distribution properties
-        mean = np.mean(numbers)
+        mean = np.mean(np.array(numbers))
         assert 0.4 < mean < 0.6, "Mean of uniform distribution should be close to 0.5"
 
     def test_uniform_reproducibility_with_seed(self) -> None:
         """Test that uniform method produces reproducible results with same seed."""
-        random_manager = RandomManager()
-        object.__setattr__(Configuration().random_manager, "SEED", 42)
-        random_manager.reset_all_rng()
+        random_manager = RandomManager(self.sim)
 
         # Generate first sequence
         numbers1 = [random_manager.uniform() for _ in range(100)]
@@ -210,36 +190,32 @@ class TestRandomManager:
         random_manager.reset_all_rng()
         numbers2 = [random_manager.uniform() for _ in range(100)]
 
-        assert np.allclose(numbers1, numbers2), (
+        assert np.allclose(np.array(numbers1), np.array(numbers2)), (
             "The same seed should produce the same sequence of random numbers"
         )
 
     def test_uniform_different_seeds_different_sequences(self) -> None:
         """Test that different seeds produce different random sequences."""
-        random_manager = RandomManager()
-
-        # Generate sequence with seed 42
-        object.__setattr__(Configuration().random_manager, "SEED", 42)
-        random_manager.reset_all_rng()
-        numbers1 = [random_manager.uniform() for _ in range(100)]
+        random_manager1 = RandomManager(self.sim)
+        numbers1 = [random_manager1.uniform() for _ in range(100)]
 
         # Generate sequence with seed 43
-        object.__setattr__(Configuration().random_manager, "SEED", 43)
-        random_manager.reset_all_rng()
-        numbers2 = [random_manager.uniform() for _ in range(100)]
+        object.__setattr__(self.config.random_manager, "SEED", 43)
+        random_manager2 = RandomManager(self.sim)
+        numbers2 = [random_manager2.uniform() for _ in range(100)]
 
-        assert not np.allclose(numbers1, numbers2), (
+        assert not np.allclose(np.array(numbers1), np.array(numbers2)), (
             "Different seeds should produce different sequences of random numbers"
         )
 
     def test_component_seed_zero_generates_random_sequences(self) -> None:
         """Test that component seed zero generates different results on each reset."""
-        random_manager = RandomManager()
-        object.__setattr__(Configuration().random_manager, "SEED", 0)
-        random_manager.reset_all_rng()
+        # Set seed to 0 in config
+        object.__setattr__(self.config.random_manager, "SEED", 0)
+        random_manager = RandomManager(self.sim)
 
         component = "test_component"
-        Configuration().random_manager.COMPONENT_SEEDS[component] = 0
+        self.config.random_manager.COMPONENT_SEEDS[component] = 0
         random_manager.reset_fixed_seed_components()
 
         # Store first sequence of random numbers
@@ -251,7 +227,7 @@ class TestRandomManager:
 
         # The sequences should be different since seed is randomly generated each time
         with pytest.raises(AssertionError):
-            np.testing.assert_array_equal(sequence1, sequence2)
+            np.testing.assert_array_equal(np.array(sequence1), np.array(sequence2))
 
     @pytest.mark.parametrize(
         "component_name", ["vehicles", "users", "environment", "simulation_engine"]
@@ -264,9 +240,7 @@ class TestRandomManager:
         component_name : str
             Name of the component to test RNG isolation for.
         """
-        random_manager = RandomManager()
-        object.__setattr__(Configuration().random_manager, "SEED", 42)
-        random_manager.reset_all_rng()
+        random_manager = RandomManager(self.sim)
 
         # Get RNG for this component
         component_rng = random_manager.get_rng(component_name)
@@ -284,9 +258,7 @@ class TestRandomManager:
 
     def test_reset_all_rng_resets_component_rngs(self) -> None:
         """Test that reset_all_rng properly resets component RNGs to initial state."""
-        random_manager = RandomManager()
-        object.__setattr__(Configuration().random_manager, "SEED", 42)
-        random_manager.reset_all_rng()
+        random_manager = RandomManager(self.sim)
 
         component = "test_component"
 
@@ -311,4 +283,6 @@ class TestRandomManager:
         reset_numbers = [random_manager.uniform(component=component) for _ in range(5)]
 
         # Should get the same sequence as initially generated
-        np.testing.assert_array_equal(initial_numbers, reset_numbers)
+        np.testing.assert_array_equal(
+            np.array(initial_numbers), np.array(reset_numbers)
+        )

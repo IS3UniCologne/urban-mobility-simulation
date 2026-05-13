@@ -1,58 +1,28 @@
-import logging
+from __future__ import annotations  # noqa: D100
 
-from simpy import Environment
-
-from simulation.agent.user import User
-from simulation.helper.configuration.configuration import Configuration
-from simulation.helper.configuration.enums import VehicleMode
-from simulation.infrastructure.charging_stations.charging_infastructure import (
-    ChargingInfrastructure,
-)
-from simulation.operator.interface.search_engine_interface import SearchEngineInterface
-from simulation.operator.interface.vehicle_allocation_engine_interface import (
-    VehicleAllocationEngineInterface,
-)
-from simulation.operator.operations_management.integrated_shared_mobility_operations import (
-    IntegratedSharedMobilityOperations,
-)
-from simulation.operator.operator import Operator
-from simulation.operator.service_workforce import ServiceWorkforce
-from simulation.operator.transactions import DemandMonitor
-from simulation.operator.vehicle_fleet import VehicleFleet
-from simulation.tasks.transport_task import TransportTask
+from simulation.helper.enums import OperatorMode
+from simulation.operator.operator import Operator, OperatorDependencies
+from simulation.operator.operator_log import DemandMonitor
 
 
-class SharedMobilityOperator(Operator):
+class SharedMobilityOperator(Operator):  # noqa: D101
     __slots__ = ("_demand_monitor", "_number_service_workers", "_workforce")
 
-    def __init__(  # noqa: ANN204
-        self,
-        env: Environment,
-        fleet: VehicleFleet,
-        charging_infrastructure: ChargingInfrastructure,
-        operations: IntegratedSharedMobilityOperations,
-        search_engine: SearchEngineInterface,
-        allocation_engine: VehicleAllocationEngineInterface,
-        number_service_workers: int,
-    ):
-        super().__init__(
-            env,
-            fleet,
-            charging_infrastructure,
-            operations,
-            search_engine,
-            allocation_engine,
-        )
-        # Register demand monitor to transaction log
-        self._demand_monitor: DemandMonitor = DemandMonitor(
-            operations._available_vehicle_modes  # noqa: SLF001
-        )
-        self._transaction_log.add_listener(self._demand_monitor)
+    def __init__(self, deps: OperatorDependencies) -> None:
+        super().__init__(deps=deps)
+        self._mode = OperatorMode.SHARED_MOBILITY
 
-        # Shared Mobility specific: Service Workforce
-        self._workforce = ServiceWorkforce(
-            env=self._env, number_service_workers=number_service_workers
-        )
+    def build_operator_subcomponents(self, deps: OperatorDependencies) -> None:
+        """Build subcomponents specific to the shared mobility operator.
+
+        We override this method to add the demand monitor to the transaction log. This is required for
+        tracking regional demand for the operations.
+        """
+        super().build_operator_subcomponents(deps)
+
+        # Register demand monitor to transaction log
+        self._demand_monitor: DemandMonitor = DemandMonitor(self._sim)
+        self._operator_log.add_listener(self._demand_monitor)
 
     @property
     def demand_monitor(self) -> DemandMonitor:
@@ -65,52 +35,3 @@ class SharedMobilityOperator(Operator):
             The demand monitor instance.
         """
         return self._demand_monitor
-
-    def withdraw_transportation_task(  # noqa: ANN201
-        self, user: User, transportation_task: TransportTask
-    ):
-        vehicle_types = [
-            mode.name
-            for mode in Configuration().shared_vehicle_global.AVAILABLE_VEHICLE_MODES
-        ]
-
-        # We assume an ordered list here (e.g., SharedCar, SharedScooter, SharedKickScooter)
-        # We count the lost revenue for the "cheapest" mode
-        for vehicle_type in vehicle_types:
-            if (
-                vehicle_type in transportation_task.viable_vehicle_modes
-                and transportation_task.viable_vehicle_modes[vehicle_type] == 1
-            ):
-                distance = transportation_task.origin >> transportation_task.destination
-                velocity = (
-                    Configuration()
-                    .shared_vehicles.get(VehicleMode[vehicle_type])
-                    .VELOCITY
-                )
-                price_per_min = (
-                    Configuration()
-                    .shared_vehicles.get(VehicleMode[vehicle_type])
-                    .PRICE_PER_MIN
-                )
-                missed_trip_cost = distance / velocity * price_per_min
-
-                if vehicle_type == "KickScooter":
-                    missed_trip_cost += 1.0  # Unlock Fee
-
-        self.increase_total_missed_trips(missed_trip_cost)
-
-        self.log_transaction(
-            transportation_task=transportation_task,
-            transportation_alternative=None,
-            state="Missed",
-            trip_record=None,
-        )
-
-        logging.info(
-            "Missed trip of User %s. Current Total Revenue: %s - Total Trips: %s - Missed Trips %s.",
-            user.id,
-            self.total_revenue,
-            self.total_fulfilled_trips,
-            self.total_missed_trips,
-            extra={"clazz": self.__class__.__name__, "oid": ""},
-        )

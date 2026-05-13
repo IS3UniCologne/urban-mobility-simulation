@@ -1,24 +1,26 @@
+from __future__ import annotations  # noqa: D100
+
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
 
-from simulation.operator.data_transfer_object.transportation_alternative import (
-    TransportationAlternative,
-)
-from simulation.operator.data_transfer_object.vehicle_allocation import (
-    VehicleAllocation,
-)
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
+    from simulation.operator.data_transfer_object.transportation_alternative import (
+        TransportationAlternative,
+    )
+    from simulation.operator.data_transfer_object.vehicle_allocation import (
+        VehicleAllocation,
+    )
 
 
-class VehicleAllocationEngineInterface(ABC):
+class AllocationEngineInterface(ABC):  # noqa: D101
     @abstractmethod
-    def request_vehicle_allocation(
+    def request_vehicle_allocation(  # noqa: D102
         self,
         user,  # noqa: ANN001
         selected_transportation_alternative: TransportationAlternative,
-    ) -> VehicleAllocation:
+    ) -> Generator[Event, Any, VehicleAllocation | None]:
         pass  # Implement filtering
-
-    @abstractmethod
-    def notify_user_arrival_at_pick_up_position(  # noqa: ANN201
-        self, vehicle_assignment: VehicleAllocation
-    ):
-        pass  # Implement Notification
