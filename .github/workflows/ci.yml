@@ -3,9 +3,9 @@
 
 name: CI Pipeline
 on:
-  # run when pushing to main or develop
+  # run when pushing to develop
   push:
-    branches: [main, develop]
+    branches: [develop]
   # run when opening, synchronizing, or reopening a pull request
   pull_request:
     types: [opened, synchronize, reopened]
