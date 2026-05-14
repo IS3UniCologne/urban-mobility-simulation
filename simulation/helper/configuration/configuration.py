@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import tomllib
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, cast
 
@@ -85,11 +86,6 @@ if TYPE_CHECKING:
     # Careful moving stuff here, pydantic needs to check type hints at runtime!
     from types import ModuleType
 
-
-try:
-    import tomllib  # future proofing for python 3.11+
-except ModuleNotFoundError:
-    import pip._vendor.tomli as tomllib
 
 T = TypeVar("T", bound=BaseModel)
 
