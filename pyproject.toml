@@ -60,9 +60,7 @@ notebooks = [
   "notebook>=7.5.6",
   "seaborn>=0.13.2",
 ]
-viz = [
-    "bokeh>=3.9.0",
-]
+viz = ["bokeh>=3.9.0"]
 
 [build-system]
 build-backend = "setuptools.build_meta"
@@ -133,6 +131,7 @@ convention = "numpy"
 
 
 [tool.pyrefly]
+min-severity     = "warn"
 project-includes = ["simulation/"]
 # Exclude untyped modules from error reporting; remove entries as modules are typed
 project-excludes = [

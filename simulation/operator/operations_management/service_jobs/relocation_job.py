@@ -81,7 +81,7 @@ class RelocationJob(ServiceJob):
                 and isinstance(vehicle, SharedVehicle)
                 and not vehicle.is_reserved
             )
-            max_candidates = max(0, int(self._number_of_vehicles_to_relocate))
+            max_candidates = max(0, self._number_of_vehicles_to_relocate)
             candidates = heapq.nsmallest(
                 max_candidates, eligible_vehicles, key=lambda v: v.uid
             )
