@@ -29,7 +29,6 @@ dependencies = [
   "shapely>=2.1.2",
   "simpy>=4.1.1",
   "statsmodels>=0.14.6",
-  "tqdm>=4.67.3",
 ]
 [dependency-groups]
 dev = [
@@ -53,16 +52,18 @@ typing = [
 
 
 [project.optional-dependencies]
-ml = ["torch>=2.12.0", "pyomo>=6.10.0"]
+ml = [
+  "highspy>=1.7.2", #highspy is not explicitly imported anywhere, but used as a solver for pyomo
+  "torch>=2.12.0",
+  "pyomo>=6.10.0",
+]
 notebooks = [
   "contextily>=1.7.0",
   "ipython>=9.13.0",
   "notebook>=7.5.6",
   "seaborn>=0.13.2",
 ]
-viz = [
-    "bokeh>=3.9.0",
-]
+viz = ["bokeh>=3.9.0"]
 
 [build-system]
 build-backend = "setuptools.build_meta"
