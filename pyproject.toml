@@ -46,7 +46,7 @@ pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.13"]
 testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.0.3"]
 
 typing = [
-  "mypy>=2.1.0",
+  "pyrefly>=1.0.0",
   "pandas-stubs>=3.0.0.260204",
   "types-shapely>=2.1.0.20260518",
 ]
@@ -132,115 +132,90 @@ convention = "numpy"
 "simulation/helper/configuration/configuration.py" = ["TC001"]
 
 
-[tool.mypy]
-# Enable type checking for all simulation modules
-exclude = []
-files   = ["simulation/"]
-plugins = ["pydantic.mypy"]
-
-# General type checking options
-check_untyped_defs  = true
-warn_unreachable    = true
-warn_unused_configs = true
-
-# Strictness and error reporting
-disallow_any_generics    = true
-disallow_incomplete_defs = true
-disallow_untyped_defs    = true
-no_implicit_optional     = true
-warn_redundant_casts     = true
-warn_return_any          = true
-
-# Enable specific error codes
-enable_error_code = ["redundant-expr", "truthy-bool"]
-
-# Since we are incrementally adding type hints, we want to ignore errors in
-# untyped modules. Remove modules from this list as they are typed.
-[[tool.mypy.overrides]]
-ignore_errors = true
-module = [
-  "simulation.agent.action_space",
-  "simulation.agent.agent",
-  "simulation.agent.deep_q_learning",
-  "simulation.agent.episodic_semi_gradient_n_step_sarsa",
-  "simulation.agent.episodic_semi_gradient_sarsa",
-  "simulation.agent.policy",
-  "simulation.agent.rl_agent",
-  "simulation.environment.environment",
-  "simulation.environment.geodesic_environment",
-  "simulation.environment.geodesic_position",
-  "simulation.helper.configuration.configuration",
-  "simulation.helper.logging.extra_default_filter",
-  "simulation.helper.logging.simulation_context_filter",
-  "simulation.helper.random.random_manager",
-  "simulation.helper.time",
-  "simulation.infrastructure.charging_stations.charging_infastructure",
-  "simulation.infrastructure.charging_stations.charging_station",
-  "simulation.infrastructure.charging_stations.virtual_charging_infrastructure",
-  "simulation.infrastructure.charging_stations.virtual_charging_station",
-  "simulation.infrastructure.helper.distance_matrix_importer",
-  "simulation.infrastructure.helper.timetable",
-  "simulation.infrastructure.route",
-  "simulation.infrastructure.transit_network.route_segment",
-  "simulation.infrastructure.transit_network.stop",
-  "simulation.operator.data_transfer_object.vehicle_allocation",
-  "simulation.operator.fleet_factory",
-  "simulation.operator.interface.payment_interface",
-  "simulation.operator.interface.vehicle_allocation_engine_interface",
-  "simulation.operator.ride_hailing_fleet",
-  "simulation.operator.mixed_shared_vehicle_fleet",
-  "simulation.operator.operations_management.algorithms.charging_station_allocation",
-  "simulation.operator.operations_management.algorithms.distance_based_bidding_strategy",
-  "simulation.operator.operations_management.integrated_shared_mobility_operations",
-  "simulation.operator.operations_management.operations",
-  "simulation.operator.operations_management.operations_public_transport",
-  "simulation.operator.operations_management.ridehailing_MP_charging_operations",
-  "simulation.operator.operations_management.ridehailing_base_charging_operations",
-  "simulation.operator.operations_management.ridehailing_greedy_charging_operations",
-  "simulation.operator.operations_management.ridehailing_shared_charging_operations",
-  "simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations",
-  "simulation.operator.operations_management.service_tasks.charging_task",
-  "simulation.operator.operations_management.service_tasks.charging_task_ridehailing",
-  "simulation.operator.operations_management.service_tasks.multi_service_task",
-  "simulation.operator.operations_management.service_tasks.relocation_task",
-  "simulation.operator.operations_management.service_tasks.service_task",
-  "simulation.operator.operations_management.task_queue",
-  "simulation.operator.operator",
-  "simulation.operator.public_transit_operator",
-  "simulation.operator.public_transport_allocation_engine",
-  "simulation.operator.public_transport_search_engine",
-  "simulation.operator.public_transport_vehicle_fleet",
-  "simulation.operator.ride_hailing_allocation_engine",
-  "simulation.operator.ride_hailing_operator",
-  "simulation.operator.ride_hailing_search_engine",
-  "simulation.operator.service_worker",
-  "simulation.operator.service_workforce",
-  "simulation.operator.shared_mobility_operator",
-  "simulation.operator.shared_vehicle_allocation_engine",
-  "simulation.operator.shared_vehicle_search_engine",
-  "simulation.operator.walking_search_engine",
-  "simulation.tasks.transport_request",
-  "simulation.tasks.transportation_search_task",
-  "simulation.vehicle.interfaces.driver_interface",
-  "simulation.vehicle.interfaces.passenger_interface",
-  "simulation.vehicle.public_transit_bus",
-  "simulation.vehicle.public_transit_vehicle",
-  "simulation.vehicle.ride_hailing_vehicle",
-  "simulation.vehicle.shared_vehicle",
-  "simulation.vehicle.walking",
-  "simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior",
-  "simulation.vehicle_choice_model.only_car_vehicle_choice_behavior",
-  "simulation.vehicle_choice_model.only_walking_choice_behavior",
-  "simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior",
-  "simulation.vehicle_choice_model.trip_characteristics",
-  "simulation.world",
-  "simulation.world.demand.demand_factory",
-  "simulation.world.markets.auction",
-  "simulation.world.markets.interfaces.bidder_interface",
-  "simulation.world.markets.shared_charging_auction",
-  "simulation.world.world",
-  "tracking.tracking",
-  "tracking.tracking_interface",
+[tool.pyrefly]
+project-includes = ["simulation/"]
+# Exclude untyped modules from error reporting; remove entries as modules are typed
+project-excludes = [
+  "simulation/agent/action_space.py",
+  "simulation/agent/agent.py",
+  "simulation/agent/deep_q_learning.py",
+  "simulation/agent/episodic_semi_gradient_n_step_sarsa.py",
+  "simulation/agent/episodic_semi_gradient_sarsa.py",
+  "simulation/agent/policy.py",
+  "simulation/agent/rl_agent.py",
+  "simulation/environment/environment.py",
+  "simulation/environment/geodesic_environment.py",
+  "simulation/environment/geodesic_position.py",
+  "simulation/helper/configuration/configuration.py",
+  "simulation/helper/logging/extra_default_filter.py",
+  "simulation/helper/logging/simulation_context_filter.py",
+  "simulation/helper/random/random_manager.py",
+  "simulation/helper/time.py",
+  "simulation/infrastructure/charging_stations/charging_infastructure.py",
+  "simulation/infrastructure/charging_stations/charging_station.py",
+  "simulation/infrastructure/charging_stations/virtual_charging_infrastructure.py",
+  "simulation/infrastructure/charging_stations/virtual_charging_station.py",
+  "simulation/infrastructure/helper/distance_matrix_importer.py",
+  "simulation/infrastructure/helper/timetable.py",
+  "simulation/infrastructure/route.py",
+  "simulation/infrastructure/transit_network/route_segment.py",
+  "simulation/infrastructure/transit_network/stop.py",
+  "simulation/operator/data_transfer_object/vehicle_allocation.py",
+  "simulation/operator/fleet_factory.py",
+  "simulation/operator/interface/payment_interface.py",
+  "simulation/operator/interface/vehicle_allocation_engine_interface.py",
+  "simulation/operator/ride_hailing_fleet.py",
+  "simulation/operator/mixed_shared_vehicle_fleet.py",
+  "simulation/operator/operations_management/algorithms/charging_station_allocation.py",
+  "simulation/operator/operations_management/algorithms/distance_based_bidding_strategy.py",
+  "simulation/operator/operations_management/integrated_shared_mobility_operations.py",
+  "simulation/operator/operations_management/operations.py",
+  "simulation/operator/operations_management/operations_public_transport.py",
+  "simulation/operator/operations_management/ridehailing_MP_charging_operations.py",
+  "simulation/operator/operations_management/ridehailing_base_charging_operations.py",
+  "simulation/operator/operations_management/ridehailing_greedy_charging_operations.py",
+  "simulation/operator/operations_management/ridehailing_shared_charging_operations.py",
+  "simulation/operator/operations_management/ridehailing_uncoordinated_charging_operations.py",
+  "simulation/operator/operations_management/service_tasks/charging_task.py",
+  "simulation/operator/operations_management/service_tasks/charging_task_ridehailing.py",
+  "simulation/operator/operations_management/service_tasks/multi_service_task.py",
+  "simulation/operator/operations_management/service_tasks/relocation_task.py",
+  "simulation/operator/operations_management/service_tasks/service_task.py",
+  "simulation/operator/operations_management/task_queue.py",
+  "simulation/operator/operator.py",
+  "simulation/operator/public_transit_operator.py",
+  "simulation/operator/public_transport_allocation_engine.py",
+  "simulation/operator/public_transport_search_engine.py",
+  "simulation/operator/public_transport_vehicle_fleet.py",
+  "simulation/operator/ride_hailing_allocation_engine.py",
+  "simulation/operator/ride_hailing_operator.py",
+  "simulation/operator/ride_hailing_search_engine.py",
+  "simulation/operator/service_worker.py",
+  "simulation/operator/service_workforce.py",
+  "simulation/operator/shared_mobility_operator.py",
+  "simulation/operator/shared_vehicle_allocation_engine.py",
+  "simulation/operator/shared_vehicle_search_engine.py",
+  "simulation/operator/walking_search_engine.py",
+  "simulation/tasks/transport_request.py",
+  "simulation/tasks/transportation_search_task.py",
+  "simulation/vehicle/interfaces/driver_interface.py",
+  "simulation/vehicle/interfaces/passenger_interface.py",
+  "simulation/vehicle/public_transit_bus.py",
+  "simulation/vehicle/public_transit_vehicle.py",
+  "simulation/vehicle/ride_hailing_vehicle.py",
+  "simulation/vehicle/shared_vehicle.py",
+  "simulation/vehicle/walking.py",
+  "simulation/vehicle_choice_model/distance_based_shared_vehicle_choice_behavior.py",
+  "simulation/vehicle_choice_model/only_car_vehicle_choice_behavior.py",
+  "simulation/vehicle_choice_model/only_walking_choice_behavior.py",
+  "simulation/vehicle_choice_model/public_transit_vehicle_choice_behavior.py",
+  "simulation/vehicle_choice_model/trip_characteristics.py",
+  "simulation/world/__init__.py",
+  "simulation/world/demand/demand_factory.py",
+  "simulation/world/markets/auction.py",
+  "simulation/world/markets/interfaces/bidder_interface.py",
+  "simulation/world/markets/shared_charging_auction.py",
+  "simulation/world/world.py",
 ]
 
 [tool.pytest.ini_options]

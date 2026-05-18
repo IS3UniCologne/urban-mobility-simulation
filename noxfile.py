@@ -9,9 +9,9 @@ UV_SYNC_COMMAND = ("uv", "sync", "--locked", "--no-dev")
 python_versions = nox.project.python_versions(nox.project.load_toml())
 
 
-@nox.session(name="mypy", python=python_versions)
-def mypy(session: nox.Session) -> None:
-    """Run mypy type checking.
+@nox.session(name="pyrefly", python=python_versions)
+def pyrefly(session: nox.Session) -> None:
+    """Run pyrefly type checking.
 
     Parameters
     ----------
@@ -25,7 +25,7 @@ def mypy(session: nox.Session) -> None:
         session.python,
         env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
     )
-    session.run("mypy", *session.posargs)
+    session.run("pyrefly", "check", *session.posargs)
 
 
 @nox.session(name="pre-commit")
