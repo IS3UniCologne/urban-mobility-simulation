@@ -34,8 +34,6 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
 
     __slots__ = ("_distance",)
 
-    _destination: GeodesicPosition  # Narrowed from optional type in parent class
-
     def __init__(
         self,
         sim: SimulationContext,
@@ -44,7 +42,6 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
         distance: float,
     ) -> None:
         super().__init__(sim, vehicle, destination)
-        assert self._destination is not None  # Narrowed from parent's optional type
         self._distance = distance
 
     def _run(self) -> Generator[Event, None, None]:
@@ -55,24 +52,26 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
         Event
             Events during relocation.
         """
-        if self._vehicle.position == self._destination:
+        destination = self._destination
+        if destination is None:
+            raise ValueError("AutonomousRelocationTask requires a destination")
+
+        if self._vehicle.position == destination:
             self.logger.debug(
                 "Vehicle %s is already at the destination %s. No relocation needed.",
                 self._vehicle.uid,
-                self._destination,
+                destination,
             )
             return
 
         self.logger.debug(
             "Autonomously relocating vehicle %s to %s (%.0f m).",
             self._vehicle.uid,
-            self._destination,
+            destination,
             self._distance,
         )
 
-        relocation_route = Route(
-            origin=self._vehicle.position, destination=self._destination
-        )
+        relocation_route = Route(origin=self._vehicle.position, destination=destination)
 
         try:
             assert relocation_route.distance == self._distance
@@ -87,12 +86,14 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
 
         yield from self._vehicle.relocate(relocation_route)
 
-    def get_predicted_energy_delta(self, current_energy: float | None = None) -> float:
+    def get_predicted_energy_delta(
+        self, prev_task_energy: float | None = None
+    ) -> float:
         """Calculate predicted energy for relocation.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Unused; relocation energy depends on distance only.
 
         Returns
@@ -105,12 +106,12 @@ class AutonomousRelocationTask(VehicleTask["RideHailingVehicle"]):
         )
         return -energy_required
 
-    def get_predicted_duration(self, current_energy: float | None = None) -> float:
+    def get_predicted_duration(self, prev_task_energy: float | None = None) -> float:
         """Calculate predicted duration for relocation.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Unused; relocation duration depends on distance only.
 
         Returns
