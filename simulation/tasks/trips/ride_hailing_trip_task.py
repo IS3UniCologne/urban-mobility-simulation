@@ -97,12 +97,14 @@ class RideHailingTripTask(VehicleTask["RideHailingVehicle"]):
         self._vehicle.park()
         self._vehicle.unmount_passenger(self._user)
 
-    def get_predicted_energy_delta(self, current_energy: float | None = None) -> float:
+    def get_predicted_energy_delta(
+        self, prev_task_energy: float | None = None
+    ) -> float:
         """Calculate predicted energy for pickup and transport.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Unused; trip energy depends on distance only.
 
         Returns
@@ -128,12 +130,12 @@ class RideHailingTripTask(VehicleTask["RideHailingVehicle"]):
 
         return -(pickup_energy + transport_energy)
 
-    def get_predicted_duration(self, current_energy: float | None = None) -> float:
+    def get_predicted_duration(self, prev_task_energy: float | None = None) -> float:
         """Calculate predicted duration for pickup and transport.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Unused; trip duration depends on distance only.
 
         Returns

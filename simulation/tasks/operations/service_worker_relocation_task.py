@@ -36,8 +36,6 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
 
     __slots__ = ("_relocation_duration",)
 
-    _destination: GeodesicPosition  # Narrowed from optional type in parent class
-
     def __init__(
         self,
         sim: SimulationContext,
@@ -56,19 +54,25 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
         Event
             Events during relocation.
         """
-        distance = self._vehicle.position << self._destination
-        relocation_route = Edge(distance, self._vehicle.position, self._destination)
+        destination = self._destination
+        if destination is None:
+            raise ValueError("ServiceWorkerRelocationTask requires a destination")
+
+        distance = self._vehicle.position << destination
+        relocation_route = Edge(distance, self._vehicle.position, destination)
 
         yield self._env.process(
             self._vehicle.relocate(relocation_route, self._relocation_duration)
         )
 
-    def get_predicted_energy_delta(self, current_energy: float | None = None) -> float:
+    def get_predicted_energy_delta(
+        self, prev_task_energy: float | None = None
+    ) -> float:
         """Return predicted energy for relocation: Zero, as service worker is assumed to use external energy source.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Unused; relocation energy depends on distance only.
 
         Returns
@@ -78,12 +82,12 @@ class ServiceWorkerRelocationTask(VehicleTask[SharedVehicle]):
         """
         return 0.0
 
-    def get_predicted_duration(self, current_energy: float | None = None) -> float:
+    def get_predicted_duration(self, prev_task_energy: float | None = None) -> float:
         """Calculate predicted duration for relocation.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Unused; relocation duration is pre-calculated.
 
         Returns
