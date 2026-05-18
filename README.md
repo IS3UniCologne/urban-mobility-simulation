@@ -128,10 +128,10 @@ If you are modifying an existing class or function containing `#noqa`  statement
 
 ```bash
 # Run everything below
-nox -rs
+nox -r
 
-# Run type checking with mypy
-nox -rs mypy
+# Run type checking with pyrefly
+nox -rs pyrefly
 
 # Run pre-commit hooks (linting, formatting, etc.)
 nox -rs pre-commit
