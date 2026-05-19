@@ -1,16 +1,21 @@
 from __future__ import annotations  # noqa: D100
 
+import hashlib
 import math
 from typing import TYPE_CHECKING
 
 import geopandas as gpd
 import h3
 import numpy
-from shapely.geometry import Point, Polygon
+import pandas as pd
+from shapely.geometry import MultiPoint, Point, Polygon
 
 from simulation.environment.environment import Environment
+from simulation.world.demand import demand_schema
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from simulation.context.simulation_context import SimulationContext
     from simulation.vehicle.vehicle import Vehicle
 
@@ -30,33 +35,127 @@ class GeodesicEnvironment(Environment):  # noqa: D101
 
         self._logger = sim.log_manager.get_class_logger(self.__class__.__name__)
 
-        # TODO Why are we reading all the files? One should be enough.
-        # Read Environment Files
-        with open(sim.config.path.PATH_ENV_BOUNDING_BOX, encoding="utf-8") as file:
-            env_df = gpd.read_file(file)
-            if env_df.crs is None:
+        bbox_path = sim.config.path.bounding_box
+        supply_paths = sim.config.all_supply_distribution_paths()
+        demand_df = pd.read_parquet(
+            sim.config.path.demand,
+            columns=[demand_schema.ORIGIN, demand_schema.DESTINATION],
+        )
+        demand_hex_ids: set[str] = set(demand_df[demand_schema.ORIGIN]) | set(
+            demand_df[demand_schema.DESTINATION]
+        )
+        if bbox_path is not None:
+            bbox_df = gpd.read_file(bbox_path)
+            if bbox_df.crs is None:
                 self._logger.warning(
                     "Bounding box CRS is None. Defaulting to EPSG:4326."
                 )
-                env_df.set_crs("epsg:4326", inplace=True)
-            self._utm_epsg = f"epsg:{env_df.estimate_utm_crs().to_epsg()}"
+                bbox_df.set_crs("epsg:4326", inplace=True)
+        else:
+            self._logger.info(
+                "No bounding_box.geojson found. Inferring from demand + supply data."
+            )
+            bbox_df = self._infer_bounding_box(demand_hex_ids, supply_paths)
 
-        with open(sim.config.path.PATH_ENV_HEX_LAYER_RES_9, encoding="utf-8") as file:
-            env_df_hex_9 = gpd.read_file(file)
-            env_df_hex_9.set_index("hex_id_9", inplace=True)
+        self._utm_epsg = f"epsg:{bbox_df.estimate_utm_crs().to_epsg()}"
+        self.addLayer("bounding_box", bbox_df)
 
-        with open(sim.config.path.PATH_ENV_HEX_LAYER_RES_8, encoding="utf-8") as file:
-            env_df_hex_8 = gpd.read_file(file)
-            env_df_hex_8.set_index("hex_id_8", inplace=True)
+        resolution = sim.config.world.SPATIAL_RESOLUTION.value
+        hex_df = self._load_hex_layer(
+            bbox_df=bbox_df, resolution=resolution, cache_dir=sim.config.path.cache_dir
+        )
+        self.addLayer("hex", hex_df)
 
-        with open(sim.config.path.PATH_ENV_HEX_LAYER_RES_7, encoding="utf-8") as file:
-            env_df_hex_7 = gpd.read_file(file)
-            env_df_hex_7.set_index("hex_id_7", inplace=True)
+        self._warn_hex_mismatches(hex_df, demand_hex_ids, supply_paths)
 
-        self.addLayer("bounding_box", env_df)
-        self.addLayer("hex_9", env_df_hex_9)
-        self.addLayer("hex_8", env_df_hex_8)
-        self.addLayer("hex_7", env_df_hex_7)
+    @staticmethod
+    def _infer_bounding_box(
+        demand_hex_ids: set[str], supply_paths: list[Path]
+    ) -> gpd.GeoDataFrame:
+        hex_ids = demand_hex_ids.copy()
+        for supply_path in supply_paths:
+            hex_ids |= set(pd.read_parquet(supply_path, columns=["hex_id"])["hex_id"])
+        latlngs = [h3.cell_to_latlng(hid) for hid in hex_ids]
+        hull = MultiPoint([(lng, lat) for lat, lng in latlngs]).convex_hull
+        return gpd.GeoDataFrame({"geometry": [hull]}, crs="epsg:4326")
+
+    def _warn_hex_mismatches(
+        self,
+        hex_df: gpd.GeoDataFrame,
+        demand_hex_ids: set[str],
+        supply_paths: list[Path],
+    ) -> None:
+        """Warn if demand or supply data contains hex IDs that fall outside the hex layer grid.
+
+        This can could happen with user provided data and might lead to unreachable origins/destinations
+        or supply locations.
+        """
+        hex_set = set(hex_df.index)
+        outside = demand_hex_ids - hex_set
+        if outside:
+            self._logger.warning(
+                "%d demand hex ID(s) fall outside the hex grid (e.g. %s). "
+                "These origins/destinations will be unreachable.",
+                len(outside),
+                next(iter(outside)),
+            )
+        for supply_path in supply_paths:
+            supply_hexes: set[str] = set(
+                pd.read_parquet(supply_path, columns=["hex_id"])["hex_id"]
+            )
+            outside_supply = supply_hexes - hex_set
+            if outside_supply:
+                self._logger.warning(
+                    "%d supply hex ID(s) in %s fall outside the hex grid (e.g. %s).",
+                    len(outside_supply),
+                    supply_path.name,
+                    next(iter(outside_supply)),
+                )
+
+    def _load_hex_layer(
+        self, bbox_df: gpd.GeoDataFrame, resolution: int, cache_dir: Path
+    ) -> gpd.GeoDataFrame:
+        bbox_bytes = bbox_df.union_all().wkt.encode()
+        cache_key = hashlib.sha256(bbox_bytes + str(resolution).encode()).hexdigest()[
+            :12
+        ]
+        cache_path = cache_dir / f"{cache_key}_res{resolution}_hex.geoparquet"
+
+        if cache_path.exists():
+            self._logger.debug("Loading hex layer from cache: %s", cache_path)
+            return gpd.read_parquet(cache_path)
+
+        self._logger.info(
+            "Deriving hex layer at resolution %s from bounding box.", resolution
+        )
+        hex_df = self._build_hex_layer(bbox_df, resolution)
+
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        hex_df.to_parquet(cache_path)
+        return hex_df
+
+    @staticmethod
+    def _build_hex_layer(
+        bbox_df: gpd.GeoDataFrame, resolution: int
+    ) -> gpd.GeoDataFrame:
+        geom = bbox_df.union_all()
+        if not isinstance(geom, Polygon):
+            raise TypeError(f"Bounding box must be a single Polygon, got {type(geom)}")
+        exterior = list(geom.exterior.coords)
+        outer = [(lat, lng) for lng, lat in exterior]  # h3 uses (lat, lng) ordering
+        polygon = h3.LatLngPoly(outer)
+        hex_ids = sorted(
+            h3.h3shape_to_cells_experimental(polygon, res=resolution, contain="overlap")
+        )
+        hex_polys = [
+            Polygon([(lng, lat) for lat, lng in h3.cell_to_boundary(hid)])
+            for hid in hex_ids
+        ]
+        hex_df = gpd.GeoDataFrame(
+            {"geometry": hex_polys}, index=hex_ids, crs="epsg:4326"
+        )
+        hex_df.index.name = "hex_id"
+        return hex_df
 
     @property
     def utm_epsg(self) -> str:
@@ -83,7 +182,7 @@ class GeodesicEnvironment(Environment):  # noqa: D101
     # TODO: Hardcoded layer here is dangerous
     # TODO: initialize pool of positions for every region once, then draw from there instead for efficiency?
     def get_random_position(
-        self, hex_id: str, layer_name: str = "hex_7"
+        self, hex_id: str, layer_name: str = "hex"
     ) -> tuple[float, float]:
         """
         Returns a random position within given hexagon
@@ -118,14 +217,14 @@ class GeodesicEnvironment(Environment):  # noqa: D101
 
         return self._centroid_cache[hex_id]
 
-    def is_in_layer(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201, D102
+    def is_in_layer(self, hex_id, layer_name="hex"):  # noqa: ANN001, ANN201, D102
         return hex_id in self.layer[layer_name].index
 
-    def get_hexagon(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
+    def get_hexagon(self, hex_id, layer_name="hex"):  # noqa: ANN001, ANN201
         """
         Get geometry of hexagon with optimized lookup.
         :param hex_id: Hexagon ID
-        :param layer_name: Layer name (e.g., "hex_7", "hex_8").
+        :param layer_name: Layer name (e.g., "hex").
         :return: Polygon representing the hexagon
         """  # noqa: D202, D205, D400
 
