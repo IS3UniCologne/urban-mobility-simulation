@@ -5,7 +5,6 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import pandas as pd
 import simpy
 
 from simulation.environment.geodesic_helper import (
@@ -13,7 +12,7 @@ from simulation.environment.geodesic_helper import (
     FastSpatialVehicleIndex,
 )
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.enums import AutonomyType, VehicleType
+from simulation.helper.data import load_fleet_supply_distribution
 from simulation.helper.exceptions import VehicleFleetError
 from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.vehicle_states import VehicleStates
@@ -21,6 +20,7 @@ from simulation.helper.vehicle_states import VehicleStates
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import FleetConfig, VehicleConfig
+    from simulation.helper.enums import AutonomyType, VehicleType
     from simulation.helper.types import RegionId
     from simulation.helper.vehicle_states import VehicleState
     from simulation.operator.interface.operator_interface import OperatorInterface
@@ -102,50 +102,33 @@ class VehicleFleet(SimulationBase, ABC):
     def _create_fleet_vehicles(self, deps: VehicleFleetDependencies) -> None:
         """Create fleet vehicles using spatial distribution from supply data."""
         rng = deps.sim.random_manager.get_rng(component_name="FLEETFACTORY")
-        hex_columns = deps.sim.config.world.SPATIAL_RESOLUTION.column_name
-
-        supply_path = deps.sim.config.path.PATH_VEHICLE_SUPPLY
-        supply_probabilities = pd.read_csv(supply_path)
-
-        # TODO: This mapping should come from configuration
-        vehicle_type_to_prob_column = {
-            VehicleType.CAR: "cars_prob",
-            VehicleType.BIKE: "bikes_prob",
-            VehicleType.SCOOTER: "scooters_prob",
-            VehicleType.KICK_SCOOTER: "kick_scooters_prob",
-        }
+        supply_data = load_fleet_supply_distribution(deps.sim.config, deps.config)
+        has_type_column = "vehicle_type" in supply_data.columns
 
         for vehicle_config, total_count in deps.config.VEHICLES.items():
-            prob_column = vehicle_type_to_prob_column.get(vehicle_config.VEHICLE_TYPE)
+            vehicle_type = vehicle_config.VEHICLE_TYPE
+            if has_type_column:
+                hex_probs = supply_data[
+                    supply_data["vehicle_type"] == vehicle_type
+                ].copy()
+                if hex_probs.empty:
+                    self.logger.error(
+                        "No supply data for vehicle type %s", vehicle_type
+                    )
+                    continue
+            else:
+                hex_probs = supply_data.copy()
 
-            if prob_column is None:
-                self.logger.error(
-                    "Fleet does not support vehicle type %s",
-                    vehicle_config.VEHICLE_TYPE,
-                )
-                continue
+            probs = hex_probs["probability"].to_numpy()
+            probs = probs / probs.sum()  # (re-)normalize for multinomial sampling
+            counts = rng.multinomial(n=total_count, pvals=probs)
+            hex_probs = hex_probs.assign(count=counts)
 
-            vehicle_probabilities = supply_probabilities[prob_column].to_numpy()
-
-            # Sample vehicle distribution based on probabilities
-            vehicle_count = pd.DataFrame(
-                rng.multinomial(
-                    n=total_count, pvals=vehicle_probabilities, size=1
-                ).transpose(),
-                columns=["count"],
-            )
-            vehicle_count.index = supply_probabilities.index
-            supply_probabilities["count"] = vehicle_count["count"]
-
-            # Create vehicles in their assigned regions
-            for _index, row in supply_probabilities.iterrows():
-                hex_id = row[hex_columns]
-                local_count = row["count"]
-                for _ in range(local_count):
+            for _, row in hex_probs[hex_probs["count"] > 0].iterrows():
+                hex_id = row["hex_id"]
+                for _ in range(int(row["count"])):
                     rdm_lat, rdm_lng = deps.sim.geo_env.get_random_position(hex_id)
                     pos = GeodesicPosition(deps.sim, rdm_lat, rdm_lng, hex_id)
-
-                    # Call subclass-specific vehicle creation
                     self._create_vehicle(deps, pos, vehicle_config)
 
     @abstractmethod

@@ -24,6 +24,7 @@ All validation, type conversion, and defaults should be handled using Pydantic f
 from __future__ import annotations
 
 import importlib.util
+import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, cast
@@ -92,6 +93,7 @@ except ModuleNotFoundError:
     import pip._vendor.tomli as tomllib
 
 T = TypeVar("T", bound=BaseModel)
+logger = logging.getLogger(__name__)
 
 
 class ConfigBaseModel(BaseModel):
@@ -212,13 +214,6 @@ class PathConfig(ConfigBaseModel):
     def demand(self) -> Path:
         """Path to demand.parquet (required)."""
         return self.DATASET_DIR / "demand.parquet"
-
-    @computed_field
-    @property
-    def supply(self) -> Path | None:
-        """Path to supply.parquet, or None if absent (optional)."""
-        p = self.DATASET_DIR / "supply.parquet"
-        return p if p.exists() else None
 
     @computed_field
     @property
@@ -372,6 +367,14 @@ class FleetConfig(ConfigBaseModel):
     VEHICLES: dict[VehicleConfig, int]  # TODO: update this to use distributions
 
     ENABLE_EN_ROUTE_INDEX: bool = Field(default=False)
+
+    SUPPLY_DISTRIBUTION_FILE: str | None = Field(default=None)
+
+    def supply_distribution_path(self, project_dir: Path) -> Path | None:
+        """Resolve the supply distribution filename against a project directory."""
+        if self.SUPPLY_DISTRIBUTION_FILE is None:
+            return None
+        return project_dir / self.SUPPLY_DISTRIBUTION_FILE
 
 
 class RideHailingFleetConfig(FleetConfig):
@@ -851,6 +854,21 @@ class Configuration:
         """
         return self._get_section_list("operator", OperatorConfig)
 
+    def all_supply_distribution_paths(self) -> list[Path]:
+        """Return every fleet's resolved supply distribution path, skipping unset or missing ones.
+
+        Returns
+        -------
+        list of Path
+            Paths to supply distribution files.
+        """
+        return [
+            path
+            for op in self.operators
+            if (path := op.FLEET_CONFIG.supply_distribution_path(self.path.PROJECT_DIR))
+            is not None
+        ]
+
     @property
     def ride_hailing_vehicles(self) -> dict[str, VehicleConfig]:
         """
@@ -1011,6 +1029,15 @@ class Configuration:
                     continue
                 self._collect_config_instance(
                     value, model_classes, model_to_section, section_buckets
+                )
+
+        for op in cast("list[OperatorConfig]", section_buckets.get("operator", [])):
+            filename = op.FLEET_CONFIG.SUPPLY_DISTRIBUTION_FILE
+            if filename is not None and not (self._project_dir / filename).exists():
+                logger.error(
+                    "Supply distribution file '%s' not found in project directory %s",
+                    filename,
+                    self._project_dir,
                 )
 
         # Store collected instances in cache
