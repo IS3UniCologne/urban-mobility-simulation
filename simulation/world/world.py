@@ -207,17 +207,12 @@ class World(SimulationBase):  # noqa: D101
             )
             self._operators.append(operator)
 
-    def _load_distance_matrix(self) -> None:
-        hexagons = self.geo_env.getLayer(
-            f"hex_{self._config.world.SPATIAL_RESOLUTION}"
-        ).index.tolist()
-
-        # TODO: Remove hardcoded path
+    def _load_distance_matrix(self) -> DataFrame:
+        hexagons = self.geo_env.getLayer("hex").index.tolist()
         dmi = DistanceMatrixImporter(
-            hexagons,
-            self._config.world.SPATIAL_RESOLUTION,
-            os.path.normpath(os.path.join(".", "data", "infrastructure")),
-            self._config.world.CITY,
+            hexagons=hexagons,
+            resolution=self._config.world.SPATIAL_RESOLUTION,
+            cache_dir=self._config.path.cache_dir,
         )
         return dmi.load_distance_matrix()
 
