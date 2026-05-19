@@ -1,6 +1,5 @@
 from __future__ import annotations  # noqa: D100
 
-import os
 from typing import TYPE_CHECKING
 
 from simulation.agent.user.user_log import UserLog
@@ -292,13 +291,15 @@ class World(SimulationBase):  # noqa: D101
         )
 
     def _load_timetable(self) -> Timetable | None:
-        if not hasattr(self._config.path, "PATH_TRANSIT_TIMETABLE"):
-            self.logger.warning("No timetable path configured for public transport")
+        timetable_path = self._config.path.transit_timetable
+        if timetable_path is None:
+            self.logger.warning(
+                "No timetable found in DATASET_DIR, skipping public transport"
+            )
             return None
 
         from simulation.infrastructure.helper.timetable import Timetable
 
-        timetable_path = os.path.normpath(self._config.path.PATH_TRANSIT_TIMETABLE)
         timetable = Timetable(data_path=timetable_path, sim=self._sim)
         timetable.import_timetable()
         self.logger.info("Loaded public transport timetable from %s", timetable_path)
