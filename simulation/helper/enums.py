@@ -15,13 +15,6 @@ class TemporalResolution(IntEnum):
     EIGHT_HOURLY_BUCKETS = 8
     TWELVE_HOURLY_BUCKETS = 12
 
-    @property
-    def column_name(self) -> str:
-        """Get the column name for this temporal resolution."""
-        if self == TemporalResolution.HOURLY_BUCKETS:
-            return "hour_of_day"
-        return f"time_bucket_{self.value}h"
-
 
 class DailyResolution(StrEnum):
     """Daily resolution for demand data."""
@@ -29,19 +22,6 @@ class DailyResolution(StrEnum):
     DAILY = "daily"
     WEEKDAY_WEEKEND = "weekday_weekend"
     NONE = "none"
-
-    @property
-    def day_of_week_column_name(self) -> str:
-        """
-        Get the day classification column name.
-
-        Returns
-        -------
-        str
-            Column name for day classification in the data
-        """
-        # TODO: Is this correct ? Seems a bit odd.
-        return "is_holiday"
 
 
 class SpatialResolution(IntEnum):
@@ -54,26 +34,6 @@ class SpatialResolution(IntEnum):
     HEX_7 = 7
     HEX_8 = 8
     HEX_9 = 9
-
-    @property
-    def origin_column_name(self) -> str:
-        """Get the origin column name for this spatial resolution."""
-        return f"h3_start_{self.value}"
-
-    @property
-    def destination_column_name(self) -> str:
-        """Get the destination column name for this spatial resolution."""
-        return f"h3_end_{self.value}"
-
-    @property
-    def origin_destination_columns(self) -> tuple[str, str]:
-        """Get both origin and destination column names for this spatial resolution."""
-        return self.origin_column_name, self.destination_column_name
-
-    @property
-    def column_name(self) -> str:
-        """Returns the column name for the spatial resolution. E.g. 'hex_id_7'."""
-        return f"hex_id_{self.value}"
 
 
 class ModeChoiceStrategy(StrEnum):
