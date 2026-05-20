@@ -223,10 +223,16 @@ class PathConfig(ConfigBaseModel):
 
     @computed_field
     @property
-    def demand_modifier(self) -> Path | None:
-        """Path to demand_modifiers.geojson in project dir, or None if absent (optional)."""
-        p = self.PROJECT_DIR / "demand_modifiers.geojson"
-        return p if p.exists() else None
+    def demand_modifiers(self) -> list[Path]:
+        """Paths to demand-modifier GeoJSONs in PROJECT_DIR/demand_modifiers/.
+
+        Returns an empty list if the directory is absent or contains no .geojson files.
+        Sorted lexicographically for deterministic load order.
+        """
+        d = self.PROJECT_DIR / "demand_modifiers"
+        if not d.is_dir():
+            return []
+        return sorted(d.glob("*.geojson"))
 
     @computed_field
     @property
