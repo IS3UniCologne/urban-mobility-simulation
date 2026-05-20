@@ -718,7 +718,7 @@ class Configuration:
         try:
             validated_model = model.model_validate(self._data[section])
             self._cache[section] = validated_model
-            return cast("T", validated_model)
+            return validated_model
         except ValidationError as e:
             raise ValueError(
                 f"Config validation error in section '{section}': {e}"
