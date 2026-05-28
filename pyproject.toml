@@ -27,7 +27,7 @@ dependencies = [
   "pydantic>=2.13.4",
   "rtree>=1.4.1",
   "shapely>=2.1.2",
-  "simpy>=4.1.1",
+  "simpy>=4.1.2",
   "statsmodels>=0.14.6",
 ]
 [dependency-groups]
