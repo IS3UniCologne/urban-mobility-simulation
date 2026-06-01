@@ -40,13 +40,13 @@ dev = [
 
 benchmarks = ["pyperf>=2.10.0"]
 
-pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.13"]
+pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.15"]
 
 testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.0.3"]
 
 typing = [
   "mypy>=2.1.0",
-  "pandas-stubs>=3.0.0.260204",
+  "pandas-stubs>=3.0.3.260530",
   "types-shapely>=2.1.0.20260518",
 ]
 
