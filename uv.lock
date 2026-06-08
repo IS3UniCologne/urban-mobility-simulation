@@ -196,7 +196,7 @@ css = [
 
 [[package]]
 name = "bokeh"
-version = "3.9.0"
+version = "3.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "contourpy" },
@@ -209,9 +209,9 @@ dependencies = [
     { name = "tornado", marker = "sys_platform != 'emscripten'" },
     { name = "xyzservices" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bf/0d/fabb70707646217e4b0e3943e05730eab8c1f7b7e7485145f8594b52e606/bokeh-3.9.0.tar.gz", hash = "sha256:775219714a8496973ddbae16b1861606ba19fe670a421e4d43267b41148e07a3", size = 5740345, upload-time = "2026-03-11T17:58:34.062Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/cc/754521e919aab05982f126b7702c0a253341ef6b400beca22bc5b4bdcb72/bokeh-3.9.1.tar.gz", hash = "sha256:1463d3c84fba61a925ea6ace0b4d3d9c0160ca214f6851edbfed6dc27e172b60", size = 5749911, upload-time = "2026-06-04T18:04:42.932Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/0b/bdf449df87be3f07b23091ceafee8c3ef569cf6d2fb7edec6e3b12b3faa4/bokeh-3.9.0-py3-none-any.whl", hash = "sha256:b252bfb16a505f0e0c57d532d0df308ae1667235bafc622aa9441fe9e7c5ce4a", size = 6396068, upload-time = "2026-03-11T17:58:31.645Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/54/40ff985187f0fd1afcedebc23eda0ba92bdbea1e0605cbb878b45391e5e0/bokeh-3.9.1-py3-none-any.whl", hash = "sha256:8bf2aae574509055fbd6b68f023046bebc91b0bbd631d204d0d60863b4237dbd", size = 6406728, upload-time = "2026-06-04T18:04:40.832Z" },
 ]
 
 [[package]]
@@ -966,7 +966,7 @@ wheels = [
 
 [[package]]
 name = "ipython"
-version = "9.14.0"
+version = "9.14.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -982,9 +982,9 @@ dependencies = [
     { name = "traitlets" },
     { name = "typing-extensions", marker = "python_full_version < '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/21/c2/c0064cf15d026501a1ef70e42efd9c3f818663089399aacc5e37a82901c1/ipython-9.14.0.tar.gz", hash = "sha256:6f27ff0f1d9ea050e0551f71568bc4b34d8aba579e8f111c5b4175f44ac6b4aa", size = 4432601, upload-time = "2026-05-29T15:13:24.611Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/23/3a27530575643c8bb7bfc757a28e2e7ef80092afbf59a2bc5716320b6602/ipython-9.14.1.tar.gz", hash = "sha256:f913bf74df06d458e46ced84ca506c23797590d594b236fe60b14df213291e7b", size = 4433457, upload-time = "2026-06-05T08:12:34.921Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/a3/9e59340f02c1dc8f8c0a05b09244712b8609eb5439f9996e887e2b82f452/ipython-9.14.0-py3-none-any.whl", hash = "sha256:8fd984a3372c14b12790b084ba6b5cff5678c0cb063244a0034f06a51f20d6c2", size = 627457, upload-time = "2026-05-29T15:13:22.942Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/22/58818a63eaf8982b67632b1bc20585c811611b15a8da19d6012323dc76a5/ipython-9.14.1-py3-none-any.whl", hash = "sha256:5d4a9ecaa3b10e6e5f269dd0948bdb58ca9cb851899cd23e07c320d3eb11613c", size = 627770, upload-time = "2026-06-05T08:12:33.045Z" },
 ]
 
 [[package]]
@@ -1207,7 +1207,7 @@ wheels = [
 
 [[package]]
 name = "jupyterlab"
-version = "4.5.7"
+version = "4.5.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "async-lru" },
@@ -1224,9 +1224,9 @@ dependencies = [
     { name = "tornado" },
     { name = "traitlets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2b/22/8440ec827762146e7cdecf04335bd348795899d29dc6ae82238707353a2c/jupyterlab-4.5.7.tar.gz", hash = "sha256:55a9822c4754da305f41e113452c68383e214dcf96de760146af89ce5d5117b0", size = 23992763, upload-time = "2026-04-29T16:43:51.328Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0e/74/089613e6099e851a6130816f2df592c839d8565f8746a701edada05a33e4/jupyterlab-4.5.8.tar.gz", hash = "sha256:af54d7242cc689a1e6c3ad213cc9b6d9781787d9ec67c52ec9a8f4707088cadd", size = 23994076, upload-time = "2026-06-04T12:32:12.906Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3d/aa/537b8f7d80e799af19af35fb3ddfc970b951088a13c57dd9387dcfbb7f61/jupyterlab-4.5.7-py3-none-any.whl", hash = "sha256:fba4cb0e2c44a52859669d8c98b45de029d5e515f8407bf8534d2a8fc5f0964d", size = 12450123, upload-time = "2026-04-29T16:43:46.639Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/d1/56a400100559cbf154a23cd29989261941ae5c9f743898fc10e8a5508b7c/jupyterlab-4.5.8-py3-none-any.whl", hash = "sha256:7d514c856d0d607601ec7692374da4f26e2aaf3b6e7cd363136b422a50588d6c", size = 12449443, upload-time = "2026-06-04T12:32:08.442Z" },
 ]
 
 [[package]]
@@ -1671,7 +1671,7 @@ wheels = [
 
 [[package]]
 name = "notebook"
-version = "7.5.6"
+version = "7.5.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jupyter-server" },
@@ -1680,9 +1680,9 @@ dependencies = [
     { name = "notebook-shim" },
     { name = "tornado" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2a/c2/cf59bd2e6f2c8b976b52477e3e53bf6f97bc714ed046a51821afb428eaee/notebook-7.5.6.tar.gz", hash = "sha256:621174aade80108f0020b0f00738000b215f75fa3cd90771ad7aa0f24536a4e1", size = 14170814, upload-time = "2026-04-30T11:46:26.613Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/c4/f71f8716f2903e9e817a47f534b9fd84831e155e2acb32c26691c8e06243/notebook-7.5.7.tar.gz", hash = "sha256:d6d59288a25303b25e1dcb71e9b017ec3a785f7d92f38b9bc288ca1970d5b0a8", size = 14171612, upload-time = "2026-06-04T18:33:45.224Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/d6/1fd0646b9bbd9efbb0b8ae21b2325fbef515769a5621c03e31d8eb8da587/notebook-7.5.6-py3-none-any.whl", hash = "sha256:4dde3f8fb55fa8fb7946d58c6e869ce9baf46d00fc070664f62604569d0faca0", size = 14581730, upload-time = "2026-04-30T11:46:22.342Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/4d/b3347f7073a377273531efe4ffc738fc910e93718fd2838c7ebf6736c6af/notebook-7.5.7-py3-none-any.whl", hash = "sha256:1f95f79d117e47d20b5555b5c85a397d2cfecf136978aaab767cf0314b09165b", size = 14583767, upload-time = "2026-06-04T18:33:40.987Z" },
 ]
 
 [[package]]
@@ -2381,23 +2381,23 @@ wheels = [
 
 [[package]]
 name = "pyomo"
-version = "6.10.0"
+version = "6.10.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/df/be/6aa8022dec69bf837885a094b9bc8d452debcb455ab69b66ee27cc6563e3/pyomo-6.10.0.tar.gz", hash = "sha256:672fac375e57e121ca935adcc16a1cd118be8afa1a3e5608161fb86220c3a577", size = 3171562, upload-time = "2026-02-20T21:42:31.639Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/16/5ee100614f82b8bc482336afc15a554b98d847d0bcdc22e51bb559112183/pyomo-6.10.1.tar.gz", hash = "sha256:74a9109c3b4ab97e69d6b1a1ca4e96a54442a177d8b1a19393e417e6ba008ba3", size = 3276980, upload-time = "2026-06-04T21:45:42.76Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c3/df/fd2003e8d85ce9f60b07b7b6d6576584cd36dd7ad55f489e813cc457779a/pyomo-6.10.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:4333bf38fb63d8e104207d36ccd1f0b60c7e56b68d5a868c8274afce726d8cee", size = 4428647, upload-time = "2026-02-20T21:48:52.868Z" },
-    { url = "https://files.pythonhosted.org/packages/78/8b/4795d9d96dc82a857c36f5d5363ad2a7ac2524d4bf5348453cb620be963c/pyomo-6.10.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:acdd63b0397f444a1f59aa2169892aa91eb085b7ff216be6304fc328570247cb", size = 4416123, upload-time = "2026-02-20T21:48:59.862Z" },
-    { url = "https://files.pythonhosted.org/packages/8c/57/1398e3ff3a0ff68a5af7defa04ea2495093600485a263c335f05b20b3f74/pyomo-6.10.0-cp311-cp311-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:28c5b4a9eeb26dbc6ea21dfa46fde4dfb3200f4650123d184bc352320e6ac3dc", size = 4481866, upload-time = "2026-02-27T17:09:24.953Z" },
-    { url = "https://files.pythonhosted.org/packages/84/4c/1062945fcd586b56386b0872fb88bd5a40be8ce1ed4d1bfa3c0fbab8cf37/pyomo-6.10.0-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ce7a3572508f3c9439ec3ef88743f1bd428aac71e406bc87ab274b02a736d914", size = 4509695, upload-time = "2026-02-20T21:49:05.632Z" },
-    { url = "https://files.pythonhosted.org/packages/89/8c/bbc4cfab889eaa689e85b2ec0574bd9a584d9de89d36e22ad11bd050acf5/pyomo-6.10.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:a564996b6e3c0b425d5961186ee5d726ba59d1fb29490eb63cd32d8183859c46", size = 4430199, upload-time = "2026-02-20T21:49:11.58Z" },
-    { url = "https://files.pythonhosted.org/packages/75/3e/b5ff9b8b786741507eb899c865871c7bdac02f05eef6faa7cf625dae99b3/pyomo-6.10.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:2e686b529e81a650ac9d1458476c664ee1cf2b45a90f57acce318524f50255ad", size = 4415951, upload-time = "2026-02-20T21:49:17.426Z" },
-    { url = "https://files.pythonhosted.org/packages/2e/6b/7371e09047b6b0c3d475545aa819415a84d579797bfe9a9b822771dc8ea2/pyomo-6.10.0-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:5d6c7d8802b399541e611f289172c3ec721e75a029a7d3af4cc56a0e8ff6735d", size = 4484110, upload-time = "2026-02-27T17:09:34.503Z" },
-    { url = "https://files.pythonhosted.org/packages/ca/2b/ae9f35156948b959b7d292e842fea4a08dffbf96e944e88fdcf10a3c3391/pyomo-6.10.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a5ca37402b686816704a95f72d7d6c7aa5245f38f10010828ce9d0937694f4cb", size = 4512622, upload-time = "2026-02-20T21:49:23.022Z" },
-    { url = "https://files.pythonhosted.org/packages/1c/66/b4fe4f6f9dcdb01c8590d507a4090c7ffdb72a2832115ce07fb83b23e718/pyomo-6.10.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:376dc045e62285b42ce41706df370f2ab5ac8babb31e2750aa3bf9eb6ce938ac", size = 4430253, upload-time = "2026-02-20T21:49:28.949Z" },
-    { url = "https://files.pythonhosted.org/packages/75/01/a8c1539654b29903a98310fb34fd4caeebf67061289f552b1ea826462156/pyomo-6.10.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:4bc7b77278da187e6bcd603317cb60dd6555aeff8159c811eb9755fc873c4928", size = 4416089, upload-time = "2026-02-20T21:49:34.724Z" },
-    { url = "https://files.pythonhosted.org/packages/e7/ef/bf19632527bba7149d5a1d18ad5a923ee4956cd2a7c6dcc595a43321ca2e/pyomo-6.10.0-cp313-cp313-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:e13d6ac1c837419d2140618faeee061c7ab8e09c872005a9e75ec46bcb6c85e4", size = 4484042, upload-time = "2026-02-27T17:09:44.869Z" },
-    { url = "https://files.pythonhosted.org/packages/dd/4e/9d523d75a64dc7ed13fd76bbf94618666456b0b69dcf1f2dc308ada982f9/pyomo-6.10.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d6dcf06214b71617d45a7cb238793171863bf0a30d9e1740190443813baee200", size = 4513077, upload-time = "2026-02-20T21:49:40.608Z" },
-    { url = "https://files.pythonhosted.org/packages/88/1d/b5dad00739979353726059137a647acf031ef3af5557a9d227ca7b32481d/pyomo-6.10.0-py3-none-any.whl", hash = "sha256:3fc34402474f78c9144c735499c8dc6a0570948034f4c668d24727ec1b4671b1", size = 4052690, upload-time = "2026-02-27T17:10:13.653Z" },
+    { url = "https://files.pythonhosted.org/packages/70/3b/cadf8ab734fc2bc4423083c82beae8b23e85fb9ae6be064303a063f3b4c1/pyomo-6.10.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:e3564058b79b8a9f179b010b4a8ad28686369b548cccec1e2a58a5c44363d48a", size = 4553316, upload-time = "2026-06-04T21:49:43.007Z" },
+    { url = "https://files.pythonhosted.org/packages/af/d9/2a1912a848a0a25f5cb5e6fdf04911527b124a662b001ec6f502e758a0ee/pyomo-6.10.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:f8f4fd600abf78732a72a16926ec94fd6f23f98818cd4032ce96d4cf2bef035e", size = 4540562, upload-time = "2026-06-04T21:49:46.569Z" },
+    { url = "https://files.pythonhosted.org/packages/64/8d/8d7b58def406b32b3e72520bf65158552ada9e4ab42504278830e2151a36/pyomo-6.10.1-cp311-cp311-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:4abc6def7f898296c4554208965bb0a1feffc98acc171480a5645bdfa5208ead", size = 4608637, upload-time = "2026-06-04T22:43:06.878Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/a5/8b227497a50e531b14f3285b554296c14baf8857d6b6714b2dcd991db55c/pyomo-6.10.1-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4e6c54a9a8b9325db5bb0c2b4cafa02738d592e3673d20c80f28d73738f38316", size = 4637228, upload-time = "2026-06-04T21:49:49.923Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/3d/55089dbb8fdbed2b08600c50c52a7f2193f1de8bd6454a6541a8c56643ee/pyomo-6.10.1-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:f446764a499e535c6980435b71f297873cb13f0b040a1275853431abd35033d9", size = 4554942, upload-time = "2026-06-04T21:49:53.156Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/c9/2aeb79f0cb6069a7391b6724be6137624a78ac38856a3b89f62b57d1bcfb/pyomo-6.10.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:1ffae4d4cd96c87d48ea19a25dd942b69b3d8383374e133f7a040ea63e361f68", size = 4540416, upload-time = "2026-06-04T21:49:55.855Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/b9/dd9e82c7cf1c13a5ee4f0e30fb802ec599d5a765c1e759d0b7c101a802fc/pyomo-6.10.1-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:2ed5fe352c74b249c35437e366413582c24d1869b995fdc648e29675bb9e8c3a", size = 4610464, upload-time = "2026-06-04T22:43:09.79Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/1a/e82ad06861982b139e20a903b12edb654ac912c1f8669fb2efb9b2193ff0/pyomo-6.10.1-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:be91786a9340230c031bec0e82c17acfcb5bba04801253ad09e85e4ddaf87d51", size = 4639806, upload-time = "2026-06-04T21:49:58.235Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/e7/52c567616293d70f58895450b0a40ea4cb12471c09f591a897bf40ee0e16/pyomo-6.10.1-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:1a8b838d7b66ffefa29c6a033a67dddfbcd048a94ac1ed4e11bc7e1abc40262d", size = 4555004, upload-time = "2026-06-04T21:50:00.926Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/50/f8a92a0738a06db030ff0a729a122c2ebbc1e0321a1a1ff4bf31a3d174c5/pyomo-6.10.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:c2c9b69066428ec0b9b01e5ef146d0ff36c709fff747e20e8af00667e5d55b76", size = 4540444, upload-time = "2026-06-04T21:50:03.358Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/09/0c91db7da564b07493ad6899e8b72da9f8fa580bd19128ba944a1cf2ff16/pyomo-6.10.1-cp313-cp313-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:ab4799b3a2c2728cfba1c9a1754c06dda48e2f4463c7692a027b5b884e54b16a", size = 4611118, upload-time = "2026-06-04T22:43:12.131Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/a4/cdcd433eed4a226014b898a14adecc94aa2e48cae69e3f831c04dc56ccfe/pyomo-6.10.1-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9efddbc4c83971189047e734ba108ca6fdde8ff3390e0944e6eb928db0707ecd", size = 4639577, upload-time = "2026-06-04T21:50:07.168Z" },
+    { url = "https://files.pythonhosted.org/packages/40/ba/8526e3d84432a01dd4d12a3c0b3cdc8ec67432792b854ebc911e575646ca/pyomo-6.10.1-py3-none-any.whl", hash = "sha256:7a81b5301d4c0389809c1afd12311d23db04522341566332229d8ce4226bccb1", size = 4175938, upload-time = "2026-06-04T21:45:39.569Z" },
 ]
 
 [[package]]
@@ -3406,21 +3406,21 @@ typing = [
 [package.metadata]
 requires-dist = [
     { name = "beartype", specifier = ">=0.22.9" },
-    { name = "bokeh", marker = "extra == 'viz'", specifier = ">=3.9.0" },
+    { name = "bokeh", marker = "extra == 'viz'", specifier = ">=3.9.1" },
     { name = "contextily", marker = "extra == 'notebooks'", specifier = ">=1.7.0" },
     { name = "geojson", specifier = ">=3.3.0" },
     { name = "geopandas", specifier = ">=1.1.3" },
     { name = "h3", specifier = ">=4.5.0" },
     { name = "haversine", specifier = ">=2.9.0" },
     { name = "highspy", marker = "extra == 'ml'", specifier = ">=1.7.2" },
-    { name = "ipython", marker = "extra == 'notebooks'", specifier = ">=9.14.0" },
+    { name = "ipython", marker = "extra == 'notebooks'", specifier = ">=9.14.1" },
     { name = "matplotlib", specifier = ">=3.10.9" },
-    { name = "notebook", marker = "extra == 'notebooks'", specifier = ">=7.5.6" },
+    { name = "notebook", marker = "extra == 'notebooks'", specifier = ">=7.5.7" },
     { name = "pandas", specifier = ">=3.0.3" },
     { name = "prettytable", specifier = ">=3.17.0" },
     { name = "pyarrow", specifier = ">=24.0.0" },
     { name = "pydantic", specifier = ">=2.13.4" },
-    { name = "pyomo", marker = "extra == 'ml'", specifier = ">=6.10.0" },
+    { name = "pyomo", marker = "extra == 'ml'", specifier = ">=6.10.1" },
     { name = "rtree", specifier = ">=1.4.1" },
     { name = "seaborn", marker = "extra == 'notebooks'", specifier = ">=0.13.2" },
     { name = "shapely", specifier = ">=2.1.2" },
