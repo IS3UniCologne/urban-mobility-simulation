@@ -55,15 +55,15 @@ typing = [
 ml = [
   "highspy>=1.7.2", #highspy is not explicitly imported anywhere, but used as a solver for pyomo
   "torch>=2.12.0",
-  "pyomo>=6.10.0",
+  "pyomo>=6.10.1",
 ]
 notebooks = [
   "contextily>=1.7.0",
-  "ipython>=9.14.0",
-  "notebook>=7.5.6",
+  "ipython>=9.14.1",
+  "notebook>=7.5.7",
   "seaborn>=0.13.2",
 ]
-viz = ["bokeh>=3.9.0"]
+viz = ["bokeh>=3.9.1"]
 
 [build-system]
 build-backend = "setuptools.build_meta"
