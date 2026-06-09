@@ -1,21 +1,22 @@
 from __future__ import annotations  # noqa: D100
 
-import hashlib
 import math
 from typing import TYPE_CHECKING
 
-import geopandas as gpd
 import h3
 import numpy
-import pandas as pd
-from shapely.geometry import MultiPoint, Point, Polygon
+from shapely.geometry import Point, Polygon
 
+from simulation.environment.bounding_box import (
+    load_or_infer_bounding_box,
+    read_demand_hex_ids,
+    read_supply_hex_ids,
+    warn_hex_mismatches,
+)
 from simulation.environment.environment import Environment
-from simulation.world.demand import demand_schema
+from simulation.environment.hex_layer import load_or_build_hex_layer
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from simulation.context.simulation_context import SimulationContext
     from simulation.vehicle.vehicle import Vehicle
 
@@ -35,127 +36,31 @@ class GeodesicEnvironment(Environment):  # noqa: D101
 
         self._logger = sim.log_manager.get_class_logger(self.__class__.__name__)
 
-        bbox_path = sim.config.path.bounding_box
-        supply_paths = sim.config.all_supply_distribution_paths()
-        demand_df = pd.read_parquet(
-            sim.config.path.demand,
-            columns=[demand_schema.ORIGIN, demand_schema.DESTINATION],
+        demand_hex_ids = read_demand_hex_ids(sim.config.path.demand)
+        supply_hex_ids_by_path = read_supply_hex_ids(
+            sim.config.all_supply_distribution_paths()
         )
-        demand_hex_ids: set[str] = set(demand_df[demand_schema.ORIGIN]) | set(
-            demand_df[demand_schema.DESTINATION]
-        )
-        if bbox_path is not None:
-            bbox_df = gpd.read_file(bbox_path)
-            if bbox_df.crs is None:
-                self._logger.warning(
-                    "Bounding box CRS is None. Defaulting to EPSG:4326."
-                )
-                bbox_df.set_crs("epsg:4326", inplace=True)
-        else:
-            self._logger.info(
-                "No bounding_box.geojson found. Inferring from demand + supply data."
-            )
-            bbox_df = self._infer_bounding_box(demand_hex_ids, supply_paths)
 
+        bbox_df = load_or_infer_bounding_box(
+            sim.config.path.bounding_box,
+            demand_hex_ids,
+            supply_hex_ids_by_path,
+            self._logger,
+        )
         self._utm_epsg = f"epsg:{bbox_df.estimate_utm_crs().to_epsg()}"
         self.addLayer("bounding_box", bbox_df)
 
-        resolution = sim.config.world.SPATIAL_RESOLUTION.value
-        hex_df = self._load_hex_layer(
-            bbox_df=bbox_df, resolution=resolution, cache_dir=sim.config.path.cache_dir
+        hex_df = load_or_build_hex_layer(
+            bbox_df=bbox_df,
+            resolution=sim.config.world.SPATIAL_RESOLUTION.value,
+            cache_dir=sim.config.path.cache_dir,
+            logger=self._logger,
         )
         self.addLayer("hex", hex_df)
 
-        self._warn_hex_mismatches(hex_df, demand_hex_ids, supply_paths)
-
-    @staticmethod
-    def _infer_bounding_box(
-        demand_hex_ids: set[str], supply_paths: list[Path]
-    ) -> gpd.GeoDataFrame:
-        hex_ids = demand_hex_ids.copy()
-        for supply_path in supply_paths:
-            hex_ids |= set(pd.read_parquet(supply_path, columns=["hex_id"])["hex_id"])
-        latlngs = [h3.cell_to_latlng(hid) for hid in hex_ids]
-        hull = MultiPoint([(lng, lat) for lat, lng in latlngs]).convex_hull
-        return gpd.GeoDataFrame({"geometry": [hull]}, crs="epsg:4326")
-
-    def _warn_hex_mismatches(
-        self,
-        hex_df: gpd.GeoDataFrame,
-        demand_hex_ids: set[str],
-        supply_paths: list[Path],
-    ) -> None:
-        """Warn if demand or supply data contains hex IDs that fall outside the hex layer grid.
-
-        This can could happen with user provided data and might lead to unreachable origins/destinations
-        or supply locations.
-        """
-        hex_set = set(hex_df.index)
-        outside = demand_hex_ids - hex_set
-        if outside:
-            self._logger.warning(
-                "%d demand hex ID(s) fall outside the hex grid (e.g. %s). "
-                "These origins/destinations will be unreachable.",
-                len(outside),
-                next(iter(outside)),
-            )
-        for supply_path in supply_paths:
-            supply_hexes: set[str] = set(
-                pd.read_parquet(supply_path, columns=["hex_id"])["hex_id"]
-            )
-            outside_supply = supply_hexes - hex_set
-            if outside_supply:
-                self._logger.warning(
-                    "%d supply hex ID(s) in %s fall outside the hex grid (e.g. %s).",
-                    len(outside_supply),
-                    supply_path.name,
-                    next(iter(outside_supply)),
-                )
-
-    def _load_hex_layer(
-        self, bbox_df: gpd.GeoDataFrame, resolution: int, cache_dir: Path
-    ) -> gpd.GeoDataFrame:
-        bbox_bytes = bbox_df.union_all().wkt.encode()
-        cache_key = hashlib.sha256(bbox_bytes + str(resolution).encode()).hexdigest()[
-            :12
-        ]
-        cache_path = cache_dir / f"{cache_key}_res{resolution}_hex.geoparquet"
-
-        if cache_path.exists():
-            self._logger.debug("Loading hex layer from cache: %s", cache_path)
-            return gpd.read_parquet(cache_path)
-
-        self._logger.info(
-            "Deriving hex layer at resolution %s from bounding box.", resolution
+        warn_hex_mismatches(
+            hex_df, demand_hex_ids, supply_hex_ids_by_path, self._logger
         )
-        hex_df = self._build_hex_layer(bbox_df, resolution)
-
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        hex_df.to_parquet(cache_path)
-        return hex_df
-
-    @staticmethod
-    def _build_hex_layer(
-        bbox_df: gpd.GeoDataFrame, resolution: int
-    ) -> gpd.GeoDataFrame:
-        geom = bbox_df.union_all()
-        if not isinstance(geom, Polygon):
-            raise TypeError(f"Bounding box must be a single Polygon, got {type(geom)}")
-        exterior = list(geom.exterior.coords)
-        outer = [(lat, lng) for lng, lat in exterior]  # h3 uses (lat, lng) ordering
-        polygon = h3.LatLngPoly(outer)
-        hex_ids = sorted(
-            h3.h3shape_to_cells_experimental(polygon, res=resolution, contain="overlap")
-        )
-        hex_polys = [
-            Polygon([(lng, lat) for lat, lng in h3.cell_to_boundary(hid)])
-            for hid in hex_ids
-        ]
-        hex_df = gpd.GeoDataFrame(
-            {"geometry": hex_polys}, index=hex_ids, crs="epsg:4326"
-        )
-        hex_df.index.name = "hex_id"
-        return hex_df
 
     @property
     def utm_epsg(self) -> str:
