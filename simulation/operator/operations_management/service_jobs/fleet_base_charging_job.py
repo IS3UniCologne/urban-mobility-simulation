@@ -36,13 +36,14 @@ class FleetBaseChargingJob(ServiceJob):
     """
 
     __slots__ = (
-        "_config",
+        "_charging_power",
         "_destination",
         "_distance_to_fleet_base",
         "_number_of_vehicles_to_charge",
         "_origin",
         "_state_of_charge_threshold",
         "_vehicle_fleet",
+        "_vehicle_relocation_velocity",
         "_vehicle_type",
     )
 
@@ -56,9 +57,10 @@ class FleetBaseChargingJob(ServiceJob):
         distance_to_fleet_base: float,
         vehicle_fleet: VehicleFleet,
         state_of_charge_threshold: float,
+        charging_power: float,
+        vehicle_relocation_velocity: float,
     ) -> None:
         super().__init__(sim)
-        self._config = sim.config
 
         self._origin = origin
         self._destination = destination
@@ -68,6 +70,8 @@ class FleetBaseChargingJob(ServiceJob):
 
         self._vehicle_fleet = vehicle_fleet
         self._state_of_charge_threshold = state_of_charge_threshold
+        self._charging_power = charging_power
+        self._vehicle_relocation_velocity = vehicle_relocation_velocity
 
     def execute(self) -> Generator[Event, None, None]:
         """Execute batch charging: select vehicles, relocate, and charge."""
@@ -107,17 +111,11 @@ class FleetBaseChargingJob(ServiceJob):
 
         for vehicle, reservation in selected_vehicles_to_charge:
             distance = vehicle.position << fleet_base_position
-            vehicle_relocation_velocity = self._config.operators[
-                0
-            ].OPERATIONS_CONFIG.VEHICLE_RELOCATION_VELOCITY
             relocation_duration_per_vehicle = (
-                distance / vehicle_relocation_velocity
+                distance / self._vehicle_relocation_velocity
             ) / num_vehicles
 
-            # TODO: This is not good
-            vehicle_charging_power = self._config.operators[
-                0
-            ].OPERATIONS_CONFIG.CHARGING_STATION_POWER  # type: ignore
+            vehicle_charging_power = self._charging_power
 
             relocation_task = ServiceWorkerRelocationTask(
                 sim=self._sim,

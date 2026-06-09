@@ -92,6 +92,8 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         self._operations_start = ops_config.OPERATIONS_START
 
         self._state_of_charge_threshold = ops_config.RECHARGE_THRESHOLD
+        self._charging_station_power = ops_config.CHARGING_STATION_POWER
+        self._vehicle_relocation_velocity = ops_config.VEHICLE_RELOCATION_VELOCITY
 
         self._scheduled_jobs: list = []  # TODO: move to workforce? or internal schedule?
 
@@ -181,6 +183,8 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                 distance_to_fleet_base=distance_to_base,
                                 vehicle_fleet=self._operator.fleet,
                                 state_of_charge_threshold=self._state_of_charge_threshold,
+                                charging_power=self._charging_station_power,
+                                vehicle_relocation_velocity=self._vehicle_relocation_velocity,
                             )
 
                             composite_job.append_job(charging_job)
@@ -210,6 +214,8 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                             distance_to_fleet_base=distance_to_base,
                             vehicle_fleet=self._operator.fleet,
                             state_of_charge_threshold=self._state_of_charge_threshold,
+                            charging_power=self._charging_station_power,
+                            vehicle_relocation_velocity=self._vehicle_relocation_velocity,
                         )
 
                         # Schedule to Queue
