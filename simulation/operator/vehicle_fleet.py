@@ -102,31 +102,19 @@ class VehicleFleet(SimulationBase, ABC):
     def _create_fleet_vehicles(self, deps: VehicleFleetDependencies) -> None:
         """Create fleet vehicles using spatial distribution from supply data."""
         rng = deps.sim.random_manager.get_rng(component_name="FLEETFACTORY")
-        supply_data = load_fleet_supply_distribution(deps.sim.config, deps.config)
-        has_type_column = "vehicle_type" in supply_data.columns
+        supply = load_fleet_supply_distribution(deps.sim.config, deps.config)
+        hex_ids = supply.index.to_numpy()
 
         for vehicle_config, total_count in deps.config.VEHICLES.items():
             vehicle_type = vehicle_config.VEHICLE_TYPE
-            if has_type_column:
-                hex_probs = supply_data[
-                    supply_data["vehicle_type"] == vehicle_type
-                ].copy()
-                if hex_probs.empty:
-                    self.logger.error(
-                        "No supply data for vehicle type %s", vehicle_type
-                    )
-                    continue
-            else:
-                hex_probs = supply_data.copy()
-
-            probs = hex_probs["probability"].to_numpy()
-            probs = probs / probs.sum()  # (re-)normalize for multinomial sampling
-            counts = rng.multinomial(n=total_count, pvals=probs)
-            hex_probs = hex_probs.assign(count=counts)
-
-            for _, row in hex_probs[hex_probs["count"] > 0].iterrows():
-                hex_id = row["hex_id"]
-                for _ in range(int(row["count"])):
+            if vehicle_type not in supply.columns:
+                self.logger.error("No supply data for vehicle type %s", vehicle_type)
+                continue
+            counts = rng.multinomial(
+                n=total_count, pvals=supply[vehicle_type].to_numpy()
+            )
+            for hex_id, count in zip(hex_ids, counts):
+                for _ in range(int(count)):
                     rdm_lat, rdm_lng = deps.sim.geo_env.get_random_position(hex_id)
                     pos = GeodesicPosition(deps.sim, rdm_lat, rdm_lng, hex_id)
                     self._create_vehicle(deps, pos, vehicle_config)

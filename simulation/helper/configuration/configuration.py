@@ -217,6 +217,13 @@ class PathConfig(ConfigBaseModel):
 
     @computed_field
     @property
+    def supply(self) -> Path | None:
+        """Path to dataset-level supply.parquet, or None if absent."""
+        p = self.DATASET_DIR / "supply.parquet"
+        return p if p.exists() else None
+
+    @computed_field
+    @property
     def cache_dir(self) -> Path:
         """Path to the cache directory for derived artifacts."""
         return self.DATASET_DIR / ".cache"
@@ -710,6 +717,8 @@ class Configuration:
         # Load components that are configured as Python modules
         self._load_config_from_py(self._project_dir)
 
+        self._validate_fleet_supply_files()
+
     def _get_section(self, section: str, model: type[T]) -> T:
         if section in self._cache:
             return cast("T", self._cache[section])
@@ -861,19 +870,28 @@ class Configuration:
         return self._get_section_list("operator", OperatorConfig)
 
     def all_supply_distribution_paths(self) -> list[Path]:
-        """Return every fleet's resolved supply distribution path, skipping unset or missing ones.
+        """Return every supply parquet that contributes hex IDs to the simulation.
+
+        Includes per-fleet ``SUPPLY_DISTRIBUTION_FILE`` overrides as well as
+        the dataset-level ``supply.parquet``.
+        Order is preserved, duplicates are removed.
 
         Returns
         -------
         list of Path
             Paths to supply distribution files.
         """
-        return [
-            path
-            for op in self.operators
-            if (path := op.FLEET_CONFIG.supply_distribution_path(self.path.PROJECT_DIR))
-            is not None
-        ]
+        paths: list[Path] = []
+        seen: set[Path] = set()
+        for op in self.operators:
+            path = op.FLEET_CONFIG.supply_distribution_path(self.path.PROJECT_DIR)
+            if path is not None and path not in seen:
+                paths.append(path)
+                seen.add(path)
+        dataset_supply = self.path.supply
+        if dataset_supply is not None and dataset_supply not in seen:
+            paths.append(dataset_supply)
+        return paths
 
     @property
     def ride_hailing_vehicles(self) -> dict[str, VehicleConfig]:
@@ -1037,15 +1055,6 @@ class Configuration:
                     value, model_classes, model_to_section, section_buckets
                 )
 
-        for op in cast("list[OperatorConfig]", section_buckets.get("operator", [])):
-            filename = op.FLEET_CONFIG.SUPPLY_DISTRIBUTION_FILE
-            if filename is not None and not (self._project_dir / filename).exists():
-                logger.error(
-                    "Supply distribution file '%s' not found in project directory %s",
-                    filename,
-                    self._project_dir,
-                )
-
         # Store collected instances in cache
         self._cache["operator"] = section_buckets.get("operator", [])
         self._cache["charging_infrastructure"] = section_buckets.get(
@@ -1059,6 +1068,16 @@ class Configuration:
                 "Multiple PopulationConfig instances found in population.py. "
             )
         self._cache["population"] = population_configs[0]
+
+    def _validate_fleet_supply_files(self) -> None:
+        """Raise if any fleet references a SUPPLY_DISTRIBUTION_FILE that does not exist."""
+        for op in self.operators:
+            path = op.FLEET_CONFIG.supply_distribution_path(self._project_dir)
+            if path is not None and not path.exists():
+                raise FileNotFoundError(
+                    f"Supply distribution file '{op.FLEET_CONFIG.SUPPLY_DISTRIBUTION_FILE}' "
+                    f"not found in project directory {self._project_dir}"
+                )
 
     def _collect_config_instance(
         self,
