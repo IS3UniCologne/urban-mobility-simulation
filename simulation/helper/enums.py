@@ -53,6 +53,11 @@ class VehicleType(StrEnum):
     BIKE = "Bike"
     BUS = "Bus"
 
+    @classmethod
+    def _missing_(cls, value: object) -> None:
+        valid = ", ".join(vt.value for vt in cls)
+        raise ValueError(f"Unknown vehicle type {value!r}. Expected one of: {valid}.")
+
 
 class AutonomyType(StrEnum):
     """Vehicle autonomy, e.g. human-driven or autonomous."""
