@@ -69,7 +69,7 @@ class VehicleTask(SimulationBase, ABC, Generic[VehicleT]):
 
     @property
     def destination(self) -> GeodesicPosition | None:
-        """Get the relocation destination."""
+        """Get the task destination."""
         return self._destination
 
     @property
