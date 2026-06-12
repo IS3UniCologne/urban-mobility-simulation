@@ -115,9 +115,11 @@ class FleetBaseChargingJob(ServiceJob):
             ) / num_vehicles
 
             # TODO: This is not good
-            vehicle_charging_power = self._config.operators[
-                0
-            ].OPERATIONS_CONFIG.CHARGING_STATION_POWER  # type: ignore
+            vehicle_charging_power = (
+                self._config.operators[  # pyrefly: ignore[missing-attribute]
+                    0
+                ].OPERATIONS_CONFIG.CHARGING_STATION_POWER  # type: ignore
+            )
 
             relocation_task = ServiceWorkerRelocationTask(
                 sim=self._sim,

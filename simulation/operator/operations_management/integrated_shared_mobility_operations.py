@@ -284,7 +284,9 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                     sim=self._sim,
                                     origin=origin,
                                     destination=destination,
-                                    number_of_vehicles_to_relocate=no_vehicle_to_relocate,
+                                    number_of_vehicles_to_relocate=int(
+                                        no_vehicle_to_relocate
+                                    ),
                                     distance=relocation_distance,
                                     vehicle_type=type,
                                     vehicle_fleet=self._operator.fleet,
@@ -315,7 +317,9 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                 sim=self._sim,
                                 origin=origin,
                                 destination=destination,
-                                number_of_vehicles_to_relocate=no_vehicle_to_relocate,
+                                number_of_vehicles_to_relocate=int(
+                                    no_vehicle_to_relocate
+                                ),
                                 distance=relocation_distance,
                                 vehicle_type=type,
                                 vehicle_fleet=self._operator.fleet,
