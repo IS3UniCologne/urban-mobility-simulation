@@ -99,7 +99,6 @@ class RideHailingMPChargingOperations(RideHailingOperations):
             if not allocations:
                 continue
 
-            scheduled_sessions: list[ChargingSession] = []
             for charging_allocation in allocations:
                 v = charging_allocation["vehicle"]
                 c = charging_allocation["charging_station"]
@@ -108,12 +107,9 @@ class RideHailingMPChargingOperations(RideHailingOperations):
                     sim=self._sim, vehicle=v, charging_station=c
                 )
 
-                # Schedule to Queue
-                scheduled_sessions.append(session)
                 # Track task completion
                 self._env.process(self._track_session(session))
 
-            for session in scheduled_sessions:
                 self.logger.debug(
                     "Processing charging session for vehicle %s.", session.vehicle.uid
                 )
@@ -131,8 +127,12 @@ class RideHailingMPChargingOperations(RideHailingOperations):
     def _update_after_arrival(
         self, session: ChargingSession
     ) -> Generator[Event, Any, None]:
-        # as soon as the vehicle really arrives, we can undo this because its then reflected in the capacity
-        yield session.arrived_at_charging_station
+        # as soon as the pre_queuing or pre_charging checkpoint event is triggered, we know the vehicle has arrived and
+        # is either occupying a slot in the queue, at the plugs, or the task has aborted
+        yield AnyOf(
+            self._sim.env,
+            [session.pre_queuing_checkpoint, session.pre_charging_checkpoint],
+        )
         availability = self._virtual_charging_infrastructure.get_available_capacity()
         availability[session.destination] += 1
         self._virtual_charging_infrastructure.update(availability=availability)

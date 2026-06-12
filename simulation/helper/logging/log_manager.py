@@ -63,10 +63,6 @@ class LogManager:
         file_level = getattr(logging, config.settings.FILE_LOG_LEVEL)
         logger.setLevel(min(console_level, file_level))
 
-        # Suppress verbose third-party loggers
-        logging.getLogger("fiona").setLevel(logging.WARNING)
-        logging.getLogger("pyomo").setLevel(logging.WARNING)
-
         logger.addHandler(self._shared_console_handler)
         logger.addHandler(self._shared_memory_handler)
 
@@ -76,6 +72,9 @@ class LogManager:
 
         logger.addFilter(self._uid_injector)
         logger.addFilter(self._env_time_injector)
+
+        # Keep noisy third-party loggers out of the simulation formatter.
+        self._silence_third_party_loggers()
 
     def get_class_logger(self, cls_name: str) -> logging.Logger:
         """
@@ -146,6 +145,43 @@ class LogManager:
         class_name = uid.split("_")[0]
         base_logger = self.get_class_logger(class_name)
         return UidLoggerAdapter(base_logger, uid)
+
+    def get_system_logger(self, name: str) -> logging.Logger:
+        """
+        Get a specialized logger for system messages with simplified formatting.
+
+        Parameters
+        ----------
+        name : str
+            The name of the logger.
+
+        Returns
+        -------
+        logging.Logger
+            The system logger with simplified formatting.
+        """
+        logger_name = f"system.{name}"
+
+        if logger_name not in self._loggers:
+            logger = logging.getLogger(logger_name)
+            logger.propagate = False
+
+            system_format_string = "[%(levelname)s]: %(message)s"
+            if self._config.settings.LOG_TIMESTAMPS:
+                system_format_string = "%(asctime)s " + system_format_string
+            system_formatter = logging.Formatter(system_format_string)
+
+            # Create console handler for system messages
+            system_console_handler = logging.StreamHandler()
+            system_console_handler.setLevel(self._config.settings.LOG_LEVEL)
+            system_console_handler.setFormatter(system_formatter)
+
+            logger.addHandler(system_console_handler)
+            logger.setLevel(self._config.settings.LOG_LEVEL)
+
+            self._loggers[logger_name] = logger
+
+        return self._loggers[logger_name]
 
     def get_metrics_output_logger(self) -> logging.Logger:
         """
@@ -247,3 +283,11 @@ class LogManager:
             formatter = "%(asctime)s " + formatter
 
         return logging.Formatter(formatter)
+
+    def _silence_third_party_loggers(self) -> None:
+        for logger_name in ("bokeh", "tornado", "fiona", "pyomo"):
+            third_party_logger = logging.getLogger(logger_name)
+            third_party_logger.handlers.clear()
+            third_party_logger.addHandler(logging.NullHandler())
+            third_party_logger.setLevel(logging.WARNING)
+            third_party_logger.propagate = False

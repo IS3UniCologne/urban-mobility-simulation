@@ -71,8 +71,9 @@ class RideHailingOperations(Operations):
             charging_duration=charging_session.charging_duration,
             charging_station=charging_session.charging_station,
             scheduled_time=charging_session.scheduled_time,
-            arrived_at_charging_station=charging_session.arrived_at_charging_station,
-            started_charging=charging_session.started_charging,
+            arrived_at_charging_station=charging_session.arrival_at_cs_checkpoint,
+            started_queuing=charging_session.pre_queuing_checkpoint,
+            started_charging=charging_session.pre_charging_checkpoint,
         )
 
         # 2. Create Session

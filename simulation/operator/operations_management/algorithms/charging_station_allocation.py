@@ -52,12 +52,9 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
             CSs_range.append(i.cs_id)
 
         d = {}  # distance matrix
-        # TODO: use haversive vector or distance matrix
         for j in vehicles:
             for i in CSs:
-                d[i.cs_id, j.id] = i.centre << j.position
-                # if isinstance(d[i.id, j.id], list):
-                #     d[i.id, j.id] = float([i.id, j.id][0])
+                d[i.cs_id, j.id] = i.centre << j.destination
 
         Q = {}  # queueing time of the CS
         N = {}  # available capacity (excl queue)
@@ -66,13 +63,14 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
         for i in CSs:
             Q[i.cs_id] = i.current_queue_time
             N[i.cs_id] = i.capacity  # this only works with VirtualChargingStations !!
-            # TODO: M should incorporate overflow of capa
-            M[i.cs_id] = i.capacity + (i.queue_size - len(i.plugs.queue))
+            M[i.cs_id] = (
+                i.capacity - i.blocked_capacity + (i.queue_size - len(i.plugs.queue))
+            )
             C[i.cs_id] = i.plugs.capacity
 
         SoC = {}  # state of charge for vehicles that need to charge
         for j in vehicles:
-            SoC[j.id] = j.energy_system.current_energy_relative
+            SoC[j.id] = j.energy_system.predicted_energy_relative
             # if isinstance(SoC[j.id], list):
             #     SoC[j.id] = float(SoC[j.id][0])
 
@@ -193,7 +191,10 @@ class DowntimeMinWithoutLookahead(SimulationBase):  # noqa: D101
         mdl.objective = Objective(rule=objective_rule, sense=minimize)
 
         opt = SolverFactory("highs")
-        opt.solve(mdl)
+        try:
+            opt.solve(mdl)
+        except Exception as e:
+            raise e
 
         pairs = []
         for i in CSs:

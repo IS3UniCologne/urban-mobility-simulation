@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 class VirtualChargingStation(SimulationBase):  # noqa: D101
     __slots__ = (
+        "_blocked_capacity",
         "_capacity",
         "_centre",
         "_cs_id",
@@ -46,6 +47,7 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
         self._physical_charging_station = charging_station
         self._valid_timeframe = None
         self._capacity = charging_station.capacity
+        self._blocked_capacity = 0
         self._polygon = charging_station.polygon
         self._centre = charging_station.centre
         self._plugs = charging_station.plugs  # reference, mutable object
@@ -67,7 +69,11 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
     def update_capacity(  # noqa: D102
         self, capacity: int, valid_timeframe: tuple[float, float] | None
     ) -> None:
-        self._capacity = capacity
+        self._capacity = max(0, min(capacity, self._physical_charging_station.capacity))
+        if capacity < 0:
+            self._blocked_capacity = -capacity
+        else:
+            self._blocked_capacity = 0
         self._valid_timeframe = valid_timeframe
 
     @property
@@ -112,6 +118,10 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
     @property
     def capacity(self) -> int:  # noqa: D102
         return self._capacity
+
+    @property
+    def blocked_capacity(self) -> int:  # noqa: D102
+        return self._blocked_capacity
 
     @property
     def plugs(self) -> simpy.PriorityResource:  # noqa: D102

@@ -72,7 +72,6 @@ class World(SimulationBase):  # noqa: D101
         "_user_log",
         "_users",
         "_vehicle_assignment_engine",
-        "_vehicle_processes",
         "_vehicles",
     )
 
@@ -98,9 +97,8 @@ class World(SimulationBase):  # noqa: D101
         self._total_users: int = 0
 
         # Store all current vehicles
-        # TODO: Probably redundant
+        # TODO: Probably redundant with fleets
         self._vehicles: set[Vehicle] = set()
-        self._vehicle_processes: dict[int, simpy.Process] = {}
 
         self._fleets: list[VehicleFleet] = []
 
@@ -159,10 +157,6 @@ class World(SimulationBase):  # noqa: D101
     @property
     def demand_processes(self):  # noqa: ANN201, D102
         return self._demand_processes
-
-    @property
-    def vehicle_processes(self):  # noqa: ANN201, D102
-        return self._vehicle_processes
 
     @property
     def operators(self) -> list[Operator]:
