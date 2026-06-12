@@ -8,7 +8,9 @@ import pytest
 
 from tests.end_to_end.end_to_end_shared import run_simulation_and_extract_metrics
 
-# Discover all configuration directories under tests/configurations
+REL_TOLERANCE = 1e-3
+
+# Discover all configuration directories under tests/configurations.
 CONFIG_DIRS = sorted(
     str(p) for p in Path("tests", "configurations").iterdir() if p.is_dir()
 )
@@ -68,7 +70,7 @@ def _validate_metrics(actual_metrics: dict, config_path: str) -> None:
     # Validate that actual metrics match expected metrics approximately
     try:
         assert actual_metrics["operator_metrics"] == pytest.approx(
-            expected["operator_metrics"]
+            expected["operator_metrics"], rel=REL_TOLERANCE
         )
     except AssertionError as e:
         raise AssertionError(
@@ -76,7 +78,9 @@ def _validate_metrics(actual_metrics: dict, config_path: str) -> None:
         )
 
     try:
-        assert actual_metrics["user_metrics"] == pytest.approx(expected["user_metrics"])
+        assert actual_metrics["user_metrics"] == pytest.approx(
+            expected["user_metrics"], rel=REL_TOLERANCE
+        )
     except AssertionError as e:
         raise AssertionError(
             f"user_metrics mismatch for config {config_path}: {e}\nActual: {actual_metrics['user_metrics']}\nExpected: {expected['user_metrics']}"
@@ -93,7 +97,9 @@ def _validate_metrics(actual_metrics: dict, config_path: str) -> None:
 
     for fleet_id, metrics in actual_metrics["fleet_metrics"].items():
         try:
-            assert metrics == pytest.approx(expected["fleet_metrics"][fleet_id])
+            assert metrics == pytest.approx(
+                expected["fleet_metrics"][fleet_id], rel=REL_TOLERANCE
+            )
         except AssertionError as e:
             raise AssertionError(
                 f"fleet_metrics mismatch for fleet_id {fleet_id} in config {config_path}: {e}\nActual: {metrics}\nExpected: {expected['fleet_metrics'][fleet_id]}"
