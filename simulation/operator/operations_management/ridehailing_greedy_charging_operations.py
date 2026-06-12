@@ -218,12 +218,12 @@ class RideHailingGreedyChargingOperations(RideHailingOperations):
             self._charging_plan_updated = self._env.event()
 
             for session in scheduled_sessions:
+                self._job_executed.succeed(session)
+                self._job_executed = self._env.event()
                 self.logger.debug(
                     "Processing charging session for vehicle %s.", session.vehicle.uid
                 )
                 self._env.process(self._execute_autonomous_charging_session(session))
-                self._job_executed.succeed(session)
-                self._job_executed = self._env.event()
 
     def _track_session(self, session: ChargingSession) -> Generator[AnyOf, Any, None]:
         yield AnyOf(self._env, [session.finished, self._world.simulation_finished])

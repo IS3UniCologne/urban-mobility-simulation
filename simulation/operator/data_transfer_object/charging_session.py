@@ -28,8 +28,9 @@ class ChargingSession:
     charging_duration: float
     vehicle: RideHailingVehicle
     charging_station: ChargingStation
-    arrived_at_charging_station: Event
-    started_charging: Event
+    arrival_at_cs_checkpoint: Event
+    pre_queuing_checkpoint: Event
+    pre_charging_checkpoint: Event
 
     finished: Event = None  # type: ignore[assignment]
 
@@ -92,7 +93,8 @@ class ChargingSession:
             charging_duration=charging_duration,
             vehicle=vehicle,
             charging_station=charging_station,
-            arrived_at_charging_station=sim.env.event(),
-            started_charging=sim.env.event(),
+            arrival_at_cs_checkpoint=sim.env.event(),
+            pre_queuing_checkpoint=sim.env.event(),
+            pre_charging_checkpoint=sim.env.event(),
             finished=sim.env.event(),
         )

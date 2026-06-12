@@ -2,10 +2,11 @@ name: Ruff Checks
 on:
   pull_request:
   push:
-    branches: [main, develop]
+    branches: [develop]
 
 jobs:
   main:
+    if: ${{ !startsWith(github.head_ref, 'release-please--') && !startsWith(github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     permissions:
       # Give the default GITHUB_TOKEN write permission to commit and push the
@@ -16,7 +17,7 @@ jobs:
       #       check-out repo and set-up python
       #----------------------------------------------
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Set up Python
         uses: actions/setup-python@v6
         with:

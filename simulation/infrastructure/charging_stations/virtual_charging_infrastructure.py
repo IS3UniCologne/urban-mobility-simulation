@@ -136,22 +136,18 @@ class VirtualChargingInfrastructure(SimulationBase):
     def _update_virtual_cs(self, init: bool = False) -> None:
         for cs in self._virtual_charging_stations:
             # availability might be negative if we account for some vehicle on the way and in the meantime another vehicle arrives at the already full station
-            bounded_capa = (
-                max(
-                    0,
-                    min(
-                        self._availability[self._current_lookahead][cs.location]
-                        if self._current_lookahead is not None
-                        else self._availability[cs.location],
-                        cs._physical_charging_station.capacity,  # noqa: SLF001
-                    ),
+            capa = (
+                (
+                    self._availability[self._current_lookahead][cs.location]
+                    if self._current_lookahead is not None
+                    else self._availability[cs.location]
                 )
                 if not init
                 else 0
             )
+
             cs.update_capacity(
-                capacity=bounded_capa,
-                # TODO: move all shared_charging_auction to charging infrastructure config?
+                capacity=capa,
                 valid_timeframe=(
                     self._current_lookahead,
                     self._current_lookahead
@@ -175,7 +171,6 @@ class VirtualChargingInfrastructure(SimulationBase):
         if self._current_lookahead is not None:
             # update the current lookahead to be the next coordinated (e.g. auctioned) slot
             self._current_lookahead = self._env.now + (
-                # TODO: move all shared_charging_auction to charging infrastructure config?
                 self._charging_infrastructure._charging_infra_config.COORDINATION_LOOKAHEAD  # noqa: SLF001
                 - (
                     self._env.now
