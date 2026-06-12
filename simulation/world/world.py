@@ -179,20 +179,19 @@ class World(SimulationBase):  # noqa: D101
     ) -> list[ChargingInfrastructure] | None:
         # TODO: This is currently completely ignored by shared vehicle operators, while ridehailing operators all use the same charging infrastructure.
         # This probably needs some refactoring depending on what we want to do with charging infrastructure in the future.
-
-        if len(self._config.charging_infrastructures) > 0:
-            charging_infrastructures = []
-
-            for ci_conf in self._config.charging_infrastructures:
-                charging_infrastructure = ChargingInfrastructure(
-                    sim=self._sim, charging_infrastructure_config=ci_conf
-                )
-                # Assign the charging infrastructure object to the config so operators can access it
-                ci_conf.instance = charging_infrastructure
-                charging_infrastructures.append(charging_infrastructure)
-            return charging_infrastructures
-        else:
-            return None
+        charging_infrastructures: list[ChargingInfrastructure] = []
+        seen: set[int] = set()
+        for operator_config in self._config.operators:
+            ci_conf = operator_config.CHARGING_INFRASTRUCTURE
+            if ci_conf is None or id(ci_conf) in seen:
+                continue
+            seen.add(id(ci_conf))
+            charging_infrastructure = ChargingInfrastructure(
+                sim=self._sim, charging_infrastructure_config=ci_conf
+            )
+            ci_conf.instance = charging_infrastructure
+            charging_infrastructures.append(charging_infrastructure)
+        return charging_infrastructures or None
 
     def _setup_operators(self) -> None:
         if not self._config.operators or len(self._config.operators) == 0:

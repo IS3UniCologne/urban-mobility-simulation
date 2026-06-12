@@ -844,20 +844,6 @@ class Configuration:
         return self._get_section("population", PopulationConfig)
 
     @property
-    def charging_infrastructures(self) -> list[ChargingInfrastructureConfig]:
-        """
-        Get the charging infrastructure configuration section.
-
-        Returns
-        -------
-        ChargingInfrastructureConfig
-            The charging infrastructure configuration section.
-        """
-        return self._get_section_list(
-            "charging_infrastructure", ChargingInfrastructureConfig
-        )
-
-    @property
     def operators(self) -> list[OperatorConfig]:
         """
         Get the operators configuration section.
@@ -1026,7 +1012,6 @@ class Configuration:
         # Map model types to their config section names
         model_to_section: dict[type[BaseModel], str] = {
             OperatorConfig: "operator",
-            ChargingInfrastructureConfig: "charging_infrastructure",
             PopulationConfig: "population",
         }
         model_classes = tuple(model_to_section.keys())
@@ -1057,9 +1042,6 @@ class Configuration:
 
         # Store collected instances in cache
         self._cache["operator"] = section_buckets.get("operator", [])
-        self._cache["charging_infrastructure"] = section_buckets.get(
-            "charging_infrastructure", []
-        )
         population_configs = section_buckets.get("population", [])
         if len(population_configs) == 0:
             raise ValueError("No PopulationConfig instance found in population.py. ")

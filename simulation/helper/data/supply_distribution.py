@@ -100,8 +100,11 @@ def _derive_supply_distribution_from_demand(
         probs = pd.read_parquet(cache_path).set_index("hex_id")["probability"]
     else:
         demand_df = pd.read_parquet(demand_path)
+        cells = demand_df.drop_duplicates(
+            [demand_schema.ORIGIN, demand_schema.TIME_BUCKET, demand_schema.IS_WEEKEND]
+        )
         probs = (
-            demand_df.groupby(demand_schema.ORIGIN)[demand_schema.ORIGIN_ARRIVAL_RATE]
+            cells.groupby(demand_schema.ORIGIN)[demand_schema.ORIGIN_ARRIVAL_RATE]
             .sum()
             .rename_axis("hex_id")
             .rename("probability")
