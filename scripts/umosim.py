@@ -261,6 +261,11 @@ def _handle_run(args: argparse.Namespace) -> None:
     dataset_dir = _resolve_project_dataset(project_dir)
     if dataset_dir is not None:
         logger.info("Running '%s' on dataset %s", args.name, dataset_dir)
+    if args.log_level is not None:
+        from simulation.helper.configuration.configuration import LOG_LEVEL_ENV_VAR
+
+        os.environ[LOG_LEVEL_ENV_VAR] = args.log_level
+        logger.info("Overriding log level for this run: %s", args.log_level)
     try:
         os.execvp("uv", ["uv", "run", str(run_script)])
     except FileNotFoundError:
@@ -390,6 +395,30 @@ def build_parser() -> argparse.ArgumentParser:
         "run", help="Run a project's run.py via uv (e.g. umosim run ridehailing_demo)."
     )
     p_run.add_argument("name", help="Project name (directory under data/projects/)")
+    log_group = p_run.add_mutually_exclusive_group()
+    log_group.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default=None,
+        dest="log_level",
+        help="Override console + file log level for this run (ignores config.toml).",
+    )
+    log_group.add_argument(
+        "-v",
+        "--verbose",
+        action="store_const",
+        const="DEBUG",
+        dest="log_level",
+        help="Shortcut for --log-level DEBUG.",
+    )
+    log_group.add_argument(
+        "-q",
+        "--quiet",
+        action="store_const",
+        const="CRITICAL",
+        dest="log_level",
+        help="Shortcut for --log-level CRITICAL (near-silent console).",
+    )
     p_run.set_defaults(func=_handle_run)
 
     return parser
