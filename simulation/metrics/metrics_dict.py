@@ -141,7 +141,7 @@ class MetricsDict(dict[str, object]):
 
             if table.rowcount > 0:
                 logger.info(
-                    "%s%s METRICS:\n%s", prefix, str(key).upper(), table.get_string()
+                    "%s%s METRICS:\n%s", prefix, key.upper(), table.get_string()
                 )
 
     def flatten(self, prefix: str = "") -> dict[str, object]:
