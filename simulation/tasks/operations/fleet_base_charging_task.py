@@ -71,12 +71,14 @@ class FleetBaseChargingTask(VehicleTask["SharedVehicle"]):
 
         self._vehicle.unplug_from_charging_station()
 
-    def get_predicted_energy_delta(self, current_energy: float | None = None) -> float:
+    def get_predicted_energy_delta(
+        self, prev_task_energy: float | None = None
+    ) -> float:
         """Calculate predicted energy gain from charging.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Running energy level from previous tasks. When None, uses
             vehicle's actual current energy.
 
@@ -85,18 +87,18 @@ class FleetBaseChargingTask(VehicleTask["SharedVehicle"]):
         float
             Net energy delta in kWh (positive = energy gain).
         """
-        if current_energy is None:
-            current_energy = self._vehicle.energy_system.current_energy_absolute
+        if prev_task_energy is None:
+            prev_task_energy = self._vehicle.energy_system.current_energy_absolute
 
-        charging_energy_gain = self._vehicle.energy_system.capacity - current_energy
+        charging_energy_gain = self._vehicle.energy_system.capacity - prev_task_energy
         return charging_energy_gain
 
-    def get_predicted_duration(self, current_energy: float | None = None) -> float:
+    def get_predicted_duration(self, prev_task_energy: float | None = None) -> float:
         """Calculate predicted duration for charging.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Running energy level from previous tasks. When None, uses
             vehicle's actual current energy.
 
@@ -105,4 +107,4 @@ class FleetBaseChargingTask(VehicleTask["SharedVehicle"]):
         float
             Predicted duration in minutes (charging only).
         """
-        return self._compute_charging_duration(current_energy)
+        return self._compute_charging_duration(prev_task_energy)

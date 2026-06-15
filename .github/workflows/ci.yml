@@ -15,9 +15,9 @@ permissions:
   contents: read
 
 jobs:
-  mypy:
+  pyrefly:
     runs-on: self-hosted
-    name: Mypy static type checking
+    name: Pyrefly static type checking
 
     steps:
     - name: Check out the repository
@@ -32,9 +32,9 @@ jobs:
       run: |
         uv tool install nox
 
-    - name: Run mypy
+    - name: Run pyrefly
       run: |
-        nox -rs mypy
+        nox -rs pyrefly
 
   fast-test:
     runs-on: self-hosted
