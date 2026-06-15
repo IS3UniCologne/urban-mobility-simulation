@@ -91,6 +91,9 @@ if TYPE_CHECKING:
 T = TypeVar("T", bound=BaseModel)
 logger = logging.getLogger(__name__)
 
+LOG_LEVEL_ENV_VAR = "UMOSIM_LOG_LEVEL"
+VALID_LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
+
 
 class ConfigBaseModel(BaseModel):
     """Base model for all configuration models."""
@@ -113,9 +116,8 @@ class SettingsConfig(ConfigBaseModel):
         """Validate log class overrides."""
         if v is None:
             return v
-        valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         for class_name, level in v.items():
-            if level not in valid_levels:
+            if level not in VALID_LOG_LEVELS:
                 raise ValueError(
                     f"Invalid log level '{level}' for class '{class_name}'"
                 )
@@ -707,6 +709,7 @@ class Configuration:
             data = tomllib.load(f)
 
         self._data = {k.lower(): v for k, v in data.items()}
+        self._apply_log_level_override()  # From env var, if set
         self._cache: dict[str, object] = {}
         self._project_dir: Path = project_path.resolve()
 
@@ -714,6 +717,26 @@ class Configuration:
         self._load_config_from_py(self._project_dir)
 
         self._validate_fleet_supply_files()
+
+    def _apply_log_level_override(self) -> None:
+        """Override log levels with env var, if set (from CLI)."""
+        override = os.environ.get(LOG_LEVEL_ENV_VAR)
+        if override is None:
+            return
+        override = override.strip().upper()
+        if override not in VALID_LOG_LEVELS:
+            logger.warning(
+                "Ignoring invalid %s=%r (expected one of %s)",
+                LOG_LEVEL_ENV_VAR,
+                os.environ[LOG_LEVEL_ENV_VAR],
+                ", ".join(sorted(VALID_LOG_LEVELS)),
+            )
+            return
+        settings = self._data.get("settings")
+        if not isinstance(settings, dict):
+            return
+        settings["LOG_LEVEL"] = override
+        settings["FILE_LOG_LEVEL"] = override
 
     def _get_section(self, section: str, model: type[T]) -> T:
         if section in self._cache:
