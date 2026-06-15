@@ -40,9 +40,9 @@ dev = [
 
 benchmarks = ["pyperf>=2.10.0"]
 
-pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.16"]
+pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.17"]
 
-testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.0.3"]
+testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.1.0"]
 
 typing = [
   "pyrefly>=1.0.0",
