@@ -48,6 +48,7 @@ typing = [
   "pyrefly>=1.0.0",
   "pandas-stubs>=3.0.3.260530",
   "types-shapely>=2.1.0.20260603",
+  "types-geopandas>=1.1.3.20260518",
 ]
 
 
@@ -145,9 +146,6 @@ project-excludes = [
   "simulation/agent/episodic_semi_gradient_sarsa.py",
   "simulation/agent/policy.py",
   "simulation/agent/rl_agent.py",
-  "simulation/environment/environment.py",
-  "simulation/environment/geodesic_environment.py",
-  "simulation/environment/geodesic_position.py",
   "simulation/helper/configuration/configuration.py",
   "simulation/infrastructure/charging_stations/charging_infastructure.py",
   "simulation/infrastructure/charging_stations/charging_station.py",
