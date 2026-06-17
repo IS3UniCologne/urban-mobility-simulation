@@ -1,7 +1,9 @@
-from __future__ import annotations  # noqa: D100
+"""Geodesic spatial environment backed by H3 hexagons and GeoDataFrame layers."""
+
+from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, cast
 
 import geopandas as gpd
 import h3
@@ -11,11 +13,30 @@ from shapely.geometry import Point, Polygon
 from simulation.environment.environment import Environment
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from simulation.context.simulation_context import SimulationContext
-    from simulation.vehicle.vehicle import Vehicle
+    from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
 
 
-class GeodesicEnvironment(Environment):  # noqa: D101
+class _Demand(Protocol):
+    """Structural type for a demand with origin and destination positions."""
+
+    origin: GeodesicPosition
+    destination: GeodesicPosition
+
+
+class GeodesicEnvironment(Environment):
+    """
+    Spatial environment using H3 hexagon layers stored as GeoDataFrames.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        Simulation context providing configuration, RNG, and logging.
+    """
+
     __slots__ = ("_centroid_cache", "_hex_geom_cache", "_logger", "_rng", "_utm_epsg")
 
     def __init__(self, sim: SimulationContext) -> None:
@@ -25,8 +46,8 @@ class GeodesicEnvironment(Environment):  # noqa: D101
             component_name="GEOENV"
         )
 
-        self._hex_geom_cache = {}
-        self._centroid_cache = {}
+        self._hex_geom_cache: dict[str, dict[str, Polygon]] = {}
+        self._centroid_cache: dict[str, tuple[float, float]] = {}
 
         self._logger = sim.log_manager.get_class_logger(self.__class__.__name__)
 
@@ -60,24 +81,27 @@ class GeodesicEnvironment(Environment):  # noqa: D101
 
     @property
     def utm_epsg(self) -> str:
-        """The UTM CRS EPSG code for the environment."""
+        """UTM CRS EPSG code."""
         return self._utm_epsg
 
-    def getLayer(self, layer_name: str):  # noqa: ANN201
-        """
-            Return layer
-        :param layer_name: GeoDataFrame containing all spatial elements of that layer
-        :return:
-        """  # noqa: D205, D400
+    def getLayer(self, layer_name: str) -> gpd.GeoDataFrame:
+        """Return layer stored under layer_name."""
         return self.layer[layer_name]
 
-    def addLayer(self, layer_name, layer):  # noqa: ANN001, ANN201
+    def addLayer(self, layer_name: str, layer: gpd.GeoDataFrame) -> None:
         """
-        Add a new layer to the environment. Typically, we assume a natural ordering of the layers (i.e., first layer is finest)
-        :param layer_name: Layer name
-        :param layer: Layer object stored as a Geopandas DataFrame
-        :return:
-        """  # noqa: D205, D400
+        Store a spatial layer under a name.
+
+        Layers are assumed to have a natural ordering (first added is finest
+        resolution).
+
+        Parameters
+        ----------
+        layer_name : str
+            Name to store layer under.
+        layer : geopandas.GeoDataFrame
+            Layer geometries.
+        """
         self.layer[layer_name] = layer
 
     # TODO: Hardcoded layer here is dangerous
@@ -86,73 +110,101 @@ class GeodesicEnvironment(Environment):  # noqa: D101
         self, hex_id: str, layer_name: str = "hex_7"
     ) -> tuple[float, float]:
         """
-        Returns a random position within given hexagon
-        :param hex_id: Hexagon ID
-        :param layer_name: Layername (i.e., resolution)
-        :return: Random Point (Lat, Lng)
-        """  # noqa: D205, D400, D401
+        Sample a uniformly random position within given hexagon.
+
+        Parameters
+        ----------
+        hex_id : str
+            Hexagon ID.
+        layer_name : str
+            Layer (resolution) to look up.
+
+        Returns
+        -------
+        tuple of float
+            Random point as (latitude, longitude).
+        """
         # Select Layer
         gdf = self.layer[layer_name]
 
         # Select Hexagon
-        geometry = gdf.loc[hex_id].geometry
+        geometry = cast("Polygon", gdf.loc[hex_id].geometry)
 
         # Sample random point within hexagon
         minx, miny, maxx, maxy = geometry.bounds
-        points = []
-        while len(points) < 1:
+        while True:
             pnt = Point(self._rng.uniform(minx, maxx), self._rng.uniform(miny, maxy))
             if geometry.contains(pnt):
                 return pnt.y, pnt.x  # Latitude, Longitude
 
     def get_centroid(self, hex_id: str) -> tuple[float, float]:
         """
-        Get centroid of hexagon, results are cached for performance
-        :param hex_id: Hexagon ID
-        :param layer_name: Layername (i.e., resolution, hex_7, hex_8, hex_9)
-        :return: Point (lat,lng) representing centroid of hexagon
-        """  # noqa: D205, D400
+        Return hexagon centroid (cached).
+
+        Parameters
+        ----------
+        hex_id : str
+            Hexagon ID.
+
+        Returns
+        -------
+        tuple of float
+            Centroid as (latitude, longitude).
+        """
         if hex_id not in self._centroid_cache:
             lat, lng = h3.cell_to_latlng(hex_id)
             self._centroid_cache[hex_id] = (lat, lng)
 
         return self._centroid_cache[hex_id]
 
-    def is_in_layer(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201, D102
+    def is_in_layer(self, hex_id: str, layer_name: str = "hex_7") -> bool:
+        """Return whether a hexagon exists in the layer."""
         return hex_id in self.layer[layer_name].index
 
-    def get_hexagon(self, hex_id, layer_name="hex_7"):  # noqa: ANN001, ANN201
+    def get_hexagon(self, hex_id: str, layer_name: str = "hex_7") -> Polygon | None:
         """
-        Get geometry of hexagon with optimized lookup.
-        :param hex_id: Hexagon ID
-        :param layer_name: Layer name (e.g., "hex_7", "hex_8").
-        :return: Polygon representing the hexagon
-        """  # noqa: D202, D205, D400
+        Return hexagon geometry via a cached lookup.
 
+        Parameters
+        ----------
+        hex_id : str
+            Hexagon ID.
+        layer_name : str
+            Layer name (e.g. "hex_7", "hex_8").
+
+        Returns
+        -------
+        shapely.geometry.Polygon or None
+            Hexagon geometry, or None if not in layer.
+        """
         if layer_name not in self._hex_geom_cache:
-            self._hex_geom_cache[layer_name] = self.layer[layer_name][
-                "geometry"
-            ].to_dict()
+            self._hex_geom_cache[layer_name] = cast(
+                "dict[str, Polygon]", self.layer[layer_name]["geometry"].to_dict()
+            )
 
         return self._hex_geom_cache[layer_name].get(hex_id, None)
 
     @staticmethod
     def move_in_layer(hex_id: str, movement: str) -> str:
-        """
-              ___3___
-           /           \
-         /1/          \2\
-                0
-         \\5\\          /6/
-          \\  ________  /
-                4
+        r"""
+        Return neighbouring hexagon reached by a movement.
 
-        It doesn't really matter if the movement is named "up" or "left" as long as it corresponds always to the same
-        neighbor of the hexagon cell. Here, we use the Central Place Indexing (CPI) based on the Generalized Balanced
-        Ternary (GBT) prefix code system for aperture 7 grids, which is visualized above.
+        Neighbour layout (Central Place Indexing)::
 
-        (see:
-        http://webpages.sou.edu/~sahrk/sqspc/pubs/autocarto14.pdf and https://h3geo.org/docs/core-library/h3Indexing)
+                 ___3___
+              /           \
+            /1/          \2\
+                   0
+            \5\          /6/
+             \  ________  /
+                   4
+
+        The movement name ("up", "left", ...) only needs to consistently map to
+        the same neighbour. We use Central Place Indexing (CPI) based on the
+        Generalized Balanced Ternary (GBT) prefix code for aperture-7 grids,
+        visualised above (see
+        https://web.archive.org/web/20240703092509/https://webpages.sou.edu/~sahrk/sqspc/pubs/autocarto14.pdf
+        and https://h3geo.org/docs/core-library/h3Indexing).
 
         Here, and only here the below mapping of "up", "down" etc is guaranteed to match the above visualization indices
         HINT: This does not map (pun intended) to hexagons on a map because hexagons (their ijk coordinates) are rotated
@@ -165,11 +217,18 @@ class GeodesicEnvironment(Environment):  # noqa: D101
         We can do this by leveraging the binary index representation of a unidirectional edge between two h3 cells.
         Bits 5-7 indicate the edge 1-6.( see: https://h3geo.org/docs/core-library/h3Indexing#h3-unidirectional-edge-index)
 
-        :param hex_id: Current hex id
-        :param movement: one of ["UP", "DOWN", "UP_LEFT", "UP_RIGHT", "DOWN_LEFT", "DOWN_RIGHT"]
-        :return: hex id after "movement"
-        """  # noqa: D202, D205, D301, D400
+        Parameters
+        ----------
+        hex_id : str
+            Current hexagon ID.
+        movement : str
+            One of "UP", "DOWN", "UP_LEFT", "UP_RIGHT", "DOWN_LEFT", "DOWN_RIGHT".
 
+        Returns
+        -------
+        str
+            Hexagon ID after movement.
+        """
         EDGE_MAPPING = {
             "UP": 3,
             "UP_RIGHT": 2,
@@ -204,31 +263,53 @@ class GeodesicEnvironment(Environment):  # noqa: D101
         return new_hex_id
 
     @staticmethod
-    def corridor(start: str, end: str, k: int) -> set[str]:
+    def corridor(start: str, end: str, buffer_radius: int) -> set[str]:
         """
-        Given a start and end hexagon id (with same resolution), return a straight line of hexagons between them
-        plus (optionally for k>0) a buffer of k hex-cells around it.
+        Return hexagons forming a corridor between two cells.
 
-        :param start: start hexagon id
-        :param end: end hexagon id
-        :param k: k-hex buffer
-        :return: set of hexagon ids
-        """  # noqa: D205
+        Gives the straight line of hexagons between start and end (same
+        resolution), plus a buffer around it when buffer_radius > 0.
+
+        Parameters
+        ----------
+        start : str
+            Start hexagon ID.
+        end : str
+            End hexagon ID.
+        buffer_radius : int
+            Buffer radius in hex-cells.
+
+        Returns
+        -------
+        set of str
+            Hexagon IDs in the corridor.
+        """
         straight = h3.grid_path_cells(start, end)
         return {
             item
-            for sublist in [h3.grid_disk(h, k) for h in straight]
+            for sublist in [h3.grid_disk(h, buffer_radius) for h in straight]
             for item in sublist
         }
 
     @staticmethod
-    def filter_demands_by_area(demands, area: Polygon):  # noqa: ANN001, ANN205
+    def filter_demands_by_area(
+        demands: Iterable[_Demand], area: Polygon
+    ) -> list[_Demand]:
         """
-        :param demands: [{origin: GeodesicPosition, destination: GeodesicPosition}, ...]
-        :param area: shapely.Polygon
-        :return: list of demands which have both origin and destination within the area
-        """  # noqa: D202, D205
+        Keep demands whose origin and destination both fall within an area.
 
+        Parameters
+        ----------
+        demands : iterable of demand
+            Demands, each with origin and destination positions.
+        area : shapely.geometry.Polygon
+            Area to filter against.
+
+        Returns
+        -------
+        list of demand
+            Demands fully contained in the area.
+        """
         filtered = []
         for d in demands:
             if Point(d.origin.getExactLocation()).within(area) and Point(
@@ -238,7 +319,10 @@ class GeodesicEnvironment(Environment):  # noqa: D101
 
         return filtered
 
-    def filter_demands_by_direction(self, demands, vehicle: Vehicle):  # noqa: ANN001, ANN201, D102
+    def filter_demands_by_direction(
+        self, demands: Iterable[_Demand], vehicle: PublicTransitVehicle
+    ) -> list[_Demand]:
+        """Keep demands whose direction roughly aligns with a vehicle's route."""
         route_direction = self.get_bearing(
             *vehicle.position.getExactLocation(),
             *vehicle.route.destination.getExactLocation(),
@@ -270,7 +354,23 @@ class GeodesicEnvironment(Environment):  # noqa: D101
         return filtered
 
     @staticmethod
-    def direction_aligns(direction, target, degrees=180) -> bool:  # noqa: ANN001, D102
+    def direction_aligns(direction: float, target: float, degrees: float = 180) -> bool:
+        """Return whether a direction lies within degrees of a target bearing.
+
+        Parameters
+        ----------
+        direction : float
+            Direction to check (in degrees).
+        target : float
+            Target bearing (in degrees).
+        degrees : float, optional
+            Range of degrees to check (default is 180).
+
+        Returns
+        -------
+        bool
+            Whether the direction lies within the specified range of the target bearing.
+        """
         assert degrees < 360
         target_range = (target - (degrees / 2), target + (degrees / 2))
         target_norm = tuple(x % 360 for x in target_range)
@@ -279,15 +379,29 @@ class GeodesicEnvironment(Environment):  # noqa: D101
 
         if target_norm[0] > target_norm[1]:
             # +90° was above 360°
-            if direction_norm >= target_norm[0] or direction_norm <= target_norm[1]:
-                return True
-        elif target_norm[0] <= direction_norm <= target_norm[1]:
-            return True
-        else:
-            return False
+            return direction_norm >= target_norm[0] or direction_norm <= target_norm[1]
+        return target_norm[0] <= direction_norm <= target_norm[1]
 
     @staticmethod
-    def get_bearing(lat1, long1, lat2, long2):  # noqa: ANN001, ANN205, D102
+    def get_bearing(lat1: float, long1: float, lat2: float, long2: float) -> float:
+        """Return the great-circle bearing from one coordinate to another.
+
+        Parameters
+        ----------
+        lat1 : float
+            Latitude of first point.
+        long1 : float
+            Longitude of first point.
+        lat2 : float
+            Latitude of second point.
+        long2 : float
+            Longitude of second point.
+
+        Returns
+        -------
+        float
+            Great-circle bearing (in degrees).
+        """
         # great circle bearing without projection
         # from https://stackoverflow.com/a/64747209
         dLon = long2 - long1
@@ -298,4 +412,4 @@ class GeodesicEnvironment(Environment):  # noqa: D101
         brng = numpy.arctan2(x, y)
         brng = numpy.degrees(brng)
 
-        return brng
+        return float(brng)
