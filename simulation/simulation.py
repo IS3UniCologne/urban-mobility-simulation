@@ -55,6 +55,7 @@ class Simulation:
 
         self.logger.info("Starting Simulation.")
         self.sim.env.run(until=end_time)
+        self.sim.mark_ended()
         self.logger.info("Ending Simulation.")
 
         self._post_simulation_processing()

@@ -8,6 +8,7 @@ import simpy
 
 from simulation.context.uid_manager import UidManager
 from simulation.environment.geodesic_environment import GeodesicEnvironment
+from simulation.helper.enums import SimulationPhase
 from simulation.helper.logging.log_manager import LogManager
 from simulation.helper.random.random_manager import RandomManager
 
@@ -35,6 +36,7 @@ class SimulationContext:
         self._uid_manager = UidManager()
         self._random_manager = RandomManager(self)
         self._geo_env = GeodesicEnvironment(sim=self)
+        self._phase: SimulationPhase = SimulationPhase.RUNNING
 
     @property
     def env(self) -> simpy.Environment:
@@ -70,3 +72,12 @@ class SimulationContext:
     def time(self) -> float:
         """Get current simulation time."""
         return self._env.now
+
+    @property
+    def phase(self) -> SimulationPhase:
+        """Current phase."""
+        return self._phase
+
+    def mark_ended(self) -> None:
+        """Advance the phase to ENDED."""
+        self._phase = SimulationPhase.ENDED

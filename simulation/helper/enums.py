@@ -99,6 +99,13 @@ class UserState(Enum):
     WAITING_FOR_TRANSPORT = 33
 
 
+class SimulationPhase(Enum):
+    """Phase of a simulation run."""
+
+    RUNNING = "Running"
+    ENDED = "Ended"
+
+
 # TODO: Do we need both withdrawn and missed? If so we should clarify the difference.
 class TransactionState(StrEnum):
     """Transaction states."""
