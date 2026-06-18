@@ -28,7 +28,9 @@ from tests.end_to_end.end_to_end_shared import (
 
 # Discover all configuration directories under tests/configurations
 CONFIG_DIRS = sorted(
-    str(p) for p in Path("tests", "configurations").iterdir() if p.is_dir()
+    str(p)
+    for p in Path("tests", "configurations").iterdir()
+    if p.is_dir() and (p / "config.toml").exists()
 )
 
 EXPECTATIONS_FILE = Path("tests/end_to_end/end_to_end_expectations.json")

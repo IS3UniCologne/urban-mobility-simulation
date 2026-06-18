@@ -12,7 +12,9 @@ REL_TOLERANCE = 1e-3
 
 # Discover all configuration directories under tests/configurations.
 CONFIG_DIRS = sorted(
-    str(p) for p in Path("tests", "configurations").iterdir() if p.is_dir()
+    str(p)
+    for p in Path("tests", "configurations").iterdir()
+    if p.is_dir() and (p / "config.toml").exists()
 )
 
 EXPECTATIONS_FILE = Path(__file__).parent / "end_to_end_expectations.json"
