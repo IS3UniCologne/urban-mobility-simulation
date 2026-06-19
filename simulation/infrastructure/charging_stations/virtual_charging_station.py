@@ -1,14 +1,20 @@
-from __future__ import annotations  # noqa: D100
+"""Per-operator virtual view of a physical charging station."""
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     import simpy
     from shapely.geometry import Polygon
+    from simpy import Event
 
     from simulation.environment.geodesic_position import GeodesicPosition
+    from simulation.helper.types import RegionId
     from simulation.infrastructure.charging_stations.charging_station import (
         ChargingStation,
     )
@@ -17,7 +23,20 @@ if TYPE_CHECKING:
     )
 
 
-class VirtualChargingStation(SimulationBase):  # noqa: D101
+class VirtualChargingStation(SimulationBase):
+    """Virtual view of a physical charging station for a single operator.
+
+    Mirrors the physical station's plugs and queue while tracking
+    operator-specific capacity reservations.
+
+    Parameters
+    ----------
+    charging_station : ChargingStation
+        Backing physical charging station.
+    virtual_charging_infrastructure : VirtualChargingInfrastructure
+        Owning virtual infrastructure.
+    """
+
     __slots__ = (
         "_blocked_capacity",
         "_capacity",
@@ -45,7 +64,7 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
         self._cs_id = charging_station.cs_id
         self._env = charging_station._env  # noqa: SLF001
         self._physical_charging_station = charging_station
-        self._valid_timeframe = None
+        self._valid_timeframe: tuple[float, float] | None = None
         self._capacity = charging_station.capacity
         self._blocked_capacity = 0
         self._polygon = charging_station.polygon
@@ -58,17 +77,36 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
         self._current_queue_time = charging_station._current_queue_time  # noqa: SLF001
         self._virtual_charging_infrastructure = virtual_charging_infrastructure
 
-    def plug_in_notify(self) -> simpy.events.Generator:  # noqa: D102
+    def plug_in_notify(self) -> Generator[Event, None, None]:
+        """Forward a plug-in notification to the physical station.
+
+        Yields
+        ------
+        simpy.Event
+            Process event for the physical station's plug-in.
+        """
         yield self._env.process(self._physical_charging_station.plug_in_notify())
         assert self._plugs.users == self._physical_charging_station.plugs.users
 
-    def plug_out_notify(self) -> simpy.events.Generator:  # noqa: D102
+    def plug_out_notify(self) -> Generator[Event, None, None]:
+        """Forward a plug-out notification to the physical station.
+
+        Yields
+        ------
+        simpy.Event
+            Process event for the physical station's plug-out.
+        """
         yield self._env.process(self._physical_charging_station.plug_out_notify())
         assert self._plugs.users == self._physical_charging_station.plugs.users
 
-    def update_capacity(  # noqa: D102
+    def update_capacity(
         self, capacity: int, valid_timeframe: tuple[float, float] | None
     ) -> None:
+        """Set the operator-visible capacity and its valid timeframe.
+
+        Capacity is clamped to [0, physical capacity]; a negative input records
+        blocked capacity instead.
+        """
         self._capacity = max(0, min(capacity, self._physical_charging_station.capacity))
         if capacity < 0:
             self._blocked_capacity = -capacity
@@ -77,7 +115,8 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
         self._valid_timeframe = valid_timeframe
 
     @property
-    def virtual_charging_infrastructure(self) -> VirtualChargingInfrastructure:  # noqa: D102
+    def virtual_charging_infrastructure(self) -> VirtualChargingInfrastructure:
+        """Owning virtual charging infrastructure."""
         return self._virtual_charging_infrastructure
 
     @property
@@ -112,41 +151,51 @@ class VirtualChargingStation(SimulationBase):  # noqa: D101
         return self._cs_id
 
     @property
-    def valid_timeframe(self) -> tuple[float, float] | None:  # noqa: D102
+    def valid_timeframe(self) -> tuple[float, float] | None:
+        """Timeframe over which the current capacity applies, or None."""
         return self._valid_timeframe
 
     @property
-    def capacity(self) -> int:  # noqa: D102
+    def capacity(self) -> int:
+        """Operator-visible capacity."""
         return self._capacity
 
     @property
-    def blocked_capacity(self) -> int:  # noqa: D102
+    def blocked_capacity(self) -> int:
+        """Capacity blocked from this operator."""
         return self._blocked_capacity
 
     @property
-    def plugs(self) -> simpy.PriorityResource:  # noqa: D102
+    def plugs(self) -> simpy.PriorityResource:
+        """Shared plug resource of the physical station."""
         return self._plugs
 
     @property
-    def power(self) -> float:  # noqa: D102
+    def power(self) -> float:
+        """Charging power in kW."""
         return self._power
 
     @property
-    def centre(self) -> GeodesicPosition:  # noqa: D102
+    def centre(self) -> GeodesicPosition:
+        """Centroid position of the station's cell."""
         return self._centre
 
     @property
-    def location(self) -> str:  # noqa: D102
+    def location(self) -> RegionId:
+        """Region id of the station."""
         return self._location
 
     @property
-    def polygon(self) -> Polygon:  # noqa: D102
+    def polygon(self) -> Polygon:
+        """Cell boundary polygon."""
         return self._polygon
 
     @property
-    def queue_size(self) -> int:  # noqa: D102
+    def queue_size(self) -> int:
+        """Maximum queue length."""
         return self._queue_size
 
     @property
-    def current_queue_time(self) -> float:  # noqa: D102
+    def current_queue_time(self) -> float:
+        """Current estimated queue wait time of the physical station."""
         return self._physical_charging_station.current_queue_time

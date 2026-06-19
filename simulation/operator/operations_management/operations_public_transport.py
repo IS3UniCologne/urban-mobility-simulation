@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     )
 
 from simulation.helper.time import SimulationTime
+from simulation.helper.types import GtfsRouteId, GtfsStopId, GtfsTripId
 from simulation.infrastructure.route import PublicTransitRoute
 from simulation.infrastructure.transit_network.route_segment import RouteSegment
 from simulation.infrastructure.transit_network.stop import Stop
@@ -105,7 +106,7 @@ class OperationsPublicTransport(OperationsInterface):  # noqa: D101
         origin = Stop(
             self._sim,
             0,
-            origin_row["stop_id"],
+            GtfsStopId(origin_row["stop_id"]),
             origin_row["stop_lat"],
             origin_row["stop_lon"],
             origin_row["departure_time"],
@@ -114,15 +115,15 @@ class OperationsPublicTransport(OperationsInterface):  # noqa: D101
         destination = Stop(
             self._sim,
             len(trip.index) - 1,
-            destination_row["stop_id"],
+            GtfsStopId(destination_row["stop_id"]),
             destination_row["stop_lat"],
             destination_row["stop_lon"],
             destination_row["departure_time"],
             destination_row["dep_next_day"],
         )
 
-        route_id = origin_row["route_id"]
-        trip_id = origin_row["trip_id"]
+        route_id = GtfsRouteId(origin_row["route_id"])
+        trip_id = GtfsTripId(origin_row["trip_id"])
 
         # create route prototype with OD and add first stop
         route = PublicTransitRoute(origin, destination, route_id, trip_id)
@@ -136,7 +137,7 @@ class OperationsPublicTransport(OperationsInterface):  # noqa: D101
             stop = Stop(
                 self._sim,
                 stop_id,
-                row.stop_id,
+                GtfsStopId(row.stop_id),
                 row.stop_lat,
                 row.stop_lon,
                 row.departure_time,

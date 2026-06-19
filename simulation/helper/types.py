@@ -12,3 +12,13 @@ RegionId: TypeAlias = str
 # SimId represents a unique identifier for simulation entities.
 SimId = NewType("SimId", str)
 """Simulation object identifier with format 'ClassName_id'."""
+
+# Distinct GTFS identifiers. Avoid mi
+GtfsStopId = NewType("GtfsStopId", str)
+"""GTFS stop_id feed."""
+
+GtfsRouteId = NewType("GtfsRouteId", str)
+"""GTFS route_id."""
+
+GtfsTripId = NewType("GtfsTripId", str)
+"""GTFS trip_id."""

@@ -1,18 +1,38 @@
-from __future__ import annotations  # noqa: D100
+"""Physical charging station with plug allocation and queue estimation."""
 
-from typing import TYPE_CHECKING, Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import h3
 import simpy
-from shapely.geometry import Polygon, shape
+from shapely.geometry import Polygon
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.simulation_base import SimulationBase
 from tracking.tracking_interface import TrackingInterface
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.types import RegionId
+
+
+class _PlugEventSubscriber(Protocol):
+    """Listener notified when a vehicle plugs in or out."""
+
+    processed_plug_in_event: simpy.Event
+    processed_plug_out_event: simpy.Event
+
+
+class _ChargingRequest(Protocol):
+    """Simpy plug request with charging-task metadata."""
+
+    estimated_completion_time: float | None
+    charging_duration: float | None
 
 
 class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
@@ -46,25 +66,19 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
         self._sim = sim
         self._env = sim.env
         self._cs_id = cs_id
-        self._capacity = int(capacity)
-        self._polygon = shape(
-            {
-                "type": "Polygon",
-                "coordinates": [
-                    [[lon, lat] for lat, lon in h3.cell_to_boundary(location)]
-                ],
-                "properties": "",
-            }
+        self._capacity = capacity
+        self._polygon = Polygon(
+            [(lon, lat) for lat, lon in h3.cell_to_boundary(location)]
         )
         self._centre = GeodesicPosition(
             self._sim, self._polygon.centroid.y, self._polygon.centroid.x
         )
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
         self._location = location
-        self._power = float(power)  # kwh/hr
-        self._queue = []
+        self._power = power  # kW
+        self._queue: list[object] = []
         self._queue_size = queue_size
-        self._current_queue_time = 0
+        self._current_queue_time: float = 0.0
 
         # Events
         self._vehicle_plugged_in = self._env.event()
@@ -75,7 +89,7 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
         self._plug_out_lock = simpy.Resource(self._env, capacity=1)
 
         # List of listening entities for the above events, in case of massive parallel access of competing fleets
-        self._event_subscribers = []
+        self._event_subscribers: list[_PlugEventSubscriber] = []
 
         self._env.process(self.calc_current_queue_time())
 
@@ -124,10 +138,18 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
     def vehicle_unplugged(self) -> simpy.Event:  # noqa: D102
         return self._vehicle_unplugged
 
-    def register_event_subscriber(self, subscriber) -> None:  # noqa: ANN001, D102
+    def register_event_subscriber(self, subscriber: _PlugEventSubscriber) -> None:
+        """Register a listener for plug-in / plug-out events."""
         self._event_subscribers.append(subscriber)
 
-    def plug_in_notify(self) -> simpy.events.Generator:  # noqa: D102
+    def plug_in_notify(self) -> Generator[Event, None, None]:
+        """Signal a plug-in and await acknowledgement from subscribers.
+
+        Yields
+        ------
+        simpy.Event
+            Lock request, then the combined subscriber acknowledgement event.
+        """
         with self._plug_in_lock.request() as req:
             yield req
             self._vehicle_plugged_in.succeed()
@@ -143,7 +165,14 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
                     x.processed_plug_in_event = self._env.event()
             self._vehicle_plugged_in = self._env.event()
 
-    def plug_out_notify(self) -> simpy.events.Generator:  # noqa: D102
+    def plug_out_notify(self) -> Generator[Event, None, None]:
+        """Signal a plug-out and await acknowledgement from subscribers.
+
+        Yields
+        ------
+        simpy.Event
+            Lock request, then the combined subscriber acknowledgement event.
+        """
         with self._plug_out_lock.request() as req:
             yield req
             self._vehicle_unplugged.succeed()
@@ -160,21 +189,28 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
 
             self._vehicle_unplugged = self._env.event()
 
-    def calc_current_queue_time(self) -> simpy.events.Generator:  # noqa: D102
+    def calc_current_queue_time(self) -> Generator[Event, None, None]:
+        """Continuously estimate the expected queue wait time.
+
+        Yields
+        ------
+        simpy.Event
+            One-minute timeouts that pace the recomputation loop.
+        """
         # Estimate queue time from request metadata on active and queued plugs.
         while True:
             yield self._env.timeout(1)
             # first we get the most trivial scenario out of the way
             if len(self._plugs.users) < self._capacity:
-                self._current_queue_time = 0
+                self._current_queue_time = 0.0
                 continue
 
             yield self._env.timeout(
                 1e-6
             )  # this might be necessary for process order, when charging tasks are making the switch from queue to plugs
 
-            ongoing_requests = list(self._plugs.users)
-            queued_requests = list(self._plugs.queue)
+            ongoing_requests = cast("list[_ChargingRequest]", list(self._plugs.users))
+            queued_requests = cast("list[_ChargingRequest]", list(self._plugs.queue))
 
             ongoing_tasks_completion_time_asc = sorted(
                 [
