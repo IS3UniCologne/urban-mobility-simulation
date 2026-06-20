@@ -164,7 +164,6 @@ class PathConfig(ConfigBaseModel):
     PATH_TRANSIT_TIMETABLE: Path
     PATH_TRANSIT_SHAPES: Path
     PATH_VEHICLE_SUPPLY: Path
-    PATH_TO_MODE_CHOICE_MODEL: Path  # deprecated, remove
     OUTPUT_FOLDER: Path
     TRANSACTION_FILE: Path
     FLEET_STATE_FILE: Path
