@@ -97,6 +97,7 @@ skip-magic-trailing-comma = true
 max-complexity = 18
 
 [tool.uv]
+exclude-newer     = "1 week"
 python-preference = "only-managed"
 
 [tool.ruff.lint]
