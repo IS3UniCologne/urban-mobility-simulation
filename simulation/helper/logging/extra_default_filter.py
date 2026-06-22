@@ -10,18 +10,10 @@ class UidInjector(logging.Filter):
     Parameters
     ----------
     filter_name : str
-        The name of the filter.
+        Filter name.
     """
 
     def __init__(self, filter_name: str) -> None:
-        """
-        Initialize the UidInjector.
-
-        Parameters
-        ----------
-        filter_name : str
-            The name of the filter.
-        """
         super().__init__(filter_name)
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -31,12 +23,12 @@ class UidInjector(logging.Filter):
         Parameters
         ----------
         record : logging.LogRecord
-            The log record to filter.
+            Log record to filter.
 
         Returns
         -------
         bool
-            Always returns True to allow the record to be logged.
+            Always True, so the record is logged.
         """
         if not hasattr(record, "uid"):
             record.uid = record.name
