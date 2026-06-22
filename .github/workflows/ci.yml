@@ -14,6 +14,11 @@ permissions:
   # added using https://github.com/step-security/secure-workflows
   contents: read
 
+# Cancel a in-progress run when a newer commit is pushed to the same PR or branch.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pyrefly:
     runs-on: self-hosted
