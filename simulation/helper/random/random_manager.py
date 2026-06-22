@@ -50,10 +50,10 @@ class RandomManager(SimulationBase):
     def __init__(self, sim: SimulationContext) -> None:
         super().__init__(sim)
         self._config = sim.config
-        self._main_seed = None
-        self._main_rng = None
-        self._fixed_seed_components = None
-        self._component_rngs = {}
+        self._main_seed: int | None = None
+        self._main_rng: Generator | None = None
+        self._fixed_seed_components: dict[str, int] | None = None
+        self._component_rngs: dict[str, Generator] = {}
         self.reset_all_rng()
 
     def reset_fixed_seed_components(self) -> None:
@@ -63,8 +63,8 @@ class RandomManager(SimulationBase):
 
         for component, seed in self._fixed_seed_components.items():
             if seed == 0:
-                self._fixed_seed_components[component] = (
-                    np.random.SeedSequence().entropy % 2**32
+                self._fixed_seed_components[component] = int(
+                    np.random.default_rng().integers(0, 2**32)
                 )
             self._create_component_rng(
                 component, self._fixed_seed_components[component]
@@ -81,7 +81,7 @@ class RandomManager(SimulationBase):
         main_seed = self._config.random_manager.SEED
         # If the seed is 0, we use a random seed
         if main_seed == 0:
-            main_seed = np.random.SeedSequence().entropy % 2**32
+            main_seed = int(np.random.default_rng().integers(0, 2**32))
 
         self._main_seed = main_seed
 
@@ -100,11 +100,18 @@ class RandomManager(SimulationBase):
         If no component name is provided, returns the main RNG.
         If the generator for the component does not exist, it is created.
 
+        Parameters
+        ----------
+        component_name : str or None
+            Name of RNG component. If None, the main RNG is returned.
+
         Returns
         -------
-            np.random.Generator: A NumPy Generator instance
+        Generator
+            NumPy Generator instance.
         """
         if component_name is None:
+            assert self._main_rng is not None
             return self._main_rng
 
         if component_name not in self._component_rngs:

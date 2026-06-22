@@ -1,4 +1,6 @@
-from __future__ import annotations  # noqa: D100
+"""Geodesic (latitude/longitude) position backed by H3 hexagon indexing."""
+
+from __future__ import annotations
 
 import h3 as h3
 from haversine import Unit, haversine
@@ -24,7 +26,22 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
 
 
-class GeodesicPosition(Position):  # noqa: D101
+class GeodesicPosition(Position):
+    """
+    Position identified by latitude and longitude.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        Provides the default spatial resolution.
+    latitude : float
+        Latitude in degrees.
+    longitude : float
+        Longitude in degrees.
+    default_res_hex_id : RegionId or None
+        Pre-computed H3 hex id at the default resolution, if known.
+    """
+
     __slots__ = ("_geometry", "_hex_id_by_resolution", "_lat", "_lng")
 
     def __init__(
@@ -46,61 +63,79 @@ class GeodesicPosition(Position):  # noqa: D101
 
         self._geometry = Point(self._lng, self._lat)
 
-    def getExactLocation(self, geojson: bool = False) -> tuple[float, float]:  # noqa: D102
+    def getExactLocation(self, geojson: bool = False) -> tuple[float, float]:
+        """
+        Return exact coordinates.
+
+        Parameters
+        ----------
+        geojson : bool
+            If True, return (longitude, latitude) GeoJSON order; otherwise
+            (latitude, longitude).
+
+        Returns
+        -------
+        tuple of float
+            Coordinate pair.
+        """
         if geojson:
             return (self._lng, self._lat)
         else:
             return (self._lat, self._lng)
 
     @property
-    def geometry(self) -> Point:  # noqa: D102
+    def geometry(self) -> Point:
+        """Shapely point geometry."""
         return self._geometry
 
-    def __str__(self) -> str:  # noqa: D105
+    def __str__(self) -> str:
+        """Human-readable latitude/longitude representation."""
         return f"Latitude {self._lat} : Longitude {self._lng}"
 
     # ==
     def __eq__(self, other: object) -> bool:
-        """
-        Test equality of two GeodesicPositions
-        :param other: GeodesicPosition
-        :return: bool
-        """  # noqa: D205, D400
+        """Test equality of two GeodesicPositions."""
         if not isinstance(other, GeodesicPosition):
             return NotImplemented
         else:
             return self._lat == other._lat and self._lng == other._lng
 
     # >>
-    def __rshift__(self, other: GeodesicPosition) -> float:
+    def __rshift__(self, other: Position) -> float:
         """
-        Calculate haversine distance between two positions
-        :param other: GeodesicPosition
-        :return: Haversine distance in meter.
-        """  # noqa: D205
-        return haversine((self._lat, self._lng), (other._lat, other._lng), Unit.METERS)
+        Calculate haversine distance between two positions.
+
+        Parameters
+        ----------
+        other : Position
+            Position to measure to.
+
+        Returns
+        -------
+        float
+            Haversine distance in meters.
+        """
+        return haversine((self._lat, self._lng), other.getExactLocation(), Unit.METERS)
 
     # <<
     def __lshift__(self, other: GeodesicPosition) -> float:
         """
         Calculate euclidean distance between two positions.
 
-        This is a fast approximation of the haversine distance.
-        In testing it was about 7.5x faster than the haversine distance calculation.
-        Error is about 0.1% for distances of 10km, slowly increasing with distance.
-
-        Benchmarks can be found in benchmarks/bench_geodesic_position.py
+        Fast approximation of the haversine distance: in testing about 7.5x
+        faster, with error around 0.1% at 10 km, slowly increasing with
+        distance. Benchmarks are in benchmarks/bench_geodesic_position.py.
 
         Parameters
         ----------
         other : GeodesicPosition
-            The other position to calculate the distance to.
+            Position to measure to.
+
         Returns
         -------
         float
-            The euclidean distance in meters.
-        """  # noqa: D202, D410, D411
-
+            Euclidean distance in meters.
+        """
         return cy_euclidean_distance(self._lat, self._lng, other._lat, other._lng)
 
     def _compute_hex_id(self, resolution: int) -> str:
@@ -114,12 +149,12 @@ class GeodesicPosition(Position):  # noqa: D101
         Parameters
         ----------
         resolution : int or None
-            H3 Resolution. If None, uses the default resolution.
+            H3 resolution. If None, uses the default resolution.
 
         Returns
         -------
         RegionId
-            The hexagon ID for this position.
+            Hexagon ID.
         """
         if resolution is None:
             resolution = self._default_resolution
@@ -129,21 +164,31 @@ class GeodesicPosition(Position):  # noqa: D101
 
         return RegionId(self._hex_id_by_resolution[resolution])
 
-    def is_in_geometry(self, geometry: Geometry) -> bool:  # noqa: D102
+    def is_in_geometry(self, geometry: Geometry) -> bool:
+        """Return whether this position intersects geometry."""
         if self._geometry.intersects(geometry):
             return True
         else:
             return False
 
-    def difference(self, other: GeodesicPosition):  # noqa: ANN201
+    def difference(self, other: GeodesicPosition) -> tuple[float, ...]:
         """
-        This function is meant for getting the full distance vector of the (lat, lng) coordinate system
-        of two GeodesicPositions. This might not be vastly intelligent in terms of what the result means geographically
+        Return coordinate-wise difference to another position.
+
+        Gives the (lat, lng) distance vector ``(self.lat - other.lat,
+        self.lng - other.lng)``. This might not be vastly intelligent in terms of what the result means geographically
         but it is needed for constructing states for public vehicle agents.
 
-        :param other: GeodesicPosition
-        :return: returns a tuple of (self.lat - other.lat, self.lon - other.lon)
-        """  # noqa: D205, D401, D404
+        Parameters
+        ----------
+        other : GeodesicPosition
+            Position to subtract.
+
+        Returns
+        -------
+        tuple of float
+            Per-coordinate difference.
+        """
         return tuple(
             x - y for x, y in zip(self.getExactLocation(), other.getExactLocation())
         )
