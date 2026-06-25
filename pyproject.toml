@@ -126,7 +126,6 @@ convention = "numpy"
 [tool.ruff.lint.per-file-ignores]
 # These directories do not follow the same style as the rest of the codebase.
 "learning/*"      = ["D"]
-"planning/*"      = ["D"]
 "resources/*"     = ["D"]
 "tests/*"         = ["D", "SLF001", "T201"]
 "visualization/*" = ["D"]
