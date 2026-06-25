@@ -69,7 +69,6 @@ class World(SimulationBase):  # noqa: D101
         "_spatial_resolution",
         "_temporal_resolution",
         "_total_users",
-        "_tracking",
         "_user_log",
         "_users",
         "_vehicle_assignment_engine",

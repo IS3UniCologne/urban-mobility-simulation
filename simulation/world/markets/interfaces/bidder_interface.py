@@ -1,12 +1,9 @@
 from simpy import Environment  # noqa: D100
 
 from simulation.world.markets.auction import Auction
-from tracking.tracking_interface import TrackingInterface
 
 
-class BidderInterface(TrackingInterface):  # noqa: D101
-    exposes = ["auction_participant_id", "_bids", "_result"]  # noqa: RUF012
-
+class BidderInterface:  # noqa: D101
     def __init__(self, env: Environment, auction: Auction) -> None:
         self._env = env
         self._auction = auction
@@ -22,12 +19,6 @@ class BidderInterface(TrackingInterface):  # noqa: D101
     @property
     def auction_participant_id(self):  # noqa: ANN201, D102
         return self._auction_participant_id
-
-    def dump(self, exposed_only: bool = True) -> dict:  # noqa: D102
-        if exposed_only:
-            return {x: self.get(x) for x in self.exposes}
-        else:
-            raise NotImplementedError
 
     # @abstractmethod
     # def wait_for_bidding(self):

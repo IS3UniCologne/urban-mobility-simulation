@@ -36,8 +36,6 @@ class SharedChargingAuction(Auction):  # noqa: D101
         "_shared_charging_config",
     )
 
-    exposes = ["_next_timeslot", "_bids", "_location_results"]  # noqa: RUF012
-
     def __init__(
         self,
         sim: SimulationContext,
@@ -344,10 +342,3 @@ class SharedChargingAuction(Auction):  # noqa: D101
                 random.sample(remaining_ids, capacity - len(allocated_ids))
             )
             return allocated_ids
-
-    def dump(self, exposed_only: bool = True) -> dict:  # noqa: D102
-        return {
-            "_next_timeslot": self._next_timeslot,
-            "_bids": self._bids,
-            "_location_results": self._location_results,
-        }
