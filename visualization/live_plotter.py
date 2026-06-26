@@ -25,8 +25,13 @@ if TYPE_CHECKING:
     from queue import Queue
 
     from bokeh.document import Document
+    from bokeh.models import Column
 
     from simulation.metrics.metrics_tracker import MetricsSnapshot, TrackingJob
+
+# Sentinel returned when a plot config references a metric not tracked this run.
+# (we cant return None because that could be a valid metric value)
+_MISSING: Any = object()
 
 
 class MetricsAdapter(threading.Thread):
@@ -75,79 +80,96 @@ class LivePlotter:
 
     def add_plot(self, plot_config: dict) -> None:
         """Register a plot configuration to be displayed."""
-        # Augment the config with runtime objects it will need
-        plot_config["sources"] = {}
-        plot_config["indexed_colors"] = {}
         self._plot_configs.append(plot_config)
 
     def _make_app(self, doc: Document) -> None:
-        """Factory function to create the Bokeh application instance."""
-        plots = []
-        for config in self._plot_configs:
-            # Create the plot based on its type
-            plot_type = config.get("plot_type", "line")
-            if plot_type == "vbar":
-                # Special setup for bar charts
-                p = figure(
-                    height=300,
-                    title=config["title"],
-                    sizing_mode="stretch_width",
-                    x_range=[],  # Start with empty categorical range
-                )
-            else:
-                # Default setup for line charts
-                p = figure(
-                    height=300, title=config["title"], sizing_mode="stretch_width"
-                )
-            p.xaxis.axis_label = "Time"
-            config["plot"] = p
-            plots.append(p)
+        """Bokeh document factory; lazily renders a panel per tracked metric."""
+        layout = column(sizing_mode="stretch_width")
+        states: dict[int, dict[str, Any]] = {}
 
         def update() -> None:
-            """Callback to update plot data from the queue."""
+            """Callback to render queued snapshots into this document."""
             while not self._queue.empty():
                 snapshot: MetricsSnapshot = self._queue.get()
                 for config in self._plot_configs:
-                    self._update_plot_data(snapshot, config)
+                    self._render_config(snapshot, config, states, layout)
 
         doc.add_periodic_callback(update, 200)
-        doc.add_root(column(*plots, sizing_mode="stretch_width"))
+        doc.add_root(layout)
         doc.title = "Live Simulation Metrics"
 
-    def _update_plot_data(
-        self, snapshot: MetricsSnapshot, config: dict[str, Any]
+    def _render_config(
+        self,
+        snapshot: MetricsSnapshot,
+        config: dict[str, Any],
+        states: dict[int, dict[str, Any]],
+        layout: Column,
     ) -> None:
-        """Dispatches to the correct update function based on plot type."""
+        """Render one config into the session's layout, building it lazily."""
+        if config.get("disabled"):
+            return
+        metrics = self._extract_metric(snapshot, config)
+        if metrics is _MISSING:
+            return  # _extract_metric has disabled + warned
+
+        state = states.get(id(config))
+        if state is None:
+            state = self._build_render_state(config)
+            states[id(config)] = state
+            layout.children.append(state["plot"])
+
+        plot_type = config["plot_type"]
+        if plot_type == "line":
+            self._update_line_plot(snapshot.timestamp, metrics, config, state)
+        elif plot_type == "indexed_line":
+            self._update_indexed_line_plot(snapshot.timestamp, metrics, state)
+        elif plot_type == "vbar":
+            self._update_vbar_plot(metrics, state)
+
+    def _extract_metric(
+        self, snapshot: MetricsSnapshot, config: dict[str, Any]
+    ) -> object:
+        """Pull the configured metric from a snapshot, or disable+warn if absent."""
         try:
-            plot_type = config["plot_type"]
             metrics_group = snapshot.metrics[config["metric_group"]]
             transform = config.get("transform", None)
             if transform:
                 metrics_group = transform(metrics_group)
-            if plot_type == "indexed_line":
-                metrics = {
-                    k: v[config["metric_key"]] for k, v in metrics_group.items()
-                }  # filter but retain different indices
-            else:
-                metrics = metrics_group[config["metric_key"]]  # get single value
-        except Exception as e:
-            if isinstance(e, KeyError):
-                self._logger.error(
-                    "Visualization config did not find matching tracked metric! Please review any `viz.add_plot() calls in your run.py`."
-                )
-            else:
-                raise
+            if config["plot_type"] == "indexed_line":
+                return {k: v[config["metric_key"]] for k, v in metrics_group.items()}
+            return metrics_group[config["metric_key"]]
+        except KeyError:
+            config["disabled"] = True
+            self._logger.error(
+                "Visualization: no tracked metric '%s.%s' for plot %r; disabling it. "
+                "Remove the matching viz.add_plot() call in your run.py to remove this error.",
+                config["metric_group"],
+                config["metric_key"],
+                config["title"],
+            )
+            return _MISSING
 
-        if plot_type == "line":
-            self._update_line_plot(snapshot.timestamp, metrics, config)
-        elif plot_type == "indexed_line":
-            self._update_indexed_line_plot(snapshot.timestamp, metrics, config)
-        elif plot_type == "vbar":
-            self._update_vbar_plot(metrics, config)
+    def _build_render_state(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Create a fresh figure and per-session source/color stores for a config."""
+        if config.get("plot_type") == "vbar":
+            plot = figure(
+                height=300,
+                title=config["title"],
+                sizing_mode="stretch_width",
+                x_range=[],
+            )
+        else:
+            plot = figure(
+                height=300, title=config["title"], sizing_mode="stretch_width"
+            )
+        plot.xaxis.axis_label = "Time"
+        return {"plot": plot, "sources": {}, "colors": {}}
 
-    def _update_line_plot(self, x: float, y: float, config: dict) -> None:
-        plot = config["plot"]
-        sources = config["sources"]
+    def _update_line_plot(
+        self, x: float, y: object, config: dict, state: dict[str, Any]
+    ) -> None:
+        plot = state["plot"]
+        sources = state["sources"]
         key = "main"
         if key not in sources:
             sources[key] = ColumnDataSource(data=dict(x=[], y=[]))
@@ -156,10 +178,12 @@ class LivePlotter:
         if y is not None:
             sources[key].stream({"x": [x], "y": [y]}, 1000)
 
-    def _update_indexed_line_plot(self, x: float, y_data: dict, config: dict) -> None:
-        plot = config["plot"]
-        sources = config["sources"]
-        colors = config["indexed_colors"]
+    def _update_indexed_line_plot(
+        self, x: float, y_data: object, state: dict[str, Any]
+    ) -> None:
+        plot = state["plot"]
+        sources = state["sources"]
+        colors = state["colors"]
 
         if not isinstance(y_data, dict):
             return
@@ -186,10 +210,10 @@ class LivePlotter:
             if value is not None:
                 sources[index_key].stream({"x": [x], "y": [value]}, 1000)
 
-    def _update_vbar_plot(self, data: dict, config: dict) -> None:
+    def _update_vbar_plot(self, data: object, state: dict[str, Any]) -> None:
         # TODO: this should probably be a "live-updating" bar plot, but what about a growing, stacked barplot
-        plot = config["plot"]
-        sources = config["sources"]
+        plot = state["plot"]
+        sources = state["sources"]
         key = "main"
 
         if not isinstance(data, dict):
