@@ -266,6 +266,11 @@ def _handle_run(args: argparse.Namespace) -> None:
 
         os.environ[LOG_LEVEL_ENV_VAR] = args.log_level
         logger.info("Overriding log level for this run: %s", args.log_level)
+    if args.viz:
+        from visualization import VIZ_ENABLED_ENV_VAR
+
+        os.environ[VIZ_ENABLED_ENV_VAR] = "1"
+        logger.info("Visualization enabled for this run")
     try:
         os.execvp("uv", ["uv", "run", str(run_script)])
     except FileNotFoundError:
@@ -418,6 +423,13 @@ def build_parser() -> argparse.ArgumentParser:
         const="CRITICAL",
         dest="log_level",
         help="Shortcut for --log-level CRITICAL (near-silent console).",
+    )
+    p_run.add_argument(
+        "--viz",
+        action="store_true",
+        dest="viz",
+        help="Enable the live visualization dashboard for this run "
+        "(requires the 'viz' extra: uv sync --extra viz).",
     )
     p_run.set_defaults(func=_handle_run)
 
