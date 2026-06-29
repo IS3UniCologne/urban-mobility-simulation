@@ -13,7 +13,7 @@ RegionId: TypeAlias = str
 SimId = NewType("SimId", str)
 """Simulation object identifier with format 'ClassName_id'."""
 
-# Distinct GTFS identifiers. Avoid mi
+# Distinct GTFS identifiers.
 GtfsStopId = NewType("GtfsStopId", str)
 """GTFS stop_id feed."""
 
