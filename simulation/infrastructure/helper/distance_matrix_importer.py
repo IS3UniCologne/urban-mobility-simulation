@@ -1,4 +1,6 @@
-from pathlib import Path  # noqa: D100
+"""Loader for the inter-hexagon haversine distance matrix."""
+
+from pathlib import Path
 
 import h3
 import pandas as pd
@@ -6,11 +8,19 @@ from haversine import Unit, haversine_vector
 
 
 class DistanceMatrixImporter:
-    """
-    Proxy Class for Distance Matrix. Either (Re-)Calculate, or load Matrix, if already existing
+    """Load or (re-)compute the haversine distance matrix between hexagons.
 
-    Distance between hexagon elements are computed using haversine distances
-    """  # noqa: D400
+    Parameters
+    ----------
+    hexagons : list of str
+        H3 hexagon identifiers.
+    resolution : int
+        H3 resolution of the hexagons.
+    data_path : str or pathlib.Path
+        Directory holding the cached matrix CSV.
+    city : str
+        City name, used in the cache filename.
+    """
 
     __slots__ = ("_city", "_data_path", "_hexagons", "_resolution")
 
@@ -23,11 +33,14 @@ class DistanceMatrixImporter:
         self._city = city
 
     def load_distance_matrix(self) -> pd.DataFrame:
-        """
-        Load or calculate distance matrix between hexagon elements
-        :return:
-        """  # noqa: D202, D205, D400
+        """Load the cached distance matrix, computing and caching it if absent.
 
+        Returns
+        -------
+        pandas.DataFrame
+            Square matrix of inter-hexagon distances in metres, indexed and
+            columned by hexagon id.
+        """
         filename = f"{self._city}_distance_matrix_hex_{self._resolution}.csv"
         p = Path(self._data_path, filename)
         hexagons = self._hexagons
