@@ -57,9 +57,6 @@ PATH_TRANSIT_SHAPES    = "./data/infrastructure/transit_shapes.csv"
 # Supply paths
 PATH_VEHICLE_SUPPLY = "./data/supply/{city}_vehicle_supply_distribution_hex_7.csv"
 
-# Mode Choice Model paths
-PATH_TO_MODE_CHOICE_MODEL = "./data/choice_model/distance_based_shared_vehicles.pickle"
-
 # Output paths
 OUTPUT_FOLDER    = "./data/output"
 TRANSACTION_FILE = "transactions.csv"
