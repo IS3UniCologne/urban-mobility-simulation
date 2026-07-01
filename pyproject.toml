@@ -58,12 +58,6 @@ ml = [
   "torch>=2.12.0",
   "pyomo>=6.10.1",
 ]
-notebooks = [
-  "contextily>=1.7.0",
-  "ipython>=9.14.1",
-  "notebook>=7.5.7",
-  "seaborn>=0.13.2",
-]
 viz = ["bokeh>=3.9.1"]
 
 [build-system]
@@ -88,7 +82,6 @@ ext-modules = [
 
 
 [tool.ruff]
-extend-exclude = ["*.ipynb"]
 fix            = true
 output-format  = "grouped"
 [tool.ruff.format]

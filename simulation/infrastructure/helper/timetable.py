@@ -82,8 +82,7 @@ class Timetable(SimulationBase):
             raw_trips = pd.read_csv(self._data_path)
         except FileNotFoundError:
             self.logger.error(
-                "%s does not exist, use Prepare_Transit_Data notebook to generate first.",
-                self._data_path,
+                "%s does not exist, generate the transit data first.", self._data_path
             )
             raise
 
