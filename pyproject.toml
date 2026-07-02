@@ -40,12 +40,12 @@ dev = [
 
 benchmarks = ["pyperf>=2.10.0"]
 
-pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.17"]
+pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.18"]
 
-testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.1.0"]
+testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.1.1"]
 
 typing = [
-  "pyrefly>=1.0.0",
+  "pyrefly>=1.1.1",
   "pandas-stubs>=3.0.3.260530",
   "types-shapely>=2.1.0.20260603",
   "types-geopandas>=1.1.3.20260518",
@@ -57,12 +57,6 @@ ml = [
   "highspy>=1.7.2", #highspy is not explicitly imported anywhere, but used as a solver for pyomo
   "torch>=2.12.0",
   "pyomo>=6.10.1",
-]
-notebooks = [
-  "contextily>=1.7.0",
-  "ipython>=9.14.1",
-  "notebook>=7.5.7",
-  "seaborn>=0.13.2",
 ]
 viz = ["bokeh>=3.9.1"]
 
@@ -92,7 +86,6 @@ ext-modules = [
 ]
 
 [tool.ruff]
-extend-exclude = ["*.ipynb"]
 fix            = true
 output-format  = "grouped"
 [tool.ruff.format]
@@ -131,7 +124,6 @@ convention = "numpy"
 # These directories do not follow the same style as the rest of the codebase.
 "data/projects/*" = ["F401", "E402"]
 "learning/*"      = ["D"]
-"planning/*"      = ["D"]
 "resources/*"     = ["D"]
 "scripts/*"       = ["T201", "E402"]
 "tests/*"         = ["D", "SLF001", "T201"]
@@ -154,15 +146,6 @@ project-excludes = [
   "simulation/agent/policy.py",
   "simulation/agent/rl_agent.py",
   "simulation/helper/configuration/configuration.py",
-  "simulation/infrastructure/charging_stations/charging_infastructure.py",
-  "simulation/infrastructure/charging_stations/charging_station.py",
-  "simulation/infrastructure/charging_stations/virtual_charging_infrastructure.py",
-  "simulation/infrastructure/charging_stations/virtual_charging_station.py",
-  "simulation/infrastructure/helper/distance_matrix_importer.py",
-  "simulation/infrastructure/helper/timetable.py",
-  "simulation/infrastructure/route.py",
-  "simulation/infrastructure/transit_network/route_segment.py",
-  "simulation/infrastructure/transit_network/stop.py",
   "simulation/operator/data_transfer_object/vehicle_allocation.py",
   "simulation/operator/interface/vehicle_allocation_engine_interface.py",
   "simulation/operator/ride_hailing_fleet.py",
