@@ -10,6 +10,8 @@ from simulation.vehicle.energy_system.internal_combustion_system import (
     InternalCombustionSystem,
 )
 
+pytestmark = pytest.mark.unit
+
 
 class TestEnergySystem:
     @pytest.fixture

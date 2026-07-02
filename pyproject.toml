@@ -60,6 +60,9 @@ ml = [
 ]
 viz = ["bokeh>=3.9.1"]
 
+[project.scripts]
+umosim = "scripts.umosim:main"
+
 [build-system]
 build-backend = "setuptools.build_meta"
 requires      = ["cython", "setuptools"]
@@ -67,6 +70,8 @@ requires      = ["cython", "setuptools"]
 
 [tool.setuptools]
 packages = [
+  "scripts",
+  "scripts._cli",
   "simulation",
   "simulation.environment",
   "simulation.environment.cython_ext",
@@ -79,7 +84,6 @@ ext-modules = [
     "-O3",
   ] },
 ]
-
 
 [tool.ruff]
 fix            = true
@@ -118,8 +122,10 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 # These directories do not follow the same style as the rest of the codebase.
+"data/projects/*" = ["F401", "E402"]
 "learning/*"      = ["D"]
 "resources/*"     = ["D"]
+"scripts/*"       = ["T201", "E402"]
 "tests/*"         = ["D", "SLF001", "T201"]
 "visualization/*" = ["D"]
 
@@ -198,4 +204,5 @@ markers = [
 python_classes = ["Test*"]
 python_files = ["*_test.py", "test_*.py"]
 python_functions = ["test_*"]
+pythonpath = ["."]
 testpaths = ["tests"]

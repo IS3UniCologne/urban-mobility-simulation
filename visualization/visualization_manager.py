@@ -55,6 +55,14 @@ class VisualizationManager:
             "Visualization server started. View at http://localhost:%s/", server.port
         )
 
+    def block_until_interrupted(self) -> None:
+        """Keep the dashboard alive until interrupted with Ctrl-C, then stop."""
+        self._logger.info("Visualization running — press Ctrl-C to exit.")
+        try:
+            threading.Event().wait()
+        except KeyboardInterrupt:
+            self.stop()
+
     def stop(self) -> None:
         """Signal the visualization components to shut down gracefully."""
         self._metrics_adapter.stop()
