@@ -112,3 +112,12 @@ class AuctionClosedException(Exception):
 
 class TaskAborted(Exception):
     """Raised to signal early task termination."""
+
+
+# ============================================================================
+# General Exceptions
+# ============================================================================
+
+
+class MissingDependencyError(Exception):
+    """Raised when an optional dependency required for a feature is not installed."""
