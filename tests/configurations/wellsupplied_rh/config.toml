@@ -1,0 +1,46 @@
+##############################################################################################
+### This is the default configuration file template                                        ###
+### for instructions on adding new configuration parameters, check the Configuration class ###
+##############################################################################################
+
+
+[SETTINGS]
+# Logging
+LOG_LEVEL      = "WARNING"
+FILE_LOG_LEVEL = "WARNING"
+LOG_TIMESTAMPS = false
+
+# Output
+PERSIST_RESULTS = false
+
+
+[EXPERIMENT_MANAGEMENT]
+START_TIME = 0
+END_TIME   = 1440
+
+
+[RANDOM_MANAGER]
+# Main seed, set to 0 to generate a new seed on every run
+SEED = 43
+# Component seeds. If commented out, they will be generated from the main seed. (default for reproducibility)
+# Set to 0 to generate a new seed for the component on every run, independent of the main seed.
+# Set to any other value to use that value as the seed for the component.
+[RANDOM_MANAGER.COMPONENT_SEEDS]
+# POPULATIONFACTORY = 0
+# FLEETFACTORY =0
+# DEMANDFACTORY     = 0
+# INITIALSOC        = 0
+# GEOENV            = 0
+
+
+[WORLD]
+SPATIAL_RESOLUTION  = 7
+TEMPORAL_RESOLUTION = 4
+DAILY_RESOLUTION    = "weekday_weekend"
+
+
+[PATH]
+DATASET_DIR      = "../../../data/datasets/e2e_wellsupplied"
+OUTPUT_FOLDER    = "../../../data/test_output"
+TRANSACTION_FILE = "transactions.csv"
+FLEET_STATE_FILE = "fleet_state.csv"

@@ -1,78 +1,306 @@
 {
-    "ridehailing_test": {
-        "operator_metrics": {
-            "total_revenue": 21056.724550972427,
-            "total_transaction_count": 95613,
-            "total_fulfilled_trips": 1456,
-            "total_missed_allocations": 94157,
-            "total_missed_revenue": 1381347.731712706,
-            "total_trip_duration": 40723.33996317089,
-            "total_trip_distance": 6475011.054144175,
-            "total_energy_consumption": 2389.6750041806336
-        },
-        "user_metrics": {
-            "total_trip_requests": 15432,
-            "total_fulfilled_trips": 1456,
-            "total_missed_trips": 13976,
-            "fulfillment_rate": 0.09434940383618455,
-            "total_revenue": 23435.09739712412,
-            "average_price_paid": 16.095533926596236,
-            "total_search_time": 181599.89595429422,
-            "average_search_time": 11.767748571429122,
-            "average_wait_time": 53.87117325665217,
-            "total_trip_duration": 119159.76822485632,
-            "average_trip_duration": 81.84050015443428,
-            "total_energy_consumed": 1295.0022108288354,
-            "average_energy_consumed": 0.8894245953494748
-        },
-        "fleet_metrics": {
-            "fleet_RideHailingFleet_0": {
-                "standby_vehicles": 0,
-                "charging_vehicles": 2,
-                "transporting_vehicles": 25,
-                "avg_state_of_charge": 0.6308667736269946
-            },
-            "fleet_RideHailingFleet_1": {
-                "standby_vehicles": 1,
-                "charging_vehicles": 4,
-                "transporting_vehicles": 23,
-                "avg_state_of_charge": 0.6219354905132448
-            }
-        }
+  "balanced_rh": {
+    "operator_metrics": {
+      "total_revenue": 19658.042812552398,
+      "total_transaction_count": 8929,
+      "total_fulfilled_trips": 1190,
+      "total_missed_allocations": 7739,
+      "total_missed_revenue": 148888.54309266875,
+      "total_trip_duration": 38662.68974262566,
+      "total_trip_distance": 6147367.669077481,
+      "total_energy_consumption": 2009.3519416010765
     },
-    "shared_mobility_test": {
-        "operator_metrics": {
-            "total_revenue": 18499.554585366128,
-            "total_transaction_count": 2380,
-            "total_fulfilled_trips": 1984,
-            "total_missed_allocations": 396,
-            "total_missed_revenue": 3977.1530218204693,
-            "total_trip_duration": 82849.06033246814,
-            "total_trip_distance": 7838382.405023105,
-            "total_energy_consumption": 723.4135148538545
-        },
-        "user_metrics": {
-            "total_trip_requests": 15477,
-            "total_fulfilled_trips": 1984,
-            "total_missed_trips": 13493,
-            "fulfillment_rate": 0.12819021774245654,
-            "total_revenue": 18499.554585366128,
-            "average_price_paid": 9.324372270849862,
-            "total_search_time": 173785.986010257,
-            "average_search_time": 11.228660981472961,
-            "average_wait_time": 0.0,
-            "total_trip_duration": 89731.16889584548,
-            "average_trip_duration": 45.22740367734147,
-            "total_energy_consumed": 723.4135148538545,
-            "average_energy_consumed": 0.36462374740617665
-        },
-        "fleet_metrics": {
-            "fleet_MixedSharedVehicleFleet_0": {
-                "standby_vehicles": 133,
-                "charging_vehicles": 4,
-                "transporting_vehicles": 36,
-                "avg_state_of_charge": 0.7280633200241645
-            }
-        }
+    "user_metrics": {
+      "total_trip_requests": 2103,
+      "total_fulfilled_trips": 1190,
+      "total_missed_trips": 913,
+      "fulfillment_rate": 0.5658582976699953,
+      "total_revenue": 21885.93178309358,
+      "average_price_paid": 18.391539313524017,
+      "total_search_time": 15639.862249518974,
+      "average_search_time": 7.436929267484058,
+      "average_wait_time": 39.74318521454085,
+      "total_trip_duration": 85957.08014792931,
+      "average_trip_duration": 72.2328404604448,
+      "total_energy_consumed": 1229.4735338154956,
+      "average_energy_consumed": 1.0331710368197442
+    },
+    "fleet_metrics": {
+      "fleet_RideHailingFleet_0": {
+        "standby_vehicles": 1,
+        "charging_vehicles": 8,
+        "transporting_vehicles": 16,
+        "avg_state_of_charge": 0.5811692224882765
+      },
+      "fleet_RideHailingFleet_1": {
+        "standby_vehicles": 2,
+        "charging_vehicles": 7,
+        "transporting_vehicles": 15,
+        "avg_state_of_charge": 0.4710651854225376
+      }
     }
+  },
+  "balanced_sm": {
+    "operator_metrics": {
+      "total_revenue": 13495.81512834949,
+      "total_transaction_count": 1199,
+      "total_fulfilled_trips": 1187,
+      "total_missed_allocations": 12,
+      "total_missed_revenue": 104.56117346096488,
+      "total_trip_duration": 57314.83292955601,
+      "total_trip_distance": 5713285.656233968,
+      "total_energy_consumption": 650.7772496753967
+    },
+    "user_metrics": {
+      "total_trip_requests": 2114,
+      "total_fulfilled_trips": 1187,
+      "total_missed_trips": 927,
+      "fulfillment_rate": 0.5614947965941344,
+      "total_revenue": 13495.81512834949,
+      "average_price_paid": 11.369684185635627,
+      "total_search_time": 12998.485072365207,
+      "average_search_time": 6.1487630427460775,
+      "average_wait_time": 0.0,
+      "total_trip_duration": 60838.645378834386,
+      "average_trip_duration": 51.25412416077033,
+      "total_energy_consumed": 650.7772496753967,
+      "average_energy_consumed": 0.5482537907964589
+    },
+    "fleet_metrics": {
+      "fleet_MixedSharedVehicleFleet_0": {
+        "standby_vehicles": 526,
+        "charging_vehicles": 0,
+        "transporting_vehicles": 30,
+        "avg_state_of_charge": 0.739532385151252
+      }
+    }
+  },
+  "base_charging_rh": {
+    "operator_metrics": {
+      "total_revenue": 10444.561253224108,
+      "total_transaction_count": 9862,
+      "total_fulfilled_trips": 654,
+      "total_missed_allocations": 9208,
+      "total_missed_revenue": 172680.01117700027,
+      "total_trip_duration": 21870.96252504728,
+      "total_trip_distance": 3477483.041482511,
+      "total_energy_consumption": 1186.4355119292313
+    },
+    "user_metrics": {
+      "total_trip_requests": 2114,
+      "total_fulfilled_trips": 654,
+      "total_missed_trips": 1460,
+      "fulfillment_rate": 0.3093661305581835,
+      "total_revenue": 12432.082274774428,
+      "average_price_paid": 19.00930011433399,
+      "total_search_time": 21325.682491581272,
+      "average_search_time": 10.087834669622172,
+      "average_wait_time": 49.88933046199979,
+      "total_trip_duration": 54498.5846471952,
+      "average_trip_duration": 83.33116918531377,
+      "total_energy_consumed": 695.496608296504,
+      "average_energy_consumed": 1.0634504714013822
+    },
+    "fleet_metrics": {
+      "fleet_RideHailingFleet_0": {
+        "standby_vehicles": 0,
+        "charging_vehicles": 5,
+        "transporting_vehicles": 20,
+        "avg_state_of_charge": 0.5423633774305737
+      }
+    }
+  },
+  "long_run": {
+    "operator_metrics": {
+      "total_revenue": 51749.24827186327,
+      "total_transaction_count": 5240,
+      "total_fulfilled_trips": 4969,
+      "total_missed_allocations": 271,
+      "total_missed_revenue": 3873.481378934453,
+      "total_trip_duration": 101189.44262877114,
+      "total_trip_distance": 16089121.37797463,
+      "total_energy_consumption": 4129.624945645735
+    },
+    "user_metrics": {
+      "total_trip_requests": 4980,
+      "total_fulfilled_trips": 4969,
+      "total_missed_trips": 11,
+      "fulfillment_rate": 0.9977911646586345,
+      "total_revenue": 61119.15942543832,
+      "average_price_paid": 12.300092458329306,
+      "total_search_time": 3018.4021760232936,
+      "average_search_time": 0.6061048546231513,
+      "average_wait_time": 6.730069322032661,
+      "total_trip_duration": 134631.15708995136,
+      "average_trip_duration": 27.094215554427723,
+      "total_energy_consumed": 3217.824275594921,
+      "average_energy_consumed": 0.6475798501901632
+    },
+    "fleet_metrics": {
+      "fleet_RideHailingFleet_0": {
+        "standby_vehicles": 25,
+        "charging_vehicles": 0,
+        "transporting_vehicles": 2,
+        "avg_state_of_charge": 0.7502562685851534
+      },
+      "fleet_RideHailingFleet_1": {
+        "standby_vehicles": 27,
+        "charging_vehicles": 0,
+        "transporting_vehicles": 0,
+        "avg_state_of_charge": 0.8070407695910181
+      }
+    }
+  },
+  "saturated_rh": {
+    "operator_metrics": {
+      "total_revenue": 22621.8339498528,
+      "total_transaction_count": 68529,
+      "total_fulfilled_trips": 1257,
+      "total_missed_allocations": 67272,
+      "total_missed_revenue": 1276727.5380041392,
+      "total_trip_duration": 44921.58511962906,
+      "total_trip_distance": 7142532.034021024,
+      "total_energy_consumption": 2315.182116659901
+    },
+    "user_metrics": {
+      "total_trip_requests": 11480,
+      "total_fulfilled_trips": 1257,
+      "total_missed_trips": 10223,
+      "fulfillment_rate": 0.10949477351916376,
+      "total_revenue": 25153.6720750532,
+      "average_price_paid": 20.01087675024121,
+      "total_search_time": 133538.12218231196,
+      "average_search_time": 11.632240608215326,
+      "average_wait_time": 54.875158178741096,
+      "total_trip_duration": 113899.65895030671,
+      "average_trip_duration": 90.61229828982236,
+      "total_energy_consumed": 1428.5064068042036,
+      "average_energy_consumed": 1.1364410555323816
+    },
+    "fleet_metrics": {
+      "fleet_RideHailingFleet_0": {
+        "standby_vehicles": 0,
+        "charging_vehicles": 5,
+        "transporting_vehicles": 21,
+        "avg_state_of_charge": 0.5180680430294339
+      },
+      "fleet_RideHailingFleet_1": {
+        "standby_vehicles": 0,
+        "charging_vehicles": 3,
+        "transporting_vehicles": 19,
+        "avg_state_of_charge": 0.5342992779641492
+      }
+    }
+  },
+  "saturated_sm": {
+    "operator_metrics": {
+      "total_revenue": 13858.46487657673,
+      "total_transaction_count": 1422,
+      "total_fulfilled_trips": 1280,
+      "total_missed_allocations": 142,
+      "total_missed_revenue": 1703.4697043674407,
+      "total_trip_duration": 61089.25003311207,
+      "total_trip_distance": 5962966.850104115,
+      "total_energy_consumption": 569.4433628478059
+    },
+    "user_metrics": {
+      "total_trip_requests": 11526,
+      "total_fulfilled_trips": 1280,
+      "total_missed_trips": 10246,
+      "fulfillment_rate": 0.11105327086586847,
+      "total_revenue": 13858.46487657673,
+      "average_price_paid": 10.826925684825571,
+      "total_search_time": 130486.90440428123,
+      "average_search_time": 11.32109182754479,
+      "average_wait_time": 0.0,
+      "total_trip_duration": 64844.192999207036,
+      "average_trip_duration": 50.659525780630496,
+      "total_energy_consumed": 569.4433628478059,
+      "average_energy_consumed": 0.44487762722484836
+    },
+    "fleet_metrics": {
+      "fleet_MixedSharedVehicleFleet_0": {
+        "standby_vehicles": 159,
+        "charging_vehicles": 0,
+        "transporting_vehicles": 31,
+        "avg_state_of_charge": 0.7229658809899827
+      }
+    }
+  },
+  "wellsupplied_rh": {
+    "operator_metrics": {
+      "total_revenue": 3662.529427974172,
+      "total_transaction_count": 361,
+      "total_fulfilled_trips": 347,
+      "total_missed_allocations": 14,
+      "total_missed_revenue": 153.23251246784415,
+      "total_trip_duration": 7386.977925762947,
+      "total_trip_distance": 1174529.4901963086,
+      "total_energy_consumption": 283.9497895490954
+    },
+    "user_metrics": {
+      "total_trip_requests": 347,
+      "total_fulfilled_trips": 347,
+      "total_missed_trips": 0,
+      "fulfillment_rate": 1.0,
+      "total_revenue": 4449.646119041039,
+      "average_price_paid": 12.823187662942475,
+      "total_search_time": 196.95083568602016,
+      "average_search_time": 0.5675816590375221,
+      "average_wait_time": 4.889391226321813,
+      "total_trip_duration": 9083.596681296624,
+      "average_trip_duration": 26.17751204984618,
+      "total_energy_consumed": 234.90589803926173,
+      "average_energy_consumed": 0.6769622421880741
+    },
+    "fleet_metrics": {
+      "fleet_RideHailingFleet_0": {
+        "standby_vehicles": 23,
+        "charging_vehicles": 0,
+        "transporting_vehicles": 4,
+        "avg_state_of_charge": 0.7964399114552135
+      },
+      "fleet_RideHailingFleet_1": {
+        "standby_vehicles": 25,
+        "charging_vehicles": 0,
+        "transporting_vehicles": 2,
+        "avg_state_of_charge": 0.8517913998116337
+      }
+    }
+  },
+  "wellsupplied_sm": {
+    "operator_metrics": {
+      "total_revenue": 2844.510615406426,
+      "total_transaction_count": 323,
+      "total_fulfilled_trips": 322,
+      "total_missed_allocations": 1,
+      "total_missed_revenue": 4.253559594982911,
+      "total_trip_duration": 12969.370228198957,
+      "total_trip_distance": 1107812.5009191681,
+      "total_energy_consumption": 108.43889269234916
+    },
+    "user_metrics": {
+      "total_trip_requests": 349,
+      "total_fulfilled_trips": 322,
+      "total_missed_trips": 27,
+      "fulfillment_rate": 0.9226361031518625,
+      "total_revenue": 2844.510615406426,
+      "average_price_paid": 8.83388389877772,
+      "total_search_time": 648.0478359822349,
+      "average_search_time": 1.8568705902069769,
+      "average_wait_time": 0.0,
+      "total_trip_duration": 13645.102286039395,
+      "average_trip_duration": 42.376094056022964,
+      "total_energy_consumed": 108.43889269234916,
+      "average_energy_consumed": 0.33676674749176755
+    },
+    "fleet_metrics": {
+      "fleet_MixedSharedVehicleFleet_0": {
+        "standby_vehicles": 176,
+        "charging_vehicles": 0,
+        "transporting_vehicles": 4,
+        "avg_state_of_charge": 0.7403656624248133
+      }
+    }
+  }
 }

@@ -92,6 +92,18 @@ class AmbiguousTripException(Exception):
     """Raised when a trip cannot be uniquely identified in the timetable."""
 
 
+class StopNotFoundError(Exception):
+    """Raised when a stop cannot be located within a route."""
+
+
+class TimetableNotImportedError(Exception):
+    """Raised when timetable data is accessed before being imported."""
+
+
+class HexagonNotFoundError(Exception):
+    """Raised when a region id has no hexagon in the geodesic environment."""
+
+
 # ============================================================================
 # Market/Auction Exceptions
 # ============================================================================
@@ -112,3 +124,12 @@ class AuctionClosedException(Exception):
 
 class TaskAborted(Exception):
     """Raised to signal early task termination."""
+
+
+# ============================================================================
+# General Exceptions
+# ============================================================================
+
+
+class MissingDependencyError(Exception):
+    """Raised when an optional dependency required for a feature is not installed."""

@@ -1,4 +1,7 @@
-from pathlib import Path  # noqa: D100
+"""Helper class to load or calculate distance matrix between hexagon centroids."""
+
+import hashlib
+from pathlib import Path
 
 import h3
 import pandas as pd
@@ -6,63 +9,50 @@ from haversine import Unit, haversine_vector
 
 
 class DistanceMatrixImporter:
+    """Load or calculate the distance matrix between hexagon centroids.
+
+    Distance between hexagon elements are computed using haversine distances.
     """
-    Proxy Class for Distance Matrix. Either (Re-)Calculate, or load Matrix, if already existing
 
-    Distance between hexagon elements are computed using haversine distances
-    """  # noqa: D400
+    __slots__ = ("_cache_dir", "_hexagons", "_resolution")
 
-    __slots__ = ("_city", "_data_path", "_hexagons", "_resolution")
-
-    def __init__(
-        self, hexagons: list[str], resolution: int, data_path: str | Path, city: str
-    ) -> None:
+    def __init__(self, hexagons: list[str], resolution: int, cache_dir: Path) -> None:
         self._hexagons = hexagons
         self._resolution = resolution
-        self._data_path = data_path
-        self._city = city
+        self._cache_dir = Path(cache_dir)
 
     def load_distance_matrix(self) -> pd.DataFrame:
+        """Load or calculate distance matrix between hexagon elements.
+
+        Returns
+        -------
+        pd.DataFrame
+            Square DataFrame indexed and columned by hex IDs with haversine
+            distances in metres.
         """
-        Load or calculate distance matrix between hexagon elements
-        :return:
-        """  # noqa: D202, D205, D400
+        cache_path = self._cache_path()
 
-        filename = f"{self._city}_distance_matrix_hex_{self._resolution}.csv"
-        p = Path(self._data_path, filename)
-        hexagons = self._hexagons
+        if cache_path.exists():
+            return pd.read_parquet(cache_path)
 
-        if p.exists():
-            distance_matrix = pd.read_csv(p, index_col=0)
-        else:
-            hexagon_centers = [h3.cell_to_latlng(x) for x in hexagons]
-            distance_matrix = pd.DataFrame(
-                haversine_vector(
-                    hexagon_centers, hexagon_centers, comb=True, unit=Unit.METERS
-                ),
-                index=hexagons,
-                columns=hexagons,
-            )
-            distance_matrix.to_csv(p, index=True)
+        hexagon_centers = [h3.cell_to_latlng(x) for x in self._hexagons]
+        distance_matrix = pd.DataFrame(
+            haversine_vector(
+                hexagon_centers, hexagon_centers, comb=True, unit=Unit.METERS
+            ),
+            index=self._hexagons,
+            columns=self._hexagons,
+        )
 
-            # Below is the old, inefficient way of doing things
-            # geo_env = GeodesicEnvironment.getInstance()
-
-            # for idx_row, hex_row in enumerate(hexagons):
-            #     for idx_col, hex_col in enumerate(hexagons):
-            #         # Symmetry
-            #         if idx_col > idx_row:
-            #             lat, lng = geo_env.get_centroid(hex_row, f'hex_{self._resolution}')
-            #             hex_row_pos = GeodesicPosition(lat, lng, hex_row)
-            #
-            #             lat, lng = geo_env.get_centroid(hex_col, f'hex_{self._resolution}')
-            #             hex_col_pos = GeodesicPosition(lat, lng, hex_col)
-            #
-            #             distance = hex_row_pos >> hex_col_pos
-            #
-            #             distance_matrix[hex_row][hex_col] = distance
-            #             distance_matrix[hex_col][hex_row] = distance
-            #         elif idx_col == idx_row:
-            #             distance_matrix[hex_row][hex_col] = 0.0
-
+        self._cache_dir.mkdir(parents=True, exist_ok=True)
+        distance_matrix.to_parquet(cache_path)
         return distance_matrix
+
+    def _cache_path(self) -> Path:
+        cache_key = hashlib.sha256(
+            ",".join(sorted(self._hexagons)).encode() + str(self._resolution).encode()
+        ).hexdigest()[:12]
+        return (
+            self._cache_dir
+            / f"{cache_key}_res{self._resolution}_distance_matrix.parquet"
+        )

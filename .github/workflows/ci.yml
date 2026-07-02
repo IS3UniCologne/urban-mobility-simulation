@@ -41,9 +41,9 @@ jobs:
       run: |
         nox -rs pyrefly
 
-  unit-test:
+  fast-test:
     runs-on: self-hosted
-    name: Unit Test
+    name: Fast Tests (unit + integration)
     steps:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
@@ -57,15 +57,15 @@ jobs:
         run: |
           uv tool install nox
 
-      - name: Run Unit Tests
-        id: unit_test
+      - name: Run Fast Tests
+        id: fast_test
         run: |
-          nox -rs pytest -- --durations=10 -m unit
+          nox -rs pytest_fast
 
   end-to-end-test:
     runs-on: self-hosted
     name: End-to-End Test
-    needs: unit-test # Ensure unit tests pass before running end-to-end tests
+    needs: fast-test # Ensure fast tests pass before running end-to-end tests
     steps:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
@@ -85,7 +85,7 @@ jobs:
       - name: Run End-to-End Tests
         id: end_to_end_test
         run: |
-          nox -rs pytest -- --durations=10 -m end_to_end
+          nox -rs pytest_e2e
 
       - name: Copy simulation logs on failure
         if: failure()
