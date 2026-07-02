@@ -1,6 +1,5 @@
 from __future__ import annotations  # noqa: D100
 
-import os
 from typing import TYPE_CHECKING
 
 from simulation.agent.user.user_log import UserLog
@@ -174,20 +173,19 @@ class World(SimulationBase):  # noqa: D101
     ) -> list[ChargingInfrastructure] | None:
         # TODO: This is currently completely ignored by shared vehicle operators, while ridehailing operators all use the same charging infrastructure.
         # This probably needs some refactoring depending on what we want to do with charging infrastructure in the future.
-
-        if len(self._config.charging_infrastructures) > 0:
-            charging_infrastructures = []
-
-            for ci_conf in self._config.charging_infrastructures:
-                charging_infrastructure = ChargingInfrastructure(
-                    sim=self._sim, charging_infrastructure_config=ci_conf
-                )
-                # Assign the charging infrastructure object to the config so operators can access it
-                ci_conf.instance = charging_infrastructure
-                charging_infrastructures.append(charging_infrastructure)
-            return charging_infrastructures
-        else:
-            return None
+        charging_infrastructures: list[ChargingInfrastructure] = []
+        seen: set[int] = set()
+        for operator_config in self._config.operators:
+            ci_conf = operator_config.CHARGING_INFRASTRUCTURE
+            if ci_conf is None or id(ci_conf) in seen:
+                continue
+            seen.add(id(ci_conf))
+            charging_infrastructure = ChargingInfrastructure(
+                sim=self._sim, charging_infrastructure_config=ci_conf
+            )
+            ci_conf.instance = charging_infrastructure
+            charging_infrastructures.append(charging_infrastructure)
+        return charging_infrastructures or None
 
     def _setup_operators(self) -> None:
         if not self._config.operators or len(self._config.operators) == 0:
@@ -201,17 +199,12 @@ class World(SimulationBase):  # noqa: D101
             )
             self._operators.append(operator)
 
-    def _load_distance_matrix(self) -> None:
-        hexagons = self.geo_env.getLayer(
-            f"hex_{self._config.world.SPATIAL_RESOLUTION}"
-        ).index.tolist()
-
-        # TODO: Remove hardcoded path
+    def _load_distance_matrix(self) -> DataFrame:
+        hexagons = self.geo_env.getLayer("hex").index.tolist()
         dmi = DistanceMatrixImporter(
-            hexagons,
-            self._config.world.SPATIAL_RESOLUTION,
-            os.path.normpath(os.path.join(".", "data", "infrastructure")),
-            self._config.world.CITY,
+            hexagons=hexagons,
+            resolution=self._config.world.SPATIAL_RESOLUTION,
+            cache_dir=self._config.path.cache_dir,
         )
         return dmi.load_distance_matrix()
 
@@ -291,13 +284,15 @@ class World(SimulationBase):  # noqa: D101
         )
 
     def _load_timetable(self) -> Timetable | None:
-        if not hasattr(self._config.path, "PATH_TRANSIT_TIMETABLE"):
-            self.logger.warning("No timetable path configured for public transport")
+        timetable_path = self._config.path.transit_timetable
+        if timetable_path is None:
+            self.logger.warning(
+                "No timetable found in DATASET_DIR, skipping public transport"
+            )
             return None
 
         from simulation.infrastructure.helper.timetable import Timetable
 
-        timetable_path = os.path.normpath(self._config.path.PATH_TRANSIT_TIMETABLE)
         timetable = Timetable(data_path=timetable_path, sim=self._sim)
         timetable.import_timetable()
         self.logger.info("Loaded public transport timetable from %s", timetable_path)

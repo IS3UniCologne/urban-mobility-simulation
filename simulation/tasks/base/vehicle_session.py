@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from simulation.helper.enums import TaskState
+from simulation.helper.enums import SimulationPhase, TaskState
 from simulation.helper.exceptions import ReservationCanceledError
 from simulation.vehicle.interfaces.reservable_interface import ReservableInterface
 
@@ -115,9 +115,10 @@ class VehicleSession(SimulationBase):
                     break
 
         finally:
-            # 5. Always release vehicle use
+            # 5. Release vehicle use, unless the sim has already ended.
             if (
-                isinstance(self._vehicle, ReservableInterface)
+                self._sim.phase is SimulationPhase.RUNNING
+                and isinstance(self._vehicle, ReservableInterface)
                 and self._vehicle.is_in_use
             ):
                 self._vehicle.release_use()

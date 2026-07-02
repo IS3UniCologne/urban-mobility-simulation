@@ -1,11 +1,8 @@
-"""Demand data import and processing.
-
-This module provides the DemandImporter class which coordinates the import
-and processing and caching of transportation demand data,
-"""
+"""Demand data import and validation."""
 
 from pathlib import Path
 
+import h3  # type: ignore
 import pandas as pd
 from pandas import DataFrame
 
@@ -14,88 +11,62 @@ from simulation.helper.enums import (
     SpatialResolution,
     TemporalResolution,
 )
-
-from .demand_cache_manager import DemandCacheManager
-from .demand_processor import DemandProcessor
+from simulation.world.demand import demand_schema
 
 
 class DemandImporter:
-    """Coordinates demand data import and processing."""
+    """Loads and validates demand files."""
 
-    __slots__ = (
-        "_cache_manager",
-        "_city",
-        "_daily_resolution",
-        "_spatial_resolution",
-        "_temporal_resolution",
-    )
+    __slots__ = ("_daily_resolution", "_spatial_resolution", "_temporal_resolution")
 
     def __init__(
         self,
         temporal_resolution: TemporalResolution,
         spatial_resolution: SpatialResolution,
         daily_resolution: DailyResolution,
-        city: str,
     ) -> None:
-        self._temporal_resolution: TemporalResolution = temporal_resolution
-        self._spatial_resolution: SpatialResolution = spatial_resolution
-        self._daily_resolution: DailyResolution = daily_resolution
-        self._city = city
+        self._temporal_resolution = temporal_resolution
+        self._spatial_resolution = spatial_resolution
+        self._daily_resolution = daily_resolution
 
-        self._cache_manager = DemandCacheManager(city)
-
-    def extract_spatio_temporal_demand_estimates(
-        self, trip_data_path: Path
-    ) -> pd.DataFrame:
-        """Extract demand estimates from trip data.
-
-        Returns a DataFrame with distributional data regarding arrival times (poisson) and origin destination trips (frequency)
-        in spatio-temporal resolution.
+    def load(self, demand_path: Path) -> DataFrame:
+        """Load and validate a pre-processed demand parquet file.
 
         Parameters
         ----------
-        trip_data_path : Path
-            Path to the trip data file
+        demand_path : Path
+            Path to demand.parquet.
 
         Returns
         -------
         DataFrame
-            Contains the following columns:
-                - is_holiday: yes/no (!weekday)
-                - temporal bucket: TemporalResolution
-                - origin: Hexagon ID by given resolution
-                - destination: Hexagon ID by given resolution
-                - od_multinom_p_est: Multionomial Distribution Coeffcients for P(D | is_holiday, temp_bucket, origin). Add up to 1 for each triplet.
-                - o_poisson_est: Lambda of poisson distribution for each triplet (is_holiday, temp_bucket, origin); destination not considered
+            Validated demand data.
 
         Raises
         ------
-        NotImplementedError
-        If the daily resolution is not supported.
+        ValueError
+            If demand data does not match expected values based on config.
         """
-        if self._daily_resolution != DailyResolution.WEEKDAY_WEEKEND:
-            raise NotImplementedError(
-                "Currently only weekday/weekend distinction supported."
+        df = pd.read_parquet(demand_path)
+        self._validate(df)
+        return df
+
+    def _validate(self, df: DataFrame) -> None:
+        inferred_h3_res = h3.get_resolution(df[demand_schema.ORIGIN].iloc[0])
+        if inferred_h3_res != self._spatial_resolution.value:
+            raise ValueError(
+                f"Demand H3 resolution {inferred_h3_res} != config {self._spatial_resolution.value}"
             )
 
-        # Try to load from cache first
-        cache_path: Path = self._cache_manager.get_cache_path(
-            temporal_column=self._temporal_resolution.column_name,
-            origin_column=self._spatial_resolution.origin_column_name,
-        )
-        cached_data: DataFrame | None = self._cache_manager.load_cached_data(cache_path)
-        if cached_data is not None:
-            return cached_data
+        inferred_bucket_hours = 24 // df[demand_schema.TIME_BUCKET].nunique()
+        if inferred_bucket_hours != self._temporal_resolution.value:
+            raise ValueError(
+                f"Demand temporal bucket {inferred_bucket_hours}h != config {self._temporal_resolution.value}h"
+            )
 
-        # Process data if not cached
-        processor: DemandProcessor = DemandProcessor(
-            spatial_columns=self._spatial_resolution.origin_destination_columns,
-            temporal_column=self._temporal_resolution.column_name,
-            day_column=self._daily_resolution.day_of_week_column_name,
-        )
-        result: DataFrame = processor.process_trip_data(trip_data_path=trip_data_path)
-
-        # Cache the result
-        self._cache_manager.save_to_cache(data=result, cache_path=cache_path)
-
-        return result
+        if self._daily_resolution == DailyResolution.WEEKDAY_WEEKEND:
+            # TODO: this whole config value can probably be deprecated?
+            if df[demand_schema.IS_WEEKEND].nunique() < 2:
+                raise ValueError(
+                    "Config requires weekday/weekend split but demand data has only one day type"
+                )
