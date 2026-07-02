@@ -24,6 +24,7 @@ All validation, type conversion, and defaults should be handled using Pydantic f
 from __future__ import annotations
 
 import importlib.util
+import logging
 import os
 import tomllib
 from pathlib import Path
@@ -34,6 +35,7 @@ from pydantic import (
     ConfigDict,
     Field,
     ValidationError,
+    computed_field,
     field_validator,
     model_validator,
 )
@@ -50,7 +52,6 @@ from simulation.agent.user.choice_model.random_nearest_vehicle_choice_model impo
 from simulation.helper.enums import (
     AutonomyType,
     DailyResolution,
-    ModeChoiceStrategy,
     PropulsionType,
     SpatialResolution,
     TemporalResolution,
@@ -88,6 +89,10 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T", bound=BaseModel)
+logger = logging.getLogger(__name__)
+
+LOG_LEVEL_ENV_VAR = "UMOSIM_LOG_LEVEL"
+VALID_LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
 
 
 class ConfigBaseModel(BaseModel):
@@ -111,9 +116,8 @@ class SettingsConfig(ConfigBaseModel):
         """Validate log class overrides."""
         if v is None:
             return v
-        valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         for class_name, level in v.items():
-            if level not in valid_levels:
+            if level not in VALID_LOG_LEVELS:
                 raise ValueError(
                     f"Invalid log level '{level}' for class '{class_name}'"
                 )
@@ -151,35 +155,110 @@ class WorldConfig(ConfigBaseModel):
     SPATIAL_RESOLUTION: SpatialResolution
     DAILY_RESOLUTION: DailyResolution
     TEMPORAL_RESOLUTION: TemporalResolution
-    CITY: str
 
 
 class PathConfig(ConfigBaseModel):
     """Configuration for file paths used in the simulation."""
 
-    PATH_ENV_BOUNDING_BOX: Path
-    PATH_ENV_HEX_LAYER_RES_7: Path
-    PATH_ENV_HEX_LAYER_RES_8: Path
-    PATH_ENV_HEX_LAYER_RES_9: Path
-    PATH_TRANSIT_TIMETABLE: Path
-    PATH_TRANSIT_SHAPES: Path
-    PATH_VEHICLE_SUPPLY: Path
+    DATASET_DIR: Path
+    PROJECT_DIR: Path
     OUTPUT_FOLDER: Path
     TRANSACTION_FILE: Path
     FLEET_STATE_FILE: Path
-    PATH_TRIP_DEMAND: Path
-    PATH_DEMAND_MODIFIERS: list[Path] | None = None
 
-    @field_validator("*", mode="after")
+    @field_validator("DATASET_DIR", "PROJECT_DIR", "OUTPUT_FOLDER", mode="after")
     @classmethod
-    def normalize_paths(cls, v: str | Path | list[Path]) -> Path | list[Path]:
-        """Normalize and expand paths."""
-        if isinstance(v, list):
-            return [Path(os.path.normpath(str(item.expanduser()))) for item in v]
-        if isinstance(v, Path):
-            return Path(os.path.normpath(str(v.expanduser())))
-        if isinstance(v, str):
-            return Path(os.path.normpath(os.path.expanduser(v)))
+    def normalize_paths(cls, v: Path) -> Path:
+        """Normalize and expand absolute paths."""
+        return Path(os.path.normpath(str(v.expanduser())))
+
+    @model_validator(mode="after")
+    def validate_required_files(self) -> PathConfig:
+        """Validate that required dataset files exist."""
+        required = [("demand.parquet", self.demand)]
+        for name, path in required:
+            if not path.exists():
+                raise ValueError(
+                    f"Required file '{name}' missing in DATASET_DIR (looked at {path})"
+                )
+        return self
+
+    @classmethod
+    def from_raw(cls, data: dict, project_dir: Path) -> PathConfig:
+        """Build a PathConfig from raw TOML data, resolving relative paths against project_dir."""
+        resolved = data.copy()
+        for key in ("DATASET_DIR", "OUTPUT_FOLDER"):
+            if key in resolved:
+                p = Path(resolved[key]).expanduser()
+                resolved[key] = p if p.is_absolute() else (project_dir / p).resolve()
+        resolved["PROJECT_DIR"] = project_dir
+        return cls.model_validate(resolved)
+
+    @computed_field
+    @property
+    def dataset_name(self) -> str:
+        """Name of the dataset directory (used as identifier, e.g. for cache keys)."""
+        return self.DATASET_DIR.name
+
+    @computed_field
+    @property
+    def bounding_box(self) -> Path | None:
+        """Path to bounding_box.geojson, or None if absent (optional, inferred at runtime)."""
+        p = self.DATASET_DIR / "bounding_box.geojson"
+        return p if p.exists() else None
+
+    @computed_field
+    @property
+    def demand(self) -> Path:
+        """Path to demand.parquet (required)."""
+        return self.DATASET_DIR / "demand.parquet"
+
+    @computed_field
+    @property
+    def supply(self) -> Path | None:
+        """Path to dataset-level supply.parquet, or None if absent."""
+        p = self.DATASET_DIR / "supply.parquet"
+        return p if p.exists() else None
+
+    @computed_field
+    @property
+    def cache_dir(self) -> Path:
+        """Path to the cache directory for derived artifacts."""
+        return self.DATASET_DIR / ".cache"
+
+    @computed_field
+    @property
+    def demand_modifiers(self) -> list[Path]:
+        """Paths to demand-modifier GeoJSONs in PROJECT_DIR/demand_modifiers/.
+
+        Returns an empty list if the directory is absent or contains no .geojson files.
+        Sorted lexicographically for deterministic load order.
+        """
+        d = self.PROJECT_DIR / "demand_modifiers"
+        if not d.is_dir():
+            return []
+        return sorted(d.glob("*.geojson"))
+
+    @computed_field
+    @property
+    def choice_model(self) -> Path | None:
+        """Path to choice_model.pickle in project dir, or None if absent (optional, deprecated?)."""
+        p = self.PROJECT_DIR / "choice_model.pickle"
+        return p if p.exists() else None
+
+    @computed_field
+    @property
+    def transit_timetable(self) -> Path | None:
+        """Path to transit_timetable.parquet, or None if absent (optional)."""
+        p = self.DATASET_DIR / "transit_timetable.parquet"
+        return p if p.exists() else None
+
+    @computed_field
+    @property
+    def transit_shapes(self) -> Path | None:
+        """Path to transit_shapes.parquet, or None if absent (optional)."""
+        p = self.DATASET_DIR / "transit_shapes.parquet"
+        return p if p.exists() else None
 
 
 class UserConfig(ConfigBaseModel):
@@ -300,6 +379,14 @@ class FleetConfig(ConfigBaseModel):
 
     ENABLE_EN_ROUTE_INDEX: bool = Field(default=False)
 
+    SUPPLY_DISTRIBUTION_FILE: str | None = Field(default=None)
+
+    def supply_distribution_path(self, project_dir: Path) -> Path | None:
+        """Resolve the supply distribution filename against a project directory."""
+        if self.SUPPLY_DISTRIBUTION_FILE is None:
+            return None
+        return project_dir / self.SUPPLY_DISTRIBUTION_FILE
+
 
 class RideHailingFleetConfig(FleetConfig):
     """Configuration for ride-hailing fleet parameters."""
@@ -322,19 +409,6 @@ class SharedVehicleFleetConfig(FleetConfig):
     """Configuration for shared vehicle fleet parameters."""
 
     FLEET_TYPE: type[VehicleFleet] = MixedSharedVehicleFleet
-
-
-class ModeChoiceModelConfig(ConfigBaseModel):
-    """Configuration for mode choice model parameters."""
-
-    SUBSTITUTION_BOUNDARY: float
-    AV_TRUST: list[float]
-    MODE_CHOICE_STRATEGY: ModeChoiceStrategy
-    MOD_COEFFICIENTS: list[list[float]]
-    MOD_COEFFICIENTS_CI_LOWER: list[list[float]]
-    MOD_COEFFICIENTS_CI_UPPER: list[list[float]]
-    MOD_P_VALUES: list[list[float]]
-    MOD_COEFFICIENT_INTERVAL_ADJUSTER: float
 
 
 class ChargingInfrastructureConfig(BaseModel):
@@ -614,21 +688,6 @@ class DQNConfig(ConfigBaseModel):
     GAMMA: float
 
 
-def _patch_path_city_fields(
-    path_data: dict[str, str | list[str]], city: str
-) -> dict[str, str | list[str]]:
-    """Replace {city} in all string fields of path_data with the given city name."""
-    patched = path_data.copy()
-    for k, v in patched.items():
-        if isinstance(v, str) and "{city}" in v:
-            patched[k] = v.format(city=city)
-    if patched.get("PATH_DEMAND_MODIFIERS"):
-        patched["PATH_DEMAND_MODIFIERS"] = [
-            s.format(city=city) for s in patched["PATH_DEMAND_MODIFIERS"]
-        ]
-    return patched
-
-
 class Configuration:
     """
     Configuration class for simulation parameters.
@@ -637,30 +696,47 @@ class Configuration:
     Preserves type checking and IDE auto-completion for each section property.
     """
 
-    def __init__(self, experiment_dir: str | Path) -> None:
-        base = Path(experiment_dir)
-        if not base.is_dir():
-            raise NotADirectoryError(f"Expected a directory: {base}")
+    def __init__(self, project_dir: str | Path) -> None:
+        project_path = Path(project_dir)
+        if not project_path.is_dir():
+            raise NotADirectoryError(f"Expected a directory: {project_path}")
 
-        config_file = base / "config.toml"
+        config_file = project_path / "config.toml"
         if not config_file.exists():
-            raise FileNotFoundError(f'Could not find "config.toml" in {base}')
+            raise FileNotFoundError(f'Could not find "config.toml" in {project_path}')
 
         with open(config_file, "rb") as f:
             data = tomllib.load(f)
 
         self._data = {k.lower(): v for k, v in data.items()}
+        self._apply_log_level_override()  # From env var, if set
         self._cache: dict[str, object] = {}
-
-        # Eagerly load world and path so we can patch path fields
-        world_config = WorldConfig.model_validate(self._data["world"])
-        self._cache["world"] = world_config
-        city = world_config.CITY
-        patched_path = _patch_path_city_fields(self._data["path"], city)
-        self._cache["path"] = PathConfig.model_validate(patched_path)
+        self._project_dir: Path = project_path.resolve()
 
         # Load components that are configured as Python modules
-        self._load_config_from_py(base)
+        self._load_config_from_py(self._project_dir)
+
+        self._validate_fleet_supply_files()
+
+    def _apply_log_level_override(self) -> None:
+        """Override log levels with env var, if set (from CLI)."""
+        override = os.environ.get(LOG_LEVEL_ENV_VAR)
+        if override is None:
+            return
+        override = override.strip().upper()
+        if override not in VALID_LOG_LEVELS:
+            logger.warning(
+                "Ignoring invalid %s=%r (expected one of %s)",
+                LOG_LEVEL_ENV_VAR,
+                os.environ[LOG_LEVEL_ENV_VAR],
+                ", ".join(sorted(VALID_LOG_LEVELS)),
+            )
+            return
+        settings = self._data.get("settings")
+        if not isinstance(settings, dict):
+            return
+        settings["LOG_LEVEL"] = override
+        settings["FILE_LOG_LEVEL"] = override
 
     def _get_section(self, section: str, model: type[T]) -> T:
         if section in self._cache:
@@ -670,7 +746,7 @@ class Configuration:
         try:
             validated_model = model.model_validate(self._data[section])
             self._cache[section] = validated_model
-            return cast("T", validated_model)
+            return validated_model
         except ValidationError as e:
             raise ValueError(
                 f"Config validation error in section '{section}': {e}"
@@ -768,7 +844,11 @@ class Configuration:
         PathConfig
             The path configuration section.
         """
-        return self._get_section("path", PathConfig)
+        if "path" not in self._cache:
+            self._cache["path"] = PathConfig.from_raw(
+                self._data["path"], self._project_dir
+            )
+        return cast("PathConfig", self._cache["path"])
 
     @property
     def population(self) -> PopulationConfig:
@@ -783,20 +863,6 @@ class Configuration:
         return self._get_section("population", PopulationConfig)
 
     @property
-    def charging_infrastructures(self) -> list[ChargingInfrastructureConfig]:
-        """
-        Get the charging infrastructure configuration section.
-
-        Returns
-        -------
-        ChargingInfrastructureConfig
-            The charging infrastructure configuration section.
-        """
-        return self._get_section_list(
-            "charging_infrastructure", ChargingInfrastructureConfig
-        )
-
-    @property
     def operators(self) -> list[OperatorConfig]:
         """
         Get the operators configuration section.
@@ -807,6 +873,30 @@ class Configuration:
             The operators configuration section.
         """
         return self._get_section_list("operator", OperatorConfig)
+
+    def all_supply_distribution_paths(self) -> list[Path]:
+        """Return every supply parquet that contributes hex IDs to the simulation.
+
+        Includes per-fleet ``SUPPLY_DISTRIBUTION_FILE`` overrides as well as
+        the dataset-level ``supply.parquet``.
+        Order is preserved, duplicates are removed.
+
+        Returns
+        -------
+        list of Path
+            Paths to supply distribution files.
+        """
+        paths: list[Path] = []
+        seen: set[Path] = set()
+        for op in self.operators:
+            path = op.FLEET_CONFIG.supply_distribution_path(self.path.PROJECT_DIR)
+            if path is not None and path not in seen:
+                paths.append(path)
+                seen.add(path)
+        dataset_supply = self.path.supply
+        if dataset_supply is not None and dataset_supply not in seen:
+            paths.append(dataset_supply)
+        return paths
 
     @property
     def ride_hailing_vehicles(self) -> dict[str, VehicleConfig]:
@@ -941,7 +1031,6 @@ class Configuration:
         # Map model types to their config section names
         model_to_section: dict[type[BaseModel], str] = {
             OperatorConfig: "operator",
-            ChargingInfrastructureConfig: "charging_infrastructure",
             PopulationConfig: "population",
         }
         model_classes = tuple(model_to_section.keys())
@@ -972,9 +1061,6 @@ class Configuration:
 
         # Store collected instances in cache
         self._cache["operator"] = section_buckets.get("operator", [])
-        self._cache["charging_infrastructure"] = section_buckets.get(
-            "charging_infrastructure", []
-        )
         population_configs = section_buckets.get("population", [])
         if len(population_configs) == 0:
             raise ValueError("No PopulationConfig instance found in population.py. ")
@@ -983,6 +1069,16 @@ class Configuration:
                 "Multiple PopulationConfig instances found in population.py. "
             )
         self._cache["population"] = population_configs[0]
+
+    def _validate_fleet_supply_files(self) -> None:
+        """Raise if any fleet references a SUPPLY_DISTRIBUTION_FILE that does not exist."""
+        for op in self.operators:
+            path = op.FLEET_CONFIG.supply_distribution_path(self._project_dir)
+            if path is not None and not path.exists():
+                raise FileNotFoundError(
+                    f"Supply distribution file '{op.FLEET_CONFIG.SUPPLY_DISTRIBUTION_FILE}' "
+                    f"not found in project directory {self._project_dir}"
+                )
 
     def _collect_config_instance(
         self,

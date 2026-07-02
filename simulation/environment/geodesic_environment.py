@@ -5,15 +5,23 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, Protocol, cast
 
-import geopandas as gpd
 import h3
 import numpy
 from shapely.geometry import Point, Polygon
 
+from simulation.environment.bounding_box import (
+    load_or_infer_bounding_box,
+    read_demand_hex_ids,
+    read_supply_hex_ids,
+    warn_hex_mismatches,
+)
 from simulation.environment.environment import Environment
+from simulation.environment.hex_layer import load_or_build_hex_layer
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+    import geopandas as gpd
 
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
@@ -51,33 +59,31 @@ class GeodesicEnvironment(Environment):
 
         self._logger = sim.log_manager.get_class_logger(self.__class__.__name__)
 
-        # TODO Why are we reading all the files? One should be enough.
-        # Read Environment Files
-        with open(sim.config.path.PATH_ENV_BOUNDING_BOX, encoding="utf-8") as file:
-            env_df = gpd.read_file(file)
-            if env_df.crs is None:
-                self._logger.warning(
-                    "Bounding box CRS is None. Defaulting to EPSG:4326."
-                )
-                env_df.set_crs("epsg:4326", inplace=True)
-            self._utm_epsg = f"epsg:{env_df.estimate_utm_crs().to_epsg()}"
+        demand_hex_ids = read_demand_hex_ids(sim.config.path.demand)
+        supply_hex_ids_by_path = read_supply_hex_ids(
+            sim.config.all_supply_distribution_paths()
+        )
 
-        with open(sim.config.path.PATH_ENV_HEX_LAYER_RES_9, encoding="utf-8") as file:
-            env_df_hex_9 = gpd.read_file(file)
-            env_df_hex_9.set_index("hex_id_9", inplace=True)
+        bbox_df = load_or_infer_bounding_box(
+            sim.config.path.bounding_box,
+            demand_hex_ids,
+            supply_hex_ids_by_path,
+            self._logger,
+        )
+        self._utm_epsg = f"epsg:{bbox_df.estimate_utm_crs().to_epsg()}"
+        self.addLayer("bounding_box", bbox_df)
 
-        with open(sim.config.path.PATH_ENV_HEX_LAYER_RES_8, encoding="utf-8") as file:
-            env_df_hex_8 = gpd.read_file(file)
-            env_df_hex_8.set_index("hex_id_8", inplace=True)
+        hex_df = load_or_build_hex_layer(
+            bbox_df=bbox_df,
+            resolution=sim.config.world.SPATIAL_RESOLUTION.value,
+            cache_dir=sim.config.path.cache_dir,
+            logger=self._logger,
+        )
+        self.addLayer("hex", hex_df)
 
-        with open(sim.config.path.PATH_ENV_HEX_LAYER_RES_7, encoding="utf-8") as file:
-            env_df_hex_7 = gpd.read_file(file)
-            env_df_hex_7.set_index("hex_id_7", inplace=True)
-
-        self.addLayer("bounding_box", env_df)
-        self.addLayer("hex_9", env_df_hex_9)
-        self.addLayer("hex_8", env_df_hex_8)
-        self.addLayer("hex_7", env_df_hex_7)
+        warn_hex_mismatches(
+            hex_df, demand_hex_ids, supply_hex_ids_by_path, self._logger
+        )
 
     @property
     def utm_epsg(self) -> str:
@@ -107,7 +113,7 @@ class GeodesicEnvironment(Environment):
     # TODO: Hardcoded layer here is dangerous
     # TODO: initialize pool of positions for every region once, then draw from there instead for efficiency?
     def get_random_position(
-        self, hex_id: str, layer_name: str = "hex_7"
+        self, hex_id: str, layer_name: str = "hex"
     ) -> tuple[float, float]:
         """
         Sample a uniformly random position within given hexagon.

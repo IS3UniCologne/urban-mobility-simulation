@@ -1,0 +1,52 @@
+# Named bounding-box presets for the CLI.
+#
+# Each entry maps a name to a [lat_min, lon_min, lat_max, lon_max] bbox.
+# A preset may carry an optional [<name>.demand] table whose keys override
+# DemandParams fields when generating synthetic demand for that geography.
+
+[berlin]
+bbox = [
+    52.369986097423876,
+    13.088073794009967,
+    52.619531587720147,
+    13.728710229702786,
+]
+
+[chicago]
+bbox = [
+    41.640088848221133,
+    -87.937988404413034,
+    42.033053745733511,
+    -87.498198544912341,
+]
+
+# --- End-to-end test fixtures ---------------------------------------------
+
+# Demand-saturated, fleet-starved (~11% fulfillment)
+[e2e_saturated]
+bbox = [
+    52.369986097423876,
+    13.088073794009967,
+    52.619531587720147,
+    13.728710229702786,
+]
+[e2e_saturated.demand]
+base_arrival_rate = 130.0
+
+# Balanced (~50% fulfillment)
+[e2e_balanced]
+bbox = [
+    52.369986097423876,
+    13.088073794009967,
+    52.619531587720147,
+    13.728710229702786,
+]
+[e2e_balanced.demand]
+base_arrival_rate = 24.0
+
+# Well-supplied (~90%+ fulfillment)
+[e2e_wellsupplied]
+bbox = [41.81, -87.72, 41.91, -87.58]
+[e2e_wellsupplied.demand]
+base_arrival_rate = 25.0
+n_hotspots        = 3

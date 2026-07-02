@@ -1,4 +1,6 @@
-from __future__ import annotations  # noqa: D100
+"""GTFS timetable import and trip lookup utilities."""
+
+from __future__ import annotations
 
 import datetime
 from typing import TYPE_CHECKING
@@ -7,9 +9,14 @@ import geopandas as gpd
 import pandas as pd
 
 from simulation.environment.geodesic_position import GeodesicPosition
-from simulation.helper.exceptions import AmbiguousTripException
+from simulation.helper.exceptions import (
+    AmbiguousTripException,
+    HexagonNotFoundError,
+    TimetableNotImportedError,
+)
 from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
+from simulation.helper.types import GtfsTripId
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -19,28 +26,45 @@ if TYPE_CHECKING:
         TransportRequest,
     )
 
-if TYPE_CHECKING:
-    from pathlib import Path
 
-    from simulation.context.simulation_context import SimulationContext
+class Timetable(SimulationBase):
+    """GTFS timetable holding trip and stop schedules.
 
+    Parameters
+    ----------
+    data_path : pathlib.Path
+        Path to the prepared GTFS trips CSV.
+    sim : SimulationContext
+        Simulation context.
+    """
 
-class Timetable(SimulationBase):  # noqa: D101
     __slots__ = ("_data_path", "_geo_env", "_sim", "_trips")
 
     def __init__(self, data_path: Path, sim: SimulationContext) -> None:
         super().__init__(sim)
         self._data_path = data_path
-        self._trips = None
+        self._trips: gpd.GeoDataFrame | None = None
         self._geo_env = sim.geo_env
         self._sim = sim
 
     @property
-    def trips(self) -> pd.DataFrame:  # noqa: D102
+    def trips(self) -> gpd.GeoDataFrame:
+        """Imported trips frame.
+
+        Raises
+        ------
+        TimetableNotImportedError
+            If accessed before import_timetable has run.
+        """
+        if self._trips is None:
+            raise TimetableNotImportedError(
+                "Timetable accessed before import_timetable() was called."
+            )
         return self._trips
 
-    def trip_by_id(self, trip_id: str) -> pd.DataFrame:  # noqa: D102
-        trip = self._trips[self._trips["trip_id"] == trip_id]
+    def trip_by_id(self, trip_id: GtfsTripId) -> pd.DataFrame:  # noqa: D102
+        trips = self.trips
+        trip = trips[trips["trip_id"] == trip_id]
         trip = trip.sort_values(by="stop_sequence")
 
         # quick sanity check
@@ -55,28 +79,39 @@ class Timetable(SimulationBase):  # noqa: D101
         self.logger.debug("Importing GTFS data...")
 
         try:
-            self._trips = pd.read_csv(self._data_path)
+            raw_trips = pd.read_csv(self._data_path)
         except FileNotFoundError:
             self.logger.error(
-                "%s does not exist, use Prepare_Transit_Data notebook to generate first.",
-                self._data_path,
+                "%s does not exist, generate the transit data first.", self._data_path
             )
+            raise
 
-        self._trips = gpd.GeoDataFrame(
-            self._trips,
-            geometry=gpd.points_from_xy(
-                self._trips["stop_lon"], self._trips["stop_lat"]
-            ),
+        trips = gpd.GeoDataFrame(
+            raw_trips,
+            geometry=gpd.points_from_xy(raw_trips["stop_lon"], raw_trips["stop_lat"]),
         )
-        self._trips.sort_values(by=["trip_id", "stop_sequence"], inplace=True)
+        trips.sort_values(by=["trip_id", "stop_sequence"], inplace=True)
+        self._trips = trips
 
-    def next_trips(self, time: SimulationTime, lookahead: int) -> list[str]:  # noqa: D102
-        # look ahead 'lookahead' minutes, simulation time is in minutes
-        # yield all trips that start (on this weekday) within the next lookahead minutes
-        lookahead = int(lookahead)
+    def next_trips(self, time: SimulationTime, lookahead: int) -> list[GtfsTripId]:
+        """Return trips departing within the next `lookahead` minutes.
+
+        Parameters
+        ----------
+        time : SimulationTime
+            Current simulation time.
+        lookahead : int
+            Minutes to look ahead.
+
+        Returns
+        -------
+        list[GtfsTripId]
+            List of trip IDs departing within the lookahead window.
+        """
+        trips = self.trips
         weekday = time.dayofweek_as_str()
         last_weekday = time.last_dayofweek_as_str()
-        if time.minutes() + int(lookahead) > 59:
+        if time.minutes() + lookahead > 59:
             if time.hours() == 23:
                 last_weekday = weekday
                 weekday = time.next_dayofweek_as_str()
@@ -90,18 +125,18 @@ class Timetable(SimulationBase):  # noqa: D101
                 time.hours(), time.minutes() + lookahead
             ).strftime("%H:%M:%S")
 
-        trips = self._trips.loc[
+        next_trips = trips.loc[
             (
-                ((self._trips[weekday] == 1) & (~self._trips["dep_next_day"]))
-                | ((self._trips[last_weekday] == 1) & (self._trips["dep_next_day"]))
+                ((trips[weekday] == 1) & (~trips["dep_next_day"]))
+                | ((trips[last_weekday] == 1) & (trips["dep_next_day"]))
             )
-            & (self._trips["stop_sequence"] == 0)
-            & (self._trips["departure_time"] > time.now_as_str())
-            & (self._trips["departure_time"] <= lookahead_strf),
+            & (trips["stop_sequence"] == 0)
+            & (trips["departure_time"] > time.now_as_str())
+            & (trips["departure_time"] <= lookahead_strf),
             "trip_id",
         ].tolist()
 
-        return trips
+        return [GtfsTripId(t) for t in next_trips]
 
     def find_viable_trips(
         self,
@@ -109,13 +144,24 @@ class Timetable(SimulationBase):  # noqa: D101
         spatial_strategy: str = "hexagon",
         temporal_lookahead: int = 10,
     ) -> gpd.GeoDataFrame:
+        """Find viable public transit trips for a search task.
+
+        Parameters
+        ----------
+        transport_task : TransportRequest
+            Request that generated the search.
+        spatial_strategy : str
+            Strategy for matching stops to the task origin (e.g. "hexagon").
+        temporal_lookahead : int
+            Minutes into the future for the latest possible departure
+            (does not account for walking time).
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            Trips reachable on foot and departing within the lookahead window.
         """
-        User facing method that enables users to find viable public transportation trips for a search task
-        :param transportation_search_task:
-        :param spatial_strategy:
-        :param temporal_lookahead: How many minutes to look into the future for latest possible departure (currently this does not account for walking time)
-        :return:
-        """  # noqa: D205, D400
+        trips = self.trips
         search_time = transport_task.creation_time
         latest_departure = SimulationTimeConverter.as_str(
             search_time + temporal_lookahead
@@ -123,7 +169,7 @@ class Timetable(SimulationBase):  # noqa: D101
         weekday = SimulationTimeConverter.dayofweek_as_str(search_time)
 
         # only look at trips that are in service today
-        viable_trips = self._trips[(self._trips[weekday] == 1)]  # TODO: edge cases?
+        viable_trips = trips[(trips[weekday] == 1)]  # TODO: edge cases?
 
         # find viable stops in vicinity given a strategy, e.g. hexagon, euclidean distance, walking distance (street network), ...
         viable_trips = self._find_viable_stops(
@@ -162,14 +208,15 @@ class Timetable(SimulationBase):  # noqa: D101
         return viable_trips
 
     def _find_viable_stops(
-        self,
-        trips: gpd.GeoDataFrame,
-        strategy,  # noqa: ANN001
-        position: GeodesicPosition,
+        self, trips: gpd.GeoDataFrame, strategy: str, position: GeodesicPosition
     ) -> gpd.GeoDataFrame:
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon
             poly = self._geo_env.get_hexagon(position.get_region_id())
+            if poly is None:
+                raise HexagonNotFoundError(
+                    f"No hexagon for region {position.get_region_id()}."
+                )
 
             return trips[trips.within(poly)]
         else:

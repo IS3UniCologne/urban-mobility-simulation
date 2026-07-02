@@ -8,7 +8,6 @@ based on spatio-temporal demand profiles and configurable modifiers.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import geojson
@@ -17,6 +16,7 @@ import simpy
 
 from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
+from simulation.world.demand import demand_schema
 from simulation.world.demand.demand_importer import DemandImporter
 from simulation.world.demand.user_factory import UserFactory
 
@@ -48,14 +48,6 @@ class DemandFactory(SimulationBase):
         The simulation time manager.
     _world : World
         The simulation world instance.
-    _origin_column : str
-        Name of the origin column in the demand profile.
-    _destination_column : str
-        Name of the destination column in the demand profile.
-    _temporal_column : str
-        Name of the temporal column in the demand profile.
-    _day_of_week_column : str
-        Name of the day-of-week column in the demand profile.
     _maximal_demand : int
         Maximum number of demand events to generate.
     _modifiers : list of str
@@ -84,17 +76,13 @@ class DemandFactory(SimulationBase):
     __slots__ = (
         "_config",
         "_daily_resolution",
-        "_day_of_week_column",
         "_demand_profile",
-        "_destination_column",
         "_env",
         "_maximal_demand",
         "_modifiers",
-        "_origin_column",
         "_rng",
         "_spatial_resolution",
         "_spatial_units",
-        "_temporal_column",
         "_temporal_resolution",
         "_time",
         "_user_factory",
@@ -119,16 +107,11 @@ class DemandFactory(SimulationBase):
         self._spatial_resolution = self._config.world.SPATIAL_RESOLUTION
         self._daily_resolution = self._config.world.DAILY_RESOLUTION
 
-        self._origin_column = self._spatial_resolution.origin_column_name
-        self._destination_column = self._spatial_resolution.destination_column_name
-        self._temporal_column = self._temporal_resolution.column_name
-        self._day_of_week_column = self._daily_resolution.day_of_week_column_name
-
         self._maximal_demand = maximal_demand
         self._modifiers = {}
 
         self._demand_profile = self._load_demand_profile()
-        self._spatial_units = list(self._demand_profile[self._origin_column].unique())
+        self._spatial_units = list(self._demand_profile[demand_schema.ORIGIN].unique())
 
         self._rng = sim.random_manager.get_rng("DEMANDFACTORY")
 
@@ -138,69 +121,55 @@ class DemandFactory(SimulationBase):
 
     def _load_demand_profile(self) -> DataFrame:
         """Load the demand profile from the configured path using the DemandImporter."""
-        demand_importer: DemandImporter = DemandImporter(
+        demand_importer = DemandImporter(
             temporal_resolution=self._temporal_resolution,
             spatial_resolution=self._spatial_resolution,
-            daily_resolution=self._config.world.DAILY_RESOLUTION,
-            city=self._config.world.CITY,
+            daily_resolution=self._daily_resolution,
         )
-
-        return demand_importer.extract_spatio_temporal_demand_estimates(
-            trip_data_path=Path(self._config.path.PATH_TRIP_DEMAND)
-        )
+        return demand_importer.load(self._config.path.demand)
 
     def _register_modifier(self, geomodifier) -> None:  # noqa: ANN001
         multiplier = geomodifier["properties"]["demandMultiplier"]
         hex_ids = h3.polygon_to_cells(
             h3.geo_to_h3shape(geomodifier["geometry"]), res=self._spatial_resolution
         )
-
-        self._modifiers.update({x: multiplier for x in hex_ids})
+        # TODO: this currently allows for overlapping modifiers, which will be applied sequentially (last one wins). I added a warning, but is this even desired behaviour?
+        for hex_id in hex_ids:
+            existing = self._modifiers.get(hex_id)
+            if existing is not None and existing != multiplier:
+                self.logger.warning(
+                    "Demand modifier overlap at hex %s: %.3f overwriting %.3f",
+                    hex_id,
+                    multiplier,
+                    existing,
+                )
+            self._modifiers[hex_id] = multiplier
 
     def _load_modifiers(self) -> None:
-        """Load and register per-hexagon demand modifiers (floating number multiplier) from GeoJSON."""
-        if not self._config.path.PATH_DEMAND_MODIFIERS:
-            self.logger.info(
-                "No demand modifiers configured, skipping loading of demand modifiers."
-            )
+        """Load and register per-hexagon demand modifiers from PROJECT_DIR/demand_modifiers/."""
+        paths = self._config.path.demand_modifiers
+        if not paths:
+            self.logger.info("No demand modifiers found, skipping.")
             return
 
-        modifier_paths = [
-            self._config.path.PATH_DEMAND_MODIFIERS[i]
-            for i in range(len(self._config.path.PATH_DEMAND_MODIFIERS))
-        ]
-
-        for modifier in modifier_paths:
+        for path in paths:
             try:
-                with open(modifier) as f:
-                    if not geojson.load(f).is_valid:
-                        self.logger.warning(
-                            'Demand modifier provided at "%s" is not valid GeoJSON, skipping.',
-                            modifier,
-                        )
-                        continue
-            except (FileNotFoundError, ValueError) as e:
-                if isinstance(e, FileNotFoundError):
-                    self.logger.warning(
-                        'Demand modifier at "%s" doesn\'t exist, skipping.', modifier
-                    )
-                    continue
-                elif isinstance(e, ValueError):
-                    self.logger.warning(
-                        'Demand modifier at "%s" is not valid GeoJSON, skipping.',
-                        modifier,
-                    )
-                    continue
+                with open(path) as f:
+                    geo = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                self.logger.warning('Skipping "%s": %s', path, e)
+                continue
 
-            with open(modifier) as f:
-                geo = json.load(f)
-            featurecollection = True if "features" in geo else False
+            if not geojson.loads(json.dumps(geo)).is_valid:
+                self.logger.warning('Skipping "%s": not valid GeoJSON.', path)
+                continue
 
-            if featurecollection:
-                for feature in geo["features"]:
-                    self._register_modifier(feature)
-            else:
-                self._register_modifier(geo)
+            features = geo.get("features", [geo])
+            for feature in features:
+                self._register_modifier(feature)
+            self.logger.info(
+                "Loaded demand modifier %s (%d features).", path.name, len(features)
+            )
 
     def generate_demand(self):  # noqa: ANN201
         """Invoke for each spatial unit a dedicated process which generates demand."""
@@ -230,7 +199,7 @@ class DemandFactory(SimulationBase):
         """
         # Filter data on spatial unit such that we don't need to filter on the entire demand profile
         local_demand_profile = self._demand_profile[
-            (self._demand_profile[self._origin_column] == spatial_unit)
+            (self._demand_profile[demand_schema.ORIGIN] == spatial_unit)
         ]
         # local_demand_profile.loc[:,'o_poisson_est'] /= 4
         # Run until simulation ends
@@ -246,9 +215,9 @@ class DemandFactory(SimulationBase):
 
                 # Filter demand profile on current time
                 demand_slice = local_demand_profile[
-                    (local_demand_profile[self._temporal_column] == time_bucket)
+                    (local_demand_profile[demand_schema.TIME_BUCKET] == time_bucket)
                     & (
-                        local_demand_profile[self._day_of_week_column]
+                        local_demand_profile[demand_schema.IS_WEEKEND]
                         == non_working_day
                     )
                 ]
@@ -264,7 +233,9 @@ class DemandFactory(SimulationBase):
                     poisson_lambda = 0
                 else:
                     # Extract Poisson Estimate for given spatio-temporal cell
-                    poisson_lambda = demand_slice.iloc[0]["o_poisson_est"]
+                    poisson_lambda = demand_slice.iloc[0][
+                        demand_schema.ORIGIN_ARRIVAL_RATE
+                    ]
 
                 # Based on Poisson Estimate sample next arrival time (in minutes)
                 # inter_arrival_time = numpy.random.exponential(
@@ -302,7 +273,9 @@ class DemandFactory(SimulationBase):
                     yield self._env.timeout(inter_arrival_time)
 
                     # Sample Destination
-                    prob_array = demand_slice["od_multinom_p_est"].to_numpy()
+                    prob_array = demand_slice[
+                        demand_schema.DESTINATION_PROBABILITY
+                    ].to_numpy()
 
                     # TODO: rename - this has nothing to do with low SOC
                     low_soc_vehicle_sample = self._rng.multinomial(
@@ -311,7 +284,7 @@ class DemandFactory(SimulationBase):
 
                     idx = low_soc_vehicle_sample.argmax()
 
-                    destination = demand_slice.iloc[idx][self._destination_column]
+                    destination = demand_slice.iloc[idx][demand_schema.DESTINATION]
 
                     # Create and add user to world
                     self._create_user(spatial_unit, destination)
