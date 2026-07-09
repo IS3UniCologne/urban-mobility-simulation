@@ -5,143 +5,143 @@
 
 We provide a simulation platform considering shared mobility (ride sharing, vehicle sharing) services along with infrastructure services (e.g., charging)
 
-## Setup
+## Installation
 
 > We use [uv](https://github.com/astral-sh/uv) for dependency management.
 
-- To create a virtual environment and install all dependencies simply run `uv sync`
-- Optional notebook specific dependencies can be installed using `uv sync --extra notebooks`
-- Optional machine learning and optimization dependencies can be installed using `uv sync --extra ml`
-- Use `uv sync --all-extras` to install all optional dependencies simultaneously
-
-## Running an experiment
-
-We use a directory-based configuration system. Each experiment requires a configuration directory containing at least:
-- `config.toml`: General settings (logging, experiment management, world resolution, paths).
-- `operators.py`: Configuration of mobility service operators and fleets.
-- `population.py`: Configuration of the simulated population and their behavior.
-
-We provide a default template for running simulations:
-
 ```bash
-uv run default_template.py resources/configurations/ridehailing_example
+# Create a virtual environment and install all dependencies
+uv sync
+
+# Optional extras
+uv sync --extra ml    # machine learning and optimization dependencies
+uv sync --extra viz   # visualization dependencies
+uv sync --all-extras  # all the things
 ```
 
-> You can also activate the virtual environment that `uv sync` creates in `.venv` manually and use `python default_template.py resources/configurations/ridehailing_example`.
+To also install the git hooks and development tooling, see
+[CONTRIBUTING.md](CONTRIBUTING.md#development-setup).
 
-## Simulation Components
+## Quickstart & CLI
 
-The simulation consists of three different types of mobility services:
-- **Public transport** (currently only buses)
+The `umosim` CLI scaffolds and runs simulations:
+
+```bash
+# Generate a synthetic demo: a berlin_synthetic dataset plus one demo project per mode
+uv run umosim demo
+
+# Run the ride-hailing demo project
+uv run umosim run ridehailing_demo
+```
+
+> With the virtual environment activated (`source .venv/bin/activate`), you can drop the
+> `uv run` prefix and call `umosim` directly.
+
+Available subcommands:
+
+| Command | Description |
+| --- | --- |
+| `demo` | Generate a synthetic demo (`berlin_synthetic` dataset + one project per mode). |
+| `new-dataset` | Create a dataset: `bounding_box.geojson` + synthetic `demand.parquet`. |
+| `new-project` | Scaffold project files against an existing dataset. |
+| `run <name>` | Run a project from `data/projects/`. |
+| `doctor` | Report orphan or malformed datasets and projects. |
+| `clean-demos` | Remove demo and test datasets/projects. |
+| `clean-logs` | Prune simulation output logs, keeping the newest entries. |
+
+Run `uv run umosim <command> -h` for additional help.
+
+Useful flags for `run`:
+
+```bash
+# Verbose console/file logging (-v = --log-level DEBUG, -q for near-silent), this overrules the config.toml
+uv run umosim run ridehailing_demo --verbose
+
+# Live visualization dashboard (requires the viz extra: uv sync --extra viz)
+uv run umosim run ridehailing_demo --viz
+```
+
+## Simulation components
+
+The simulation supports three types of mobility services:
+
+- **Public transport** (currently not working)
 - **Ride-hailing fleet** (autonomous vehicles and human-driven cars)
 - **Shared mobility fleet** (cars, scooters, kickscooters, and bikes)
 
-Configurations are spread across several files in the configuration directory:
+Simulations are organized into **datasets** (`data/datasets/<name>/`) holding the input
+data (bounding box, demand), and **projects** (`data/projects/<name>/`) holding the
+scenario configuration:
 
 ### `config.toml`
-This file contains the foundational simulation settings:
-- **Experiment Management**: Start and end times, and random seeds.
-- **World Resolution**: Spatial, temporal, and daily resolution, and the target city.
-- **Input Paths**: Paths to demand, supply, transit timetables, and environment data.
-- **Logging**: Configurable log levels for different simulation components.
+
+Foundational simulation settings:
+
+- **Experiment management**: start and end times, and random seeds.
+- **World resolution**: spatial, temporal, and daily resolution.
+- **Paths**: dataset directory and output locations.
+- **Logging**: configurable log levels for different simulation components.
 
 ### `operators.py`
-This Python file configures the mobility service operators:
-- **Fleet Configuration**: Number and types of vehicles, their characteristics (e.g., speed, capacity, energy consumption).
-- **Charging Infrastructure**: Location, power, and capacity of charging stations.
-- **Operations Management**: Pricing, pickup distance constraints, and recharging thresholds.
-- **Search & Allocation Engines**: Strategies for matching users with vehicles.
+
+Configuration of service operators:
+
+- **Fleet configuration**: number and types of vehicles, their characteristics (e.g.,
+  speed, capacity, energy consumption).
+- **Charging infrastructure**: location, power, and capacity of charging stations.
+- **Operations management**: pricing, pickup distance constraints, and recharging
+  thresholds.
+- **Search & allocation engines**: strategies for matching users with vehicles.
 
 ### `population.py`
-This Python file defines the simulated population:
-- **Population Segments**: Proportions of different user groups.
-- **User Behavior**: Maximum waiting times, walking speeds, and choice models for selecting transportation modes.
 
-### Simulation Execution Flow
+Definition of the simulated population:
 
-Once initialized, the simulation follows these high-level steps:
-1. **Data Preparation**: Estimates demand (arrival times, origins, destinations) based on spatio-temporal resolution and calculates distance matrices between hexagons.
-2. **Component Initialization**:
-   - Initializes search, payment, and vehicle assignment engines for each fleet.
-   - Generates fleets and their operators (PublicTransitOperator, RideHailingOperator, etc.).
-   - Sets up scheduler modules for charging and relocations.
-   - Initializes task queues and service workers.
-3. **World Setup**: Integrates engines, infrastructure, and the population factory into the simulation world.
-4. **Execution**: Spawns demand processes and runs the simulation until the specified `END_TIME`.
+- **Population segments**: proportions of different user groups, totals are determined by the demand file.
+- **User behavior**: maximum waiting times, walking speeds, and choice models for selecting transportation modes.
 
-## Development
+### `run.py`
 
-We mostly try to adhere to [trunk-based development](https://trunkbaseddevelopment.com/) with `develop` being our "trunk".
-What this means is that we do issues that translate to feature branches that should be short-lived, but if they stick around for longer, you need to make sure to be up-to-date with `develop` by merging it to this branch from time to time.
-All active feature branches should have an active pull request associated to track progress.
+Entry point that wires the project configuration together and starts the simulation (invoked by `umosim run <name>` or directly). Additional pre-, or post-simulation code goes here.
 
-### Ruff linter and formatter
+## Using this project for your own research
 
-All pull requests must conform in formatting and linting to the interpretation of _ruff_ on _blacks_ code style and to the PEP definitions and their interpretation. In case a pull request's check of the _ruff_ style fails, you have to run ruff locally. Simply use the following command:
+If you want to build your own experiments on top of the simulation without contributing
+back, fork the repository and work directly on your fork:
 
-```
-uv run ruff check .
-```
+- Create your own scenarios with `uv run umosim new-dataset` and `uv run umosim new-project`.
+  Everything under `data/datasets/` and `data/projects/` is gitignored, so your scenarios
+  and input data never conflict with upstream changes.
+- To version your own scenarios, either force-add them (`git add -f data/projects/<name>`)
+  or adjust the `.gitignore` files in your fork.
+- Keep your fork up to date by adding this repository as a remote:
 
-In the output, you can see what exactly is causing the problems. In order for the pull request to pass, you need to fix all issues and commit the changes to your pull request. After that, the code checks should complete successfully.
+  ```bash
+  git remote add upstream https://github.com/IS3UniCologne/urban-mobility-simulation.git
+  ```
 
-You can use ruff to format your code as well. In that case, use the following command:
+  For a stable base, pull in [tagged releases](https://github.com/IS3UniCologne/urban-mobility-simulation/releases)
+  as they are published:
 
-```
-uv run ruff format
-```
+  ```bash
+  git fetch upstream --tags
+  git merge v0.1.0  # or whichever release you want to move to
+  ```
 
-### Handling Ruff Noqa Statements
+  If you prefer the latest development state instead, merge `develop` periodically. Don't complain if something breaks :)
 
-Our codebase currently contains numerous `#noqa` comments that suppress ruff warnings. While these were necessary to maintain compatibility during the transition to ruff, we would like to gradually reduce and eliminate them.
+  ```bash
+  git fetch upstream
+  git merge upstream/develop
+  ```
 
-#### Example Noqa Comments
+- The commit conventions and CI checks described in [CONTRIBUTING.md](CONTRIBUTING.md)
+  only apply to pull requests against this repository, in your own fork you are free to work however you like.
 
-```python
-# Suppress specific rule
-def example():  # noqa: ANN201
-    pass
+If your work produces improvements that could be generally useful (bug fixes, new
+operators, performance work), we would be happy to receive them back, see below.
 
-# Suppress multiple rules
-variable = value  # noqa: ANN001, SLF001
+## Contributing
 
-# Suppress all rules (please don't do this :) )
-problematic_code()  # noqa
-```
-
-#### Ruff rules explanation
-
-All ruff rules can be looked up via their code here: https://docs.astral.sh/ruff/rules/
-
-This includes examples with suggested fixes.
-
-
-#### Gradual Cleanup Strategy
-
-If you are modifying an existing class or function containing `#noqa`  statements, please take the opportunity to fix them. Ruff will automatically remove the `#noqa` statement once it is no longer necessary.
-
-### Task automation with Nox
-
-> We use [nox](https://nox.thea.codes/) for task automation and testing across multiple Python environments. This ensures that all tasks run in a clean and reproducible environment. The CI pipeline also uses the same nox sessions.
-
-#### Available Nox Sessions:
-
-```bash
-# Run everything below
-nox -r
-
-# Run type checking with pyrefly
-nox -rs pyrefly
-
-# Run pre-commit hooks (linting, formatting, etc.)
-nox -rs pre-commit
-
-# Run all tests
-nox -rs pytest
-
-# Run only unit tests
-nox -rs pytest -- -m unit
-
-# Run only integration tests
-nox -rs pytest -- -m integration
-```
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the development
+setup, workflow, and code standards.
