@@ -74,6 +74,10 @@ Once initialized, the simulation follows these high-level steps:
 We mostly try to adhere to [trunk-based development](https://trunkbaseddevelopment.com/) with `develop` being our "trunk".
 What this means is that we do issues that translate to feature branches that should be short-lived, but if they stick around for longer, you need to make sure to be up-to-date with `develop` by merging it to this branch from time to time.
 All active feature branches should have an active pull request associated to track progress.
+Commits should adhere to the [conventional commits spec](https://www.conventionalcommits.org/en/v1.0.0/) as release notes are automatically generated from commit messages.
+
+> First things first, when you clone this repo, make sure to install the [pre-commit](https://pre-commit.com/) hooks to ensure your commits adhere to the above (and do a first pass of linting before pushing)
+> `pre-commit install`
 
 ### Ruff linter and formatter
 
