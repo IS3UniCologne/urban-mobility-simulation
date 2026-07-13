@@ -54,7 +54,7 @@ typing = [
 
 [project.optional-dependencies]
 ml = [
-  "highspy>=1.15.0", #highspy is not explicitly imported anywhere, but used as a solver for pyomo
+  "highspy>=1.15.1", #highspy is not explicitly imported anywhere, but used as a solver for pyomo
   "torch>=2.12.1",
   "pyomo>=6.10.1",
 ]
