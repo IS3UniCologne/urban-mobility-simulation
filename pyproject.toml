@@ -17,7 +17,7 @@ classifiers = [
 dependencies = [
   "beartype>=0.22.9",
   "geojson>=3.3.0",
-  "geopandas>=1.1.3",
+  "geopandas>=1.1.4",
   "h3>=4.5.0",
   "haversine>=2.9.0",
   "matplotlib>=3.11.0",
@@ -40,21 +40,21 @@ dev = [
 
 benchmarks = ["pyperf>=2.10.0"]
 
-pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.18"]
+pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.20"]
 
 testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.1.1"]
 
 typing = [
   "pyrefly>=1.1.1",
   "pandas-stubs>=3.0.3.260530",
-  "types-shapely>=2.1.0.20260603",
-  "types-geopandas>=1.1.3.20260518",
+  "types-shapely>=2.1.0.20260630",
+  "types-geopandas>=1.1.4.20260628",
 ]
 
 
 [project.optional-dependencies]
 ml = [
-  "highspy>=1.7.2", #highspy is not explicitly imported anywhere, but used as a solver for pyomo
+  "highspy>=1.15.1", #highspy is not explicitly imported anywhere, but used as a solver for pyomo
   "torch>=2.12.1",
   "pyomo>=6.10.1",
 ]
