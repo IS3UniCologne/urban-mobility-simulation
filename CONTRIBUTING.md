@@ -42,7 +42,8 @@ The Cython extension is built automatically during `uv sync`.
 We use an issue-first workflow: before starting non-trivial work, open a GitHub issue
 (or comment on an existing one) so we can discuss the approach and avoid duplicate or
 wasted effort. Trivial fixes (typos, small doc corrections etc.) can go straight
-to a pull request.
+to a pull request. When opening an issue, please use one of the issue templates
+(bug report, feature request, question) so we get the context we need.
 
 ## Branching and pull requests
 
