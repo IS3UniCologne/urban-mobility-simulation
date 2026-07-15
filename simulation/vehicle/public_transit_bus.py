@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 from simulation.helper.time import SimulationTime, SimulationTimeConverter
 from simulation.helper.vehicle_states import VehicleStates
 from simulation.vehicle.public_transit_vehicle import PublicTransitVehicle
-from tracking.tracking_interface import TrackingInterface
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -25,7 +24,7 @@ if TYPE_CHECKING:
     from simulation.vehicle.movement_stats import MovementStats
 
 
-class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
+class Bus(PublicTransitVehicle):  # noqa: D101
     bus_id: int = 0
 
     __slots__ = (
@@ -41,8 +40,6 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
         "_time",
         "_use_learning_agent",
     )
-    # Tracking
-    exposes = ["_position", "state", "_available_seats"]  # noqa: RUF012
 
     def __init__(
         self,
@@ -303,16 +300,3 @@ class Bus(PublicTransitVehicle, TrackingInterface):  # noqa: D101
 
     def __str__(self) -> str:  # noqa: D105
         return f"I have {len(self._passengers)} passengers on boards"
-
-    def dump(self, exposed_only: bool = True) -> dict:  # noqa: D102
-        if exposed_only:
-            return {x: self.get(x) for x in self.exposes}
-        else:
-            dump_attr = [
-                "state",
-                "_position",
-                "_available_seats",
-                "_spawned",
-                "_velocity",
-            ]
-            return {x: self.get(x) for x in dump_attr}
