@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Protocol, cast
 
 import h3
 import simpy
@@ -10,7 +10,6 @@ from shapely.geometry import Polygon
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.simulation_base import SimulationBase
-from tracking.tracking_interface import TrackingInterface
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -35,23 +34,26 @@ class _ChargingRequest(Protocol):
     charging_duration: float | None
 
 
-class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
+class ChargingStation(SimulationBase):  # noqa: D101
     __slots__ = (
         "_capacity",
         "_centre",
         "_cs_id",
         "_current_queue_time",
         "_env",
+        "_event_subscribers",
         "_location",
+        "_plug_in_lock",
+        "_plug_out_lock",
         "_plugs",
         "_polygon",
         "_power",
         "_queue",
         "_queue_size",
         "_sim",
+        "_vehicle_plugged_in",
+        "_vehicle_unplugged",
     )
-
-    exposes = ["_location", "_plugs", "_current_queue_time"]  # noqa: RUF012
 
     def __init__(
         self,
@@ -266,12 +268,6 @@ class ChargingStation(TrackingInterface, SimulationBase):  # noqa: D101
             None — physical charging stations are not timeslot-based.
         """
         return None
-
-    def dump(self, exposed_only: bool = True) -> dict[str, Any]:  # noqa: D102
-        if exposed_only:
-            return {x: self.get(x) for x in self.exposes}
-        else:
-            return {x: self.get(x) for x in self.__slots__}
 
     def __str__(self) -> str:  # noqa: D105
         return f"ID: {self._id}, Location: {self._location}, Current Users: {len(self._plugs.users)}, Current Queue Size: {len(self._queue)}"
