@@ -158,6 +158,8 @@ project-excludes = [
   "simulation/operator/operations_management/ridehailing_uncoordinated_charging_operations.py",
   "simulation/operator/operator.py",
   "simulation/operator/public_transit_operator.py",
+  "simulation/operator/public_transport_allocation_engine.py",
+  "simulation/operator/public_transport_search_engine.py",
   "simulation/operator/public_transport_vehicle_fleet.py",
   "simulation/operator/ride_hailing_operator.py",
   "simulation/operator/shared_mobility_operator.py",
