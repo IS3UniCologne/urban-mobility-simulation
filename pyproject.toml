@@ -86,8 +86,8 @@ ext-modules = [
 ]
 
 [tool.ruff]
-fix            = true
-output-format  = "grouped"
+fix           = true
+output-format = "grouped"
 [tool.ruff.format]
 skip-magic-trailing-comma = true
 [tool.ruff.lint.mccabe]
@@ -173,12 +173,10 @@ project-excludes = [
   "simulation/operator/shared_mobility_operator.py",
   "simulation/operator/shared_vehicle_allocation_engine.py",
   "simulation/operator/shared_vehicle_search_engine.py",
-  "simulation/operator/walking_search_engine.py",
   "simulation/vehicle/public_transit_bus.py",
   "simulation/vehicle/public_transit_vehicle.py",
   "simulation/vehicle/ride_hailing_vehicle.py",
   "simulation/vehicle/shared_vehicle.py",
-  "simulation/vehicle/walking.py",
   "simulation/world/__init__.py",
   "simulation/world/demand/demand_factory.py",
   "simulation/world/markets/auction.py",
