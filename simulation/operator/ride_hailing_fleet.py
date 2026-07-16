@@ -7,13 +7,11 @@ from simulation.helper.time import SimulationTimeConverter
 from simulation.helper.vehicle_states import VehicleStates
 from simulation.operator.vehicle_fleet import VehicleFleet, VehicleFleetDependencies
 from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
-from simulation.vehicle.vehicle import Vehicle
 
 if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.environment.position import Position
     from simulation.helper.configuration.configuration import VehicleConfig
-    from simulation.vehicle.vehicle import Vehicle
 
 
 class RideHailingFleet(VehicleFleet):  # noqa: D101
@@ -37,7 +35,7 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
 
     def get_available_vehicles_to_user(
         self, origin: Position, destination: Position
-    ) -> list[Vehicle]:
+    ) -> list[RideHailingVehicle]:
         """
         TODO: This is opinionated and should thus not be part of the fleet, it is operations logic.
 

@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from simulation.helper.simulation_base import SimulationBase
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
     from simulation.context.simulation_context import SimulationContext
     from simulation.operator.operations_management.service_jobs.job_queue import (
         JobQueue,
@@ -17,16 +21,29 @@ if TYPE_CHECKING:
     )
 
 
-class ServiceWorkerState(Enum):  # noqa: D101
+class ServiceWorkerState(Enum):
+    """Lifecycle states of a service worker."""
+
     FREE = 0
     WORKING = 1
     HIBERNATE = 3
 
 
-class ServiceWorker(SimulationBase):  # noqa: D101
-    service_worker_id = 0
+class ServiceWorker(SimulationBase):
+    """
+    Worker process that executes service jobs from a shared queue.
 
-    __slots__ = ("_env", "_id", "_job_queue", "_state")
+    Parameters
+    ----------
+    sim : SimulationContext
+        Simulation context.
+    job_queue : JobQueue
+        Queue supplying jobs to execute.
+    """
+
+    service_worker_id: ClassVar[int] = 0  # TODO: not thread safe
+
+    __slots__ = ("_env", "_job_queue", "_state")
 
     def __init__(self, sim: SimulationContext, job_queue: JobQueue) -> None:
         super().__init__(sim)
@@ -38,7 +55,15 @@ class ServiceWorker(SimulationBase):  # noqa: D101
 
         ServiceWorker.service_worker_id += 1
 
-    def run(self):  # noqa: ANN201, D102
+    def run(self) -> Generator[Event, None, None]:
+        """
+        Wait for queued jobs and execute them until the queue drains.
+
+        Yields
+        ------
+        Event
+            Queue update events and job execution processes.
+        """
         while True:
             # Wait until operation management engine puts jobs into queue
             yield self._job_queue.queue_updated
@@ -57,13 +82,18 @@ class ServiceWorker(SimulationBase):  # noqa: D101
             # Go back to sleep
             self._state = ServiceWorkerState.HIBERNATE
 
-    def execute_job(self, job: ServiceJob):  # noqa: ANN201
+    def execute_job(self, job: ServiceJob) -> Generator[Event, None, None]:
         """Execute assigned service job.
 
         Parameters
         ----------
         job : ServiceJob
-            The job to execute.
+            Job to execute.
+
+        Yields
+        ------
+        Event
+            Job execution process.
         """
         self._state = ServiceWorkerState.WORKING
 
@@ -74,5 +104,6 @@ class ServiceWorker(SimulationBase):  # noqa: D101
         self._state = ServiceWorkerState.FREE
 
     @property
-    def state(self):  # noqa: ANN201, D102
+    def state(self) -> ServiceWorkerState:
+        """Return the current worker state."""
         return self._state

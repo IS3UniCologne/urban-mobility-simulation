@@ -341,9 +341,9 @@ class VehicleConfig(ConfigBaseModel):
     VEHICLE_TYPE: VehicleType
     AUTONOMY_TYPE: AutonomyType = AutonomyType.HUMAN_DRIVEN
     PROPULSION_TYPE: PropulsionType = PropulsionType.BATTERY_ELECTRIC
-    ENERGY_CAPACITY: float = Field(default=None, gt=0)  # kWh or Liters
-    ENERGY_CONSUMPTION_PER_KM: float = Field(default=None, ge=0)  # kWh/km or Liters/km
-    INITIAL_CHARGE_RATIO: float = Field(default=None, ge=0, le=1)
+    ENERGY_CAPACITY: float = Field(gt=0)  # kWh or Liters
+    ENERGY_CONSUMPTION_PER_KM: float = Field(ge=0)  # kWh/km or Liters/km
+    INITIAL_CHARGE_RATIO: float | None = Field(default=None, ge=0, le=1)
     ENERGY_RESERVE_RATIO: float | None = Field(
         default=None, ge=0, le=1, description="Reserve energy ratio to maintain"
     )
@@ -478,7 +478,7 @@ class OperationsConfig(ConfigBaseModel):
     RECHARGE_THRESHOLD: list[float] | float | None = Field(
         default=None
     )  # TODO: unify this between sv and rh
-    VEHICLE_RELOCATION_VELOCITY: float = Field(gt=0, default=0)
+    VEHICLE_RELOCATION_VELOCITY: float = Field(ge=0, default=0)
 
     ALLOWED_QUEUE_SIZE: int | None = Field(default=0, ge=0)
 
@@ -759,9 +759,10 @@ class Configuration:
     def _get_section_list(self, section: str, model: type[T]) -> list[T]:
         """Get a section that contains a list of items."""
         if section in self._cache:
-            return self._cache[section]
+            return cast("list[T]", self._cache[section])
 
         items = self._data.get(section)
+        result: list[T]
         if items is None:
             result = []
         else:
@@ -770,18 +771,23 @@ class Configuration:
         self._cache[section] = result
         return result
 
-    def _get_section_dict(
-        self, section: str, model: type[T], allow_none: bool = False
-    ) -> dict[str, T] | None:
+    def _get_section_dict(self, section: str, model: type[T]) -> dict[str, T]:
         """Get a section that contains a dictionary of items."""
+        return self._get_optional_section_dict(section, model) or {}
+
+    def _get_optional_section_dict(
+        self, section: str, model: type[T]
+    ) -> dict[str, T] | None:
+        """Get a section dict, or None if the section is absent."""
         if section in self._cache:
-            return self._cache[section]
+            return cast("dict[str, T] | None", self._cache[section])
 
         items = self._data.get(section)
-        if items is None:
-            result = None if allow_none else {}
-        else:
-            result = {k: model.model_validate(v) for k, v in items.items()}
+        result: dict[str, T] | None = (
+            None
+            if items is None
+            else {k: model.model_validate(v) for k, v in items.items()}
+        )
 
         self._cache[section] = result
         return result
@@ -945,9 +951,7 @@ class Configuration:
         dict[str, VehicleConfig] | None
             The transit vehicles configuration section, or None if not defined.
         """
-        return self._get_section_dict(
-            "transit_vehicles", VehicleConfig, allow_none=True
-        )
+        return self._get_optional_section_dict("transit_vehicles", VehicleConfig)
 
     @property
     def ride_hailing_global(self) -> RideHailingGlobalConfig:
