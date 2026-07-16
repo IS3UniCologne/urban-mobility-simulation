@@ -86,8 +86,8 @@ ext-modules = [
 ]
 
 [tool.ruff]
-fix            = true
-output-format  = "grouped"
+fix           = true
+output-format = "grouped"
 [tool.ruff.format]
 skip-magic-trailing-comma = true
 [tool.ruff.lint.mccabe]
@@ -124,7 +124,6 @@ convention = "numpy"
 # These directories do not follow the same style as the rest of the codebase.
 "data/projects/*" = ["F401", "E402"]
 "learning/*"      = ["D"]
-"resources/*"     = ["D"]
 "scripts/*"       = ["T201", "E402"]
 "tests/*"         = ["D", "SLF001", "T201"]
 "visualization/*" = ["D"]
