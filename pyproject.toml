@@ -86,8 +86,8 @@ ext-modules = [
 ]
 
 [tool.ruff]
-fix            = true
-output-format  = "grouped"
+fix           = true
+output-format = "grouped"
 [tool.ruff.format]
 skip-magic-trailing-comma = true
 [tool.ruff.lint.mccabe]
@@ -145,13 +145,9 @@ project-excludes = [
   "simulation/agent/episodic_semi_gradient_sarsa.py",
   "simulation/agent/policy.py",
   "simulation/agent/rl_agent.py",
-  "simulation/helper/configuration/configuration.py",
-  "simulation/operator/data_transfer_object/vehicle_allocation.py",
-  "simulation/operator/interface/vehicle_allocation_engine_interface.py",
   "simulation/operator/ride_hailing_fleet.py",
   "simulation/operator/mixed_shared_vehicle_fleet.py",
   "simulation/operator/operations_management/algorithms/charging_station_allocation.py",
-  "simulation/operator/operations_management/algorithms/distance_based_bidding_strategy.py",
   "simulation/operator/operations_management/integrated_shared_mobility_operations.py",
   "simulation/operator/operations_management/operations.py",
   "simulation/operator/operations_management/operations_public_transport.py",
@@ -162,27 +158,16 @@ project-excludes = [
   "simulation/operator/operations_management/ridehailing_uncoordinated_charging_operations.py",
   "simulation/operator/operator.py",
   "simulation/operator/public_transit_operator.py",
-  "simulation/operator/public_transport_allocation_engine.py",
-  "simulation/operator/public_transport_search_engine.py",
   "simulation/operator/public_transport_vehicle_fleet.py",
-  "simulation/operator/ride_hailing_allocation_engine.py",
   "simulation/operator/ride_hailing_operator.py",
-  "simulation/operator/ride_hailing_search_engine.py",
-  "simulation/operator/service_worker.py",
-  "simulation/operator/service_workforce.py",
   "simulation/operator/shared_mobility_operator.py",
-  "simulation/operator/shared_vehicle_allocation_engine.py",
-  "simulation/operator/shared_vehicle_search_engine.py",
   "simulation/operator/walking_search_engine.py",
   "simulation/vehicle/public_transit_bus.py",
   "simulation/vehicle/public_transit_vehicle.py",
   "simulation/vehicle/ride_hailing_vehicle.py",
   "simulation/vehicle/shared_vehicle.py",
   "simulation/vehicle/walking.py",
-  "simulation/world/__init__.py",
   "simulation/world/demand/demand_factory.py",
-  "simulation/world/markets/auction.py",
-  "simulation/world/markets/interfaces/bidder_interface.py",
   "simulation/world/markets/shared_charging_auction.py",
   "simulation/world/world.py",
 ]

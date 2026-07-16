@@ -1,4 +1,6 @@
-from __future__ import annotations  # noqa: D100
+"""Search engine for ride-hailing transportation alternatives."""
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
@@ -13,11 +15,11 @@ if TYPE_CHECKING:
     from simulation.helper.configuration.configuration import (
         RideHailingOperationsConfig,
     )
+    from simulation.helper.types import SimTime
     from simulation.operator.data_transfer_object.transport_request import (
         TransportRequest,
     )
     from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
-    from simulation.vehicle.vehicle import Vehicle
 
 from simulation.helper.enums import AutonomyType
 from simulation.infrastructure.route import Route
@@ -27,7 +29,18 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 
 
 class RideHailingSearchEngine(SearchEngine):
-    """Search engine for ride-hailing vehicles."""
+    """Search engine for ride-hailing vehicles.
+
+    Parameters
+    ----------
+    deps : SearchEngineDependencies
+        Shared search engine dependencies.
+
+    Raises
+    ------
+    TypeError
+        If the operator fleet is not a RideHailingFleet.
+    """
 
     __slots__ = (
         "_AV_price_reduction",
@@ -65,8 +78,15 @@ class RideHailingSearchEngine(SearchEngine):
     ) -> TransportationAlternativeBrowser:
         """Spot all available vehicles to user.
 
-        :param transport_task:
-        :return: Available Alternatives along with auxilary information regarding trip
+        Parameters
+        ----------
+        transport_task : TransportRequest
+            Transport demand to serve.
+
+        Returns
+        -------
+        TransportationAlternativeBrowser
+            Available alternatives with auxiliary trip information.
         """
         browser = TransportationAlternativeBrowser()
 
@@ -187,8 +207,8 @@ class RideHailingSearchEngine(SearchEngine):
         return browser
 
     def _calculate_pickup_time(
-        self, vehicle: Vehicle, route_to_pick_up: Route
-    ) -> float:
+        self, vehicle: RideHailingVehicle, route_to_pick_up: Route
+    ) -> SimTime | None:
         """
         Calculate the estimated pickup time for a vehicle.
 
@@ -197,15 +217,15 @@ class RideHailingSearchEngine(SearchEngine):
 
         Parameters
         ----------
-        vehicle : Vehicle
-            The vehicle for which to calculate the pickup time.
+        vehicle : RideHailingVehicle
+            Vehicle to calculate the pickup time for.
         route_to_pick_up : Route
-            The route from the vehicle's current position to the pickup location.
+            Route from vehicle position to pickup location.
 
         Returns
         -------
-        float
-            The estimated pickup time in simulation time units (absolute).
+        SimTime or None
+            Estimated absolute pickup time. None if neither parking nor in use.
         """
         if vehicle.state is VehicleStates.STANDBY:
             return (
@@ -218,3 +238,5 @@ class RideHailingSearchEngine(SearchEngine):
                 vehicle.calculate_travel_time(route_to_pick_up.distance)
                 + vehicle.estimated_completion_time
             )
+
+        return None
