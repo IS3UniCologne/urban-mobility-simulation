@@ -40,7 +40,7 @@ dev = [
 
 benchmarks = ["pyperf>=2.10.0"]
 
-pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.20"]
+pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.21"]
 
 testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.1.1"]
 
