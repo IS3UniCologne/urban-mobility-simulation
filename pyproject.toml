@@ -23,7 +23,7 @@ dependencies = [
   "matplotlib>=3.11.0",
   "pandas>=3.0.3",
   "prettytable>=3.18.0",
-  "pyarrow>=24.0.0",
+  "pyarrow>=25.0.0",
   "pydantic>=2.13.4",
   "rtree>=1.4.1",
   "shapely>=2.1.2",
@@ -40,7 +40,7 @@ dev = [
 
 benchmarks = ["pyperf>=2.10.0"]
 
-pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.20"]
+pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.21"]
 
 testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.1.1"]
 
@@ -55,7 +55,7 @@ typing = [
 [project.optional-dependencies]
 ml = [
   "highspy>=1.15.1", #highspy is not explicitly imported anywhere, but used as a solver for pyomo
-  "torch>=2.12.1",
+  "torch>=2.13.0",
   "pyomo>=6.10.1",
 ]
 viz = ["bokeh>=3.9.1"]
@@ -172,12 +172,10 @@ project-excludes = [
   "simulation/operator/shared_mobility_operator.py",
   "simulation/operator/shared_vehicle_allocation_engine.py",
   "simulation/operator/shared_vehicle_search_engine.py",
-  "simulation/operator/walking_search_engine.py",
   "simulation/vehicle/public_transit_bus.py",
   "simulation/vehicle/public_transit_vehicle.py",
   "simulation/vehicle/ride_hailing_vehicle.py",
   "simulation/vehicle/shared_vehicle.py",
-  "simulation/vehicle/walking.py",
   "simulation/world/__init__.py",
   "simulation/world/demand/demand_factory.py",
   "simulation/world/markets/auction.py",
