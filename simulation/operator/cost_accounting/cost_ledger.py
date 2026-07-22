@@ -1,0 +1,191 @@
+"""Operator-owned cost ledger applying configured rates to reported quantities."""
+
+from __future__ import annotations
+
+import logging
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from simulation.operator.cost_accounting.cost_reporter import (
+    VehicleCostReporter,
+    WorkerCostReporter,
+)
+from simulation.operator.cost_accounting.cost_type import CostType
+
+if TYPE_CHECKING:
+    from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.types import SimId
+    from simulation.operator.cost_accounting.cost_reporter import (
+        CostBearingVehicle,
+        CostBearingWorker,
+    )
+
+logger = logging.getLogger(__name__)
+
+MINUTES_PER_DAY = 1440
+MINUTES_PER_HOUR = 60
+
+
+@dataclass(slots=True)
+class _TimeAccrual:
+    """Time-based cost accrual for a single entity.
+
+    Attributes
+    ----------
+    since : float
+        Simulation time the currently open span started.
+    active : bool
+        Whether the entity is currently in its active state.
+    rates : dict[bool, tuple[float, CostType]]
+        Per-state (rate per minute, cost type). A missing state accrues nothing.
+    """
+
+    since: float
+    active: bool
+    rates: dict[bool, tuple[float, CostType]]
+
+
+class CostLedger(VehicleCostReporter, WorkerCostReporter):
+    """
+    Accumulate operator costs from raw quantities reported by components.
+
+    Keeps running totals per cost type and entity; time-based costs are
+    settled lazily on every query, so totals are correct at any simulation
+    time without per-tick work.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        Simulation context supplying the clock accruals are folded against.
+    """
+
+    __slots__ = ("_env", "_time_accruals", "_totals")
+
+    def __init__(self, sim: SimulationContext) -> None:
+        self._env = sim.env
+        self._totals: defaultdict[CostType, defaultdict[SimId, float]] = defaultdict(
+            lambda: defaultdict(float)
+        )
+        self._time_accruals: dict[SimId, _TimeAccrual] = {}
+
+    # Vehicle reporting
+
+    def register_vehicle(self, vehicle: CostBearingVehicle, active: bool) -> None:
+        """Start cost tracking for a vehicle."""
+        config = vehicle.cost_config
+        self._time_accruals[vehicle.uid] = _TimeAccrual(
+            since=self._env.now,
+            active=active,
+            rates={
+                True: (
+                    config.DAILY_ONLINE / MINUTES_PER_DAY,
+                    CostType.VEHICLE_TIME_ONLINE,
+                ),
+                False: (
+                    config.DAILY_OFFLINE / MINUTES_PER_DAY,
+                    CostType.VEHICLE_TIME_OFFLINE,
+                ),
+            },
+        )
+
+    def record_distance(
+        self, vehicle: CostBearingVehicle, distance_m: float, relocation: bool
+    ) -> None:
+        """Report distance driven by a vehicle, in meters."""
+        cost_type = (
+            CostType.VEHICLE_RELOCATION_DISTANCE
+            if relocation
+            else CostType.VEHICLE_DISTANCE
+        )
+        cost_per_km = vehicle.cost_config.PER_KM
+        self._totals[cost_type][vehicle.uid] += distance_m / 1000 * cost_per_km
+
+    def record_energy_charged(self, vehicle: CostBearingVehicle, kwh: float) -> None:
+        """Report energy actually charged into a vehicle, in kWh."""
+        cost_per_kwh = vehicle.cost_config.CHARGING_PER_KWH
+        self._totals[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * cost_per_kwh
+
+    def set_vehicle_active(self, vehicle: CostBearingVehicle, active: bool) -> None:
+        """Report a change of a vehicle's activity. No-op if unchanged."""
+        self._flip_accrual(vehicle.uid, active=active)
+
+    def report_driver_trip_compensation(
+        self, vehicle: CostBearingVehicle, price: float
+    ) -> None:
+        """Report a fulfilled trip's gross price for driver-share costing."""
+        share = vehicle.cost_config.DRIVER_PAYMENT_SHARE
+        if share > 0:
+            self._totals[CostType.DRIVER_PAYMENT][vehicle.uid] += price * share
+
+    # Worker reporting
+
+    def register_worker(self, worker: CostBearingWorker, active: bool) -> None:
+        """Start cost tracking for a service worker."""
+        rate_per_min = worker.cost_config.HOURLY / MINUTES_PER_HOUR
+        self._time_accruals[worker.uid] = _TimeAccrual(
+            since=self._env.now,
+            active=active,
+            rates={True: (rate_per_min, CostType.WORKER_TIME)},
+        )
+
+    def set_worker_active(self, worker: CostBearingWorker, active: bool) -> None:
+        """Report a change of a worker's activity. No-op if unchanged."""
+        self._flip_accrual(worker.uid, active=active)
+
+    def totals_by_type(self) -> dict[CostType, float]:
+        """Return accumulated cost per cost type, zero for unused types."""
+        self._settle(self._env.now)
+        return {
+            cost_type: sum(self._totals[cost_type].values()) for cost_type in CostType
+        }
+
+    def totals_by_entity(self, cost_type: CostType | None = None) -> dict[SimId, float]:
+        """Return accumulated cost per entity.
+
+        Parameters
+        ----------
+        cost_type : CostType or None
+            Restrict to one cost type. None sums across all types.
+
+        Returns
+        -------
+        dict[SimId, float]
+            Mapping of entity ID to total cost incurred.
+            The result is sparse: an entity absent has no incurred cost of the requested type.
+        """
+        self._settle(self._env.now)
+        if cost_type is not None:
+            return dict(self._totals[cost_type])
+        result: defaultdict[SimId, float] = defaultdict(float)
+        for by_entity in self._totals.values():
+            for uid, amount in by_entity.items():
+                result[uid] += amount
+        return dict(result)
+
+    def _flip_accrual(self, uid: SimId, active: bool) -> None:
+        """Fold the open time span of an entity and switch its activity flag."""
+        accrual = self._time_accruals.get(uid)
+        if accrual is None:
+            logger.debug("Activity reported for unregistered entity %s.", uid)
+            return
+        if accrual.active == active:
+            return
+        self._fold(accrual, uid, self._env.now)
+        accrual.active = active
+
+    def _fold(self, accrual: _TimeAccrual, uid: SimId, now: float) -> None:
+        """Fold the open time span of one accrual into totals up to now."""
+        elapsed = now - accrual.since
+        accrual.since = now
+        priced = accrual.rates.get(accrual.active)
+        if priced is None or elapsed <= 0:
+            return
+        rate, cost_type = priced
+        if rate > 0:
+            self._totals[cost_type][uid] += elapsed * rate
+
+    def _settle(self, now: float) -> None:
+        """Fold all open time accruals into totals up to now."""
+        for uid, accrual in self._time_accruals.items():
+            self._fold(accrual, uid, now)

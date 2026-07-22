@@ -6,9 +6,12 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from simulation.helper.simulation_base import SimulationBase
+from simulation.operator.cost_accounting import NULL_WORKER_COST_REPORTER
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.configuration.configuration import WorkerCostConfig
+    from simulation.operator.cost_accounting import WorkerCostReporter
     from simulation.operator.operations_management.service_jobs.job_queue import (
         JobQueue,
     )
@@ -22,13 +25,31 @@ class ServiceWorkerState(Enum):  # noqa: D101
     WORKING = 1
     HIBERNATE = 3
 
+    @property
+    def on_duty(self) -> bool:
+        """Whether worker time is paid in this state."""
+        return self is not ServiceWorkerState.HIBERNATE
+
 
 class ServiceWorker(SimulationBase):  # noqa: D101
     service_worker_id = 0
 
-    __slots__ = ("_env", "_id", "_job_queue", "_state")
+    __slots__ = (
+        "_cost_config",
+        "_cost_reporter",
+        "_env",
+        "_id",
+        "_job_queue",
+        "_state",
+    )
 
-    def __init__(self, sim: SimulationContext, job_queue: JobQueue) -> None:
+    def __init__(
+        self,
+        sim: SimulationContext,
+        job_queue: JobQueue,
+        cost_config: WorkerCostConfig,
+        cost_reporter: WorkerCostReporter = NULL_WORKER_COST_REPORTER,
+    ) -> None:
         super().__init__(sim)
 
         self._env = sim.env
@@ -36,7 +57,16 @@ class ServiceWorker(SimulationBase):  # noqa: D101
 
         self._job_queue = job_queue
 
+        self._cost_config = cost_config
+        self._cost_reporter = cost_reporter
+        self._cost_reporter.register_worker(self, active=self._state.on_duty)
+
         ServiceWorker.service_worker_id += 1
+
+    @property
+    def cost_config(self) -> WorkerCostConfig:
+        """Operator cost rates for this worker."""
+        return self._cost_config
 
     def run(self):  # noqa: ANN201, D102
         while True:
@@ -45,7 +75,7 @@ class ServiceWorker(SimulationBase):  # noqa: D101
 
             self.logger.debug("Waking up and searching for available jobs.")
 
-            self._state = ServiceWorkerState.FREE
+            self._set_state(ServiceWorkerState.FREE)
 
             while self._job_queue.count > 0:
                 next_job = self._job_queue.popleft()
@@ -55,7 +85,7 @@ class ServiceWorker(SimulationBase):  # noqa: D101
             self.logger.debug("No more jobs to process. Going into hibernate.")
 
             # Go back to sleep
-            self._state = ServiceWorkerState.HIBERNATE
+            self._set_state(ServiceWorkerState.HIBERNATE)
 
     def execute_job(self, job: ServiceJob):  # noqa: ANN201
         """Execute assigned service job.
@@ -65,13 +95,20 @@ class ServiceWorker(SimulationBase):  # noqa: D101
         job : ServiceJob
             The job to execute.
         """
-        self._state = ServiceWorkerState.WORKING
+        self._set_state(ServiceWorkerState.WORKING)
 
         self.logger.debug("Processing following job: %s.", job)
 
         yield self._env.process(job.execute())
 
-        self._state = ServiceWorkerState.FREE
+        self._set_state(ServiceWorkerState.FREE)
+
+    def _set_state(self, state: ServiceWorkerState) -> None:
+        """Transition to a new state and report activity for cost accounting."""
+        if state is self._state:
+            return
+        self._state = state
+        self._cost_reporter.set_worker_active(self, active=state.on_duty)
 
     @property
     def state(self):  # noqa: ANN201, D102

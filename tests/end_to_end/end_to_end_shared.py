@@ -85,6 +85,17 @@ def run_simulation_and_extract_metrics(config_path: str) -> dict[str, Any]:
         "total_trip_duration": aggregate["total_trip_duration"],
         "total_trip_distance": aggregate["total_trip_distance"],
         "total_energy_consumption": aggregate["total_energy_consumption"],
+        "total_cost": aggregate["total_cost"],
+        "profit": aggregate["profit"],
+        "cost_vehicle_distance": aggregate["cost_vehicle_distance"],
+        "cost_vehicle_relocation_distance": aggregate[
+            "cost_vehicle_relocation_distance"
+        ],
+        "cost_vehicle_charging": aggregate["cost_vehicle_charging"],
+        "cost_vehicle_time_online": aggregate["cost_vehicle_time_online"],
+        "cost_vehicle_time_offline": aggregate["cost_vehicle_time_offline"],
+        "cost_driver_payment": aggregate["cost_driver_payment"],
+        "cost_worker_time": aggregate["cost_worker_time"],
     }
 
     relevant_user_metrics = {
