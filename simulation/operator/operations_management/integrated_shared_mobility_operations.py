@@ -109,7 +109,10 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
 
         # Shared Mobility specific: Service Workforce
         self._workforce = ServiceWorkforce(
-            sim=self._sim, number_service_workers=ops_config.NUMBER_OF_SERVICE_WORKERS
+            sim=self._sim,
+            number_service_workers=ops_config.NUMBER_OF_SERVICE_WORKERS,
+            cost_config=ops_config.WORKER_COST_CONFIG,
+            cost_reporter=self.operator.cost_ledger,
         )
 
     @property
