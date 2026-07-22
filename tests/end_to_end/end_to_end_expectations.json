@@ -9,14 +9,15 @@
       "total_trip_duration": 38662.68974262604,
       "total_trip_distance": 6147367.66907755,
       "total_energy_consumption": 2009.3519416011,
-      "total_cost": 10086.732388407781,
-      "profit": 11799.199394686006,
+      "total_cost": 9588.596971741114,
+      "profit": 12297.334811352674,
       "cost_vehicle_distance": 4551.553480504833,
       "cost_vehicle_relocation_distance": 209.7915304430618,
       "cost_vehicle_charging": 951.4984069186423,
-      "cost_vehicle_holding": 2146.0000000000005,
+      "cost_vehicle_time_online": 1647.8645833333335,
+      "cost_vehicle_time_offline": 0.0,
       "cost_driver_payment": 2227.8889705412425,
-      "cost_worker_labor": 0
+      "cost_worker_time": 0.0
     },
     "user_metrics": {
       "total_trip_requests": 2103,
@@ -61,11 +62,12 @@
       "total_cost": 12711.979015708319,
       "profit": 783.8361126412965,
       "cost_vehicle_distance": 2895.458677325451,
-      "cost_vehicle_relocation_distance": 0,
+      "cost_vehicle_relocation_distance": 0.0,
       "cost_vehicle_charging": 35.797731332963,
-      "cost_vehicle_holding": 9670.0,
-      "cost_driver_payment": 0,
-      "cost_worker_labor": 110.72260704990482
+      "cost_vehicle_time_online": 9670.0,
+      "cost_vehicle_time_offline": 0.0,
+      "cost_driver_payment": 0.0,
+      "cost_worker_time": 110.72260704990482
     },
     "user_metrics": {
       "total_trip_requests": 2114,
@@ -101,14 +103,15 @@
       "total_trip_duration": 21870.962525047675,
       "total_trip_distance": 3477483.041482575,
       "total_energy_consumption": 1186.435511929255,
-      "total_cost": 6926.491303120677,
-      "profit": 5505.590971653956,
+      "total_cost": 6377.001719787343,
+      "profit": 6055.08055498729,
       "cost_vehicle_distance": 2693.093650854274,
       "cost_vehicle_relocation_distance": 197.84542167297388,
       "cost_vehicle_charging": 598.0312090430656,
-      "cost_vehicle_holding": 1450.0000000000002,
+      "cost_vehicle_time_online": 900.5104166666667,
+      "cost_vehicle_time_offline": 0.0,
       "cost_driver_payment": 1987.521021550363,
-      "cost_worker_labor": 0
+      "cost_worker_time": 0.0
     },
     "user_metrics": {
       "total_trip_requests": 2114,
@@ -144,14 +147,15 @@
       "total_trip_duration": 101189.44262876063,
       "total_trip_distance": 16089121.377972944,
       "total_energy_consumption": 4129.62494564538,
-      "total_cost": 51085.69138530307,
-      "profit": 10033.468040129897,
+      "total_cost": 43782.5247186364,
+      "profit": 17336.634706796573,
       "cost_vehicle_distance": 9291.912162722065,
       "cost_vehicle_relocation_distance": 134.95854070486578,
       "cost_vehicle_charging": 2244.9095283018796,
-      "cost_vehicle_holding": 30044.0,
+      "cost_vehicle_time_online": 22740.83333333333,
+      "cost_vehicle_time_offline": 0.0,
       "cost_driver_payment": 9369.91115357426,
-      "cost_worker_labor": 0
+      "cost_worker_time": 0.0
     },
     "user_metrics": {
       "total_trip_requests": 4980,
@@ -193,14 +197,15 @@
       "total_trip_duration": 44921.58511962967,
       "total_trip_distance": 7142532.0340211205,
       "total_energy_consumption": 2315.1821166599275,
-      "total_cost": 11219.921289370832,
-      "profit": 13933.750785682729,
+      "total_cost": 10735.6817060375,
+      "profit": 14417.99036901606,
       "cost_vehicle_distance": 5268.442394318118,
       "cost_vehicle_relocation_distance": 189.003934308729,
       "cost_vehicle_charging": 1084.6368355435234,
-      "cost_vehicle_holding": 2146.0000000000005,
+      "cost_vehicle_time_online": 1661.7604166666667,
+      "cost_vehicle_time_offline": 0.0,
       "cost_driver_payment": 2531.838125200462,
-      "cost_worker_labor": 0
+      "cost_worker_time": 0.0
     },
     "user_metrics": {
       "total_trip_requests": 11480,
@@ -245,11 +250,12 @@
       "total_cost": 6528.776963174675,
       "profit": 7329.687913402303,
       "cost_vehicle_distance": 3030.6011394547904,
-      "cost_vehicle_relocation_distance": 0,
+      "cost_vehicle_relocation_distance": 0.0,
       "cost_vehicle_charging": 354.67311452774624,
-      "cost_vehicle_holding": 2911.9,
-      "cost_driver_payment": 0,
-      "cost_worker_labor": 231.60270919213855
+      "cost_vehicle_time_online": 2911.9,
+      "cost_vehicle_time_offline": 0.0,
+      "cost_driver_payment": 0.0,
+      "cost_worker_time": 231.60270919213855
     },
     "user_metrics": {
       "total_trip_requests": 11526,
@@ -285,14 +291,15 @@
       "total_trip_duration": 7386.977925762128,
       "total_trip_distance": 1174529.490196178,
       "total_energy_consumption": 283.9497895490645,
-      "total_cost": 4250.038474198778,
-      "profit": 199.60764484184983,
+      "total_cost": 3728.9447241987777,
+      "profit": 720.7013948418507,
       "cost_vehicle_distance": 639.9912265122329,
       "cost_vehicle_relocation_distance": 32.70317415686219,
       "cost_vehicle_charging": 644.2273824628842,
-      "cost_vehicle_holding": 2146.0000000000005,
+      "cost_vehicle_time_online": 1624.90625,
+      "cost_vehicle_time_offline": 0.0,
       "cost_driver_payment": 787.1166910667985,
-      "cost_worker_labor": 0
+      "cost_worker_time": 0.0
     },
     "user_metrics": {
       "total_trip_requests": 347,
@@ -337,11 +344,12 @@
       "total_cost": 3584.895305108711,
       "profit": -740.3846897025787,
       "cost_vehicle_distance": 556.1185418047387,
-      "cost_vehicle_relocation_distance": 0,
+      "cost_vehicle_relocation_distance": 0.0,
       "cost_vehicle_charging": 7.154828333393178,
-      "cost_vehicle_holding": 3018.8,
-      "cost_driver_payment": 0,
-      "cost_worker_labor": 2.8219349705790764
+      "cost_vehicle_time_online": 3018.8,
+      "cost_vehicle_time_offline": 0.0,
+      "cost_driver_payment": 0.0,
+      "cost_worker_time": 2.8219349705790764
     },
     "user_metrics": {
       "total_trip_requests": 349,

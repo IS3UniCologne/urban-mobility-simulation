@@ -272,7 +272,7 @@ class Operator(OperatorInterface):
             transaction = self._create_fulfilled_transaction(
                 transportation_task, transportation_alternative, state, energy_consumed
             )
-            self._cost_ledger.report_fulfilled_trip(
+            self._cost_ledger.report_driver_trip_compensation(
                 transportation_alternative.vehicle, transportation_alternative.price
             )
 

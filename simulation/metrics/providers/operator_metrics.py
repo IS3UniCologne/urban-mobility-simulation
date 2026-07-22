@@ -101,10 +101,8 @@ class OperatorMetrics(IndexedMetricsBase):
         `MetricsDict` erases value types to `object`.
         """
         operator_log_stats = operator.operator_log.metrics
-        ledger = operator.cost_ledger
-        costs_by_type = ledger.totals_by_type()
+        costs_by_type = operator.cost_ledger.totals_by_type()
         total_cost = sum(costs_by_type.values())
-        revenue = ledger.revenue()
         cost_metrics = {
             f"cost_{cost_type.value}": amount
             for cost_type, amount in costs_by_type.items()
@@ -112,8 +110,8 @@ class OperatorMetrics(IndexedMetricsBase):
         return {
             **cost_metrics,
             "total_cost": total_cost,
-            "profit": revenue - total_cost,
-            "total_revenue": revenue,
+            "profit": operator_log_stats.total_price_sum - total_cost,
+            "total_revenue": operator_log_stats.total_price_sum,
             "total_transaction_count": operator.operator_log.transaction_count,
             "total_fulfilled_trips": operator_log_stats.total_fulfilled_trips,
             "total_missed_trips": operator_log_stats.total_missed_trips,

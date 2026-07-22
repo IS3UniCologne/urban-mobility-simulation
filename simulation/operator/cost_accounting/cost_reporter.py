@@ -43,13 +43,15 @@ class VehicleCostReporter(ABC):
     __slots__ = ()
 
     @abstractmethod
-    def register_vehicle(self, vehicle: CostBearingVehicle) -> None:
+    def register_vehicle(self, vehicle: CostBearingVehicle, active: bool) -> None:
         """Start cost tracking for a vehicle.
 
         Parameters
         ----------
         vehicle : CostBearingVehicle
-            Vehicle to track. The daily rate accrues from now on.
+            Vehicle to track. Time-based costs accrue from now on.
+        active : bool
+            Whether the vehicle starts in an active (online) state.
         """
 
     @abstractmethod
@@ -81,11 +83,25 @@ class VehicleCostReporter(ABC):
         """
 
     @abstractmethod
-    def report_fulfilled_trip(self, vehicle: CostBearingVehicle, price: float) -> None:
-        """Report a fulfilled trip's fare.
+    def set_vehicle_active(self, vehicle: CostBearingVehicle, active: bool) -> None:
+        """Report a change of a vehicle's activity for time-based costs.
 
-        Report every fulfilled trip. The driver share comes from the vehicle's
-        own cost config.
+        Parameters
+        ----------
+        vehicle : CostBearingVehicle
+            Vehicle whose activity changed.
+        active : bool
+            Whether the vehicle is now active (online). No-op if unchanged.
+        """
+
+    @abstractmethod
+    def report_driver_trip_compensation(
+        self, vehicle: CostBearingVehicle, price: float
+    ) -> None:
+        """Report a completed trip fare that a driver is paid a share of.
+
+        Report every fulfilled trip. The share comes from the vehicle's own
+        cost config.
 
         Parameters
         ----------
@@ -124,3 +140,44 @@ class WorkerCostReporter(ABC):
         active : bool
             Whether the worker is now active (paid). No-op if unchanged.
         """
+
+
+class NullVehicleCostReporter(VehicleCostReporter):
+    """No-op reporter for vehicles without cost accounting."""
+
+    __slots__ = ()
+
+    def register_vehicle(self, vehicle: CostBearingVehicle, active: bool) -> None:
+        """Ignore vehicle registration."""
+
+    def record_distance(
+        self, vehicle: CostBearingVehicle, distance_m: float, relocation: bool
+    ) -> None:
+        """Ignore distance report."""
+
+    def record_energy_charged(self, vehicle: CostBearingVehicle, kwh: float) -> None:
+        """Ignore charging report."""
+
+    def set_vehicle_active(self, vehicle: CostBearingVehicle, active: bool) -> None:
+        """Ignore vehicle activity change."""
+
+    def report_driver_trip_compensation(
+        self, vehicle: CostBearingVehicle, price: float
+    ) -> None:
+        """Ignore fare report."""
+
+
+class NullWorkerCostReporter(WorkerCostReporter):
+    """No-op reporter for service workers without cost accounting."""
+
+    __slots__ = ()
+
+    def register_worker(self, worker: CostBearingWorker, active: bool) -> None:
+        """Ignore worker registration."""
+
+    def set_worker_active(self, worker: CostBearingWorker, active: bool) -> None:
+        """Ignore worker activity change."""
+
+
+NULL_VEHICLE_COST_REPORTER: VehicleCostReporter = NullVehicleCostReporter()
+NULL_WORKER_COST_REPORTER: WorkerCostReporter = NullWorkerCostReporter()

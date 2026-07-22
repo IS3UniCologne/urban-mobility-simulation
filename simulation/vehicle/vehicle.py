@@ -8,6 +8,7 @@ from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.state_machine import StateMachine
 from simulation.helper.time import SimulationVelocityConverter
 from simulation.helper.vehicle_states import VehicleStates
+from simulation.operator.cost_accounting import NULL_VEHICLE_COST_REPORTER
 from simulation.vehicle.movement_stats import MovementStats
 
 if TYPE_CHECKING:
@@ -54,7 +55,7 @@ class Vehicle(SimulationBase, ABC):
     vehicle_config : VehicleConfig
         Vehicle configuration.
     cost_reporter : VehicleCostReporter
-        Sink for cost-relevant quantities.
+        Sink for cost-relevant quantities. Defaults to a no-op reporter.
     """
 
     __slots__ = (
@@ -103,7 +104,7 @@ class Vehicle(SimulationBase, ABC):
         fleet: VehicleFleet,
         position: GeodesicPosition,
         vehicle_config: VehicleConfig,
-        cost_reporter: VehicleCostReporter,
+        cost_reporter: VehicleCostReporter = NULL_VEHICLE_COST_REPORTER,
     ) -> None:
         super().__init__(sim)
 
@@ -161,7 +162,9 @@ class Vehicle(SimulationBase, ABC):
         # Add self to fleet
         self._fleet.register_vehicle(self)
 
-        self._cost_reporter.register_vehicle(self)
+        self._cost_reporter.register_vehicle(
+            self, active=self.state is not VehicleStates.OFFLINE
+        )
 
     @property
     def cost_config(self) -> VehicleCostConfig:
@@ -321,6 +324,9 @@ class Vehicle(SimulationBase, ABC):
         old_state = self._state_machine.current_state
         self._state_machine.transition_to(state)
         self._fleet.update_vehicle_state(self, old_state, state)
+        self._cost_reporter.set_vehicle_active(
+            self, active=state is not VehicleStates.OFFLINE
+        )
 
     @property
     def position(self) -> GeodesicPosition:

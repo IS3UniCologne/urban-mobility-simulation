@@ -14,6 +14,8 @@ from simulation.operator.cost_accounting import (
     CostBearingWorker,
     CostLedger,
     CostType,
+    NullVehicleCostReporter,
+    NullWorkerCostReporter,
 )
 
 pytestmark = pytest.mark.unit
@@ -23,7 +25,8 @@ def make_cost_config(**overrides: float) -> VehicleCostConfig:
     defaults = dict(
         PER_KM=0.5,
         CHARGING_PER_KWH=0.3,
-        DAILY=28.8,  # 0.02 per minute
+        DAILY_ONLINE=28.8,  # 0.02 per minute
+        DAILY_OFFLINE=14.4,  # 0.01 per minute
         DRIVER_PAYMENT_SHARE=0.75,
     )
     defaults.update(overrides)
@@ -123,51 +126,75 @@ class TestCostLedger:
 
         assert ledger.totals_by_type()[CostType.VEHICLE_CHARGING] == 0.0
 
+    def test_time_accrual_online_offline_split(
+        self, sim: Mock, ledger: CostLedger
+    ) -> None:
+        vehicle = make_vehicle(make_cost_config())
+        ledger.register_vehicle(vehicle, active=True)
+
+        sim.env.now = 100.0
+        ledger.set_vehicle_active(vehicle, active=False)
+
+        sim.env.now = 300.0
+        totals = ledger.totals_by_type()
+
+        assert totals[CostType.VEHICLE_TIME_ONLINE] == pytest.approx(100.0 * 0.02)
+        assert totals[CostType.VEHICLE_TIME_OFFLINE] == pytest.approx(200.0 * 0.01)
+
     def test_time_accrual_repeated_query_adds_nothing(
         self, sim: Mock, ledger: CostLedger
     ) -> None:
         vehicle = make_vehicle(make_cost_config())
-        ledger.register_vehicle(vehicle)
+        ledger.register_vehicle(vehicle, active=True)
 
         sim.env.now = 100.0
         first = ledger.totals_by_type()
         second = ledger.totals_by_type()
 
         assert first == second
-        assert first[CostType.VEHICLE_HOLDING] == pytest.approx(100.0 * 0.02)
+        assert first[CostType.VEHICLE_TIME_ONLINE] == pytest.approx(100.0 * 0.02)
 
-    def test_daily_rate_accrues_over_a_full_day(
+    def test_time_accrual_without_activity_changes(
         self, sim: Mock, ledger: CostLedger
     ) -> None:
         vehicle = make_vehicle(make_cost_config())
-        ledger.register_vehicle(vehicle)
+        ledger.register_vehicle(vehicle, active=True)
 
         sim.env.now = 1440.0
+        totals = ledger.totals_by_type()
 
-        assert ledger.totals_by_type()[CostType.VEHICLE_HOLDING] == pytest.approx(28.8)
+        assert totals[CostType.VEHICLE_TIME_ONLINE] == pytest.approx(28.8)
+        assert totals[CostType.VEHICLE_TIME_OFFLINE] == 0.0
 
-    def test_daily_rate_zero_rate(self, sim: Mock, ledger: CostLedger) -> None:
-        vehicle = make_vehicle(make_cost_config(DAILY=0.0))
-        ledger.register_vehicle(vehicle)
-
-        sim.env.now = 1440.0
-
-        assert ledger.totals_by_type()[CostType.VEHICLE_HOLDING] == 0.0
-
-    def test_accrual_starts_at_registration(
+    def test_unchanged_activity_keeps_accruing_online(
         self, sim: Mock, ledger: CostLedger
     ) -> None:
-        sim.env.now = 500.0
         vehicle = make_vehicle(make_cost_config())
-        ledger.register_vehicle(vehicle)
+        ledger.register_vehicle(vehicle, active=True)
 
-        sim.env.now = 1940.0
+        sim.env.now = 50.0
+        ledger.set_vehicle_active(vehicle, active=True)
 
-        assert ledger.totals_by_type()[CostType.VEHICLE_HOLDING] == pytest.approx(28.8)
+        sim.env.now = 100.0
+        totals = ledger.totals_by_type()
+
+        assert totals[CostType.VEHICLE_TIME_ONLINE] == pytest.approx(100.0 * 0.02)
+
+    def test_vehicle_registered_while_offline(
+        self, sim: Mock, ledger: CostLedger
+    ) -> None:
+        vehicle = make_vehicle(make_cost_config())
+        ledger.register_vehicle(vehicle, active=False)
+
+        sim.env.now = 100.0
+        totals = ledger.totals_by_type()
+
+        assert totals[CostType.VEHICLE_TIME_ONLINE] == 0.0
+        assert totals[CostType.VEHICLE_TIME_OFFLINE] == pytest.approx(100.0 * 0.01)
 
     def test_caller_side_interval_diff(self, sim: Mock, ledger: CostLedger) -> None:
         vehicle = make_vehicle(make_cost_config())
-        ledger.register_vehicle(vehicle)
+        ledger.register_vehicle(vehicle, active=True)
         ledger.record_distance(vehicle, 2000.0, relocation=False)
 
         sim.env.now = 100.0
@@ -179,25 +206,18 @@ class TestCostLedger:
         delta = {ct: current[ct] - snapshot[ct] for ct in CostType}
 
         assert delta[CostType.VEHICLE_DISTANCE] == pytest.approx(1.0)
-        assert delta[CostType.VEHICLE_HOLDING] == pytest.approx(100.0 * 0.02)
+        assert delta[CostType.VEHICLE_TIME_ONLINE] == pytest.approx(100.0 * 0.02)
         assert delta[CostType.VEHICLE_CHARGING] == 0.0
-
-    def test_fulfilled_trip_books_gross_revenue(self, ledger: CostLedger) -> None:
-        vehicle = make_vehicle(make_cost_config())
-        ledger.report_fulfilled_trip(vehicle, 10.0)
-        ledger.report_fulfilled_trip(vehicle, 2.5)
-
-        assert ledger.revenue() == pytest.approx(12.5)
 
     def test_fare_applies_vehicles_own_share(self, ledger: CostLedger) -> None:
         vehicle = make_vehicle(make_cost_config())
-        ledger.report_fulfilled_trip(vehicle, 10.0)
+        ledger.report_driver_trip_compensation(vehicle, 10.0)
 
         assert ledger.totals_by_type()[CostType.DRIVER_PAYMENT] == pytest.approx(7.5)
 
     def test_fare_zero_share_ignored(self, ledger: CostLedger) -> None:
         vehicle = make_vehicle(make_cost_config(DRIVER_PAYMENT_SHARE=0.0))
-        ledger.report_fulfilled_trip(vehicle, 10.0)
+        ledger.report_driver_trip_compensation(vehicle, 10.0)
 
         assert ledger.totals_by_type()[CostType.DRIVER_PAYMENT] == 0.0
 
@@ -206,8 +226,8 @@ class TestCostLedger:
         autonomous = make_vehicle(
             make_cost_config(DRIVER_PAYMENT_SHARE=0.0), uid="autonomous"
         )
-        ledger.report_fulfilled_trip(human, 10.0)
-        ledger.report_fulfilled_trip(autonomous, 10.0)
+        ledger.report_driver_trip_compensation(human, 10.0)
+        ledger.report_driver_trip_compensation(autonomous, 10.0)
 
         by_entity = ledger.totals_by_entity(CostType.DRIVER_PAYMENT)
         assert by_entity == {SimId("human"): pytest.approx(7.5)}
@@ -227,7 +247,7 @@ class TestCostLedger:
 
         sim.env.now = 300.0
         # Active from 60 to 120 at 30/h = 0.5/min
-        assert ledger.totals_by_type()[CostType.WORKER_LABOR] == pytest.approx(30.0)
+        assert ledger.totals_by_type()[CostType.WORKER_TIME] == pytest.approx(30.0)
 
     def test_worker_zero_rate_accrues_nothing(
         self, sim: Mock, ledger: CostLedger
@@ -237,15 +257,15 @@ class TestCostLedger:
 
         sim.env.now = 600.0
 
-        assert ledger.totals_by_type()[CostType.WORKER_LABOR] == 0.0
+        assert ledger.totals_by_type()[CostType.WORKER_TIME] == 0.0
 
     def test_caller_side_interval_diff_per_entity(
         self, sim: Mock, ledger: CostLedger
     ) -> None:
         vehicle_a = make_vehicle(make_cost_config(), uid="vehicle-a")
         vehicle_b = make_vehicle(make_cost_config(), uid="vehicle-b")
-        ledger.register_vehicle(vehicle_a)
-        ledger.register_vehicle(vehicle_b)
+        ledger.register_vehicle(vehicle_a, active=True)
+        ledger.register_vehicle(vehicle_b, active=True)
 
         sim.env.now = 100.0
         snapshot = ledger.totals_by_entity()
@@ -254,7 +274,7 @@ class TestCostLedger:
         sim.env.now = 200.0
         current = ledger.totals_by_entity()
 
-        # Both accrue 100 min of daily cost; only vehicle-a drove.
+        # Both accrue 100 min online; only vehicle-a drove.
         assert current[SimId("vehicle-a")] - snapshot[SimId("vehicle-a")] == (
             pytest.approx(100.0 * 0.02 + 1.0)
         )
@@ -278,3 +298,22 @@ class TestCostLedger:
         all_costs = ledger.totals_by_entity()
         assert all_costs[SimId("vehicle-a")] == pytest.approx(4.0)
         assert all_costs[SimId("vehicle-b")] == pytest.approx(2.0)
+
+
+class TestNullCostReporters:
+    def test_vehicle_methods_are_noops(self) -> None:
+        reporter = NullVehicleCostReporter()
+        vehicle = make_vehicle(make_cost_config())
+
+        reporter.register_vehicle(vehicle, active=True)
+        reporter.record_distance(vehicle, 1000.0, relocation=False)
+        reporter.record_energy_charged(vehicle, 5.0)
+        reporter.set_vehicle_active(vehicle, active=False)
+        reporter.report_driver_trip_compensation(vehicle, 10.0)
+
+    def test_worker_methods_are_noops(self) -> None:
+        reporter = NullWorkerCostReporter()
+        worker = make_worker()
+
+        reporter.register_worker(worker, active=False)
+        reporter.set_worker_active(worker, active=True)

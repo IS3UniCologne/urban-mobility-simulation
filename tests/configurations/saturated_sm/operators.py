@@ -32,7 +32,9 @@ sv_car = SharedVehicleConfig(
     PRICE_PER_KM=1.3,
     PRICE_PER_MIN=0.35,
     WALKING_DISTANCE=500,
-    COST_CONFIG=VehicleCostConfig(PER_KM=0.53, CHARGING_PER_KWH=0.23, DAILY=29.86),
+    COST_CONFIG=VehicleCostConfig(
+        PER_KM=0.53, CHARGING_PER_KWH=0.23, DAILY_ONLINE=29.86, DAILY_OFFLINE=0.0
+    ),
 )
 sv_scooter = SharedVehicleConfig(
     VEHICLE_TYPE=VehicleType.SCOOTER,
@@ -46,7 +48,9 @@ sv_scooter = SharedVehicleConfig(
     PRICE_PER_MIN=0.23,
     VELOCITY_KMH=8.04,
     WALKING_DISTANCE=350,
-    COST_CONFIG=VehicleCostConfig(PER_KM=0.53, CHARGING_PER_KWH=0.23, DAILY=7.66),
+    COST_CONFIG=VehicleCostConfig(
+        PER_KM=0.53, CHARGING_PER_KWH=0.23, DAILY_ONLINE=7.66, DAILY_OFFLINE=0.0
+    ),
 )
 
 sv_kickscooter = SharedVehicleConfig(
@@ -61,7 +65,9 @@ sv_kickscooter = SharedVehicleConfig(
     PRICE_PER_MIN=0.19,
     VELOCITY_KMH=2.82,
     WALKING_DISTANCE=200,
-    COST_CONFIG=VehicleCostConfig(PER_KM=0.53, CHARGING_PER_KWH=0.23, DAILY=11.51),
+    COST_CONFIG=VehicleCostConfig(
+        PER_KM=0.53, CHARGING_PER_KWH=0.23, DAILY_ONLINE=11.51, DAILY_OFFLINE=0.0
+    ),
 )
 sv_bike = SharedVehicleConfig(
     VEHICLE_TYPE=VehicleType.BIKE,
@@ -75,7 +81,7 @@ sv_bike = SharedVehicleConfig(
     PRICE_PER_MIN=0.08,
     VELOCITY_KMH=2.82,
     WALKING_DISTANCE=200,
-    COST_CONFIG=VehicleCostConfig(PER_KM=0.1, DAILY=11.51),
+    COST_CONFIG=VehicleCostConfig(PER_KM=0.1, DAILY_ONLINE=11.51, DAILY_OFFLINE=0.0),
 )
 
 

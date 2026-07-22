@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from simulation.helper.configuration.configuration import WorkerCostConfig
     from simulation.operator.cost_accounting import WorkerCostReporter
 
+from simulation.operator.cost_accounting import NULL_WORKER_COST_REPORTER
 from simulation.operator.operations_management.service_jobs.job_queue import JobQueue
 from simulation.operator.service_worker import ServiceWorker
 
@@ -38,7 +39,7 @@ class ServiceWorkforce:
         sim: SimulationContext,
         number_service_workers: int,
         cost_config: WorkerCostConfig,
-        cost_reporter: WorkerCostReporter,
+        cost_reporter: WorkerCostReporter = NULL_WORKER_COST_REPORTER,
     ) -> None:
         self._sim = sim
         self._service_workers: list[Process] = []

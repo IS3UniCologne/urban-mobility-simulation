@@ -335,7 +335,8 @@ class VehicleCostConfig(ConfigBaseModel):
 
     PER_KM: float = Field(default=0, ge=0)
     CHARGING_PER_KWH: float = Field(default=0, ge=0)
-    DAILY: float = Field(default=0, ge=0)
+    DAILY_ONLINE: float = Field(default=0, ge=0)
+    DAILY_OFFLINE: float = Field(default=0, ge=0)
     DRIVER_PAYMENT_SHARE: float = Field(default=0, ge=0, le=1)
 
 
