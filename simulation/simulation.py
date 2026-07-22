@@ -6,6 +6,7 @@ import os
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+import numpy as np
 from pandas import DataFrame
 
 from simulation.context.simulation_context import SimulationContext
@@ -43,31 +44,36 @@ class Simulation:
         self.world = World(self.sim)
         self.metrics: Metrics = Metrics(simulation=self)
 
-    def run_simulation(self, end_time: int | None = None) -> None:
-        """
-        Run a single simulation.
-
-        Parameters
-        ----------
-        end_time : int or None
-            End time for simulation. If None, uses configuration value.
-        """
-        if end_time is None:
-            end_time = self.config.experiment_management.END_TIME
-
+    def initialize_simulation(self) -> None:
+        """Sets up the simulation environment up to time 0, ready to step."""
         self.demand_factory = self._create_demand_factory()
         self.sim.env.process(self.demand_factory.generate_demand())
 
-        self.logger.info("Starting Simulation.")
-        self.sim.env.run(until=end_time)
-        self.logger.info("Ending Simulation.")
+        self.logger.info("Simulation initialized and ready.")
 
+    def step_simulation(self, until_time: float) -> None:
+        """Advances the simulation to a specific timestamp."""
+        if self.sim.env.now < until_time:
+            self.sim.env.run(until=until_time)
+
+    def finalize_simulation(self) -> None:
+        """Runs post-processing once the gym episode ends."""
+        self.logger.info("Ending Simulation.")
         self._post_simulation_processing()
+
+    def run_simulation(self, end_time: int | None = None) -> None:
+        """Legacy method: Runs the whole thing standardly without Gym."""
+        if end_time is None:
+            end_time = self.config.experiment_management.END_TIME
+        self.initialize_simulation()
+        self.step_simulation(end_time)
+        self.finalize_simulation()
 
     def _load_supply_data(self) -> DataFrame:
         """Load vehicle supply probability data."""
         supply_path = os.path.normpath(self.config.path.PATH_VEHICLE_SUPPLY)
         return pd.read_csv(supply_path)
+
 
     def _create_demand_factory(self) -> DemandFactory:
         """Create demand factory for the simulation."""

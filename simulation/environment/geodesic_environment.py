@@ -1,11 +1,12 @@
 from __future__ import annotations  # noqa: D100
 
 import math
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import geopandas as gpd
 import h3
-import numpy
+import numpy as np
 from shapely.geometry import Point, Polygon
 
 from simulation.environment.environment import Environment
@@ -16,12 +17,12 @@ if TYPE_CHECKING:
 
 
 class GeodesicEnvironment(Environment):  # noqa: D101
-    __slots__ = ("_centroid_cache", "_hex_geom_cache", "_logger", "_rng", "_utm_epsg")
+    __slots__ = ("_centroid_cache", "_hex_geom_cache", "_logger", "_rng", "_utm_epsg", "__dict__")
 
     def __init__(self, sim: SimulationContext) -> None:
         super().__init__()
 
-        self._rng: numpy.random.Generator = sim.random_manager.get_rng(
+        self._rng: np.random.Generator = sim.random_manager.get_rng(
             component_name="GEOENV"
         )
 
@@ -62,6 +63,7 @@ class GeodesicEnvironment(Environment):  # noqa: D101
     def utm_epsg(self) -> str:
         """The UTM CRS EPSG code for the environment."""
         return self._utm_epsg
+
 
     def getLayer(self, layer_name: str):  # noqa: ANN201
         """
@@ -105,6 +107,8 @@ class GeodesicEnvironment(Environment):  # noqa: D101
             if geometry.contains(pnt):
                 return pnt.y, pnt.x  # Latitude, Longitude
 
+
+
     def get_centroid(self, hex_id: str) -> tuple[float, float]:
         """
         Get centroid of hexagon, results are cached for performance
@@ -135,6 +139,7 @@ class GeodesicEnvironment(Environment):  # noqa: D101
             ].to_dict()
 
         return self._hex_geom_cache[layer_name].get(hex_id, None)
+
 
     @staticmethod
     def move_in_layer(hex_id: str, movement: str) -> str:
@@ -295,7 +300,7 @@ class GeodesicEnvironment(Environment):  # noqa: D101
         y = math.cos(math.radians(lat1)) * math.sin(math.radians(lat2)) - math.sin(
             math.radians(lat1)
         ) * math.cos(math.radians(lat2)) * math.cos(math.radians(dLon))
-        brng = numpy.arctan2(x, y)
-        brng = numpy.degrees(brng)
+        brng = np.arctan2(x, y)
+        brng = np.degrees(brng)
 
         return brng

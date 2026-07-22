@@ -59,6 +59,7 @@ class BatterySystem(EnergySystem):
         if self._current_energy < 0:
             deficit = -self._current_energy
             self._current_energy = 0.0
+            
             raise EnergyDepletedError(
                 f"Battery depleted after traveling {distance}m. Deficit: {deficit:.2f} kWh."
             )

@@ -170,13 +170,13 @@ class VirtualChargingInfrastructure(SimulationBase):
             ) from e
         if self._current_lookahead is not None:
             # update the current lookahead to be the next coordinated (e.g. auctioned) slot
-            self._current_lookahead = self._env.now + (
+            self._current_lookahead = int(self._env.now + (
                 self._charging_infrastructure._charging_infra_config.COORDINATION_LOOKAHEAD  # noqa: SLF001
                 - (
                     self._env.now
                     % self._charging_infrastructure._charging_infra_config.COORDINATION_INTERVAL  # noqa: SLF001
                 )
-            )
+            ))
 
         if self._virtual_charging_stations is not None:
             self._update_virtual_cs()

@@ -106,7 +106,7 @@ class DemandFactory(SimulationBase):
         self,
         sim: SimulationContext,
         world: World,
-        maximal_demand=3_000_000,  # noqa: ANN001
+        maximal_demand=3,  # noqa: ANN001
     ) -> None:
         super().__init__(sim)
 

@@ -133,6 +133,9 @@ class UserState(Enum):
     MOVING_TO_DESTINATION = 32  # walk after last transit stop
     WAITING_FOR_TRANSPORT = 33
 
+USER_STATE_TO_IDX = {state: idx for idx, state in enumerate(UserState)}
+NUM_USER_STATES = len(UserState)
+
 
 # TODO: Do we need both withdrawn and missed? If so we should clarify the difference.
 class TransactionState(StrEnum):

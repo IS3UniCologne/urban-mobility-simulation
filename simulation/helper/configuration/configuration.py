@@ -27,6 +27,7 @@ import importlib.util
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, cast
+from enum import Enum
 
 from pydantic import (
     BaseModel,
@@ -428,6 +429,10 @@ class OperationsConfig(ConfigBaseModel):
         return SimulationVelocityConverter.kmh_to_meters_per_minute(v)
 
 
+class ChargingStrategy(str, Enum):
+    RL = "reinforcement_learning"
+    HEURISTIC = "heuristic"
+
 class RideHailingOperationsConfig(OperationsConfig):
     """Configuration for ride-hailing operations parameters."""
 
@@ -455,6 +460,7 @@ class RideHailingUncoordinatedChargingOperationsConfig(RideHailingOperationsConf
 
 
 class RideHailingSharedChargingOperationsConfig(RideHailingOperationsConfig):
+    STRATEGY: ChargingStrategy
     """Configuration for shared, coordinated charging operations."""
 
 

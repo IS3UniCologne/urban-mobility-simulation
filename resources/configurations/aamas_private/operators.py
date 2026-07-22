@@ -12,6 +12,8 @@ from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
 from simulation.operator.operations_management.algorithms.charging_station_allocation import (
     DowntimeMinWithoutLookahead,
 )
+from simulation.world.markets.shared_charging_auction import SharedChargingAuction
+
 
 rh_car_autonomous = RideHailingVehicleConfig(
     VELOCITY_KMH=32.16,
@@ -54,10 +56,11 @@ charging_infrastructure_1 = ChargingInfrastructureConfig(
     # How many spaces without plugs (queue for plugs) a charging station has, if single value, all stations have the same capacity
     CHARGING_STATION_QUEUE_SIZE=[5],
     AUCTION_CONFIG=SharedChargingAuctionConfig(
+        AUCTION_TYPE=SharedChargingAuction,
         AUCTION_START=10,
         AUCTION_END=20_160,
-        AUCTION_INTERVAL=10,
-        TIMESLOT_DURATION=90,
+        AUCTION_INTERVAL=20,
+        TIMESLOT_DURATION=20,
         AUCTION_LOOKAHEAD=20,
     ),
 )

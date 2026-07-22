@@ -225,6 +225,21 @@ class User(Agent):
         """Get the total energy consumed by the user's activities."""
         return self._energy_consumed
 
+    @property
+    def search_start_time(self) -> float | None:
+        """Get the simulation time when the user started searching."""
+        return getattr(self, "_search_start_time", None)
+
+    @property
+    def search_end_time(self) -> float | None:
+        """Get the simulation time when the user finished or timed out searching."""
+        return getattr(self, "_search_end_time", None)
+
+    @property
+    def trip_start_time(self) -> float | None:
+        """Get the simulation time when the user finished or timed out searching."""
+        return getattr(self, "_search_end_time", None)
+
     def run(self) -> Generator[Process | Timeout, Any, None]:
         """
         Full user lifecycle.

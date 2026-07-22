@@ -198,3 +198,4 @@ AGENTS.md
 .agents/
 GEMINI.md
 .gemini/
+*.csv

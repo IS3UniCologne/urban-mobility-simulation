@@ -22,11 +22,12 @@ from simulation.operator.operator import Operator, OperatorDependencies
 class RideHailingOperator(Operator):
     """Operator for ride-hailing services."""
 
-    __slots__ = ("_charging_infrastructure",)
+    __slots__ = ("_charging_infrastructure", "_earnings")
 
     def __init__(self, deps: OperatorDependencies) -> None:
         super().__init__(deps=deps)
         self._mode = OperatorMode.RIDE_HAILING
+        self._earnings = 0
 
     @property
     def charging_infrastructure(self) -> ChargingInfrastructure:
@@ -36,6 +37,11 @@ class RideHailingOperator(Operator):
                 "Charging infrastructure must be provided for ride-hailing."
             )
         return self._charging_infrastructure
+
+    @property
+    def earnings(self) -> float:
+        """Return the charging infrastructure for electric vehicles."""
+        return self._earnings
 
     def pay_for_fulfilled_transportation_task(  # noqa: ANN201, D102
         self,
@@ -47,6 +53,7 @@ class RideHailingOperator(Operator):
             vehicle_allocation.transportation_alternative
         )
         payment = selected_transportation_alternative.price
+        self._earnings += payment
 
         # Add Transaction to Log
         self.log_transaction(

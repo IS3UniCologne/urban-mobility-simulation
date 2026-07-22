@@ -47,7 +47,7 @@ class RideHailingGreedyChargingOperations(RideHailingOperations):
             deps.sim.config.world.SPATIAL_RESOLUTION - 1, unit="m"
         )  # use a buffer when calculating distances to charging stations of next coarser grid level edge length (radius)
 
-        self._recharge_threshold = self._config.RECHARGE_THRESHOLD
+        self._recharge_threshold = [1.0 for threshold in self._config.RECHARGE_THRESHOLD]
 
         self._allow_queue = self._config.ALLOWED_QUEUE_SIZE > 0
 
@@ -75,7 +75,7 @@ class RideHailingGreedyChargingOperations(RideHailingOperations):
     def job_transactions(self):  # noqa: ANN201, D102
         return pd.DataFrame(self._job_transactions)
 
-    def execute(self) -> Generator[Timeout, None, None]:
+    def execute(self, pairs) -> Generator[Timeout, None, None]:
         """Run main loop of greedy lowest-soc, closest-charging-station operations.
 
         Yields

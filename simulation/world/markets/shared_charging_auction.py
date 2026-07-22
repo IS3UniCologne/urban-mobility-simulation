@@ -50,7 +50,7 @@ class SharedChargingAuction(Auction):  # noqa: D101
         # bids are a list of n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
 
         self._shared_charging_config = shared_charging_config
-        self._bid_syntax = dict[str, list[tuple[int, int | float, int]]]
+        self._bid_syntax = dict[str, list[tuple[int, int | float, int, int]]]
 
         # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
         self._result_syntax = dict[int, dict[str, tuple[int, float]]]
@@ -182,10 +182,11 @@ class SharedChargingAuction(Auction):  # noqa: D101
             return
 
         bids_df = pd.DataFrame.from_records(
-            location_bids, columns=["capacity", "bid_price", "bidder_id"]
+            location_bids, columns=["capacity", "bid_price", "bidder_id", "vehicle_id"]
         )
+        # CHANGED: Added vehicle_id conversion to int to handle integer vehicle identifiers
         bids_df = bids_df.astype(
-            {"capacity": int, "bid_price": float, "bidder_id": int}
+            {"capacity": int, "bid_price": float, "bidder_id": int, "vehicle_id": int}
         )
         bids_df.sort_values(by="bid_price", ascending=False, inplace=True)
 
@@ -207,7 +208,6 @@ class SharedChargingAuction(Auction):  # noqa: D101
             bidders_to_tiebreak = bids_df.loc[
                 bids_df["bid_price"] == clearing_price, "bidder_id"
             ].values
-
             counts = Counter(
                 self.__tiebreak_capacity(
                     capacity_to_tiebreak, bidders_to_tiebreak.tolist()
@@ -262,7 +262,7 @@ class SharedChargingAuction(Auction):  # noqa: D101
         submitted_ids = [result[0] for result in result_list]
         for participant in self._participants:
             if participant.auction_participant_id not in submitted_ids:
-                result_list.append((participant.auction_participant_id, 0, 0.0))
+                result_list.append((participant.auction_participant_id, 0, clearing_price))
 
         self._location_results[location] = {t[0]: (t[1], t[2]) for t in result_list}
 

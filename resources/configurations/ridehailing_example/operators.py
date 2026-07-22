@@ -6,14 +6,20 @@ from simulation.helper.configuration.configuration import (
     RideHailingOperatorConfig,
     RideHailingSearchEngineConfig,
     RideHailingVehicleConfig,
+    SharedChargingAuctionConfig,
+    RideHailingSharedChargingOperationsConfig,
+    ChargingStrategy,
+
 )
 from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
-from simulation.operator.operations_management.ridehailing_greedy_charging_operations import (
-    RideHailingGreedyChargingOperations,
+from simulation.operator.operations_management.ridehailing_shared_charging_operations import (
+    RideHailingSharedChargingOperations,
 )
+
 from simulation.operator.ride_hailing_allocation_engine import (
     RideHailingAllocationEngine,
 )
+from simulation.world.markets.shared_charging_auction import SharedChargingAuction
 from simulation.operator.ride_hailing_fleet import RideHailingFleet
 from simulation.operator.ride_hailing_search_engine import RideHailingSearchEngine
 
@@ -79,7 +85,7 @@ RH_AVAILABILITY = [
 
 fleet1 = RideHailingFleetConfig(
     FLEET_TYPE=RideHailingFleet,
-    VEHICLES={rh_car_autonomous: 250, rh_car_human: 250},
+    VEHICLES={rh_car_autonomous: 10,},
     RH_AVAILABILITY=RH_AVAILABILITY,
 )
 
@@ -87,34 +93,32 @@ charging_infrastructure_1 = ChargingInfrastructureConfig(
     # If lists are provided, heterogeneous charging stations are possible
     # If single value lists are provided, we assume the same values for all locations
     # Number of charging stations can be used to cut down on the number of charging stations without modifying the locations
-    NUMBER_OF_CHARGING_STATIONS=16,
+    NUMBER_OF_CHARGING_STATIONS=5,
     ##### berlin
     LOCATIONS=[
-        "871f18869ffffff",
-        "871f18b0dffffff",
-        "871f18b23ffffff",
-        "871f18b26ffffff",
-        "871f18b35ffffff",
-        "871f1d483ffffff",
-        "871f1d489ffffff",
-        "871f1d48bffffff",
-        "871f1d48effffff",
-        "871f1d49cffffff",
-        "871f1d4aaffffff",
-        "871f1d4b3ffffff",
-        "871f1d4d2ffffff",
-        "871f1d4d3ffffff",
-        "871f1d4f3ffffff",
-        "871f1d4f6ffffff",
-    ],
+        '871f18b6effffff',
+        '871f1d4f1ffffff',
+        '871f1d413ffffff',
+        '871f18863ffffff',
+        '871f1d7a6ffffff'
+         ],
     # If single value, all stations have the same power
     # Analysis of electric vehicle charging station usage and profitability in Germany based on empirical data -> Analysis of electric vehicle charging station usage and profitability in Germany based on empirical data / https://www.iea.org/reports/global-ev-outlook-2025/electric-vehicle-charging
     # Representative empirical, real-world charging station usage characteristics and data in Germany -> https://www.sciencedirect.com/science/article/pii/S2590116820300369
     CHARGING_STATION_POWER=[50.0],
     # How many plugs / slots a charging station has. If single value, all stations have the same capacity
-    CHARGING_STATION_CAPACITY=[20],
+    CHARGING_STATION_CAPACITY=[1],
     # How many spaces without plugs (queue for plugs) a charging station has, if single value, all stations have the same capacity
-    CHARGING_STATION_QUEUE_SIZE=[99],
+    CHARGING_STATION_QUEUE_SIZE=[1],
+
+    AUCTION_CONFIG=SharedChargingAuctionConfig(
+        AUCTION_TYPE=SharedChargingAuction,
+        AUCTION_START=0,
+        AUCTION_END=1440,
+        AUCTION_INTERVAL=60,
+        TIMESLOT_DURATION=60,
+        AUCTION_LOOKAHEAD=60,
+    ),
 )
 
 # When vehicles drop below RECHARGE_THRESHOLD => cannot be rented and needs to be recharged
@@ -148,20 +152,26 @@ DEFAULT_RECHARGE_THRESHOLD = [
 operator_1 = RideHailingOperatorConfig(
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    OPERATIONS_CONFIG=RideHailingGreedyChargingOperationsConfig(
-        OPERATIONS_TYPE=RideHailingGreedyChargingOperations,
-        OPERATIONS_START=15,
-        OPERATIONS_DURATION=50,
-        TIME_BETWEEN_OPERATIONS=15,
-        RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
-        VEHICLE_RELOCATION_VELOCITY=9.54,
-        AV_PRICE_REDUCTION=0.90,
-        MAX_PICKUP_DISTANCE=10000,
-        PRICE_ENTERING=2.0,
-        PRICE_PER_MINUTE=0.35,
-        PRICE_PER_KM=1.3,
-        MINIMUM_PRICE=5.0,
-        DRIVER_PAYMENT_SHARE=0.75,
+    OPERATIONS_CONFIG=RideHailingSharedChargingOperationsConfig(
+        OPERATIONS_TYPE=RideHailingSharedChargingOperations,
+        OPERATIONS_START=10,
+        OPERATIONS_DURATION=10,
+        TIME_BETWEEN_OPERATIONS=10,
+        RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD, 
+        VEHICLE_RELOCATION_VELOCITY=32.16,
+        ALLOWED_QUEUE_SIZE=0,
+        AV_PRICE_REDUCTION=1.0,
+        MAX_PICKUP_DISTANCE=5000,
+        PRICE_ENTERING=2.0,  # doesnt apply
+        PRICE_PER_MINUTE=0.35,  # TODO: should be in the car?
+        PRICE_PER_KM=1.3,  # TODO: should be in the car?
+        MINIMUM_PRICE=5.0,  # doesn't apply?
+        DRIVER_PAYMENT_SHARE=0.75,  # doesn't apply
+        BID_DEFAULT=1,
+        BID_DECAY=0.0001,
+        RANDOM_OVERBIDDING=True,
+        OVERBID_PROB=0.3,
+        STRATEGY=ChargingStrategy.RL,
     ),
     SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
         SEARCH_ENGINE_TYPE=RideHailingSearchEngine
@@ -173,20 +183,26 @@ operator_1 = RideHailingOperatorConfig(
 operator_2 = RideHailingOperatorConfig(
     FLEET_CONFIG=fleet1,
     CHARGING_INFRASTRUCTURE=charging_infrastructure_1,
-    OPERATIONS_CONFIG=RideHailingGreedyChargingOperationsConfig(
-        OPERATIONS_TYPE=RideHailingGreedyChargingOperations,
-        OPERATIONS_START=15,
-        OPERATIONS_DURATION=50,
-        TIME_BETWEEN_OPERATIONS=15,
-        RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
-        VEHICLE_RELOCATION_VELOCITY=9.54,
-        AV_PRICE_REDUCTION=0.90,
-        MAX_PICKUP_DISTANCE=10000,
-        PRICE_ENTERING=2.0,
-        PRICE_PER_MINUTE=0.35,
-        PRICE_PER_KM=1.3,
-        MINIMUM_PRICE=5.0,
-        DRIVER_PAYMENT_SHARE=0.75,
+    OPERATIONS_CONFIG=RideHailingSharedChargingOperationsConfig(
+        OPERATIONS_TYPE=RideHailingSharedChargingOperations,
+        OPERATIONS_START=10,
+        OPERATIONS_DURATION=10,
+        TIME_BETWEEN_OPERATIONS=10,
+        RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD, 
+        VEHICLE_RELOCATION_VELOCITY=32.16,
+        ALLOWED_QUEUE_SIZE=0,
+        AV_PRICE_REDUCTION=1.0,
+        MAX_PICKUP_DISTANCE=5000,
+        PRICE_ENTERING=2.0,  # doesnt apply
+        PRICE_PER_MINUTE=0.35,  # TODO: should be in the car?
+        PRICE_PER_KM=1.3,  # TODO: should be in the car?
+        MINIMUM_PRICE=5.0,  # doesn't apply?
+        DRIVER_PAYMENT_SHARE=0.75,  # doesn't apply
+        BID_DEFAULT=1,
+        BID_DECAY=0.0001,
+        RANDOM_OVERBIDDING=True,
+        OVERBID_PROB=0.3,
+        STRATEGY=ChargingStrategy.RL,
     ),
     SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
         SEARCH_ENGINE_TYPE=RideHailingSearchEngine
