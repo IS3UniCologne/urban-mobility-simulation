@@ -3,7 +3,7 @@ description     = "Urban Mobility Simulation"
 name            = "urban-mobility-simulation"
 readme          = "README.md"
 requires-python = ">=3.11, <3.14.0"
-version         = "0.1.0"
+version         = "0.2.0"
 
 classifiers = [
   "Private :: Do Not Upload",
@@ -15,62 +15,53 @@ classifiers = [
 
 
 dependencies = [
-  "beartype>=0.21.0",
-  "cython>=3.1.0",
-  "geojson>=3.2.0",
-  "geopandas>=1.0.1",
-  "h3>=4.2.2",
+  "beartype>=0.22.9",
+  "geojson>=3.3.0",
+  "geopandas>=1.1.4",
+  "h3>=4.5.0",
   "haversine>=2.9.0",
-  "matplotlib>=3.9.4",
-  "pandas>=2.2.3",
-  "pip>=25.0.1",
-  "prettytable>=3.16.0",
-  "pyarrow>=19.0.1",
-  "pydantic>=2.11.4",
+  "matplotlib>=3.11.0",
+  "pandas>=3.0.3",
+  "prettytable>=3.18.0",
+  "pyarrow>=25.0.0",
+  "pydantic>=2.13.4",
   "rtree>=1.4.1",
-  "shapely>=2.0.7",
-  "simpy>=4.1.1",
-  "statsmodels>=0.14.4",
-  "tqdm>=4.67.1",
+  "shapely>=2.1.2",
+  "simpy>=4.1.2",
+  "statsmodels>=0.14.6",
 ]
 [dependency-groups]
 dev = [
-  { include-group = "performance" },
+  { include-group = "benchmarks" },
   { include-group = "pre-commit" },
   { include-group = "testing" },
   { include-group = "typing" },
 ]
 
-performance = [
-  "py-spy>=0.3.11",
-  "pyperf>=2.9.0",
-  "scalene>=1.5.51",
-  "pyinstrument>=5.1.1",
-]
+benchmarks = ["pyperf>=2.10.0"]
 
-pre-commit = ["pre-commit>=4.2.0", "ruff>=0.11.0"]
+pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.21"]
 
-testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=8.3.5"]
+testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.1.1"]
 
 typing = [
-  "mypy>=1.15.0",
-  "pandas-stubs>=2.2.2.240807",
-  "types-shapely>=2.1.0.20250512",
+  "pyrefly>=1.1.1",
+  "pandas-stubs>=3.0.3.260530",
+  "types-shapely>=2.1.0.20260630",
+  "types-geopandas>=1.1.4.20260628",
 ]
 
 
 [project.optional-dependencies]
-ml = ["torch>=2.6.0", "highspy>=1.10.0", "pyomo>=6.9.2"]
-notebooks = [
-  "contextily>=1.6.2",
-  "ipython>=8.18.1",
-  "notebook>=7.3.2",
-  "seaborn>=0.13.2",
-  "sidetable>=0.9.1",
+ml = [
+  "highspy>=1.15.1", #highspy is not explicitly imported anywhere, but used as a solver for pyomo
+  "torch>=2.13.0",
+  "pyomo>=6.10.1",
 ]
-viz = [
-    "bokeh>=3.7.3",
-]
+viz = ["bokeh>=3.9.1"]
+
+[project.scripts]
+umosim = "scripts.umosim:main"
 
 [build-system]
 build-backend = "setuptools.build_meta"
@@ -79,6 +70,8 @@ requires      = ["cython", "setuptools"]
 
 [tool.setuptools]
 packages = [
+  "scripts",
+  "scripts._cli",
   "simulation",
   "simulation.environment",
   "simulation.environment.cython_ext",
@@ -92,17 +85,16 @@ ext-modules = [
   ] },
 ]
 
-
 [tool.ruff]
-extend-exclude = ["*.ipynb"]
-fix            = true
-output-format  = "grouped"
+fix           = true
+output-format = "grouped"
 [tool.ruff.format]
 skip-magic-trailing-comma = true
 [tool.ruff.lint.mccabe]
 max-complexity = 18
 
 [tool.uv]
+exclude-newer     = "1 week"
 python-preference = "only-managed"
 
 [tool.ruff.lint]
@@ -130,9 +122,10 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 # These directories do not follow the same style as the rest of the codebase.
+"data/projects/*" = ["F401", "E402"]
 "learning/*"      = ["D"]
-"planning/*"      = ["D"]
 "resources/*"     = ["D"]
+"scripts/*"       = ["T201", "E402"]
 "tests/*"         = ["D", "SLF001", "T201"]
 "visualization/*" = ["D"]
 
@@ -140,115 +133,56 @@ convention = "numpy"
 "simulation/helper/configuration/configuration.py" = ["TC001"]
 
 
-[tool.mypy]
-# Enable type checking for all simulation modules
-exclude = []
-files   = ["simulation/"]
-plugins = ["pydantic.mypy"]
-
-# General type checking options
-check_untyped_defs  = true
-warn_unreachable    = true
-warn_unused_configs = true
-
-# Strictness and error reporting
-disallow_any_generics    = true
-disallow_incomplete_defs = true
-disallow_untyped_defs    = true
-no_implicit_optional     = true
-warn_redundant_casts     = true
-warn_return_any          = true
-
-# Enable specific error codes
-enable_error_code = ["redundant-expr", "truthy-bool"]
-
-# Since we are incrementally adding type hints, we want to ignore errors in
-# untyped modules. Remove modules from this list as they are typed.
-[[tool.mypy.overrides]]
-ignore_errors = true
-module = [
-  "simulation.agent.action_space",
-  "simulation.agent.agent",
-  "simulation.agent.deep_q_learning",
-  "simulation.agent.episodic_semi_gradient_n_step_sarsa",
-  "simulation.agent.episodic_semi_gradient_sarsa",
-  "simulation.agent.policy",
-  "simulation.agent.rl_agent",
-  "simulation.environment.environment",
-  "simulation.environment.geodesic_environment",
-  "simulation.environment.geodesic_position",
-  "simulation.helper.configuration.configuration",
-  "simulation.helper.logging.extra_default_filter",
-  "simulation.helper.logging.simulation_context_filter",
-  "simulation.helper.random.random_manager",
-  "simulation.helper.time",
-  "simulation.infrastructure.charging_stations.charging_infastructure",
-  "simulation.infrastructure.charging_stations.charging_station",
-  "simulation.infrastructure.charging_stations.virtual_charging_infrastructure",
-  "simulation.infrastructure.charging_stations.virtual_charging_station",
-  "simulation.infrastructure.helper.distance_matrix_importer",
-  "simulation.infrastructure.helper.timetable",
-  "simulation.infrastructure.route",
-  "simulation.infrastructure.transit_network.route_segment",
-  "simulation.infrastructure.transit_network.stop",
-  "simulation.operator.data_transfer_object.vehicle_allocation",
-  "simulation.operator.fleet_factory",
-  "simulation.operator.interface.payment_interface",
-  "simulation.operator.interface.vehicle_allocation_engine_interface",
-  "simulation.operator.ride_hailing_fleet",
-  "simulation.operator.mixed_shared_vehicle_fleet",
-  "simulation.operator.operations_management.algorithms.charging_station_allocation",
-  "simulation.operator.operations_management.algorithms.distance_based_bidding_strategy",
-  "simulation.operator.operations_management.integrated_shared_mobility_operations",
-  "simulation.operator.operations_management.operations",
-  "simulation.operator.operations_management.operations_public_transport",
-  "simulation.operator.operations_management.ridehailing_MP_charging_operations",
-  "simulation.operator.operations_management.ridehailing_base_charging_operations",
-  "simulation.operator.operations_management.ridehailing_greedy_charging_operations",
-  "simulation.operator.operations_management.ridehailing_shared_charging_operations",
-  "simulation.operator.operations_management.ridehailing_uncoordinated_charging_operations",
-  "simulation.operator.operations_management.service_tasks.charging_task",
-  "simulation.operator.operations_management.service_tasks.charging_task_ridehailing",
-  "simulation.operator.operations_management.service_tasks.multi_service_task",
-  "simulation.operator.operations_management.service_tasks.relocation_task",
-  "simulation.operator.operations_management.service_tasks.service_task",
-  "simulation.operator.operations_management.task_queue",
-  "simulation.operator.operator",
-  "simulation.operator.public_transit_operator",
-  "simulation.operator.public_transport_allocation_engine",
-  "simulation.operator.public_transport_search_engine",
-  "simulation.operator.public_transport_vehicle_fleet",
-  "simulation.operator.ride_hailing_allocation_engine",
-  "simulation.operator.ride_hailing_operator",
-  "simulation.operator.ride_hailing_search_engine",
-  "simulation.operator.service_worker",
-  "simulation.operator.service_workforce",
-  "simulation.operator.shared_mobility_operator",
-  "simulation.operator.shared_vehicle_allocation_engine",
-  "simulation.operator.shared_vehicle_search_engine",
-  "simulation.operator.walking_search_engine",
-  "simulation.tasks.transport_request",
-  "simulation.tasks.transportation_search_task",
-  "simulation.vehicle.interfaces.driver_interface",
-  "simulation.vehicle.interfaces.passenger_interface",
-  "simulation.vehicle.public_transit_bus",
-  "simulation.vehicle.public_transit_vehicle",
-  "simulation.vehicle.ride_hailing_vehicle",
-  "simulation.vehicle.shared_vehicle",
-  "simulation.vehicle.walking",
-  "simulation.vehicle_choice_model.distance_based_shared_vehicle_choice_behavior",
-  "simulation.vehicle_choice_model.only_car_vehicle_choice_behavior",
-  "simulation.vehicle_choice_model.only_walking_choice_behavior",
-  "simulation.vehicle_choice_model.public_transit_vehicle_choice_behavior",
-  "simulation.vehicle_choice_model.trip_characteristics",
-  "simulation.world",
-  "simulation.world.demand.demand_factory",
-  "simulation.world.markets.auction",
-  "simulation.world.markets.interfaces.bidder_interface",
-  "simulation.world.markets.shared_charging_auction",
-  "simulation.world.world",
-  "tracking.tracking",
-  "tracking.tracking_interface",
+[tool.pyrefly]
+min-severity     = "warn"
+project-includes = ["simulation/"]
+# Exclude untyped modules from error reporting; remove entries as modules are typed
+project-excludes = [
+  "simulation/agent/action_space.py",
+  "simulation/agent/agent.py",
+  "simulation/agent/deep_q_learning.py",
+  "simulation/agent/episodic_semi_gradient_n_step_sarsa.py",
+  "simulation/agent/episodic_semi_gradient_sarsa.py",
+  "simulation/agent/policy.py",
+  "simulation/agent/rl_agent.py",
+  "simulation/helper/configuration/configuration.py",
+  "simulation/operator/data_transfer_object/vehicle_allocation.py",
+  "simulation/operator/interface/vehicle_allocation_engine_interface.py",
+  "simulation/operator/ride_hailing_fleet.py",
+  "simulation/operator/mixed_shared_vehicle_fleet.py",
+  "simulation/operator/operations_management/algorithms/charging_station_allocation.py",
+  "simulation/operator/operations_management/algorithms/distance_based_bidding_strategy.py",
+  "simulation/operator/operations_management/integrated_shared_mobility_operations.py",
+  "simulation/operator/operations_management/operations.py",
+  "simulation/operator/operations_management/operations_public_transport.py",
+  "simulation/operator/operations_management/ridehailing_MP_charging_operations.py",
+  "simulation/operator/operations_management/ridehailing_base_charging_operations.py",
+  "simulation/operator/operations_management/ridehailing_greedy_charging_operations.py",
+  "simulation/operator/operations_management/ridehailing_shared_charging_operations.py",
+  "simulation/operator/operations_management/ridehailing_uncoordinated_charging_operations.py",
+  "simulation/operator/operator.py",
+  "simulation/operator/public_transit_operator.py",
+  "simulation/operator/public_transport_allocation_engine.py",
+  "simulation/operator/public_transport_search_engine.py",
+  "simulation/operator/public_transport_vehicle_fleet.py",
+  "simulation/operator/ride_hailing_allocation_engine.py",
+  "simulation/operator/ride_hailing_operator.py",
+  "simulation/operator/ride_hailing_search_engine.py",
+  "simulation/operator/service_worker.py",
+  "simulation/operator/service_workforce.py",
+  "simulation/operator/shared_mobility_operator.py",
+  "simulation/operator/shared_vehicle_allocation_engine.py",
+  "simulation/operator/shared_vehicle_search_engine.py",
+  "simulation/vehicle/public_transit_bus.py",
+  "simulation/vehicle/public_transit_vehicle.py",
+  "simulation/vehicle/ride_hailing_vehicle.py",
+  "simulation/vehicle/shared_vehicle.py",
+  "simulation/world/__init__.py",
+  "simulation/world/demand/demand_factory.py",
+  "simulation/world/markets/auction.py",
+  "simulation/world/markets/interfaces/bidder_interface.py",
+  "simulation/world/markets/shared_charging_auction.py",
+  "simulation/world/world.py",
 ]
 
 [tool.pytest.ini_options]
@@ -268,4 +202,5 @@ markers = [
 python_classes = ["Test*"]
 python_files = ["*_test.py", "test_*.py"]
 python_functions = ["test_*"]
+pythonpath = ["."]
 testpaths = ["tests"]

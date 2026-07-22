@@ -3,9 +3,9 @@
 
 name: CI Pipeline
 on:
-  # run when pushing to main or develop
+  # run when pushing to develop
   push:
-    branches: [main, develop]
+    branches: [develop]
   # run when opening, synchronizing, or reopening a pull request
   pull_request:
     types: [opened, synchronize, reopened]
@@ -14,14 +14,19 @@ permissions:
   # added using https://github.com/step-security/secure-workflows
   contents: read
 
+# Cancel a in-progress run when a newer commit is pushed to the same PR or branch.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  mypy:
+  pyrefly:
     runs-on: self-hosted
-    name: Mypy static type checking
+    name: Pyrefly static type checking
 
     steps:
     - name: Check out the repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Install the latest version of uv
       uses:  astral-sh/setup-uv@v7
@@ -32,13 +37,13 @@ jobs:
       run: |
         uv tool install nox
 
-    - name: Run mypy
+    - name: Run pyrefly
       run: |
-        nox -rs mypy
+        nox -rs pyrefly
 
-  unit-test:
+  fast-test:
     runs-on: self-hosted
-    name: Unit Test
+    name: Fast Tests (unit + integration)
     steps:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
@@ -46,21 +51,21 @@ jobs:
           version: "latest"
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Nox
         run: |
           uv tool install nox
 
-      - name: Run Unit Tests
-        id: unit_test
+      - name: Run Fast Tests
+        id: fast_test
         run: |
-          nox -rs pytest -- --durations=10 -m unit
+          nox -rs pytest_fast
 
   end-to-end-test:
     runs-on: self-hosted
     name: End-to-End Test
-    needs: unit-test # Ensure unit tests pass before running end-to-end tests
+    needs: fast-test # Ensure fast tests pass before running end-to-end tests
     steps:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
@@ -68,7 +73,7 @@ jobs:
           version: "latest"
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Copy local files to workspace
         run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/data
@@ -80,7 +85,7 @@ jobs:
       - name: Run End-to-End Tests
         id: end_to_end_test
         run: |
-          nox -rs pytest -- --durations=10 -m end_to_end
+          nox -rs pytest_e2e
 
       - name: Copy simulation logs on failure
         if: failure()

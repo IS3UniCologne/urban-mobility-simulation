@@ -31,10 +31,6 @@ if TYPE_CHECKING:
 class RideHailingGreedyChargingOperations(RideHailingOperations):
     """Naive, greedy charging operations for ride hailing operators.
 
-    .. deprecated::
-        Use ``CompetitiveChargingOperations`` with a ``GreedyClosestAvailable``
-        strategy instead.  This class will be removed in a future version.
-
     This class implements a myopic, greedy charging strategy for ride hailing operators based on available charging stations at the moment of execution.
     If queueing at charging stations is not allowed, lowest SOC vehicles are sent to closest charging stations until capacity is exhausted.
     TODO: If queueing is allowed, lowest SOC vehicles are sent to charging stations that minimize the total time (travel + (queue-travel) + charging).

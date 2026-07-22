@@ -62,12 +62,10 @@ class UserFactory(SimulationBase):
         """
         # Get Origin and Destination positions
         origin_lat, origin_lng = self._geo_env.get_random_position(
-            hex_id=origin_region,
-            layer_name=f"hex_{self._config.world.SPATIAL_RESOLUTION}",
+            hex_id=origin_region, layer_name="hex"
         )
         destination_lat, destination_lng = self._geo_env.get_random_position(
-            hex_id=destination_region,
-            layer_name=f"hex_{self._config.world.SPATIAL_RESOLUTION}",
+            hex_id=destination_region, layer_name="hex"
         )
 
         origin_position = GeodesicPosition(self._sim, origin_lat, origin_lng)

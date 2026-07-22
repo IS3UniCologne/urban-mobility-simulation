@@ -1,4 +1,4 @@
-"""Lgging filter that injects the current simulation time from a SimPy environment into log records."""
+"""Logging filter that injects the current simulation time from a SimPy environment into log records."""
 
 import logging
 
@@ -9,15 +9,12 @@ class EnvTimeInjector(logging.Filter):
     """
     Logging filter that injects the current simulation time from a SimPy environment into log records.
 
-    Attributes
+    Parameters
     ----------
-    _env : simpy.Environment
-        The SimPy environment providing the current simulation time.
-
-    Methods
-    -------
-    filter(record: logging.LogRecord) -> bool
-        Adds the current simulation time to the log record.
+    filter_name : str
+        Filter name.
+    env : simpy.Environment
+        SimPy environment providing the current simulation time.
     """
 
     __slots__ = ("_env",)
@@ -33,12 +30,12 @@ class EnvTimeInjector(logging.Filter):
         Parameters
         ----------
         record : logging.LogRecord
-            The log record to which the simulation time will be added.
+            Log record to annotate with the simulation time.
 
         Returns
         -------
         bool
-            Always returns True to allow the log record to be processed.
+            Always True, so the record is processed.
         """
         # This is faster than rounding, rounding errors should not be an issue
         record.env_time = int(self._env.now * 100) / 100

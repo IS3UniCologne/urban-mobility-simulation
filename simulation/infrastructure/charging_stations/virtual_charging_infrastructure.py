@@ -1,7 +1,8 @@
-from __future__ import annotations  # noqa: D100
+"""Per-observer virtual view of the physical charging infrastructure."""
 
-from types import SimpleNamespace
-from typing import TYPE_CHECKING
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
 
 from beartype.door import die_if_unbearable
 from beartype.roar import BeartypeDoorHintViolation
@@ -15,19 +16,49 @@ from simulation.infrastructure.charging_stations.virtual_charging_station import
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from simpy import Event
+
     from simulation.context.simulation_context import SimulationContext
+    from simulation.helper.types import RegionId, SimId
     from simulation.infrastructure.charging_stations.charging_infastructure import (
         ChargingInfrastructure,
     )
 
 
-class VirtualChargingInfrastructure(SimulationBase):
-    """
-    This class provides a virtual charging infrastructure (a special view on the physical charging infrastructure) to a certain observer.
-    This could e.g. be fleet operators that are only allowed to charge at locations where they buy capacity.
+class _PlugEventListener:
+    """Holder of plug-in/out acknowledgement events for one station."""
 
-    This class replicates the public API of ChargingInfrastructure. #TODO: Yes? Then we should we make sure about this by implementing a Protocol
-    """  # noqa: D205, D404
+    __slots__ = ("processed_plug_in_event", "processed_plug_out_event")
+
+    def __init__(
+        self, processed_plug_in_event: Event, processed_plug_out_event: Event
+    ) -> None:
+        self.processed_plug_in_event = processed_plug_in_event
+        self.processed_plug_out_event = processed_plug_out_event
+
+
+class VirtualChargingInfrastructure(SimulationBase):
+    """Observer-specific view on the physical charging infrastructure.
+
+    Used e.g. by fleet operators only allowed to charge where they bought
+    capacity. Replicates the public API of ChargingInfrastructure.
+    TODO: enforce that shared API.
+
+    ALSO TODO: The heterogeneity introduced by the lookahead and virtual_cs options is a bit awkward;
+    we might want to split this in the future
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        Simulation context.
+    charging_infrastructure : ChargingInfrastructure
+        Backing physical infrastructure.
+    lookahead : int or None
+        If set, build an artificial plan over future timeslots; if None, mirror
+        the underlying infrastructure and update from outside as needed.
+    use_virtual_cs : bool
+        Whether to create VirtualChargingStation views over the physical stations.
+    """
 
     __slots__ = (
         "_availability",
@@ -53,18 +84,22 @@ class VirtualChargingInfrastructure(SimulationBase):
         # if virtual charging infra is used to create a completely artificial plan of infrastructure, including future timeslots, use lookahead
         # otherwise, (if lookahead is None) be a mirror of the real underlying infrastructure, that can be updated from outside as needed
 
-        self._current_lookahead = lookahead
+        self._current_lookahead: float | None = lookahead
         self._use_virtual_cs = use_virtual_cs
 
+        # Without lookahead, availability maps location -> free capacity. With
+        # lookahead, it maps timeslot -> (location -> free capacity).
+        self._availability: dict[RegionId, int] | dict[float, dict[RegionId, int]]
         if self._current_lookahead is None:
-            self._availability: dict[str, int] = {
+            self._availability = {
                 station.location: station.capacity
                 for station in charging_infrastructure.charging_stations
             }
         else:
-            self._availability: dict[int, dict[str, int]] = {}
+            self._availability = {}
 
         self._charging_infrastructure = charging_infrastructure
+        self._virtual_charging_stations: list[VirtualChargingStation] | None
         if use_virtual_cs:
             self._virtual_charging_stations = [
                 VirtualChargingStation(
@@ -80,9 +115,10 @@ class VirtualChargingInfrastructure(SimulationBase):
         else:
             self._virtual_charging_stations = None
 
+        self._listeners: dict[SimId, _PlugEventListener] | None
         if self._current_lookahead is None and self._use_virtual_cs:
             self._listeners = {}
-            for cs in self._virtual_charging_stations:
+            for cs in self._charging_stations():
                 self._env.process(self._sync_with_real(cs))
         else:
             self._listeners = None
@@ -99,103 +135,125 @@ class VirtualChargingInfrastructure(SimulationBase):
         else:
             return self._virtual_charging_stations
 
-    def get_available_locations(self, at_timeslot: int | None):  # noqa: ANN201, D102
+    def get_available_locations(self, at_timeslot: float | None) -> list[RegionId]:
+        """Locations with positive available capacity, optionally at a timeslot."""
         if at_timeslot is None:
-            return [
-                location
-                for location, capacity in self._availability.items()
-                if capacity > 0
-            ]
+            location_avail = cast("dict[RegionId, int]", self._availability)
+            return [loc for loc, capacity in location_avail.items() if capacity > 0]
 
+        timeslot_avail = cast("dict[float, dict[RegionId, int]]", self._availability)
         try:
             return [
-                location
-                for location, capacity in self._availability[at_timeslot].items()
+                loc
+                for loc, capacity in timeslot_avail[at_timeslot].items()
                 if capacity > 0
             ]
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_available_capacity(  # noqa: D102
-        self, at_timeslot: int | None = None
-    ) -> dict[int, dict[str, int]] | dict[str, int]:
+    def get_available_capacity(
+        self, at_timeslot: float | None = None
+    ) -> dict[float, dict[RegionId, int]] | dict[RegionId, int]:
+        """Available capacity, by location (no lookahead) or for a timeslot."""
         if self._current_lookahead is None:
-            return self._availability
+            return cast("dict[RegionId, int]", self._availability)
+        timeslot_avail = cast("dict[float, dict[RegionId, int]]", self._availability)
+        if at_timeslot is None:
+            raise KeyError("A timeslot must be given when a lookahead is set")
         try:
-            return self._availability[at_timeslot]
+            return timeslot_avail[at_timeslot]
         except KeyError as e:
             raise KeyError(f"Timeslot {at_timeslot} not in availability") from e
 
-    def get_locations(self) -> list[str]:
-        """
-        Defaults to `get_available_locations() at self._default_lookahead`
-        which is the next timeslot that was already auctioned, or None
-        """  # noqa: D205, D400
+    def get_locations(self) -> list[RegionId]:
+        """Available locations at the current lookahead (next auctioned slot, or None)."""
         return self.get_available_locations(self._current_lookahead)
 
     def _update_virtual_cs(self, init: bool = False) -> None:
-        for cs in self._virtual_charging_stations:
+        lookahead = self._current_lookahead
+        if lookahead is not None:
+            duration = self._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION  # noqa: SLF001
+            assert duration is not None
+            valid_timeframe: tuple[float, float] | None = (
+                lookahead,
+                lookahead + duration,
+            )
+        else:
+            valid_timeframe = None
+
+        for cs in self._charging_stations():
             # availability might be negative if we account for some vehicle on the way and in the meantime another vehicle arrives at the already full station
-            capa = (
-                (
-                    self._availability[self._current_lookahead][cs.location]
-                    if self._current_lookahead is not None
-                    else self._availability[cs.location]
+            if init:
+                capa = 0
+            elif lookahead is not None:
+                timeslot_avail = cast(
+                    "dict[float, dict[RegionId, int]]", self._availability
                 )
-                if not init
-                else 0
-            )
+                capa = timeslot_avail[lookahead][cs.location]
+            else:
+                location_avail = cast("dict[RegionId, int]", self._availability)
+                capa = location_avail[cs.location]
 
-            cs.update_capacity(
-                capacity=capa,
-                valid_timeframe=(
-                    self._current_lookahead,
-                    self._current_lookahead
-                    + self._charging_infrastructure._charging_infra_config.COORDINATION_TIMESLOT_DURATION,  # noqa: SLF001
-                )
-                if self._current_lookahead is not None
-                else None,
-            )
+            cs.update_capacity(capacity=capa, valid_timeframe=valid_timeframe)
 
-    def update(self, availability: dict[str, int], timeslot: int | None = None) -> None:  # noqa: D102
+    def update(
+        self, availability: dict[RegionId, int], timeslot: int | None = None
+    ) -> None:
+        """Update availability, lookahead and virtual stations.
+
+        Parameters
+        ----------
+        availability : dict of RegionId to int
+            New free capacity per location.
+        timeslot : int or None
+            Target timeslot; required when a lookahead is set, ignored otherwise.
+
+        Raises
+        ------
+        ValueError
+            If availability is not a dict of (location, capacity).
+        """
         try:
             die_if_unbearable(availability, dict[str, int])
             if self._current_lookahead is None:
                 self._availability = availability
             else:
-                self._availability[timeslot] = availability
+                timeslot_avail = cast(
+                    "dict[float, dict[RegionId, int]]", self._availability
+                )
+                assert timeslot is not None
+                timeslot_avail[timeslot] = availability
+                # This is super awkward, but hard to avoid, see todo at the top
         except BeartypeDoorHintViolation as e:
             raise ValueError(
                 "Availability must be a dict of (location, capacity)"
             ) from e
         if self._current_lookahead is not None:
+            config = self._charging_infrastructure._charging_infra_config  # noqa: SLF001
+            assert config.COORDINATION_LOOKAHEAD is not None
+            assert config.COORDINATION_INTERVAL is not None
             # update the current lookahead to be the next coordinated (e.g. auctioned) slot
-            self._current_lookahead = int(self._env.now + (
-                self._charging_infrastructure._charging_infra_config.COORDINATION_LOOKAHEAD  # noqa: SLF001
-                - (
-                    self._env.now
-                    % self._charging_infrastructure._charging_infra_config.COORDINATION_INTERVAL  # noqa: SLF001
-                )
-            ))
+            self._current_lookahead = self._env.now + (
+                config.COORDINATION_LOOKAHEAD
+                - (self._env.now % config.COORDINATION_INTERVAL)
+            )
 
         if self._virtual_charging_stations is not None:
             self._update_virtual_cs()
 
     def _sync_with_real(
         self, charging_station: VirtualChargingStation
-    ) -> Generator[None, None, None]:
+    ) -> Generator[Event, Any, None]:
+        assert self._listeners is not None
+        location_avail = cast("dict[RegionId, int]", self._availability)
         cs = charging_station._physical_charging_station  # noqa: SLF001
         # Listener = namedtuple(
         #     "Listener", ["processed_plug_in_event", "processed_plug_out_event"]
         # )
-        self._listeners[cs.uid] = SimpleNamespace(
+        self._listeners[cs.uid] = _PlugEventListener(
             processed_plug_in_event=self._env.event(),
             processed_plug_out_event=self._env.event(),
         )
-        # self._listeners[cs.id] = {
-        #     "processed_plug_in_event": self._env.event(),
-        #     "processed_plug_out_event": self._env.event(),
-        # }
         cs.register_event_subscriber(self._listeners[cs.uid])
 
         while True:
@@ -213,7 +271,7 @@ class VirtualChargingInfrastructure(SimulationBase):
             )
 
             if cs.vehicle_plugged_in in event:
-                self._availability[charging_station.location] -= 1
+                location_avail[charging_station.location] -= 1
                 if self._use_virtual_cs:
                     self._update_virtual_cs()
                 self.logger.debug(
@@ -221,7 +279,7 @@ class VirtualChargingInfrastructure(SimulationBase):
                 )
                 self._listeners[cs.uid].processed_plug_in_event.succeed()
             elif cs.vehicle_unplugged in event:
-                self._availability[charging_station.location] += 1
+                location_avail[charging_station.location] += 1
                 if self._use_virtual_cs:
                     self._update_virtual_cs()
                 self.logger.debug(
@@ -229,5 +287,8 @@ class VirtualChargingInfrastructure(SimulationBase):
                 )
                 self._listeners[cs.uid].processed_plug_out_event.succeed()
 
-    def get_charging_station_by_location(self, location: str) -> VirtualChargingStation:  # noqa: D102
+    def get_charging_station_by_location(
+        self, location: RegionId
+    ) -> VirtualChargingStation:
+        """Virtual charging station at the given location."""
         return self._charging_stations_by_location[location]

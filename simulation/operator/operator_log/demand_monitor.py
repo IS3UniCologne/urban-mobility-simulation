@@ -45,7 +45,7 @@ class DemandMonitor(OperatorLogEntryListener):
         self.hexagons: set[RegionId] = set()
         self.vehicle_data: VehicleDemandByRegion = defaultdict(
             lambda: defaultdict(
-                lambda: {"outflow_fulfilled": 0, "outflow_missed": 0, "inflow": 0}
+                lambda: VehicleFlow(outflow_fulfilled=0, outflow_missed=0, inflow=0)
             )
         )
         self._rng = sim.random_manager.get_rng("DEMAND_MONITOR")

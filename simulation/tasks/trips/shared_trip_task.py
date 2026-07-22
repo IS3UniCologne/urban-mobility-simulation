@@ -83,14 +83,16 @@ class SharedTripTask(VehicleTask["SharedVehicle"]):
         self._vehicle.park()
         self._vehicle.unmount_driver()
 
-    def get_predicted_energy_delta(self, current_energy: float | None = None) -> float:
+    def get_predicted_energy_delta(
+        self, prev_task_energy: float | None = None
+    ) -> float:
         """Calculate predicted energy for driving trip.
 
         Walking consumes no vehicle energy, so only driving distance counts.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Unused; trip energy depends on distance only.
 
         Returns
@@ -104,12 +106,12 @@ class SharedTripTask(VehicleTask["SharedVehicle"]):
         )
         return -energy_required
 
-    def get_predicted_duration(self, current_energy: float | None = None) -> float:
+    def get_predicted_duration(self, prev_task_energy: float | None = None) -> float:
         """Calculate predicted duration including walk time and driving.
 
         Parameters
         ----------
-        current_energy : float or None
+        prev_task_energy : float or None
             Unused; trip duration depends on distance only.
 
         Returns
