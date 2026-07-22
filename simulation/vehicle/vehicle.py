@@ -8,6 +8,7 @@ from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.state_machine import StateMachine
 from simulation.helper.time import SimulationVelocityConverter
 from simulation.helper.vehicle_states import VehicleStates
+from simulation.operator.cost_accounting import NULL_VEHICLE_COST_REPORTER
 from simulation.vehicle.movement_stats import MovementStats
 
 if TYPE_CHECKING:
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from simulation.helper.configuration.configuration import (
         Configuration,
         VehicleConfig,
+        VehicleCostConfig,
     )
     from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
     from simulation.helper.types import RegionId
@@ -28,6 +30,7 @@ if TYPE_CHECKING:
     from simulation.infrastructure.network.edge import Edge
     from simulation.infrastructure.route import Route
     from simulation.infrastructure.transit_network.route_segment import RouteSegment
+    from simulation.operator.cost_accounting import VehicleCostReporter
     from simulation.operator.data_transfer_object.transport_request import (
         TransportRequest,
     )
@@ -44,13 +47,15 @@ class Vehicle(SimulationBase, ABC):
     Parameters
     ----------
     sim : SimulationContext
-        The simulation context.
+        Simulation context.
     fleet : VehicleFleet
-        The fleet to which the vehicle belongs.
+        Fleet to which the vehicle belongs.
     position : GeodesicPosition
-        The initial position of the vehicle.
+        Initial position of the vehicle.
     vehicle_config : VehicleConfig
-        The vehicle configuration.
+        Vehicle configuration.
+    cost_reporter : VehicleCostReporter
+        Sink for cost-relevant quantities. Defaults to a no-op reporter.
     """
 
     __slots__ = (
@@ -58,6 +63,8 @@ class Vehicle(SimulationBase, ABC):
         "_autonomy_type",
         "_config",
         "_convenience",
+        "_cost_config",
+        "_cost_reporter",
         "_current_region",
         "_current_request",
         "_destination",
@@ -97,6 +104,7 @@ class Vehicle(SimulationBase, ABC):
         fleet: VehicleFleet,
         position: GeodesicPosition,
         vehicle_config: VehicleConfig,
+        cost_reporter: VehicleCostReporter = NULL_VEHICLE_COST_REPORTER,
     ) -> None:
         super().__init__(sim)
 
@@ -105,6 +113,8 @@ class Vehicle(SimulationBase, ABC):
         self._env = sim.env
 
         self._fleet: VehicleFleet = fleet
+        self._cost_config: VehicleCostConfig = vehicle_config.COST_CONFIG
+        self._cost_reporter = cost_reporter
 
         # Vehicle Position, name is intentionally mangled. Do not set directly.
         self.__position: GeodesicPosition = position
@@ -151,6 +161,15 @@ class Vehicle(SimulationBase, ABC):
 
         # Add self to fleet
         self._fleet.register_vehicle(self)
+
+        self._cost_reporter.register_vehicle(
+            self, active=self.state is not VehicleStates.OFFLINE
+        )
+
+    @property
+    def cost_config(self) -> VehicleCostConfig:
+        """Operator cost rates for this vehicle."""
+        return self._cost_config
 
     @property
     def vehicle_type(self) -> VehicleType:
@@ -305,6 +324,9 @@ class Vehicle(SimulationBase, ABC):
         old_state = self._state_machine.current_state
         self._state_machine.transition_to(state)
         self._fleet.update_vehicle_state(self, old_state, state)
+        self._cost_reporter.set_vehicle_active(
+            self, active=state is not VehicleStates.OFFLINE
+        )
 
     @property
     def position(self) -> GeodesicPosition:
@@ -556,6 +578,10 @@ class Vehicle(SimulationBase, ABC):
         self._update_position(route_segment.destination)
 
         energy_consumed = self.energy_system.consume_for_distance(distance)
+
+        self._cost_reporter.record_distance(
+            self, distance, relocation=self.state is VehicleStates.RELOCATING
+        )
 
         return MovementStats(
             energy_consumed=energy_consumed,

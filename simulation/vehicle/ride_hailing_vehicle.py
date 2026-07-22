@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from simulation.helper.enums import AutonomyType, PropulsionType
 from simulation.helper.vehicle_states import VehicleStates
+from simulation.operator.cost_accounting import NULL_VEHICLE_COST_REPORTER
 from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
 
 from .vehicle import Vehicle
@@ -16,10 +17,9 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import VehicleConfig
-    from simulation.infrastructure.network.edge import Edge
     from simulation.infrastructure.route import Route
+    from simulation.operator.cost_accounting import VehicleCostReporter
     from simulation.operator.vehicle_fleet import VehicleFleet
-    from simulation.vehicle.movement_stats import MovementStats
     from simulation.vehicle.reservation import Reservation
 
     from ..operator.data_transfer_object.vehicle_allocation import VehicleAllocation
@@ -28,16 +28,12 @@ if TYPE_CHECKING:
 class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
     __slots__ = (
         "_arrived_at_pick_up_position",
-        "_charging_cost_per_kWh",
         "_charging_station_plugged_out",
-        "_cost_km",
         "_driver_availability_vector",
         "_is_electric",
         "_price_per_minute",
         "_reservation",
         "_vehicle_assignment",
-        "charging_costs",
-        "travel_costs",
     )
 
     def __init__(
@@ -47,9 +43,14 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         position: GeodesicPosition,
         vehicle_config: VehicleConfig,
         driver_availability_vector: list[int],
+        cost_reporter: VehicleCostReporter = NULL_VEHICLE_COST_REPORTER,
     ) -> None:
         super().__init__(
-            sim=sim, fleet=fleet, position=position, vehicle_config=vehicle_config
+            sim=sim,
+            fleet=fleet,
+            position=position,
+            vehicle_config=vehicle_config,
+            cost_reporter=cost_reporter,
         )
 
         self._price_per_minute = vehicle_config.PRICE_PER_MIN
@@ -59,8 +60,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         )
 
         self._driver_availability_vector = driver_availability_vector
-        self.travel_costs = 0
-        self.charging_costs = 0
 
         # Vehicle Events
         self._arrived_at_pick_up_position: Event = self._env.event()
@@ -68,11 +67,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
 
         self._reservation: Reservation | None = None
         self._is_in_use: bool = False
-
-        # TODO: Update config types/refactor config
-        # costs
-        self._cost_km: float = vehicle_config.COST_PER_KM
-        self._charging_cost_per_kWh: float = vehicle_config.CHARGING_COST_PER_KWH
 
         if vehicle_config.AUTONOMY_TYPE == AutonomyType.HUMAN_DRIVEN:
             self._price_per_minute = vehicle_config.PRICE_PER_MIN
@@ -86,33 +80,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
     @property
     def is_electric(self) -> bool:  # noqa: D102
         return self._is_electric
-
-    def _move(self, route_segment: Edge) -> Generator[Event, None, MovementStats]:
-        """
-        Move vehicle along a route segment.
-
-            Attention: Low-level function that does not update states! This should not directly be invoked.
-
-        Parameters
-        ----------
-        route_segment : Edge
-            The route segment to move along.
-
-        Returns
-        -------
-        MovementStats
-            The movement stats.
-
-        Yields
-        ------
-        Event
-            simpy Timeout event for the duration of the movement.
-        """
-        stats = yield from super()._move(route_segment)
-
-        self.travel_costs += stats.distance_travelled / 1000 * self._cost_km
-
-        return stats
 
     def traverse_route(self, route: Route) -> Generator[Event, None, float]:
         """
@@ -237,10 +204,14 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
                 self.energy_system.capacity - self.energy_system.current_energy_absolute
             )
 
-        self.charging_costs += charge_amount * self._charging_cost_per_kWh
+        energy_before = self.energy_system.current_energy_absolute
 
         # Charge
         yield from self.energy_system.refill(charge_amount, charging_time)
+
+        self._cost_reporter.record_energy_charged(
+            self, self.energy_system.current_energy_absolute - energy_before
+        )
 
         self.logger.debug(
             "Vehicle charged %s kWh and has now %s kWh out of %s.",

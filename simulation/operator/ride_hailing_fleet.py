@@ -103,14 +103,6 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
             if vehicle.energy_system.current_energy_relative < state_of_charge_threshold
         )
 
-    def get_operational_costs(self):  # noqa: ANN201, D102
-        operational_costs = 0
-        all_vehicle_list = self._vehicles
-        for vehicle in all_vehicle_list:
-            if vehicle.autonomy_type == AutonomyType.AUTONOMOUS:
-                operational_costs += vehicle.travel_costs + vehicle.charging_costs
-        return operational_costs
-
     def get_all_vehicles_below_soc_level_in_region(  # noqa: ANN201
         self,
         state_of_charge_threshold,  # noqa: ANN001
@@ -256,4 +248,5 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
             driver_availability_vector=self._driver_availability_vectors[
                 vehicle_config
             ],
+            cost_reporter=self.operator.cost_ledger,
         )
