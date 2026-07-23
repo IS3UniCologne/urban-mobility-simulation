@@ -9,6 +9,7 @@ class RolloutRunner:
         self.rollout_steps = rollout_steps
         self.device = device
         self.num_vehicles = num_vehicles
+        # each vehicle needs a dummy stations and vice versa 
         self.num_stations = num_stations
         self.max_users = 50
         self.MAX_RELOCATION_TIME = 30
@@ -85,7 +86,9 @@ class RolloutRunner:
                         operator_buffers[op_idx]['obs_user_distances'][step, :, :current_num_users] = op_user_dist_raw[:, :current_num_users]
 
                     max_reachable_distance = self.max_relocation_distances_normalized[op_idx]
-                    unreachable_cs_mask = op_cs_dist > max_reachable_distance
+
+
+                    stations_mask = self.create_sinkhorn_station_mask(op_cs_dist, max_reachable_distance, op_vehicles, self.env.num_operators)
 
                     # 4. Construct a static padded dictionary view adding the batch dimension [None, ...]
                     padded_obs_step_actor = {
@@ -95,7 +98,7 @@ class RolloutRunner:
                         'users': global_obs_buffers['users'][step][None, ...],
                         'user_distances': operator_buffers[op_idx]['obs_user_distances'][step][None, ...],
                         'users_mask': global_obs_buffers['users_mask'][step][None, ...],
-                        'unreachable_mask': unreachable_cs_mask[None, ...],
+                        'stations_mask': stations_mask[None, ...],
                     }
                     
                     # 5. Forward Pass through Actor
@@ -108,11 +111,24 @@ class RolloutRunner:
                     stds = torch.clamp(pricing_matrix[..., 1], min=1e-3)
                     price_dist = torch.distributions.Normal(means, stds)
                     all_sampled_prices = price_dist.sample()
-                    
-                    chosen_prices = torch.gather(all_sampled_prices, dim=-1, index=allocations.unsqueeze(-1)).squeeze(-1)
-                    
                     all_price_log_probs = price_dist.log_prob(all_sampled_prices)
-                    chosen_price_log_probs = torch.gather(all_price_log_probs, dim=-1, index=allocations.unsqueeze(-1)).squeeze(-1)
+
+                    
+                    # 1. Identify dummy selections
+                    is_dummy = allocations >= self.num_stations
+
+                    # 2. Clamp allocations to construct the safe gather index tensor (3D for 3D tensors)
+                    gather_index = allocations.clamp(0, self.num_stations - 1).unsqueeze(-1)
+
+                    # --- CHOSEN PRICES ---
+                    # Gather from all_sampled_prices using allocations as the index
+                    gathered_prices = torch.gather(all_sampled_prices, dim=-1, index=gather_index).squeeze(-1)
+                    chosen_prices = torch.where(is_dummy, torch.zeros_like(gathered_prices), gathered_prices)
+
+                    # --- CHOSEN PRICE LOG PROBS ---
+                    # Gather from all_price_log_probs using allocations as the index
+                    gathered_log_probs = torch.gather(all_price_log_probs, dim=-1, index=gather_index).squeeze(-1)
+                    chosen_price_log_probs = torch.where(is_dummy, torch.zeros_like(gathered_log_probs), gathered_log_probs)
                     
                     # Sum the pricing log probabilities across the fleet dimensions and join
                     joint_log_prob = allocation_log_prob + chosen_price_log_probs.sum(dim=-1)
@@ -172,4 +188,45 @@ class RolloutRunner:
         )
         individual_log_probs = torch.log(chosen_probs.squeeze(-1) + 1e-8)
         joint_action_log_probs = individual_log_probs.sum(dim=-1)
-        return selected_indices, joint_action_log_probs
+        return selected_indices[:, :-1], joint_action_log_probs
+
+    def create_sinkhorn_station_mask(
+        self,
+        vehicle_station_distances: torch.Tensor,
+        max_reachable_distance: float,
+        vehicle_state_tokens: torch.Tensor,
+        num_operators: int
+    ) -> torch.Tensor:
+        """
+        Constructs an unreachable mask for the (num_real_vehicles + 1) x (num_real_stations + 1) Sinkhorn matrix.
+        
+        Args:
+            vehicle_station_distances: Tensor of shape (batch_size, num_real_vehicles, num_real_stations)
+            max_reachable_distance: Float threshold for distance reachability
+            vehicle_state_tokens: Tensor of shape (batch_size, num_real_vehicles, feature_dim)
+            num_operators: Integer offset used to locate the reservation feature index
+            
+        Returns:
+            station_mask: BoolTensor of shape (batch_size, num_real_vehicles + 1, num_real_stations + 1)
+                            True indicates an invalid/masked assignment.
+        """
+        num_real_vehicles, num_real_stations = vehicle_station_distances.shape
+        device = vehicle_station_distances.device
+
+        real_distance_mask = vehicle_station_distances > max_reachable_distance
+
+        reservation_feature_index = num_operators + 1
+        is_reserved_vehicle = (vehicle_state_tokens[ :, reservation_feature_index] == 1.0)
+
+        reserved_vehicle_mask = is_reserved_vehicle.unsqueeze(-1)
+        
+        real_vehicles_mask = real_distance_mask | reserved_vehicle_mask
+
+        station_mask = torch.zeros(
+            (num_real_vehicles + 1, num_real_stations + 1),
+            dtype=torch.bool,
+            device=device
+        )
+        station_mask[:num_real_vehicles, :num_real_stations] = real_vehicles_mask
+
+        return station_mask

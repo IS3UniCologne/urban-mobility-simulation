@@ -52,11 +52,11 @@ class RideHailingExplicitChargingOperations(RideHailingOperations):
             self.logger.debug("No external charging allocations passed for this execution tick.")
             return
 
-        # 1. Process and map structural pairings to live memory instances
+        # 1. Process and map structural pairings to live memory instancses
         for vehicle_uid, station_location in list(pairs.items()):
             try:
                 # Resolves the index directly against the physical fleet list
-                vehicle = self._operator.fleet.vehicles[vehicle_uid]
+                vehicle = next(vehicle for vehicle in self._operator.fleet.vehicles if vehicle.uid == vehicle_uid)
             except IndexError:
                 self.logger.warning("Vehicle index %s out of fleet bounds. Skipping.", vehicle_uid)
                 continue

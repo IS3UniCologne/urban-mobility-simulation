@@ -38,8 +38,18 @@ class Simulation:
         self.world = World(self.sim)
         self.metrics: Metrics = Metrics(simulation=self)
 
-    def initialize_simulation(self) -> None:
-        """Sets up the simulation environment up to time 0, ready to step."""
+    def run_simulation(self, end_time: int | None = None) -> None:
+        """
+        Run a single simulation.
+
+        Parameters
+        ----------
+        end_time : int or None
+            End time for simulation. If None, uses configuration value.
+        """
+        if end_time is None:
+            end_time = self.config.experiment_management.END_TIME
+
         self.demand_factory = self._create_demand_factory()
         self.sim.env.process(self.demand_factory.generate_demand())
 
@@ -48,14 +58,6 @@ class Simulation:
         self.sim.mark_ended()
         self.logger.info("Ending Simulation.")
 
-    def step_simulation(self, until_time: float) -> None:
-        """Advances the simulation to a specific timestamp."""
-        if self.sim.env.now < until_time:
-            self.sim.env.run(until=until_time)
-
-    def finalize_simulation(self) -> None:
-        """Runs post-processing once the gym episode ends."""
-        self.logger.info("Ending Simulation.")
         self._post_simulation_processing()
 
     def _create_demand_factory(self) -> DemandFactory:
@@ -65,3 +67,8 @@ class Simulation:
     def _post_simulation_processing(self) -> None:
         """Handle post-simulation processing."""
         self.logger.info("Simulation completed")
+
+    def step_simulation(self, until_time: float) -> None:
+        """Advances the simulation to a specific timestamp."""
+        if self.sim.env.now < until_time:
+            self.sim.env.run(until=until_time)

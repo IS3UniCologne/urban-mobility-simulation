@@ -498,10 +498,6 @@ class OperationsConfig(ConfigBaseModel):
         return SimulationVelocityConverter.kmh_to_meters_per_minute(v)
 
 
-class ChargingStrategy(str, Enum):
-    RL = "reinforcement_learning"
-    HEURISTIC = "heuristic"
-
 class RideHailingOperationsConfig(OperationsConfig):
     """Configuration for ride-hailing operations parameters."""
 
@@ -527,6 +523,10 @@ class RideHailingGreedyChargingOperationsConfig(RideHailingOperationsConfig):
 class RideHailingUncoordinatedChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for shared, uncoordinated charging operations."""
 
+
+class ChargingStrategy(str, Enum):
+    RL = "reinforcement_learning"
+    HEURISTIC = "heuristic"
 
 class RideHailingSharedChargingOperationsConfig(RideHailingOperationsConfig):
     STRATEGY: ChargingStrategy

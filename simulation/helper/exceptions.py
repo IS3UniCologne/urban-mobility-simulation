@@ -22,10 +22,17 @@ class AlreadyReservedError(VehicleReservationError):
     """Raised when attempting to reserve an already-reserved vehicle."""
 
     def __init__(self, vehicle_uid: str, requester: str) -> None:
+        self.vehicle_uid = vehicle_uid
+        self.requester = requester
+        
+        # 1. Pass the formatted message to VehicleReservationError
         super().__init__(
             f"Vehicle {vehicle_uid} already reserved; cannot reserve for {requester}.",
             vehicle_uid=vehicle_uid,
         )
+        
+        # 2. OVERRIDE args so Python/SimPy re-instantiates with (vehicle_uid, requester)
+        self.args = (vehicle_uid, requester)
 
 
 class InvalidReservationError(VehicleReservationError):
@@ -133,3 +140,11 @@ class TaskAborted(Exception):
 
 class MissingDependencyError(Exception):
     """Raised when an optional dependency required for a feature is not installed."""
+
+
+# ============================================================================
+# Auction Agent Env Exceptions
+# ============================================================================
+class ChargingInfrastructureNotSharedError(Exception):
+    def __init__(self, message="In the RL Auction Agent Scenario all fleet operators must point to the same Charging Infrastructure"):
+        super().__init__(message)

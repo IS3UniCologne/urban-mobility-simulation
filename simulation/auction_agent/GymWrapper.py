@@ -122,11 +122,11 @@ class GymWrapper(gym.Env):
         
         self.simulation = Simulation(self.config)
         
-        self.simulation.initialize_simulation()
+        #self.simulation.initialize_simulation()
         if seed is not None:
             np.random.seed(seed)
 
-        self.feature_extractor = FeatureExtractor(self.simulation.world.geo_env, self.config.charging_infrastructures[0].LOCATIONS)
+        self.feature_extractor = FeatureExtractor(self.simulation.world.geo_env, self.cs_locations)
         self.prev_revenues = np.array([0 for operator in self.simulation.world.operators])
 
         return self._get_obs(), {}
@@ -134,10 +134,12 @@ class GymWrapper(gym.Env):
     def step(self, action):
         next_time = self.simulation.sim.env.now + self.timeblock_duration
 
+        actions_by_uid = [[np.append(action[op_index][vehicle_index], vehicle.uid) for vehicle_index, vehicle in enumerate(operator.fleet.vehicles)] for op_index, operator in enumerate(self.simulation.world.operators)]
+
         bids_per_op = [
                 {cs_location: 
-                [(1, op_bid[1].item(), op_index, vehicle_index) for vehicle_index, op_bid in enumerate(op_biddings) if op_bid[0] == cs_index]
-                for op_biddings in action 
+                [(1, float(op_bid[1].item()), int(op_index), op_bid[2].item()) for op_bid in op_biddings if float(op_bid[0]) == cs_index]
+                for op_biddings in actions_by_uid 
                 for cs_index, cs_location in enumerate(self.cs_locations)}
             for op_index, operator in enumerate(self.simulation.world.operators)
         ]

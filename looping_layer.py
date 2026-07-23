@@ -8,6 +8,7 @@ from simulation.auction_agent.RolloutRunner import RolloutRunner
 from simulation.helper.enums import NUM_USER_STATES
 from simulation.auction_agent.Actor import MultiEntityActor
 from simulation.auction_agent.Critic import PermutationInvariantCritic
+from simulation.helper.exceptions import ChargingInfrastructureNotSharedError
 
 load_dotenv(dotenv_path='.env')
 
@@ -15,14 +16,17 @@ print(os.environ.get("CONFIG_PATH"))
 config = Configuration(os.environ.get("CONFIG_PATH"))
 print('test')
 num_vehicles = sum([next(iter(operator.FLEET_CONFIG.VEHICLES.values())) for operator in config.operators])
-num_stations = config.charging_infrastructures[0].NUMBER_OF_CHARGING_STATIONS
+if not all(operator.CHARGING_INFRASTRUCTURE is config.operators[0].CHARGING_INFRASTRUCTURE for operator in config.operators):
+    raise ChargingInfrastructureNotSharedError()
+
+num_stations = sum(config.operators[0].CHARGING_INFRASTRUCTURE.CHARGING_STATION_CAPACITY)
 num_operators = len(config.operators)
 
 vehicle_dim = num_operators + 15
 user_dim = NUM_USER_STATES + 17
 stations_dim = 3
 
-env = GymWrapper(num_vehicles=num_vehicles, num_charging_stations=num_stations, num_operators=num_operators, num_user_states=NUM_USER_STATES, config=config, cs_locations=config.charging_infrastructures[0].LOCATIONS)
+env = GymWrapper(num_vehicles=num_vehicles, num_charging_stations=num_stations, num_operators=num_operators, num_user_states=NUM_USER_STATES, config=config, cs_locations=config.operators[0].CHARGING_INFRASTRUCTURE.LOCATIONS)
 
 obs, info = env.reset(seed=42)
 print("--- Simulation Initialized ---")

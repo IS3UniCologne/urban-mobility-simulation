@@ -61,9 +61,9 @@ class RideHailingSharedChargingOperations(RideHailingOperations, BidderInterface
         )
 
         if(self._config.STRATEGY == ChargingStrategy.RL):
-            self._bidding_strategy = RLStrategy(self._sim.env, self._auction)
+            self._bidding_strategy = RLStrategy(self._sim.env, self._operator, self._auction)
         else:
-            self._bidding_strategy = HeuristicStrategy(self._sim.env, self._auction)
+            self._bidding_strategy = HeuristicStrategy(self._sim.env, self._operator, self._auction)
 
         self._state_of_charge_threshold = self._config.RECHARGE_THRESHOLD
         self._charging_operations = None

@@ -1,13 +1,12 @@
 class RLStrategy:
     """Strictly returns the bids from Gym, raising an error if they are missing."""
-    def __init__(self, env, auction):
+    def __init__(self, env, operator, auction):
         self._env = env
         self._auction = auction
         self.next_action = env.event()
+        self._operator = operator
 
-    def get_bids(self, operator_instance, auctioned_timeslot, auctioned_capacity):
-        #yield self._auction.open_for_bidding
-        
+    def get_bids(self, operations, auctioned_timeslot, auctioned_capacity):
         action_matrix = yield self.next_action
 
         self.next_action = self._env.event()
@@ -18,4 +17,16 @@ class RLStrategy:
                 f"for timeslot {auctioned_timeslot}!"
             )
             
-        return action_matrix
+        valid_uids = {v.uid for v in self._operator.fleet.vehicles}
+
+        filtered_bids = {}
+        for loc, bids in action_matrix.items():
+            if isinstance(bids, list):
+                filtered_bids[loc] = [
+                    bid for bid in bids 
+                    if isinstance(bid, (tuple, list)) and len(bid) >= 4 and bid[3] in valid_uids
+                ]
+            else:
+                filtered_bids[loc] = bids
+
+        return filtered_bids

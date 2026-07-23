@@ -76,6 +76,7 @@ class MultiEntityActor(nn.Module):
         users_raw = obs['users']
         stations_raw = obs['stations']
         users_mask = obs['users_mask']
+        stations_mask = obs['stations_mask']
         
         user_encodings = self.user_head(users_raw)
         user_encodings = user_encodings.masked_fill(users_mask.unsqueeze(-1), 0.0)
@@ -92,7 +93,7 @@ class MultiEntityActor(nn.Module):
 
         combined = torch.cat([user_context, station_context], dim=-1)
 
-        station_decision_matrix = self.station_decision_head(combined)
+        station_decision_matrix = self.station_decision_head(combined, stations_mask)
         pricing_matrix = self.pricing_head(combined)
 
         return station_decision_matrix, pricing_matrix

@@ -48,7 +48,7 @@ class SharedChargingAuction(Auction):  # noqa: D101
         # bids are a list of n>=0 tuples of (integer, float, int)[capacity, bid price, bidder id] PER charging station, charging stations are denoted by h3hex ID (str)
 
         self._shared_charging_config = shared_charging_config
-        self._bid_syntax = dict[str, list[tuple[int, int | float, int, int]]]
+        self._bid_syntax = dict[str, list[tuple[int, int | float, int, str]]]
 
         # results are n=1 tuples of (integer, float)[capacity, clearing price] PER charging station, PER participant (int), charging stations are denoted by h3hex ID (str)
         self._result_syntax = dict[int, dict[str, tuple[int, float]]]
@@ -184,7 +184,7 @@ class SharedChargingAuction(Auction):  # noqa: D101
         )
         # CHANGED: Added vehicle_id conversion to int to handle integer vehicle identifiers
         bids_df = bids_df.astype(
-            {"capacity": int, "bid_price": float, "bidder_id": int, "vehicle_id": int}
+            {"capacity": int, "bid_price": float, "bidder_id": int, "vehicle_id": str}
         )
         bids_df.sort_values(by="bid_price", ascending=False, inplace=True)
 
