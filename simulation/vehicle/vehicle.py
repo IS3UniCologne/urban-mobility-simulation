@@ -143,7 +143,7 @@ class Vehicle(SimulationBase, ABC):
             allowed_transitions=VehicleStates.TRANSITIONS,
         )
 
-        self._current_request: None | TransportRequest = None
+        self._current_request: TransportRequest | None = None
 
         # Predicted state tracking for task completion
         self._estimated_completion_time: float = 0
