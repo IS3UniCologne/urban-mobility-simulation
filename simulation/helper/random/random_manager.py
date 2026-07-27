@@ -158,8 +158,8 @@ class RandomManager(SimulationBase):
         self,
         low: float = 0.0,
         high: float = 1.0,
-        size: None | int | tuple[int, ...] = None,
-        component: None | str = None,
+        size: int | tuple[int, ...] | None = None,
+        component: str | None = None,
     ) -> float | np.ndarray:
         """Generate uniform random numbers between low and high."""
         rng = self.get_rng(component)
@@ -169,8 +169,8 @@ class RandomManager(SimulationBase):
         self,
         low: int,
         high: int,
-        size: None | int | tuple[int, ...] = None,
-        component: None | str = None,
+        size: int | tuple[int, ...] | None = None,
+        component: str | None = None,
     ) -> int | np.ndarray:
         """Generate random integers from low (inclusive) to high (exclusive)."""
         rng = self.get_rng(component)
