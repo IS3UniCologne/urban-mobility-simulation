@@ -119,8 +119,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):  # noqa: D101
         down-left  \\ __ /  down-right
                     down
 
-        """  # noqa: D202, D301
-
+        """  # noqa: D301
         if action == "STAY":
             yield self._env.timeout(0.01)
         else:
@@ -165,8 +164,7 @@ class EpisodicSemiGradientNStepSarsa(RLAgent, SimulationBase):  # noqa: D101
         :param state: env state as given by the bus agent
         :param terminal: bool, is the state a terminal one?
         :return: numerical reward +/- or 0
-        """  # noqa: D202, D401, D404
-
+        """  # noqa: D401, D404
         if terminal:
             return 10
         else:

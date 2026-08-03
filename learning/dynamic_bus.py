@@ -23,7 +23,7 @@ class DynamicBusProblem(LearningInterface):
     """
 
     def __init__(self, env: Environment):  # noqa: ANN204
-        super(DynamicBusProblem, self).__init__(env)  # noqa: UP008
+        super().__init__(env)
 
         # Config
         self._config = Configuration()

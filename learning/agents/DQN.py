@@ -21,7 +21,7 @@ from learning.spaces.action_space import ForbiddenAction
 
 class DQN(RLAgent):
     def __init__(self, problem: LearningInterface):  # noqa: ANN204
-        super(DQN, self).__init__()  # noqa: UP008
+        super().__init__()
 
         self.problem = problem
         self._problem_config = self.problem.problem_config

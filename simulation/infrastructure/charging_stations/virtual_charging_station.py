@@ -147,7 +147,8 @@ class VirtualChargingStation(SimulationBase):
         """ID of the charging station in relation to the charging infrastructure it belongs to.
 
         Note: This ID is not globally unique across the entire simulation.
-        For a globally unique identifier, use the `uid` property inherited from SimulationBase."""  # noqa: D209
+        For a globally unique identifier, use the `uid` property inherited from SimulationBase.
+        """
         return self._cs_id
 
     @property
