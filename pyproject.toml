@@ -21,7 +21,7 @@ dependencies = [
   "h3>=4.5.0",
   "haversine>=2.9.0",
   "matplotlib>=3.11.1",
-  "pandas>=3.0.3",
+  "pandas>=3.0.5",
   "prettytable>=3.18.0",
   "pyarrow>=25.0.0",
   "pydantic>=2.13.4",
@@ -58,7 +58,7 @@ ml = [
   "torch>=2.13.0",
   "pyomo>=6.10.1",
 ]
-viz = ["bokeh>=3.9.1"]
+viz = ["bokeh>=3.9.2"]
 
 [project.scripts]
 umosim = "scripts.umosim:main"
