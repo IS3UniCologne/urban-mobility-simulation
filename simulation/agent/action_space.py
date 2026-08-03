@@ -30,7 +30,7 @@ class ActionSpace:  # noqa: D101
             raise Exception("This class is a singleton!")
         else:
             ActionSpace.__instance = self
-            super(ActionSpace, self).__init__()  # noqa: UP008
+            super().__init__()
 
         self._actions = actions
 
