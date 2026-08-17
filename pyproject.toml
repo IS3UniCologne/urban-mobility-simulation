@@ -40,7 +40,7 @@ dev = [
 
 benchmarks = ["pyperf>=2.10.0"]
 
-pre-commit = ["pre-commit>=4.6.1", "ruff>=0.16.1"]
+pre-commit = ["pre-commit>=4.6.1", "ruff>=0.16.2"]
 
 testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.1.1"]
 
@@ -48,7 +48,7 @@ typing = [
   "pyrefly>=1.2.0",
   "pandas-stubs>=3.0.5.260730",
   "types-shapely>=2.1.0.20260728",
-  "types-geopandas>=1.1.4.20260728",
+  "types-geopandas>=1.1.4.20260807",
 ]
 
 
