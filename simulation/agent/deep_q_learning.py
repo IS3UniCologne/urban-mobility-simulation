@@ -100,7 +100,7 @@ class DQN(RLAgent, SimulationBase):  # noqa: D101
         replay_buffer,  # noqa: ANN001
         episode=1,  # noqa: ANN001
     ):
-        super(DQN, self).__init__(env)  # noqa: UP008
+        super().__init__(env)
 
         self._total_episodes = self._config.transit_agent_config.episodes
         self._episode = episode  # starting from 1
@@ -474,8 +474,7 @@ class DQN(RLAgent, SimulationBase):  # noqa: D101
         down-left  \\ __ /  down-right
                     down
 
-        """  # noqa: D202, D301
-
+        """  # noqa: D301
         if action == "STAY":
             # even though the bus does not move, timeout for the average movement duration
             # otherwise the action does have no consequence, when another action immediately follows

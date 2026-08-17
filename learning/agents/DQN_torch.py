@@ -2,7 +2,6 @@ import logging
 import random
 import sys
 from collections import deque
-from typing import List  # noqa: UP035
 
 import numpy as np
 import torch
@@ -16,7 +15,7 @@ from simulation.helper.configuration.configuration import Configuration
 
 class DQNN(nn.Module):
     def __init__(self, input_layer, action_layer):  # noqa: ANN001, ANN204
-        super(DQNN, self).__init__()  # noqa: UP008
+        super().__init__()
 
         self._config = Configuration()
 
@@ -37,7 +36,7 @@ class DQNN(nn.Module):
 
 class DQN(RLAgent):
     def __init__(self, problem: LearningInterface):  # noqa: ANN204
-        super(DQN, self).__init__()  # noqa: UP008
+        super().__init__()
 
         # Get cpu or gpu device for training.
         self._device = "cpu"
@@ -327,7 +326,7 @@ class DQN(RLAgent):
 
         self.problem.reset()
 
-    def policy(self, state, forbidden: List[int], exploit=False):  # noqa: ANN001, ANN201, UP006
+    def policy(self, state, forbidden: list[int], exploit=False):  # noqa: ANN001, ANN201
         """
 
         :param state: state representation
