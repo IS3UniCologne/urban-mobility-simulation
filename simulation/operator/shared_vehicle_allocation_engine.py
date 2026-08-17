@@ -1,6 +1,8 @@
-from __future__ import annotations  # noqa: D100
+"""Vehicle allocation engine for shared mobility operators."""
 
-from typing import TYPE_CHECKING
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from simulation.operator.vehicle_allocation_engine import (
     AllocationEngine,
@@ -9,6 +11,10 @@ from simulation.operator.vehicle_allocation_engine import (
 from simulation.vehicle.interfaces.reservable_interface import ReservableInterface
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from simpy import Event
+
     from simulation.agent.user import User
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
@@ -19,7 +25,19 @@ from simulation.operator.data_transfer_object.vehicle_allocation import (
 )
 
 
-class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
+class SharedVehicleAllocationEngine(AllocationEngine):
+    """
+    Batched first-come-first-serve allocation of shared vehicles.
+
+    Collects allocation requests and resolves them every two simulation
+    minutes by reserving each requested vehicle for the first requester.
+
+    Parameters
+    ----------
+    deps : AllocationEngineDependencies
+        Shared allocation engine dependencies.
+    """
+
     __slots__ = (
         "_env",
         "_sim",
@@ -37,9 +55,19 @@ class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
             tuple[User, TransportationAlternative]
         ] = []
 
-    def run(self):  # noqa: ANN201, D102
+    def run(self) -> Generator[Event, None, None]:
+        """
+        Process queued allocation requests in batches.
+
+        Yields
+        ------
+        Event
+            Timeout between allocation batches.
+        """
         while True:
-            yield self._env.timeout(2)
+            yield self._env.timeout(
+                2
+            )  # TODO: Make configurable ? Why is this 2, while ridehailing has 1?
 
             if not self._vehicle_assignment_requests:
                 # no requests to process
@@ -79,18 +107,43 @@ class SharedVehicleAllocationEngine(AllocationEngine):  # noqa: D101
 
     def request_vehicle_allocation(
         self, user: User, selected_transportation_alternative: TransportationAlternative
-    ) -> VehicleAllocation:
+    ) -> Generator[Event, Any, VehicleAllocation | None]:
         """
-            Assign vehicle in transportation alternative to user
-        :param user:
-        :param selected_transportation_alternative:
-        :return:
-        """  # noqa: D205, D400
+        Allocate vehicle in transportation alternative to the user.
+
+        Parameters
+        ----------
+        user : User
+            User requesting vehicle allocation.
+        selected_transportation_alternative : TransportationAlternative
+            Alternative containing the vehicle to allocate.
+
+        Yields
+        ------
+        Event
+            Batch completion event.
+
+        Returns
+        -------
+        VehicleAllocation or None
+            Vehicle allocation if successful, None otherwise.
+        """
+        selected_vehicle = selected_transportation_alternative.vehicle
+        if not isinstance(selected_vehicle, ReservableInterface):
+            self.logger.warning(
+                "Vehicle %s does not support reservation", selected_vehicle.uid
+            )
+            self._operator.log_failed_allocation_attempt(
+                user=user,
+                transportation_task=user.transport_request,
+                transportation_alternative=selected_transportation_alternative,
+            )
+            return None
+
         self._vehicle_assignment_requests.append(
             (user, selected_transportation_alternative)
         )
 
-        selected_vehicle = selected_transportation_alternative.vehicle
         required_distance = selected_transportation_alternative.distance
 
         yield self._vehicles_assigned_to_users

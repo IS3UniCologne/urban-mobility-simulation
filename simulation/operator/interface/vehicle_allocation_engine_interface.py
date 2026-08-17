@@ -1,4 +1,6 @@
-from __future__ import annotations  # noqa: D100
+"""Interface for vehicle allocation engines."""
+
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
@@ -8,6 +10,7 @@ if TYPE_CHECKING:
 
     from simpy import Event
 
+    from simulation.agent.user import User
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -16,11 +19,30 @@ if TYPE_CHECKING:
     )
 
 
-class AllocationEngineInterface(ABC):  # noqa: D101
+class AllocationEngineInterface(ABC):
+    """Interface all vehicle allocation engines must implement."""
+
     @abstractmethod
-    def request_vehicle_allocation(  # noqa: D102
-        self,
-        user,  # noqa: ANN001
-        selected_transportation_alternative: TransportationAlternative,
+    def request_vehicle_allocation(
+        self, user: User, selected_transportation_alternative: TransportationAlternative
     ) -> Generator[Event, Any, VehicleAllocation | None]:
-        pass  # Implement filtering
+        """
+        User requests allocation of selected TransportationAlternative.
+
+        Parameters
+        ----------
+        user : User
+            User requesting the allocation.
+        selected_transportation_alternative : TransportationAlternative
+            Alternative containing the vehicle to allocate.
+
+        Yields
+        ------
+        Event
+            Events awaited while the allocation is processed.
+
+        Returns
+        -------
+        VehicleAllocation or None
+            Allocation if successful, None otherwise.
+        """
