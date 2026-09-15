@@ -423,6 +423,7 @@ class ChargingInfrastructureConfig(BaseModel):
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
+    CHARGING_STATION_COST_PER_KWH: list[float]
 
     # fallback if there is no auction
     COORDINATION_INTERVAL: int | None = Field(gt=0, default=None)
@@ -462,6 +463,8 @@ class ChargingInfrastructureConfig(BaseModel):
             self.CHARGING_STATION_CAPACITY = self.CHARGING_STATION_CAPACITY * n
         if len(self.CHARGING_STATION_QUEUE_SIZE) == 1:
             self.CHARGING_STATION_QUEUE_SIZE = self.CHARGING_STATION_QUEUE_SIZE * n
+        if len(self.CHARGING_STATION_COST_PER_KWH) == 1:
+            self.CHARGING_STATION_COST_PER_KWH = self.CHARGING_STATION_COST_PER_KWH * n
 
         return self
 
