@@ -38,6 +38,7 @@ class ChargingStation(SimulationBase):  # noqa: D101
     __slots__ = (
         "_capacity",
         "_centre",
+        "_cost_per_kwh",
         "_cs_id",
         "_current_queue_time",
         "_env",
@@ -53,7 +54,6 @@ class ChargingStation(SimulationBase):  # noqa: D101
         "_sim",
         "_vehicle_plugged_in",
         "_vehicle_unplugged",
-        "_cost_per_kwh",
     )
 
     def __init__(
