@@ -36,7 +36,7 @@ class ChargingInfrastructure:
         "_charging_infra_config",
         "_charging_stations",
         "_charging_stations_by_location",
-        "_cost_per_kwh_list",
+        "_cost_per_kWh_list",
         "_location_list",
         "_power_list",
         "_queue_size",
@@ -54,7 +54,7 @@ class ChargingInfrastructure:
         self._power_list = charging_infrastructure_config.CHARGING_STATION_POWER
         self._capacity_list = charging_infrastructure_config.CHARGING_STATION_CAPACITY
         self._queue_size = charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
-        self._cost_per_kwh_list = charging_infrastructure_config.CHARGING_STATION_COST_PER_KWH
+        self._cost_per_kWh_list = charging_infrastructure_config.CHARGING_STATION_COST_PER_KWH
         if charging_infrastructure_config.AUCTION_CONFIG:
             # TODO: Remove this hack once the auction modules are fully typed.
             auction_config = cast(
@@ -109,7 +109,7 @@ class ChargingInfrastructure:
                 power=self._power_list[i],
                 capacity=self._capacity_list[i],
                 queue_size=self._queue_size[i],
-                cost_per_kwh=self._cost_per_kwh_list[i],
+                cost_per_kWh=self._cost_per_kWh_list[i],
             )
             self._charging_stations.append(charging_station)
             self._charging_stations_by_location[location] = charging_station
