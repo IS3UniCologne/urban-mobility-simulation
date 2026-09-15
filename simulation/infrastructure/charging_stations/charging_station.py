@@ -53,6 +53,7 @@ class ChargingStation(SimulationBase):  # noqa: D101
         "_sim",
         "_vehicle_plugged_in",
         "_vehicle_unplugged",
+        "_cost_per_kwh",
     )
 
     def __init__(
@@ -61,6 +62,7 @@ class ChargingStation(SimulationBase):  # noqa: D101
         cs_id: int,  # ID of the charging station in relation to the charging infrastructure it belongs to
         location: RegionId,
         power: float,
+        cost_per_kwh: float,
         capacity: int,
         queue_size: int,
     ) -> None:
@@ -78,6 +80,7 @@ class ChargingStation(SimulationBase):  # noqa: D101
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
         self._location = location
         self._power = power  # kW
+        self._cost_per_kwh = cost_per_kwh
         self._queue: list[object] = []
         self._queue_size = queue_size
         self._current_queue_time: float = 0.0
@@ -139,6 +142,10 @@ class ChargingStation(SimulationBase):  # noqa: D101
     @property
     def vehicle_unplugged(self) -> simpy.Event:  # noqa: D102
         return self._vehicle_unplugged
+
+    @property
+    def cost_per_kwh(self) -> float:  # noqa: D102
+        return self._cost_per_kwh
 
     def register_event_subscriber(self, subscriber: _PlugEventSubscriber) -> None:
         """Register a listener for plug-in / plug-out events."""
