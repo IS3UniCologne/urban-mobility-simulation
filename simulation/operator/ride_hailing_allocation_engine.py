@@ -1,4 +1,6 @@
-from __future__ import annotations  # noqa: D100
+"""Vehicle allocation engine for ride-hailing operators."""
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
@@ -24,7 +26,19 @@ from simulation.operator.data_transfer_object.vehicle_allocation import (
 )
 
 
-class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
+class RideHailingAllocationEngine(AllocationEngine):
+    """
+    Batched first-come-first-serve allocation of ride-hailing vehicles.
+
+    Collects allocation requests and resolves them once per simulation
+    minute by reserving each requested vehicle for the first requester.
+
+    Parameters
+    ----------
+    deps : AllocationEngineDependencies
+        Shared allocation engine dependencies.
+    """
+
     __slots__ = ("_env", "_vehicle_assignment_requests", "_vehicles_assigned_to_users")
 
     def __init__(self, deps: AllocationEngineDependencies) -> None:
@@ -36,9 +50,17 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
             tuple[User, TransportationAlternative]
         ] = []
 
-    def run(self):  # noqa: ANN201, D102
+    def run(self) -> Generator[Event, None, None]:
+        """
+        Process queued allocation requests in batches.
+
+        Yields
+        ------
+        Event
+            Timeout between allocation batches.
+        """
         while True:
-            yield self._env.timeout(1)
+            yield self._env.timeout(1)  # TODO: Make this configurable ?
 
             if not self._vehicle_assignment_requests:
                 # no requests to process
@@ -91,9 +113,14 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
         Parameters
         ----------
         user : User
-            The user requesting vehicle allocation.
+            User requesting vehicle allocation.
         selected_transportation_alternative : TransportationAlternative
-            The selected transportation alternative containing the vehicle.
+            Alternative containing the vehicle to allocate.
+
+        Yields
+        ------
+        Event
+            Batch completion event.
 
         Returns
         -------
@@ -101,6 +128,17 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
             Vehicle allocation if successful, None otherwise.
         """
         selected_vehicle = selected_transportation_alternative.vehicle
+        if not isinstance(selected_vehicle, ReservableInterface):
+            self.logger.warning(
+                "Vehicle %s does not support reservation.", selected_vehicle.uid
+            )
+            self._operator.log_failed_allocation_attempt(
+                user=user,
+                transportation_task=user.transport_request,
+                transportation_alternative=selected_transportation_alternative,
+            )
+            return None
+
         pickup_distance = (
             selected_transportation_alternative.route_to_pickup.distance
             if selected_transportation_alternative.route_to_pickup
@@ -163,5 +201,7 @@ class RideHailingAllocationEngine(AllocationEngine):  # noqa: D101
         # Vehicle was successfully allocated
         return vehicle_allocation
 
-    def _add_request(self, user, vehicle_assignment):  # noqa: ANN001, ANN202
+    def _add_request(
+        self, user: User, vehicle_assignment: TransportationAlternative
+    ) -> None:
         self._vehicle_assignment_requests.append((user, vehicle_assignment))
