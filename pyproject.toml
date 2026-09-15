@@ -20,8 +20,8 @@ dependencies = [
   "geopandas>=1.1.4",
   "h3>=4.5.0",
   "haversine>=2.9.0",
-  "matplotlib>=3.11.0",
-  "pandas>=3.0.3",
+  "matplotlib>=3.11.1",
+  "pandas>=3.0.5",
   "prettytable>=3.18.0",
   "pyarrow>=25.0.0",
   "pydantic>=2.13.4",
@@ -40,15 +40,15 @@ dev = [
 
 benchmarks = ["pyperf>=2.10.0"]
 
-pre-commit = ["pre-commit>=4.6.0", "ruff>=0.15.21"]
+pre-commit = ["pre-commit>=4.6.1", "ruff>=0.16.2"]
 
 testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.1.1"]
 
 typing = [
-  "pyrefly>=1.1.1",
-  "pandas-stubs>=3.0.3.260530",
-  "types-shapely>=2.1.0.20260630",
-  "types-geopandas>=1.1.4.20260628",
+  "pyrefly>=1.2.0",
+  "pandas-stubs>=3.0.5.260730",
+  "types-shapely>=2.1.0.20260728",
+  "types-geopandas>=1.1.4.20260807",
 ]
 
 
@@ -58,7 +58,7 @@ ml = [
   "torch>=2.13.0",
   "pyomo>=6.10.1",
 ]
-viz = ["bokeh>=3.9.1"]
+viz = ["bokeh>=3.9.2"]
 
 [project.scripts]
 umosim = "scripts.umosim:main"
@@ -124,7 +124,6 @@ convention = "numpy"
 # These directories do not follow the same style as the rest of the codebase.
 "data/projects/*" = ["F401", "E402"]
 "learning/*"      = ["D"]
-"resources/*"     = ["D"]
 "scripts/*"       = ["T201", "E402"]
 "tests/*"         = ["D", "SLF001", "T201"]
 "visualization/*" = ["D"]
@@ -145,13 +144,9 @@ project-excludes = [
   "simulation/agent/episodic_semi_gradient_sarsa.py",
   "simulation/agent/policy.py",
   "simulation/agent/rl_agent.py",
-  "simulation/helper/configuration/configuration.py",
-  "simulation/operator/data_transfer_object/vehicle_allocation.py",
-  "simulation/operator/interface/vehicle_allocation_engine_interface.py",
   "simulation/operator/ride_hailing_fleet.py",
   "simulation/operator/mixed_shared_vehicle_fleet.py",
   "simulation/operator/operations_management/algorithms/charging_station_allocation.py",
-  "simulation/operator/operations_management/algorithms/distance_based_bidding_strategy.py",
   "simulation/operator/operations_management/integrated_shared_mobility_operations.py",
   "simulation/operator/operations_management/operations.py",
   "simulation/operator/operations_management/operations_public_transport.py",
@@ -165,22 +160,13 @@ project-excludes = [
   "simulation/operator/public_transport_allocation_engine.py",
   "simulation/operator/public_transport_search_engine.py",
   "simulation/operator/public_transport_vehicle_fleet.py",
-  "simulation/operator/ride_hailing_allocation_engine.py",
   "simulation/operator/ride_hailing_operator.py",
-  "simulation/operator/ride_hailing_search_engine.py",
-  "simulation/operator/service_worker.py",
-  "simulation/operator/service_workforce.py",
   "simulation/operator/shared_mobility_operator.py",
-  "simulation/operator/shared_vehicle_allocation_engine.py",
-  "simulation/operator/shared_vehicle_search_engine.py",
   "simulation/vehicle/public_transit_bus.py",
   "simulation/vehicle/public_transit_vehicle.py",
   "simulation/vehicle/ride_hailing_vehicle.py",
   "simulation/vehicle/shared_vehicle.py",
-  "simulation/world/__init__.py",
   "simulation/world/demand/demand_factory.py",
-  "simulation/world/markets/auction.py",
-  "simulation/world/markets/interfaces/bidder_interface.py",
   "simulation/world/markets/shared_charging_auction.py",
   "simulation/world/world.py",
 ]

@@ -1,10 +1,14 @@
-from __future__ import annotations  # noqa: D100
+"""Search engine for shared vehicle transportation alternatives."""
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from simulation.operator.search_engine import SearchEngine
+from simulation.vehicle.shared_vehicle import SharedVehicle
 
 if TYPE_CHECKING:
+    from simulation.helper.enums import VehicleType
     from simulation.operator.data_transfer_object.transport_request import (
         TransportRequest,
     )
@@ -20,7 +24,16 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 )
 
 
-class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
+class SharedVehicleSearchEngine(SearchEngine):
+    """
+    Search engine for parked shared vehicles near the trip origin.
+
+    Parameters
+    ----------
+    deps : SearchEngineDependencies
+        Shared search engine dependencies.
+    """
+
     __slots__ = ("_env", "_fleet", "_radii", "_sim")
 
     def __init__(self, deps: SearchEngineDependencies) -> None:
@@ -29,7 +42,7 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         self._fleet: VehicleFleet = deps.operator.fleet
         self._operator = deps.operator
 
-        self._radii = {
+        self._radii: dict[VehicleType, float | int] = {
             config.VEHICLE_TYPE: config.WALKING_DISTANCE
             for config in self._fleet.config.VEHICLES
             if config.WALKING_DISTANCE is not None
@@ -39,10 +52,18 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
         self, transport_task: TransportRequest
     ) -> TransportationAlternativeBrowser:
         """
-        Spot all available vehicles to user
-        :param vehicle_search_task:
-        :return: Available Alternatives along with auxilary information regarding trip
-        """  # noqa: D205, D400
+        Spot all available vehicles to user.
+
+        Parameters
+        ----------
+        transport_task : TransportRequest
+            Transport demand to serve.
+
+        Returns
+        -------
+        TransportationAlternativeBrowser
+            Available alternatives with auxiliary trip information.
+        """
         browser = TransportationAlternativeBrowser()
 
         parking_vehicles_in_region = self._fleet.parking_vehicles_in_radius(
@@ -66,6 +87,9 @@ class SharedVehicleSearchEngine(SearchEngine):  # noqa: D101
 
         # Add all available cars to alternative browser
         for vehicle in parking_vehicles_sorted:
+            if not isinstance(vehicle, SharedVehicle):
+                continue
+
             # Calc Duration
             duration = vehicle.calculate_travel_time(distance)
 

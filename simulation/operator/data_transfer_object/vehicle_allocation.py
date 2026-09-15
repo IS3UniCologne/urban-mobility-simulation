@@ -1,4 +1,6 @@
-from __future__ import annotations  # noqa: D100
+"""Data transfer object for vehicle allocations."""
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
@@ -7,7 +9,7 @@ from simulation.vehicle.interfaces.reservable_interface import ReservableInterfa
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.environment.geodesic_position import GeodesicPosition
-    from simulation.helper.time import SimulationTime
+    from simulation.helper.types import SimTime
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -21,13 +23,13 @@ class VehicleAllocation:
     Parameters
     ----------
     user : User
-        The user whom the vehicle is allocated to.
+        User the vehicle is allocated to.
     transportation_alternative : TransportationAlternative
-        The selected transportation alternative.
+        Selected transportation alternative.
     pick_up_position : GeodesicPosition
-        The pick-up position for the user.
-    pick_up_time : SimulationTime
-        The time at which the vehicle will be at the pick-up position.
+        Pick-up position for the user.
+    pick_up_time : SimTime or None
+        Time the vehicle reaches the pick-up position, or None if unknown.
     """
 
     __slots__ = (
@@ -40,13 +42,13 @@ class VehicleAllocation:
         "_vehicle",
     )
 
-    def __init__(  # noqa: ANN204
+    def __init__(
         self,
         user: User,
         transportation_alternative: TransportationAlternative,
         pick_up_position: GeodesicPosition,  # Todo these are ridehailing specific, might want to refactor
-        pick_up_time: SimulationTime | None,
-    ):
+        pick_up_time: SimTime | None,
+    ) -> None:
         self._user = user  # User that got the assignment
         self._vehicle = (
             transportation_alternative.vehicle
@@ -66,23 +68,28 @@ class VehicleAllocation:
         self._energy_consumed = 0.0
 
     @property
-    def user(self) -> User:  # noqa: D102
+    def user(self) -> User:
+        """Return the allocated user."""
         return self._user
 
     @property
-    def vehicle(self) -> Vehicle:  # noqa: D102
+    def vehicle(self) -> Vehicle:
+        """Return the allocated vehicle."""
         return self._vehicle
 
     @property
-    def transportation_alternative(self) -> TransportationAlternative:  # noqa: D102
+    def transportation_alternative(self) -> TransportationAlternative:
+        """Return the selected transportation alternative."""
         return self._transportation_alternative
 
     @property
-    def pick_up_position(self) -> GeodesicPosition:  # noqa: D102
+    def pick_up_position(self) -> GeodesicPosition:
+        """Return the pick-up position."""
         return self._pick_up_position
 
     @property
-    def pick_up_time(self) -> SimulationTime | None:  # noqa: D102
+    def pick_up_time(self) -> SimTime | None:
+        """Return the pick-up time, or None if unknown."""
         return self._pick_up_time
 
     @property
