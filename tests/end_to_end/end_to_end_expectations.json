@@ -14,9 +14,9 @@
       "cost_vehicle_distance": 4551.553480504833,
       "cost_vehicle_relocation_distance": 209.7915304430618,
       "cost_vehicle_charging": 951.4984069186423,
-      "cost_vehicle_time": 2146.0000000000005,
+      "cost_vehicle_holding": 2146.0000000000005,
       "cost_driver_payment": 2227.8889705412425,
-      "cost_worker_time": 0
+      "cost_worker_labor": 0
     },
     "user_metrics": {
       "total_trip_requests": 2103,
@@ -63,9 +63,9 @@
       "cost_vehicle_distance": 2895.458677325451,
       "cost_vehicle_relocation_distance": 0,
       "cost_vehicle_charging": 35.797731332963,
-      "cost_vehicle_time": 9670.0,
+      "cost_vehicle_holding": 9670.0,
       "cost_driver_payment": 0,
-      "cost_worker_time": 110.72260704990482
+      "cost_worker_labor": 110.72260704990482
     },
     "user_metrics": {
       "total_trip_requests": 2114,
@@ -106,9 +106,9 @@
       "cost_vehicle_distance": 2693.093650854274,
       "cost_vehicle_relocation_distance": 197.84542167297388,
       "cost_vehicle_charging": 598.0312090430656,
-      "cost_vehicle_time": 1450.0000000000002,
+      "cost_vehicle_holding": 1450.0000000000002,
       "cost_driver_payment": 1987.521021550363,
-      "cost_worker_time": 0
+      "cost_worker_labor": 0
     },
     "user_metrics": {
       "total_trip_requests": 2114,
@@ -149,9 +149,9 @@
       "cost_vehicle_distance": 9291.912162722065,
       "cost_vehicle_relocation_distance": 134.95854070486578,
       "cost_vehicle_charging": 2244.9095283018796,
-      "cost_vehicle_time": 30044.0,
+      "cost_vehicle_holding": 30044.0,
       "cost_driver_payment": 9369.91115357426,
-      "cost_worker_time": 0
+      "cost_worker_labor": 0
     },
     "user_metrics": {
       "total_trip_requests": 4980,
@@ -198,9 +198,9 @@
       "cost_vehicle_distance": 5268.442394318118,
       "cost_vehicle_relocation_distance": 189.003934308729,
       "cost_vehicle_charging": 1084.6368355435234,
-      "cost_vehicle_time": 2146.0000000000005,
+      "cost_vehicle_holding": 2146.0000000000005,
       "cost_driver_payment": 2531.838125200462,
-      "cost_worker_time": 0
+      "cost_worker_labor": 0
     },
     "user_metrics": {
       "total_trip_requests": 11480,
@@ -247,9 +247,9 @@
       "cost_vehicle_distance": 3030.6011394547904,
       "cost_vehicle_relocation_distance": 0,
       "cost_vehicle_charging": 354.67311452774624,
-      "cost_vehicle_time": 2911.9,
+      "cost_vehicle_holding": 2911.9,
       "cost_driver_payment": 0,
-      "cost_worker_time": 231.60270919213855
+      "cost_worker_labor": 231.60270919213855
     },
     "user_metrics": {
       "total_trip_requests": 11526,
@@ -290,9 +290,9 @@
       "cost_vehicle_distance": 639.9912265122329,
       "cost_vehicle_relocation_distance": 32.70317415686219,
       "cost_vehicle_charging": 644.2273824628842,
-      "cost_vehicle_time": 2146.0000000000005,
+      "cost_vehicle_holding": 2146.0000000000005,
       "cost_driver_payment": 787.1166910667985,
-      "cost_worker_time": 0
+      "cost_worker_labor": 0
     },
     "user_metrics": {
       "total_trip_requests": 347,
@@ -339,9 +339,9 @@
       "cost_vehicle_distance": 556.1185418047387,
       "cost_vehicle_relocation_distance": 0,
       "cost_vehicle_charging": 7.154828333393178,
-      "cost_vehicle_time": 3018.8,
+      "cost_vehicle_holding": 3018.8,
       "cost_driver_payment": 0,
-      "cost_worker_time": 2.8219349705790764
+      "cost_worker_labor": 2.8219349705790764
     },
     "user_metrics": {
       "total_trip_requests": 349,
