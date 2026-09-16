@@ -4,6 +4,8 @@ from __future__ import annotations
 
 # SCAFFOLD:IMPORTS_START
 from simulation.helper.configuration.configuration import (
+    VehicleCostConfig,
+    WorkerCostConfig,
     IntegratedSharedMobilityOperationsConfig,
     SharedVehicleAllocationEngineConfig,
     SharedVehicleConfig,
@@ -25,10 +27,7 @@ sv_car = SharedVehicleConfig(
     VEHICLE_TYPE=VehicleType.CAR,
     AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
     PROPULSION_TYPE=PropulsionType.INTERNAL_COMBUSTION,
-    CHARGING_COST_PER_KWH=0.23,
     CONVENIENCE=3,
-    COST_PER_KM=0.53,
-    DAILY_TOTAL_COST=29.86,
     ENERGY_CONSUMPTION_PER_KM=0.20,
     INITIAL_CHARGE_RATIO=0.50,
     KG_CO2_PER_KM=0.236,
@@ -37,16 +36,14 @@ sv_car = SharedVehicleConfig(
     PRICE_PER_MIN=0.35,
     VELOCITY_KMH=9.54,
     WALKING_DISTANCE=500,
+    COST_CONFIG=VehicleCostConfig(PER_KM=0.53, CHARGING_PER_KWH=0.23, DAILY=29.86),
 )
 
 sv_scooter = SharedVehicleConfig(
     VEHICLE_TYPE=VehicleType.SCOOTER,
     AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
     PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
-    CHARGING_COST_PER_KWH=0.23,
     CONVENIENCE=2,
-    COST_PER_KM=0.53,
-    DAILY_TOTAL_COST=7.66,
     ENERGY_CONSUMPTION_PER_KM=0.048,
     INITIAL_CHARGE_RATIO=0.50,
     KG_CO2_PER_KM=0.051,
@@ -55,16 +52,14 @@ sv_scooter = SharedVehicleConfig(
     PRICE_PER_MIN=0.23,
     VELOCITY_KMH=8.04,
     WALKING_DISTANCE=350,
+    COST_CONFIG=VehicleCostConfig(PER_KM=0.53, CHARGING_PER_KWH=0.23, DAILY=7.66),
 )
 
 sv_kick_scooter = SharedVehicleConfig(
     VEHICLE_TYPE=VehicleType.KICK_SCOOTER,
     AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
     PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
-    CHARGING_COST_PER_KWH=0.23,
     CONVENIENCE=1,
-    COST_PER_KM=0.53,
-    DAILY_TOTAL_COST=11.51,
     ENERGY_CONSUMPTION_PER_KM=0.0072,
     INITIAL_CHARGE_RATIO=0.5,
     KG_CO2_PER_KM=0.105,
@@ -74,6 +69,7 @@ sv_kick_scooter = SharedVehicleConfig(
     PRICE_PER_TRIP=1.0,
     VELOCITY_KMH=2.82,
     WALKING_DISTANCE=200,
+    COST_CONFIG=VehicleCostConfig(PER_KM=0.53, CHARGING_PER_KWH=0.23, DAILY=11.51),
 )
 
 sv_bike = SharedVehicleConfig(
@@ -81,8 +77,6 @@ sv_bike = SharedVehicleConfig(
     AUTONOMY_TYPE=AutonomyType.HUMAN_DRIVEN,
     PROPULSION_TYPE=PropulsionType.HUMAN_POWERED,
     CONVENIENCE=1,
-    COST_PER_KM=0.10,
-    DAILY_TOTAL_COST=11.51,
     ENERGY_CONSUMPTION_PER_KM=0.0,
     INITIAL_CHARGE_RATIO=1.0,
     KG_CO2_PER_KM=0.046,
@@ -91,6 +85,7 @@ sv_bike = SharedVehicleConfig(
     PRICE_PER_MIN=0.08,
     VELOCITY_KMH=2.82,
     WALKING_DISTANCE=200,
+    COST_CONFIG=VehicleCostConfig(PER_KM=0.10, DAILY=11.51),
 )
 
 SM_STATION_HEXES = ["872830828ffffff"]  # SCAFFOLD:STATION_HEXES
@@ -120,6 +115,7 @@ OPERATORS = [
             RECHARGE_THRESHOLD=0.3,
             VEHICLE_RELOCATION_VELOCITY=9.54,
             NUMBER_OF_SERVICE_WORKERS=20,
+            WORKER_COST_CONFIG=WorkerCostConfig(HOURLY=20.0),
         ),
     )
     # SCAFFOLD:OPERATOR_END
