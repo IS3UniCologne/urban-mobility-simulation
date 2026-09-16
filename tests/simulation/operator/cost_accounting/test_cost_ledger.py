@@ -134,7 +134,7 @@ class TestCostLedger:
         second = ledger.totals_by_type()
 
         assert first == second
-        assert first[CostType.VEHICLE_TIME] == pytest.approx(100.0 * 0.02)
+        assert first[CostType.VEHICLE_HOLDING] == pytest.approx(100.0 * 0.02)
 
     def test_daily_rate_accrues_over_a_full_day(
         self, sim: Mock, ledger: CostLedger
@@ -144,7 +144,7 @@ class TestCostLedger:
 
         sim.env.now = 1440.0
 
-        assert ledger.totals_by_type()[CostType.VEHICLE_TIME] == pytest.approx(28.8)
+        assert ledger.totals_by_type()[CostType.VEHICLE_HOLDING] == pytest.approx(28.8)
 
     def test_daily_rate_zero_rate(self, sim: Mock, ledger: CostLedger) -> None:
         vehicle = make_vehicle(make_cost_config(DAILY=0.0))
@@ -152,7 +152,7 @@ class TestCostLedger:
 
         sim.env.now = 1440.0
 
-        assert ledger.totals_by_type()[CostType.VEHICLE_TIME] == 0.0
+        assert ledger.totals_by_type()[CostType.VEHICLE_HOLDING] == 0.0
 
     def test_accrual_starts_at_registration(
         self, sim: Mock, ledger: CostLedger
@@ -163,7 +163,7 @@ class TestCostLedger:
 
         sim.env.now = 1940.0
 
-        assert ledger.totals_by_type()[CostType.VEHICLE_TIME] == pytest.approx(28.8)
+        assert ledger.totals_by_type()[CostType.VEHICLE_HOLDING] == pytest.approx(28.8)
 
     def test_caller_side_interval_diff(self, sim: Mock, ledger: CostLedger) -> None:
         vehicle = make_vehicle(make_cost_config())
@@ -179,7 +179,7 @@ class TestCostLedger:
         delta = {ct: current[ct] - snapshot[ct] for ct in CostType}
 
         assert delta[CostType.VEHICLE_DISTANCE] == pytest.approx(1.0)
-        assert delta[CostType.VEHICLE_TIME] == pytest.approx(100.0 * 0.02)
+        assert delta[CostType.VEHICLE_HOLDING] == pytest.approx(100.0 * 0.02)
         assert delta[CostType.VEHICLE_CHARGING] == 0.0
 
     def test_fare_applies_vehicles_own_share(self, ledger: CostLedger) -> None:
@@ -220,7 +220,7 @@ class TestCostLedger:
 
         sim.env.now = 300.0
         # Active from 60 to 120 at 30/h = 0.5/min
-        assert ledger.totals_by_type()[CostType.WORKER_TIME] == pytest.approx(30.0)
+        assert ledger.totals_by_type()[CostType.WORKER_LABOR] == pytest.approx(30.0)
 
     def test_worker_zero_rate_accrues_nothing(
         self, sim: Mock, ledger: CostLedger
@@ -230,7 +230,7 @@ class TestCostLedger:
 
         sim.env.now = 600.0
 
-        assert ledger.totals_by_type()[CostType.WORKER_TIME] == 0.0
+        assert ledger.totals_by_type()[CostType.WORKER_LABOR] == 0.0
 
     def test_caller_side_interval_diff_per_entity(
         self, sim: Mock, ledger: CostLedger
