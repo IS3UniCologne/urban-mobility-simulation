@@ -92,8 +92,7 @@ def run_simulation_and_extract_metrics(config_path: str) -> dict[str, Any]:
             "cost_vehicle_relocation_distance"
         ],
         "cost_vehicle_charging": aggregate["cost_vehicle_charging"],
-        "cost_vehicle_time_online": aggregate["cost_vehicle_time_online"],
-        "cost_vehicle_time_offline": aggregate["cost_vehicle_time_offline"],
+        "cost_vehicle_time": aggregate["cost_vehicle_time"],
         "cost_driver_payment": aggregate["cost_driver_payment"],
         "cost_worker_time": aggregate["cost_worker_time"],
     }
