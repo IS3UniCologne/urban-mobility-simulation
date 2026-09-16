@@ -80,7 +80,7 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
             since=self._env.now,
             active=True,
             rate=vehicle.cost_config.DAILY / MINUTES_PER_DAY,
-            cost_type=CostType.VEHICLE_TIME,
+            cost_type=CostType.VEHICLE_HOLDING,
         )
 
     def record_distance(
@@ -116,7 +116,7 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
             since=self._env.now,
             active=active,
             rate=worker.cost_config.HOURLY / MINUTES_PER_HOUR,
-            cost_type=CostType.WORKER_TIME,
+            cost_type=CostType.WORKER_LABOR,
         )
 
     def set_worker_active(self, worker: CostBearingWorker, active: bool) -> None:
