@@ -9,7 +9,6 @@ class CostType(Enum):
     VEHICLE_DISTANCE = "vehicle_distance"
     VEHICLE_RELOCATION_DISTANCE = "vehicle_relocation_distance"
     VEHICLE_CHARGING = "vehicle_charging"
-    VEHICLE_TIME_ONLINE = "vehicle_time_online"
-    VEHICLE_TIME_OFFLINE = "vehicle_time_offline"
+    VEHICLE_TIME = "vehicle_time"
     DRIVER_PAYMENT = "driver_payment"
     WORKER_TIME = "worker_time"
