@@ -1,4 +1,4 @@
-"""Operator-owned cost ledger applying configured rates to reported quantities."""
+"""Operator-owned ledger booking revenue and applying cost rates to reported quantities."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from simulation.helper.time import MINUTES_PER_DAY, MINUTES_PER_HOUR
 from simulation.operator.cost_accounting.cost_reporter import (
     VehicleCostReporter,
     WorkerCostReporter,
@@ -22,9 +23,6 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
-
-MINUTES_PER_DAY = 1440
-MINUTES_PER_HOUR = 60
 
 
 @dataclass(slots=True)
@@ -51,11 +49,11 @@ class _TimeAccrual:
 
 class CostLedger(VehicleCostReporter, WorkerCostReporter):
     """
-    Accumulate operator costs from raw quantities reported by components.
+    Accumulate operator revenue and costs from raw quantities reported by components.
 
-    Keeps running totals per cost type and entity; time-based costs are
-    settled lazily on every query, so totals are correct at any simulation
-    time without per-tick work.
+    Keeps running cost totals per cost type and entity and one gross revenue
+    total; time-based costs are settled lazily on every query, so totals are
+    correct at any simulation time without per-tick work.
 
     Parameters
     ----------
@@ -63,7 +61,7 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
         Simulation context supplying the clock accruals are folded against.
     """
 
-    __slots__ = ("_env", "_time_accruals", "_totals")
+    __slots__ = ("_env", "_revenue", "_time_accruals", "_totals")
 
     def __init__(self, sim: SimulationContext) -> None:
         self._env = sim.env
@@ -71,6 +69,7 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
             lambda: defaultdict(float)
         )
         self._time_accruals: dict[SimId, _TimeAccrual] = {}
+        self._revenue = 0.0
 
     # Vehicle reporting
 
@@ -100,10 +99,9 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
         cost_per_kwh = vehicle.cost_config.CHARGING_PER_KWH
         self._totals[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * cost_per_kwh
 
-    def report_driver_trip_compensation(
-        self, vehicle: CostBearingVehicle, price: float
-    ) -> None:
-        """Report a fulfilled trip's gross price for driver-share costing."""
+    def report_fulfilled_trip(self, vehicle: CostBearingVehicle, price: float) -> None:
+        """Book a fulfilled trip's gross price as revenue and its driver share as cost."""
+        self._revenue += price
         share = vehicle.cost_config.DRIVER_PAYMENT_SHARE
         if share > 0:
             self._totals[CostType.DRIVER_PAYMENT][vehicle.uid] += price * share
@@ -122,6 +120,10 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
     def set_worker_active(self, worker: CostBearingWorker, active: bool) -> None:
         """Report a change of a worker's activity. No-op if unchanged."""
         self._flip_accrual(worker.uid, active=active)
+
+    def revenue(self) -> float:
+        """Return gross revenue."""
+        return self._revenue
 
     def totals_by_type(self) -> dict[CostType, float]:
         """Return accumulated cost per cost type, zero for unused types."""
