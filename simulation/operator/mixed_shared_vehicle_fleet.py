@@ -25,7 +25,11 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
         vehicle_config: VehicleConfig,
     ) -> None:
         SharedVehicle(
-            sim=deps.sim, position=position, fleet=self, vehicle_config=vehicle_config
+            sim=deps.sim,
+            position=position,
+            fleet=self,
+            vehicle_config=vehicle_config,
+            cost_reporter=self.operator.cost_ledger,
         )
 
     def supply_per_region(self) -> dict[str, dict[str, int]]:

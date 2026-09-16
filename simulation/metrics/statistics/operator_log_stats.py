@@ -40,8 +40,6 @@ class OperatorLogStats:
         Total revenue lost from missed transactions.
     total_price_sum : float
         Sum of prices of all fulfilled transactions.
-    total_revenue : float
-        Total revenue from all fulfilled transactions.
     withdrawn_count : int
         Number of withdrawn transactions.
     """
@@ -56,7 +54,6 @@ class OperatorLogStats:
         "total_energy",
         "total_missed_revenue",
         "total_price_sum",
-        "total_revenue",
         "withdrawn_count",
     )
 
@@ -65,7 +62,6 @@ class OperatorLogStats:
         self.fulfilled_count = 0
         self.missed_count = 0
         self.withdrawn_count = 0
-        self.total_revenue = 0.0
         self.total_missed_revenue = 0.0
         self.total_duration = 0.0
         self.total_distance = 0.0
@@ -87,7 +83,6 @@ class OperatorLogStats:
         if isinstance(transaction, FulfilledOperatorLogEntry):
             self.fulfilled_count += 1
             self.has_fulfilled = True
-            self.total_revenue += transaction.revenue
             self.total_price_sum += transaction.price
             self.total_duration += transaction.duration
             self.total_distance += transaction.distance

@@ -41,12 +41,8 @@ if TYPE_CHECKING:
     )
     from simulation.world.world import World
 
-from simulation.helper.enums import (
-    AutonomyType,
-    OperatorMode,
-    PropulsionType,
-    TransactionState,
-)
+from simulation.helper.enums import OperatorMode, PropulsionType, TransactionState
+from simulation.operator.cost_accounting import CostLedger
 from simulation.operator.interface.operator_interface import OperatorInterface
 from simulation.operator.operator_log import OperatorLog
 from simulation.operator.operator_log.operator_log_entry import (
@@ -73,6 +69,7 @@ class Operator(OperatorInterface):
         "_allocation_engine",
         "_charging_infrastructure",
         "_context",
+        "_cost_ledger",
         "_env",
         "_fleet",
         "_mode",
@@ -95,6 +92,8 @@ class Operator(OperatorInterface):
         )
 
         self._operator_log: OperatorLog = OperatorLog()
+
+        self._cost_ledger: CostLedger = CostLedger(deps.sim)
 
     @staticmethod
     def from_deps(deps: OperatorDependencies) -> Operator:
@@ -196,6 +195,11 @@ class Operator(OperatorInterface):
         return self._fleet.vehicle_types
 
     @property
+    def cost_ledger(self) -> CostLedger:
+        """Cost ledger accumulating this operator's operating costs."""
+        return self._cost_ledger
+
+    @property
     def operator_log(self) -> OperatorLog:
         """
         Return the operator log of the operator.
@@ -268,6 +272,9 @@ class Operator(OperatorInterface):
             transaction = self._create_fulfilled_transaction(
                 transportation_task, transportation_alternative, state, energy_consumed
             )
+            self._cost_ledger.report_fulfilled_trip(
+                transportation_alternative.vehicle, transportation_alternative.price
+            )
 
         self._operator_log.add_transaction(transaction)
 
@@ -297,8 +304,6 @@ class Operator(OperatorInterface):
         energy_consumed: float | None = None,
     ) -> FulfilledOperatorLogEntry:
         """Create a transaction for a fulfilled trip."""
-        revenue = self._calculate_revenue(transportation_alternative)
-
         return FulfilledOperatorLogEntry(
             origin=transportation_alternative.route.origin.get_region_id(),
             destination=transportation_alternative.route.destination.get_region_id(),
@@ -308,7 +313,6 @@ class Operator(OperatorInterface):
             accepted_vehicle_types=transportation_task.accepted_vehicle_types,
             state=state,
             price=transportation_alternative.price,
-            revenue=revenue,
             duration=transportation_alternative.duration,
             vehicle_uid=transportation_alternative.vehicle.uid,
             selected_vehicle_type=transportation_alternative.vehicle.vehicle_type,
@@ -324,37 +328,6 @@ class Operator(OperatorInterface):
                 == PropulsionType.BATTERY_ELECTRIC
             ),
         )
-
-    def _calculate_revenue(
-        self, transportation_alternative: TransportationAlternative
-    ) -> float:
-        """
-        Calculate operator revenue from a transportation alternative.
-
-        For human-driven vehicles, deducts driver payment share if configured.
-
-        Parameters
-        ----------
-        transportation_alternative : TransportationAlternative
-            The selected transportation alternative.
-
-        Returns
-        -------
-        float
-            The revenue for the operator after deductions.
-        """
-        base_price = transportation_alternative.price
-
-        if (
-            transportation_alternative.vehicle.autonomy_type
-            == AutonomyType.HUMAN_DRIVEN
-        ):
-            driver_share = getattr(
-                self._config.OPERATIONS_CONFIG, "DRIVER_PAYMENT_SHARE", 0.0
-            )
-            return base_price * (1 - driver_share)
-
-        return base_price
 
     def pay_for_fulfilled_transportation_task(  # noqa: D102
         self,

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import VehicleConfig
     from simulation.infrastructure.network.edge import Edge
+    from simulation.operator.cost_accounting import VehicleCostReporter
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.vehicle.reservation import Reservation
 
@@ -27,9 +28,14 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         fleet: VehicleFleet,
         position: GeodesicPosition,
         vehicle_config: VehicleConfig,
+        cost_reporter: VehicleCostReporter,
     ) -> None:
         super().__init__(
-            sim=sim, fleet=fleet, position=position, vehicle_config=vehicle_config
+            sim=sim,
+            fleet=fleet,
+            position=position,
+            vehicle_config=vehicle_config,
+            cost_reporter=cost_reporter,
         )
 
         self._price_per_minute: float = vehicle_config.PRICE_PER_MIN
@@ -113,6 +119,9 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         yield from self.energy_system.refill(amount, charging_time)
 
         charged = self.energy_system.current_energy_absolute - energy_before
+
+        self._cost_reporter.record_energy_charged(self, charged)
+
         self.logger.debug(
             "Vehicle charged %s (units) and has now %s out of %s.",
             charged,

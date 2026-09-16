@@ -1,8 +1,51 @@
 """Plot adapter for metrics from the 'operator' group."""
 
+from simulation.metrics.metrics_dict import MetricsDict
+
+_FINANCIAL_KEYS = {"total_revenue": "revenue", "total_cost": "cost", "profit": "profit"}
+
 
 class OperatorMetricsPlotAdapter:
     """Provides plot configurations for operator metrics."""
+
+    @property
+    def financials(self) -> dict:
+        """Configuration for plotting revenue, cost and profit of each operator in one chart."""
+
+        def transform(snapshot: MetricsDict) -> dict[str, dict[str, float]]:
+            return {
+                f"{uid} {label}": {"amount": operator_metrics[key]}
+                for uid, operator_metrics in snapshot.items()
+                if uid != "aggregate"
+                for key, label in _FINANCIAL_KEYS.items()
+            }
+
+        return {
+            "title": "Operator Revenue, Cost and Profit",
+            "metric_group": "operator",
+            "metric_key": "amount",  # see transform
+            "plot_type": "indexed_line",
+            "transform": transform,
+        }
+
+    @property
+    def aggregate_financials(self) -> dict:
+        """Configuration for plotting revenue, cost and profit summed over all operators."""
+
+        def transform(snapshot: MetricsDict) -> dict[str, dict[str, float]]:
+            aggregate = snapshot["aggregate"]
+            return {
+                label: {"amount": aggregate[key]}
+                for key, label in _FINANCIAL_KEYS.items()
+            }
+
+        return {
+            "title": "Total Revenue, Cost and Profit",
+            "metric_group": "operator",
+            "metric_key": "amount",  # see transform
+            "plot_type": "indexed_line",
+            "transform": transform,
+        }
 
     @property
     def total_revenue(self) -> dict:

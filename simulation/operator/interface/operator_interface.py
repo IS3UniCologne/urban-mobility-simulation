@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from simulation.operator.data_transfer_object.vehicle_allocation import (
         VehicleAllocation,
     )
+    from simulation.operator.cost_accounting import CostLedger
     from simulation.operator.interface.operations_interface import OperationsInterface
     from simulation.operator.interface.search_engine_interface import (
         SearchEngineInterface,
@@ -65,6 +66,12 @@ class OperatorInterface(SimulationBase, ABC):
     @abstractmethod
     def operations(self) -> OperationsInterface:
         """Return the operations interface for this operator."""
+        pass
+
+    @property
+    @abstractmethod
+    def cost_ledger(self) -> CostLedger:
+        """Return the cost ledger for this operator."""
         pass
 
     @abstractmethod
