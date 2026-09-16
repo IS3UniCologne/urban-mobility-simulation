@@ -31,9 +31,7 @@ rh_car_autonomous = RideHailingVehicleConfig(
     PRICE_PER_MIN=0.35,
     PRICE_PER_KM=1.3,
     INITIAL_CHARGE_RATIO=0.50,
-    COST_CONFIG=VehicleCostConfig(
-        PER_KM=0.45, CHARGING_PER_KWH=0.43, DAILY_ONLINE=29.0, DAILY_OFFLINE=0.0
-    ),
+    COST_CONFIG=VehicleCostConfig(PER_KM=0.45, CHARGING_PER_KWH=0.43, DAILY=29.0),
 )
 rh_car_human = RideHailingVehicleConfig(
     VELOCITY_KMH=9.54,
@@ -48,11 +46,7 @@ rh_car_human = RideHailingVehicleConfig(
     PRICE_PER_KM=1.3,
     INITIAL_CHARGE_RATIO=0.50,
     COST_CONFIG=VehicleCostConfig(
-        PER_KM=0.45,
-        CHARGING_PER_KWH=0.43,
-        DAILY_ONLINE=29.0,
-        DAILY_OFFLINE=0.0,
-        DRIVER_PAYMENT_SHARE=0.75,
+        PER_KM=0.45, CHARGING_PER_KWH=0.43, DAILY=29.0, DRIVER_PAYMENT_SHARE=0.75
     ),
 )
 

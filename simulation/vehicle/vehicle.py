@@ -161,9 +161,7 @@ class Vehicle(SimulationBase, ABC):
         # Add self to fleet
         self._fleet.register_vehicle(self)
 
-        self._cost_reporter.register_vehicle(
-            self, active=self.state is not VehicleStates.OFFLINE
-        )
+        self._cost_reporter.register_vehicle(self)
 
     @property
     def cost_config(self) -> VehicleCostConfig:
@@ -323,9 +321,6 @@ class Vehicle(SimulationBase, ABC):
         old_state = self._state_machine.current_state
         self._state_machine.transition_to(state)
         self._fleet.update_vehicle_state(self, old_state, state)
-        self._cost_reporter.set_vehicle_active(
-            self, active=state is not VehicleStates.OFFLINE
-        )
 
     @property
     def position(self) -> GeodesicPosition:
