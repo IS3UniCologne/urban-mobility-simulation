@@ -37,13 +37,16 @@ class _TimeAccrual:
         Simulation time the currently open span started.
     active : bool
         Whether the entity is currently in its active state.
-    rates : dict[bool, tuple[float, CostType]]
-        Per-state (rate per minute, cost type). A missing state accrues nothing.
+    rate : float
+        Cost per minute while active.
+    cost_type : CostType
+        Cost type the accrual books to.
     """
 
     since: float
     active: bool
-    rates: dict[bool, tuple[float, CostType]]
+    rate: float
+    cost_type: CostType
 
 
 class CostLedger(VehicleCostReporter, WorkerCostReporter):
@@ -71,22 +74,13 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
 
     # Vehicle reporting
 
-    def register_vehicle(self, vehicle: CostBearingVehicle, active: bool) -> None:
+    def register_vehicle(self, vehicle: CostBearingVehicle) -> None:
         """Start cost tracking for a vehicle."""
-        config = vehicle.cost_config
         self._time_accruals[vehicle.uid] = _TimeAccrual(
             since=self._env.now,
-            active=active,
-            rates={
-                True: (
-                    config.DAILY_ONLINE / MINUTES_PER_DAY,
-                    CostType.VEHICLE_TIME_ONLINE,
-                ),
-                False: (
-                    config.DAILY_OFFLINE / MINUTES_PER_DAY,
-                    CostType.VEHICLE_TIME_OFFLINE,
-                ),
-            },
+            active=True,
+            rate=vehicle.cost_config.DAILY / MINUTES_PER_DAY,
+            cost_type=CostType.VEHICLE_TIME,
         )
 
     def record_distance(
@@ -106,10 +100,6 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
         cost_per_kwh = vehicle.cost_config.CHARGING_PER_KWH
         self._totals[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * cost_per_kwh
 
-    def set_vehicle_active(self, vehicle: CostBearingVehicle, active: bool) -> None:
-        """Report a change of a vehicle's activity. No-op if unchanged."""
-        self._flip_accrual(vehicle.uid, active=active)
-
     def report_driver_trip_compensation(
         self, vehicle: CostBearingVehicle, price: float
     ) -> None:
@@ -122,11 +112,11 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
 
     def register_worker(self, worker: CostBearingWorker, active: bool) -> None:
         """Start cost tracking for a service worker."""
-        rate_per_min = worker.cost_config.HOURLY / MINUTES_PER_HOUR
         self._time_accruals[worker.uid] = _TimeAccrual(
             since=self._env.now,
             active=active,
-            rates={True: (rate_per_min, CostType.WORKER_TIME)},
+            rate=worker.cost_config.HOURLY / MINUTES_PER_HOUR,
+            cost_type=CostType.WORKER_TIME,
         )
 
     def set_worker_active(self, worker: CostBearingWorker, active: bool) -> None:
@@ -178,12 +168,9 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
         """Fold the open time span of one accrual into totals up to now."""
         elapsed = now - accrual.since
         accrual.since = now
-        priced = accrual.rates.get(accrual.active)
-        if priced is None or elapsed <= 0:
+        if not accrual.active or elapsed <= 0 or accrual.rate <= 0:
             return
-        rate, cost_type = priced
-        if rate > 0:
-            self._totals[cost_type][uid] += elapsed * rate
+        self._totals[accrual.cost_type][uid] += elapsed * accrual.rate
 
     def _settle(self, now: float) -> None:
         """Fold all open time accruals into totals up to now."""

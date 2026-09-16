@@ -43,15 +43,13 @@ class VehicleCostReporter(ABC):
     __slots__ = ()
 
     @abstractmethod
-    def register_vehicle(self, vehicle: CostBearingVehicle, active: bool) -> None:
+    def register_vehicle(self, vehicle: CostBearingVehicle) -> None:
         """Start cost tracking for a vehicle.
 
         Parameters
         ----------
         vehicle : CostBearingVehicle
-            Vehicle to track. Time-based costs accrue from now on.
-        active : bool
-            Whether the vehicle starts in an active (online) state.
+            Vehicle to track. The daily rate accrues from now on.
         """
 
     @abstractmethod
@@ -80,18 +78,6 @@ class VehicleCostReporter(ABC):
             Vehicle that charged.
         kwh : float
             Actually charged energy in kWh.
-        """
-
-    @abstractmethod
-    def set_vehicle_active(self, vehicle: CostBearingVehicle, active: bool) -> None:
-        """Report a change of a vehicle's activity for time-based costs.
-
-        Parameters
-        ----------
-        vehicle : CostBearingVehicle
-            Vehicle whose activity changed.
-        active : bool
-            Whether the vehicle is now active (online). No-op if unchanged.
         """
 
     @abstractmethod
