@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any
 
 from simulation.helper.enums import AutonomyType, PropulsionType
 from simulation.helper.vehicle_states import VehicleStates
-from simulation.operator.cost_accounting import NULL_VEHICLE_COST_REPORTER
 from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
 
 from .vehicle import Vehicle
@@ -43,7 +42,7 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         position: GeodesicPosition,
         vehicle_config: VehicleConfig,
         driver_availability_vector: list[int],
-        cost_reporter: VehicleCostReporter = NULL_VEHICLE_COST_REPORTER,
+        cost_reporter: VehicleCostReporter,
     ) -> None:
         super().__init__(
             sim=sim,

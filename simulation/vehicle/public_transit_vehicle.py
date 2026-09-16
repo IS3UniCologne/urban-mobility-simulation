@@ -30,7 +30,11 @@ class PublicTransitVehicle(Vehicle, ABC):  # noqa: D101
         vehicle_config: VehicleConfig,
     ) -> None:
         super().__init__(
-            sim=sim, fleet=fleet, position=position, vehicle_config=vehicle_config
+            sim=sim,
+            fleet=fleet,
+            position=position,
+            vehicle_config=vehicle_config,
+            cost_reporter=fleet.operator.cost_ledger,
         )
 
         self._route: Route = route

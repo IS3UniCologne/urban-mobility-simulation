@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from simulation.helper.configuration.configuration import WorkerCostConfig
     from simulation.operator.cost_accounting import WorkerCostReporter
 
-from simulation.operator.cost_accounting import NULL_WORKER_COST_REPORTER
 from simulation.operator.operations_management.service_jobs.job_queue import JobQueue
 from simulation.operator.service_worker import ServiceWorker
 
@@ -26,6 +25,10 @@ class ServiceWorkforce:
         Simulation context.
     number_service_workers : int
         Number of workers to spawn.
+    cost_config : WorkerCostConfig
+        Operator cost rates for every worker.
+    cost_reporter : WorkerCostReporter
+        Sink each worker reports cost-relevant quantities to.
     """
 
     __slots__ = ("_job_queue", "_number_service_workers", "_service_workers", "_sim")
@@ -35,7 +38,7 @@ class ServiceWorkforce:
         sim: SimulationContext,
         number_service_workers: int,
         cost_config: WorkerCostConfig,
-        cost_reporter: WorkerCostReporter = NULL_WORKER_COST_REPORTER,
+        cost_reporter: WorkerCostReporter,
     ) -> None:
         self._sim = sim
         self._service_workers: list[Process] = []

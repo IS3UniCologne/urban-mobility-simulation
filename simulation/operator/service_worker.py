@@ -6,7 +6,6 @@ from enum import Enum
 from typing import TYPE_CHECKING, ClassVar
 
 from simulation.helper.simulation_base import SimulationBase
-from simulation.operator.cost_accounting import NULL_WORKER_COST_REPORTER
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -47,6 +46,10 @@ class ServiceWorker(SimulationBase):
         Simulation context.
     job_queue : JobQueue
         Queue supplying jobs to execute.
+    cost_config : WorkerCostConfig
+        Operator cost rates for this worker.
+    cost_reporter : WorkerCostReporter
+        Sink for cost-relevant quantities.
     """
 
     service_worker_id: ClassVar[int] = 0  # TODO: not thread safe
@@ -58,7 +61,7 @@ class ServiceWorker(SimulationBase):
         sim: SimulationContext,
         job_queue: JobQueue,
         cost_config: WorkerCostConfig,
-        cost_reporter: WorkerCostReporter = NULL_WORKER_COST_REPORTER,
+        cost_reporter: WorkerCostReporter,
     ) -> None:
         super().__init__(sim)
 

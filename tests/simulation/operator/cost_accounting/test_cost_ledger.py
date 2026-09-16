@@ -14,8 +14,6 @@ from simulation.operator.cost_accounting import (
     CostBearingWorker,
     CostLedger,
     CostType,
-    NullVehicleCostReporter,
-    NullWorkerCostReporter,
 )
 
 pytestmark = pytest.mark.unit
@@ -298,22 +296,3 @@ class TestCostLedger:
         all_costs = ledger.totals_by_entity()
         assert all_costs[SimId("vehicle-a")] == pytest.approx(4.0)
         assert all_costs[SimId("vehicle-b")] == pytest.approx(2.0)
-
-
-class TestNullCostReporters:
-    def test_vehicle_methods_are_noops(self) -> None:
-        reporter = NullVehicleCostReporter()
-        vehicle = make_vehicle(make_cost_config())
-
-        reporter.register_vehicle(vehicle, active=True)
-        reporter.record_distance(vehicle, 1000.0, relocation=False)
-        reporter.record_energy_charged(vehicle, 5.0)
-        reporter.set_vehicle_active(vehicle, active=False)
-        reporter.report_driver_trip_compensation(vehicle, 10.0)
-
-    def test_worker_methods_are_noops(self) -> None:
-        reporter = NullWorkerCostReporter()
-        worker = make_worker()
-
-        reporter.register_worker(worker, active=False)
-        reporter.set_worker_active(worker, active=True)
