@@ -81,13 +81,11 @@ class VehicleCostReporter(ABC):
         """
 
     @abstractmethod
-    def report_driver_trip_compensation(
-        self, vehicle: CostBearingVehicle, price: float
-    ) -> None:
-        """Report a completed trip fare that a driver is paid a share of.
+    def report_fulfilled_trip(self, vehicle: CostBearingVehicle, price: float) -> None:
+        """Report a fulfilled trip's fare.
 
-        Report every fulfilled trip. The share comes from the vehicle's own
-        cost config.
+        Report every fulfilled trip. The driver share comes from the vehicle's
+        own cost config.
 
         Parameters
         ----------

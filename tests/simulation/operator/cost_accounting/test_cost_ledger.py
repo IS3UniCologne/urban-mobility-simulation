@@ -182,15 +182,22 @@ class TestCostLedger:
         assert delta[CostType.VEHICLE_HOLDING] == pytest.approx(100.0 * 0.02)
         assert delta[CostType.VEHICLE_CHARGING] == 0.0
 
+    def test_fulfilled_trip_books_gross_revenue(self, ledger: CostLedger) -> None:
+        vehicle = make_vehicle(make_cost_config())
+        ledger.report_fulfilled_trip(vehicle, 10.0)
+        ledger.report_fulfilled_trip(vehicle, 2.5)
+
+        assert ledger.revenue() == pytest.approx(12.5)
+
     def test_fare_applies_vehicles_own_share(self, ledger: CostLedger) -> None:
         vehicle = make_vehicle(make_cost_config())
-        ledger.report_driver_trip_compensation(vehicle, 10.0)
+        ledger.report_fulfilled_trip(vehicle, 10.0)
 
         assert ledger.totals_by_type()[CostType.DRIVER_PAYMENT] == pytest.approx(7.5)
 
     def test_fare_zero_share_ignored(self, ledger: CostLedger) -> None:
         vehicle = make_vehicle(make_cost_config(DRIVER_PAYMENT_SHARE=0.0))
-        ledger.report_driver_trip_compensation(vehicle, 10.0)
+        ledger.report_fulfilled_trip(vehicle, 10.0)
 
         assert ledger.totals_by_type()[CostType.DRIVER_PAYMENT] == 0.0
 
@@ -199,8 +206,8 @@ class TestCostLedger:
         autonomous = make_vehicle(
             make_cost_config(DRIVER_PAYMENT_SHARE=0.0), uid="autonomous"
         )
-        ledger.report_driver_trip_compensation(human, 10.0)
-        ledger.report_driver_trip_compensation(autonomous, 10.0)
+        ledger.report_fulfilled_trip(human, 10.0)
+        ledger.report_fulfilled_trip(autonomous, 10.0)
 
         by_entity = ledger.totals_by_entity(CostType.DRIVER_PAYMENT)
         assert by_entity == {SimId("human"): pytest.approx(7.5)}
