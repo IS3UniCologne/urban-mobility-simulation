@@ -3,7 +3,6 @@ from __future__ import annotations  # noqa: D100
 from typing import TYPE_CHECKING, Any
 
 from simulation.helper.vehicle_states import VehicleStates
-from simulation.operator.cost_accounting import NULL_VEHICLE_COST_REPORTER
 from simulation.vehicle.mixins.reservable_mixin import ReservableMixin
 
 from .vehicle import Vehicle
@@ -29,7 +28,7 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         fleet: VehicleFleet,
         position: GeodesicPosition,
         vehicle_config: VehicleConfig,
-        cost_reporter: VehicleCostReporter = NULL_VEHICLE_COST_REPORTER,
+        cost_reporter: VehicleCostReporter,
     ) -> None:
         super().__init__(
             sim=sim,
