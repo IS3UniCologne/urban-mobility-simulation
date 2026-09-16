@@ -8,7 +8,6 @@ from simulation.helper.simulation_base import SimulationBase
 from simulation.helper.state_machine import StateMachine
 from simulation.helper.time import SimulationVelocityConverter
 from simulation.helper.vehicle_states import VehicleStates
-from simulation.operator.cost_accounting import NULL_VEHICLE_COST_REPORTER
 from simulation.vehicle.movement_stats import MovementStats
 
 if TYPE_CHECKING:
@@ -55,7 +54,7 @@ class Vehicle(SimulationBase, ABC):
     vehicle_config : VehicleConfig
         Vehicle configuration.
     cost_reporter : VehicleCostReporter
-        Sink for cost-relevant quantities. Defaults to a no-op reporter.
+        Sink for cost-relevant quantities.
     """
 
     __slots__ = (
@@ -104,7 +103,7 @@ class Vehicle(SimulationBase, ABC):
         fleet: VehicleFleet,
         position: GeodesicPosition,
         vehicle_config: VehicleConfig,
-        cost_reporter: VehicleCostReporter = NULL_VEHICLE_COST_REPORTER,
+        cost_reporter: VehicleCostReporter,
     ) -> None:
         super().__init__(sim)
 
