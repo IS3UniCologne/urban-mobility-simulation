@@ -65,8 +65,6 @@ class FulfilledOperatorLogEntry(BaseOperatorLogEntry):
         Energy consumed during the trip.
     selected_vehicle_EV : bool
         Whether the selected vehicle is electric.
-    revenue : float
-        Revenue earned from the trip for the operator.
     duration : float
         Duration of the trip.
     """
@@ -76,7 +74,6 @@ class FulfilledOperatorLogEntry(BaseOperatorLogEntry):
     est_pickup_wait: float
     energy_consumption: float
     selected_vehicle_EV: bool
-    revenue: float
     duration: float
 
     def __post_init__(self) -> None:

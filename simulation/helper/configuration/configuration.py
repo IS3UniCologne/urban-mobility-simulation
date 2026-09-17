@@ -328,6 +328,25 @@ class PopulationConfig(ConfigBaseModel):
         return self
 
 
+class VehicleCostConfig(ConfigBaseModel):
+    """Operator cost rates for a vehicle."""
+
+    model_config = ConfigDict(frozen=True)
+
+    PER_KM: float = Field(default=0, ge=0)
+    CHARGING_PER_KWH: float = Field(default=0, ge=0)
+    DAILY: float = Field(default=0, ge=0)
+    DRIVER_PAYMENT_SHARE: float = Field(default=0, ge=0, le=1)
+
+
+class WorkerCostConfig(ConfigBaseModel):
+    """Operator cost rates for a service worker."""
+
+    model_config = ConfigDict(frozen=True)
+
+    HOURLY: float = Field(default=0, ge=0)
+
+
 class VehicleConfig(ConfigBaseModel):
     """Configuration for vehicle properties and behavior."""
 
@@ -353,11 +372,9 @@ class VehicleConfig(ConfigBaseModel):
     CONVENIENCE: int = Field(default=1, ge=1)
     PRICE_PER_MIN: float | None = Field(default=None, ge=0)
     PRICE_PER_TRIP: float = Field(default=0, ge=0)
-    DAILY_TOTAL_COST: float | None = Field(default=None, ge=0)
-    COST_PER_KM: float | None = Field(default=0, ge=0)
     PRICE_PER_KM: float | None = Field(default=None, ge=0)
-    CHARGING_COST_PER_KWH: float | None = Field(default=None, ge=0)
     KG_CO2_PER_KM: float | None = Field(default=None, ge=0)
+    COST_CONFIG: VehicleCostConfig = Field(default_factory=VehicleCostConfig)
 
 
 class RideHailingVehicleConfig(VehicleConfig):
@@ -505,7 +522,6 @@ class RideHailingOperationsConfig(OperationsConfig):
 
     # OPERATOR_TYPE: type[Operator] =
 
-    DRIVER_PAYMENT_SHARE: float = Field(gt=0)
     AV_PRICE_REDUCTION: float = Field(gt=0)
     MAX_PICKUP_DISTANCE: int = Field(gt=0)
     PRICE_ENTERING: float = Field(ge=0)
@@ -543,6 +559,7 @@ class IntegratedSharedMobilityOperationsConfig(OperationsConfig):
     OPERATIONS_TYPE: type[Operations] = IntegratedSharedMobilityOperations
 
     NUMBER_OF_SERVICE_WORKERS: int = Field(gt=0)
+    WORKER_COST_CONFIG: WorkerCostConfig = Field(default_factory=WorkerCostConfig)
 
     CHARGING_STATION_POWER: float | None = Field(default=None)
     NUMBER_OF_BASE_REGIONS: int | None = Field(default=None)

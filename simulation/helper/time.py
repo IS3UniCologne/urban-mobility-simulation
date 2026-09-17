@@ -16,6 +16,9 @@ WEEKDAYS = [
     "sunday",
 ]
 
+MINUTES_PER_HOUR = 60
+MINUTES_PER_DAY = 1440
+
 
 class SimulationTime:
     """
