@@ -33,6 +33,7 @@ dependencies = [
 [dependency-groups]
 dev = [
   { include-group = "benchmarks" },
+  { include-group = "docs" },
   { include-group = "pre-commit" },
   { include-group = "testing" },
   { include-group = "typing" },
@@ -49,6 +50,10 @@ typing = [
   "pandas-stubs>=3.0.5.260730",
   "types-shapely>=2.1.0.20260728",
   "types-geopandas>=1.1.4.20260807",
+]
+
+docs = [
+    "interrogate>=1.7.0",
 ]
 
 
@@ -190,3 +195,26 @@ python_files = ["*_test.py", "test_*.py"]
 python_functions = ["test_*"]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.interrogate]
+ignore-init-method = false
+ignore-init-module = true
+ignore-magic = false
+ignore-semiprivate = false
+ignore-private = true
+ignore-property-decorators = false
+ignore-module = false
+ignore-nested-functions = false
+ignore-nested-classes = false
+ignore-setters = false
+ignore-overloaded-functions = false
+fail-under = 69
+# possible values: sphinx (default), google
+style = "sphinx"
+# possible values: 0 (minimal output), 1 (-v), 2 (-vv)
+verbose = 0
+quiet = false
+color = true
+# output file location
+generate-badge = "docs"
+badge-format = "svg"
