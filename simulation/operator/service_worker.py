@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import WorkerCostConfig
-    from simulation.operator.cost_accounting import WorkerCostReporter
+    from simulation.operator.accounting import WorkerLedger
     from simulation.operator.operations_management.service_jobs.job_queue import (
         JobQueue,
     )
@@ -48,20 +48,20 @@ class ServiceWorker(SimulationBase):
         Queue supplying jobs to execute.
     cost_config : WorkerCostConfig
         Operator cost rates for this worker.
-    cost_reporter : WorkerCostReporter
-        Sink for cost-relevant quantities.
+    ledger : WorkerLedger
+        Ledger the worker reports to.
     """
 
     service_worker_id: ClassVar[int] = 0  # TODO: not thread safe
 
-    __slots__ = ("_cost_config", "_cost_reporter", "_env", "_job_queue", "_state")
+    __slots__ = ("_cost_config", "_env", "_job_queue", "_ledger", "_state")
 
     def __init__(
         self,
         sim: SimulationContext,
         job_queue: JobQueue,
         cost_config: WorkerCostConfig,
-        cost_reporter: WorkerCostReporter,
+        ledger: WorkerLedger,
     ) -> None:
         super().__init__(sim)
 
@@ -71,8 +71,8 @@ class ServiceWorker(SimulationBase):
         self._job_queue = job_queue
 
         self._cost_config = cost_config
-        self._cost_reporter = cost_reporter
-        self._cost_reporter.register_worker(self, active=self._state.on_duty)
+        self._ledger = ledger
+        self._ledger.register_worker(self, active=self._state.on_duty)
 
         ServiceWorker.service_worker_id += 1
 
@@ -134,7 +134,7 @@ class ServiceWorker(SimulationBase):
         if state is self._state:
             return
         self._state = state
-        self._cost_reporter.set_worker_active(self, active=state.on_duty)
+        self._ledger.set_worker_active(self, active=state.on_duty)
 
     @property
     def state(self) -> ServiceWorkerState:

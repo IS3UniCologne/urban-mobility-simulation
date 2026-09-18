@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import VehicleConfig
     from simulation.infrastructure.route import Route
-    from simulation.operator.cost_accounting import VehicleCostReporter
+    from simulation.operator.accounting import VehicleLedger
     from simulation.operator.vehicle_fleet import VehicleFleet
     from simulation.vehicle.reservation import Reservation
 
@@ -42,14 +42,14 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         position: GeodesicPosition,
         vehicle_config: VehicleConfig,
         driver_availability_vector: list[int],
-        cost_reporter: VehicleCostReporter,
+        ledger: VehicleLedger,
     ) -> None:
         super().__init__(
             sim=sim,
             fleet=fleet,
             position=position,
             vehicle_config=vehicle_config,
-            cost_reporter=cost_reporter,
+            ledger=ledger,
         )
 
         self._price_per_minute = vehicle_config.PRICE_PER_MIN
@@ -208,7 +208,7 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         # Charge
         yield from self.energy_system.refill(charge_amount, charging_time)
 
-        self._cost_reporter.record_energy_charged(
+        self._ledger.record_energy_charged(
             self, self.energy_system.current_energy_absolute - energy_before
         )
 
