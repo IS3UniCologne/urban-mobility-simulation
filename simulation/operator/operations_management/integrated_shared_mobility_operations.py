@@ -112,7 +112,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
             sim=self._sim,
             number_service_workers=ops_config.NUMBER_OF_SERVICE_WORKERS,
             cost_config=ops_config.WORKER_COST_CONFIG,
-            cost_reporter=self.operator.cost_ledger,
+            ledger=self.operator.ledger,
         )
 
     @property
