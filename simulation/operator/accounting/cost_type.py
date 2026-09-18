@@ -4,7 +4,7 @@ from enum import Enum
 
 
 class CostType(Enum):
-    """Categories of operating cost drivers attributed to an operator."""
+    """Categories of costs attributed to an operator."""
 
     VEHICLE_DISTANCE = "vehicle_distance"
     VEHICLE_RELOCATION_DISTANCE = "vehicle_relocation_distance"
