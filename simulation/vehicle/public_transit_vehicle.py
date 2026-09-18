@@ -34,7 +34,7 @@ class PublicTransitVehicle(Vehicle, ABC):  # noqa: D101
             fleet=fleet,
             position=position,
             vehicle_config=vehicle_config,
-            cost_reporter=fleet.operator.cost_ledger,
+            ledger=fleet.operator.ledger,
         )
 
         self._route: Route = route
