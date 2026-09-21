@@ -14,24 +14,22 @@ jobs:
         contents: write
     steps:
       #----------------------------------------------
-      #       check-out repo and set-up python
+      #       check out the repo
       #----------------------------------------------
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: 3.11
       #----------------------------------------------
       #       run ruff
       #----------------------------------------------
       - name: Run ruff linter
-        uses: chartboost/ruff-action@v1
+        uses: astral-sh/ruff-action@v4
         with:
+          version-file: uv.lock
           args: 'check --fix'
       - name: Run ruff formatter
-        uses: chartboost/ruff-action@v1
+        uses: astral-sh/ruff-action@v4
         with:
+          version-file: uv.lock
           args: 'format'
       #----------------------------------------------
       #       Commit fixes done by ruff
