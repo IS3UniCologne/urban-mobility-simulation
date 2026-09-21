@@ -22,12 +22,12 @@ jobs:
       #       run ruff
       #----------------------------------------------
       - name: Run ruff linter
-        uses: astral-sh/ruff-action@v4
+        uses: astral-sh/ruff-action@v4.1.0
         with:
           version-file: uv.lock
           args: 'check --fix'
       - name: Run ruff formatter
-        uses: astral-sh/ruff-action@v4
+        uses: astral-sh/ruff-action@v4.1.0
         with:
           version-file: uv.lock
           args: 'format'
