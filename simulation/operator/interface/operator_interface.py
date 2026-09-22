@@ -10,6 +10,7 @@ from simulation.helper.simulation_base import SimulationBase
 if TYPE_CHECKING:
     from simulation.agent.user import User
     from simulation.helper.enums import OperatorMode, TransactionState
+    from simulation.operator.accounting import Ledger
     from simulation.operator.data_transfer_object.transport_request import (
         TransportRequest,
     )
@@ -19,7 +20,6 @@ if TYPE_CHECKING:
     from simulation.operator.data_transfer_object.vehicle_allocation import (
         VehicleAllocation,
     )
-    from simulation.operator.cost_accounting import CostLedger
     from simulation.operator.interface.operations_interface import OperationsInterface
     from simulation.operator.interface.search_engine_interface import (
         SearchEngineInterface,
@@ -42,37 +42,31 @@ class OperatorInterface(SimulationBase, ABC):
     @abstractmethod
     def mode(self) -> OperatorMode:
         """Return the operator mode."""
-        pass
 
     @property
     @abstractmethod
     def search_engine(self) -> SearchEngineInterface:
         """Return the search engine for this operator."""
-        pass
 
     @property
     @abstractmethod
     def allocation_engine(self) -> AllocationEngineInterface:
         """Return the vehicle allocation engine for this operator."""
-        pass
 
     @property
     @abstractmethod
     def fleet(self) -> VehicleFleet:
         """Return the vehicle fleet for this operator."""
-        pass
 
     @property
     @abstractmethod
     def operations(self) -> OperationsInterface:
         """Return the operations interface for this operator."""
-        pass
 
     @property
     @abstractmethod
-    def cost_ledger(self) -> CostLedger:
-        """Return the cost ledger for this operator."""
-        pass
+    def ledger(self) -> Ledger:
+        """Return the ledger for this operator."""
 
     @abstractmethod
     def withdraw_transportation_task(
@@ -90,7 +84,6 @@ class OperatorInterface(SimulationBase, ABC):
         state : TransactionState
             The state of the task after withdrawal.
         """
-        pass
 
     @abstractmethod
     def pay_for_fulfilled_transportation_task(
@@ -111,7 +104,6 @@ class OperatorInterface(SimulationBase, ABC):
         vehicle_allocation : VehicleAllocation
             The vehicle allocation for the task.
         """
-        pass
 
     @abstractmethod
     def log_failed_allocation_attempt(
@@ -132,4 +124,3 @@ class OperatorInterface(SimulationBase, ABC):
         transportation_alternative : TransportationAlternative
             The transportation alternative that was selected but could not be allocated.
         """
-        pass

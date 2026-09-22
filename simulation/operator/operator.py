@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from simulation.world.world import World
 
 from simulation.helper.enums import OperatorMode, PropulsionType, TransactionState
-from simulation.operator.cost_accounting import CostLedger
+from simulation.operator.accounting import Ledger
 from simulation.operator.interface.operator_interface import OperatorInterface
 from simulation.operator.operator_log import OperatorLog
 from simulation.operator.operator_log.operator_log_entry import (
@@ -69,9 +69,9 @@ class Operator(OperatorInterface):
         "_allocation_engine",
         "_charging_infrastructure",
         "_context",
-        "_cost_ledger",
         "_env",
         "_fleet",
+        "_ledger",
         "_mode",
         "_operations",
         "_operator_log",
@@ -93,7 +93,7 @@ class Operator(OperatorInterface):
 
         self._operator_log: OperatorLog = OperatorLog()
 
-        self._cost_ledger: CostLedger = CostLedger(deps.sim)
+        self._ledger: Ledger = Ledger(deps.sim)
 
     @staticmethod
     def from_deps(deps: OperatorDependencies) -> Operator:
@@ -195,9 +195,9 @@ class Operator(OperatorInterface):
         return self._fleet.vehicle_types
 
     @property
-    def cost_ledger(self) -> CostLedger:
-        """Cost ledger accumulating this operator's operating costs."""
-        return self._cost_ledger
+    def ledger(self) -> Ledger:
+        """Ledger accumulating this operator's revenue and costs."""
+        return self._ledger
 
     @property
     def operator_log(self) -> OperatorLog:
@@ -272,7 +272,7 @@ class Operator(OperatorInterface):
             transaction = self._create_fulfilled_transaction(
                 transportation_task, transportation_alternative, state, energy_consumed
             )
-            self._cost_ledger.report_fulfilled_trip(
+            self._ledger.report_fulfilled_trip(
                 transportation_alternative.vehicle, transportation_alternative.price
             )
 
