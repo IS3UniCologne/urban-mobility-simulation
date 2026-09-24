@@ -340,3 +340,77 @@ class TestLogManager:
         # Assert - Check the actual state instead of mock calls
         root_logger = logging.getLogger()
         assert root_logger.level == expected_min_level
+
+
+@pytest.mark.unit
+class TestLogManagerClose:
+    """Unit tests for releasing a LogManager's handlers."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, tmp_path: "os.PathLike[str]") -> None:
+        """Point a real configuration stub at a temporary output folder."""
+        self.config = Mock()
+        self.config.settings = Mock()
+        self.config.settings.LOG_LEVEL = "WARNING"
+        self.config.settings.FILE_LOG_LEVEL = "INFO"
+        self.config.settings.LOG_TIMESTAMPS = False
+        self.config.settings.LOG_CLASS_OVERRIDES = {"Overridden": "DEBUG"}
+        self.config.path = Mock()
+        self.config.path.OUTPUT_FOLDER = str(tmp_path)
+        self.env = Mock()
+
+    def test_close_detaches_and_closes_every_handler(self) -> None:
+        """After close no logger holds the manager's handlers and its files are shut."""
+        manager = LogManager(self.config, self.env)
+        class_logger = manager.get_class_logger("Plain")
+        override_logger = manager.get_class_logger("Overridden")
+        system_logger = manager.get_system_logger("boot")
+        metrics_logger = manager.get_metrics_output_logger()
+        metrics_file_handler = next(
+            h for h in metrics_logger.handlers if isinstance(h, logging.FileHandler)
+        )
+
+        manager.close()
+
+        for logger in (class_logger, override_logger, system_logger, metrics_logger):
+            assert logger.handlers == []
+        root = logging.getLogger()
+        assert manager._shared_console_handler not in root.handlers
+        assert manager._shared_memory_handler not in root.handlers
+        assert manager._shared_file_handler.stream is None
+        assert manager._override_file_handler.stream is None
+        assert metrics_file_handler.stream is None
+
+    @patch("simulation.helper.logging.log_manager.atexit.unregister")
+    def test_close_unregisters_its_exit_hooks(self, mock_unregister: Mock) -> None:
+        """Both exit flushes are unregistered, and a second close is harmless."""
+        manager = LogManager(self.config, self.env)
+
+        manager.close()
+        manager.close()
+
+        mock_unregister.assert_any_call(manager._shared_memory_handler.flush)
+        mock_unregister.assert_any_call(manager._override_memory_handler.flush)
+
+    def test_close_leaves_a_newer_manager_untouched(self) -> None:
+        """Closing an older manager keeps a newer one's handlers on the shared loggers."""
+        older = LogManager(self.config, self.env)
+        older.get_class_logger("Plain")
+        older.get_system_logger("boot")
+        older.get_metrics_output_logger()
+        newer = LogManager(self.config, self.env)
+        plain = newer.get_class_logger("Plain")
+        metrics_logger = newer.get_metrics_output_logger()
+        metrics_file_handler = next(
+            h for h in metrics_logger.handlers if isinstance(h, logging.FileHandler)
+        )
+
+        older.close()
+
+        assert plain.handlers == [
+            newer._shared_console_handler,
+            newer._shared_memory_handler,
+        ]
+        assert newer._shared_file_handler.stream is not None
+        assert metrics_file_handler.stream is not None
+        newer.close()

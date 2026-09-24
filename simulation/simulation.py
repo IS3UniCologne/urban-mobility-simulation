@@ -60,6 +60,14 @@ class Simulation:
 
         self._post_simulation_processing()
 
+    def close(self) -> None:
+        """Release the log handlers this simulation opened.
+
+        Call it once the run and any reads of its state are done.
+        A process building many simulations otherwise keeps two open log files per simulation until exit.
+        """
+        self.sim.close()
+
     def _create_demand_factory(self) -> DemandFactory:
         """Create demand factory for the simulation."""
         return DemandFactory(sim=self.sim, world=self.world)
