@@ -60,7 +60,6 @@ class Vehicle(SimulationBase, ABC):
     __slots__ = (
         "__position",
         "_autonomy_type",
-        "_charging_cost_per_kWh",
         "_config",
         "_convenience",
         "_cost_config",
@@ -115,9 +114,6 @@ class Vehicle(SimulationBase, ABC):
         self._fleet: VehicleFleet = fleet
         self._cost_config: VehicleCostConfig = vehicle_config.COST_CONFIG
         self._cost_reporter = cost_reporter
-        self._charging_cost_per_kWh: float = (
-            0.0  # init charging cost, updated when vehicle is charged
-        )
 
         # Vehicle Position, name is intentionally mangled. Do not set directly.
         self.__position: GeodesicPosition = position
@@ -166,11 +162,6 @@ class Vehicle(SimulationBase, ABC):
         self._fleet.register_vehicle(self)
 
         self._cost_reporter.register_vehicle(self)
-
-    @property
-    def charging_cost_per_kWh(self) -> float:
-        """Charging cost per kWh for this vehicle. 0.0 until first charge."""
-        return self._charging_cost_per_kWh
 
     @property
     def cost_config(self) -> VehicleCostConfig:

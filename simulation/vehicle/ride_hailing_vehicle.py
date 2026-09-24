@@ -197,9 +197,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         self, charging_time: float, cost_per_kWh: float, charge_amount: float = 0
     ) -> Generator[Event, None, None]:
         self._set_state(VehicleStates.CHARGING)
-        self._charging_cost_per_kWh = (
-            cost_per_kWh  # Update charging cost per kWh for vehicle
-        )
 
         if charge_amount == 0:
             charge_amount = (
