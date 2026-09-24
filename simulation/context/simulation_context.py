@@ -81,3 +81,7 @@ class SimulationContext:
     def mark_ended(self) -> None:
         """Advance the phase to ENDED."""
         self._phase = SimulationPhase.ENDED
+
+    def close(self) -> None:
+        """Release the log handlers this context opened."""
+        self._log_manager.close()
