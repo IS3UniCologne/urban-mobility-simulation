@@ -79,7 +79,8 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
         serving_cars_in_area = [
             car
             for car in serving_cars_in_area
-            if car.energy_system.has_enough_energy(
+            if car.current_request is not None
+            and car.energy_system.has_enough_energy(
                 (car.current_request.origin << car.current_request.destination)
                 + (car.current_request.destination << origin)
                 + route_distance
