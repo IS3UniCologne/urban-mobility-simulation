@@ -28,7 +28,6 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
     __slots__ = (
         "_arrived_at_pick_up_position",
         "_charging_cost_per_kWh",
-        "_charging_cost_per_kWh",
         "_charging_station_plugged_out",
         "_driver_availability_vector",
         "_is_electric",
@@ -196,7 +195,10 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
 
     # TODO: Should this be part of the EnergySystem ?
     def charge(  # noqa: D102
-        self, charging_time: float, cost_per_kWh: float, charge_amount: float = 0
+        self,
+        charging_time: float,
+        cost_per_kWh: float | None = None,
+        charge_amount: float = 0,
     ) -> Generator[Event, None, None]:
         self._set_state(VehicleStates.CHARGING)
 
@@ -205,14 +207,15 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
                 self.energy_system.capacity - self.energy_system.current_energy_absolute
             )
 
-        self.charging_costs += charge_amount * cost_per_kWh
         energy_before = self.energy_system.current_energy_absolute
 
         # Charge
         yield from self.energy_system.refill(charge_amount, charging_time)
 
         self._cost_reporter.record_energy_charged(
-            self, self.energy_system.current_energy_absolute - energy_before
+            self,
+            self.energy_system.current_energy_absolute - energy_before,
+            cost_per_kWh=cost_per_kWh,
         )
 
         self.logger.debug(
