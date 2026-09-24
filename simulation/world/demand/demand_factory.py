@@ -48,8 +48,6 @@ class DemandFactory(SimulationBase):
         The simulation time manager.
     _world : World
         The simulation world instance.
-    _maximal_demand : int
-        Maximum number of demand events to generate.
     _modifiers : list of str
         Paths to GeoJSON files containing demand modifiers.
     _modifiers : dict
@@ -78,7 +76,6 @@ class DemandFactory(SimulationBase):
         "_daily_resolution",
         "_demand_profile",
         "_env",
-        "_maximal_demand",
         "_modifiers",
         "_rng",
         "_spatial_resolution",
@@ -88,14 +85,8 @@ class DemandFactory(SimulationBase):
         "_user_factory",
         "_world",
     )
-    counter = 0
 
-    def __init__(
-        self,
-        sim: SimulationContext,
-        world: World,
-        maximal_demand=3_000_000,  # noqa: ANN001
-    ) -> None:
+    def __init__(self, sim: SimulationContext, world: World) -> None:
         super().__init__(sim)
 
         self._config = sim.config
@@ -107,7 +98,6 @@ class DemandFactory(SimulationBase):
         self._spatial_resolution = self._config.world.SPATIAL_RESOLUTION
         self._daily_resolution = self._config.world.DAILY_RESOLUTION
 
-        self._maximal_demand = maximal_demand
         self._modifiers = {}
 
         self._demand_profile = self._load_demand_profile()
@@ -203,7 +193,7 @@ class DemandFactory(SimulationBase):
         ]
         # local_demand_profile.loc[:,'o_poisson_est'] /= 4
         # Run until simulation ends
-        while DemandFactory.counter < self._maximal_demand:
+        while True:
             try:
                 # Transform current time to temporal buckets as defined in the demand profile
                 time_bucket = SimulationTimeConverter.convert_to_temporal_bucket(
@@ -288,9 +278,6 @@ class DemandFactory(SimulationBase):
 
                     # Create and add user to world
                     self._create_user(spatial_unit, destination)
-
-                # Increase global counter (not thread safe)
-                DemandFactory.counter += 1
             except simpy.Interrupt:
                 break
 
