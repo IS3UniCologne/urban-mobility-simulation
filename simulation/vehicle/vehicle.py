@@ -114,6 +114,9 @@ class Vehicle(SimulationBase, ABC):
         self._fleet: VehicleFleet = fleet
         self._cost_config: VehicleCostConfig = vehicle_config.COST_CONFIG
         self._cost_reporter = cost_reporter
+        self._charging_cost_per_kwh: (
+            0.0  # init charging cost, updated with first charge
+        )
 
         # Vehicle Position, name is intentionally mangled. Do not set directly.
         self.__position: GeodesicPosition = position
