@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
     __slots__ = (
         "_arrived_at_pick_up_position",
-        "_charging_cost_per_kWh",
         "_charging_station_plugged_out",
         "_driver_availability_vector",
         "_is_electric",
