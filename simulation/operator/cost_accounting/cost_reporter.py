@@ -69,7 +69,9 @@ class VehicleCostReporter(ABC):
         """
 
     @abstractmethod
-    def record_energy_charged(self, vehicle: CostBearingVehicle, kwh: float) -> None:
+    def record_energy_charged(
+        self, vehicle: CostBearingVehicle, kwh: float, cost_per_kWh: float
+    ) -> None:
         """Report energy charged into a vehicle.
 
         Parameters
@@ -78,6 +80,8 @@ class VehicleCostReporter(ABC):
             Vehicle that charged.
         kwh : float
             Actually charged energy in kWh.
+        cost_per_kWh : float
+            Price paid at the charging station.
         """
 
     @abstractmethod

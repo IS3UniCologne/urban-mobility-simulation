@@ -94,10 +94,11 @@ class CostLedger(VehicleCostReporter, WorkerCostReporter):
         cost_per_km = vehicle.cost_config.PER_KM
         self._totals[cost_type][vehicle.uid] += distance_m / 1000 * cost_per_km
 
-    def record_energy_charged(self, vehicle: CostBearingVehicle, kwh: float) -> None:
-        """Report energy actually charged into a vehicle, in kWh."""
-        cost_per_kwh = vehicle.cost_config.CHARGING_PER_KWH
-        self._totals[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * cost_per_kwh
+    def record_energy_charged(
+        self, vehicle: CostBearingVehicle, kwh: float, cost_per_kWh: float
+    ) -> None:
+        """Report energy actually charged into a vehicle, in kWh, at the charger's price."""
+        self._totals[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * cost_per_kWh
 
     def report_fulfilled_trip(self, vehicle: CostBearingVehicle, price: float) -> None:
         """Book a fulfilled trip's gross price as revenue and its driver share as cost."""
