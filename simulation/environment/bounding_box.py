@@ -24,7 +24,10 @@ def read_demand_hex_ids(demand_path: Path) -> set[str]:
     df = pd.read_parquet(
         demand_path, columns=[demand_schema.ORIGIN, demand_schema.DESTINATION]
     )
-    return set(df[demand_schema.ORIGIN]) | set(df[demand_schema.DESTINATION])
+    # set() walks an Arrow-backed column row by row in Python, so deduplicate first
+    return set(df[demand_schema.ORIGIN].unique()) | set(
+        df[demand_schema.DESTINATION].unique()
+    )
 
 
 def read_supply_hex_ids(supply_paths: list[Path]) -> dict[Path, set[str]]:
