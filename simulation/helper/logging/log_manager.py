@@ -250,8 +250,7 @@ class LogManager:
             logs_dir = os.path.normpath(
                 os.path.join(self._config.path.OUTPUT_FOLDER, "metrics_logs")
             )
-            if not os.path.exists(logs_dir):
-                os.makedirs(logs_dir)
+            os.makedirs(logs_dir, exist_ok=True)
 
             metrics_log_file = os.path.join(logs_dir, f"{output_timestamp}_metrics.log")
             metrics_file_handler = logging.FileHandler(metrics_log_file)
@@ -278,8 +277,7 @@ class LogManager:
         # File handler setup
         output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
         logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
-        if not os.path.exists(logs_dir):
-            os.makedirs(logs_dir)
+        os.makedirs(logs_dir, exist_ok=True)
 
         log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
         file_handler = logging.FileHandler(log_file)
