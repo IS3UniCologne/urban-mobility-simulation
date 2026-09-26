@@ -2,46 +2,10 @@
 
 from __future__ import annotations
 
-import shutil
-from pathlib import Path
 from typing import Any, cast
 
-from scripts._cli.orchestrators import generate_demand, init_dataset
-from scripts._cli.paths import project_dataset_dir
-from scripts._cli.templates import load_preset_demand_params, load_presets
 from simulation.helper.configuration.configuration import Configuration
 from simulation.simulation import Simulation
-
-_ROOT = Path(__file__).resolve().parent.parent.parent
-_CONFIG_ROOT = _ROOT / "tests" / "configurations"
-DEMAND_SEED = 42
-
-
-def _dataset_name(config_dir: Path) -> str:
-    return project_dataset_dir(config_dir).name
-
-
-def build_e2e_datasets(root: Path = _ROOT) -> None:
-    """Regenerate every scenario dataset referenced by the e2e configs."""
-    presets = load_presets()
-    required = {
-        _dataset_name(d)
-        for d in _CONFIG_ROOT.iterdir()
-        if d.is_dir() and (d / "config.toml").exists()
-    }
-    for name in sorted(required):
-        if name not in presets:
-            raise ValueError(
-                f"Dataset '{name}' referenced by an e2e config has no preset in "
-                f"scripts/_presets.toml."
-            )
-        dataset_dir = root / "data" / "datasets" / name
-        if dataset_dir.exists():
-            shutil.rmtree(dataset_dir)
-        init_dataset(name, presets[name], root=root)
-        generate_demand(
-            name, root=root, seed=DEMAND_SEED, params=load_preset_demand_params(name)
-        )
 
 
 def run_simulation_and_extract_metrics(config_path: str) -> dict[str, Any]:
