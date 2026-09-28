@@ -32,11 +32,16 @@ class SimulationContext:
     config : Configuration
         Simulation parameters.
     decision_broker : DecisionBroker or None
-        RL decision broker, or None when the simulation runs without RL.
+        Broker answering the decision points. None leaves them inactive.
+    seed : int or None
+        Main random seed. None takes the configured ``SEED``.
     """
 
     def __init__(
-        self, config: Configuration, decision_broker: DecisionBroker | None = None
+        self,
+        config: Configuration,
+        decision_broker: DecisionBroker | None = None,
+        seed: int | None = None,
     ) -> None:
         self._config = config
         self._decision_broker = decision_broker
@@ -45,7 +50,7 @@ class SimulationContext:
         )
         self._log_manager = LogManager(config=self.config, env=self.env)
         self._uid_manager = UidManager()
-        self._random_manager = RandomManager(self)
+        self._random_manager = RandomManager(self, seed=seed)
         self._geo_env = GeodesicEnvironment(sim=self)
         self._phase: SimulationPhase = SimulationPhase.RUNNING
 
@@ -97,7 +102,3 @@ class SimulationContext:
     def mark_ended(self) -> None:
         """Advance the phase to ENDED."""
         self._phase = SimulationPhase.ENDED
-
-    def close(self) -> None:
-        """Release the log handlers this context opened."""
-        self._log_manager.close()
