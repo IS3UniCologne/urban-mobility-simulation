@@ -1,5 +1,7 @@
 """Noxfile for managing tests and other tasks."""
 
+import shutil
+
 import nox
 
 nox.options.default_venv_backend = "uv"
@@ -44,6 +46,35 @@ def pre_commit(session: nox.Session) -> None:
         env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
     )
     session.run("pre-commit", *args)
+
+
+@nox.session(name="docs")
+def docs(session: nox.Session) -> None:
+    """Build the HTML documentation into docs/_build/html, failing on any warning.
+
+    Parameters
+    ----------
+    session : nox.Session
+        Nox session.
+    """
+    session.run_install(
+        *UV_SYNC_COMMAND,
+        "--group=docs",
+        env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
+    )
+    # Stale stubs or an incremental build would make warnings differ from a clean checkout
+    shutil.rmtree("docs/_autosummary", ignore_errors=True)
+    session.run(
+        "sphinx-build",
+        "-E",
+        "-W",
+        "--keep-going",
+        "-b",
+        "html",
+        "docs",
+        "docs/_build/html",
+        *session.posargs,
+    )
 
 
 def _install_testing(session: nox.Session) -> None:

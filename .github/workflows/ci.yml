@@ -41,6 +41,26 @@ jobs:
       run: |
         nox -rs pyrefly
 
+  docs:
+    runs-on: self-hosted
+    name: Sphinx documentation
+    steps:
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nox
+        run: |
+          uv tool install nox
+
+      - name: Build documentation
+        run: |
+          nox -rs docs
+
   fast-test:
     runs-on: self-hosted
     name: Fast Tests (unit + integration)

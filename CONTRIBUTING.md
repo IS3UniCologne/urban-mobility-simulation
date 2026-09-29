@@ -116,6 +116,7 @@ nox -rs pyrefly      # type checking
 nox -rs pre-commit   # linting and formatting (ruff etc.)
 nox -rs pytest_fast  # fast test suite (everything except end-to-end)
 nox -rs pytest_e2e   # end-to-end scenario suite
+nox -rs docs         # API documentation, built into docs/_build/html
 ```
 
 All test data is generated locally, no external data is required to run the full
