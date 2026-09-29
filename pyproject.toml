@@ -51,6 +51,8 @@ typing = [
   "types-geopandas>=1.1.4.20260807",
 ]
 
+docs = ["furo>=2025.12.19", "sphinx>=9.0.4"]
+
 
 [project.optional-dependencies]
 ml = [

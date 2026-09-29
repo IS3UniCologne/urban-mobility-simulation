@@ -10,10 +10,11 @@ Validation and type checking are handled by Pydantic. To add a new configuration
 
 1. Add the section to the TOML config file as a new table (e.g., [new_section]).
 2. Create a new Pydantic model for the section in this file, using ConfigBaseModel.
-3a. Add a property to the Configuration class that uses _get_section to load and validate the new section.
-3b. If the section contains a list or dictionary, use _get_section_list or _get_section_dict respectively.
+3. Add a property to the Configuration class that uses _get_section to load and validate the new section.
+   If the section contains a list or dictionary, use _get_section_list or _get_section_dict respectively.
 
 To add a new parameter to an existing section:
+
 1. Add the parameter to the TOML config file under the appropriate section.
 2. Add the parameter to the corresponding Pydantic model, with an appropriate type hint.
 
