@@ -19,8 +19,9 @@ To add a new parameter to an existing section:
 2. Add the parameter to the corresponding Pydantic model, with an appropriate type hint.
 
 All validation, type conversion, and defaults should be handled using Pydantic features (validators, model_config, etc.).
-# TODO: cleanup, with more and more being config-as-code, some of the sections are obsolete
 """
+
+# TODO: cleanup, with more and more being config-as-code, some of the sections are obsolete
 
 from __future__ import annotations
 

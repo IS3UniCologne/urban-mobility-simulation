@@ -62,11 +62,11 @@ def docs(session: nox.Session) -> None:
         "--group=docs",
         env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
     )
-    # Stale stubs or an incremental build would make warnings differ from a clean checkout
-    shutil.rmtree("docs/_autosummary", ignore_errors=True)
+    # Leftover stubs, doctrees or cached inventories would make the build differ from CI
+    for build_dir in ("docs/_autosummary", "docs/_build"):
+        shutil.rmtree(build_dir, ignore_errors=True)
     session.run(
         "sphinx-build",
-        "-E",
         "-W",
         "--keep-going",
         "-b",
