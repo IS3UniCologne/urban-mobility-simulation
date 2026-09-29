@@ -1,5 +1,6 @@
 [project]
 description     = "Urban Mobility Simulation"
+license         = "AGPL-3.0-or-later"
 name            = "urban-mobility-simulation"
 readme          = "README.md"
 requires-python = ">=3.11, <3.14.0"
@@ -65,7 +66,7 @@ umosim = "scripts.umosim:main"
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires      = ["cython", "setuptools"]
+requires      = ["cython", "setuptools>=77"]
 
 
 [tool.setuptools]
