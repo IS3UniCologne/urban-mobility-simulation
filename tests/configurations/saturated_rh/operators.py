@@ -163,15 +163,15 @@ operator_1 = RideHailingOperatorConfig(
             0.35,
         ],
         VEHICLE_RELOCATION_VELOCITY=9.54,
+    ),
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
+        SEARCH_ENGINE_TYPE=RideHailingSearchEngine,
         AV_PRICE_REDUCTION=0.90,
         MAX_PICKUP_DISTANCE=10000,
         PRICE_ENTERING=2.0,
         PRICE_PER_MINUTE=0.35,
         PRICE_PER_KM=1.3,
         MINIMUM_PRICE=5.0,
-    ),
-    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
-        SEARCH_ENGINE_TYPE=RideHailingSearchEngine
     ),
     ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(
         VEHICLE_ALLOCATION_ENGINE_TYPE=RideHailingAllocationEngine
@@ -214,15 +214,15 @@ operator_2 = RideHailingOperatorConfig(
             0.35,
         ],
         VEHICLE_RELOCATION_VELOCITY=9.54,
+    ),
+    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
+        SEARCH_ENGINE_TYPE=RideHailingSearchEngine,
         AV_PRICE_REDUCTION=0.90,
         MAX_PICKUP_DISTANCE=10000,
         PRICE_ENTERING=2.0,
         PRICE_PER_MINUTE=0.35,
         PRICE_PER_KM=1.3,
         MINIMUM_PRICE=5.0,
-    ),
-    SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
-        SEARCH_ENGINE_TYPE=RideHailingSearchEngine
     ),
     ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(
         VEHICLE_ALLOCATION_ENGINE_TYPE=RideHailingAllocationEngine
