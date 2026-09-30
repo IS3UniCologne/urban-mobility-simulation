@@ -246,5 +246,6 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
             driver_availability_vector=self._driver_availability_vectors[
                 vehicle_config
             ],
+            shift_check_interval_min=deps.config.SHIFT_CHECK_INTERVAL_MIN,
             ledger=self.operator.ledger,
         )
