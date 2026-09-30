@@ -1,0 +1,30 @@
+.version-badge {
+  border: 1px solid var(--pst-color-border);
+  border-radius: 0.25rem;
+  color: var(--pst-color-text-base);
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  white-space: nowrap;
+}
+
+.navbar-brand .logo__image {
+  height: 2rem;
+}
+
+/* Icon-only collapse button, with the label kept for screen readers since the button has no other name */
+.bd-sidebar-primary #pst-collapse-sidebar-button .pst-collapse-sidebar-label {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+/* The nav element already carries "Section Navigation" as its accessible name */
+.bd-sidebar-primary p.bd-links__title {
+  display: none;
+}

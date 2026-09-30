@@ -79,11 +79,31 @@ myst_heading_anchors = 3
 # The landing page cards use sphinx-design directives in ::: fences
 myst_enable_extensions = ["colon_fence"]
 
-html_theme = "furo"
+html_theme = "pydata_sphinx_theme"
 html_title = f"umosim {release}"
+html_favicon = "_static/logo.svg"
 html_show_copyright = False
+html_show_sourcelink = False
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 html_js_files = ["sidebar.js"]
+html_theme_options = {
+    "logo": {
+        "text": "umosim",
+        "image_light": "_static/logo.svg",
+        "image_dark": "_static/logo-dark.svg",
+    },
+    # Opens the simulation package in the API reference sidebar
+    "show_nav_level": 2,
+    "navbar_end": ["version-badge", "theme-switcher", "navbar-icon-links"],
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/IS3UniCologne/urban-mobility-simulation",
+            "icon": "fa-brands fa-github",
+        }
+    ],
+}
 
 
 def _check_pydantic_models(app: Sphinx, env: BuildEnvironment) -> None:
