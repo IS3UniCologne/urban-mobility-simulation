@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.3.0](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.2.0...v0.3.0) (2026-09-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **accounting:** operator.cost_ledger and the cost_accounting import path are gone.
+* **operator:** revenue is now gross, costs and profit are tracked separately. Cost configuration has been moved into separate Config subclasses. Charging cost is now based on kWh actually charged rather than requested.
+
+### Features
+
+* **cost_accounting:** book revenue in the CostLedger, so revenue and cost come from one object. ([1181d34](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/1181d34cda6e7a2e00111fcb38e1c1d9daf632e1))
+* **operator:** centralized cost accounting in Operator CostLedger ([e4a0519](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/e4a0519640e8e02e03f732e087d83a500b3adb7e))
+
+
+### Refactors
+
+* **accounting:** rename CostLedger to Ledger, rename the reporter contracts to VehicleLedger and WorkerLedger. ([7fd33c6](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/7fd33c62f573a808d28b68fa8cff524621100401))
+* **cost_accounting:** remove null cost reporters and make assignment required ([984a6ae](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/984a6ae58726ae7acfd6ec4060e5cba6fdbef046))
+* **cost_accounting:** remove ONLINE/OFFLINE split for daily vehicle costs ([cd24b76](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/cd24b76cbd237c723d3d0e1c794d2e94f05bbee3))
+* fix type hints and docstrings on various connected modules. Minor refactoring where necessary for clean typing. ([04e85f0](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/04e85f031ff886bfeb26b8ccbebf505a0bb22c88))
+* fix type hints and docstrings on various connected modules… ([7d3e8cd](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/7d3e8cd11f6095f0aec4b85dd40fb63dcbb00c24))
+
 ## [0.2.0](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.1.0...v0.2.0) (2026-07-14)
 
 

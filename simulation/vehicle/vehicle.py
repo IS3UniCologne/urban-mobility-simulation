@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from simulation.infrastructure.network.edge import Edge
     from simulation.infrastructure.route import Route
     from simulation.infrastructure.transit_network.route_segment import RouteSegment
-    from simulation.operator.cost_accounting import VehicleCostReporter
+    from simulation.operator.accounting import VehicleLedger
     from simulation.operator.data_transfer_object.transport_request import (
         TransportRequest,
     )
@@ -53,8 +53,8 @@ class Vehicle(SimulationBase, ABC):
         Initial position of the vehicle.
     vehicle_config : VehicleConfig
         Vehicle configuration.
-    cost_reporter : VehicleCostReporter
-        Sink for cost-relevant quantities.
+    ledger : VehicleLedger
+        Ledger the vehicle reports to.
     """
 
     __slots__ = (
@@ -63,7 +63,6 @@ class Vehicle(SimulationBase, ABC):
         "_config",
         "_convenience",
         "_cost_config",
-        "_cost_reporter",
         "_current_region",
         "_current_request",
         "_destination",
@@ -75,6 +74,7 @@ class Vehicle(SimulationBase, ABC):
         "_estimated_completion_time",
         "_fleet",
         "_id",
+        "_ledger",
         "_max_available_seats",
         "_mode",
         "_passengers",
@@ -103,7 +103,7 @@ class Vehicle(SimulationBase, ABC):
         fleet: VehicleFleet,
         position: GeodesicPosition,
         vehicle_config: VehicleConfig,
-        cost_reporter: VehicleCostReporter,
+        ledger: VehicleLedger,
     ) -> None:
         super().__init__(sim)
 
@@ -113,7 +113,7 @@ class Vehicle(SimulationBase, ABC):
 
         self._fleet: VehicleFleet = fleet
         self._cost_config: VehicleCostConfig = vehicle_config.COST_CONFIG
-        self._cost_reporter = cost_reporter
+        self._ledger = ledger
 
         # Vehicle Position, name is intentionally mangled. Do not set directly.
         self.__position: GeodesicPosition = position
@@ -161,7 +161,7 @@ class Vehicle(SimulationBase, ABC):
         # Add self to fleet
         self._fleet.register_vehicle(self)
 
-        self._cost_reporter.register_vehicle(self)
+        self._ledger.register_vehicle(self)
 
     @property
     def cost_config(self) -> VehicleCostConfig:
@@ -573,7 +573,7 @@ class Vehicle(SimulationBase, ABC):
 
         energy_consumed = self.energy_system.consume_for_distance(distance)
 
-        self._cost_reporter.record_distance(
+        self._ledger.record_distance(
             self, distance, relocation=self.state is VehicleStates.RELOCATING
         )
 
