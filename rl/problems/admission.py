@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import numpy as np
 from gymnasium.spaces import Discrete
@@ -115,6 +115,7 @@ class Admission:
     fleet_yield: float
 
 
+@runtime_checkable
 class Reward(Protocol):
     """Protocol of the reward an ``AdmissionProblem`` pays each step."""
 
@@ -266,9 +267,17 @@ class AdmissionProblem(OperatorProblem[NDArray[np.float32], np.int64]):
     ----------
     reward : Reward
         Reward of each step, ``Profit`` of its period or ``Surplus`` of its decision.
+
+    Raises
+    ------
+    TypeError
+        If ``reward`` is a class or has no ``of`` method, such as the string ``"surplus"``.
     """
 
     def __init__(self, reward: Reward = Profit()) -> None:
+        if isinstance(reward, type) or not isinstance(reward, Reward):
+            msg = f"Expected a Reward such as Profit() or Surplus(), got {reward!r}."
+            raise TypeError(msg)
         super().__init__()
         self._reward = reward
         self._episode: _Episode | None = None
