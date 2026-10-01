@@ -264,6 +264,14 @@ def test_negative_waiting_cost_is_rejected() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("reward", ["surplus", Surplus])
+def test_reward_other_than_a_reward_instance_is_rejected(reward: object) -> None:
+    """A string or a bare reward class fails at construction rather than at the first step."""
+    with pytest.raises(TypeError, match="Reward"):
+        AdmissionProblem(reward)  # type: ignore[arg-type]
+
+
+@pytest.mark.unit
 def test_pickup_beyond_the_radius_is_clipped() -> None:
     """A pickup leg past the configured radius still lies in the observation space."""
     problem, simulation = start_episode([FakeVehicle("Vehicle_1")])
