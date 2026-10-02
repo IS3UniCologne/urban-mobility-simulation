@@ -1,5 +1,1 @@
-"""
-Benchmarks package.
-
-This package contains benchmarks for various components of the simulation environmen.
-"""
+"""Benchmark comparison of end-to-end scenarios between two code versions."""
