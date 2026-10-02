@@ -104,3 +104,67 @@ jobs:
             tail -n 20 "$logfile"
             echo ""
           done
+
+  benchmark:
+    runs-on: self-hosted
+    name: Benchmark
+    # Reports CPU time and peak memory against the target branch in a PR comment.
+    # A regression never fails this job, only a benchmark that cannot run does.
+    needs: end-to-end-test
+    # Also runs when the tests failed, so the comment does not keep the numbers of an
+    # earlier push
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          # the first parent of the PR merge commit is the tip of the target branch
+          fetch-depth: 2
+
+      - name: Install Nox
+        run: |
+          uv tool install nox
+
+      - name: Run benchmark
+        if: needs.end-to-end-test.result == 'success'
+        run: |
+          nox -rs benchmark -- --base HEAD^1 --report benchmark-report.md
+
+      - name: Add report to job summary
+        if: ${{ !cancelled() }}
+        run: |
+          if [ ! -f benchmark-report.md ]; then
+            printf '## Benchmark\n\nNo comparison for this push, since the tests or the benchmark failed.\n' > benchmark-report.md
+          fi
+          cat benchmark-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on pull request
+        # PRs from forks get a read-only token, their report stays in the job summary
+        if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require("fs");
+            const marker = "<!-- benchmark-report -->";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const report = fs.readFileSync("benchmark-report.md", "utf8");
+            const body = `${marker}\n${report}\n[Run log](${runUrl})\n`;
+            const issue = { ...context.repo, issue_number: context.issue.number };
+            const comments = await github.paginate(github.rest.issues.listComments, issue);
+            const previous = comments.find(
+              (comment) => comment.user?.type === "Bot" && comment.body?.startsWith(marker),
+            );
+            if (previous) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: previous.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...issue, body });
+            }
