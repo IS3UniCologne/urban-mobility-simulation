@@ -5,7 +5,7 @@ The PR side is the working tree this script runs from.
 Each side gets its own environment, its own Cython build and its own datasets.
 Runs alternate between the sides, each in a fresh process and with the dataset caches
 removed, so every run includes building the dataset cache.
-The report is a Markdown table of medians, meant for a PR comment.
+The report is a verdict and a Markdown table of medians, meant for a PR comment.
 A change beyond the threshold of its metric is flagged as a regression or improvement.
 Wall time is reported for context only, since load from other jobs on the machine
 changes it.
@@ -117,12 +117,12 @@ class Sample:
 @dataclass(frozen=True, slots=True)
 class Metric:
     """
-    One row of the report per scenario.
+    One column of the report.
 
     Parameters
     ----------
     label : str
-        Row label in the report.
+        Column heading in the report.
     value : Callable
         Function reading the value from a sample.
     unit : str
@@ -130,7 +130,7 @@ class Metric:
     scale : float
         Factor from the sample's unit to the shown unit.
     threshold_pct : float or None
-        Change beyond which the row gets flagged (percent). None never flags the row.
+        Change beyond which a cell gets flagged (percent). None never flags a cell.
     """
 
     label: str
@@ -318,37 +318,52 @@ def _report(
     pr_side: Side,
     base_commit: str,
 ) -> str:
-    lines = [
-        "## Benchmark",
-        "",
-        f"Base `{base_commit[:8]}` against the PR on Python {PYTHON_VERSION}, "
-        f"median of {REPEATS} runs per side.",
-        f"A CPU time change beyond {CPU_TIME_THRESHOLD_PCT:g}% or a peak memory "
-        f"change beyond {PEAK_MEMORY_THRESHOLD_PCT:g}% is flagged. "
-        "Wall time is for context only.",
-        "",
-        "| Scenario | Metric | Base | PR | Change |",
-        "|---|---|---|---|---|",
-    ]
+    rows = []
+    flagged = []
     for scenario in SCENARIOS:
+        cells = []
         for metric in METRICS:
             base = statistics.median(map(metric.value, samples[scenario, base_side]))
             pr = statistics.median(map(metric.value, samples[scenario, pr_side]))
-            lines.append(
-                f"| {scenario} | {metric.label} "
-                f"| {base * metric.scale:.1f} {metric.unit} "
-                f"| {pr * metric.scale:.1f} {metric.unit} "
-                f"| {_change(base, pr, metric.threshold_pct)} |"
+            change, is_flagged = _change(base, pr, metric.threshold_pct)
+            cells.append(
+                f"{change} ({base * metric.scale:.1f} → "
+                f"{pr * metric.scale:.1f} {metric.unit})"
             )
-    return "\n".join(lines) + "\n"
+            if is_flagged:
+                flagged.append(f"- {metric.label} of {scenario}: {change}")
+        rows.append(f"| {scenario} | {' | '.join(cells)} |")
+    verdict = ["**Flagged:**", "", *flagged] if flagged else ["**No flagged changes.**"]
+    return (
+        "\n".join(
+            [
+                "## Benchmark",
+                "",
+                *verdict,
+                "",
+                f"| Scenario | {' | '.join(metric.label for metric in METRICS)} |",
+                "|---" * (len(METRICS) + 1) + "|",
+                *rows,
+                "",
+                f"Base `{base_commit[:8]}` against the PR on Python {PYTHON_VERSION}, "
+                f"median of {REPEATS} runs per side, base → PR in parentheses.",
+                f"A CPU time change beyond {CPU_TIME_THRESHOLD_PCT:g}% or a peak memory "
+                f"change beyond {PEAK_MEMORY_THRESHOLD_PCT:g}% is flagged. "
+                "Wall time is for context only.",
+            ]
+        )
+        + "\n"
+    )
 
 
-def _change(base: float, pr: float, threshold_pct: float | None) -> str:
+def _change(base: float, pr: float, threshold_pct: float | None) -> tuple[str, bool]:
     change_pct = (pr - base) / base * 100
-    cell = f"{change_pct:+.1f}%"
-    if threshold_pct is None or abs(change_pct) <= threshold_pct:
-        return cell
-    return f"{cell} **{'regression' if change_pct > 0 else 'improvement'}**"
+    # A change that rounds to zero shows as 0.0%, never as -0.0%
+    change = f"{change_pct:+.1f}%" if round(change_pct, 1) else "0.0%"
+    is_flagged = threshold_pct is not None and abs(change_pct) > threshold_pct
+    if is_flagged:
+        change = f"**{change} {'regression' if change_pct > 0 else 'improvement'}**"
+    return change, is_flagged
 
 
 if __name__ == "__main__":
