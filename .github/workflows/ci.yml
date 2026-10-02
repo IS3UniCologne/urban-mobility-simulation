@@ -112,8 +112,8 @@ jobs:
     # A regression never fails this job, only a benchmark that cannot run does.
     needs: end-to-end-test
     # Also runs when the tests failed, so the comment does not keep the numbers of an
-    # earlier push
-    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    # earlier push. Release PRs only bump the version, so both sides run the same code
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--') }}
     timeout-minutes: 45
     permissions:
       contents: read
