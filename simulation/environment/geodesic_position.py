@@ -124,7 +124,7 @@ class GeodesicPosition(Position):
 
         Fast approximation of the haversine distance: in testing about 7.5x
         faster, with error around 0.1% at 10 km, slowly increasing with
-        distance. Benchmarks are in benchmarks/bench_geodesic_position.py.
+        distance.
 
         Parameters
         ----------

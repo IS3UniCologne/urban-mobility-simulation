@@ -130,6 +130,7 @@ OPERATORS = [
             FLEET_TYPE=RideHailingFleet,
             VEHICLES={rh_car_autonomous: 125, rh_car_human: 125},
             RH_AVAILABILITY=RH_AVAILABILITY,
+            SHIFT_CHECK_INTERVAL_MIN=15,
         ),
         CHARGING_INFRASTRUCTURE=ChargingInfrastructureConfig(
             NUMBER_OF_CHARGING_STATIONS=len(RH_STATION_HEXES),
