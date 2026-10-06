@@ -3,7 +3,7 @@ description     = "Urban Mobility Simulation"
 name            = "urban-mobility-simulation"
 readme          = "README.md"
 requires-python = ">=3.11, <3.14.0"
-version         = "0.2.0"
+version         = "0.3.0"
 
 classifiers = [
   "Private :: Do Not Upload",
@@ -32,13 +32,10 @@ dependencies = [
 ]
 [dependency-groups]
 dev = [
-  { include-group = "benchmarks" },
   { include-group = "pre-commit" },
   { include-group = "testing" },
   { include-group = "typing" },
 ]
-
-benchmarks = ["pyperf>=2.10.0"]
 
 pre-commit = ["pre-commit>=4.6.1", "ruff>=0.16.2"]
 

@@ -409,6 +409,11 @@ class RideHailingFleetConfig(FleetConfig):
     """Configuration for ride-hailing fleet parameters."""
 
     RH_AVAILABILITY: list[float]
+    SHIFT_CHECK_INTERVAL_MIN: int = Field(
+        default=15,
+        gt=0,
+        description="Minutes between two checks whether a human-driven vehicle goes online or offline",
+    )
     ENABLE_EN_ROUTE_INDEX: bool = Field(default=True)
 
     @field_validator("RH_AVAILABILITY", mode="after")

@@ -35,5 +35,15 @@ updates:
         - "minor"
         - "patch"
     commit-message:
-      prefix: "chore(deps): "
+      prefix: "deps: "
       prefix-development: "chore(deps-dev): "
+  - package-ecosystem: pre-commit
+    directory: "/"
+    schedule:
+      interval: weekly
+      time: "06:00"
+      timezone: "Etc/UTC"
+      day: monday
+    labels: [deps]
+    commit-message:
+      prefix: "ci: "
