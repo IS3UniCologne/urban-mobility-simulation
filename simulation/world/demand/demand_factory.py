@@ -48,8 +48,6 @@ class DemandFactory(SimulationBase):
         The simulation time manager.
     _world : World
         The simulation world instance.
-    _modifiers : list of str
-        Paths to GeoJSON files containing demand modifiers.
     _modifiers : dict
         Mapping of spatial unit IDs to demand multipliers.
     _demand_profile : DataFrame
@@ -60,15 +58,6 @@ class DemandFactory(SimulationBase):
         Random number generator for demand sampling.
     _user_factory : UserFactory
         Factory for creating users.
-
-    Methods
-    -------
-    generate_demand()
-        Starts demand generation processes for all spatial units.
-    spawn_demand_process(spatial_unit: str)
-        Generator for demand events in a specific spatial unit.
-    reset()
-        Resets the demand factory and clears all demand-related state.
     """
 
     __slots__ = (

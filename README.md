@@ -3,6 +3,8 @@
 [![ruff-fix.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml)
 [![ci.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml)
 
+<!-- docs/README.md includes this file from here on -->
+
 We provide a simulation platform considering shared mobility (ride sharing, vehicle sharing) services along with infrastructure services (e.g., charging)
 
 ## Installation
@@ -104,6 +106,8 @@ Definition of the simulated population:
 ### `run.py`
 
 Entry point that wires the project configuration together and starts the simulation (invoked by `umosim run <name>` or directly). Additional pre-, or post-simulation code goes here.
+
+The [configuration guide](docs/configuration.md) explains how a run loads these files and lists every config field.
 
 ## Reinforcement learning
 

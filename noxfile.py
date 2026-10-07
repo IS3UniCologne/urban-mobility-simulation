@@ -1,5 +1,7 @@
 """Noxfile for managing tests and other tasks."""
 
+import shutil
+
 import nox
 
 nox.options.default_venv_backend = "uv"
@@ -45,6 +47,35 @@ def pre_commit(session: nox.Session) -> None:
         env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
     )
     session.run("pre-commit", *args)
+
+
+@nox.session(name="docs")
+def docs(session: nox.Session) -> None:
+    """Build the HTML documentation into docs/_build/html, failing on any warning.
+
+    Parameters
+    ----------
+    session : nox.Session
+        Nox session.
+    """
+    session.run_install(
+        *UV_SYNC_COMMAND,
+        "--group=docs",
+        env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
+    )
+    # Leftover stubs, doctrees or cached inventories would make the build differ from CI
+    for build_dir in ("docs/_autosummary", "docs/_build"):
+        shutil.rmtree(build_dir, ignore_errors=True)
+    session.run(
+        "sphinx-build",
+        "-W",
+        "--keep-going",
+        "-b",
+        "html",
+        "docs",
+        "docs/_build/html",
+        *session.posargs,
+    )
 
 
 def _install_testing(session: nox.Session) -> None:
