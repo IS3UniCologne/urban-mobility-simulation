@@ -54,7 +54,9 @@ class ChargingInfrastructure:
         self._power_list = charging_infrastructure_config.CHARGING_STATION_POWER
         self._capacity_list = charging_infrastructure_config.CHARGING_STATION_CAPACITY
         self._queue_size = charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
-        self._cost_per_kWh_list = charging_infrastructure_config.CHARGING_STATION_COST_PER_KWH
+        self._cost_per_kWh_list = (
+            charging_infrastructure_config.CHARGING_STATION_COST_PER_KWH
+        )
         if charging_infrastructure_config.AUCTION_CONFIG:
             # TODO: Remove this hack once the auction modules are fully typed.
             auction_config = cast(

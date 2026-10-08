@@ -10,6 +10,7 @@ from shapely.geometry import Polygon
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.simulation_base import SimulationBase
+from simulation.helper.time import HOURS_PER_DAY, SimulationTimeConverter
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -38,11 +39,11 @@ class ChargingStation(SimulationBase):  # noqa: D101
     __slots__ = (
         "_capacity",
         "_centre",
-        "_cost_per_kWh",
         "_cs_id",
         "_current_queue_time",
         "_env",
         "_event_subscribers",
+        "_hourly_prices",
         "_location",
         "_plug_in_lock",
         "_plug_out_lock",
@@ -62,7 +63,7 @@ class ChargingStation(SimulationBase):  # noqa: D101
         cs_id: int,  # ID of the charging station in relation to the charging infrastructure it belongs to
         location: RegionId,
         power: float,
-        cost_per_kWh: float,
+        cost_per_kWh: float | list[float],
         capacity: int,
         queue_size: int,
     ) -> None:
@@ -80,7 +81,11 @@ class ChargingStation(SimulationBase):  # noqa: D101
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
         self._location = location
         self._power = power  # kW
-        self._cost_per_kWh = cost_per_kWh
+        self._hourly_prices = (
+            cost_per_kWh
+            if isinstance(cost_per_kWh, list)
+            else [cost_per_kWh] * HOURS_PER_DAY
+        )
         self._queue: list[object] = []
         self._queue_size = queue_size
         self._current_queue_time: float = 0.0
@@ -144,8 +149,9 @@ class ChargingStation(SimulationBase):  # noqa: D101
         return self._vehicle_unplugged
 
     @property
-    def cost_per_kWh(self) -> float:  # noqa: D102
-        return self._cost_per_kWh
+    def cost_per_kWh(self) -> float:
+        """Current price per kWh at the current hour of day."""
+        return self._hourly_prices[SimulationTimeConverter.hours(self._env.now)]
 
     def register_event_subscriber(self, subscriber: _PlugEventSubscriber) -> None:
         """Register a listener for plug-in / plug-out events."""

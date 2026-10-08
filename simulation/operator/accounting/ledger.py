@@ -78,7 +78,9 @@ class VehicleLedger(ABC):
         """
 
     @abstractmethod
-    def record_energy_charged(self, vehicle: CostBearingVehicle, kwh: float) -> None:
+    def record_energy_charged(
+        self, vehicle: CostBearingVehicle, kwh: float, cost_per_kWh: float | None = None
+    ) -> None:
         """Report energy charged into a vehicle.
 
         Parameters
@@ -87,6 +89,9 @@ class VehicleLedger(ABC):
             Vehicle that charged.
         kwh : float
             Actually charged energy in kWh.
+        cost_per_kWh : float or None
+            Cost per kWh the operator pays for the energy.
+            If None, the vehicle's cost config is used.
         """
 
     @abstractmethod
@@ -204,10 +209,13 @@ class Ledger(VehicleLedger, WorkerLedger):
         cost_per_km = vehicle.cost_config.PER_KM
         self._costs[cost_type][vehicle.uid] += distance_m / 1000 * cost_per_km
 
-    def record_energy_charged(self, vehicle: CostBearingVehicle, kwh: float) -> None:
+    def record_energy_charged(
+        self, vehicle: CostBearingVehicle, kwh: float, cost_per_kWh: float | None = None
+    ) -> None:
         """Report energy actually charged into a vehicle, in kWh."""
-        cost_per_kwh = vehicle.cost_config.CHARGING_PER_KWH
-        self._costs[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * cost_per_kwh
+        if cost_per_kWh is None:
+            cost_per_kWh = vehicle.cost_config.CHARGING_PER_KWH
+        self._costs[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * cost_per_kWh
 
     def report_fulfilled_trip(self, vehicle: CostBearingVehicle, price: float) -> None:
         """Book a fulfilled trip's gross price as revenue and its driver share as cost."""
