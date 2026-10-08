@@ -18,6 +18,7 @@ WEEKDAYS = [
 
 MINUTES_PER_HOUR = 60
 MINUTES_PER_DAY = 1440
+HOURS_PER_DAY = 24  # used for price schedule
 
 
 class SimulationTime:
