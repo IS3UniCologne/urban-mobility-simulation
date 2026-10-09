@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
+from simulation.helper.time import HOURS_PER_DAY
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
@@ -54,10 +55,10 @@ class ChargingInfrastructure:
         self._power_list = charging_infrastructure_config.CHARGING_STATION_POWER
         self._capacity_list = charging_infrastructure_config.CHARGING_STATION_CAPACITY
         self._queue_size = charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
-        self._cost_per_kWh_list = ChargingStation.load_hourly_prices(
-            charging_infrastructure_config.CHARGING_STATION_PRICE_FILE,
-            self._location_list,
-        )
+        self._cost_per_kWh_list = [
+            price if isinstance(price, list) else [price] * HOURS_PER_DAY
+            for price in charging_infrastructure_config.CHARGING_STATION_COST_PER_KWH
+        ]
         if charging_infrastructure_config.AUCTION_CONFIG:
             # TODO: Remove this hack once the auction modules are fully typed.
             auction_config = cast(

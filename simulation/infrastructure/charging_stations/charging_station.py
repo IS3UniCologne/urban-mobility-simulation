@@ -5,19 +5,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, cast
 
 import h3
-import pandas as pd
 
 import simpy
 from shapely.geometry import Polygon
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.simulation_base import SimulationBase
-from simulation.helper.time import HOURS_PER_DAY, SimulationTimeConverter
+from simulation.helper.time import SimulationTimeConverter
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-    from pathlib import Path
 
     from simpy import Event
 
@@ -153,44 +150,6 @@ class ChargingStation(SimulationBase):  # noqa: D101
     def cost_per_kWh(self) -> float:
         """Current price per kWh at the current hour of day."""
         return self._hourly_prices[SimulationTimeConverter.hours(self._env.now)]
-
-    @staticmethod
-    def load_hourly_prices(path: Path, locations: list[RegionId]) -> list[list[float]]:
-        """Read per-station hourly prices from a CSV file.
-
-        Parameters
-        ----------
-        path: Path
-            Path to CSV file. CSV file is structured as follows:
-                ``hex_id`` identifies the charging station location
-                ``0, 1, 2, ..., 23`` are the hourly prices for each hour of the day
-        locations: list[RegionId]
-            Station locations, in station order.
-
-        Returns
-        -------
-        list[list[float]]
-            One list of 24 hourly prices per lcoation, in the order of ``locations``.
-        """
-        hours = [str(hour) for hour in range(HOURS_PER_DAY)]
-        df = pd.read_csv(path, dtype={"hex_id": str})
-
-        missing_columns = {"hex_id", *hours} - set(df.columns)
-        if missing_columns:
-            raise ValueError(f"{path} is missing columns: {sorted(missing_columns)}")
-        if df["hex_id"].duplicated().any():
-            raise ValueError(f"{path} lists a station hex more than once.")
-
-        prices = df.set_index("hex_id")[hours]
-        missing_locations = set(locations) - set(prices.index)
-        if missing_locations:
-            raise ValueError(
-                f"{path} has no prices for stations: {sorted(missing_locations)}"
-            )
-        if prices.isna().any().any() or (prices < 0).any().any():
-            raise ValueError(f"{path} contains empty or negative prices.")
-
-        return prices.loc[locations].astype(float).values.tolist()
 
     def register_event_subscriber(self, subscriber: _PlugEventSubscriber) -> None:
         """Register a listener for plug-in / plug-out events."""
