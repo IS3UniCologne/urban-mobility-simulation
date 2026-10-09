@@ -57,7 +57,7 @@ from simulation.helper.enums import (
     TemporalResolution,
     VehicleType,
 )
-from simulation.helper.time import HOURS_PER_DAY, SimulationVelocityConverter
+from simulation.helper.time import SimulationVelocityConverter
 from simulation.helper.types import RegionId
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
@@ -445,9 +445,7 @@ class ChargingInfrastructureConfig(BaseModel):
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
-    CHARGING_STATION_COST_PER_KWH: list[
-        float | list[float]
-    ]  # allows charging price schedule
+    CHARGING_STATION_PRICE_FILE: Path
 
     # fallback if there is no auction
     COORDINATION_INTERVAL: int | None = Field(gt=0, default=None)
@@ -487,14 +485,11 @@ class ChargingInfrastructureConfig(BaseModel):
             self.CHARGING_STATION_CAPACITY = self.CHARGING_STATION_CAPACITY * n
         if len(self.CHARGING_STATION_QUEUE_SIZE) == 1:
             self.CHARGING_STATION_QUEUE_SIZE = self.CHARGING_STATION_QUEUE_SIZE * n
-        if len(self.CHARGING_STATION_COST_PER_KWH) == 1:
-            self.CHARGING_STATION_COST_PER_KWH = self.CHARGING_STATION_COST_PER_KWH * n
 
-        for price in self.CHARGING_STATION_COST_PER_KWH:
-            if isinstance(price, list) and len(price) != HOURS_PER_DAY:
-                raise ValueError(
-                    f"Charging station cost per kWh schedule must have {HOURS_PER_DAY} (24) elements (one per hour), got {len(price)}"
-                )
+        if not self.CHARGING_STATION_PRICE_FILE.exists():
+            raise ValueError(
+                f"Charging station price file {self.CHARGING_STATION_PRICE_FILE} does not exist."
+            )
 
         return self
 
