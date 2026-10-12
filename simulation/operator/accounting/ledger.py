@@ -92,6 +92,7 @@ class VehicleLedger(ABC):
         cost_per_kWh : float
             Cost per kWh the operator pays for the energy.
         """
+        self._costs[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * cost_per_kWh
 
     @abstractmethod
     def report_fulfilled_trip(self, vehicle: CostBearingVehicle, price: float) -> None:
