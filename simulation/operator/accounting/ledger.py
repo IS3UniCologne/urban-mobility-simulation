@@ -79,7 +79,7 @@ class VehicleLedger(ABC):
 
     @abstractmethod
     def record_energy_charged(
-        self, vehicle: CostBearingVehicle, kwh: float, cost_per_kWh: float | None = None
+        self, vehicle: CostBearingVehicle, kwh: float, cost_per_kWh: float
     ) -> None:
         """Report energy charged into a vehicle.
 
@@ -89,9 +89,8 @@ class VehicleLedger(ABC):
             Vehicle that charged.
         kwh : float
             Actually charged energy in kWh.
-        cost_per_kWh : float or None
+        cost_per_kWh : float
             Cost per kWh the operator pays for the energy.
-            If None, the vehicle's cost config is used.
         """
 
     @abstractmethod

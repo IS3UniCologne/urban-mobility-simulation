@@ -445,9 +445,7 @@ class ChargingInfrastructureConfig(BaseModel):
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
-    CHARGING_STATION_COST_PER_KWH: list[float | list[float]] = Field(
-        default_factory=lambda: [0.0]
-    )
+    CHARGING_STATION_COST_PER_KWH: list[float | list[float]]
 
     # fallback if there is no auction
     COORDINATION_INTERVAL: int | None = Field(gt=0, default=None)
