@@ -79,7 +79,7 @@ class VehicleLedger(ABC):
 
     @abstractmethod
     def record_energy_charged(
-        self, vehicle: CostBearingVehicle, kwh: float, cost_per_kWh: float
+        self, vehicle: CostBearingVehicle, kwh: float, price_per_kWh: float
     ) -> None:
         """Report energy charged into a vehicle.
 
@@ -91,10 +91,9 @@ class VehicleLedger(ABC):
             Vehicle that charged.
         kwh : float
             Actually charged energy in kWh.
-        cost_per_kWh : float
-            Cost per kWh the operator pays for the energy.
+        price_per_kWh : float
+            Price per kWh the operator pays for the energy.
         """
-        self._costs[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * cost_per_kWh
 
     @abstractmethod
     def report_fulfilled_trip(self, vehicle: CostBearingVehicle, price: float) -> None:
