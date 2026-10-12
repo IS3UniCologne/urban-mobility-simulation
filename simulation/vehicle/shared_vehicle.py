@@ -121,7 +121,7 @@ class SharedVehicle(Vehicle, ReservableMixin):  # noqa: D101
         charged = self.energy_system.current_energy_absolute - energy_before
 
         self._ledger.record_energy_charged(
-            self, charged, cost_per_kWh=self.cost_config.CHARGING_PER_KWH
+            self, charged, price_per_kWh=self.cost_config.CHARGING_PER_KWH
         )
 
         self.logger.debug(

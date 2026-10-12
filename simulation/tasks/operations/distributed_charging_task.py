@@ -208,7 +208,7 @@ class DistributedChargingTask(VehicleTask["RideHailingVehicle"]):
             yield self._env.process(
                 vehicle.charge(
                     charging_time=actual_duration,
-                    cost_per_kWh=self._charging_station.cost_per_kWh,
+                    price_per_kWh=self._charging_station.price_per_kWh,
                     charge_amount=self.kWh_charged,
                 )
             )

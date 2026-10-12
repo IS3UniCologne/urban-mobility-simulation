@@ -7,7 +7,7 @@ class ChargingStationMetricsPlotAdapter:
     """Adapter for plotting charging station metrics."""
 
     @property
-    def cost_per_kWh(self) -> dict:
+    def price_per_kWh(self) -> dict:
         """Configuration for plotting the current price per kWh of each charging station"""
 
         def trasform(snapshot: MetricsDict) -> MetricsDict:
@@ -21,7 +21,7 @@ class ChargingStationMetricsPlotAdapter:
         return {
             "title": "Price per kWh by Charging Station",
             "metric_group": "charging_station",
-            "metric_key": "cost_per_kWh",
+            "metric_key": "price_per_kWh",
             "plot_type": "indexed_line",
             "transform": trasform,
         }
