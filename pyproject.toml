@@ -20,6 +20,7 @@ dependencies = [
   "geopandas>=1.1.4",
   "h3>=4.5.0",
   "haversine>=2.9.0",
+  "jupyterlab>=4.6.4",
   "matplotlib>=3.11.1",
   "pandas>=3.0.5",
   "prettytable>=3.18.0",
@@ -28,6 +29,7 @@ dependencies = [
   "rtree>=1.4.1",
   "shapely>=2.1.2",
   "simpy>=4.1.2",
+  "stable-baselines3>=2.9.0; sys_platform != 'darwin' or platform_machine != 'x86_64'", # torch has no Intel Mac build since 2.2.2
   "statsmodels>=0.14.6",
 ]
 [dependency-groups]
