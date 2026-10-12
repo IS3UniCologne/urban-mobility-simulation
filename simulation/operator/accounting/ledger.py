@@ -83,6 +83,8 @@ class VehicleLedger(ABC):
     ) -> None:
         """Report energy charged into a vehicle.
 
+        The price is read once when charging starts, the ledger books every kWh at that price, meaning a session starting at 17.50 and ending at 21.40 pays the price at 17.00 for the whole charging process.
+
         Parameters
         ----------
         vehicle : CostBearingVehicle
