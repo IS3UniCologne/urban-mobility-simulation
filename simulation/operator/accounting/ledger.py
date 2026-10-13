@@ -211,14 +211,9 @@ class Ledger(VehicleLedger, WorkerLedger):
         self._costs[cost_type][vehicle.uid] += distance_m / 1000 * cost_per_km
 
     def record_energy_charged(
-        self,
-        vehicle: CostBearingVehicle,
-        kwh: float,
-        price_per_kWh: float | None = None,
+        self, vehicle: CostBearingVehicle, kwh: float, price_per_kWh: float
     ) -> None:
         """Report energy actually charged into a vehicle, in kWh."""
-        if price_per_kWh is None:
-            price_per_kWh = vehicle.cost_config.CHARGING_PER_KWH
         self._costs[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * price_per_kWh
 
     def report_fulfilled_trip(self, vehicle: CostBearingVehicle, price: float) -> None:
