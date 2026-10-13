@@ -64,7 +64,7 @@ class ChargingStation(SimulationBase):  # noqa: D101
         cs_id: int,  # ID of the charging station in relation to the charging infrastructure it belongs to
         location: RegionId,
         power: float,
-        price_per_kWh: list[float],
+        hourly_prices_per_kWh: list[float],
         capacity: int,
         queue_size: int,
     ) -> None:
@@ -82,7 +82,7 @@ class ChargingStation(SimulationBase):  # noqa: D101
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
         self._location = location
         self._power = power  # kW
-        self._hourly_prices = price_per_kWh
+        self._hourly_prices = hourly_prices_per_kWh
 
         self._queue: list[object] = []
         self._queue_size = queue_size
