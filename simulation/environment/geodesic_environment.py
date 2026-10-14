@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Protocol, cast
 
 import h3
 import numpy
+from shapely import contains_xy
 from shapely.geometry import Point, Polygon
 
 from simulation.environment.bounding_box import (
@@ -17,6 +18,7 @@ from simulation.environment.bounding_box import (
 )
 from simulation.environment.environment import Environment
 from simulation.environment.hex_layer import load_or_build_hex_layer
+from simulation.helper.exceptions import HexagonNotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -111,7 +113,6 @@ class GeodesicEnvironment(Environment):
         self.layer[layer_name] = layer
 
     # TODO: Hardcoded layer here is dangerous
-    # TODO: initialize pool of positions for every region once, then draw from there instead for efficiency?
     def get_random_position(
         self, hex_id: str, layer_name: str = "hex"
     ) -> tuple[float, float]:
@@ -129,19 +130,19 @@ class GeodesicEnvironment(Environment):
         -------
         tuple of float
             Random point as (latitude, longitude).
+
+        Raises
+        ------
+        HexagonNotFoundError
+            If the hexagon is not in the layer.
         """
-        # Select Layer
-        gdf = self.layer[layer_name]
-
-        # Select Hexagon
-        geometry = cast("Polygon", gdf.loc[hex_id].geometry)
-
-        # Sample random point within hexagon
+        geometry = self.get_hexagon(hex_id, layer_name)
         minx, miny, maxx, maxy = geometry.bounds
         while True:
-            pnt = Point(self._rng.uniform(minx, maxx), self._rng.uniform(miny, maxy))
-            if geometry.contains(pnt):
-                return pnt.y, pnt.x  # Latitude, Longitude
+            lng = self._rng.uniform(minx, maxx)
+            lat = self._rng.uniform(miny, maxy)
+            if contains_xy(geometry, lng, lat):
+                return lat, lng
 
     def get_centroid(self, hex_id: str) -> tuple[float, float]:
         """
@@ -167,7 +168,7 @@ class GeodesicEnvironment(Environment):
         """Return whether a hexagon exists in the layer."""
         return hex_id in self.layer[layer_name].index
 
-    def get_hexagon(self, hex_id: str, layer_name: str = "hex_7") -> Polygon | None:
+    def get_hexagon(self, hex_id: str, layer_name: str = "hex_7") -> Polygon:
         """
         Return hexagon geometry via a cached lookup.
 
@@ -180,15 +181,25 @@ class GeodesicEnvironment(Environment):
 
         Returns
         -------
-        shapely.geometry.Polygon or None
-            Hexagon geometry, or None if not in layer.
+        shapely.geometry.Polygon
+            Hexagon geometry.
+
+        Raises
+        ------
+        HexagonNotFoundError
+            If the hexagon is not in the layer.
         """
         if layer_name not in self._hex_geom_cache:
             self._hex_geom_cache[layer_name] = cast(
                 "dict[str, Polygon]", self.layer[layer_name]["geometry"].to_dict()
             )
 
-        return self._hex_geom_cache[layer_name].get(hex_id, None)
+        geometry = self._hex_geom_cache[layer_name].get(hex_id)
+        if geometry is None:
+            raise HexagonNotFoundError(
+                f"Hexagon {hex_id} is not in layer {layer_name}."
+            )
+        return geometry
 
     @staticmethod
     def move_in_layer(hex_id: str, movement: str) -> str:

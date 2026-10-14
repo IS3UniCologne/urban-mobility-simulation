@@ -123,6 +123,13 @@ test suite.
 
 CI runs the same nox sessions on self-hosted runners. For PRs from forks, CI runs only after a maintainer approves the workflow run, so your local nox -r run is the primary gate.
 
+CI also compares the CPU time and peak memory of the saturated end-to-end scenarios
+between your PR and its target branch. The result shows up as a comment on the PR. To run the comparison yourself (not part of `nox -r`):
+
+```bash
+nox -rs benchmark -- --base develop
+```
+
 ## Code standards
 
 *Most* of these are enforced by ruff and pyrefly, so `nox -r` will catch violations:
