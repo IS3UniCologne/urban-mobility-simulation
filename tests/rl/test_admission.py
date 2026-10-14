@@ -19,7 +19,7 @@ from rl.channel import DecisionRequest
 from rl.problem import Period
 from rl.problems import AdmissionProblem
 from rl.problems.admission import DEFER, FEATURES, OFFER, SEARCH_FEATURES, Surplus
-from simulation.helper.configuration.configuration import RideHailingOperationsConfig
+from simulation.helper.configuration.configuration import RideHailingSearchEngineConfig
 from simulation.helper.types import SimId
 from simulation.helper.vehicle_states import VehicleStates
 from simulation.operator.accounting import CostType
@@ -70,12 +70,12 @@ def make_search(
 
 
 def wire(simulation: SimpleNamespace) -> None:
-    """Give a fake simulation's operator the adapter and ride-hailing operations."""
+    """Give a fake simulation's operator the adapter with a ride-hailing search engine config."""
     operator = operator_of(simulation)
     operator.search_engine = Mock(spec=BrokeredAdmissionSearchEngine)
-    config = Mock(spec=RideHailingOperationsConfig)
+    config = Mock(spec=RideHailingSearchEngineConfig)
     config.MAX_PICKUP_DISTANCE = RADIUS_M
-    operator.operations.config = config
+    operator.search_engine.config = config
 
 
 def start_episode(
@@ -356,18 +356,6 @@ def test_search_engine_other_than_the_adapter_is_rejected() -> None:
     problem = AdmissionProblem()
 
     with pytest.raises(TypeError, match="BrokeredAdmissionSearchEngine"):
-        problem.on_episode_start(simulation)
-
-
-@pytest.mark.unit
-def test_operations_without_a_pickup_radius_are_rejected() -> None:
-    """Operations that are not ride-hailing ones fail at the episode start, typed."""
-    simulation = make_simulation([FakeVehicle("Vehicle_1")])
-    wire(simulation)
-    operator_of(simulation).operations.config = SimpleNamespace()
-    problem = AdmissionProblem()
-
-    with pytest.raises(TypeError, match="RideHailingOperationsConfig"):
         problem.on_episode_start(simulation)
 
 

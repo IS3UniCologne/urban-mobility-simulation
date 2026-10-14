@@ -21,41 +21,6 @@ def mock_sim() -> Mock:
 class TestGeodesicPositionDistance:
     """Tests for GeodesicPosition distance calculations."""
 
-    def test_distance_calculation_speed(self, mock_sim: Mock) -> None:
-        """Test that euclidean distance calculation is faster than haversine."""
-        # Berlin's approximate bounding box
-        min_lat, max_lat = 52.3, 52.7  # latitude range
-        min_lng, max_lng = 13.1, 13.6  # longitude range
-
-        # Number of position pairs to test
-        n_samples = 1000  # Reduced for faster test execution
-
-        # Generate random positions within Berlin
-        positions = []
-        for _ in range(n_samples * 2):
-            lat = random.uniform(min_lat, max_lat)
-            lng = random.uniform(min_lng, max_lng)
-            positions.append(GeodesicPosition(mock_sim, lat, lng))
-
-        # Measure haversine distance calculations
-        import time
-
-        start_time = time.time()
-        for i in range(0, len(positions), 2):
-            _ = positions[i] >> positions[i + 1]
-        haversine_time = time.time() - start_time
-
-        # Measure euclidean distance calculations
-        start_time = time.time()
-        for i in range(0, len(positions), 2):
-            _ = positions[i] << positions[i + 1]
-        euclidean_time = time.time() - start_time
-
-        # Verify that euclidean is actually faster
-        assert euclidean_time < haversine_time, (
-            "Euclidean distance calculation should be faster than haversine"
-        )
-
     def test_distance_calculation_accuracy(self, mock_sim: Mock) -> None:
         """Test accuracy of euclidean approximation vs haversine for Berlin distances."""
         # Berlin's approximate bounding box

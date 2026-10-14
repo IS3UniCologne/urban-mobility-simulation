@@ -6,6 +6,16 @@ from typing import Any, cast
 
 from simulation.helper.configuration.configuration import Configuration
 from simulation.simulation import Simulation
+from tests.datasets import rebuild_datasets
+
+
+def build_e2e_datasets() -> None:
+    """Regenerate every dataset the test projects reference.
+
+    benchmarks/compare.py calls this on both sides of a comparison, so it stays here
+    while a base commit can predate tests/datasets.py.
+    """
+    rebuild_datasets()
 
 
 def run_simulation_and_extract_metrics(config_path: str) -> dict[str, Any]:

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 import numpy as np
 from gymnasium.spaces import Discrete
@@ -33,7 +33,6 @@ from rl.problems.features import (
     squash,
     state_shares,
 )
-from simulation.helper.configuration.configuration import RideHailingOperationsConfig
 from simulation.operator.accounting import CostType
 
 if TYPE_CHECKING:
@@ -42,6 +41,9 @@ if TYPE_CHECKING:
     from rl.bookkeeper import SettlementPeriod
     from rl.channel import DecisionRequest
     from rl.problem import Period
+    from simulation.helper.configuration.configuration import (
+        RideHailingSearchEngineConfig,
+    )
     from simulation.operator.data_transfer_object.transportation_alternative import (
         TransportationAlternative,
     )
@@ -298,7 +300,7 @@ class AdmissionProblem(OperatorProblem[NDArray[np.float32], np.int64]):
         return Discrete(2)
 
     def on_episode_start(self, simulation: Simulation) -> None:
-        """Pick the operator, check its search engine, operations and fleet, then start a fresh episode state.
+        """Pick the operator, check its search engine and fleet, then start a fresh episode state.
 
         Parameters
         ----------
@@ -308,8 +310,7 @@ class AdmissionProblem(OperatorProblem[NDArray[np.float32], np.int64]):
         Raises
         ------
         TypeError
-            If the search engine is not ``BrokeredAdmissionSearchEngine`` or the
-            operations are not ride-hailing ones.
+            If the search engine is not ``BrokeredAdmissionSearchEngine``.
         ValueError
             If the world has no single operator or the operator has no vehicles.
         """
@@ -321,13 +322,7 @@ class AdmissionProblem(OperatorProblem[NDArray[np.float32], np.int64]):
                 "BrokeredAdmissionSearchEngine. Configure a search engine that is."
             )
             raise TypeError(msg)
-        config = self.operator.operations.config
-        if not isinstance(config, RideHailingOperationsConfig):
-            msg = (
-                f"{type(config).__name__} is not a RideHailingOperationsConfig, so "
-                "it has no pickup radius. Configure ride-hailing operations."
-            )
-            raise TypeError(msg)
+        config = cast("RideHailingSearchEngineConfig", search_engine.config)
         fleet_size = len(self.operator.fleet.vehicles)
         if fleet_size == 0:
             msg = "AdmissionProblem needs an operator with at least one vehicle."

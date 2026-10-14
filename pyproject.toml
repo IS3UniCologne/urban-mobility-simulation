@@ -32,13 +32,10 @@ dependencies = [
 ]
 [dependency-groups]
 dev = [
-  { include-group = "benchmarks" },
   { include-group = "pre-commit" },
   { include-group = "testing" },
   { include-group = "typing" },
 ]
-
-benchmarks = ["pyperf>=2.10.0"]
 
 pre-commit = ["pre-commit>=4.6.1", "ruff>=0.16.2"]
 

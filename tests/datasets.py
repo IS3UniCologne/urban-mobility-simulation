@@ -5,8 +5,6 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from filelock import FileLock
-
 from scripts._cli.orchestrators import generate_demand, init_dataset
 from scripts._cli.paths import project_dataset_dir
 from scripts._cli.templates import load_preset_demand_params, load_presets
@@ -41,6 +39,9 @@ def ensure_datasets() -> None:
     A change to the generator code itself still needs a rebuild by hand: delete the dataset directory.
     A file lock keeps xdist workers from building the same dataset at once.
     """
+    # filelock is a test dependency, and the benchmark builds datasets without those
+    from filelock import FileLock
+
     _DATASETS.mkdir(parents=True, exist_ok=True)
     with FileLock(_DATASETS / ".build.lock"):
         presets = load_presets()
