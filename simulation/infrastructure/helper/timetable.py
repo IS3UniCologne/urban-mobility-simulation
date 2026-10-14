@@ -11,7 +11,6 @@ import pandas as pd
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.exceptions import (
     AmbiguousTripException,
-    HexagonNotFoundError,
     TimetableNotImportedError,
 )
 from simulation.helper.simulation_base import SimulationBase
@@ -213,11 +212,6 @@ class Timetable(SimulationBase):
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon
             poly = self._geo_env.get_hexagon(position.get_region_id())
-            if poly is None:
-                raise HexagonNotFoundError(
-                    f"No hexagon for region {position.get_region_id()}."
-                )
-
             return trips[trips.within(poly)]
         else:
             raise NotImplementedError(
