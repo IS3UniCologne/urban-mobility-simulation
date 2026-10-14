@@ -151,6 +151,7 @@ OPERATORS = [
             SEARCH_ENGINE_TYPE=RideHailingSearchEngine,
             AV_PRICE_REDUCTION=0.90,
             MAX_PICKUP_DISTANCE=10000,
+            ARRIVAL_LOOKAHEAD_MIN=5,
             PRICE_ENTERING=2.0,
             PRICE_PER_MINUTE=0.35,
             PRICE_PER_KM=1.3,

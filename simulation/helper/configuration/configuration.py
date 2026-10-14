@@ -608,6 +608,11 @@ class RideHailingSearchEngineConfig(SearchEngineConfig):
 
     AV_PRICE_REDUCTION: float = Field(gt=0)
     MAX_PICKUP_DISTANCE: int = Field(gt=0)
+    ARRIVAL_LOOKAHEAD_MIN: float = Field(
+        default=5,
+        ge=0,
+        description="Minutes within which a busy vehicle must finish its current request to be offered",
+    )
     PRICE_ENTERING: float = Field(ge=0)
     PRICE_PER_MINUTE: float = Field(ge=0)
     PRICE_PER_KM: float = Field(ge=0)

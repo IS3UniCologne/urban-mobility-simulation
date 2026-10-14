@@ -45,6 +45,7 @@ class RideHailingSearchEngine(SearchEngine):
 
     __slots__ = (
         "_AV_price_reduction",
+        "_arrival_lookahead_min",
         "_env",
         "_fleet",
         "_max_pickup_distance",
@@ -73,6 +74,7 @@ class RideHailingSearchEngine(SearchEngine):
         self._price_per_km = config.PRICE_PER_KM
         self._min_price = config.MINIMUM_PRICE
         self._max_pickup_distance = config.MAX_PICKUP_DISTANCE
+        self._arrival_lookahead_min = config.ARRIVAL_LOOKAHEAD_MIN
 
     def search_for_transportation_alternatives(
         self, transport_task: TransportRequest
@@ -158,7 +160,7 @@ class RideHailingSearchEngine(SearchEngine):
         """Find vehicles within the pickup radius with the energy to serve the trip.
 
         A parking vehicle needs the energy to drive to the origin and then the trip.
-        A vehicle expected to arrive within the radius needs the energy to finish its current request first.
+        A vehicle expected to arrive within the radius and the arrival lookahead needs the energy to finish its current request first.
 
         Parameters
         ----------
@@ -184,7 +186,9 @@ class RideHailingSearchEngine(SearchEngine):
         arriving = [
             car
             for car in self._fleet.expected_arrivals_in_radius(
-                origin, self._max_pickup_distance, self._sim.time + 5
+                origin,
+                self._max_pickup_distance,
+                self._sim.time + self._arrival_lookahead_min,
             )
             if car.current_request is not None
             and car.energy_system.has_enough_energy(
