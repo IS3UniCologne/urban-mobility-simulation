@@ -13,12 +13,19 @@ Example::
 from __future__ import annotations
 
 import argparse
+import os
 import statistics
 import time
+from collections import defaultdict
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from itertools import batched
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+import gymnasium as gym
+import numpy as np
+from gymnasium.vector import AsyncVectorEnv
 
 from rl.env import UmosimEnv
 from rl.operator_problem import OperatorProblem
@@ -28,7 +35,6 @@ from rl.problems.admission import FEATURES as ADMISSION_FEATURES
 from rl.problems.features import unsquash
 
 if TYPE_CHECKING:
-    import numpy as np
     from numpy.typing import NDArray
 
     from simulation.simulation import Simulation
@@ -203,6 +209,99 @@ def sweep(
         }
 
 
+class _OutcomeOnEnd(gym.Wrapper):
+    """Add the episode's lost users and mean wait to the info of its last step."""
+
+    def step(self, action):  # noqa: ANN202, ANN001
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        if terminated or truncated:
+            stats = self.env.unwrapped.simulation.world.user_log.metrics
+            info = {
+                **info,
+                "lost": stats.total_missed_trips,
+                "wait_min": stats.average_wait_time,
+            }
+        return observation, reward, terminated, truncated, info
+
+
+def async_sweep(
+    project: Path | str,
+    problem: OperatorProblem[Any, Any],
+    policies: Mapping[str, Policy | None],
+    seeds: list[int],
+    in_parallel: int,
+    horizon_min: int | None,
+) -> dict[str, list[Outcome]]:
+    """Run every policy over every seed on AsyncVectorEnv.
+
+    Parameters
+    ----------
+    project : Path or str
+        Project directory the environment is built from.
+    problem : OperatorProblem
+        Problem the environment is built around, the one the project is wired for.
+    policies : mapping of str to Policy or None
+        Policies by name. None samples the action space.
+    seeds : list of int
+        Episode seeds, shared by all policies.
+    in_parallel : int
+        Number of parallel evaluations, -1 uses all available cores.
+    horizon_min : int or None
+        Simulation time an episode stops at (min). None takes the project's END_TIME.
+
+    Returns
+    -------
+    dict of str to list of Outcome
+        Episode outcomes per policy in seed order.
+    """
+    n_processes = in_parallel if in_parallel > 0 else os.cpu_count()
+    batched_seeds = [
+        list(batch) for batch in batched(seeds, n_processes)
+    ]  # python 3.12+
+    returns = defaultdict(list)
+    for policy_name, policy in policies.items():
+        print(f"Running {policy_name}...")
+        for batch in batched_seeds:
+            envs = AsyncVectorEnv(
+                [
+                    lambda: _OutcomeOnEnd(
+                        UmosimEnv(project, problem, horizon_min=horizon_min)
+                    )
+                    for _ in range(len(batch))
+                ]
+            )
+
+            observation, _ = envs.reset(seed=batch)
+            done = np.zeros(len(batch), dtype=bool)
+            envs.action_space.seed(
+                batch[0]
+            )  # attention: not comparable with sequential
+            profits = np.zeros(len(batch), dtype=np.float32)
+            fulfilled = np.zeros(len(batch), dtype=np.int32)
+            lost = np.zeros(len(batch), dtype=np.int32)
+            wait_min = np.zeros(len(batch), dtype=np.float32)
+            while not all(done):
+                if policy is None:
+                    actions = envs.action_space.sample()
+                else:
+                    actions = np.array([policy(o) for o in observation])
+                observation, _, terminated, truncated, info = envs.step(actions)
+                live = ~done  # mask of the episodes that are still running
+                profits[live] += info["profit"][live]
+                fulfilled[live] += info["fulfilled"][live]
+                ended = live & (terminated | truncated)
+                if any(ended):
+                    lost[ended] = info["lost"][ended]
+                    wait_min[ended] = info["wait_min"][ended]
+                done |= ended
+            returns[policy_name].extend(
+                Outcome(float(p), int(f), int(lo), float(w))
+                for p, f, lo, w in zip(profits, fulfilled, lost, wait_min, strict=True)
+            )
+        envs.close()
+    return returns
+
+
 def format_table(results: dict[str, list[Outcome]]) -> str:
     """Return one line per baseline: mean and stdev of profit, then mean fulfilled, lost and wait."""
     lines = [
@@ -240,6 +339,12 @@ def main() -> None:
         default=None,
         help="baselines to run, names from ADMISSION_BASELINES (default: all)",
     )
+    parser.add_argument(
+        "--parallel",
+        type=int,
+        default=None,
+        help="number of parallel evaluations, -1 uses all available cores, default is sequential (default: None)",
+    )
     args = parser.parse_args()
 
     names = args.baselines or list(ADMISSION_BASELINES)
@@ -251,13 +356,23 @@ def main() -> None:
         )
 
     started = time.perf_counter()
-    results = sweep(
-        args.project,
-        AdmissionProblem(),
-        {name: ADMISSION_BASELINES[name] for name in names},
-        list(range(1, args.seeds + 1)),
-        args.horizon,
-    )
+    if args.parallel is not None:
+        results = async_sweep(
+            args.project,
+            AdmissionProblem(),
+            {name: ADMISSION_BASELINES[name] for name in names},
+            list(range(1, args.seeds + 1)),
+            args.parallel,
+            args.horizon,
+        )
+    else:
+        results = sweep(
+            args.project,
+            AdmissionProblem(),
+            {name: ADMISSION_BASELINES[name] for name in names},
+            list(range(1, args.seeds + 1)),
+            args.horizon,
+        )
     print(format_table(results))
     print(f"{time.perf_counter() - started:.0f} s")
 
