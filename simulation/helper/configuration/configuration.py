@@ -538,13 +538,6 @@ class RideHailingOperationsConfig(OperationsConfig):
 
     # OPERATOR_TYPE: type[Operator] =
 
-    AV_PRICE_REDUCTION: float = Field(gt=0)
-    MAX_PICKUP_DISTANCE: int = Field(gt=0)
-    PRICE_ENTERING: float = Field(ge=0)
-    PRICE_PER_MINUTE: float = Field(ge=0)
-    PRICE_PER_KM: float = Field(ge=0)
-    MINIMUM_PRICE: float = Field(ge=0)
-
 
 class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for ride-hailing base charging operations."""
@@ -626,6 +619,18 @@ class RideHailingSearchEngineConfig(SearchEngineConfig):
     """Configuration for ride-hailing search engine parameters."""
 
     SEARCH_ENGINE_TYPE: type[SearchEngine] = RideHailingSearchEngine
+
+    AV_PRICE_REDUCTION: float = Field(gt=0)
+    MAX_PICKUP_DISTANCE: int = Field(gt=0)
+    ARRIVAL_LOOKAHEAD_MIN: float = Field(
+        default=5,
+        ge=0,
+        description="Minutes within which a busy vehicle must finish its current request to be offered",
+    )
+    PRICE_ENTERING: float = Field(ge=0)
+    PRICE_PER_MINUTE: float = Field(ge=0)
+    PRICE_PER_KM: float = Field(ge=0)
+    MINIMUM_PRICE: float = Field(ge=0)
 
 
 class SharedVehicleSearchEngineConfig(SearchEngineConfig):
