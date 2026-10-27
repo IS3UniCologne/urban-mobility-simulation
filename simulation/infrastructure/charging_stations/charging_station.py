@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, cast
 
 import h3
-
 import simpy
 from shapely.geometry import Polygon
 
@@ -82,7 +81,7 @@ class ChargingStation(SimulationBase):  # noqa: D101
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
         self._location = location
         self._power = power  # kW
-        self._hourly_prices = hourly_prices_per_kWh
+        self._hourly_prices = hourly_prices_per_kWh  # EUR / kWh
 
         self._queue: list[object] = []
         self._queue_size = queue_size

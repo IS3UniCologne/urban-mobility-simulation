@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 from simulation.helper.time import HOURS_PER_DAY
+from simulation.infrastructure.charging_stations.charging_station import ChargingStation
 
 if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
@@ -37,10 +37,10 @@ class ChargingInfrastructure:
         "_charging_infra_config",
         "_charging_stations",
         "_charging_stations_by_location",
-        "_hourly_prices_per_kWh",
+        "_hourly_prices_per_kWh_list",
         "_location_list",
         "_power_list",
-        "_queue_size",
+        "_queue_size_list",
         "_sim",
         "_tracking",
     )
@@ -54,8 +54,10 @@ class ChargingInfrastructure:
         self._location_list = charging_infrastructure_config.LOCATIONS
         self._power_list = charging_infrastructure_config.CHARGING_STATION_POWER
         self._capacity_list = charging_infrastructure_config.CHARGING_STATION_CAPACITY
-        self._queue_size = charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
-        self._hourly_prices_per_kWh = [
+        self._queue_size_list = (
+            charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
+        )
+        self._hourly_prices_per_kWh_list = [
             price if isinstance(price, list) else [price] * HOURS_PER_DAY
             for price in charging_infrastructure_config.CHARGING_STATION_PRICE_PER_KWH
         ]
@@ -112,8 +114,8 @@ class ChargingInfrastructure:
                 location=location,
                 power=self._power_list[i],
                 capacity=self._capacity_list[i],
-                queue_size=self._queue_size[i],
-                hourly_prices_per_kWh=self._hourly_prices_per_kWh[i],
+                queue_size=self._queue_size_list[i],
+                hourly_prices_per_kWh=self._hourly_prices_per_kWh_list[i],
             )
             self._charging_stations.append(charging_station)
             self._charging_stations_by_location[location] = charging_station

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 # SCAFFOLD:IMPORTS_START
 from simulation.helper.configuration.configuration import (
-    VehicleCostConfig,
     ChargingInfrastructureConfig,
     RideHailingAllocationEngineConfig,
     RideHailingBaseChargingOperationsConfig,
@@ -12,6 +11,7 @@ from simulation.helper.configuration.configuration import (
     RideHailingOperatorConfig,
     RideHailingSearchEngineConfig,
     RideHailingVehicleConfig,
+    VehicleCostConfig,
 )
 from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
 from simulation.operator.operations_management.ridehailing_base_charging_operations import (
