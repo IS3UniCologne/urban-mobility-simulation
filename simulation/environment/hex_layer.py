@@ -15,6 +15,8 @@ import geopandas as gpd  # type: ignore[import-untyped]
 import h3  # type: ignore[import-untyped]
 from shapely.geometry import Polygon
 
+from simulation.helper.cache import write_cache
+
 if TYPE_CHECKING:
     import logging
     from pathlib import Path
@@ -49,8 +51,7 @@ def load_or_build_hex_layer(
     logger.info("Deriving hex layer at resolution %s from bounding box.", resolution)
     hex_df = _build_hex_layer(bbox_df, resolution)
 
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    hex_df.to_parquet(cache_path)
+    write_cache(hex_df, cache_path)
     return hex_df
 
 
