@@ -87,6 +87,8 @@ html_show_sourcelink = False
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_js_files = ["sidebar.js"]
+# Top-level pages without pages below them would show an empty sidebar
+html_sidebars = {"index": [], "CONTRIBUTING": []}
 html_theme_options = {
     "logo": {
         "text": "umosim",

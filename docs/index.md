@@ -57,9 +57,7 @@ Classes and functions of the `simulation` package.
 ```{toctree}
 :hidden:
 
-Getting started <README>
-cli
-configuration
+guide
 Contributing <CONTRIBUTING>
 api
 ```
