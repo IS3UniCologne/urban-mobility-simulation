@@ -145,6 +145,7 @@ back, fork the repository and work directly on your fork:
 
 If your work produces improvements that could be generally useful (bug fixes, new
 operators, performance work), we would be happy to receive them back, see below.
+If you want to share the research in which you have used this project, see [Research](research.md).
 
 ## Contributing
 

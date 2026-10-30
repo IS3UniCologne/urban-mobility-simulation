@@ -77,7 +77,9 @@ autodoc_pydantic_model_show_json = False
 # README and CONTRIBUTING link to each other's sections by heading
 myst_heading_anchors = 3
 # The landing page cards use sphinx-design directives in ::: fences
-myst_enable_extensions = ["colon_fence"]
+myst_enable_extensions = ["colon_fence", "substitution"]
+# enable markdown replacement of the version number in the docs, e.g. in the README
+myst_substitutions = {"release": release}
 
 html_theme = "pydata_sphinx_theme"
 html_title = f"umosim {release}"
@@ -88,7 +90,7 @@ html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_js_files = ["sidebar.js"]
 # Top-level pages without pages below them would show an empty sidebar
-html_sidebars = {"index": [], "CONTRIBUTING": []}
+html_sidebars = {"index": [], "CONTRIBUTING": [], "research": []}
 html_theme_options = {
     "logo": {
         "text": "umosim",
@@ -105,6 +107,13 @@ html_theme_options = {
             "icon": "fa-brands fa-github",
         }
     ],
+    "use_edit_page_button": True,
+}
+html_context = {
+    "github_user": "IS3UniCologne",
+    "github_repo": "urban-mobility-simulation",
+    "github_version": "develop",
+    "doc_path": "docs",
 }
 
 
