@@ -90,8 +90,7 @@ We subclass `RideHailingOperations` in `RideHailingMPChargingOperations` to patc
 # generate charging allocation using mathematical programming
 # list of pairs {vehicle: V, charging_station: C}
 allocations = self._algo.generate_charging_allocation(
-    vehicles_to_charge,
-    self._virtual_charging_infrastructure.charging_stations,
+    vehicles_to_charge, self._virtual_charging_infrastructure.charging_stations
 )
 ```
 
