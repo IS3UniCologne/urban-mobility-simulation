@@ -445,7 +445,8 @@ class ChargingInfrastructureConfig(BaseModel):
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
-    CHARGING_STATION_PRICE_PER_KWH: list[float | list[float]]
+    # One 24h price profile broadcasted to all stations
+    CHARGING_STATION_PRICE_PROFILE: list[float]
 
     # fallback if there is no auction
     COORDINATION_INTERVAL: int | None = Field(gt=0, default=None)
@@ -486,18 +487,10 @@ class ChargingInfrastructureConfig(BaseModel):
         if len(self.CHARGING_STATION_QUEUE_SIZE) == 1:
             self.CHARGING_STATION_QUEUE_SIZE = self.CHARGING_STATION_QUEUE_SIZE * n
 
-        prices = self.CHARGING_STATION_PRICE_PER_KWH
-        if len(prices) == 1:
-            self.CHARGING_STATION_PRICE_PER_KWH = prices = prices * n
-        if len(prices) != n:
+        if len(self.CHARGING_STATION_PRICE_PROFILE) != HOURS_PER_DAY:
             raise ValueError(
-                f"CHARGING_STATION_PRICE_PER_KWH needs 1 or {n} entries, got {len(prices)}."
+                f"CHARGING_STATION_PRICE_PROFILE needs {HOURS_PER_DAY} entries, got {len(self.CHARGING_STATION_PRICE_PROFILE)}."
             )
-        for price in prices:
-            if isinstance(price, list) and len(price) != HOURS_PER_DAY:
-                raise ValueError(
-                    f"Hourly charging prices need {HOURS_PER_DAY} entries, got {len(price)}."
-                )
 
         return self
 

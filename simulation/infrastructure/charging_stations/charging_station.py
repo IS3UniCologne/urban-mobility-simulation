@@ -11,7 +11,6 @@ from shapely.geometry import Polygon
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.simulation_base import SimulationBase
-from simulation.helper.time import SimulationTimeConverter
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -20,6 +19,9 @@ if TYPE_CHECKING:
 
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.types import RegionId
+    from simulation.infrastructure.charging_stations.charging_infastructure import (
+        ChargingInfrastructure,
+    )
 
 
 class _PlugEventSubscriber(Protocol):
@@ -40,17 +42,18 @@ class ChargingStation(SimulationBase):  # noqa: D101
     __slots__ = (
         "_capacity",
         "_centre",
+        "_charging_infrastructure",
         "_cs_id",
         "_current_queue_time",
         "_env",
         "_event_subscribers",
-        "_hourly_prices",
         "_location",
         "_plug_in_lock",
         "_plug_out_lock",
         "_plugs",
         "_polygon",
         "_power",
+        "_price_per_kWh",
         "_queue",
         "_queue_size",
         "_sim",
@@ -61,10 +64,10 @@ class ChargingStation(SimulationBase):  # noqa: D101
     def __init__(
         self,
         sim: SimulationContext,
+        charging_infrastructure: ChargingInfrastructure,
         cs_id: int,  # ID of the charging station in relation to the charging infrastructure it belongs to
         location: RegionId,
         power: float,
-        hourly_prices_per_kWh: list[float],
         capacity: int,
         queue_size: int,
     ) -> None:
@@ -82,7 +85,11 @@ class ChargingStation(SimulationBase):  # noqa: D101
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
         self._location = location
         self._power = power  # kW
-        self._hourly_prices = hourly_prices_per_kWh
+
+        self._charging_infrastructure = charging_infrastructure
+        self._price_per_kWh: float = (
+            0.0  # set by the charging infrastructure's price broadcast
+        )
 
         self._queue: list[object] = []
         self._queue_size = queue_size
@@ -148,8 +155,16 @@ class ChargingStation(SimulationBase):  # noqa: D101
 
     @property
     def price_per_kWh(self) -> float:
-        """Current price per kWh at the current hour of day."""
-        return self._hourly_prices[SimulationTimeConverter.hours(self._env.now)]
+        """Current price per kWh, the last broadcast by the charging infrastructure."""
+        return self._price_per_kWh
+
+    def update_price(self, price_per_kWh: float) -> None:
+        """Receive the current price per kWh from the charging infrastructure."""
+        self._price_per_kWh = price_per_kWh
+
+    def average_price(self, start: float, end: float) -> float:
+        """Time-weighted price per kWh for charging between start and end."""
+        return self._charging_infrastructure.average_price(start, end)
 
     def register_event_subscriber(self, subscriber: _PlugEventSubscriber) -> None:
         """Register a listener for plug-in / plug-out events."""

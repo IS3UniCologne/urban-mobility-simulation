@@ -84,6 +84,7 @@ class VehicleLedger(ABC):
         """Report energy charged into a vehicle.
 
         The price is read once when charging starts, the ledger books every kWh at that price, meaning a session starting at 17.50 and ending at 21.40 pays the price at 17.00 for the whole charging process.
+        The price is the time-weighted average over the charging session, so a session from 17.40 to 18.50 pays 20 minutes at the 17.00 price and 50 minutes at the 18.00 price.
 
         Parameters
         ----------
@@ -92,7 +93,7 @@ class VehicleLedger(ABC):
         kwh : float
             Actually charged energy in kWh.
         price_per_kWh : float
-            Price per kWh the operator pays for the energy.
+            Average price per kWh the operator pays for the charged energy.
         """
 
     @abstractmethod
