@@ -3,14 +3,14 @@
 Below are some examples from our research that have used `umosim` as part of the experiments.
 If you have used our simulation in your own research, and want to be featured here, let us know (just open a PR with the changes to this page), we are more than happy to see what can be done!
 
-## Conferences
-Muires, J., & Ketter, W. (2026). Right-Sizing Shared Mobility: A Simulation-Optimization Approach to Balancing Environmental, Social, and Economic Objectives in Tenders. ICIS 2026 Proceedings. International Conference on Information Systems. [https://aisel.aisnet.org/icis2026/sustenv/sustenv/3](https://aisel.aisnet.org/icis2026/sustenv/sustenv/3)
+## Conference Proceedings
+* Muires, J., & Ketter, W. (2026). Right-Sizing Shared Mobility: A Simulation-Optimization Approach to Balancing Environmental, Social, and Economic Objectives in Tenders. ICIS 2026 Proceedings. International Conference on Information Systems. [https://aisel.aisnet.org/icis2026/sustenv/sustenv/3](https://aisel.aisnet.org/icis2026/sustenv/sustenv/3)
 
 This paper will be presented at ICIS 2026 in Lisbon and showcase how the simulation can be used as a black box in an outer loop caller that cares about inputs and outputs only. Spefically the use of evolutionary algorithms to find non-dominated ("pareto") solutions for a multi-objective problem with conflicting requirements for an application to free-floating vehicle sharing tender sizing.
 
 ---
 
-Sund, L., Muires, J., Ahadi, R., Valogianni, K., & Ketter, W. (2025). Coordinating Competing Electric Vehicle Fleets: An Agent-Based Charging Capacity Market. Proceedings of the 24th International Conference on Autonomous Agents and Multiagent Systems, AAMAS ’25, 2759–2761. https://dl.acm.org/doi/10.5555/3709347.3744003
+* Sund, L., Muires, J., Ahadi, R., Valogianni, K., & Ketter, W. (2025). Coordinating Competing Electric Vehicle Fleets: An Agent-Based Charging Capacity Market. Proceedings of the 24th International Conference on Autonomous Agents and Multiagent Systems, AAMAS ’25, 2759–2761. https://dl.acm.org/doi/10.5555/3709347.3744003
 
 This paper was presented at AAMAS 2025 in Detroit as a poster and introduces the charging slot reservation auction market and mechanism for competing electric ride-hailing fleets which is implemented as the `SharedChargingAuction` in the `markets` module.
 
