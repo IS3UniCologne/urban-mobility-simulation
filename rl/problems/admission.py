@@ -290,7 +290,7 @@ class AdmissionProblem(OperatorProblem[NDArray[np.float32], np.int64]):
         return self._current.fleet_yield.value
 
     @property
-    def observation_space(self) -> Box:
+    def observation_space(self) -> Box[np.float32]:
         """Return the flat ``Box`` in ``FEATURES`` order, clock entries in -1 to 1 and the rest in 0 to 1."""
         return box(FEATURES, signed_entries=CLOCK_FEATURES)
 
