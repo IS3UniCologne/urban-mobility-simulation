@@ -41,7 +41,7 @@ CLOCK_FEATURES = ("clock_sin", "clock_cos")
 """Entry names of the sine and cosine of the time of day, both in -1 to 1."""
 
 
-def box(features: Sequence[str], signed_entries: Sequence[str] = ()) -> Box:
+def box(features: Sequence[str], signed_entries: Sequence[str] = ()) -> Box[np.float32]:
     """Return the observation space for the ``features``.
 
     Follows the Gymnasium convention of ``low`` and ``high`` arrays, with ``dtype`` float32.
