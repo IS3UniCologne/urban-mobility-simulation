@@ -21,6 +21,7 @@ def pyrefly(session: nox.Session) -> None:
     session.run_install(
         *UV_SYNC_COMMAND,
         "--group=typing",
+        "--extra=rl",
         "--python",
         session.python,
         env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
@@ -50,6 +51,7 @@ def _install_testing(session: nox.Session) -> None:
     session.run_install(
         *UV_SYNC_COMMAND,
         "--group=testing",
+        "--extra=rl",
         "--python",
         session.python,
         env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
@@ -69,7 +71,7 @@ def pytest_fast(session: nox.Session) -> None:
     """
     _install_testing(session)
     args = session.posargs or ("-m", "not end_to_end", "tests/")
-    session.run("pytest", "--durations=10", "-n=auto", "--dist=loadfile", *args)
+    session.run("pytest", "--durations=10", "-n=auto", "--dist=worksteal", *args)
 
 
 @nox.session(name="pytest_e2e", python=python_versions, tags=("test", "e2e"))
@@ -86,8 +88,23 @@ def pytest_e2e(session: nox.Session) -> None:
         "pytest",
         "--durations=10",
         "-n=auto",
-        "--dist=loadfile",
+        "--dist=worksteal",
         "-m",
         "end_to_end",
         "tests/end_to_end",
     )
+
+
+@nox.session(name="benchmark", python=python_versions[-1], default=False)
+def benchmark(session: nox.Session) -> None:
+    """Compare CPU time and peak memory of the saturated scenarios against a commit.
+
+    Not run by default, since the comparison takes quite long.
+    Options go after ``--``, e.g. ``nox -s benchmark -- --base develop``.
+
+    Parameters
+    ----------
+    session : nox.Session
+        Nox session.
+    """
+    session.run("python", "benchmarks/compare.py", *session.posargs)

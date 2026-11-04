@@ -32,6 +32,7 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         "_is_electric",
         "_price_per_minute",
         "_reservation",
+        "_shift_check_interval_min",
         "_vehicle_assignment",
     )
 
@@ -42,6 +43,7 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         position: GeodesicPosition,
         vehicle_config: VehicleConfig,
         driver_availability_vector: list[int],
+        shift_check_interval_min: int,
         ledger: VehicleLedger,
     ) -> None:
         super().__init__(
@@ -59,6 +61,7 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         )
 
         self._driver_availability_vector = driver_availability_vector
+        self._shift_check_interval_min = shift_check_interval_min
 
         # Vehicle Events
         self._arrived_at_pick_up_position: Event = self._env.event()
@@ -294,5 +297,4 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
                             | self._charging_station_plugged_out
                         )
                         self._go_offline()
-            # we check driver decisions every one hour
-            yield self._env.timeout(15)
+            yield self._env.timeout(self._shift_check_interval_min)

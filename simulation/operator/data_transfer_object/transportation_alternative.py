@@ -48,6 +48,11 @@ class TransportationAlternative:
     route_to_pickup: Route | None = None
     est_pickup_time: float | None = None
 
+    # Alternatives are dict keys in every choice and hashing every field is too slow
+    def __hash__(self) -> int:
+        """Hash on the vehicle only, since equal alternatives always share a vehicle."""
+        return hash(self.vehicle)
+
     def __str__(self) -> str:
         """Return a string representation of the transportation alternative."""
         pickup_info = ""
