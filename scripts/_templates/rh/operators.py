@@ -4,7 +4,6 @@ from __future__ import annotations
 
 # SCAFFOLD:IMPORTS_START
 from simulation.helper.configuration.configuration import (
-    VehicleCostConfig,
     ChargingInfrastructureConfig,
     RideHailingAllocationEngineConfig,
     RideHailingBaseChargingOperationsConfig,
@@ -12,6 +11,7 @@ from simulation.helper.configuration.configuration import (
     RideHailingOperatorConfig,
     RideHailingSearchEngineConfig,
     RideHailingVehicleConfig,
+    VehicleCostConfig,
 )
 from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
 from simulation.operator.operations_management.ridehailing_base_charging_operations import (
@@ -145,15 +145,16 @@ OPERATORS = [
             TIME_BETWEEN_OPERATIONS=15,
             RECHARGE_THRESHOLD=DEFAULT_RECHARGE_THRESHOLD,
             VEHICLE_RELOCATION_VELOCITY=9.54,
+        ),
+        SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
+            SEARCH_ENGINE_TYPE=RideHailingSearchEngine,
             AV_PRICE_REDUCTION=0.90,
             MAX_PICKUP_DISTANCE=10000,
+            ARRIVAL_LOOKAHEAD_MIN=5,
             PRICE_ENTERING=2.0,
             PRICE_PER_MINUTE=0.35,
             PRICE_PER_KM=1.3,
             MINIMUM_PRICE=5.0,
-        ),
-        SEARCH_ENGINE_CONFIG=RideHailingSearchEngineConfig(
-            SEARCH_ENGINE_TYPE=RideHailingSearchEngine
         ),
         ALLOCATION_ENGINE_CONFIG=RideHailingAllocationEngineConfig(
             VEHICLE_ALLOCATION_ENGINE_TYPE=RideHailingAllocationEngine

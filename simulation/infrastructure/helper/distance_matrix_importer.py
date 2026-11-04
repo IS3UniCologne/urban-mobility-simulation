@@ -7,6 +7,8 @@ import h3
 import pandas as pd
 from haversine import Unit, haversine_vector
 
+from simulation.helper.cache import write_cache
+
 
 class DistanceMatrixImporter:
     """Load or calculate the distance matrix between hexagon centroids.
@@ -44,8 +46,7 @@ class DistanceMatrixImporter:
             columns=self._hexagons,
         )
 
-        self._cache_dir.mkdir(parents=True, exist_ok=True)
-        distance_matrix.to_parquet(cache_path)
+        write_cache(distance_matrix, cache_path)
         return distance_matrix
 
     def _cache_path(self) -> Path:

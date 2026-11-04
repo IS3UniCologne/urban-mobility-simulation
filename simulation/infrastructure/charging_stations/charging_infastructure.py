@@ -43,7 +43,7 @@ class ChargingInfrastructure:
         "_charging_stations_by_location",
         "_location_list",
         "_power_list",
-        "_queue_size",
+        "_queue_size_list",
         "_sim",
         "_tracking",
     )

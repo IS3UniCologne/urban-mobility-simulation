@@ -57,7 +57,7 @@ from simulation.helper.enums import (
     TemporalResolution,
     VehicleType,
 )
-from simulation.helper.time import SimulationVelocityConverter, HOURS_PER_DAY
+from simulation.helper.time import HOURS_PER_DAY, SimulationVelocityConverter
 from simulation.helper.types import RegionId
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
@@ -465,7 +465,7 @@ class ChargingInfrastructureConfig(BaseModel):
         Clamp and expand charging infrastructure lists to match the number of stations.
 
         This method ensures that the LOCATIONS, CHARGING_STATION_POWER, CHARGING_STATION_CAPACITY,
-        and CHARGING_STATION_QUEUE_SIZE lists are all of the same length as NUMBER_OF_CHARGING_STATIONS.
+        CHARGING_STATION_QUEUE_SIZE, and CHARGING_STATION_PRICE_PER_KWH lists are all of the same length as NUMBER_OF_CHARGING_STATIONS.
         If any of these lists have only a single element, it will be expanded to match the number of stations by
         repeating the single element.
 
@@ -530,13 +530,6 @@ class RideHailingOperationsConfig(OperationsConfig):
     """Configuration for ride-hailing operations parameters."""
 
     # OPERATOR_TYPE: type[Operator] =
-
-    AV_PRICE_REDUCTION: float = Field(gt=0)
-    MAX_PICKUP_DISTANCE: int = Field(gt=0)
-    PRICE_ENTERING: float = Field(ge=0)
-    PRICE_PER_MINUTE: float = Field(ge=0)
-    PRICE_PER_KM: float = Field(ge=0)
-    MINIMUM_PRICE: float = Field(ge=0)
 
 
 class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
@@ -619,6 +612,18 @@ class RideHailingSearchEngineConfig(SearchEngineConfig):
     """Configuration for ride-hailing search engine parameters."""
 
     SEARCH_ENGINE_TYPE: type[SearchEngine] = RideHailingSearchEngine
+
+    AV_PRICE_REDUCTION: float = Field(gt=0)
+    MAX_PICKUP_DISTANCE: int = Field(gt=0)
+    ARRIVAL_LOOKAHEAD_MIN: float = Field(
+        default=5,
+        ge=0,
+        description="Minutes within which a busy vehicle must finish its current request to be offered",
+    )
+    PRICE_ENTERING: float = Field(ge=0)
+    PRICE_PER_MINUTE: float = Field(ge=0)
+    PRICE_PER_KM: float = Field(ge=0)
+    MINIMUM_PRICE: float = Field(ge=0)
 
 
 class SharedVehicleSearchEngineConfig(SearchEngineConfig):
