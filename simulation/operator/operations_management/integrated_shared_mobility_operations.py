@@ -390,10 +390,11 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
     ) -> dict[str, list[tuple[Position, Position, int, float]]]:
         """
         Generate a rule based charging plan based on given service worker capacity
+
         :param transactions: Simulation Transactions to calculate Fleet State and Expected In/Outlflows
         :return: **charging_plan**: Dictionary with keys for vehicle modes and values with lists of multiple
                 charging tasks
-        """  # noqa: D205, D400
+        """  # noqa: D400
         # Get Current Fleet State
         state = self.calculate_residual_supply(
             self._operator.fleet, self._operator.demand_monitor
@@ -433,9 +434,9 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         :param base_capacity: Set base capacity to 1000 vehicles (i.e., can charge that many vehicles)
         :return: all_charging_plans and used capacity per mode
                 all_charging_plans {"SharedKickScooter":[[(origin, destination, number of vehicles to pick up, destination to base), ()], [()],
-                                    "SharedScooter": [], "SharedCar":[]}
+                "SharedScooter": [], "SharedCar":[]}
                 [UNUSED] used_capacity = [1, 3, 5] => per available vehicle mode returns number of service workers assigned to charge these vehicles
-                                          => 1 SW for Kick Scooter, 3 for Shared Scooter, 5 for Shared Cars
+                => 1 SW for Kick Scooter, 3 for Shared Scooter, 5 for Shared Cars
         """  # noqa: D205
         # Fleet State
         state = fleet_state
@@ -624,15 +625,17 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         number_service_workers_per_mode: list[int],
     ) -> list[int]:
         """
-            Determine Service Worker Split Between Modes (How many workers should be assigned to charge how many vehicles)
+        Determine Service Worker Split Between Modes (How many workers should be assigned to charge how many vehicles)
 
-            Process: Calculate Fraction of Low SOC Vehicles per Mode. Then calculate weighted sum.
-                1. frac_i = #low_soc_vehicle_i*weight_i/max_vehicle_supply_i
-                    1.1. We calculate weight as the inverse of "get_max_capacity_per_unit" for each vehicle mode
-                    1.2. Thus, we ensure that not too many service workers are assigned to vehicles that can be pooled
-                2. total_frac = sum frac_i
-                3. Calculate how many service workers are assigned to charge vehicle mode i
-                   capacity_i = frac_i/total_frac * number_service_workers_i
+        Process: Calculate Fraction of Low SOC Vehicles per Mode. Then calculate weighted sum.
+
+            1. frac_i = #low_soc_vehicle_i*weight_i/max_vehicle_supply_i
+               1.1. We calculate weight as the inverse of "get_max_capacity_per_unit" for each vehicle mode
+               1.2. Thus, we ensure that not too many service workers are assigned to vehicles that can be pooled
+            2. total_frac = sum frac_i
+            3. Calculate how many service workers are assigned to charge vehicle mode i
+               capacity_i = frac_i/total_frac * number_service_workers_i
+
         :param fleet_state: Resulting data frame from function calculate_residual_supply
         :param available_vehicle_modes: List of available vehicle modes (["SharedKickScooter", "SharedScooter", "SharedCar"]
         :param max_vehicle_supply: List of maximum number of available vehicles (order is aligned with available_vehicle_modes)
@@ -640,7 +643,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         :param number_service_workers: Available Service Worker Capacity
         :return: List of assigned resource workers to vehicle modes (order is aligned with available_vehicle_modes)
                         for example: Input 25 Service Workers
-                                    => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
+                        => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
         """  # noqa: D400
         current_low_soc_supply = []
 
@@ -1020,14 +1023,15 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         number_service_workers_per_mode,  # noqa: ANN001
     ):
         """
-            Determine Service Worker Split Between Modes (How many workers should be assigned to relocate how many vehicles)
+        Determine Service Worker Split Between Modes (How many workers should be assigned to relocate how many vehicles)
 
-            We calculate the L1 Norm for each mode based on a "stable" vehicle networks (i.e, supply demand mismatch = 0).
-            L1 = Sum (abs(Residual))
-            Normalize L1 with vehicle capacity per service worker => L1_n = L1/weight_i (i.e,e L1/40 for kick scooters)
+        We calculate the L1 Norm for each mode based on a "stable" vehicle networks (i.e, supply demand mismatch = 0).
+        L1 = Sum (abs(Residual))
+        Normalize L1 with vehicle capacity per service worker => L1_n = L1/weight_i (i.e,e L1/40 for kick scooters)
+
         :return: List of assigned resource workers to vehicle modes (order is aligned with available_vehicle_modes)
                         for example: Input 25 Service Workers
-                                    => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
+                        => [5, 5, 10] <=> 5 sw for kick scooter, and scooter, 10 for cars.
         """  # noqa: D400
         current_supply_mismatch = []
 
@@ -1173,14 +1177,12 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
         -------
         pd.DataFrame
             DataFrame with one row per hexagon and the following columns for each vehicle type:
-            - 'Inflow_<vehicle>': int
-                Number of vehicles arriving at the hexagon.
-            - 'OutFlow_Fulfilled_<vehicle>': int
-                Number of fulfilled departures from the hexagon.
-            - 'OutFlow_Missed_<vehicle>': int
-                Number of missed departures (unfulfilled requests) from the hexagon.
-            - 'Delta_<vehicle>': int
-                Net vehicle flow: inflow - outflow_fulfilled - outflow_missed.
+
+            - 'Inflow_<vehicle>': int, number of vehicles arriving at the hexagon.
+            - 'OutFlow_Fulfilled_<vehicle>': int, number of fulfilled departures from the hexagon.
+            - 'OutFlow_Missed_<vehicle>': int, number of missed departures (unfulfilled requests)
+              from the hexagon.
+            - 'Delta_<vehicle>': int, net vehicle flow: inflow - outflow_fulfilled - outflow_missed.
 
         Notes
         -----
