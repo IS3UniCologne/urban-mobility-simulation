@@ -16,7 +16,7 @@ Prerequisites:
 
 > [!IMPORTANT]
 > If you followed the README installation, this is the extra step you're missing.
-> Install the git hooks (linting/formatting + commit message checks), otherwise
+> Install the git hooks (linting and formatting), otherwise
 > these checks only fail later in CI:
 
 ```bash
@@ -55,15 +55,15 @@ our trunk:
 - Open a pull request against `develop`. External contributors: fork the repository and
   open the PR from your fork.
 - Every active feature branch should have an open pull request to track progress.
-- PRs are merged with merge commits (no squashing), so clean up your commit history
-  before merging. Every commit lands on `develop` as-is (see below).
+- PRs are squash-merged, so your whole branch lands on `develop` as a single commit whose
+  subject is the PR title (see below).
 - A maintainer reviews and merges your PR once checks pass.
 
-## Commit messages
+## Pull request titles and commit messages
 
-Every commit must follow the [Conventional Commits](https://www.conventionalcommits.org/)
-specification. This is enforced in CI on every PR commit and locally by the `commit-msg`
-hook installed above.
+Your PR title must follow the [Conventional Commits](https://www.conventionalcommits.org/)
+specification, because it becomes the subject of the squashed commit. This is enforced in CI
+on every PR. The commits on your branch are not checked.
 
 Common types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`.
 
@@ -73,11 +73,26 @@ fix: handle users falling of the edge of the map
 docs: update CONTRIBUTING.md :)
 ```
 
-These commit messages feed into our automated release notes, so make sure they clearly
-document all relevant changes in your branch.
+Your PR title feeds into our automated release notes, so make sure it clearly documents the
+change. If one PR deserves several release notes, add the extra subjects as footers at the
+bottom of the PR description. A PR titled
 
-For breaking changes, append `!` after the type (or add a `BREAKING CHANGE:` footer) and
-describe the migration:
+```
+feat: add relocation scheduler for shared vehicles
+```
+
+whose description ends with
+
+```
+fix(operations): clamp the recharge threshold to the battery range
+```
+
+gets two entries in the change log, one under Features and one under Bug Fixes. The title
+already counts as an entry, so list only the extra subjects, and keep them on the last lines
+of the description.
+
+For breaking changes, append `!` after the type in the title (and/or add a `BREAKING CHANGE:`
+footer to the description) and describe the migration:
 
 ```
 feat!: require datasets to declare a bounding box
@@ -101,12 +116,20 @@ nox -rs pyrefly      # type checking
 nox -rs pre-commit   # linting and formatting (ruff etc.)
 nox -rs pytest_fast  # fast test suite (everything except end-to-end)
 nox -rs pytest_e2e   # end-to-end scenario suite
+nox -rs docs         # documentation, built into docs/_build/html
 ```
 
 All test data is generated locally, no external data is required to run the full
 test suite.
 
 CI runs the same nox sessions on self-hosted runners. For PRs from forks, CI runs only after a maintainer approves the workflow run, so your local nox -r run is the primary gate.
+
+CI also compares the CPU time and peak memory of the saturated end-to-end scenarios
+between your PR and its target branch. The result shows up as a comment on the PR. To run the comparison yourself (not part of `nox -r`):
+
+```bash
+nox -rs benchmark -- --base develop
+```
 
 ## Code standards
 

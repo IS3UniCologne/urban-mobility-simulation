@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from simulation.helper.types import SimId
     from simulation.operator.operator import Operator
 
-from simulation.operator.cost_accounting import CostType
+from simulation.operator.accounting import CostType
 
 from ..metrics_base import IndexedMetricsBase
 from ..metrics_dict import MetricsDict
@@ -101,8 +101,8 @@ class OperatorMetrics(IndexedMetricsBase):
         `MetricsDict` erases value types to `object`.
         """
         operator_log_stats = operator.operator_log.metrics
-        ledger = operator.cost_ledger
-        costs_by_type = ledger.totals_by_type()
+        ledger = operator.ledger
+        costs_by_type = ledger.costs_by_type()
         total_cost = sum(costs_by_type.values())
         revenue = ledger.revenue()
         cost_metrics = {

@@ -10,16 +10,18 @@ Validation and type checking are handled by Pydantic. To add a new configuration
 
 1. Add the section to the TOML config file as a new table (e.g., [new_section]).
 2. Create a new Pydantic model for the section in this file, using ConfigBaseModel.
-3a. Add a property to the Configuration class that uses _get_section to load and validate the new section.
-3b. If the section contains a list or dictionary, use _get_section_list or _get_section_dict respectively.
+3. Add a property to the Configuration class that uses _get_section to load and validate the new section.
+   If the section contains a list or dictionary, use _get_section_list or _get_section_dict respectively.
 
 To add a new parameter to an existing section:
+
 1. Add the parameter to the TOML config file under the appropriate section.
 2. Add the parameter to the corresponding Pydantic model, with an appropriate type hint.
 
 All validation, type conversion, and defaults should be handled using Pydantic features (validators, model_config, etc.).
-# TODO: cleanup, with more and more being config-as-code, some of the sections are obsolete
 """
+
+# TODO: cleanup, with more and more being config-as-code, some of the sections are obsolete
 
 from __future__ import annotations
 
@@ -409,6 +411,11 @@ class RideHailingFleetConfig(FleetConfig):
     """Configuration for ride-hailing fleet parameters."""
 
     RH_AVAILABILITY: list[float]
+    SHIFT_CHECK_INTERVAL_MIN: int = Field(
+        default=15,
+        gt=0,
+        description="Minutes between two checks whether a human-driven vehicle goes online or offline",
+    )
     ENABLE_EN_ROUTE_INDEX: bool = Field(default=True)
 
     @field_validator("RH_AVAILABILITY", mode="after")
@@ -519,13 +526,6 @@ class RideHailingOperationsConfig(OperationsConfig):
 
     # OPERATOR_TYPE: type[Operator] =
 
-    AV_PRICE_REDUCTION: float = Field(gt=0)
-    MAX_PICKUP_DISTANCE: int = Field(gt=0)
-    PRICE_ENTERING: float = Field(ge=0)
-    PRICE_PER_MINUTE: float = Field(ge=0)
-    PRICE_PER_KM: float = Field(ge=0)
-    MINIMUM_PRICE: float = Field(ge=0)
-
 
 class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
     """Configuration for ride-hailing base charging operations."""
@@ -607,6 +607,18 @@ class RideHailingSearchEngineConfig(SearchEngineConfig):
     """Configuration for ride-hailing search engine parameters."""
 
     SEARCH_ENGINE_TYPE: type[SearchEngine] = RideHailingSearchEngine
+
+    AV_PRICE_REDUCTION: float = Field(gt=0)
+    MAX_PICKUP_DISTANCE: int = Field(gt=0)
+    ARRIVAL_LOOKAHEAD_MIN: float = Field(
+        default=5,
+        ge=0,
+        description="Minutes within which a busy vehicle must finish its current request to be offered",
+    )
+    PRICE_ENTERING: float = Field(ge=0)
+    PRICE_PER_MINUTE: float = Field(ge=0)
+    PRICE_PER_KM: float = Field(ge=0)
+    MINIMUM_PRICE: float = Field(ge=0)
 
 
 class SharedVehicleSearchEngineConfig(SearchEngineConfig):

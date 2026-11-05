@@ -10,7 +10,6 @@ from simulation.vehicle.ride_hailing_vehicle import RideHailingVehicle
 
 if TYPE_CHECKING:
     from simulation.environment.geodesic_position import GeodesicPosition
-    from simulation.environment.position import Position
     from simulation.helper.configuration.configuration import VehicleConfig
 
 
@@ -32,60 +31,6 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
                 self._driver_availability_vectors[vehicle_config] = None
 
         self._create_fleet_vehicles(deps)
-
-    def get_available_vehicles_to_user(
-        self, origin: Position, destination: Position
-    ) -> list[RideHailingVehicle]:
-        """
-        TODO: This is opinionated and should thus not be part of the fleet, it is operations logic.
-
-        Find available vehicles that can serve a user at a given origin location.
-
-        This method identifies two types of available vehicles:
-        1. Parked vehicles within a distance threshold from the user's origin
-        2. Currently serving vehicles that will complete their service and be within the distance threshold
-
-        The availability considers the vehicle's state, whether it has been suggested to another user,
-        and for serving vehicles, the battery state of charge must exceed a threshold.
-
-        Parameters
-        ----------
-        origin : Position
-            The location where the user is requesting a vehicle
-
-        Returns
-        -------
-        list
-            A combined list of parked and serving vehicles that are available to the user
-            at the specified origin location and have enough energy to complete the proposed trip
-        """
-        route_distance = origin << destination
-        parking_cars_in_area = self.parking_vehicles_in_radius(
-            origin, radius=self.operator.operations.config.MAX_PICKUP_DISTANCE
-        )
-
-        parking_cars_in_area = [
-            car
-            for car in parking_cars_in_area
-            if car.energy_system.has_enough_energy(
-                (car.position << origin) + route_distance
-            )
-        ]
-        serving_cars_in_area = self.expected_arrivals_in_radius(
-            origin,
-            self.operator.operations.config.MAX_PICKUP_DISTANCE,
-            self._sim.time + 5,
-        )
-        serving_cars_in_area = [
-            car
-            for car in serving_cars_in_area
-            if car.energy_system.has_enough_energy(
-                (car.current_request.origin << car.current_request.destination)
-                + (car.current_request.destination << origin)
-                + route_distance
-            )
-        ]
-        return parking_cars_in_area + serving_cars_in_area
 
     def count_vehicles_below_soc_level(self, state_of_charge_threshold):  # noqa: ANN001, ANN201
         """
@@ -134,6 +79,7 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
     def calc_supply_per_region(self):  # noqa: ANN201
         """TODO: We can probably get rid of this ? If we need it in the future we should implement it with cached values
         Return a list of number of vehicles in each region
+
         :return: Dictionary, where key = hex_id and value is a dictionary with mode and count values
                 e.g., {"H1212j1": {"SharedKickScooters": 0, "SharedScooters": 1, "SharedCars": 2}, "h12h1j2": ...}
         """  # noqa: D205, D400
@@ -246,5 +192,6 @@ class RideHailingFleet(VehicleFleet):  # noqa: D101
             driver_availability_vector=self._driver_availability_vectors[
                 vehicle_config
             ],
-            cost_reporter=self.operator.cost_ledger,
+            shift_check_interval_min=deps.config.SHIFT_CHECK_INTERVAL_MIN,
+            ledger=self.operator.ledger,
         )

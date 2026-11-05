@@ -4,7 +4,9 @@
 [![ci.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml)
 ![interrogate_badge](docs/interrogate_badge.svg)
 
-We provide a simulation platform considering shared mobility (ride sharing, vehicle sharing) services along with infrastructure services (e.g., charging)
+<!-- docs/README.md includes this file from here on -->
+
+We provide a simulation platform considering shared mobility (ride sharing, vehicle sharing) services along with infrastructure services (e.g., charging) and the markets (e.g., Mobility-as-a-Service) that link them to users.
 
 ## Installation
 
@@ -16,6 +18,7 @@ uv sync
 
 # Optional extras
 uv sync --extra ml    # machine learning and optimization dependencies
+uv sync --extra rl    # Gymnasium environment for reinforcement learning
 uv sync --extra viz   # visualization dependencies
 uv sync --all-extras  # all the things
 ```
@@ -105,6 +108,8 @@ Definition of the simulated population:
 
 Entry point that wires the project configuration together and starts the simulation (invoked by `umosim run <name>` or directly). Additional pre-, or post-simulation code goes here.
 
+The [configuration guide](docs/configuration.md) explains how a run loads these files and lists every config field.
+
 ## Using this project for your own research
 
 If you want to build your own experiments on top of the simulation without contributing
@@ -141,6 +146,7 @@ back, fork the repository and work directly on your fork:
 
 If your work produces improvements that could be generally useful (bug fixes, new
 operators, performance work), we would be happy to receive them back, see below.
+If you want to share the research in which you have used this project, see [Research](research.md).
 
 ## Contributing
 

@@ -2,8 +2,8 @@
 description     = "Urban Mobility Simulation"
 name            = "urban-mobility-simulation"
 readme          = "README.md"
-requires-python = ">=3.11, <3.14.0"
-version         = "0.2.0"
+requires-python = ">=3.11, <3.15.0"
+version         = "0.3.0"
 
 classifiers = [
   "Private :: Do Not Upload",
@@ -11,6 +11,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 
 
@@ -32,28 +33,38 @@ dependencies = [
 ]
 [dependency-groups]
 dev = [
-  { include-group = "benchmarks" },
   { include-group = "docs" },
   { include-group = "pre-commit" },
   { include-group = "testing" },
   { include-group = "typing" },
 ]
 
-benchmarks = ["pyperf>=2.10.0"]
-
 pre-commit = ["pre-commit>=4.6.1", "ruff>=0.16.2"]
 
-testing = ["pytest-coverage>=0.0", "pytest-xdist~=3.6", "pytest>=9.1.1"]
+testing = [
+  "filelock>=3.29.0",
+  "pytest-coverage>=0.0",
+  "pytest-xdist~=3.6",
+  "pytest>=9.1.1",
+]
 
 typing = [
   "pyrefly>=1.2.0",
+  "types-greenlet>=3.0",
   "pandas-stubs>=3.0.5.260730",
   "types-shapely>=2.1.0.20260728",
   "types-geopandas>=1.1.4.20260807",
 ]
 
 docs = [
-    "interrogate>=1.7.0",
+  "autodoc-pydantic>=2.2.0",
+  "interrogate>=1.7.0",
+  "myst-parser>=5.1.0",
+  "pydata-sphinx-theme>=0.21.0",
+  "sphinx>=9.0.4",
+  "sphinx-argparse>=0.6.1",
+  "sphinx-copybutton>=0.5.2",
+  "sphinx-design>=0.7.0",
 ]
 
 
@@ -63,6 +74,7 @@ ml = [
   "torch>=2.13.0",
   "pyomo>=6.10.1",
 ]
+rl  = ["greenlet>=3.0", "gymnasium>=1.0"]
 viz = ["bokeh>=3.9.2"]
 
 [project.scripts]
@@ -75,6 +87,9 @@ requires      = ["cython", "setuptools"]
 
 [tool.setuptools]
 packages = [
+  "rl",
+  "rl.adapters",
+  "rl.problems",
   "scripts",
   "scripts._cli",
   "simulation",
@@ -139,7 +154,7 @@ convention = "numpy"
 
 [tool.pyrefly]
 min-severity     = "warn"
-project-includes = ["simulation/"]
+project-includes = ["rl/", "simulation/"]
 # Exclude untyped modules from error reporting; remove entries as modules are typed
 project-excludes = [
   "simulation/agent/action_space.py",
@@ -208,7 +223,7 @@ ignore-nested-functions = false
 ignore-nested-classes = false
 ignore-setters = false
 ignore-overloaded-functions = false
-fail-under = 69
+fail-under = 70
 # possible values: sphinx (default), google
 style = "sphinx"
 # possible values: 0 (minimal output), 1 (-v), 2 (-vv)
