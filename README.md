@@ -16,7 +16,7 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 uv sync
 
 # Optional extras
-uv sync --extra ml    # machine learning and optimization dependencies
+uv sync --extra ml    # optimization dependencies
 uv sync --extra rl    # Gymnasium environment for reinforcement learning
 uv sync --extra viz   # visualization dependencies
 uv sync --all-extras  # all the things

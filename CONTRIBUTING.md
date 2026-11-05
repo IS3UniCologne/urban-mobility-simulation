@@ -30,7 +30,7 @@ If you have not done so already:
 uv sync
 
 # Optional extras
-uv sync --extra ml    # machine learning and optimization dependencies
+uv sync --extra ml    # optimization dependencies
 uv sync --extra viz   # visualization dependencies
 uv sync --all-extras  # all the things
 ```
