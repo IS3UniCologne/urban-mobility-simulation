@@ -141,10 +141,11 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
     def generate_charging_plan(self):  # noqa: ANN201
         """
         Generate a rule based charging plan based on given service worker capacity
+
         :return: **charging_plan**: Dictionary with keys for vehicle modes and values with lists of multiple
                 charging tasks
                 **used_capacity**: How many service workers are planned to cope with charging needs
-        """  # noqa: D205, D400
+        """  # noqa: D400
         # Get Current Fleet State
         vehicles_to_charge = self._operator.fleet.mark_vehicles_to_be_charged(
             self._recharge_threshold
@@ -169,9 +170,9 @@ class RideHailingBaseChargingOperations(RideHailingOperations):  # noqa: D101
         :param vehicles_to_charge: List of vehicles to be charged
         :return: all_charging_plans and used capacity per mode
                 all_charging_plans {"SharedKickScooter":[[(origin, destination, number of vehicles to pick up, destination to base), ()], [()],
-                                    "SharedScooter": [], "SharedCar":[]}
+                "SharedScooter": [], "SharedCar":[]}
                 used_capacity = [1, 3, 5] => per available vehicle mode returns number of service workers assigned to charge these vehicles
-                                          => 1 SW for Kick Scooter, 3 for Shared Scooter, 5 for Shared Cars
+                => 1 SW for Kick Scooter, 3 for Shared Scooter, 5 for Shared Cars
         """  # noqa: D205
         # Fleet State
 
