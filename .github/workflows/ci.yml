@@ -99,9 +99,8 @@ jobs:
         run: |
           echo "coverage=$(sed -n 's/.*<title>interrogate: \([0-9.]*\)%.*/\1/p' docs/interrogate_badge.svg | head -n 1)" >> "$GITHUB_OUTPUT"
 
-      # Only develop commits the badge, and only when the rounded coverage changed, so a typical PR leaves it alone.
-      # Commits by GITHUB_TOKEN do not trigger new workflow runs, so this cannot loop.
-      # Also runs when the check failed, so the badge never shows a stale value.
+      # On merge into develop, the badge is committed, and only when the rounded coverage changed
+      # Commits by GITHUB_TOKEN do not trigger new workflow runs, so this shouldn't loop.
       - name: Commit updated badge
         if: ${{ !cancelled() && github.event_name == 'push' }}
         uses: stefanzweifel/git-auto-commit-action@v7
@@ -110,7 +109,7 @@ jobs:
           file_pattern: docs/interrogate_badge.svg
 
       - name: Comment coverage change on pull request
-        # PRs from forks get a read-only token, their report stays in the job summary
+        # PRs from forks get a read-only token, their report stays in the job summary only
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         uses: actions/github-script@v9
         env:
@@ -121,7 +120,7 @@ jobs:
             const marker = "<!-- interrogate-report -->";
             const before = process.env.COVERAGE_BEFORE;
             const after = process.env.COVERAGE_AFTER;
-            const note = "The badge in the README is regenerated when this PR is merged into `develop`.";
+            const note = "The README badge is regenerated when this PR is merged into `develop`.";
             const body = `${marker}\n**Docstring coverage:** ${before}% → ${after}%\n\n${note}\n`;
             await core.summary.addRaw(body, true).write();
             if (context.payload.pull_request.head.repo.full_name !== context.repo.owner + "/" + context.repo.repo) {
