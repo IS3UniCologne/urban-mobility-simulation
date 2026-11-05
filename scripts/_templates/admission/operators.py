@@ -119,7 +119,7 @@ OPERATORS = [
             CHARGING_STATION_POWER=[50.0],
             CHARGING_STATION_CAPACITY=[20],
             CHARGING_STATION_QUEUE_SIZE=[99],
-            CHARGING_STATION_PRICE_PER_KWH=[0.43],
+            CHARGING_STATION_PRICE_PROFILE=[0.43] * 24,
         ),
         OPERATIONS_CONFIG=RideHailingGreedyChargingOperationsConfig(
             OPERATIONS_TYPE=RideHailingGreedyChargingOperations,
