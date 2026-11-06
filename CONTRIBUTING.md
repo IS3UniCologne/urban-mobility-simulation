@@ -122,7 +122,7 @@ nox -rs docs         # documentation, built into docs/_build/html
 All test data is generated locally, no external data is required to run the full
 test suite.
 
-CI runs the same nox sessions on self-hosted runners. For PRs from forks, CI runs only after a maintainer approves the workflow run, so your local nox -r run is the primary gate.
+CI runs the same nox sessions on self-hosted runners. PRs from forks get no CI run for now, so your local nox -r run is the only gate before review.
 
 CI also compares the CPU time and peak memory of the saturated end-to-end scenarios
 between your PR and its target branch. The result shows up as a comment on the PR. To run the comparison yourself (not part of `nox -r`):
