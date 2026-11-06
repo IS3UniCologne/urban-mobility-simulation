@@ -69,6 +69,7 @@ jobs:
   interrogate:
     runs-on: self-hosted
     name: Docstring coverage
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     permissions:
       # push to develop commits the regenerated badge back
       contents: write
@@ -114,7 +115,6 @@ jobs:
           file_pattern: docs/interrogate_badge.svg
 
       - name: Comment coverage change on pull request
-        # PRs from forks get a read-only token, their report stays in the job summary only
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         uses: actions/github-script@v9
         env:
@@ -128,9 +128,6 @@ jobs:
             const note = "The README badge is regenerated when this PR is merged into `develop`.";
             const body = `${marker}\n**Docstring coverage:** ${before}% → ${after}%\n\n${note}\n`;
             await core.summary.addRaw(body, true).write();
-            if (context.payload.pull_request.head.repo.full_name !== context.repo.owner + "/" + context.repo.repo) {
-              return;
-            }
             const issue = { ...context.repo, issue_number: context.issue.number };
             const comments = await github.paginate(github.rest.issues.listComments, issue);
             const previous = comments.find(
