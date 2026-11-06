@@ -668,55 +668,6 @@ class SharedChargingAuctionConfig(AuctionConfig):
     AUCTION_LOOKAHEAD: int = Field(ge=0)
 
 
-class DynamicRoutingConfig(ConfigBaseModel):
-    """Configuration for dynamic routing parameters."""
-
-    ACTION_SPACE: list[str]
-    ACTION_SPACE_RESOLUTION: int
-    CORRIDOR_PATH: str
-    PENALTY: float
-    REWARD: float
-    TIMELIMIT: float
-
-
-class DynamicCheckpointRoutingConfig(ConfigBaseModel):
-    """Configuration for dynamic checkpoint routing parameters."""
-
-    ACTION_SPACE: list[str]
-    ACTION_SPACE_RESOLUTION: int
-    CHECKPOINTS: list[int]
-    CORRIDOR_PATH: str
-    PENALTY_CHECKPOINTS: float
-    PENALTY_UNREACHABLE: float
-    PENALTY_GOINGBACK: float
-    REWARD: float
-    TIMELIMIT: float
-    PERIODIC_TESTING: int
-
-
-class DQNConfig(ConfigBaseModel):
-    """Configuration for DQN parameters."""
-
-    LR_DECAY: bool
-    LR_DECAY_STEPS: int
-    DQN_LAYERS: tuple[int, int]
-    EPISODES: int
-    ALPHA: float
-    EPS: float
-    EPS_DECAY_STRATEGY: str
-    EPS_DECAY: float
-    EPS_MAX: float
-    EPS_MIN: float
-    BUFFERSIZE: int
-    REPLAYBUFFER: str
-    MIN_EXPERIENCE: int
-    TRAIN_FREQUENCY: int
-    USE_DOUBLE_Q: bool
-    TARGET_UPDATE_THRESHOLD: int
-    BATCHSIZE: int
-    GAMMA: float
-
-
 class Configuration:
     """
     Configuration class for simulation parameters.
@@ -1020,41 +971,6 @@ class Configuration:
             self._cache[section] = None
             return None
         return self._get_section(section, SharedChargingAuctionConfig)
-
-    @property
-    def dynamic_routing(self) -> DynamicRoutingConfig:
-        """Get the dynamic routing configuration section.
-
-        Returns
-        -------
-        DynamicRoutingConfig
-            The dynamic routing configuration section.
-        """
-        return self._get_section("dynamic_routing", DynamicRoutingConfig)
-
-    @property
-    def dynamic_checkpoint_routing(self) -> DynamicCheckpointRoutingConfig:
-        """Get the dynamic checkpoint routing configuration section.
-
-        Returns
-        -------
-        DynamicCheckpointRoutingConfig
-            The dynamic checkpoint routing configuration section.
-        """
-        return self._get_section(
-            "dynamic_checkpoint_routing", DynamicCheckpointRoutingConfig
-        )
-
-    @property
-    def dqn(self) -> DQNConfig:
-        """Get the DQN configuration section.
-
-        Returns
-        -------
-        DQNConfig
-            The DQN configuration section.
-        """
-        return self._get_section("dqn", DQNConfig)
 
     def _load_config_from_py(self, base_path: Path) -> None:
         """Load configuration from Python module files."""
