@@ -19,8 +19,9 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Every job runs on the self-hosted runner, so fork PRs skip all of them.
-# Otherwise anyone could run their code on our machine by opening a PR.
+# Every job runs on the self-hosted runner and skips PRs from forks.
+# A fork PR runs its own copy of this file and can drop the guard, so it only holds
+# while no maintainer approves a fork run whose diff touches .github/ (see CONTRIBUTING.md).
 jobs:
   pyrefly:
     runs-on: self-hosted
@@ -139,7 +140,7 @@ jobs:
     needs: end-to-end-test
     # Also runs when the tests failed, so the comment does not keep the numbers of an
     # earlier push. Release PRs only bump the version, so both sides run the same code.
-    # We repeat the fork guard here because !cancelled() also drops the implicit success check on needs
+    # We repeat the fork guard here because !cancelled() also drops the implicit success check on needs.
     if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !startsWith(github.head_ref, 'release-please--') }}
     timeout-minutes: 45
     permissions:
