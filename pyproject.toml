@@ -33,7 +33,6 @@ dependencies = [
 ]
 [dependency-groups]
 dev = [
-  { include-group = "docs" },
   { include-group = "pre-commit" },
   { include-group = "testing" },
   { include-group = "typing" },
@@ -215,7 +214,7 @@ testpaths = ["tests"]
 ignore-init-method = false
 ignore-init-module = true
 ignore-magic = false
-ignore-semiprivate = false
+ignore-semiprivate = true
 ignore-private = true
 ignore-property-decorators = false
 ignore-module = false
@@ -223,11 +222,11 @@ ignore-nested-functions = false
 ignore-nested-classes = false
 ignore-setters = false
 ignore-overloaded-functions = false
-fail-under = 70
+fail-under = 78
 # possible values: sphinx (default), google
-style = "sphinx"
+style = "google"
 # possible values: 0 (minimal output), 1 (-v), 2 (-vv)
-verbose = 0
+verbose = 1
 quiet = false
 color = true
 # output file location
