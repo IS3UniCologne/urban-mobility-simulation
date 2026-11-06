@@ -134,7 +134,7 @@ class ChargingInfrastructure:
             yield env.timeout(MINUTES_PER_HOUR - env.now % MINUTES_PER_HOUR)
 
     def average_price(self, start: float, end: float) -> float:
-        """Time-weighted price per kWh for chargign between start and end.
+        """Time-weighted price per kWh for charging between start and end.
 
         A session that from 17.40 to 18.50 pays 20 minutes at the 17.00 price and 50
         minutes at the 18.00 price. Charging power is constant, so energy is spread
