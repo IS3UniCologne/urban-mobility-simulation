@@ -7,6 +7,9 @@ import webbrowser
 from queue import Queue
 from typing import TYPE_CHECKING
 
+from visualization.adapters.charging_station_metrics_adapter import (
+    ChargingStationMetricsPlotAdapter,
+)
 from visualization.adapters.fleet_metrics_adapter import FleetMetricsPlotAdapter
 from visualization.adapters.operator_metrics_adapter import OperatorMetricsPlotAdapter
 from visualization.adapters.world_metrics_adapter import WorldMetricsPlotAdapter
@@ -37,6 +40,7 @@ class VisualizationManager:
         self.world = WorldMetricsPlotAdapter()
         self.operators = OperatorMetricsPlotAdapter()
         self.fleets = FleetMetricsPlotAdapter()
+        self.charging_stations = ChargingStationMetricsPlotAdapter()
 
     def add_plot(self, plot_config: dict) -> None:
         """Register a plot configuration to be displayed."""

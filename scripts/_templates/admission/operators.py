@@ -5,14 +5,14 @@ from __future__ import annotations
 # SCAFFOLD:IMPORTS_START
 from rl.adapters import BrokeredAdmissionSearchEngine
 from simulation.helper.configuration.configuration import (
-    VehicleCostConfig,
     ChargingInfrastructureConfig,
     RideHailingAllocationEngineConfig,
-    RideHailingGreedyChargingOperationsConfig,
     RideHailingFleetConfig,
+    RideHailingGreedyChargingOperationsConfig,
     RideHailingOperatorConfig,
     RideHailingSearchEngineConfig,
     RideHailingVehicleConfig,
+    VehicleCostConfig,
 )
 from simulation.helper.enums import AutonomyType, PropulsionType, VehicleType
 from simulation.operator.operations_management.ridehailing_greedy_charging_operations import (
@@ -43,7 +43,7 @@ admission_car_autonomous = RideHailingVehicleConfig(
     PRICE_PER_MIN=0.35,
     PRICE_PER_KM=1.3,
     INITIAL_CHARGE_RATIO=0.50,
-    COST_CONFIG=VehicleCostConfig(PER_KM=0.45, CHARGING_PER_KWH=0.43, DAILY=29.0),
+    COST_CONFIG=VehicleCostConfig(PER_KM=0.45, DAILY=29.0),
 )
 
 ADMISSION_AVAILABILITY = [
@@ -119,6 +119,7 @@ OPERATORS = [
             CHARGING_STATION_POWER=[50.0],
             CHARGING_STATION_CAPACITY=[20],
             CHARGING_STATION_QUEUE_SIZE=[99],
+            CHARGING_STATION_PRICE_PROFILE=[0.43] * 24,
         ),
         OPERATIONS_CONFIG=RideHailingGreedyChargingOperationsConfig(
             OPERATIONS_TYPE=RideHailingGreedyChargingOperations,

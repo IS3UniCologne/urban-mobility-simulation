@@ -59,7 +59,7 @@ from simulation.helper.enums import (
     TemporalResolution,
     VehicleType,
 )
-from simulation.helper.time import SimulationVelocityConverter
+from simulation.helper.time import HOURS_PER_DAY, SimulationVelocityConverter
 from simulation.helper.types import RegionId
 from simulation.infrastructure.charging_stations.charging_infastructure import (
     ChargingInfrastructure,
@@ -447,6 +447,8 @@ class ChargingInfrastructureConfig(BaseModel):
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
+    # One 24h price profile broadcasted to all stations
+    CHARGING_STATION_PRICE_PROFILE: list[float]
 
     # fallback if there is no auction
     COORDINATION_INTERVAL: int | None = Field(gt=0, default=None)
@@ -465,7 +467,7 @@ class ChargingInfrastructureConfig(BaseModel):
         Clamp and expand charging infrastructure lists to match the number of stations.
 
         This method ensures that the LOCATIONS, CHARGING_STATION_POWER, CHARGING_STATION_CAPACITY,
-        and CHARGING_STATION_QUEUE_SIZE lists are all of the same length as NUMBER_OF_CHARGING_STATIONS.
+        CHARGING_STATION_QUEUE_SIZE, and CHARGING_STATION_PRICE_PER_KWH lists are all of the same length as NUMBER_OF_CHARGING_STATIONS.
         If any of these lists have only a single element, it will be expanded to match the number of stations by
         repeating the single element.
 
@@ -486,6 +488,11 @@ class ChargingInfrastructureConfig(BaseModel):
             self.CHARGING_STATION_CAPACITY = self.CHARGING_STATION_CAPACITY * n
         if len(self.CHARGING_STATION_QUEUE_SIZE) == 1:
             self.CHARGING_STATION_QUEUE_SIZE = self.CHARGING_STATION_QUEUE_SIZE * n
+
+        if len(self.CHARGING_STATION_PRICE_PROFILE) != HOURS_PER_DAY:
+            raise ValueError(
+                f"CHARGING_STATION_PRICE_PROFILE needs {HOURS_PER_DAY} entries, got {len(self.CHARGING_STATION_PRICE_PROFILE)}."
+            )
 
         return self
 

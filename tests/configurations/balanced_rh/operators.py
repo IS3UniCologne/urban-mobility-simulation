@@ -31,7 +31,7 @@ rh_car_autonomous = RideHailingVehicleConfig(
     PRICE_PER_MIN=0.35,
     PRICE_PER_KM=1.3,
     INITIAL_CHARGE_RATIO=0.50,
-    COST_CONFIG=VehicleCostConfig(PER_KM=0.45, CHARGING_PER_KWH=0.43, DAILY=29.0),
+    COST_CONFIG=VehicleCostConfig(PER_KM=0.45, DAILY=29.0),
 )
 rh_car_human = RideHailingVehicleConfig(
     VELOCITY_KMH=9.54,
@@ -45,9 +45,7 @@ rh_car_human = RideHailingVehicleConfig(
     PRICE_PER_MIN=0.35,
     PRICE_PER_KM=1.3,
     INITIAL_CHARGE_RATIO=0.50,
-    COST_CONFIG=VehicleCostConfig(
-        PER_KM=0.45, CHARGING_PER_KWH=0.43, DAILY=29.0, DRIVER_PAYMENT_SHARE=0.75
-    ),
+    COST_CONFIG=VehicleCostConfig(PER_KM=0.45, DAILY=29.0, DRIVER_PAYMENT_SHARE=0.75),
 )
 rh_car_human_2 = RideHailingVehicleConfig(
     VELOCITY_KMH=9.54,
@@ -61,9 +59,7 @@ rh_car_human_2 = RideHailingVehicleConfig(
     PRICE_PER_MIN=0.35,
     PRICE_PER_KM=1.3,
     INITIAL_CHARGE_RATIO=0.50,
-    COST_CONFIG=VehicleCostConfig(
-        PER_KM=0.45, CHARGING_PER_KWH=0.43, DAILY=29.0, DRIVER_PAYMENT_SHARE=0.75
-    ),
+    COST_CONFIG=VehicleCostConfig(PER_KM=0.45, DAILY=29.0, DRIVER_PAYMENT_SHARE=0.75),
 )
 
 
@@ -124,6 +120,7 @@ charging_infrastructure_1 = ChargingInfrastructureConfig(
     CHARGING_STATION_POWER=[50.0],
     CHARGING_STATION_CAPACITY=[20],
     CHARGING_STATION_QUEUE_SIZE=[99],
+    CHARGING_STATION_PRICE_PROFILE=[0.43] * 24,
 )
 
 
