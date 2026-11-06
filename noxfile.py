@@ -49,6 +49,26 @@ def pre_commit(session: nox.Session) -> None:
     session.run("pre-commit", *args)
 
 
+@nox.session(name="interrogate")
+def interrogate(session: nox.Session) -> None:
+    """Check docstring coverage and regenerate the badge in docs/.
+
+    Fails when the coverage drops below ``fail-under`` in ``pyproject.toml``.
+
+    Parameters
+    ----------
+    session : nox.Session
+        Nox session.
+    """
+    session.run_install(
+        *UV_SYNC_COMMAND,
+        "--no-install-project",
+        "--group=docs",
+        env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
+    )
+    session.run("interrogate", *(session.posargs or ("simulation",)))
+
+
 @nox.session(name="docs")
 def docs(session: nox.Session) -> None:
     """Build the HTML documentation into docs/_build/html, failing on any warning.

@@ -58,6 +58,7 @@ typing = [
 
 docs = [
   "autodoc-pydantic>=2.2.0",
+  "interrogate>=1.7.0",
   "myst-parser>=5.1.0",
   "pydata-sphinx-theme>=0.21.0",
   "sphinx>=9.0.4",
@@ -201,3 +202,26 @@ python_files = ["*_test.py", "test_*.py"]
 python_functions = ["test_*"]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.interrogate]
+ignore-init-method = false
+ignore-init-module = true
+ignore-magic = false
+ignore-semiprivate = true
+ignore-private = true
+ignore-property-decorators = false
+ignore-module = false
+ignore-nested-functions = false
+ignore-nested-classes = false
+ignore-setters = false
+ignore-overloaded-functions = false
+fail-under = 81
+# possible values: sphinx (default), google
+style = "google"
+# possible values: 0 (minimal output), 1 (-v), 2 (-vv)
+verbose = 1
+quiet = false
+color = true
+# output file location
+generate-badge = "docs"
+badge-format = "svg"

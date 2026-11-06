@@ -2,6 +2,7 @@
 
 [![ruff-fix.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml)
 [![ci.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml)
+![interrogate_badge](docs/interrogate_badge.svg)
 
 <!-- docs/README.md includes this file from here on -->
 
