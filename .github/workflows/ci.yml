@@ -19,10 +19,14 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Every job runs on the self-hosted runner and skips PRs from forks.
+# A fork PR runs its own copy of this file and can drop the guard, so it only holds
+# while no maintainer approves a fork run whose diff touches .github/ (see CONTRIBUTING.md).
 jobs:
   pyrefly:
     runs-on: self-hosted
     name: Pyrefly static type checking
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
 
     steps:
     - name: Check out the repository
@@ -44,6 +48,7 @@ jobs:
   docs:
     runs-on: self-hosted
     name: Sphinx documentation
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
@@ -64,6 +69,7 @@ jobs:
   fast-test:
     runs-on: self-hosted
     name: Fast Tests (unit + integration)
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
@@ -86,6 +92,7 @@ jobs:
     runs-on: self-hosted
     name: End-to-End Test
     needs: fast-test # Ensure fast tests pass before running end-to-end tests
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
@@ -132,8 +139,9 @@ jobs:
     # A regression never fails this job, only a benchmark that cannot run does.
     needs: end-to-end-test
     # Also runs when the tests failed, so the comment does not keep the numbers of an
-    # earlier push. Release PRs only bump the version, so both sides run the same code
-    if: ${{ !cancelled() && github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--') }}
+    # earlier push. Release PRs only bump the version, so both sides run the same code.
+    # We repeat the fork guard here because !cancelled() also drops the implicit success check on needs.
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !startsWith(github.head_ref, 'release-please--') }}
     timeout-minutes: 45
     permissions:
       contents: read
@@ -168,8 +176,7 @@ jobs:
           cat benchmark-report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment on pull request
-        # PRs from forks get a read-only token, their report stays in the job summary
-        if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository }}
+        if: ${{ !cancelled() }}
         uses: actions/github-script@v9
         with:
           script: |
