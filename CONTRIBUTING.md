@@ -122,17 +122,13 @@ nox -rs docs         # documentation, built into docs/_build/html
 All test data is generated locally, no external data is required to run the full
 test suite.
 
-CI runs the same nox sessions on self-hosted runners, which skip PRs from forks for now.
-If you open your PR from a fork, your local nox -r run is the only test gate before review.
-The PR title check still runs on every PR.
-
-Maintainers: a fork PR runs its own copy of the workflows, including the guard that keeps
-it off the self-hosted runner. Before you approve a workflow run on a fork PR, check that
-its diff leaves `.github/` alone. A run that changes it can put any code on our machine.
+CI runs the nox sessions above except pre-commit on GitHub-hosted runners, for PRs from
+forks too. Ruff runs in a workflow of its own.
 
 CI also compares the CPU time and peak memory of the saturated end-to-end scenarios
-between your PR and its target branch. The result shows up as a comment on the PR (not on
-PRs from forks). To run the comparison yourself (not part of `nox -r`):
+between your PR and its target branch. The result shows up as a comment on the PR, or for
+a PR from a fork in the summary of the Benchmark job. To run the comparison yourself (not
+part of `nox -r`):
 
 ```bash
 nox -rs benchmark -- --base develop
