@@ -58,9 +58,7 @@ Classes and functions of the `simulation` package.
 
 If you use our simulation or parts of it in your work, please cite us:
 
-_insert zenodo or similar here_
-
-**placeholder**: IS3UniCologne (2026). umosim: Agent-Based Modeling and Simulation of Smart Sustainable Mobility Services, Markets, and Policies. version {{ release }}. https://github.com/IS3UniCologne/urban-mobility-simulation/
+Hulin, W., Muires, J., Sund, L., Ahadi, R., Demircan, M., & Ketter, W. (2026). umosim: Agent-Based Modeling and Simulation of Smart Sustainable Mobility Services, Markets, and Policies (Version {{ release }}).https://doi.org/10.5281/zenodo.24085762
 
 ```{toctree}
 :hidden:
