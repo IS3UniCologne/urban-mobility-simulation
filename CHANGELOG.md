@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.4.0](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.3.0...v0.4.0) (2026-11-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cleanup:** learning/ and the DQN and Sarsa agents in simulation/agent/ are gone. Configuration loses dynamic_routing, dynamic_checkpoint_routing and dqn. Bus loses use_learning_agent.
+* **search_engine:** AV_PRICE_REDUCTION, MAX_PICKUP_DISTANCE, PRICE_ENTERING, PRICE_PER_MINUTE, PRICE_PER_KM and MINIMUM_PRICE move from RideHailingOperationsConfig to RideHailingSearchEngineConfig. RideHailingFleet.get_available_vehicles_to_user is removed.
+
+### Features
+
+* configurable shift check interval ([#370](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/370)) ([9c538ae](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/9c538ae2a8bf5ad2b3e3c1bd337a1843485d27f4))
+* **rl:** reinforcement learning harness using Gymnasium ([#365](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/365)) ([143f64e](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/143f64e94cae6a7426b45fc03f896e218a3335e8))
+* **simulation:** accept a main seed on Simulation, so a caller can seed ([143f64e](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/143f64e94cae6a7426b45fc03f896e218a3335e8))
+
+
+### Performance
+
+* various performance improvments ([#371](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/371)) ([1857a8b](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/1857a8bab7c614e36d99e86219fec841349a7989))
+
+
+### Refactors
+
+* **cleanup:** remove the learning package and the old RL agents ([#396](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/396)) ([7313ac1](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/7313ac1f58fab09402940cb2d6c1f99f0f5e8730))
+* **search_engine:** move ride-hailing prices and pickup radius to the search engine config ([#366](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/366)) ([379ae51](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/379ae51f0043386c4687706016fb5f3305015b93))
+
+
+### Documentation
+
+* add readthedocs configuration file ([b147402](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/b147402c256a040d376955a9a92a24b6f107fde9))
+* add Sphinx documentation ([#369](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/369)) ([f412255](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/f412255dd04324d96c89c120e4766471c8962091))
+
+
+### Dependencies
+
+* bump certifi from 2026.4.22 to 2026.10.18 ([#390](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/390)) ([438bda9](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/438bda9f6487889d6f7d7cf041a4e24bb5c9f6ef))
+* bump fsspec from 2026.4.0 to 2026.6.0 ([#381](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/381)) ([4bd9f11](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/4bd9f11a95ae505e0bb35a5791532d908fa78400))
+* bump pandas from 3.0.5 to 3.0.6 in the runtime-dependencies group across 1 directory ([#362](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/362)) ([1e7d193](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/1e7d193807b11f299c54eee37e72a22a66ddd20e))
+* bump pillow from 12.3.0 to 13.0.0 ([#387](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/387)) ([547d33c](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/547d33cfbe7a40c5f31d8475e015778cddccb8c8))
+* bump pyarrow from 25.0.1 to 26.0.0 ([#385](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/385)) ([f51efdd](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/f51efdde5d06100d0450ff8e1ff076c127bb853c))
+* bump the runtime-dependencies group across 1 directory with 3 updates ([#393](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/393)) ([b7a95ad](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/b7a95adb8b41be23687c03fb729393efa5d0da63))
+* bump the runtime-dependencies group with 2 updates ([#380](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/380)) ([12baecd](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/12baecd83a196298c8d3a8016c9b37c542a4e3e2))
+* bump the runtime-dependencies group with 3 updates ([#384](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/384)) ([04679d7](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/04679d79e58df4459a61a72b1a04093cfb3b78fb))
+* bump tornado from 6.5.7 to 6.5.9 ([#374](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/374)) ([ea06bec](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/ea06becb643bc59d24b46cd2cf39227f0629075e))
+* bump virtualenv from 21.3.3 to 21.7.13 ([#373](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/373)) ([7ea1be7](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/7ea1be7fa78d70f4e0e5a23e4e850d235da45e96))
+* bump virtualenv from 21.7.13 to 21.14.13 ([#391](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/391)) ([17f60ad](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/17f60ada65cde3eff45d34031a4f656baaeed883))
+
 ## [0.3.0](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.2.0...v0.3.0) (2026-09-18)
 
 
