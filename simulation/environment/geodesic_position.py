@@ -170,25 +170,3 @@ class GeodesicPosition(Position):
             return True
         else:
             return False
-
-    def difference(self, other: GeodesicPosition) -> tuple[float, ...]:
-        """
-        Return coordinate-wise difference to another position.
-
-        Gives the (lat, lng) distance vector ``(self.lat - other.lat,
-        self.lng - other.lng)``. This might not be vastly intelligent in terms of what the result means geographically
-        but it is needed for constructing states for public vehicle agents.
-
-        Parameters
-        ----------
-        other : GeodesicPosition
-            Position to subtract.
-
-        Returns
-        -------
-        tuple of float
-            Per-coordinate difference.
-        """
-        return tuple(
-            x - y for x, y in zip(self.getExactLocation(), other.getExactLocation())
-        )

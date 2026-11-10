@@ -44,12 +44,7 @@ autodoc_default_options = {
     "show-inheritance": True,
 }
 # Optional or unlisted dependencies plus the Cython extension a cached editable install can miss
-autodoc_mock_imports = [
-    "keras",
-    "pyomo",
-    "simulation.environment.cython_ext",
-    "tensorflow",
-]
+autodoc_mock_imports = ["pyomo", "simulation.environment.cython_ext"]
 napoleon_google_docstring = False
 # Attributes sections list properties and dataclass fields that autodoc documents anyway
 napoleon_use_ivar = True

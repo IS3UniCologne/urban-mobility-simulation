@@ -35,6 +35,8 @@ jobs:
       #       Commit fixes done by ruff
       #----------------------------------------------
       # Commit all changed files back to the repository
+      # PRs from forks get a read-only token, their fixes land with the next push to develop
       - uses: stefanzweifel/git-auto-commit-action@v7
+        if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
         with:
           commit_message: "chore: fix style with ruff"

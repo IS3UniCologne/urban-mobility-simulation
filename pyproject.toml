@@ -1,9 +1,10 @@
 [project]
 description     = "Urban Mobility Simulation"
+license         = "MIT"
 name            = "urban-mobility-simulation"
 readme          = "README.md"
 requires-python = ">=3.11, <3.15.0"
-version         = "0.3.0"
+version         = "0.4.0"
 
 classifiers = [
   "Private :: Do Not Upload",
@@ -57,6 +58,7 @@ typing = [
 
 docs = [
   "autodoc-pydantic>=2.2.0",
+  "interrogate>=1.7.0",
   "myst-parser>=5.1.0",
   "pydata-sphinx-theme>=0.21.0",
   "sphinx>=9.0.4",
@@ -69,7 +71,6 @@ docs = [
 [project.optional-dependencies]
 ml = [
   "highspy>=1.15.1", #highspy is not explicitly imported anywhere, but used as a solver for pyomo
-  "torch>=2.13.0",
   "pyomo>=6.10.1",
 ]
 rl  = ["greenlet>=3.0", "gymnasium>=1.0"]
@@ -80,7 +81,7 @@ umosim = "scripts.umosim:main"
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires      = ["cython", "setuptools"]
+requires      = ["cython", "setuptools>=77"]
 
 
 [tool.setuptools]
@@ -141,7 +142,6 @@ convention = "numpy"
 [tool.ruff.lint.per-file-ignores]
 # These directories do not follow the same style as the rest of the codebase.
 "data/projects/*" = ["F401", "E402"]
-"learning/*"      = ["D"]
 "scripts/*"       = ["T201", "E402"]
 "tests/*"         = ["D", "SLF001", "T201"]
 "visualization/*" = ["D"]
@@ -155,13 +155,7 @@ min-severity     = "warn"
 project-includes = ["rl/", "simulation/"]
 # Exclude untyped modules from error reporting; remove entries as modules are typed
 project-excludes = [
-  "simulation/agent/action_space.py",
   "simulation/agent/agent.py",
-  "simulation/agent/deep_q_learning.py",
-  "simulation/agent/episodic_semi_gradient_n_step_sarsa.py",
-  "simulation/agent/episodic_semi_gradient_sarsa.py",
-  "simulation/agent/policy.py",
-  "simulation/agent/rl_agent.py",
   "simulation/operator/ride_hailing_fleet.py",
   "simulation/operator/mixed_shared_vehicle_fleet.py",
   "simulation/operator/operations_management/algorithms/charging_station_allocation.py",
@@ -208,3 +202,26 @@ python_files = ["*_test.py", "test_*.py"]
 python_functions = ["test_*"]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.interrogate]
+ignore-init-method = false
+ignore-init-module = true
+ignore-magic = false
+ignore-semiprivate = true
+ignore-private = true
+ignore-property-decorators = false
+ignore-module = false
+ignore-nested-functions = false
+ignore-nested-classes = false
+ignore-setters = false
+ignore-overloaded-functions = false
+fail-under = 81
+# possible values: sphinx (default), google
+style = "google"
+# possible values: 0 (minimal output), 1 (-v), 2 (-vv)
+verbose = 1
+quiet = false
+color = true
+# output file location
+generate-badge = "docs"
+badge-format = "svg"

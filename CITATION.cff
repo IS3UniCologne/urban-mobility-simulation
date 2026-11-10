@@ -1,0 +1,53 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: 'umosim: A fast, extensible, agent-based model of smart sustainable mobility services, markets, and policies'
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: William
+    family-names: Hulin
+    affiliation: University of Cologne
+  - given-names: Janik
+    family-names: Muires
+    affiliation: University of Cologne
+    orcid: 'https://orcid.org/0000-0002-7931-7603'
+  - given-names: Lennard
+    family-names: Sund
+    affiliation: University of Cologne
+    orcid: 'https://orcid.org/0000-0001-8632-9429'
+  - given-names: Ramin
+    family-names: Ahadi
+    affiliation: University of Cologne
+    orcid: 'https://orcid.org/0000-0002-8447-5008'
+  - given-names: Muhammed
+    family-names: Demircan
+    affiliation: University of Cologne
+    orcid: 'https://orcid.org/0000-0002-8194-717X'
+  - given-names: Wolfgang
+    family-names: Ketter
+    affiliation: University of Cologne
+    orcid: 'https://orcid.org/0000-0001-9008-142X'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24085762
+    description: >-
+      The concept DOI of the software (always resolves to
+      the latest version)
+repository-code: >-
+  https://github.com/IS3UniCologne/urban-mobility-simulation/
+url: 'https://umosim.readthedocs.io/'
+abstract: >-
+  We simulate shared mobility services (e.g. ride hailing,
+  vehicle sharing), the infrastructure they use (e.g.
+  charging), and the markets that link them to users (e.g.,
+  Mobility-as-a-Service) and to each other (e.g. charging
+  slot auctions).
+keywords:
+  - agent-based model
+  - transportation
+  - choice modeling
+license: MIT

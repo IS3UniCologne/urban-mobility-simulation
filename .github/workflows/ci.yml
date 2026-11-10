@@ -1,6 +1,3 @@
-### This workflow is used to test the templates as an integration test
-### The results are stored in a JSON file on the self-hosted runner and can be accessed via SSH
-
 name: CI Pipeline
 on:
   # run when pushing to develop
@@ -21,7 +18,7 @@ concurrency:
 
 jobs:
   pyrefly:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Pyrefly static type checking
 
     steps:
@@ -42,7 +39,7 @@ jobs:
         nox -rs pyrefly
 
   docs:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Sphinx documentation
     steps:
       - name: Install the latest version of uv
@@ -61,8 +58,84 @@ jobs:
         run: |
           nox -rs docs
 
+  interrogate:
+    runs-on: ubuntu-latest
+    name: Docstring coverage
+    permissions:
+      # push to develop commits the regenerated badge back
+      contents: write
+      # PRs get a comment with the coverage change
+      pull-requests: write
+    steps:
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nox
+        run: |
+          uv tool install nox
+
+      # The committed badge is the coverage of the target branch, since develop regenerates it on every push
+      - name: Read committed coverage
+        id: before
+        run: |
+          echo "coverage=$(sed -n 's/.*<title>interrogate: \([0-9.]*\)%.*/\1/p' docs/interrogate_badge.svg | head -n 1)" >> "$GITHUB_OUTPUT"
+
+      # Fails below `fail-under` in pyproject.toml, and rewrites docs/interrogate_badge.svg
+      - name: Check docstring coverage
+        run: |
+          nox -rs interrogate
+
+      - name: Read new coverage
+        id: after
+        if: ${{ !cancelled() }}
+        run: |
+          echo "coverage=$(sed -n 's/.*<title>interrogate: \([0-9.]*\)%.*/\1/p' docs/interrogate_badge.svg | head -n 1)" >> "$GITHUB_OUTPUT"
+
+      # On merge into develop, the badge is committed, and only when the rounded coverage changed
+      # Commits by GITHUB_TOKEN do not trigger new workflow runs, so this shouldn't loop.
+      - name: Commit updated badge
+        if: ${{ !cancelled() && github.event_name == 'push' }}
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: update interrogate badge"
+          file_pattern: docs/interrogate_badge.svg
+
+      - name: Comment coverage change on pull request
+        # PRs from forks get a read-only token, their report stays in the job summary only
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v9
+        env:
+          COVERAGE_BEFORE: ${{ steps.before.outputs.coverage }}
+          COVERAGE_AFTER: ${{ steps.after.outputs.coverage }}
+        with:
+          script: |
+            const marker = "<!-- interrogate-report -->";
+            const before = process.env.COVERAGE_BEFORE;
+            const after = process.env.COVERAGE_AFTER;
+            const note = "The README badge is regenerated when this PR is merged into `develop`.";
+            const body = `${marker}\n**Docstring coverage:** ${before}% → ${after}%\n\n${note}\n`;
+            await core.summary.addRaw(body, true).write();
+            if (context.payload.pull_request.head.repo?.full_name !== context.repo.owner + "/" + context.repo.repo) {
+              return;
+            }
+            const issue = { ...context.repo, issue_number: context.issue.number };
+            const comments = await github.paginate(github.rest.issues.listComments, issue);
+            const previous = comments.find(
+              (comment) => comment.user?.type === "Bot" && comment.body?.startsWith(marker),
+            );
+            if (previous) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: previous.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...issue, body });
+            }
+
   fast-test:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Fast Tests (unit + integration)
     steps:
       - name: Install the latest version of uv
@@ -83,7 +156,7 @@ jobs:
           nox -rs pytest_fast
 
   end-to-end-test:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: End-to-End Test
     needs: fast-test # Ensure fast tests pass before running end-to-end tests
     steps:
@@ -95,9 +168,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Copy local files to workspace
-        run: cp -r /home/ci/data/* $GITHUB_WORKSPACE/data
-
       - name: Install Nox
         run: |
           uv tool install nox
@@ -107,17 +177,17 @@ jobs:
         run: |
           nox -rs pytest_e2e
 
-      - name: Copy simulation logs on failure
+      # Attempt number keeps the artifact name unique (a re-run uploads into the same run)
+      - name: Upload simulation logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: end-to-end-logs-attempt-${{ github.run_attempt }}
+          path: data/test_output/logs/
+
+      - name: Show the end of each simulation log on failure
         if: failure()
         run: |
-          # Get short commit SHA (first 7 characters)
-          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          echo "End-to-End test failed. Copying simulation logs for debugging..."
-          mkdir -p /home/ci/test_runner_data/failed_logs_${{github.run_number}}_${SHORT_SHA}
-          cp -r data/test_output/logs/* /home/ci/test_runner_data/failed_logs_${{github.run_number}}_${SHORT_SHA}/
-          echo "Logs copied to /home/ci/test_runner_data/failed_logs_${{github.run_number}}_${SHORT_SHA}/"
-
-          # Output last few lines of each log file for quick inspection
           echo "=== Log file content samples ==="
           for logfile in data/test_output/logs/*; do
             echo "=== $logfile ==="
@@ -126,13 +196,13 @@ jobs:
           done
 
   benchmark:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Benchmark
-    # Reports CPU time and peak memory against the target branch in a PR comment.
+    # Reports CPU time and peak memory against the target branch in the job summary and a PR comment (no comment on fork PRs)
     # A regression never fails this job, only a benchmark that cannot run does.
     needs: end-to-end-test
     # Also runs when the tests failed, so the comment does not keep the numbers of an
-    # earlier push. Release PRs only bump the version, so both sides run the same code
+    # earlier push. Release PRs only bump the version, so both sides run the same code.
     if: ${{ !cancelled() && github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--') }}
     timeout-minutes: 45
     permissions:
@@ -168,7 +238,7 @@ jobs:
           cat benchmark-report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment on pull request
-        # PRs from forks get a read-only token, their report stays in the job summary
+        # PRs from forks get a read-only token, their report stays in the job summary only
         if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository }}
         uses: actions/github-script@v9
         with:
