@@ -154,8 +154,10 @@ class ChargingInfrastructure:
         """
         cost = 0.0
         if end < start:
-            raise ValueError(f"charging session must not end before it starts (session start: {start}, session end: {end}).")
-            
+            raise ValueError(
+                f"charging session must not end before it starts (session start: {start}, session end: {end})."
+            )
+
         if end == start:
             return cost
 
