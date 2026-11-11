@@ -40,6 +40,7 @@ def main() -> None:
         viz.add_plot(viz.operators.total_service_tasks_scheduled)
         viz.add_plot(viz.operators.finished_service_tasks)
         viz.add_plot(viz.fleets.avg_vehicle_soc)
+        viz.add_plot(viz.charging_stations.price_per_kWh)
         viz.start()
 
     simulation.run_simulation()
