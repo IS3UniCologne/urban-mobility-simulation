@@ -62,13 +62,13 @@ class TestPriceProfileConfig:
     def test_validprofile_is_kept_unchanged(self) -> None:
         assert make_config().CHARGING_STATION_PRICE_PROFILE == PROFILE
 
-    # invalid profiles should get rejected and error message names the filed
+    # invalid profiles should get rejected and error message names the field
     @pytest.mark.parametrize("length", [0, 1, 23, 25])
     def test_profile_with_wrong_length_raises(self, length: int) -> None:
         with pytest.raises(ValidationError, match="CHARGING_STATION_PRICE_PROFILE"):
             make_config(CHARGING_STATION_PRICE_PROFILE=[0.143] * length)
 
-    # config wihtout a profile should be rejected
+    # config without a profile should be rejected
     def test_missing_profile_raises(self) -> None:
         config = make_config().model_dump(
             exclude={"CHARGING_STATION_PRICE_PROFILE", "instance"}
@@ -101,7 +101,7 @@ class TestPriceBroadcast:
         sim.env.run(until=hhmm(24, 30))
         assert infra.charging_stations[0].price_per_kWh == PROFILE[0]
 
-    # if charging begins at 17.41, the price should be set straight away at 17.41 to
+    # if a simulation begins at 17.41, the price should be set straight away at 17.41 to
     # the price at 17.00 and the next update should be at 18.00, and not at 18.40
     def test_mid_hour_start_broadcasts_immediately_and_on_next_full_hour(self) -> None:
         sim = make_sim(initial_time=hhmm(17, 40))
