@@ -152,10 +152,13 @@ class ChargingInfrastructure:
         float
             Average price per kWh for the session.
         """
-        if end <= start:
-            return self._charging_price_profile[SimulationTimeConverter.hours(start)]
-
         cost = 0.0
+        if end < start:
+            raise ValueError(f"charging session must not end before it starts (session start: {start}, session end: {end}).")
+            
+        if end == start:
+            return cost
+
         t = start
         while t < end:
             hour_end = min(end, (t // MINUTES_PER_HOUR + 1) * MINUTES_PER_HOUR)
