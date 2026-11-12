@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import OperatorConfig
     from simulation.helper.enums import VehicleType
-    from simulation.infrastructure.charging_stations.charging_infastructure import (
+    from simulation.infrastructure.charging_stations.charging_infrastructure import (
         ChargingInfrastructure,
     )
     from simulation.operator.data_transfer_object.transport_request import (

@@ -7,7 +7,7 @@ import simpy
 from pydantic import ValidationError
 
 from simulation.helper.configuration.configuration import ChargingInfrastructureConfig
-from simulation.infrastructure.charging_stations.charging_infastructure import (
+from simulation.infrastructure.charging_stations.charging_infrastructure import (
     ChargingInfrastructure,
 )
 

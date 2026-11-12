@@ -61,7 +61,7 @@ from simulation.helper.enums import (
 )
 from simulation.helper.time import HOURS_PER_DAY, SimulationVelocityConverter
 from simulation.helper.types import RegionId
-from simulation.infrastructure.charging_stations.charging_infastructure import (
+from simulation.infrastructure.charging_stations.charging_infrastructure import (
     ChargingInfrastructure,
 )
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
