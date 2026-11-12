@@ -43,7 +43,7 @@ class ChargingInfrastructure:
         "_charging_stations_by_location",
         "_location_list",
         "_power_list",
-        "_queue_size",
+        "_queue_size_list",
         "_sim",
         "_tracking",
     )
@@ -57,7 +57,7 @@ class ChargingInfrastructure:
         self._location_list = charging_infrastructure_config.LOCATIONS
         self._power_list = charging_infrastructure_config.CHARGING_STATION_POWER
         self._capacity_list = charging_infrastructure_config.CHARGING_STATION_CAPACITY
-        self._queue_size = charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
+        self._queue_size_list = charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
         self._charging_price_profile = (
             charging_infrastructure_config.CHARGING_STATION_PRICE_PROFILE
         )
@@ -117,7 +117,7 @@ class ChargingInfrastructure:
                 location=location,
                 power=self._power_list[i],
                 capacity=self._capacity_list[i],
-                queue_size=self._queue_size[i],
+                queue_size=self._queue_size_list[i],
                 charging_infrastructure=self,
             )
             self._charging_stations.append(charging_station)
