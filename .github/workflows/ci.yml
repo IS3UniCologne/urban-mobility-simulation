@@ -72,33 +72,23 @@ jobs:
         with:
           version: "latest"
 
-      # On push to develop the badge is committed as the bot GitHub App, since the develop
-      # ruleset rejects a GITHUB_TOKEN push. The App is on the ruleset's bypass list.
-      - name: Create GitHub App token
-        id: app-token
-        if: ${{ github.event_name == 'push' }}
-        uses: actions/create-github-app-token@v3
-        with:
-          client-id: ${{ vars.RUFF_BOT_CLIENT_ID }}
-          private-key: ${{ secrets.RUFF_BOT_PRIVATE_KEY }}
-          permission-contents: write
-
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      # The target branch, to compare the coverage against
+      - name: Checkout target branch
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v7
         with:
-          token: ${{ steps.app-token.outputs.token || github.token }}
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
 
       - name: Install Nox
         run: |
           uv tool install nox
 
-      # The committed badge is the coverage of the target branch, since develop regenerates it on every push
-      - name: Read committed coverage
-        id: before
-        run: |
-          echo "coverage=$(sed -n 's/.*<title>interrogate: \([0-9.]*\)%.*/\1/p' docs/interrogate_badge.svg | head -n 1)" >> "$GITHUB_OUTPUT"
-
-      # Fails below `fail-under` in pyproject.toml, and rewrites docs/interrogate_badge.svg
+      # Fails below `fail-under` in pyproject.toml, and writes docs/_static/interrogate_badge.svg.
+      # The badge is not committed: the Read the Docs build publishes its own for the README.
       - name: Check docstring coverage
         run: |
           nox -rs interrogate
@@ -107,17 +97,15 @@ jobs:
         id: after
         if: ${{ !cancelled() }}
         run: |
-          echo "coverage=$(sed -n 's/.*<title>interrogate: \([0-9.]*\)%.*/\1/p' docs/interrogate_badge.svg | head -n 1)" >> "$GITHUB_OUTPUT"
+          echo "coverage=$(sed -n 's/.*<title>interrogate: \([0-9.]*\)%.*/\1/p' docs/_static/interrogate_badge.svg | head -n 1)" >> "$GITHUB_OUTPUT"
 
-      # On merge into develop, the badge is committed, and only when the rounded coverage changed.
-      # The App's commit starts a new run, which finds the badge current and commits nothing.
-      - name: Commit updated badge
-        if: ${{ !cancelled() && github.event_name == 'push' }}
-        # Pinned to v7.2.1, since this action holds a token that may push to develop
-        uses: stefanzweifel/git-auto-commit-action@d0b01107b5db882071f96de5dd4b54961ea93f4c
-        with:
-          commit_message: "chore: update interrogate badge"
-          file_pattern: docs/interrogate_badge.svg
+      # Same nox environment, run on the target branch with that branch's interrogate config
+      - name: Read target branch coverage
+        id: before
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        run: |
+          nox -rs interrogate -- --config base/pyproject.toml --fail-under 0 --generate-badge base_badge.svg base/simulation
+          echo "coverage=$(sed -n 's/.*<title>interrogate: \([0-9.]*\)%.*/\1/p' base_badge.svg | head -n 1)" >> "$GITHUB_OUTPUT"
 
       - name: Comment coverage change on pull request
         # PRs from forks get a read-only token, their report stays in the job summary only
@@ -131,7 +119,7 @@ jobs:
             const marker = "<!-- interrogate-report -->";
             const before = process.env.COVERAGE_BEFORE;
             const after = process.env.COVERAGE_AFTER;
-            const note = "The README badge is regenerated when this PR is merged into `develop`.";
+            const note = "The README badge updates with the docs build once this PR is merged into `develop`.";
             const body = `${marker}\n**Docstring coverage:** ${before}% → ${after}%\n\n${note}\n`;
             await core.summary.addRaw(body, true).write();
             if (context.payload.pull_request.head.repo?.full_name !== context.repo.owner + "/" + context.repo.repo) {

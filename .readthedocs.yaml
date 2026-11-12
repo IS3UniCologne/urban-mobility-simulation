@@ -8,6 +8,11 @@ build:
   os: ubuntu-26.04
   tools:
     python: "3.14"
+  jobs:
+    # Writes docs/_static/interrogate_badge.svg, which the README shows from the latest docs.
+    # fail-under 0, since the coverage check belongs to CI and must not break the docs build.
+    pre_build:
+      - $READTHEDOCS_VIRTUALENV_PATH/bin/interrogate --fail-under 0 simulation
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:

@@ -5,7 +5,7 @@
   <p>
     <a href="https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml"><img src="https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml/badge.svg" alt="ruff-fix workflow"></a>
     <a href="https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml"><img src="https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml/badge.svg" alt="CI workflow"></a>
-    <img src="docs/interrogate_badge.svg" alt="interrogate badge">
+    <a href="https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml"><img src="https://umosim.readthedocs.io/latest/_static/interrogate_badge.svg" alt="interrogate badge"></a>
     <a href="https://doi.org/10.5281/zenodo.24085762"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.24085762.svg" alt="DOI"></a>
   </p>
 </div>

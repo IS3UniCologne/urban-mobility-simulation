@@ -51,7 +51,7 @@ def pre_commit(session: nox.Session) -> None:
 
 @nox.session(name="interrogate")
 def interrogate(session: nox.Session) -> None:
-    """Check docstring coverage and regenerate the badge in docs/.
+    """Check docstring coverage and regenerate the badge in docs/_static/.
 
     Fails when the coverage drops below ``fail-under`` in ``pyproject.toml``.
 
