@@ -222,6 +222,6 @@ style = "google"
 verbose = 1
 quiet = false
 color = true
-# output file location
-generate-badge = "docs"
+# output file location, ignored by git: the Read the Docs build publishes the badge
+generate-badge = "docs/_static"
 badge-format = "svg"
