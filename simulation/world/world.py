@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from simulation.agent.user.user_log import UserLog
 from simulation.helper.simulation_base import SimulationBase
-from simulation.infrastructure.charging_stations.charging_infastructure import (
+from simulation.infrastructure.charging_stations.charging_infrastructure import (
     ChargingInfrastructure,
 )
 from simulation.infrastructure.helper.distance_matrix_importer import (

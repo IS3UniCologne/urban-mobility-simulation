@@ -5,8 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from simulation.infrastructure.charging_stations.charging_station import ChargingStation
+from simulation.helper.time import MINUTES_PER_HOUR, SimulationTimeConverter
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+    from simpy import Event
+
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.configuration.configuration import (
         ChargingInfrastructureConfig,
@@ -34,11 +38,12 @@ class ChargingInfrastructure:
         "_auction",
         "_capacity_list",
         "_charging_infra_config",
+        "_charging_price_profile",
         "_charging_stations",
         "_charging_stations_by_location",
         "_location_list",
         "_power_list",
-        "_queue_size",
+        "_queue_size_list",
         "_sim",
         "_tracking",
     )
@@ -52,8 +57,12 @@ class ChargingInfrastructure:
         self._location_list = charging_infrastructure_config.LOCATIONS
         self._power_list = charging_infrastructure_config.CHARGING_STATION_POWER
         self._capacity_list = charging_infrastructure_config.CHARGING_STATION_CAPACITY
-        self._queue_size = charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
-
+        self._queue_size_list = (
+            charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
+        )
+        self._charging_price_profile = (
+            charging_infrastructure_config.CHARGING_STATION_PRICE_PROFILE
+        )
         if charging_infrastructure_config.AUCTION_CONFIG:
             # TODO: Remove this hack once the auction modules are fully typed.
             auction_config = cast(
@@ -76,6 +85,9 @@ class ChargingInfrastructure:
         # fast lookup of charging stations by location
         self._charging_stations_by_location: dict[RegionId, ChargingStation] = {}
         self._initialise_charging_stations()
+        self._sim.env.process(
+            self._broadcast_prices()
+        )  # updates charging prices at each hour
 
         self._auction = self._initialize_auction()
 
@@ -107,10 +119,59 @@ class ChargingInfrastructure:
                 location=location,
                 power=self._power_list[i],
                 capacity=self._capacity_list[i],
-                queue_size=self._queue_size[i],
+                queue_size=self._queue_size_list[i],
+                charging_infrastructure=self,
             )
             self._charging_stations.append(charging_station)
             self._charging_stations_by_location[location] = charging_station
+
+    def _broadcast_prices(self) -> Generator[Event, None, None]:
+        """Send the current hour's price per kWh to all stations at every full hour."""
+        env = self._sim.env
+        while True:
+            price = self._charging_price_profile[SimulationTimeConverter.hours(env.now)]
+            for station in self._charging_stations:
+                station.update_price(price)
+            # wait until the next full hour, also if the simulation starts mid-hour
+            yield env.timeout(MINUTES_PER_HOUR - env.now % MINUTES_PER_HOUR)
+
+    def average_price(self, start: float, end: float) -> float:
+        """Time-weighted price per kWh for charging between start and end.
+
+        A session that from 17.40 to 18.50 pays 20 minutes at the 17.00 price and 50
+        minutes at the 18.00 price. Charging power is constant, so energy is spread
+        evenly over the session.
+
+        Parameters
+        ----------
+        start : float
+            Start time of charging session in simulation minutes.
+        end : float
+            End of charging session in simulation minutes.
+
+        Returns
+        -------
+        float
+            Average price per kWh for the session.
+        """
+        cost = 0.0
+        if end < start:
+            raise ValueError(
+                f"charging session must not end before it starts (session start: {start}, session end: {end})."
+            )
+
+        if end == start:
+            return cost
+
+        t = start
+        while t < end:
+            hour_end = min(end, (t // MINUTES_PER_HOUR + 1) * MINUTES_PER_HOUR)
+            cost += (hour_end - t) * self._charging_price_profile[
+                SimulationTimeConverter.hours(t)
+            ]
+            t = hour_end
+
+        return cost / (end - start)
 
     @property
     def charging_stations(self) -> list[ChargingStation]:

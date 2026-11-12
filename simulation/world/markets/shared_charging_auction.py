@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from simulation.helper.configuration.configuration import (
         SharedChargingAuctionConfig,
     )
-    from simulation.infrastructure.charging_stations.charging_infastructure import (
+    from simulation.infrastructure.charging_stations.charging_infrastructure import (
         ChargingInfrastructure,
     )
     from simulation.world.markets.interfaces.bidder_interface import BidderInterface

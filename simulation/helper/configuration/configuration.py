@@ -59,9 +59,9 @@ from simulation.helper.enums import (
     TemporalResolution,
     VehicleType,
 )
-from simulation.helper.time import SimulationVelocityConverter
+from simulation.helper.time import HOURS_PER_DAY, SimulationVelocityConverter
 from simulation.helper.types import RegionId
-from simulation.infrastructure.charging_stations.charging_infastructure import (
+from simulation.infrastructure.charging_stations.charging_infrastructure import (
     ChargingInfrastructure,
 )
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
@@ -447,6 +447,10 @@ class ChargingInfrastructureConfig(BaseModel):
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
+    # One 24h price profile broadcasted to all stations
+    CHARGING_STATION_PRICE_PROFILE: list[float] = Field(
+        min_length=HOURS_PER_DAY, max_length=HOURS_PER_DAY
+    )
 
     # fallback if there is no auction
     COORDINATION_INTERVAL: int | None = Field(gt=0, default=None)
@@ -464,8 +468,8 @@ class ChargingInfrastructureConfig(BaseModel):
         """
         Clamp and expand charging infrastructure lists to match the number of stations.
 
-        This method ensures that the LOCATIONS, CHARGING_STATION_POWER, CHARGING_STATION_CAPACITY,
-        and CHARGING_STATION_QUEUE_SIZE lists are all of the same length as NUMBER_OF_CHARGING_STATIONS.
+        This method ensures that the LOCATIONS, CHARGING_STATION_POWER, CHARGING_STATION_CAPACITY, and
+        CHARGING_STATION_QUEUE_SIZE lists are all of the same length as NUMBER_OF_CHARGING_STATIONS.
         If any of these lists have only a single element, it will be expanded to match the number of stations by
         repeating the single element.
 
@@ -479,6 +483,18 @@ class ChargingInfrastructureConfig(BaseModel):
         n = self.NUMBER_OF_CHARGING_STATIONS
 
         self.LOCATIONS = self.LOCATIONS[:n]
+
+        # Only allow 1 or n elements in the lists
+        for name in (
+            "CHARGING_STATION_POWER",
+            "CHARGING_STATION_CAPACITY",
+            "CHARGING_STATION_QUEUE_SIZE",
+        ):
+            values = getattr(self, name)
+            if len(values) not in (1, n):
+                raise ValueError(
+                    f"{name} must have 1 or NUMBER_OF_CHARGING_STATIONS ({n}) entries, got {len(values)}."
+                )
 
         if len(self.CHARGING_STATION_POWER) == 1:
             self.CHARGING_STATION_POWER = self.CHARGING_STATION_POWER * n

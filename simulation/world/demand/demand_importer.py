@@ -11,6 +11,7 @@ from simulation.helper.enums import (
     SpatialResolution,
     TemporalResolution,
 )
+from simulation.helper.time import HOURS_PER_DAY
 from simulation.world.demand import demand_schema
 
 
@@ -58,7 +59,7 @@ class DemandImporter:
                 f"Demand H3 resolution {inferred_h3_res} != config {self._spatial_resolution.value}"
             )
 
-        inferred_bucket_hours = 24 // df[demand_schema.TIME_BUCKET].nunique()
+        inferred_bucket_hours = HOURS_PER_DAY // df[demand_schema.TIME_BUCKET].nunique()
         if inferred_bucket_hours != self._temporal_resolution.value:
             raise ValueError(
                 f"Demand temporal bucket {inferred_bucket_hours}h != config {self._temporal_resolution.value}h"

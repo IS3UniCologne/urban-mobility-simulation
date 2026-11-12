@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from simulation.agent.user import User
-    from simulation.infrastructure.charging_stations.charging_infastructure import (
+    from simulation.infrastructure.charging_stations.charging_infrastructure import (
         ChargingInfrastructure,
     )
     from simulation.operator.data_transfer_object.transport_request import (
