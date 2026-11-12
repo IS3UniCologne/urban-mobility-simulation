@@ -484,6 +484,18 @@ class ChargingInfrastructureConfig(BaseModel):
 
         self.LOCATIONS = self.LOCATIONS[:n]
 
+        # Only allow 1 or n elements in the lists
+        for name in (
+            "CHARGING_STATION_POWER",
+            "CHARGING_STATION_CAPACITY",
+            "CHARGING_STATION_QUEUE_SIZE",
+        ):
+            values = getattr(self, name)
+            if len(values) not in (1, n):
+                raise ValueError(
+                    f"{name} must have 1 or NUMBER_OF_CHARGING_STATIONS ({n}) entries, got {len(values)}."
+                )
+
         if len(self.CHARGING_STATION_POWER) == 1:
             self.CHARGING_STATION_POWER = self.CHARGING_STATION_POWER * n
         if len(self.CHARGING_STATION_CAPACITY) == 1:
