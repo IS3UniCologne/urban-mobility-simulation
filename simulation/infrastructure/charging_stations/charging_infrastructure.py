@@ -57,7 +57,9 @@ class ChargingInfrastructure:
         self._location_list = charging_infrastructure_config.LOCATIONS
         self._power_list = charging_infrastructure_config.CHARGING_STATION_POWER
         self._capacity_list = charging_infrastructure_config.CHARGING_STATION_CAPACITY
-        self._queue_size_list = charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
+        self._queue_size_list = (
+            charging_infrastructure_config.CHARGING_STATION_QUEUE_SIZE
+        )
         self._charging_price_profile = (
             charging_infrastructure_config.CHARGING_STATION_PRICE_PROFILE
         )
