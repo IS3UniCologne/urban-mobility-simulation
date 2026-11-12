@@ -67,7 +67,7 @@ def load_or_infer_bounding_box(
         bbox_df = gpd.read_file(bbox_path)
         if bbox_df.crs is None:
             logger.warning("Bounding box CRS is None. Defaulting to EPSG:4326.")
-            bbox_df.set_crs("epsg:4326", inplace=True)
+            bbox_df = bbox_df.set_crs("epsg:4326")
         return bbox_df
 
     logger.info("No bounding_box.geojson found. Inferring from demand + supply data.")

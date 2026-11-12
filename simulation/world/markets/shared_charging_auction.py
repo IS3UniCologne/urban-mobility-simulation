@@ -185,7 +185,7 @@ class SharedChargingAuction(Auction):  # noqa: D101
         bids_df = bids_df.astype(
             {"capacity": int, "bid_price": float, "bidder_id": int}
         )
-        bids_df.sort_values(by="bid_price", ascending=False, inplace=True)
+        bids_df = bids_df.sort_values(by="bid_price", ascending=False)
 
         bids_df["cumulative_capacity"] = bids_df["capacity"].cumsum()
 
@@ -246,7 +246,7 @@ class SharedChargingAuction(Auction):  # noqa: D101
         result = result.groupby("bidder_id").agg({"capacity": "sum"}).reset_index()
         result["clearing_price"] = clearing_price
 
-        # result.sort_values(by="bidder_id", inplace=True)
+        # result = result.sort_values(by="bidder_id")
         result = result.astype(
             {"bidder_id": int, "capacity": int, "clearing_price": float}
         )
