@@ -62,8 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Docstring coverage
     permissions:
-      # push to develop commits the regenerated badge back
-      contents: write
+      contents: read
       # PRs get a comment with the coverage change
       pull-requests: write
     steps:
@@ -72,8 +71,21 @@ jobs:
         with:
           version: "latest"
 
+      # On push to develop the badge is committed as the bot GitHub App, since the develop
+      # ruleset rejects a GITHUB_TOKEN push. The App is on the ruleset's bypass list.
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RUFF_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.RUFF_BOT_PRIVATE_KEY }}
+          permission-contents: write
+
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
 
       - name: Install Nox
         run: |
@@ -96,11 +108,12 @@ jobs:
         run: |
           echo "coverage=$(sed -n 's/.*<title>interrogate: \([0-9.]*\)%.*/\1/p' docs/interrogate_badge.svg | head -n 1)" >> "$GITHUB_OUTPUT"
 
-      # On merge into develop, the badge is committed, and only when the rounded coverage changed
-      # Commits by GITHUB_TOKEN do not trigger new workflow runs, so this shouldn't loop.
+      # On merge into develop, the badge is committed, and only when the rounded coverage changed.
+      # The App's commit starts a new run, which finds the badge current and commits nothing.
       - name: Commit updated badge
         if: ${{ !cancelled() && github.event_name == 'push' }}
-        uses: stefanzweifel/git-auto-commit-action@v7
+        # Pinned to v7.2.1, since this action holds a token that may push to develop
+        uses: stefanzweifel/git-auto-commit-action@d0b01107b5db882071f96de5dd4b54961ea93f4c
         with:
           commit_message: "chore: update interrogate badge"
           file_pattern: docs/interrogate_badge.svg
