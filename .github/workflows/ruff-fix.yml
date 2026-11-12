@@ -9,18 +9,28 @@ jobs:
     if: ${{ !startsWith(github.head_ref, 'release-please--') && !startsWith(github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     permissions:
-      # Give the default GITHUB_TOKEN write permission to commit and push the
-      # added or changed files to the repository.
-        contents: write
+      contents: read
+    env:
+      # Dependabot runs get no Actions secrets
+      USE_APP: ${{ github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') }}
     steps:
-      #----------------------------------------------
-      #       check out the repo
-      #----------------------------------------------
+      # Fixes are pushed as the bot GitHub App. A GITHUB_TOKEN commit on a pull request holds the
+      # next CI run for maintainer approval, and the develop ruleset rejects it.
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ env.USE_APP == 'true' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RUFF_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.RUFF_BOT_PRIVATE_KEY }}
+          permission-contents: write
       - name: Checkout
         uses: actions/checkout@v7
-      #----------------------------------------------
-      #       run ruff
-      #----------------------------------------------
+        with:
+          # The branch itself, not the detached merge commit, so the fix can be pushed.
+          # A fork's branch is missing here, so forks keep the default merge commit.
+          ref: ${{ env.USE_APP == 'true' && github.head_ref || '' }}
+          token: ${{ steps.app-token.outputs.token || github.token }}
       - name: Run ruff linter
         uses: astral-sh/ruff-action@v4.1.0
         with:
@@ -31,12 +41,10 @@ jobs:
         with:
           version-file: uv.lock
           args: 'format'
-      #----------------------------------------------
-      #       Commit fixes done by ruff
-      #----------------------------------------------
-      # Commit all changed files back to the repository
-      # PRs from forks get a read-only token, their fixes land with the next push to develop
-      - uses: stefanzweifel/git-auto-commit-action@v7
-        if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+      # PRs from forks and Dependabot get no App token, their fixes land with the next push to develop
+      - name: Commit fixes done by ruff
+        if: ${{ env.USE_APP == 'true' }}
+        # Pinned to v7.2.1, since this action holds a token that may push to develop
+        uses: stefanzweifel/git-auto-commit-action@d0b01107b5db882071f96de5dd4b54961ea93f4c
         with:
           commit_message: "chore: fix style with ruff"
