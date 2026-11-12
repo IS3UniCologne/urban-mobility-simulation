@@ -89,7 +89,7 @@ class Timetable(SimulationBase):
             raw_trips,
             geometry=gpd.points_from_xy(raw_trips["stop_lon"], raw_trips["stop_lat"]),
         )
-        trips.sort_values(by=["trip_id", "stop_sequence"], inplace=True)
+        trips = trips.sort_values(by=["trip_id", "stop_sequence"])
         self._trips = trips
 
     def next_trips(self, time: SimulationTime, lookahead: int) -> list[GtfsTripId]:
