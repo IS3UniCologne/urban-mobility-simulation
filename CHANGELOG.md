@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.5.0](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.4.0...v0.5.0) (2026-11-13)
+
+
+### Features
+
+* allow time-dependent prices for charging ([#378](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/378)) ([1d0e151](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/1d0e1514c47e9eddcb2854634a8b48e48277a220))
+
+
+### Refactors
+
+* replace deprecated pandas inplace parameter with assignments ([#409](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/409)) ([9d8ce9f](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/9d8ce9f96d2473ef20108929a134d4de432e21fb)), closes [#405](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/405)
+
+
+### Dependencies
+
+* bump soupsieve from 2.10 to 4.0 ([#412](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/412)) ([1e93096](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/1e9309686f64b140f1b881392680c667c7344a2b))
+
 ## [0.4.0](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.3.0...v0.4.0) (2026-11-09)
 
 
