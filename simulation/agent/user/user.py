@@ -194,10 +194,12 @@ class User(Agent):
 
         self.logger.debug("Started user process.")
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:
+        """Return the user's id and state."""
         return f"User with id {self.uid} is in state {self._state}."
 
-    def __str__(self) -> str:  # noqa: D105
+    def __str__(self) -> str:
+        """Return the user's id."""
         return f"User {self.uid}"
 
     @property
@@ -298,10 +300,9 @@ class User(Agent):
             Successful allocation, or None if all alternatives failed.
         """
         # TODO: we are attempting allocations with old information, what if the vehicle moved in the meantime?
-        viable = {alt: prob for alt, prob in choice_probs.items() if prob > 0}
-        attempted: set[TransportationAlternative] = set()
+        remaining = {alt: prob for alt, prob in choice_probs.items() if prob > 0}
 
-        while len(attempted) < len(viable):
+        while remaining:
             if self._is_search_duration_exceeded():
                 self._search_end_time = self._env.now
                 self.logger.debug(
@@ -309,8 +310,8 @@ class User(Agent):
                 )
                 return None
 
-            chosen = self._sample_alternative(viable.keys() - attempted, viable)
-            attempted.add(chosen)
+            chosen = self._sample_alternative(remaining)
+            del remaining[chosen]
             self._attempted_operators.add(chosen.operator)
 
             vehicle_allocation: VehicleAllocation | None = yield self._env.process(
@@ -341,31 +342,30 @@ class User(Agent):
         return None
 
     def _sample_alternative(
-        self,
-        remaining: set[TransportationAlternative],
-        viable: dict[TransportationAlternative, float],
+        self, remaining: dict[TransportationAlternative, float]
     ) -> TransportationAlternative:
         """
-        Sample one alternative from the remaining set, weighted by probability.
+        Sample one alternative, weighted by its choice probability.
+
+        The sample follows the insertion order of remaining, so one seed gives the same
+        alternative in every run.
 
         Parameters
         ----------
-        remaining : set of TransportationAlternative
-            Alternatives not yet attempted.
-        viable : dict of TransportationAlternative to float
-            Full probability mapping (superset of remaining).
+        remaining : dict of TransportationAlternative to float
+            Alternatives not yet attempted, mapped to their choice probabilities.
 
         Returns
         -------
         TransportationAlternative
-            The sampled alternative.
+            Sampled alternative.
         """
-        alternatives_list = list(remaining)
-        probs = [viable[alt] for alt in alternatives_list]
-        total = sum(probs)
-        normalized = [p / total for p in probs]
-        idx: int = self._rng.choice(len(alternatives_list), p=normalized)
-        return alternatives_list[idx]
+        # Don't use a set: set order follows hashes that change between runs, so seeded runs diverge
+        alternatives = list(remaining)
+        total = sum(remaining.values())
+        normalized = [prob / total for prob in remaining.values()]
+        idx: int = self._rng.choice(len(alternatives), p=normalized)
+        return alternatives[idx]
 
     def _validate_allocation(
         self,
