@@ -45,7 +45,8 @@ class DemandImporter:
         Raises
         ------
         ValueError
-            If demand data does not match expected values based on config.
+            If demand data does not match expected values based on config,
+            or if an origin has more than one arrival rate in one time bucket and day type.
         """
         df = pd.read_parquet(demand_path)
         self._validate(df)
@@ -70,3 +71,23 @@ class DemandImporter:
                 raise ValueError(
                     "Config requires weekday/weekend split but demand data has only one day type"
                 )
+
+        # The rate belongs to the origin and DemandFactory reads it from one row per slice
+        slice_key = [
+            demand_schema.ORIGIN,
+            demand_schema.TIME_BUCKET,
+            demand_schema.IS_WEEKEND,
+        ]
+        rates_per_slice = df.groupby(slice_key)[
+            demand_schema.ORIGIN_ARRIVAL_RATE
+        ].nunique(dropna=False)
+        mixed_slices = rates_per_slice[rates_per_slice > 1]
+        if not mixed_slices.empty:
+            example = ", ".join(
+                f"{column}={value}"
+                for column, value in zip(slice_key, mixed_slices.index[0], strict=True)
+            )
+            raise ValueError(
+                f"{demand_schema.ORIGIN_ARRIVAL_RATE} differs between destinations of "
+                f"{len(mixed_slices)} ({', '.join(slice_key)}) slice(s), e.g. {example}"
+            )
