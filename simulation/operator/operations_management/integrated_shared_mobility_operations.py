@@ -299,6 +299,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                     distance=relocation_distance,
                                     vehicle_type=type,
                                     vehicle_fleet=self._operator.fleet,
+                                    vehicle_relocation_velocity_mm=self._vehicle_relocation_velocity,
                                 )
 
                                 composite_job.append_job(relocation_job)
@@ -332,6 +333,7 @@ class IntegratedSharedMobilityOperations(Operations):  # noqa: D101
                                 distance=relocation_distance,
                                 vehicle_type=type,
                                 vehicle_fleet=self._operator.fleet,
+                                vehicle_relocation_velocity_mm=self._vehicle_relocation_velocity,
                             )
 
                             # Schedule to Queue

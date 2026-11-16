@@ -32,13 +32,13 @@ class RelocationJob(ServiceJob):
     """Relocates shared vehicles between regions using a service worker."""
 
     __slots__ = (
-        "_config",
         "_destination",
         "_distance",
         "_geo_env",
         "_number_of_vehicles_to_relocate",
         "_origin",
         "_vehicle_fleet",
+        "_vehicle_relocation_velocity_mm",
         "_vehicle_type",
     )
 
@@ -51,10 +51,10 @@ class RelocationJob(ServiceJob):
         distance: float,
         vehicle_type: VehicleType,
         vehicle_fleet: VehicleFleet,
+        vehicle_relocation_velocity_mm: float,
     ) -> None:
         super().__init__(sim)
 
-        self._config = sim.config
         self._geo_env = sim.geo_env
 
         self._origin = origin
@@ -64,6 +64,7 @@ class RelocationJob(ServiceJob):
 
         self._vehicle_fleet = vehicle_fleet
         self._distance = distance
+        self._vehicle_relocation_velocity_mm = vehicle_relocation_velocity_mm
 
     def execute(self) -> Generator[Event, None, None]:
         """Execute relocation: select vehicles and move them to destination."""
@@ -94,11 +95,8 @@ class RelocationJob(ServiceJob):
             vehicle_dest = GeodesicPosition(self._sim, lat, lng, self._destination)
 
             distance = vehicle.position << vehicle_dest
-            vehicle_relocation_velocity = self._config.operators[
-                0
-            ].OPERATIONS_CONFIG.VEHICLE_RELOCATION_VELOCITY
             relocation_duration_per_vehicle = (
-                distance / vehicle_relocation_velocity
+                distance / self._vehicle_relocation_velocity_mm
             ) / len(selected_vehicles_to_relocate)
 
             task = ServiceWorkerRelocationTask(
