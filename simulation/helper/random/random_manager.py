@@ -31,20 +31,18 @@ class RandomManager(SimulationBase):
     If no component name is provided, the main RNG is returned.
     The RNG can then be used to generate random numbers using the methods provided by NumPy's Generator class.
 
-    Example:
-    ```
-    rng = RandomManager().get_rng("SIMULATIONCOMPONENT")
-    random_number = rng.uniform(0, 1)
-    ```
-
     The RandomManager also provides a set of convenience methods for generating random numbers directly.
     These methods are thin wrappers around the corresponding NumPy methods.
     Use them when you don't need to keep the RNG instance around.
 
-    Example:
-    ```
-    random_number = RandomManager().uniform(0, 1, component="OTHERSIMULATIONCOMPONENT")
-    ```
+    Examples
+    --------
+    >>> rng = sim.random_manager.get_rng("SIMULATIONCOMPONENT")
+    >>> random_number = rng.uniform(0, 1)
+
+    A convenience method draws without keeping the RNG around.
+
+    >>> random_number = sim.random_manager.uniform(0, 1, component="OTHERSIMULATIONCOMPONENT")
     """
 
     def __init__(self, sim: SimulationContext) -> None:
