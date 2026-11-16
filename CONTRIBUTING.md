@@ -148,7 +148,7 @@ nox -rs benchmark -- --base develop
 - **Exceptions**: raise specific exception types with informative messages; custom
   exceptions live in `simulation/helper/exceptions.py`.
 - **Configuration**: no hardcoded values, settings belong in the configuration class and
-  `config_template.toml`.
+  the project template `scripts/_templates/config.toml`.
 - **Functions**: Try to keep them small and single-purpose.
 - **Dependencies**: prefer the standard library; add third-party packages judiciously. This should always be discussed first.
 
