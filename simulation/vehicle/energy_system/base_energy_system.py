@@ -34,9 +34,10 @@ class EnergySystem(SimulationBase, ABC):
         self._energy_consumption = vehicle_config.ENERGY_CONSUMPTION_PER_KM
         self._capacity = vehicle_config.ENERGY_CAPACITY
 
-        self._current_energy = self._capacity * (
-            vehicle_config.INITIAL_CHARGE_RATIO or 1.0
-        )
+        initial_charge_ratio = vehicle_config.INITIAL_CHARGE_RATIO
+        if initial_charge_ratio is None:
+            initial_charge_ratio = 1.0
+        self._current_energy = self._capacity * initial_charge_ratio
 
         self._lifetime_energy_consumed = 0.0
         self._lifetime_emissions = 0.0

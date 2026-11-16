@@ -326,3 +326,25 @@ class TestEnergySystem:
 
         # Test with 0 distance
         assert ev.calculate_energy_required(0.0) == 0.0
+
+    @pytest.mark.parametrize(
+        ("initial_charge_ratio", "expected_energy"),
+        [(0.0, 0.0), (None, 100.0)],
+        ids=["zero-starts-empty", "unset-starts-full"],
+    )
+    def test_should_start_at_initial_charge_ratio(
+        self, sim: Mock, initial_charge_ratio: float | None, expected_energy: float
+    ) -> None:
+        config = VehicleConfig(
+            VELOCITY_KMH=50,
+            MAX_AVAILABLE_SEATS=4,
+            VEHICLE_TYPE=VehicleType.CAR,
+            PROPULSION_TYPE=PropulsionType.BATTERY_ELECTRIC,
+            ENERGY_CONSUMPTION_PER_KM=0.2,
+            ENERGY_CAPACITY=100.0,
+            INITIAL_CHARGE_RATIO=initial_charge_ratio,
+        )
+
+        ev = BatterySystem(sim, config)
+
+        assert ev.current_energy_absolute == pytest.approx(expected_energy)
