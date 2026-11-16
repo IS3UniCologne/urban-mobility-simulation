@@ -24,22 +24,34 @@ if TYPE_CHECKING:
     from simulation.vehicle.movement_stats import MovementStats
 
 
-class Bus(PublicTransitVehicle):  # noqa: D101
+class Bus(PublicTransitVehicle):
+    """
+    Bus that drives one public transit route along its scheduled stops.
+
+    The constructor starts the process that drives the bus.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        Simulation context.
+    route : PublicTransitRoute
+        Route to drive, from origin to terminal.
+    position : GeodesicPosition
+        Initial position.
+    fleet : VehicleFleet
+        Fleet the bus belongs to.
+    vehicle_config : VehicleConfig
+        Vehicle configuration.
+
+    Attributes
+    ----------
+    bus_id : int
+        Id of the next bus, shared by all buses and counted up on each construction.
+    """
+
     bus_id: int = 0
 
-    __slots__ = (
-        "_config",
-        "_dist_traveled",
-        "_dropoffs",
-        "_geo_env",
-        "_has_reached_terminal",
-        "_pickups",
-        "_problem_config",
-        "_process",
-        "_spawned",
-        "_time",
-        "_use_learning_agent",
-    )
+    __slots__ = ("_config", "_geo_env", "_has_reached_terminal", "_process", "_time")
 
     def __init__(
         self,
@@ -47,21 +59,12 @@ class Bus(PublicTransitVehicle):  # noqa: D101
         route: PublicTransitRoute,
         position: GeodesicPosition,
         fleet: VehicleFleet,
-        use_learning_agent: bool,
         vehicle_config: VehicleConfig,
     ) -> None:
-        """
-
-        :param env:
-        :param position: GeodesicPosition
-        :param max_available_seats: depends on type of bus
-        :param velocity: e.g. 16.67 m/min * 30 (average in city)
-        """  # noqa: D205
         super().__init__(sim, route, position, fleet, vehicle_config)
 
         self._id = Bus.bus_id
         self._time = SimulationTime(self._env)
-        self._spawned = float(SimulationTime(self._env).now())
         Bus.bus_id += 1
 
         # Events
@@ -69,38 +72,20 @@ class Bus(PublicTransitVehicle):  # noqa: D101
 
         # Config
         self._config: Configuration = sim.config
-        self._problem_config = (
-            None  # TODO: add back once dynamic problem configuration is re-implemented
-        )
 
         # Environment / World state
         self._geo_env = sim.geo_env
 
-        self._dropoffs: int = 0
-        self._pickups: int = 0
-        self._dist_traveled: int = 0
-
-        # optionally, inject the run routine of a RL agent
-        self._use_learning_agent: bool = use_learning_agent
-
-        if not self._use_learning_agent:
-            # use planned route logic
-            self._process: Event = self._env.process(self._run())
-        else:
-            # use learning agent
-            self._process: Event = self._env.process(
-                self._problem_config.learning_agent.run()
-            )
+        self._process: Event = self._env.process(self._run())
 
     def _run(self) -> Generator[Event, None, None]:
-        """
-        Bus Lifecycle (with planned stops, not RL agent)
+        """Drive the bus along its scheduled stops until it reaches the terminal.
 
         Time 12:00:00 - Departure 12:10:00 - wait
         Time 23:59:00 - Departure 00:06:00 - next_day = True - wait
         Time 00:03:00 - Departure 00:04:00 - next_day = False - wait
         Time 00:03:00 - Departure 00:04:00 - next_day = True - should not happen
-        """  # noqa: D400
+        """
         while self.state is not VehicleStates.AT_TERMINAL:
             strf = "%H:%M:%S"
             early_arrival = (
@@ -151,12 +136,6 @@ class Bus(PublicTransitVehicle):  # noqa: D101
             # otherwise move on with driving
             yield self._env.process(self._move_to_next_stop())
 
-        # # TODO: rework such that simulation is not halted when working outside of benchmark runs
-        # # stop demand generation
-        # self._world.stop_all_processes()
-        #
-        # self._has_reached_terminal.succeed((None,)*8)
-
         self._has_reached_terminal.succeed()
 
     def _move_to_next_stop(self) -> Generator[Event, None, None]:
@@ -197,7 +176,7 @@ class Bus(PublicTransitVehicle):  # noqa: D101
 
         return stats
 
-    def _update_position(self, new_position) -> None:  # noqa: ANN001
+    def _update_position(self, new_position: GeodesicPosition) -> None:
         # Update Vehicle Position
         self.position = new_position
 
@@ -205,98 +184,6 @@ class Bus(PublicTransitVehicle):  # noqa: D101
         for passenger in self._passengers:
             passenger.on_vehicle_moved(new_position)
 
-    # TODO: remove if everything works
-    # @property
-    # def env_state(self):
-    #     return self._env_state
-    #
-    # def get_viable_demands(self):
-    #     demands_corridor = self._geodesic_env.filter_demands_by_corridor([x.transport_task for x in self._world.users],
-    #                                                                      self._corridor)
-    #     demands_direction = self._geodesic_env.filter_demands_by_direction(demands_corridor, self)
-    #     return demands_direction
-    #
-    # def _update_state(self):
-    #     """
-    #     This updates the state which represents the most complete picture of the environment/world the agent has at the moment
-    #     """
-    #
-    #     # wait for external (world) or self (position) change
-    #     while True:
-    #         try:
-    #             # TODO incorporate external change here or somewhere else again
-    #             # yield simpy.events.AnyOf(self._env, [self._position_changed, self._world.changed])
-    #             yield self._position_changed
-    #
-    #             demands = self.get_viable_demands()
-    #
-    #             # build OD matrix: m[start hex][end hex] = OD count for all currently known demands
-    #             m = np.zeros((self._corridor_dim, self._corridor_dim), dtype=int)
-    #             for d in demands:
-    #                 try:
-    #                     start = self._corridor_sorted.index(d.origin.get_region_id(self._action_res))
-    #                     end = self._corridor_sorted.index(d.destination.get_region_id(self._action_res))
-    #                     m[start][end] += 1
-    #                 except ValueError as e:
-    #                     self.logger.debug(
-    #                         'Bus update state: Encountered demand at edge of hexagon: %s', e,
-    #                         extra={"clazz": self.__class__.__name__, "oid": self._id}
-    #                     )
-    #                     # for now we are skipping it. I don't see a good way to solve the geometry inconsistency
-    #                     continue
-    #
-    #             # also build "OD-demands" for each passenger in the bus:
-    #             # origin = current position, destination = drop-off
-    #             for p in self._seats:
-    #                 try:
-    #                     start = self._corridor_sorted.index(self._position.get_region_id(self._action_res))
-    #                     end = self._corridor_sorted.index(p.transport_task.destination.get_region_id(self._action_res))
-    #                     m[start][end] += 1
-    #                 except ValueError as e:
-    #                     # TODO: think about below
-    #                     # if a passenger is already in the bus, the edge case must be the destination
-    #                     # because the passenger can never be dropped of at the destination (with vicinity=hexagon)
-    #                     # this demand should be pruned before even becoming a passenger
-    #                     self.logger.debug(f'Bus update state: Encountered passenger demand at edge of hexagon: {e}',
-    #                                   extra={"clazz": self.__class__.__name__, "oid": self._id})
-    #                     # for now we are skipping it. I don't see a good way to solve the geometry inconsistency
-    #                     continue
-    #
-    #             # build position vector v[hex] =1 if bus is at hex, else 0
-    #             position = np.zeros(self._corridor_dim, dtype=int)
-    #             pos = self._corridor_sorted.index(self._position.get_region_id(self._action_res))
-    #             position[pos] = 1
-    #
-    #             self._env_state['position'] = position
-    #             self._env_state['demands'] = m
-    #             # self._env_state['drivingtime'] = int(self._time.now() - self._spawned)
-    #             self._env_state['remaining_time'] = int(self._timelimit - (self._env.now - self._spawned))
-    #
-    #             region_id, _ = self._position.get_hexagon(self._action_res)
-    #
-    #             if region_id == \
-    #                     self._route.destination.get_region_id(self._action_res):
-    #                 self._state = VehicleStates.AT_TERMINAL_DESTINATION
-    #                 self.logger.info(f'Bus has arrived at its terminal destination at time {self._time.now_as_str()}',
-    #                              extra={"clazz": self.__class__.__name__, "oid": self._id})
-    #         except simpy.Interrupt:
-    #             # stop process loop
-    #             break
-    #
-    # def _update_reward(self, before_state):
-    #
-    #     # wait for action
-    #     action = yield self._action_taken
-    #
-    #     self._rl_agent.reward = self._rl_agent.reward_state(self._env_state,
-    #                                                         self._state == VehicleStates.AT_TERMINAL_DESTINATION)
-    #     self._rl_agent.reward_sum = self._rl_agent.reward_sum + self._rl_agent.reward
-    #
-    #     self.logger.debug(f'Current reward: {self._rl_agent.reward}, overall reward: {self._rl_agent.reward_sum}',
-    #                   extra={"clazz": self.__class__.__name__, "oid": self._id})
-    #
-    #     self._agent_completed_step.succeed((before_state, action, self._rl_agent.reward, self._rl_agent.reward_sum))
-    #     self._agent_completed_step = self._env.event()
-
-    def __str__(self) -> str:  # noqa: D105
+    def __str__(self) -> str:
+        """Describe the bus by its passenger count."""
         return f"I have {len(self._passengers)} passengers on boards"

@@ -44,11 +44,12 @@ class MixedSharedVehicleFleet(VehicleFleet):  # noqa: D101
             A dictionary with region IDs as keys. Each value is another dictionary
             mapping vehicle mode names to the count of vehicles of that mode in the region.
             Empty regions and modes with no vehicles are excluded.
-            Example:
-            {
-                '871f1d4f3ffffff': {'CAR': 5, 'BIKE': 3},
-                '871f1d4f4ffffff': {'SCOOTER': 2}
-            }
+            Example::
+
+                {
+                    '871f1d4f3ffffff': {'CAR': 5, 'BIKE': 3},
+                    '871f1d4f4ffffff': {'SCOOTER': 2}
+                }
         """
         supply = {}
 

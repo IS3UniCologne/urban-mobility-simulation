@@ -113,13 +113,17 @@ class TestLedger:
 
     def test_charging_cost(self, ledger: Ledger) -> None:
         vehicle = make_vehicle(make_cost_config())
-        ledger.record_energy_charged(vehicle, 10.0)
+        ledger.record_energy_charged(
+            vehicle, kwh=10.0, price_per_kWh=vehicle.cost_config.CHARGING_PER_KWH
+        )
 
         assert ledger.costs_by_type()[CostType.VEHICLE_CHARGING] == pytest.approx(3.0)
 
     def test_charging_cost_zero_rate(self, ledger: Ledger) -> None:
         vehicle = make_vehicle(make_cost_config(CHARGING_PER_KWH=0.0))
-        ledger.record_energy_charged(vehicle, 10.0)
+        ledger.record_energy_charged(
+            vehicle, kwh=10.0, price_per_kWh=vehicle.cost_config.CHARGING_PER_KWH
+        )
 
         assert ledger.costs_by_type()[CostType.VEHICLE_CHARGING] == 0.0
 
@@ -263,7 +267,9 @@ class TestLedger:
         vehicle_b = make_vehicle(make_cost_config(), uid="vehicle-b")
         ledger.record_distance(vehicle_a, 2000.0, relocation=False)
         ledger.record_distance(vehicle_b, 4000.0, relocation=False)
-        ledger.record_energy_charged(vehicle_a, 10.0)
+        ledger.record_energy_charged(
+            vehicle_a, kwh=10.0, price_per_kWh=vehicle_a.cost_config.CHARGING_PER_KWH
+        )
 
         by_entity = ledger.costs_by_entity(CostType.VEHICLE_DISTANCE)
         assert by_entity == {

@@ -21,10 +21,8 @@ from pathlib import Path
 # Add the project root to the python path
 sys.path.append(os.getcwd())
 
-from tests.end_to_end.end_to_end_shared import (
-    build_e2e_datasets,
-    run_simulation_and_extract_metrics,
-)
+from tests.datasets import rebuild_datasets
+from tests.end_to_end.end_to_end_shared import run_simulation_and_extract_metrics
 
 # Discover all configuration directories under tests/configurations
 CONFIG_DIRS = sorted(
@@ -42,7 +40,7 @@ logger = logging.getLogger(__name__)
 def recalibrate() -> None:
     """Rebuild scenario datasets, run simulations, and update expectations."""
     logger.info("Rebuilding scenario datasets...")
-    build_e2e_datasets()
+    rebuild_datasets()
 
     expectations = {}
 

@@ -21,6 +21,7 @@ from scripts._cli.orchestrators import (
     init_dataset,
     new_project,
 )
+from scripts._cli.paths import TEMPLATES_DIR
 from scripts._cli.synthetic_demand import DemandParams
 from simulation.world.demand import demand_schema
 
@@ -350,6 +351,31 @@ def test_new_project_duplicate_operators_are_independent(
     assert op1.FLEET_CONFIG is not op2.FLEET_CONFIG
 
 
+def test_starter_run_py_is_used_for_a_single_starter_project(
+    dataset_with_demand: Path, tmp_path: Path
+) -> None:
+    """A project with one operator from a starter with its own run.py gets it.
+
+    A mixed project and a repeated starter get the shared one, since the
+    starter's runner acts for exactly one operator.
+    """
+    own = new_project(
+        "proj_admission", _DATASET, operators=["admission"], root=tmp_path
+    )
+    mixed = new_project(
+        "proj_mixed", _DATASET, operators=["rh", "admission"], root=tmp_path
+    )
+    repeated = new_project(
+        "proj_repeated", _DATASET, operators=["admission", "admission"], root=tmp_path
+    )
+
+    starter_run_py = (TEMPLATES_DIR / "admission" / "run.py").read_text()
+    shared_run_py = (TEMPLATES_DIR / "run.py").read_text()
+    assert (own / "run.py").read_text() == starter_run_py
+    assert (mixed / "run.py").read_text() == shared_run_py
+    assert (repeated / "run.py").read_text() == shared_run_py
+
+
 def test_new_project_fails_if_exists(dataset_with_demand: Path, tmp_path: Path) -> None:
     new_project("proj", _DATASET, operators=["rh"], root=tmp_path)
     with pytest.raises(FileExistsError, match="proj"):
@@ -378,7 +404,7 @@ def test_new_project_force_overwrites(
     new_project("proj", _DATASET, operators=["rh"], root=tmp_path, force=True)
 
 
-@pytest.mark.parametrize("starter", ["rh", "sm"])
+@pytest.mark.parametrize("starter", ["admission", "rh", "sm"])
 def test_new_project_config_has_no_population_section(
     starter: str, dataset_with_demand: Path, tmp_path: Path
 ) -> None:
@@ -391,7 +417,7 @@ def test_new_project_config_has_no_population_section(
     assert "[POPULATION]" not in config
 
 
-@pytest.mark.parametrize("starter", ["rh", "sm"])
+@pytest.mark.parametrize("starter", ["admission", "rh", "sm"])
 def test_starter_template_is_standalone_valid(starter: str) -> None:
     """Each starter template must be importable on its own and expose OPERATORS.
 
@@ -418,7 +444,11 @@ def test_starter_template_is_standalone_valid(starter: str) -> None:
 def test_demo_creates_one_project_per_starter(tmp_path: Path) -> None:
     project_paths = demo(root=tmp_path)
 
-    expected_names = {"ridehailing_demo", "sharedmobility_demo"}
+    expected_names = {
+        "ridehailing_admission_demo",
+        "ridehailing_demo",
+        "sharedmobility_demo",
+    }
     assert {p.name for p in project_paths} == expected_names
 
     dataset_dir = tmp_path / "data" / "datasets" / DEMO_DATASET

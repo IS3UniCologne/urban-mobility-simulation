@@ -28,7 +28,11 @@ DEMO_DATASET = "berlin_synthetic"
 DEMO_PRESET = "berlin"
 DEMO_SEED = 42
 
-DEMO_PROJECT_NAMES = {"rh": "ridehailing_demo", "sm": "sharedmobility_demo"}
+DEMO_PROJECT_NAMES = {
+    "admission": "ridehailing_admission_demo",
+    "rh": "ridehailing_demo",
+    "sm": "sharedmobility_demo",
+}
 
 
 def _box_to_geojson(bbox: tuple[float, float, float, float]) -> dict:
@@ -258,7 +262,7 @@ def new_project(
     config_toml = build_config_toml(dataset_name)
     operators_py = build_operators_py(operators, station_hexes)
     population_py = build_population_py()
-    run_py = build_run_py()
+    run_py = build_run_py(operators)
 
     (project_dir / "config.toml").write_text(config_toml)
     (project_dir / "operators.py").write_text(operators_py)

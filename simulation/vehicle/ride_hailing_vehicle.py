@@ -197,7 +197,7 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
 
     # TODO: Should this be part of the EnergySystem ?
     def charge(  # noqa: D102
-        self, charging_time: float, charge_amount: float = 0
+        self, charging_time: float, price_per_kWh: float, charge_amount: float = 0
     ) -> Generator[Event, None, None]:
         self._set_state(VehicleStates.CHARGING)
 
@@ -212,7 +212,9 @@ class RideHailingVehicle(Vehicle, ReservableMixin):  # noqa: D101
         yield from self.energy_system.refill(charge_amount, charging_time)
 
         self._ledger.record_energy_charged(
-            self, self.energy_system.current_energy_absolute - energy_before
+            self,
+            self.energy_system.current_energy_absolute - energy_before,
+            price_per_kWh=price_per_kWh,
         )
 
         self.logger.debug(

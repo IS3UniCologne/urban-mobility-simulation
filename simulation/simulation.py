@@ -10,13 +10,19 @@ from simulation.world.demand.demand_factory import DemandFactory
 from simulation.world.world import World
 
 if TYPE_CHECKING:
+    from simulation.context.decision_broker import DecisionBroker
     from simulation.helper.configuration.configuration import Configuration
 
 
 class Simulation:
     """Main simulation class that initializes and runs the simulation."""
 
-    def __init__(self, config: Configuration) -> None:
+    def __init__(
+        self,
+        config: Configuration,
+        decision_broker: DecisionBroker | None = None,
+        seed: int | None = None,
+    ) -> None:
         """
         Initialize the simulation with configuration.
 
@@ -24,9 +30,14 @@ class Simulation:
         ----------
         config : Configuration
             Configuration object containing all simulation parameters.
+        decision_broker : DecisionBroker or None
+            Broker for decision points, fixed at construction. None leaves them
+            inactive.
+        seed : int or None
+            Main random seed. None takes the configured ``SEED``.
         """
         self.config = config
-        self.sim = SimulationContext(config)
+        self.sim = SimulationContext(config, decision_broker=decision_broker, seed=seed)
 
         self.logger = self.sim.log_manager.get_class_logger(self.__class__.__name__)
         # TODO: Store config file and run information somewhere
@@ -59,6 +70,14 @@ class Simulation:
         self.logger.info("Ending Simulation.")
 
         self._post_simulation_processing()
+
+    def close(self) -> None:
+        """Release the log handlers this simulation opened.
+
+        Call it once the run and any reads of its state are done.
+        A process building many simulations otherwise keeps two open log files per simulation until exit.
+        """
+        self.sim.log_manager.close()
 
     def _create_demand_factory(self) -> DemandFactory:
         """Create demand factory for the simulation."""

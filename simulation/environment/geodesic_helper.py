@@ -104,6 +104,9 @@ class FastSpatialVehicleIndex:
         set[int]
             Return a set of vehicle IDs.
         """
+        if not self._coords:
+            return set()
+
         user_lng, user_lat = point.getExactLocation(geojson=True)
         lat_rad = math.radians(user_lat)
         cos_lat = math.cos(lat_rad)
@@ -234,6 +237,9 @@ class FastSpatialDestinationIndex:
         set[int]
             Return a set of vehicle IDs.
         """
+        if not self._coords:
+            return set()
+
         user_lng, user_lat = point.getExactLocation(geojson=True)
         lat_rad = math.radians(user_lat)
         cos_lat = math.cos(lat_rad)
@@ -248,13 +254,12 @@ class FastSpatialDestinationIndex:
             user_lat + delta_lat,
         )
 
-        candidates = list(self._rtree.intersection(bounds))
         vehicles_in_radius: set[int] = set()
         radius_squared = radius**2
 
-        for vid in candidates:
+        for vid in self._rtree.intersection(bounds):
             # Check ETA first for early exit
-            if max_eta is not None and self._etas.get(vid, float("inf")) > max_eta:
+            if max_eta is not None and self._etas.get(vid, math.inf) > max_eta:
                 continue
 
             lng, lat = self._coords[vid]

@@ -10,16 +10,18 @@ Validation and type checking are handled by Pydantic. To add a new configuration
 
 1. Add the section to the TOML config file as a new table (e.g., [new_section]).
 2. Create a new Pydantic model for the section in this file, using ConfigBaseModel.
-3a. Add a property to the Configuration class that uses _get_section to load and validate the new section.
-3b. If the section contains a list or dictionary, use _get_section_list or _get_section_dict respectively.
+3. Add a property to the Configuration class that uses _get_section to load and validate the new section.
+   If the section contains a list or dictionary, use _get_section_list or _get_section_dict respectively.
 
 To add a new parameter to an existing section:
+
 1. Add the parameter to the TOML config file under the appropriate section.
 2. Add the parameter to the corresponding Pydantic model, with an appropriate type hint.
 
 All validation, type conversion, and defaults should be handled using Pydantic features (validators, model_config, etc.).
-# TODO: cleanup, with more and more being config-as-code, some of the sections are obsolete
 """
+
+# TODO: cleanup, with more and more being config-as-code, some of the sections are obsolete
 
 from __future__ import annotations
 
@@ -57,9 +59,9 @@ from simulation.helper.enums import (
     TemporalResolution,
     VehicleType,
 )
-from simulation.helper.time import SimulationVelocityConverter
+from simulation.helper.time import HOURS_PER_DAY, SimulationVelocityConverter
 from simulation.helper.types import RegionId
-from simulation.infrastructure.charging_stations.charging_infastructure import (
+from simulation.infrastructure.charging_stations.charging_infrastructure import (
     ChargingInfrastructure,
 )
 from simulation.operator.mixed_shared_vehicle_fleet import MixedSharedVehicleFleet
@@ -445,6 +447,10 @@ class ChargingInfrastructureConfig(BaseModel):
     CHARGING_STATION_POWER: list[float]
     CHARGING_STATION_CAPACITY: list[int]
     CHARGING_STATION_QUEUE_SIZE: list[int]
+    # One 24h price profile broadcasted to all stations
+    CHARGING_STATION_PRICE_PROFILE: list[float] = Field(
+        min_length=HOURS_PER_DAY, max_length=HOURS_PER_DAY
+    )
 
     # fallback if there is no auction
     COORDINATION_INTERVAL: int | None = Field(gt=0, default=None)
@@ -462,8 +468,8 @@ class ChargingInfrastructureConfig(BaseModel):
         """
         Clamp and expand charging infrastructure lists to match the number of stations.
 
-        This method ensures that the LOCATIONS, CHARGING_STATION_POWER, CHARGING_STATION_CAPACITY,
-        and CHARGING_STATION_QUEUE_SIZE lists are all of the same length as NUMBER_OF_CHARGING_STATIONS.
+        This method ensures that the LOCATIONS, CHARGING_STATION_POWER, CHARGING_STATION_CAPACITY, and
+        CHARGING_STATION_QUEUE_SIZE lists are all of the same length as NUMBER_OF_CHARGING_STATIONS.
         If any of these lists have only a single element, it will be expanded to match the number of stations by
         repeating the single element.
 
@@ -477,6 +483,18 @@ class ChargingInfrastructureConfig(BaseModel):
         n = self.NUMBER_OF_CHARGING_STATIONS
 
         self.LOCATIONS = self.LOCATIONS[:n]
+
+        # Only allow 1 or n elements in the lists
+        for name in (
+            "CHARGING_STATION_POWER",
+            "CHARGING_STATION_CAPACITY",
+            "CHARGING_STATION_QUEUE_SIZE",
+        ):
+            values = getattr(self, name)
+            if len(values) not in (1, n):
+                raise ValueError(
+                    f"{name} must have 1 or NUMBER_OF_CHARGING_STATIONS ({n}) entries, got {len(values)}."
+                )
 
         if len(self.CHARGING_STATION_POWER) == 1:
             self.CHARGING_STATION_POWER = self.CHARGING_STATION_POWER * n
@@ -523,13 +541,6 @@ class RideHailingOperationsConfig(OperationsConfig):
     """Configuration for ride-hailing operations parameters."""
 
     # OPERATOR_TYPE: type[Operator] =
-
-    AV_PRICE_REDUCTION: float = Field(gt=0)
-    MAX_PICKUP_DISTANCE: int = Field(gt=0)
-    PRICE_ENTERING: float = Field(ge=0)
-    PRICE_PER_MINUTE: float = Field(ge=0)
-    PRICE_PER_KM: float = Field(ge=0)
-    MINIMUM_PRICE: float = Field(ge=0)
 
 
 class RideHailingBaseChargingOperationsConfig(RideHailingOperationsConfig):
@@ -613,6 +624,18 @@ class RideHailingSearchEngineConfig(SearchEngineConfig):
 
     SEARCH_ENGINE_TYPE: type[SearchEngine] = RideHailingSearchEngine
 
+    AV_PRICE_REDUCTION: float = Field(gt=0)
+    MAX_PICKUP_DISTANCE: int = Field(gt=0)
+    ARRIVAL_LOOKAHEAD_MIN: float = Field(
+        default=5,
+        ge=0,
+        description="Minutes within which a busy vehicle must finish its current request to be offered",
+    )
+    PRICE_ENTERING: float = Field(ge=0)
+    PRICE_PER_MINUTE: float = Field(ge=0)
+    PRICE_PER_KM: float = Field(ge=0)
+    MINIMUM_PRICE: float = Field(ge=0)
+
 
 class SharedVehicleSearchEngineConfig(SearchEngineConfig):
     """Configuration for shared vehicle search engine parameters."""
@@ -659,55 +682,6 @@ class SharedChargingAuctionConfig(AuctionConfig):
     AUCTION_INTERVAL: int = Field(gt=0)
     TIMESLOT_DURATION: int = Field(gt=0)
     AUCTION_LOOKAHEAD: int = Field(ge=0)
-
-
-class DynamicRoutingConfig(ConfigBaseModel):
-    """Configuration for dynamic routing parameters."""
-
-    ACTION_SPACE: list[str]
-    ACTION_SPACE_RESOLUTION: int
-    CORRIDOR_PATH: str
-    PENALTY: float
-    REWARD: float
-    TIMELIMIT: float
-
-
-class DynamicCheckpointRoutingConfig(ConfigBaseModel):
-    """Configuration for dynamic checkpoint routing parameters."""
-
-    ACTION_SPACE: list[str]
-    ACTION_SPACE_RESOLUTION: int
-    CHECKPOINTS: list[int]
-    CORRIDOR_PATH: str
-    PENALTY_CHECKPOINTS: float
-    PENALTY_UNREACHABLE: float
-    PENALTY_GOINGBACK: float
-    REWARD: float
-    TIMELIMIT: float
-    PERIODIC_TESTING: int
-
-
-class DQNConfig(ConfigBaseModel):
-    """Configuration for DQN parameters."""
-
-    LR_DECAY: bool
-    LR_DECAY_STEPS: int
-    DQN_LAYERS: tuple[int, int]
-    EPISODES: int
-    ALPHA: float
-    EPS: float
-    EPS_DECAY_STRATEGY: str
-    EPS_DECAY: float
-    EPS_MAX: float
-    EPS_MIN: float
-    BUFFERSIZE: int
-    REPLAYBUFFER: str
-    MIN_EXPERIENCE: int
-    TRAIN_FREQUENCY: int
-    USE_DOUBLE_Q: bool
-    TARGET_UPDATE_THRESHOLD: int
-    BATCHSIZE: int
-    GAMMA: float
 
 
 class Configuration:
@@ -1013,41 +987,6 @@ class Configuration:
             self._cache[section] = None
             return None
         return self._get_section(section, SharedChargingAuctionConfig)
-
-    @property
-    def dynamic_routing(self) -> DynamicRoutingConfig:
-        """Get the dynamic routing configuration section.
-
-        Returns
-        -------
-        DynamicRoutingConfig
-            The dynamic routing configuration section.
-        """
-        return self._get_section("dynamic_routing", DynamicRoutingConfig)
-
-    @property
-    def dynamic_checkpoint_routing(self) -> DynamicCheckpointRoutingConfig:
-        """Get the dynamic checkpoint routing configuration section.
-
-        Returns
-        -------
-        DynamicCheckpointRoutingConfig
-            The dynamic checkpoint routing configuration section.
-        """
-        return self._get_section(
-            "dynamic_checkpoint_routing", DynamicCheckpointRoutingConfig
-        )
-
-    @property
-    def dqn(self) -> DQNConfig:
-        """Get the DQN configuration section.
-
-        Returns
-        -------
-        DQNConfig
-            The DQN configuration section.
-        """
-        return self._get_section("dqn", DQNConfig)
 
     def _load_config_from_py(self, base_path: Path) -> None:
         """Load configuration from Python module files."""

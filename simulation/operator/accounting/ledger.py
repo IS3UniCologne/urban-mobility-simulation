@@ -78,8 +78,13 @@ class VehicleLedger(ABC):
         """
 
     @abstractmethod
-    def record_energy_charged(self, vehicle: CostBearingVehicle, kwh: float) -> None:
+    def record_energy_charged(
+        self, vehicle: CostBearingVehicle, kwh: float, price_per_kWh: float
+    ) -> None:
         """Report energy charged into a vehicle.
+
+        The price is read once when charging starts, the ledger books every kWh at that price, meaning a session starting at 17.50 and ending at 21.40 pays the price at 17.00 for the whole charging process.
+        The price is the time-weighted average over the charging session, so a session from 17.40 to 18.50 pays 20 minutes at the 17.00 price and 50 minutes at the 18.00 price.
 
         Parameters
         ----------
@@ -87,6 +92,8 @@ class VehicleLedger(ABC):
             Vehicle that charged.
         kwh : float
             Actually charged energy in kWh.
+        price_per_kWh : float
+            Average price per kWh the operator pays for the charged energy.
         """
 
     @abstractmethod
@@ -204,10 +211,11 @@ class Ledger(VehicleLedger, WorkerLedger):
         cost_per_km = vehicle.cost_config.PER_KM
         self._costs[cost_type][vehicle.uid] += distance_m / 1000 * cost_per_km
 
-    def record_energy_charged(self, vehicle: CostBearingVehicle, kwh: float) -> None:
+    def record_energy_charged(
+        self, vehicle: CostBearingVehicle, kwh: float, price_per_kWh: float
+    ) -> None:
         """Report energy actually charged into a vehicle, in kWh."""
-        cost_per_kwh = vehicle.cost_config.CHARGING_PER_KWH
-        self._costs[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * cost_per_kwh
+        self._costs[CostType.VEHICLE_CHARGING][vehicle.uid] += kwh * price_per_kWh
 
     def report_fulfilled_trip(self, vehicle: CostBearingVehicle, price: float) -> None:
         """Book a fulfilled trip's gross price as revenue and its driver share as cost."""

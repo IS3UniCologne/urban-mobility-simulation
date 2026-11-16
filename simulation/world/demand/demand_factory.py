@@ -8,10 +8,12 @@ based on spatio-temporal demand profiles and configurable modifiers.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, cast
 
 import geojson
 import h3
+import numpy
 import simpy
 
 from simulation.helper.simulation_base import SimulationBase
@@ -29,6 +31,17 @@ if TYPE_CHECKING:
     from simulation.helper.configuration.configuration import PopulationSegmentConfig
     from simulation.helper.types import RegionId
     from simulation.world.world import World
+
+    _SliceKey = tuple[RegionId, int, bool]
+
+
+@dataclass(frozen=True, slots=True)
+class _DemandSlice:
+    """Arrival rate (per time bucket) and destination distribution of one origin, time bucket and day type."""
+
+    arrival_rate: float
+    destinations: list[RegionId]
+    destination_probabilities: numpy.ndarray
 
 
 class DemandFactory(SimulationBase):
@@ -48,39 +61,31 @@ class DemandFactory(SimulationBase):
         The simulation time manager.
     _world : World
         The simulation world instance.
-    _maximal_demand : int
-        Maximum number of demand events to generate.
-    _modifiers : list of str
-        Paths to GeoJSON files containing demand modifiers.
     _modifiers : dict
         Mapping of spatial unit IDs to demand multipliers.
-    _demand_profile : DataFrame
-        The loaded demand profile data.
+    _demand_slices : dict
+        Demand slice per origin, time bucket and non-working day with demand.
     _spatial_units : list of str
         List of unique spatial unit IDs.
     _rng : numpy.random.Generator
         Random number generator for demand sampling.
+    _population_segments : list of PopulationSegmentConfig
+        Population segments new users are drawn from.
+    _segment_proportions : list of float
+        Share of new users per population segment, in segment order.
     _user_factory : UserFactory
         Factory for creating users.
-
-    Methods
-    -------
-    generate_demand()
-        Starts demand generation processes for all spatial units.
-    spawn_demand_process(spatial_unit: str)
-        Generator for demand events in a specific spatial unit.
-    reset()
-        Resets the demand factory and clears all demand-related state.
     """
 
     __slots__ = (
         "_config",
         "_daily_resolution",
-        "_demand_profile",
+        "_demand_slices",
         "_env",
-        "_maximal_demand",
         "_modifiers",
+        "_population_segments",
         "_rng",
+        "_segment_proportions",
         "_spatial_resolution",
         "_spatial_units",
         "_temporal_resolution",
@@ -88,14 +93,8 @@ class DemandFactory(SimulationBase):
         "_user_factory",
         "_world",
     )
-    counter = 0
 
-    def __init__(
-        self,
-        sim: SimulationContext,
-        world: World,
-        maximal_demand=3_000_000,  # noqa: ANN001
-    ) -> None:
+    def __init__(self, sim: SimulationContext, world: World) -> None:
         super().__init__(sim)
 
         self._config = sim.config
@@ -107,13 +106,19 @@ class DemandFactory(SimulationBase):
         self._spatial_resolution = self._config.world.SPATIAL_RESOLUTION
         self._daily_resolution = self._config.world.DAILY_RESOLUTION
 
-        self._maximal_demand = maximal_demand
         self._modifiers = {}
 
-        self._demand_profile = self._load_demand_profile()
-        self._spatial_units = list(self._demand_profile[demand_schema.ORIGIN].unique())
+        demand_profile = self._load_demand_profile()
+        self._demand_slices: dict[_SliceKey, _DemandSlice] = self._index_demand_profile(
+            demand_profile
+        )
+        self._spatial_units = list(demand_profile[demand_schema.ORIGIN].unique())
 
         self._rng = sim.random_manager.get_rng("DEMANDFACTORY")
+        self._population_segments = self._config.population.SEGMENTS
+        self._segment_proportions = [
+            segment.PROPORTION for segment in self._population_segments
+        ]
 
         self._user_factory = UserFactory(sim, world)
 
@@ -127,6 +132,40 @@ class DemandFactory(SimulationBase):
             daily_resolution=self._daily_resolution,
         )
         return demand_importer.load(self._config.path.demand)
+
+    @staticmethod
+    def _index_demand_profile(profile: DataFrame) -> dict[_SliceKey, _DemandSlice]:
+        """Group the demand profile rows by origin, time bucket and non-working day.
+
+        Rows with a zero arrival rate are dropped, so a missing slice means no demand.
+        """
+        profile = profile[profile[demand_schema.ORIGIN_ARRIVAL_RATE] > 0]
+        arrival_rates = profile[demand_schema.ORIGIN_ARRIVAL_RATE].to_numpy()
+        probabilities = profile[demand_schema.DESTINATION_PROBABILITY].to_numpy()
+        # Slices share one string object per destination (one per row held about 60 MB on the e2e datasets)
+        destination_codes, unique_destinations = profile[
+            demand_schema.DESTINATION
+        ].factorize(use_na_sentinel=False)
+        destination_names = numpy.asarray(unique_destinations, dtype=object)
+        rows_by_key = cast(
+            "dict[_SliceKey, numpy.ndarray]",
+            profile.groupby(
+                [
+                    demand_schema.ORIGIN,
+                    demand_schema.TIME_BUCKET,
+                    demand_schema.IS_WEEKEND,
+                ],
+                sort=False,
+            ).indices,
+        )
+        return {
+            key: _DemandSlice(
+                arrival_rate=arrival_rates[rows[0]],
+                destinations=destination_names[destination_codes[rows]].tolist(),
+                destination_probabilities=probabilities[rows],
+            )
+            for key, rows in rows_by_key.items()
+        }
 
     def _register_modifier(self, geomodifier) -> None:  # noqa: ANN001
         multiplier = geomodifier["properties"]["demandMultiplier"]
@@ -197,13 +236,8 @@ class DemandFactory(SimulationBase):
         simpy.Timeout
             A timeout until the next demand is generated based on the demand profile.
         """
-        # Filter data on spatial unit such that we don't need to filter on the entire demand profile
-        local_demand_profile = self._demand_profile[
-            (self._demand_profile[demand_schema.ORIGIN] == spatial_unit)
-        ]
-        # local_demand_profile.loc[:,'o_poisson_est'] /= 4
         # Run until simulation ends
-        while DemandFactory.counter < self._maximal_demand:
+        while True:
             try:
                 # Transform current time to temporal buckets as defined in the demand profile
                 time_bucket = SimulationTimeConverter.convert_to_temporal_bucket(
@@ -213,15 +247,10 @@ class DemandFactory(SimulationBase):
                     self._time.now()
                 )
 
-                # Filter demand profile on current time
-                demand_slice = local_demand_profile[
-                    (local_demand_profile[demand_schema.TIME_BUCKET] == time_bucket)
-                    & (
-                        local_demand_profile[demand_schema.IS_WEEKEND]
-                        == non_working_day
-                    )
-                ]
-                if demand_slice.shape[0] == 0:
+                key: _SliceKey = (spatial_unit, int(time_bucket), non_working_day)
+                demand_slice = self._demand_slices.get(key)
+                if demand_slice is None:
+                    # No slice means no arrivals in the sample, so wait for the next time bucket
                     self.logger.debug(
                         "Hex: %s  Time: %s  Date:%s  Env Time: %s",
                         spatial_unit,
@@ -229,68 +258,33 @@ class DemandFactory(SimulationBase):
                         non_working_day,
                         self._time.now(),
                     )
-                    # no lambda for given demand slice means there were no arrivals in the sample (lambda was zero)
-                    poisson_lambda = 0
-                else:
-                    # Extract Poisson Estimate for given spatio-temporal cell
-                    poisson_lambda = demand_slice.iloc[0][
-                        demand_schema.ORIGIN_ARRIVAL_RATE
-                    ]
-
-                # Based on Poisson Estimate sample next arrival time (in minutes)
-                # inter_arrival_time = numpy.random.exponential(
-                #    1.0 / poisson_lambda) * self._demand_importer._get_temporal_duration_in_hours() * 60
-
-                if poisson_lambda == 0:
-                    # lambda is zero, waiting until next timebucket is reached
                     bucket_in_minutes = self._temporal_resolution * 60
                     time_to_next_bucket = bucket_in_minutes - (
                         self._time.now() % bucket_in_minutes
                     )
                     yield self._env.timeout(time_to_next_bucket)
                     continue
-                else:
-                    try:
-                        if self._modifiers[spatial_unit] == 0:
-                            self.logger.debug(
-                                "Spatial unit %s is removed from demand generation process",
-                                spatial_unit,
-                            )
-                            break
 
-                        # TODO: is this a viable way of modifying exponential sampling using the scale factor?
-                        # TODO: if we wait for longer than the timebucket is long, we should probably consider no demand (otherwise we spawn this in the next timebucket and skew the real demand distribution)
-                        inter_arrival_time = self._rng.exponential(
-                            1.0 / poisson_lambda / self._modifiers[spatial_unit]
-                        ) * float(self._temporal_resolution * 60)
-                    except KeyError:
-                        # no modifier is registered for that spatial unit
-                        inter_arrival_time = self._rng.exponential(
-                            1.0 / poisson_lambda
-                        ) * float(self._temporal_resolution * 60)
+                modifier = self._modifiers.get(spatial_unit, 1.0)
+                if modifier == 0:
+                    self.logger.debug(
+                        "Spatial unit %s is removed from demand generation process",
+                        spatial_unit,
+                    )
+                    break
 
-                    # await next arrival
-                    yield self._env.timeout(inter_arrival_time)
+                # TODO: is this a viable way of modifying exponential sampling using the scale factor?
+                # TODO: if we wait for longer than the timebucket is long, we should probably consider no demand (otherwise we spawn this in the next timebucket and skew the real demand distribution)
+                inter_arrival_time = self._rng.exponential(
+                    1.0 / demand_slice.arrival_rate / modifier
+                ) * float(self._temporal_resolution * 60)
+                yield self._env.timeout(inter_arrival_time)
 
-                    # Sample Destination
-                    prob_array = demand_slice[
-                        demand_schema.DESTINATION_PROBABILITY
-                    ].to_numpy()
-
-                    # TODO: rename - this has nothing to do with low SOC
-                    low_soc_vehicle_sample = self._rng.multinomial(
-                        1, prob_array
-                    )  # No of vehicles to be charged
-
-                    idx = low_soc_vehicle_sample.argmax()
-
-                    destination = demand_slice.iloc[idx][demand_schema.DESTINATION]
-
-                    # Create and add user to world
-                    self._create_user(spatial_unit, destination)
-
-                # Increase global counter (not thread safe)
-                DemandFactory.counter += 1
+                destination_index = self._rng.multinomial(
+                    1, demand_slice.destination_probabilities
+                ).argmax()
+                destination = demand_slice.destinations[destination_index]
+                self._create_user(spatial_unit, destination)
             except simpy.Interrupt:
                 break
 
@@ -332,8 +326,8 @@ class DemandFactory(SimulationBase):
         )
 
     def _select_segment_for_demand(self) -> PopulationSegmentConfig:
-        population_config = self._config.population
-        segment_proportions = [
-            segment.PROPORTION for segment in population_config.SEGMENTS
-        ]
-        return self._rng.choice(population_config.SEGMENTS, p=segment_proportions)
+        # Choosing an index keeps numpy from probing every pydantic segment for array protocols on each call
+        index = self._rng.choice(
+            len(self._population_segments), p=self._segment_proportions
+        )
+        return self._population_segments[index]

@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from simulation.context.simulation_context import SimulationContext
     from simulation.helper.types import RegionId, SimId
-    from simulation.infrastructure.charging_stations.charging_infastructure import (
+    from simulation.infrastructure.charging_stations.charging_infrastructure import (
         ChargingInfrastructure,
     )
 

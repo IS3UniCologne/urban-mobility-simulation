@@ -10,16 +10,7 @@ from prettytable import PrettyTable
 
 
 class MetricsDict(dict[str, object]):
-    """
-    Dictionary subclass for simulation metrics with some convenience methods.
-
-    Methods
-    -------
-    to_log(logger=None, prefix="")
-        Recursively log the metrics using the logging module.
-    to_file(file_name=None, file_format="csv")
-        Save the metrics dictionary to a file.
-    """
+    """Dictionary subclass for simulation metrics with some convenience methods."""
 
     def to_file(self, file_name: str | None, file_format: str = "csv") -> None:
         """

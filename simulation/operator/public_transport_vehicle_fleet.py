@@ -22,8 +22,8 @@ class PublicTransportVehicleFleet(VehicleFleet):  # noqa: D101
         self._busses = []
         self._unserved_passengers = 0
 
-    # Add the bus
-    def spawn_bus(self, route: PublicTransitRoute) -> Bus:  # noqa: D102
+    def spawn_bus(self, route: PublicTransitRoute) -> Bus:
+        """Create a bus at the route origin and add it to the fleet and the world."""
         init_position = GeodesicPosition(self._sim, *route.origin.getExactLocation())
 
         bus = Bus(
@@ -31,7 +31,6 @@ class PublicTransportVehicleFleet(VehicleFleet):  # noqa: D101
             route=route,
             position=init_position,
             fleet=self,
-            use_learning_agent=False,
             vehicle_config=self._config.transit_vehicles[
                 "Bus"
             ],  # TODO: This should not be hardcoded

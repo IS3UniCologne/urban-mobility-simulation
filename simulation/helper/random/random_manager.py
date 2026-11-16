@@ -35,6 +35,13 @@ class RandomManager(SimulationBase):
     These methods are thin wrappers around the corresponding NumPy methods.
     Use them when you don't need to keep the RNG instance around.
 
+    Parameters
+    ----------
+    sim : SimulationContext
+        Context supplying the configuration.
+    seed : int or None
+        Main random seed. None takes the configured ``SEED``.
+
     Examples
     --------
     >>> rng = sim.random_manager.get_rng("SIMULATIONCOMPONENT")
@@ -45,9 +52,10 @@ class RandomManager(SimulationBase):
     >>> random_number = sim.random_manager.uniform(0, 1, component="OTHERSIMULATIONCOMPONENT")
     """
 
-    def __init__(self, sim: SimulationContext) -> None:
+    def __init__(self, sim: SimulationContext, seed: int | None = None) -> None:
         super().__init__(sim)
         self._config = sim.config
+        self._seed = seed
         self._main_seed: int | None = None
         self._main_rng: Generator | None = None
         self._fixed_seed_components: dict[str, int] | None = None
@@ -76,7 +84,9 @@ class RandomManager(SimulationBase):
 
         self.reset_fixed_seed_components()
 
-        main_seed = self._config.random_manager.SEED
+        main_seed = (
+            self._config.random_manager.SEED if self._seed is None else self._seed
+        )
         # If the seed is 0, we use a random seed
         if main_seed == 0:
             main_seed = int(np.random.default_rng().integers(0, 2**32))

@@ -123,6 +123,7 @@ class ChargingStationMetrics(IndexedMetricsBase):
                 "current_users": current_users,
                 "current_queue_size": current_queue_size,
                 "current_queue_time": station.current_queue_time,
+                "price_per_kWh": station.price_per_kWh,
                 "utilization": current_users / capacity if capacity > 0 else 0.0,
                 "queue_utilization": (
                     current_queue_size / queue_capacity if queue_capacity > 0 else 0.0

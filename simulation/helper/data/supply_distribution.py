@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import h3  # type: ignore[import-untyped]
 import pandas as pd
 
+from simulation.helper.cache import write_cache
 from simulation.helper.enums import VehicleType
 from simulation.world.demand import demand_schema
 
@@ -111,8 +112,7 @@ def _derive_supply_distribution_from_demand(
         )
         probs = probs / probs.sum()
 
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
-        probs.reset_index().to_parquet(cache_path, index=False)
+        write_cache(probs.reset_index(), cache_path, index=False)
 
     probs = probs.sort_index()
     # Assign same distribution to all vehicle types

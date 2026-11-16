@@ -24,7 +24,9 @@ def read_demand_hex_ids(demand_path: Path) -> set[str]:
     df = pd.read_parquet(
         demand_path, columns=[demand_schema.ORIGIN, demand_schema.DESTINATION]
     )
-    return set(df[demand_schema.ORIGIN]) | set(df[demand_schema.DESTINATION])
+    return set(df[demand_schema.ORIGIN].unique()) | set(
+        df[demand_schema.DESTINATION].unique()
+    )
 
 
 def read_supply_hex_ids(supply_paths: list[Path]) -> dict[Path, set[str]]:
@@ -65,7 +67,7 @@ def load_or_infer_bounding_box(
         bbox_df = gpd.read_file(bbox_path)
         if bbox_df.crs is None:
             logger.warning("Bounding box CRS is None. Defaulting to EPSG:4326.")
-            bbox_df.set_crs("epsg:4326", inplace=True)
+            bbox_df = bbox_df.set_crs("epsg:4326")
         return bbox_df
 
     logger.info("No bounding_box.geojson found. Inferring from demand + supply data.")

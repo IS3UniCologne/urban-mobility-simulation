@@ -13,6 +13,7 @@ from simulation.helper.logging.log_manager import LogManager
 from simulation.helper.random.random_manager import RandomManager
 
 if TYPE_CHECKING:
+    from simulation.context.decision_broker import DecisionBroker
     from simulation.helper.configuration.configuration import Configuration
 
 
@@ -25,16 +26,31 @@ class SimulationContext:
     around the codebase.
     Using an instance based context with dependency injection allows for
     easier testing and proper isolation of multiple simulations.
+
+    Parameters
+    ----------
+    config : Configuration
+        Simulation parameters.
+    decision_broker : DecisionBroker or None
+        Broker answering the decision points. None leaves them inactive.
+    seed : int or None
+        Main random seed. None takes the configured ``SEED``.
     """
 
-    def __init__(self, config: Configuration) -> None:
+    def __init__(
+        self,
+        config: Configuration,
+        decision_broker: DecisionBroker | None = None,
+        seed: int | None = None,
+    ) -> None:
         self._config = config
+        self._decision_broker = decision_broker
         self._env: simpy.Environment = simpy.Environment(
             initial_time=self.config.experiment_management.START_TIME
         )
         self._log_manager = LogManager(config=self.config, env=self.env)
         self._uid_manager = UidManager()
-        self._random_manager = RandomManager(self)
+        self._random_manager = RandomManager(self, seed=seed)
         self._geo_env = GeodesicEnvironment(sim=self)
         self._phase: SimulationPhase = SimulationPhase.RUNNING
 
@@ -72,6 +88,11 @@ class SimulationContext:
     def time(self) -> float:
         """Get current simulation time."""
         return self._env.now
+
+    @property
+    def decision_broker(self) -> DecisionBroker | None:
+        """Decision broker, or None when unattached."""
+        return self._decision_broker
 
     @property
     def phase(self) -> SimulationPhase:

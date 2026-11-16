@@ -125,8 +125,22 @@ def build_population_py() -> str:
     return (TEMPLATES_DIR / "population.py").read_text()
 
 
-def build_run_py() -> str:
-    """Render ``run.py`` from the shared template."""
+def build_run_py(operator_types: list[str]) -> str:
+    """Render ``run.py``.
+
+    A project with exactly one operator whose starter ships its own ``run.py`` gets that one.
+    Every other project gets the shared template, since a starter's runner may act for one operator only.
+
+    Parameters
+    ----------
+    operator_types : list of str
+        Sequence of template names (e.g. ``["rh", "rh", "sm"]``).
+    """
+    if (
+        len(operator_types) == 1
+        and (TEMPLATES_DIR / operator_types[0] / "run.py").exists()
+    ):
+        return _read_template(operator_types[0], "run.py")
     return (TEMPLATES_DIR / "run.py").read_text()
 
 

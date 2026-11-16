@@ -1,9 +1,18 @@
-# urban-mobility-simulation
+<div align="center">
+  <img src="docs/_static/logo-dark.svg" alt="umosim logo" width="80">
+  <p style="font-size: 1.5em; font-weight: 400; margin: 0;"><strong>umosim</strong>: A fast, extensible, agent-based model of smart sustainable mobility services, markets, and policies.</p>
+  <br>
+  <p>
+    <a href="https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml"><img src="https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml/badge.svg" alt="ruff-fix workflow"></a>
+    <a href="https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml"><img src="https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml/badge.svg" alt="CI workflow"></a>
+    <a href="https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml"><img src="https://umosim.readthedocs.io/latest/_static/interrogate_badge.svg" alt="interrogate badge"></a>
+    <a href="https://doi.org/10.5281/zenodo.24085762"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.24085762.svg" alt="DOI"></a>
+  </p>
+</div>
 
-[![ruff-fix.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ruff-fix.yml)
-[![ci.yml](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml/badge.svg)](https://github.com/IS3UniCologne/urban-mobility-simulation/actions/workflows/ci.yml)
+<!-- docs/README.md includes this file from here on -->
 
-We provide a simulation platform considering shared mobility (ride sharing, vehicle sharing) services along with infrastructure services (e.g., charging)
+We provide a simulation platform considering shared mobility (ride sharing, vehicle sharing) services along with infrastructure services (e.g., charging) and the markets (e.g., Mobility-as-a-Service) that link them to users.
 
 ## Installation
 
@@ -14,7 +23,8 @@ We provide a simulation platform considering shared mobility (ride sharing, vehi
 uv sync
 
 # Optional extras
-uv sync --extra ml    # machine learning and optimization dependencies
+uv sync --extra ml    # optimization dependencies
+uv sync --extra rl    # Gymnasium environment for reinforcement learning
 uv sync --extra viz   # visualization dependencies
 uv sync --all-extras  # all the things
 ```
@@ -104,6 +114,8 @@ Definition of the simulated population:
 
 Entry point that wires the project configuration together and starts the simulation (invoked by `umosim run <name>` or directly). Additional pre-, or post-simulation code goes here.
 
+The [configuration guide](docs/configuration.md) explains how a run loads these files and lists every config field.
+
 ## Using this project for your own research
 
 If you want to build your own experiments on top of the simulation without contributing
@@ -140,6 +152,7 @@ back, fork the repository and work directly on your fork:
 
 If your work produces improvements that could be generally useful (bug fixes, new
 operators, performance work), we would be happy to receive them back, see below.
+If you want to share the research in which you have used this project, see [Research](research.md).
 
 ## Contributing
 

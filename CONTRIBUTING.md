@@ -30,7 +30,7 @@ If you have not done so already:
 uv sync
 
 # Optional extras
-uv sync --extra ml    # machine learning and optimization dependencies
+uv sync --extra ml    # optimization dependencies
 uv sync --extra viz   # visualization dependencies
 uv sync --all-extras  # all the things
 ```
@@ -116,15 +116,19 @@ nox -rs pyrefly      # type checking
 nox -rs pre-commit   # linting and formatting (ruff etc.)
 nox -rs pytest_fast  # fast test suite (everything except end-to-end)
 nox -rs pytest_e2e   # end-to-end scenario suite
+nox -rs docs         # documentation, built into docs/_build/html
 ```
 
 All test data is generated locally, no external data is required to run the full
 test suite.
 
-CI runs the same nox sessions on self-hosted runners. For PRs from forks, CI runs only after a maintainer approves the workflow run, so your local nox -r run is the primary gate.
+CI runs the nox sessions above except pre-commit on GitHub-hosted runners, for PRs from
+forks too. Ruff runs in a workflow of its own.
 
 CI also compares the CPU time and peak memory of the saturated end-to-end scenarios
-between your PR and its target branch. The result shows up as a comment on the PR. To run the comparison yourself (not part of `nox -r`):
+between your PR and its target branch. The result shows up as a comment on the PR, or for
+a PR from a fork in the summary of the Benchmark job. To run the comparison yourself (not
+part of `nox -r`):
 
 ```bash
 nox -rs benchmark -- --base develop
@@ -148,7 +152,7 @@ nox -rs benchmark -- --base develop
 - **Exceptions**: raise specific exception types with informative messages; custom
   exceptions live in `simulation/helper/exceptions.py`.
 - **Configuration**: no hardcoded values, settings belong in the configuration class and
-  `config_template.toml`.
+  the project template `scripts/_templates/config.toml`.
 - **Functions**: Try to keep them small and single-purpose.
 - **Dependencies**: prefer the standard library; add third-party packages judiciously. This should always be discussed first.
 

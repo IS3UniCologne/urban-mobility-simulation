@@ -45,6 +45,7 @@ class LogManager:
             The simulation environment, used for env_time in logs.
         """
         self._loggers: dict[str, logging.Logger] = {}
+        self._attached: list[tuple[logging.Logger, logging.Handler]] = []
         self._config = config
         self._class_overrides = config.settings.LOG_CLASS_OVERRIDES or {}
         self._formatter = self._create_formatter(config)
@@ -63,8 +64,8 @@ class LogManager:
         file_level = getattr(logging, config.settings.FILE_LOG_LEVEL)
         logger.setLevel(min(console_level, file_level))
 
-        logger.addHandler(self._shared_console_handler)
-        logger.addHandler(self._shared_memory_handler)
+        self._attach(logger, self._shared_console_handler)
+        self._attach(logger, self._shared_memory_handler)
 
         # Create and configure filters
         self._uid_injector = UidInjector(filter_name="add_default_value")
@@ -75,6 +76,36 @@ class LogManager:
 
         # Keep noisy third-party loggers out of the simulation formatter.
         self._silence_third_party_loggers()
+
+    def close(self) -> None:
+        """Flush, close and detach this manager's handlers and drop its exit hooks.
+
+        A newer manager on the same logger names keeps its handlers.
+        """
+        root = logging.getLogger()
+        root.removeFilter(self._uid_injector)
+        root.removeFilter(self._env_time_injector)
+
+        for memory_handler in (
+            self._shared_memory_handler,
+            self._override_memory_handler,
+        ):
+            atexit.unregister(memory_handler.flush)
+
+        for logger, handler in self._attached:
+            logger.removeHandler(handler)
+        # Memory handlers flush into the file handlers, so those close last
+        for handler in (
+            *dict.fromkeys(handler for _, handler in self._attached),
+            self._shared_file_handler,
+            self._override_file_handler,
+        ):
+            handler.close()
+
+    def _attach(self, logger: logging.Logger, handler: logging.Handler) -> None:
+        """Add a handler to a logger and remember the pair for ``close``."""
+        logger.addHandler(handler)
+        self._attached.append((logger, handler))
 
     def get_class_logger(self, cls_name: str) -> logging.Logger:
         """
@@ -105,15 +136,15 @@ class LogManager:
                 logger.filters.clear()
 
             if cls_name in self._class_overrides:
-                logger.addHandler(self._override_console_handler)
-                logger.addHandler(self._override_memory_handler)
+                self._attach(logger, self._override_console_handler)
+                self._attach(logger, self._override_memory_handler)
 
                 override_level_str = self._class_overrides[cls_name]
                 override_level = getattr(logging, override_level_str.upper())
                 logger.setLevel(override_level)
             else:
-                logger.addHandler(self._shared_console_handler)
-                logger.addHandler(self._shared_memory_handler)
+                self._attach(logger, self._shared_console_handler)
+                self._attach(logger, self._shared_memory_handler)
 
                 console_level = getattr(logging, self._config.settings.LOG_LEVEL)
                 file_level = getattr(logging, self._config.settings.FILE_LOG_LEVEL)
@@ -176,7 +207,7 @@ class LogManager:
             system_console_handler.setLevel(self._config.settings.LOG_LEVEL)
             system_console_handler.setFormatter(system_formatter)
 
-            logger.addHandler(system_console_handler)
+            self._attach(logger, system_console_handler)
             logger.setLevel(self._config.settings.LOG_LEVEL)
 
             self._loggers[logger_name] = logger
@@ -219,16 +250,15 @@ class LogManager:
             logs_dir = os.path.normpath(
                 os.path.join(self._config.path.OUTPUT_FOLDER, "metrics_logs")
             )
-            if not os.path.exists(logs_dir):
-                os.makedirs(logs_dir)
+            os.makedirs(logs_dir, exist_ok=True)
 
             metrics_log_file = os.path.join(logs_dir, f"{output_timestamp}_metrics.log")
             metrics_file_handler = logging.FileHandler(metrics_log_file)
             metrics_file_handler.setFormatter(metrics_formatter)
             metrics_file_handler.setLevel(self._config.settings.FILE_LOG_LEVEL)
 
-            logger.addHandler(metrics_console_handler)
-            logger.addHandler(metrics_file_handler)
+            self._attach(logger, metrics_console_handler)
+            self._attach(logger, metrics_file_handler)
 
             console_level = getattr(logging, self._config.settings.LOG_LEVEL)
             file_level = getattr(logging, self._config.settings.FILE_LOG_LEVEL)
@@ -247,13 +277,13 @@ class LogManager:
         # File handler setup
         output_timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
         logs_dir = os.path.normpath(os.path.join(config.path.OUTPUT_FOLDER, "logs"))
-        if not os.path.exists(logs_dir):
-            os.makedirs(logs_dir)
+        os.makedirs(logs_dir, exist_ok=True)
 
         log_file = os.path.join(logs_dir, f"{output_timestamp}.log")
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(self._formatter)
         file_handler.setLevel(config.settings.FILE_LOG_LEVEL)
+        self._shared_file_handler = file_handler
 
         # Memory handler for buffered file writing
         self._shared_memory_handler = MemoryHandler(
@@ -270,6 +300,7 @@ class LogManager:
         override_file_handler = logging.FileHandler(log_file)
         override_file_handler.setFormatter(self._formatter)
         override_file_handler.setLevel(logging.DEBUG)
+        self._override_file_handler = override_file_handler
 
         self._override_memory_handler = MemoryHandler(
             capacity=1000, flushLevel=logging.ERROR, target=override_file_handler

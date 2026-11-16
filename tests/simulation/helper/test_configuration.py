@@ -5,15 +5,15 @@ from __future__ import annotations
 import logging
 import tomllib
 from pathlib import Path
-from typing import TYPE_CHECKING
+
+import pytest
 
 from simulation.helper.configuration.configuration import (
     LOG_LEVEL_ENV_VAR,
     Configuration,
 )
 
-if TYPE_CHECKING:
-    import pytest
+pytestmark = pytest.mark.usefixtures("datasets")
 
 _FIXTURE_PROJECT = (
     Path(__file__).resolve().parents[2] / "configurations" / "balanced_rh"

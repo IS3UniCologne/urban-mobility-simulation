@@ -177,6 +177,15 @@ class VirtualChargingStation(SimulationBase):
         return self._power
 
     @property
+    def price_per_kWh(self) -> float:
+        """Current price per kWh of the charging station."""
+        return self._physical_charging_station.price_per_kWh
+
+    def average_price(self, start: float, end: float) -> float:
+        """Time-weighted price per kWh for charging between start and end."""
+        return self._physical_charging_station.average_price(start, end)
+
+    @property
     def centre(self) -> GeodesicPosition:
         """Centroid position of the station's cell."""
         return self._centre

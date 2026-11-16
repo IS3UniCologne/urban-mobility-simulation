@@ -357,7 +357,7 @@ class MetricsTracker(SimulationBase):
             return pd.DataFrame()
         data = [s.to_dict() for s in snaps]
         df = pd.DataFrame(data)
-        df.set_index("timestamp", inplace=True)
+        df = df.set_index("timestamp")
         return df
 
     def dataframe_all(
@@ -396,7 +396,7 @@ class MetricsTracker(SimulationBase):
         combined = pd.concat(frames, ignore_index=True)
         if long:
             return combined
-        combined.set_index(["job", "timestamp"], inplace=True)
+        combined = combined.set_index(["job", "timestamp"])
         return combined
 
     def export_job(
