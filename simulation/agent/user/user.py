@@ -337,6 +337,9 @@ class User(Agent):
         TransportationAlternative
             Sampled alternative.
         """
+        if len(remaining) == 1:
+            return next(iter(remaining))
+
         # Don't use a set: set order follows hashes that change between runs, so seeded runs diverge
         alternatives = list(remaining)
         total = sum(remaining.values())
