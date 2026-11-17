@@ -227,14 +227,14 @@ class User(Agent):
         """Get the total energy consumed by the user's activities."""
         return self._energy_consumed
 
-    def run(self) -> Generator[Process | Timeout, Any, None]:
+    def run(self) -> Generator[Event, Any, None]:
         """
         Full user lifecycle.
 
         Yields
         ------
-        Process or Timeout
-            User events and processes.
+        Event
+            Events of the search, the allocation and the trip.
         """
         self._search_start_time = self._env.now
         vehicle_allocation: VehicleAllocation | None = None
@@ -248,9 +248,7 @@ class User(Agent):
                 break
 
             # 1: Search trip alternatives
-            available_alternatives = yield self._env.process(
-                self._search_for_alternatives()
-            )
+            available_alternatives = yield from self._search_for_alternatives()
             if not available_alternatives.transportation_alternatives:
                 break
 
@@ -259,9 +257,7 @@ class User(Agent):
                 self._calculate_choice_probabilities(available_alternatives)
             )
             # 3: Try alternatives probabilistically until one succeeds or we run out of time
-            vehicle_allocation = yield self._env.process(
-                self._try_alternatives(choice_probs)
-            )
+            vehicle_allocation = yield from self._try_alternatives(choice_probs)
             # 4: Allocation failed for all alternatives, restart search from scratch
             if vehicle_allocation is None:
                 self.logger.debug(
@@ -276,7 +272,7 @@ class User(Agent):
 
     def _try_alternatives(
         self, choice_probs: dict[TransportationAlternative, float]
-    ) -> Generator[Process | Event, Any, VehicleAllocation | None]:
+    ) -> Generator[Event, Any, VehicleAllocation | None]:
         """
         Try transportation alternatives probabilistically until one succeeds.
 
@@ -291,8 +287,8 @@ class User(Agent):
 
         Yields
         ------
-        Process or Event
-            Allocation and trip execution processes.
+        Event
+            Events of the allocation and the trip.
 
         Returns
         -------
@@ -314,9 +310,7 @@ class User(Agent):
             del remaining[chosen]
             self._attempted_operators.add(chosen.operator)
 
-            vehicle_allocation: VehicleAllocation | None = yield self._env.process(
-                self._allocate_vehicle(chosen)
-            )
+            vehicle_allocation = yield from self._allocate_vehicle(chosen)
 
             if vehicle_allocation is None:
                 continue
@@ -325,9 +319,7 @@ class User(Agent):
             self._validate_allocation(vehicle_allocation, chosen)
 
             try:
-                yield self._env.process(
-                    self._execute_chosen_alternative(vehicle_allocation)
-                )
+                yield from self._execute_chosen_alternative(vehicle_allocation)
             except ReservationCanceledError as err:
                 self.logger.debug(
                     "Allocation canceled before trip execution for user %s on vehicle %s: %s",
@@ -757,7 +749,7 @@ class User(Agent):
 
     def _allocate_vehicle(
         self, selected_transportation_alternative: TransportationAlternative
-    ) -> Generator[Process, Any, VehicleAllocation | None]:
+    ) -> Generator[Event, Any, VehicleAllocation | None]:
         """
         Request vehicle allocation for the selected transportation alternative.
 
@@ -768,8 +760,8 @@ class User(Agent):
 
         Yields
         ------
-        Process
-            Allocation process.
+        Event
+            Events of the allocation engine.
 
         Returns
         -------
@@ -780,10 +772,12 @@ class User(Agent):
         self.state = UserState.AWAITING_ALLOCATION
 
         # Get Vehicle Allocation
-        vehicle_allocation: VehicleAllocation | None = yield self._env.process(
-            selected_transportation_alternative.operator.allocation_engine.request_vehicle_allocation(
-                self, selected_transportation_alternative
-            )  # TODO: funny, maybe encapsulate in TransportationAlternative
+        # TODO: funny, maybe encapsulate in TransportationAlternative
+        allocation_engine = (
+            selected_transportation_alternative.operator.allocation_engine
+        )
+        vehicle_allocation = yield from allocation_engine.request_vehicle_allocation(
+            self, selected_transportation_alternative
         )
 
         # Vehicle was successfully allocated to request
