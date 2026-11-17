@@ -9,6 +9,9 @@ import pytest
 import simpy
 
 from simulation.agent.user.choice_model import ChoiceModelInterface
+from simulation.agent.user.choice_model.choice_model_interface import (
+    ChoiceModelDependencies,
+)
 from simulation.agent.user.user import User
 from simulation.helper.configuration.configuration import ChoiceModelConfig, UserConfig
 from simulation.helper.random.random_manager import RandomManager
@@ -89,14 +92,18 @@ def attempt_order(seed: int, alternative_count: int) -> list[float]:
     search_engine = Mock()
     search_engine.search_for_transportation_alternatives.return_value = browser
 
+    choice_model_config = ChoiceModelConfig(CHOICE_MODEL_TYPE=EqualChoiceModelStub)
     user_config = UserConfig(
         TRANSIT_MAX_WAIT=10,
         SPATIAL_STRATEGY="hexagon",
         WALKING_SPEED_KMH=5.0,
         MAX_SEARCH_DURATION_MIN=1,
-        CHOICE_MODEL_CONFIG=ChoiceModelConfig(CHOICE_MODEL_TYPE=EqualChoiceModelStub),
+        CHOICE_MODEL_CONFIG=choice_model_config,
     )
-    user = User(sim, user_config, Mock(), Mock(), Mock(), search_engine)
+    choice_model = EqualChoiceModelStub(
+        ChoiceModelDependencies(sim=sim, choice_model_config=choice_model_config)
+    )
+    user = User(sim, user_config, Mock(), Mock(), Mock(), search_engine, choice_model)
     user.start()
     env.run()
     return engine.requested_prices

@@ -15,8 +15,6 @@ from simulation.vehicle.vehicle import Vehicle
 from simulation.world.mobility_search_engine import MobilitySearchEngine
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
     import simpy
     from pandas import DataFrame
 
@@ -207,22 +205,20 @@ class World(SimulationBase):  # noqa: D101
         )
         return dmi.load_distance_matrix()
 
-    def add_user(self, user: user.User) -> Generator[simpy.Event, None, None]:
-        """
-        Add a User object to the world.
+    def add_user(self, user: user.User) -> None:
+        """Add a user to the world until their process finishes.
 
         Parameters
         ----------
-        user : User or subclass
-            The user agent to clean up.
+        user : User
+            User to add.
         """
         self._users.add(user)
         self._total_users += 1
 
         self.logger.debug("User %s added to world.", user.uid)
 
-        # Start process for automatic cleanup
-        self._env.process(self._monitor_user_lifecycle(user))
+        user.process_finished.callbacks.append(lambda _event: self._remove_user(user))
 
     def add_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
         self._vehicles.add(vehicle)
@@ -261,21 +257,7 @@ class World(SimulationBase):  # noqa: D101
     def changed(self, event):  # noqa: ANN001, ANN202
         self._changed = event
 
-    def _monitor_user_lifecycle(
-        self, user: user.User
-    ) -> Generator[simpy.Event, None, None]:
-        """
-        Monitor a user's lifecycle and clean up when it's finished.
-
-        Parameters
-        ----------
-        user : User
-            The user to monitor.
-        """
-        # Wait for user process to finish
-        yield user.process_finished
-
-        # Remove user from tracking
+    def _remove_user(self, user: user.User) -> None:
         self._users.discard(user)
 
         self.logger.debug(
