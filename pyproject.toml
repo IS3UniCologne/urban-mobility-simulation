@@ -178,9 +178,6 @@ project-excludes = [
   "simulation/vehicle/public_transit_vehicle.py",
   "simulation/vehicle/ride_hailing_vehicle.py",
   "simulation/vehicle/shared_vehicle.py",
-  "simulation/world/demand/demand_factory.py",
-  "simulation/world/markets/shared_charging_auction.py",
-  "simulation/world/world.py",
 ]
 
 [tool.pytest.ini_options]

@@ -457,8 +457,8 @@ class ChargingInfrastructureConfig(BaseModel):
     COORDINATION_TIMESLOT_DURATION: int | None = Field(gt=0, default=None)
     COORDINATION_LOOKAHEAD: int | None = Field(ge=0, default=None)
 
-    # market
-    AUCTION_CONFIG: AuctionConfig | None = Field(default=None)
+    # market: ChargingInfrastructure only runs the shared charging auction
+    AUCTION_CONFIG: SharedChargingAuctionConfig | None = Field(default=None)
 
     # Instance is put here after creation, so the operator gets a reference
     instance: ChargingInfrastructure | None = Field(default=None, exclude=True)

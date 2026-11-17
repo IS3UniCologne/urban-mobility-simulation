@@ -46,35 +46,19 @@ class _DemandSlice:
 
 class DemandFactory(SimulationBase):
     """
-    Factory for generating and managing demand based on spatio-temporal demand profiles and configurable modifiers.
+    Factory that generates users from a spatio-temporal demand profile.
 
-    This class loads demand profiles, applies modifiers, and spawns demand generation processes
-    for each spatial unit in the simulation environment.
+    The factory loads the demand profile and the demand modifiers of the project.
+    Start generate_demand as a simpy process: it starts one demand generation process per spatial unit.
+    Each process draws arrivals from the arrival rate of the current time bucket, scaled by the demand modifier of its hexagon.
+    Each new user gets a destination drawn from the destination probabilities and a population segment drawn from the segment proportions.
 
-    Attributes
+    Parameters
     ----------
-    _config : Configuration
-        The configuration instance containing simulation settings.
-    _env : simpy.Environment
-        The simulation environment.
-    _time : SimulationTime
-        The simulation time manager.
-    _world : World
-        The simulation world instance.
-    _modifiers : dict
-        Mapping of spatial unit IDs to demand multipliers.
-    _demand_slices : dict
-        Demand slice per origin, time bucket and non-working day with demand.
-    _spatial_units : list of str
-        List of unique spatial unit IDs.
-    _rng : numpy.random.Generator
-        Random number generator for demand sampling.
-    _population_segments : list of PopulationSegmentConfig
-        Population segments new users are drawn from.
-    _segment_proportions : list of float
-        Share of new users per population segment, in segment order.
-    _user_factory : UserFactory
-        Factory for creating users.
+    sim : SimulationContext
+        Simulation context with the configuration and random manager.
+    world : World
+        World that receives the new users and the demand generation processes.
     """
 
     __slots__ = (
@@ -106,7 +90,7 @@ class DemandFactory(SimulationBase):
         self._spatial_resolution = self._config.world.SPATIAL_RESOLUTION
         self._daily_resolution = self._config.world.DAILY_RESOLUTION
 
-        self._modifiers = {}
+        self._modifiers: dict[RegionId, float] = {}
 
         demand_profile = self._load_demand_profile()
         self._demand_slices: dict[_SliceKey, _DemandSlice] = self._index_demand_profile(
@@ -167,7 +151,7 @@ class DemandFactory(SimulationBase):
             for key, rows in rows_by_key.items()
         }
 
-    def _register_modifier(self, geomodifier) -> None:  # noqa: ANN001
+    def _register_modifier(self, geomodifier: dict[str, Any]) -> None:
         multiplier = geomodifier["properties"]["demandMultiplier"]
         hex_ids = h3.polygon_to_cells(
             h3.geo_to_h3shape(geomodifier["geometry"]), res=self._spatial_resolution
@@ -210,8 +194,15 @@ class DemandFactory(SimulationBase):
                 "Loaded demand modifier %s (%d features).", path.name, len(features)
             )
 
-    def generate_demand(self):  # noqa: ANN201
-        """Invoke for each spatial unit a dedicated process which generates demand."""
+    def generate_demand(self) -> Generator[simpy.Event, Any, None]:
+        """
+        Start one demand generation process per spatial unit.
+
+        Yields
+        ------
+        simpy.Event
+            Event that succeeds when every process is started.
+        """
         spawned = self._env.event()
 
         for unit in self._spatial_units:
