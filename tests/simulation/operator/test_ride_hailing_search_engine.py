@@ -182,21 +182,14 @@ class TestRideHailingSearchEngine:
 
         assert prices.keys() == {parking, dropping_off}
 
-    def test_skips_reserved_vehicle_only_when_human_driven(self) -> None:
-        reserved_human_driven = VehicleStub(is_reserved=True)
-        reserved_autonomous = VehicleStub(
-            is_reserved=True, autonomy_type=AutonomyType.AUTONOMOUS
-        )
+    def test_skips_every_reserved_vehicle(self) -> None:
+        reserved = [
+            VehicleStub(is_reserved=True, autonomy_type=autonomy_type, request=request)
+            for autonomy_type in AutonomyType
+            for request in (None, (4000, 1000))
+        ]
         free = VehicleStub()
 
-        prices = search([reserved_human_driven, reserved_autonomous, free])
+        prices = search([*reserved, free])
 
-        assert prices.keys() == {reserved_autonomous, free}
-
-    def test_offers_human_driven_vehicles_first(self) -> None:
-        autonomous = VehicleStub(autonomy_type=AutonomyType.AUTONOMOUS)
-        human_driven = VehicleStub()
-
-        prices = search([autonomous, human_driven])
-
-        assert list(prices) == [human_driven, autonomous]
+        assert prices.keys() == {free}
