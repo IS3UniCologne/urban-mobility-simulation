@@ -71,8 +71,8 @@ class DemandFactory(SimulationBase):
         Random number generator for demand sampling.
     _population_segments : list of PopulationSegmentConfig
         Population segments new users are drawn from.
-    _segment_proportions : list of float
-        Share of new users per population segment, in segment order.
+    _segment_cdf : numpy.ndarray
+        Cumulative population segment probabilities, normalized once for sampling.
     _user_factory : UserFactory
         Factory for creating users.
     """
@@ -85,7 +85,7 @@ class DemandFactory(SimulationBase):
         "_modifiers",
         "_population_segments",
         "_rng",
-        "_segment_proportions",
+        "_segment_cdf",
         "_spatial_resolution",
         "_spatial_units",
         "_temporal_resolution",
@@ -116,9 +116,12 @@ class DemandFactory(SimulationBase):
 
         self._rng = sim.random_manager.get_rng("DEMANDFACTORY")
         self._population_segments = self._config.population.SEGMENTS
-        self._segment_proportions = [
-            segment.PROPORTION for segment in self._population_segments
-        ]
+        # Match Generator.choice's CDF, including normalization for rounding in
+        # the cumulative sum. PopulationConfig already validates the proportions.
+        self._segment_cdf = numpy.cumsum(
+            [segment.PROPORTION for segment in self._population_segments]
+        )
+        self._segment_cdf /= self._segment_cdf[-1]
 
         self._user_factory = UserFactory(sim, world)
 
@@ -326,8 +329,7 @@ class DemandFactory(SimulationBase):
         )
 
     def _select_segment_for_demand(self) -> PopulationSegmentConfig:
-        # Choosing an index keeps numpy from probing every pydantic segment for array protocols on each call
-        index = self._rng.choice(
-            len(self._population_segments), p=self._segment_proportions
-        )
+        # Consume the same single uniform draw as weighted Generator.choice,
+        # without rebuilding and validating the fixed distribution for each user.
+        index = self._segment_cdf.searchsorted(self._rng.random(), side="right")
         return self._population_segments[index]

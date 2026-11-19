@@ -35,7 +35,14 @@ class GeodesicEnvironment(Environment):
         Simulation context providing configuration, RNG, and logging.
     """
 
-    __slots__ = ("_centroid_cache", "_hex_geom_cache", "_logger", "_rng", "_utm_epsg")
+    __slots__ = (
+        "_centroid_cache",
+        "_hex_geom_cache",
+        "_logger",
+        "_rng",
+        "_sampling_cache",
+        "_utm_epsg",
+    )
 
     def __init__(self, sim: SimulationContext) -> None:
         super().__init__()
@@ -45,6 +52,9 @@ class GeodesicEnvironment(Environment):
         )
 
         self._hex_geom_cache: dict[str, dict[str, Polygon]] = {}
+        self._sampling_cache: dict[
+            tuple[str, str], tuple[Polygon, tuple[float, float, float, float]]
+        ] = {}
         self._centroid_cache: dict[str, tuple[float, float]] = {}
 
         self._logger = sim.log_manager.get_class_logger(self.__class__.__name__)
@@ -124,8 +134,13 @@ class GeodesicEnvironment(Environment):
         HexagonNotFoundError
             If the hexagon is not in the layer.
         """
-        geometry = self.get_hexagon(hex_id, layer_name)
-        minx, miny, maxx, maxy = geometry.bounds
+        key = (layer_name, hex_id)
+        cached = self._sampling_cache.get(key)
+        if cached is None:
+            geometry = self.get_hexagon(hex_id, layer_name)
+            cached = (geometry, geometry.bounds)
+            self._sampling_cache[key] = cached
+        geometry, (minx, miny, maxx, maxy) = cached
         while True:
             lng = self._rng.uniform(minx, maxx)
             lat = self._rng.uniform(miny, maxy)

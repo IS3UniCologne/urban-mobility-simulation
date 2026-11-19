@@ -5,6 +5,7 @@ import statistics
 from unittest.mock import Mock
 
 import pytest
+from shapely.geometry import Point, box
 
 from simulation.environment.geodesic_position import GeodesicPosition
 
@@ -20,6 +21,22 @@ def mock_sim() -> Mock:
 @pytest.mark.unit
 class TestGeodesicPositionDistance:
     """Tests for GeodesicPosition distance calculations."""
+
+    def test_geometry_and_intersection_after_coordinate_operations(
+        self, mock_sim: Mock
+    ) -> None:
+        pos = GeodesicPosition(mock_sim, 52.52, 13.405)
+        other = GeodesicPosition(mock_sim, 52.53, 13.4)
+        assert pos << other > 0
+        assert pos.getExactLocation() == (52.52, 13.405)
+        assert pos.geometry.equals(Point(13.405, 52.52))
+        assert pos.geometry is pos.geometry
+        assert pos.is_in_geometry(box(13.4, 52.5, 13.5, 52.6))
+        assert not pos.is_in_geometry(box(0, 0, 1, 1))
+
+    def test_intersection_can_be_first_geometry_operation(self, mock_sim: Mock) -> None:
+        pos = GeodesicPosition(mock_sim, 52.52, 13.405)
+        assert pos.is_in_geometry(box(13.4, 52.5, 13.5, 52.6))
 
     def test_distance_calculation_accuracy(self, mock_sim: Mock) -> None:
         """Test accuracy of euclidean approximation vs haversine for Berlin distances."""

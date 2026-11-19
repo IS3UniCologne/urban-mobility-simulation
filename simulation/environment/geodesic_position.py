@@ -61,7 +61,9 @@ class GeodesicPosition(Position):
         if default_res_hex_id is not None:
             self._hex_id_by_resolution[self._default_resolution] = default_res_hex_id
 
-        self._geometry = Point(self._lng, self._lat)
+        # Most sampled positions only need coordinates, distances and H3 IDs.
+        # Construct the Shapely object only if a geometry operation is requested.
+        self._geometry: Point | None = None
 
     def getExactLocation(self, geojson: bool = False) -> tuple[float, float]:
         """
@@ -86,6 +88,8 @@ class GeodesicPosition(Position):
     @property
     def geometry(self) -> Point:
         """Shapely point geometry."""
+        if self._geometry is None:
+            self._geometry = Point(self._lng, self._lat)
         return self._geometry
 
     def __str__(self) -> str:
@@ -166,7 +170,7 @@ class GeodesicPosition(Position):
 
     def is_in_geometry(self, geometry: Geometry) -> bool:
         """Return whether this position intersects geometry."""
-        if self._geometry.intersects(geometry):
+        if self.geometry.intersects(geometry):
             return True
         else:
             return False
