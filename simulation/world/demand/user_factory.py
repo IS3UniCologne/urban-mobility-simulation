@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from simulation.agent.user.choice_model import ChoiceModelInterface
+from simulation.agent.user.choice_model.choice_model_interface import (
+    ChoiceModelDependencies,
+)
 from simulation.agent.user.user import User
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.simulation_base import SimulationBase
@@ -33,6 +37,8 @@ class UserFactory(SimulationBase):
         self._config = sim.config
         self._geo_env = sim.geo_env
         self._rng = sim.random_manager.get_rng("USER_FACTORY")
+        # Keyed by identity, since a configuration model has no hash (the population keeps every user configuration alive)
+        self._choice_models: dict[int, ChoiceModelInterface] = {}
 
     def create_user(
         self,
@@ -80,6 +86,7 @@ class UserFactory(SimulationBase):
             origin=origin_position,
             destination=destination_position,
             mobility_search_engine=self._world.mobility_search,
+            choice_model=self._choice_model(user_config),
         )
 
         self.logger.debug(
@@ -87,3 +94,15 @@ class UserFactory(SimulationBase):
         )
 
         return user
+
+    def _choice_model(self, user_config: UserConfig) -> ChoiceModelInterface:
+        """Return the choice model that every user of one configuration shares."""
+        choice_model = self._choice_models.get(id(user_config))
+        if choice_model is None:
+            choice_model = ChoiceModelInterface.from_deps(
+                deps=ChoiceModelDependencies(
+                    sim=self._sim, choice_model_config=user_config.CHOICE_MODEL_CONFIG
+                )
+            )
+            self._choice_models[id(user_config)] = choice_model
+        return choice_model

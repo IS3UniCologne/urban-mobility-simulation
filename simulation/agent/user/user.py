@@ -10,10 +10,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from simulation.agent.agent import Agent
-from simulation.agent.user.choice_model import ChoiceModelInterface
-from simulation.agent.user.choice_model.choice_model_interface import (
-    ChoiceModelDependencies,
-)
 from simulation.agent.user.user_log import (
     FulfilledUserLogEntry,
     MissedUserLogEntry,
@@ -35,6 +31,7 @@ if TYPE_CHECKING:
 
     from simpy import Event, Process, Timeout
 
+    from simulation.agent.user.choice_model import ChoiceModelInterface
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.configuration.configuration import UserConfig
@@ -78,6 +75,8 @@ class User(Agent):
         The destination of the user.
     mobility_search_engine : MobilitySearchEngine
         Engine to search for mobility options.
+    choice_model : ChoiceModelInterface
+        Choice model of the user's configuration, shared with the other users of it.
 
     Attributes
     ----------
@@ -90,9 +89,7 @@ class User(Agent):
     """
 
     __slots__ = (
-        "_arrived_at_destination",
         "_arrived_at_stop_time",
-        "_assigned_vehicle_arrived",
         "_attempted_operators",
         "_choice_model",
         "_destination",
@@ -109,11 +106,9 @@ class User(Agent):
         "_sim",
         "_state",
         "_transport_request",
-        "_transportation_alternatives_not_found",
         "_trip_end_time",
         "_trip_start_time",
         "_user_log",
-        "_vehicle_allocated",
         "_vehicle_allocation_time",
         "_vehicle_arrival_time",
         "_walking_speed_mm",
@@ -128,6 +123,7 @@ class User(Agent):
         origin: GeodesicPosition,
         destination: GeodesicPosition,
         mobility_search_engine: MobilitySearchEngine,
+        choice_model: ChoiceModelInterface,
     ) -> None:
         super().__init__(sim)
         self._sim = sim
@@ -140,11 +136,7 @@ class User(Agent):
         self._destination = destination
 
         self._mobility_search_engine = mobility_search_engine
-        self._choice_model: ChoiceModelInterface = ChoiceModelInterface.from_deps(
-            deps=ChoiceModelDependencies(
-                sim=self._sim, choice_model_config=user_config.CHOICE_MODEL_CONFIG
-            )
-        )
+        self._choice_model = choice_model
 
         self._max_search_duration_min = user_config.MAX_SEARCH_DURATION_MIN
         self._walking_speed_mm = SimulationVelocityConverter.kmh_to_meters_per_minute(
@@ -170,12 +162,6 @@ class User(Agent):
         self._energy_consumed: float = 0.0
 
         ### Events and Processes ###
-        # Events used for coordination and logging
-        self._transportation_alternatives_not_found = self._env.event()
-        self._vehicle_allocated = self._env.event()
-        self._assigned_vehicle_arrived = self._env.event()
-        self._arrived_at_destination = self._env.event()
-
         self.process_finished = self._env.event()
 
         self._run_process: Process | None = None
@@ -227,14 +213,14 @@ class User(Agent):
         """Get the total energy consumed by the user's activities."""
         return self._energy_consumed
 
-    def run(self) -> Generator[Process | Timeout, Any, None]:
+    def run(self) -> Generator[Event, Any, None]:
         """
         Full user lifecycle.
 
         Yields
         ------
-        Process or Timeout
-            User events and processes.
+        Event
+            Events of the search, the allocation and the trip.
         """
         self._search_start_time = self._env.now
         vehicle_allocation: VehicleAllocation | None = None
@@ -248,9 +234,7 @@ class User(Agent):
                 break
 
             # 1: Search trip alternatives
-            available_alternatives = yield self._env.process(
-                self._search_for_alternatives()
-            )
+            available_alternatives = yield from self._search_for_alternatives()
             if not available_alternatives.transportation_alternatives:
                 break
 
@@ -259,15 +243,12 @@ class User(Agent):
                 self._calculate_choice_probabilities(available_alternatives)
             )
             # 3: Try alternatives probabilistically until one succeeds or we run out of time
-            vehicle_allocation = yield self._env.process(
-                self._try_alternatives(choice_probs)
-            )
+            vehicle_allocation = yield from self._try_alternatives(choice_probs)
             # 4: Allocation failed for all alternatives, restart search from scratch
             if vehicle_allocation is None:
                 self.logger.debug(
                     "Allocation failed for all alternatives, restarting search."
                 )
-                self._reset_user()
                 yield self._env.timeout(1)
 
         self._log_trip_outcome(vehicle_allocation)
@@ -276,7 +257,7 @@ class User(Agent):
 
     def _try_alternatives(
         self, choice_probs: dict[TransportationAlternative, float]
-    ) -> Generator[Process | Event, Any, VehicleAllocation | None]:
+    ) -> Generator[Event, Any, VehicleAllocation | None]:
         """
         Try transportation alternatives probabilistically until one succeeds.
 
@@ -291,8 +272,8 @@ class User(Agent):
 
         Yields
         ------
-        Process or Event
-            Allocation and trip execution processes.
+        Event
+            Events of the allocation and the trip.
 
         Returns
         -------
@@ -314,9 +295,7 @@ class User(Agent):
             del remaining[chosen]
             self._attempted_operators.add(chosen.operator)
 
-            vehicle_allocation: VehicleAllocation | None = yield self._env.process(
-                self._allocate_vehicle(chosen)
-            )
+            vehicle_allocation = yield from self._allocate_vehicle(chosen)
 
             if vehicle_allocation is None:
                 continue
@@ -325,9 +304,7 @@ class User(Agent):
             self._validate_allocation(vehicle_allocation, chosen)
 
             try:
-                yield self._env.process(
-                    self._execute_chosen_alternative(vehicle_allocation)
-                )
+                yield from self._execute_chosen_alternative(vehicle_allocation)
             except ReservationCanceledError as err:
                 self.logger.debug(
                     "Allocation canceled before trip execution for user %s on vehicle %s: %s",
@@ -360,6 +337,9 @@ class User(Agent):
         TransportationAlternative
             Sampled alternative.
         """
+        if len(remaining) == 1:
+            return next(iter(remaining))
+
         # Don't use a set: set order follows hashes that change between runs, so seeded runs diverge
         alternatives = list(remaining)
         total = sum(remaining.values())
@@ -510,11 +490,6 @@ class User(Agent):
         """
         return self._env.now - self._search_start_time > self._max_search_duration_min
 
-    def _reset_user(self) -> None:
-        """Reset user events."""
-        self._transportation_alternatives_not_found = self._env.event()
-        self._vehicle_allocated = self._env.event()
-
     def _search_for_alternatives(
         self,
     ) -> Generator[Timeout, Any, TransportationAlternativeBrowser]:
@@ -561,7 +536,6 @@ class User(Agent):
             # Wait before searching again
             yield self._env.timeout(1)
         # We did not receive any transportation alternatives, return empty list
-        self._transportation_alternatives_not_found.succeed()
         return available_transportation_alternatives
 
     def _execute_chosen_alternative(
@@ -635,8 +609,6 @@ class User(Agent):
             arrival_time = trip_task.vehicle_arrival_time
             if arrival_time is not None:
                 self._vehicle_arrival_time = arrival_time
-        self._assigned_vehicle_arrived.succeed()
-        self._arrived_at_destination.succeed()
 
         self.state = UserState.FULFILLED
         self.logger.debug("Trip completed.")
@@ -757,7 +729,7 @@ class User(Agent):
 
     def _allocate_vehicle(
         self, selected_transportation_alternative: TransportationAlternative
-    ) -> Generator[Process, Any, VehicleAllocation | None]:
+    ) -> Generator[Event, Any, VehicleAllocation | None]:
         """
         Request vehicle allocation for the selected transportation alternative.
 
@@ -768,8 +740,8 @@ class User(Agent):
 
         Yields
         ------
-        Process
-            Allocation process.
+        Event
+            Events of the allocation engine.
 
         Returns
         -------
@@ -780,16 +752,17 @@ class User(Agent):
         self.state = UserState.AWAITING_ALLOCATION
 
         # Get Vehicle Allocation
-        vehicle_allocation: VehicleAllocation | None = yield self._env.process(
-            selected_transportation_alternative.operator.allocation_engine.request_vehicle_allocation(
-                self, selected_transportation_alternative
-            )  # TODO: funny, maybe encapsulate in TransportationAlternative
+        # TODO: funny, maybe encapsulate in TransportationAlternative
+        allocation_engine = (
+            selected_transportation_alternative.operator.allocation_engine
+        )
+        vehicle_allocation = yield from allocation_engine.request_vehicle_allocation(
+            self, selected_transportation_alternative
         )
 
         # Vehicle was successfully allocated to request
         if vehicle_allocation:
             self._vehicle_allocation_time = self._env.now
-            self._vehicle_allocated.succeed()
 
             self.logger.debug(
                 "Vehicle %s has been allocated.", vehicle_allocation.vehicle.uid

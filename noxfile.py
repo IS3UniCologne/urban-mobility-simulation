@@ -148,7 +148,7 @@ def pytest_e2e(session: nox.Session) -> None:
 
 @nox.session(name="benchmark", python=python_versions[-1], default=False)
 def benchmark(session: nox.Session) -> None:
-    """Compare CPU time and peak memory of the saturated scenarios against a commit.
+    """Compare CPU time and peak memory of end-to-end scenarios against a commit.
 
     Not run by default, since the comparison takes quite long.
     Options go after ``--``, e.g. ``nox -s benchmark -- --base develop``.

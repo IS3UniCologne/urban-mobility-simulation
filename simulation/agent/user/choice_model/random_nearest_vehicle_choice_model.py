@@ -70,7 +70,8 @@ class RandomModeNearestVehicleChoiceModel(ChoiceModelInterface):
 
         # Randomly select a mode (uniform probability)
         available_modes = sorted(alternatives_by_mode.keys(), key=str)
-        selected_mode = self._rng.choice(available_modes)
+        # An index draw gives the same stream as a draw from the list, without building an array per call
+        selected_mode = available_modes[self._rng.integers(len(available_modes))]
 
         # Get alternatives in selected mode
         selected_mode_alternatives = alternatives_by_mode[selected_mode]
