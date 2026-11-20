@@ -346,7 +346,7 @@ class VehicleFleet(SimulationBase, ABC):
 
     def register_vehicle(self, vehicle: Vehicle) -> None:
         """Register a new vehicle to the fleet."""
-        if vehicle in self._vehicles:
+        if vehicle in self._vehicles_by_type[vehicle.vehicle_type]:
             raise VehicleFleetError(f"Vehicle {vehicle} is already registered in Fleet")
         else:
             self._add_vehicle(vehicle)
