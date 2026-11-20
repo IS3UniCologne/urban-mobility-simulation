@@ -2,6 +2,7 @@
 
 from unittest.mock import Mock
 
+import h3
 import pytest
 import simpy
 from pydantic import ValidationError
@@ -40,6 +41,7 @@ def make_sim(initial_time: float = 0.0) -> Mock:
     sim.uid_manager.generate_uid.return_value = (1, "uid")
     sim.log_manager.get_uid_logger.return_value = Mock()
     sim.config.world.SPATIAL_RESOLUTION = 7
+    sim.geo_env.get_centroid.side_effect = h3.cell_to_latlng
     return sim
 
 

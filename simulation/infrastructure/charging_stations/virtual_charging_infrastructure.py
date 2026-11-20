@@ -103,7 +103,7 @@ class VirtualChargingInfrastructure(SimulationBase):
         if use_virtual_cs:
             self._virtual_charging_stations = [
                 VirtualChargingStation(
-                    charging_station=cs, virtual_charging_infrastructure=self
+                    sim=sim, charging_station=cs, virtual_charging_infrastructure=self
                 )
                 for cs in self._charging_infrastructure.charging_stations
             ]

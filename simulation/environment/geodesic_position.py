@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import h3 as h3
 from haversine import Unit, haversine
-from shapely.geometry import Point
 
 try:
     from simulation.environment.cython_ext.cy_geodesic import cy_euclidean_distance
@@ -21,8 +20,6 @@ from simulation.helper.types import RegionId
 from .position import Position
 
 if TYPE_CHECKING:
-    from shapely import Geometry
-
     from simulation.context.simulation_context import SimulationContext
 
 
@@ -42,7 +39,7 @@ class GeodesicPosition(Position):
         Pre-computed H3 hex id at the default resolution, if known.
     """
 
-    __slots__ = ("_geometry", "_hex_id_by_resolution", "_lat", "_lng")
+    __slots__ = ("_hex_id_by_resolution", "_lat", "_lng")
 
     def __init__(
         self,
@@ -60,8 +57,6 @@ class GeodesicPosition(Position):
         # store the hex_id if it's provided
         if default_res_hex_id is not None:
             self._hex_id_by_resolution[self._default_resolution] = default_res_hex_id
-
-        self._geometry = Point(self._lng, self._lat)
 
     def getExactLocation(self, geojson: bool = False) -> tuple[float, float]:
         """
@@ -82,11 +77,6 @@ class GeodesicPosition(Position):
             return (self._lng, self._lat)
         else:
             return (self._lat, self._lng)
-
-    @property
-    def geometry(self) -> Point:
-        """Shapely point geometry."""
-        return self._geometry
 
     def __str__(self) -> str:
         """Human-readable latitude/longitude representation."""
@@ -163,10 +153,3 @@ class GeodesicPosition(Position):
             self._hex_id_by_resolution[resolution] = self._compute_hex_id(resolution)
 
         return RegionId(self._hex_id_by_resolution[resolution])
-
-    def is_in_geometry(self, geometry: Geometry) -> bool:
-        """Return whether this position intersects geometry."""
-        if self._geometry.intersects(geometry):
-            return True
-        else:
-            return False

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 import h3
-from shapely import contains_xy
 
 from simulation.environment.bounding_box import (
     load_or_infer_bounding_box,
@@ -107,6 +106,8 @@ class GeodesicEnvironment(Environment):
         """
         Sample a uniformly random position within given hexagon.
 
+        The sample is drawn in the bounds of the layer polygon and kept only if h3 puts it in the hexagon.
+
         Parameters
         ----------
         hex_id : str
@@ -124,17 +125,17 @@ class GeodesicEnvironment(Environment):
         HexagonNotFoundError
             If the hexagon is not in the layer.
         """
-        geometry = self.get_hexagon(hex_id, layer_name)
-        minx, miny, maxx, maxy = geometry.bounds
+        minx, miny, maxx, maxy = self.get_hexagon(hex_id, layer_name).bounds
+        resolution = h3.get_resolution(hex_id)
         while True:
             lng = self._rng.uniform(minx, maxx)
             lat = self._rng.uniform(miny, maxy)
-            if contains_xy(geometry, lng, lat):
+            if h3.latlng_to_cell(lat, lng, resolution) == hex_id:
                 return lat, lng
 
     def get_centroid(self, hex_id: str) -> tuple[float, float]:
         """
-        Return hexagon centroid (cached).
+        Return hexagon centroid as h3 computes it (cached).
 
         Parameters
         ----------
