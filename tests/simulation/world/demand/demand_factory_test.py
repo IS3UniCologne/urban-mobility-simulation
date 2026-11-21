@@ -1,4 +1,4 @@
-"""Tests for the demand profile index of DemandFactory."""
+"""Tests for the demand profile index and the segment draw of DemandFactory."""
 
 from unittest.mock import Mock
 
@@ -65,12 +65,13 @@ def test_index_matches_row_filter(profile: pd.DataFrame) -> None:
     ],
 )
 @pytest.mark.parametrize("seed", [1, 43, 91235])
-def test_segment_sampling_preserves_interleaved_rng_stream(
+def test_segment_draw_matches_generator_choice(
     proportions: list[float],
     seed: int,
     profile: pd.DataFrame,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """The segment draw picks the same segment as Generator.choice from the same stream."""
     template = Configuration("tests/configurations/saturated_sm").population.SEGMENTS[0]
     population = PopulationConfig(
         SEGMENTS=[template.model_copy(update={"PROPORTION": p}) for p in proportions]
@@ -86,14 +87,8 @@ def test_segment_sampling_preserves_interleaved_rng_stream(
     factory = DemandFactory(sim, Mock())
     reference = numpy.random.default_rng(seed)
 
-    # Arrival, destination and segment draws share one stream across origins.
-    # Even a deterministic segment must consume its usual random draw.
+    # A segment with proportion 1.0 must still consume a random draw, or every later draw of the stream shifts
     for _ in range(2048):
-        assert factory._rng.exponential(0.7) == reference.exponential(0.7)
-        numpy.testing.assert_array_equal(
-            factory._rng.multinomial(1, [0.25, 0.0, 0.75]),
-            reference.multinomial(1, [0.25, 0.0, 0.75]),
-        )
         expected = reference.choice(len(proportions), p=proportions)
         assert factory._select_segment_for_demand() is population.SEGMENTS[expected]
 

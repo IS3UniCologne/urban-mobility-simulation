@@ -103,7 +103,7 @@ class VirtualChargingInfrastructure(SimulationBase):
         if use_virtual_cs:
             self._virtual_charging_stations = [
                 VirtualChargingStation(
-                    charging_station=cs, virtual_charging_infrastructure=self
+                    sim=sim, charging_station=cs, virtual_charging_infrastructure=self
                 )
                 for cs in self._charging_infrastructure.charging_stations
             ]
@@ -153,7 +153,7 @@ class VirtualChargingInfrastructure(SimulationBase):
 
     def get_available_capacity(
         self, at_timeslot: float | None = None
-    ) -> dict[float, dict[RegionId, int]] | dict[RegionId, int]:
+    ) -> dict[RegionId, int]:
         """Available capacity, by location (no lookahead) or for a timeslot."""
         if self._current_lookahead is None:
             return cast("dict[RegionId, int]", self._availability)

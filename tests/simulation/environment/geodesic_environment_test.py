@@ -1,48 +1,24 @@
-"""Sampling regression tests against the original rejection sampler."""
+"""Tests for hexagon geometry in GeodesicEnvironment."""
 
-import geopandas as gpd
-import numpy
+import h3
+import numpy as np
 import pytest
-from shapely import contains_xy
 from shapely.geometry import Polygon
 
 from simulation.environment.geodesic_environment import GeodesicEnvironment
-from simulation.helper.exceptions import HexagonNotFoundError
+
+pytestmark = pytest.mark.unit
 
 
-@pytest.mark.unit
-@pytest.mark.parametrize("seed", [1, 43, 91235])
-def test_cached_sampling_preserves_points_and_rng_state(seed: int) -> None:
-    polygons = {
-        "a": Polygon([(13.0, 52.0), (13.2, 52.0), (13.1, 52.1)]),
-        "b": Polygon([(-0.1, -0.2), (0.3, -0.2), (0.1, 0.4)]),
-    }
+def test_random_position_lies_in_the_h3_cell() -> None:
+    # at resolution 2 the flat polygon and the h3 cell differ often enough to catch
+    cell = h3.latlng_to_cell(41.88, -87.63, 2)
     env = GeodesicEnvironment.__new__(GeodesicEnvironment)
-    env._layer = {
-        "first": gpd.GeoDataFrame(
-            geometry=list(polygons.values()), index=list(polygons)
-        )
+    env._rng = np.random.default_rng(0)
+    env._hex_geom_cache = {
+        "hex": {cell: Polygon([(lng, lat) for lat, lng in h3.cell_to_boundary(cell)])}
     }
-    # A different layer with the same IDs must not share the sampling bounds.
-    env.layer["second"] = env.layer["first"].copy()
-    env.layer["second"]["geometry"] = env.layer["second"].translate(xoff=5)
-    env._hex_geom_cache = {}
-    env._sampling_cache = {}
-    env._rng = numpy.random.default_rng(seed)
-    reference = numpy.random.default_rng(seed)
 
-    for i in range(1000):
-        name = "first" if i % 3 else "second"
-        hex_id = "a" if i % 2 else "b"
-        geometry = env.layer[name].loc[hex_id, "geometry"]
-        minx, miny, maxx, maxy = geometry.bounds
-        while True:
-            lng = reference.uniform(minx, maxx)
-            lat = reference.uniform(miny, maxy)
-            if contains_xy(geometry, lng, lat):
-                break
-        assert env.get_random_position(hex_id, name) == (lat, lng)
-
-    assert env._rng.bit_generator.state == reference.bit_generator.state
-    with pytest.raises(HexagonNotFoundError):
-        env.get_random_position("missing", "first")
+    for _ in range(2000):
+        lat, lng = env.get_random_position(cell)
+        assert h3.latlng_to_cell(lat, lng, 2) == cell

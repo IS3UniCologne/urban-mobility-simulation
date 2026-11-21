@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 import h3
-from shapely import contains_xy
 
 from simulation.environment.bounding_box import (
     load_or_infer_bounding_box,
@@ -35,14 +34,7 @@ class GeodesicEnvironment(Environment):
         Simulation context providing configuration, RNG, and logging.
     """
 
-    __slots__ = (
-        "_centroid_cache",
-        "_hex_geom_cache",
-        "_logger",
-        "_rng",
-        "_sampling_cache",
-        "_utm_epsg",
-    )
+    __slots__ = ("_centroid_cache", "_hex_geom_cache", "_logger", "_rng", "_utm_epsg")
 
     def __init__(self, sim: SimulationContext) -> None:
         super().__init__()
@@ -52,9 +44,6 @@ class GeodesicEnvironment(Environment):
         )
 
         self._hex_geom_cache: dict[str, dict[str, Polygon]] = {}
-        self._sampling_cache: dict[
-            tuple[str, str], tuple[Polygon, tuple[float, float, float, float]]
-        ] = {}
         self._centroid_cache: dict[str, tuple[float, float]] = {}
 
         self._logger = sim.log_manager.get_class_logger(self.__class__.__name__)
@@ -117,6 +106,8 @@ class GeodesicEnvironment(Environment):
         """
         Sample a uniformly random position within given hexagon.
 
+        The sample is drawn in the bounds of the layer polygon and kept only if h3 puts it in the hexagon.
+
         Parameters
         ----------
         hex_id : str
@@ -134,22 +125,17 @@ class GeodesicEnvironment(Environment):
         HexagonNotFoundError
             If the hexagon is not in the layer.
         """
-        key = (layer_name, hex_id)
-        cached = self._sampling_cache.get(key)
-        if cached is None:
-            geometry = self.get_hexagon(hex_id, layer_name)
-            cached = (geometry, geometry.bounds)
-            self._sampling_cache[key] = cached
-        geometry, (minx, miny, maxx, maxy) = cached
+        minx, miny, maxx, maxy = self.get_hexagon(hex_id, layer_name).bounds
+        resolution = h3.get_resolution(hex_id)
         while True:
             lng = self._rng.uniform(minx, maxx)
             lat = self._rng.uniform(miny, maxy)
-            if contains_xy(geometry, lng, lat):
+            if h3.latlng_to_cell(lat, lng, resolution) == hex_id:
                 return lat, lng
 
     def get_centroid(self, hex_id: str) -> tuple[float, float]:
         """
-        Return hexagon centroid (cached).
+        Return hexagon centroid as h3 computes it (cached).
 
         Parameters
         ----------
