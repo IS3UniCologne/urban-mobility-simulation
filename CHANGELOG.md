@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.5.0...v0.5.1) (2026-11-25)
+
+
+### Documentation
+
+* add a version switcher and a warning banner for the develop docs ([#433](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/433)) ([3ea7506](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/3ea750663052f42fb38bcd1f444ad0a865ebef0b))
+
 ## [0.5.0](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.4.0...v0.5.0) (2026-11-25)
 
 
