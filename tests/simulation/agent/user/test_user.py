@@ -64,9 +64,13 @@ class FailingAllocationEngineStub:
         yield self._env.timeout(0)
 
 
-def attempt_order(seed: int, alternative_count: int) -> list[float]:
-    """Run one user over equally likely alternatives and return their prices in the order attempted."""
-    env = simpy.Environment()
+def build_user(
+    env: simpy.Environment,
+    search_engine: Mock,
+    seed: int,
+    max_search_duration_min: float,
+) -> User:
+    """Build a user with an equal-probability choice model that searches through search_engine."""
     sim = Mock()
     sim.env = env
     sim.config.random_manager.SEED = seed
@@ -74,6 +78,23 @@ def attempt_order(seed: int, alternative_count: int) -> list[float]:
     sim.uid_manager.generate_uid.return_value = (1, "User_1")
     sim.random_manager = RandomManager(sim)
 
+    choice_model_config = ChoiceModelConfig(CHOICE_MODEL_TYPE=EqualChoiceModelStub)
+    user_config = UserConfig(
+        TRANSIT_MAX_WAIT=10,
+        SPATIAL_STRATEGY="hexagon",
+        WALKING_SPEED_KMH=5.0,
+        MAX_SEARCH_DURATION_MIN=max_search_duration_min,
+        CHOICE_MODEL_CONFIG=choice_model_config,
+    )
+    choice_model = EqualChoiceModelStub(
+        ChoiceModelDependencies(sim=sim, choice_model_config=choice_model_config)
+    )
+    return User(sim, user_config, Mock(), Mock(), Mock(), search_engine, choice_model)
+
+
+def attempt_order(seed: int, alternative_count: int) -> list[float]:
+    """Run one user over equally likely alternatives and return their prices in the order attempted."""
+    env = simpy.Environment()
     engine = FailingAllocationEngineStub(env)
     browser = TransportationAlternativeBrowser()
     for price in range(alternative_count):
@@ -92,18 +113,7 @@ def attempt_order(seed: int, alternative_count: int) -> list[float]:
     search_engine = Mock()
     search_engine.search_for_transportation_alternatives.return_value = browser
 
-    choice_model_config = ChoiceModelConfig(CHOICE_MODEL_TYPE=EqualChoiceModelStub)
-    user_config = UserConfig(
-        TRANSIT_MAX_WAIT=10,
-        SPATIAL_STRATEGY="hexagon",
-        WALKING_SPEED_KMH=5.0,
-        MAX_SEARCH_DURATION_MIN=1,
-        CHOICE_MODEL_CONFIG=choice_model_config,
-    )
-    choice_model = EqualChoiceModelStub(
-        ChoiceModelDependencies(sim=sim, choice_model_config=choice_model_config)
-    )
-    user = User(sim, user_config, Mock(), Mock(), Mock(), search_engine, choice_model)
+    user = build_user(env, search_engine, seed=seed, max_search_duration_min=1)
     user.start()
     env.run()
     return engine.requested_prices
@@ -115,3 +125,20 @@ def test_same_seed_tries_alternatives_in_same_order() -> None:
 
     assert set(first) == {float(price) for price in range(8)}
     assert first == second
+
+
+# ten one-minute waits from 1016.305223960422 sum to 10.000000000000114 minutes in floats
+@pytest.mark.parametrize("start_min", [0.25, 1016.305223960422])
+def test_search_at_the_limit_counts_whatever_the_start_time(start_min: float) -> None:
+    env = simpy.Environment(initial_time=start_min)
+    search_engine = Mock()
+    search_engine.search_for_transportation_alternatives.return_value = (
+        TransportationAlternativeBrowser()
+    )
+    user = build_user(env, search_engine, seed=42, max_search_duration_min=10)
+
+    user.start()
+    env.run()
+
+    # one search a minute from 0 to 11 minutes, the one at exactly 10 still within the limit
+    assert search_engine.search_for_transportation_alternatives.call_count == 12
