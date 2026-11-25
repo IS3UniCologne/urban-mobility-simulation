@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from importlib import metadata
 from typing import TYPE_CHECKING
 
@@ -14,7 +15,16 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 project = "urban-mobility-simulation"
-release = metadata.version(project)
+package_version = metadata.version(project)
+
+_rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
+_is_release_build = _rtd_version == "stable" or _rtd_version.startswith("v")
+release = version = package_version if _is_release_build else "develop"
+switcher_json_url = (
+    "https://umosim.readthedocs.io/latest/_static/switcher.json"
+    if _is_release_build
+    else "_static/switcher.json"
+)
 
 extensions = [
     "myst_parser",
@@ -74,7 +84,7 @@ myst_heading_anchors = 3
 # The landing page cards use sphinx-design directives in ::: fences
 myst_enable_extensions = ["colon_fence", "substitution"]
 # enable markdown replacement of the version number in the docs, e.g. in the README
-myst_substitutions = {"release": release}
+myst_substitutions = {"release": package_version}
 
 html_theme = "pydata_sphinx_theme"
 html_title = f"umosim {release}"
@@ -94,7 +104,10 @@ html_theme_options = {
     },
     # Opens the simulation package in the API reference sidebar
     "show_nav_level": 2,
-    "navbar_end": ["version-badge", "theme-switcher", "navbar-icon-links"],
+    "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
+    # A release adds its entry to _static/switcher.json and moves "preferred" and "(stable)" to it
+    "switcher": {"json_url": switcher_json_url, "version_match": release},
+    "show_version_warning_banner": True,
     "icon_links": [
         {
             "name": "GitHub",
