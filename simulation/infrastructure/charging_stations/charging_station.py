@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol, cast
 
-import h3
 import simpy
-from shapely.geometry import Polygon
 
 from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.simulation_base import SimulationBase
@@ -37,7 +35,28 @@ class _ChargingRequest(Protocol):
     charging_duration: float | None
 
 
-class ChargingStation(SimulationBase):  # noqa: D101
+class ChargingStation(SimulationBase):
+    """
+    Physical charging station in one hexagon, with plugs and a queue.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        Simulation context.
+    charging_infrastructure : ChargingInfrastructure
+        Owning charging infrastructure.
+    cs_id : int
+        ID of the station within its charging infrastructure.
+    location : RegionId
+        Hexagon of the station.
+    power : float
+        Charging power per plug (kW).
+    capacity : int
+        Number of plugs.
+    queue_size : int
+        Maximum number of vehicles that wait for a plug.
+    """
+
     __slots__ = (
         "_capacity",
         "_centre",
@@ -50,7 +69,6 @@ class ChargingStation(SimulationBase):  # noqa: D101
         "_plug_in_lock",
         "_plug_out_lock",
         "_plugs",
-        "_polygon",
         "_power",
         "_price_per_kWh",
         "_queue",
@@ -64,7 +82,7 @@ class ChargingStation(SimulationBase):  # noqa: D101
         self,
         sim: SimulationContext,
         charging_infrastructure: ChargingInfrastructure,
-        cs_id: int,  # ID of the charging station in relation to the charging infrastructure it belongs to
+        cs_id: int,
         location: RegionId,
         power: float,
         capacity: int,
@@ -75,11 +93,8 @@ class ChargingStation(SimulationBase):  # noqa: D101
         self._env = sim.env
         self._cs_id = cs_id
         self._capacity = capacity
-        self._polygon = Polygon(
-            [(lon, lat) for lat, lon in h3.cell_to_boundary(location)]
-        )
         self._centre = GeodesicPosition(
-            self._sim, self._polygon.centroid.y, self._polygon.centroid.x
+            sim, *sim.geo_env.get_centroid(location), location
         )
         self._plugs = simpy.PriorityResource(self._env, capacity=capacity)
         self._location = location
@@ -113,7 +128,7 @@ class ChargingStation(SimulationBase):  # noqa: D101
 
     @property
     def cs_id(self) -> int:
-        """ID of the charging station in relation to the charging infrastructure it belongs to."""
+        """ID of the charging station within its charging infrastructure."""
         return self._cs_id
 
     @property
@@ -125,7 +140,11 @@ class ChargingStation(SimulationBase):  # noqa: D101
         return self._power
 
     @property
-    def centre(self) -> GeodesicPosition:  # noqa: D102
+    def centre(self) -> GeodesicPosition:
+        """Centre of the station's hexagon.
+
+        This is also the position vehicles drive to when they are assigned to this station.
+        """
         return self._centre
 
     @property
@@ -133,8 +152,9 @@ class ChargingStation(SimulationBase):  # noqa: D101
         return self._location
 
     @property
-    def polygon(self) -> Polygon:  # noqa: D102
-        return self._polygon
+    def queue(self) -> list[object]:
+        """Queue of vehicles waiting for a plug."""
+        return self._queue
 
     @property
     def queue_size(self) -> int:  # noqa: D102

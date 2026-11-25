@@ -63,12 +63,8 @@ class ChargingInfrastructure:
         self._charging_price_profile = (
             charging_infrastructure_config.CHARGING_STATION_PRICE_PROFILE
         )
-        if charging_infrastructure_config.AUCTION_CONFIG:
-            # TODO: Remove this hack once the auction modules are fully typed.
-            auction_config = cast(
-                "SharedChargingAuctionConfig",
-                charging_infrastructure_config.AUCTION_CONFIG,
-            )
+        auction_config = charging_infrastructure_config.AUCTION_CONFIG
+        if auction_config is not None:
             charging_infrastructure_config.COORDINATION_LOOKAHEAD = (
                 auction_config.AUCTION_LOOKAHEAD
             )
@@ -89,16 +85,14 @@ class ChargingInfrastructure:
             self._broadcast_prices()
         )  # updates charging prices at each hour
 
-        self._auction = self._initialize_auction()
+        self._auction = self._initialize_auction(auction_config)
 
-    def _initialize_auction(self) -> Auction | None:
+    def _initialize_auction(
+        self, auction_config: SharedChargingAuctionConfig | None
+    ) -> Auction | None:
         # TODO: @janikmu decouple VCI and auction - go for "coordination" or something
 
-        if self._charging_infra_config.AUCTION_CONFIG:
-            auction_config = cast(
-                "SharedChargingAuctionConfig",
-                self._charging_infra_config.AUCTION_CONFIG,
-            )
+        if auction_config is not None:
             auction_type = cast(
                 "type[SharedChargingAuction]", auction_config.AUCTION_TYPE
             )

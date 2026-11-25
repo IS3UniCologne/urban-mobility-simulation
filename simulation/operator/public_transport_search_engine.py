@@ -26,15 +26,21 @@ from simulation.operator.data_transfer_object.transportation_alternative_browser
 from simulation.operator.interface.search_engine_interface import SearchEngineInterface
 
 
-class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):  # noqa: D101
-    __slots__ = (
-        "_env",
-        "_fleet",
-        "_geo_env",
-        "_operator_config",
-        "_sim",
-        "_user_config",
-    )
+class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):
+    """
+    Search engine for public transport buses.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        Simulation context.
+    fleet : PublicTransportVehicleFleet
+        Fleet whose buses are searched.
+    operator_config : TransitOperatorConfig
+        Configuration of the transit operator.
+    """
+
+    __slots__ = ("_env", "_fleet", "_operator_config", "_sim", "_user_config")
 
     def __init__(
         self,
@@ -48,7 +54,6 @@ class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):  # noq
         self._fleet = fleet
         self._operator_config = operator_config
         self._user_config = self._sim.config.user
-        self._geo_env = sim.geo_env
 
     def find_viable_transit(  # noqa: ANN201, D102
         self,
@@ -184,61 +189,52 @@ class PublicTransportSearchEngine(SearchEngineInterface, SimulationBase):  # noq
 
         return browser
 
-    def _check_viable_stops(  # noqa: ANN202
+    def _check_viable_stops(
         self,
         vehicle: PublicTransitVehicle,
-        strategy,  # noqa: ANN001
+        strategy: str,
         origin: GeodesicPosition,
         destination: GeodesicPosition,
-    ):
+    ) -> dict[str, list[Stop]]:
         """
-        Check for viable transit stops nearby origin - destination travel demand for a given vehicle
-        This only checks spatial alignment
-        :param vehicle: PublicTransitVehicle
-        :param strategy: e.g. 'hexagon' (viable when in same hexagon), 'euclidean' (viable when eucl. dist. <= X), ...
-        :param origin: GeodesicPosition
-        :param destination: GeodesicPosition
-        :return: dict
-        """  # noqa: D205, D400
-        if strategy == "hexagon":
-            # trips are viable that start/end in the same hexagon as origin and destination
-            origin_poly = self._geo_env.get_hexagon(origin.get_region_id())
+        Find the route stops of a vehicle near the origin and near the destination.
 
-            destination_poly = self._geo_env.get_hexagon(destination.get_region_id())
-            in_vicinity = [
-                {
-                    "origin": x.is_in_geometry(origin_poly),
-                    "destination": x.is_in_geometry(destination_poly),
-                }
-                for x in vehicle.route.route_stops
-            ]
-            origin_in_vicinity_at = [
-                ix for ix, element in enumerate(in_vicinity) if element["origin"]
-            ]
-            destination_in_vicinity_at = [
-                ix for ix, element in enumerate(in_vicinity) if element["destination"]
-            ]
+        This checks only the spatial alignment, not the departure times.
 
-            # now we know which stops would potentially be in vicinity of each origin and destination
-            if not origin_in_vicinity_at or not destination_in_vicinity_at:
-                # if either no stop is in vicinity for origin or destination, return no viable stops
-                return {}
-            else:
-                # otherwise return a dict of viable stops for origin and destination
-                return {
-                    "origin": [
-                        vehicle.route.route_stop_by_id(ix)
-                        for ix in origin_in_vicinity_at
-                    ],
-                    "destination": [
-                        vehicle.route.route_stop_by_id(ix)
-                        for ix in destination_in_vicinity_at
-                    ],
-                }
-        else:
+        Parameters
+        ----------
+        vehicle : PublicTransitVehicle
+            Vehicle whose route stops are checked.
+        strategy : str
+            Spatial strategy, only "hexagon" (a stop is near when it is in the same hexagon).
+        origin : GeodesicPosition
+            Origin of the transport request.
+        destination : GeodesicPosition
+            Destination of the transport request.
+
+        Returns
+        -------
+        dict of str to list of Stop
+            Stops near the origin under "origin" and stops near the destination under "destination".
+            Empty if no stop is near the origin or no stop is near the destination.
+
+        Raises
+        ------
+        NotImplementedError
+            If the strategy is not "hexagon".
+        """
+        if strategy != "hexagon":
             raise NotImplementedError(
                 "Other strategies for aligning travel demands are not implemented."
             )
+        origin_region = origin.get_region_id()
+        destination_region = destination.get_region_id()
+        stops = vehicle.route.route_stops
+        near_origin = [s for s in stops if s.get_region_id() == origin_region]
+        near_destination = [s for s in stops if s.get_region_id() == destination_region]
+        if not near_origin or not near_destination:
+            return {}
+        return {"origin": near_origin, "destination": near_destination}
 
     def _reachable_in_time(  # noqa: ANN202
         self,

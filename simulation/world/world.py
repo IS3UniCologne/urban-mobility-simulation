@@ -1,4 +1,6 @@
-from __future__ import annotations  # noqa: D100
+"""World: the operators, users, vehicles and charging infrastructures of one simulation."""
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
@@ -11,18 +13,19 @@ from simulation.infrastructure.helper.distance_matrix_importer import (
     DistanceMatrixImporter,
 )
 from simulation.operator.operator import Operator, OperatorDependencies
-from simulation.vehicle.vehicle import Vehicle
 from simulation.world.mobility_search_engine import MobilitySearchEngine
 
 if TYPE_CHECKING:
     import simpy
     from pandas import DataFrame
 
-    from simulation.agent.user import user
     from simulation.agent.user.user import User
     from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_environment import GeodesicEnvironment
-    from simulation.helper.configuration.configuration import Configuration
+    from simulation.helper.configuration.configuration import (
+        Configuration,
+        OperatorConfig,
+    )
     from simulation.helper.random.random_manager import RandomManager
     from simulation.infrastructure.helper.timetable import Timetable
     from simulation.operator.operations_management.operations_public_transport import (
@@ -42,7 +45,25 @@ if TYPE_CHECKING:
     from simulation.vehicle.vehicle import Vehicle
 
 
-class World(SimulationBase):  # noqa: D101
+class World(SimulationBase):
+    """
+    The world.
+
+    The world loads the distance matrix, builds one charging infrastructure per distinct configuration and builds the configured operators.
+    The demand factory adds users.
+    The vehicle fleets add and remove vehicles.
+
+    Parameters
+    ----------
+    sim : SimulationContext
+        Simulation context with the configuration, geodesic environment and random manager.
+
+    Raises
+    ------
+    ValueError
+        If the configuration defines no operators.
+    """
+
     # There is only one instance of this class.
     __instance = None
     __slots__ = (
@@ -84,13 +105,13 @@ class World(SimulationBase):  # noqa: D101
 
         self._operators: list[Operator] = []
 
-        self._demand_processes = []
+        self._demand_processes: list[simpy.Process] = []
 
         self._search_engine = {}
         self._payment_engine = {}
 
         # Store all current users
-        self._users: set[user.User] = set()
+        self._users: set[User] = set()
         self._total_users: int = 0
 
         # Store all current vehicles
@@ -117,24 +138,12 @@ class World(SimulationBase):  # noqa: D101
 
     @property
     def user_log(self) -> UserLog:
-        """Get the user log.
-
-        Returns
-        -------
-        UserLog
-            The user log instance for system-level trip tracking.
-        """
+        """User log for system-level trip tracking."""
         return self._user_log
 
     @property
     def mobility_search(self) -> MobilitySearchEngine:
-        """Get the mobility search provider.
-
-        Returns
-        -------
-        MobilitySearch
-            The mobility search instance.
-        """
+        """Mobility search engine that users query for transport options."""
         return self._mobility_search
 
     @property
@@ -143,7 +152,8 @@ class World(SimulationBase):  # noqa: D101
         return self._random_manager
 
     @property
-    def geo_env(self) -> GeodesicEnvironment:  # noqa: D102
+    def geo_env(self) -> GeodesicEnvironment:
+        """Geodesic environment of the simulation."""
         return self._geo_env
 
     @property
@@ -152,7 +162,8 @@ class World(SimulationBase):  # noqa: D101
         return self._distance_matrix
 
     @property
-    def demand_processes(self):  # noqa: ANN201, D102
+    def demand_processes(self) -> list[simpy.Process]:
+        """Demand generation processes, one per spatial unit."""
         return self._demand_processes
 
     @property
@@ -205,7 +216,7 @@ class World(SimulationBase):  # noqa: D101
         )
         return dmi.load_distance_matrix()
 
-    def add_user(self, user: user.User) -> None:
+    def add_user(self, user: User) -> None:
         """Add a user to the world until their process finishes.
 
         Parameters
@@ -220,10 +231,12 @@ class World(SimulationBase):  # noqa: D101
 
         user.process_finished.callbacks.append(lambda _event: self._remove_user(user))
 
-    def add_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
+    def add_vehicle(self, vehicle: Vehicle) -> None:
+        """Add a vehicle to the world."""
         self._vehicles.add(vehicle)
 
-    def remove_vehicle(self, vehicle: Vehicle):  # noqa: ANN201, D102
+    def remove_vehicle(self, vehicle: Vehicle) -> None:
+        """Remove a vehicle from the world, if it is there."""
         self._vehicles.discard(vehicle)
 
     @property
@@ -238,26 +251,30 @@ class World(SimulationBase):  # noqa: D101
 
     # TODO: get rid of this, only one user uses it and it should be dealt with differently
     @property
-    def vehicles(self) -> set[Vehicle]:  # noqa: D102
+    def vehicles(self) -> set[Vehicle]:
+        """Vehicles currently in the world."""
         return self._vehicles
 
     @property
-    def charging_infrastructures(self) -> list[ChargingInfrastructure] | None:  # noqa: D102
+    def charging_infrastructures(self) -> list[ChargingInfrastructure] | None:
+        """Charging infrastructures of the operators, or None if no operator has one."""
         return self._charging_infrastructures
 
     @property
-    def simulation_finished(self):  # noqa: ANN201, D102
+    def simulation_finished(self) -> simpy.Event:
+        """Event that succeeds when the simulation finishes."""
         return self._simulation_finished
 
     @property
-    def changed(self):  # noqa: ANN201, D102
+    def changed(self) -> simpy.Event:
+        """Event that signals a change of the world."""
         return self._changed
 
     @changed.setter
-    def changed(self, event):  # noqa: ANN001, ANN202
+    def changed(self, event: simpy.Event) -> None:
         self._changed = event
 
-    def _remove_user(self, user: user.User) -> None:
+    def _remove_user(self, user: User) -> None:
         self._users.discard(user)
 
         self.logger.debug(
@@ -284,10 +301,11 @@ class World(SimulationBase):  # noqa: D101
             PublicTransportVehicleFleet,
         )
 
-        return PublicTransportVehicleFleet(sim=self._sim, world=self)
+        # TODO: old, pls fix
+        return PublicTransportVehicleFleet(sim=self._sim, world=self)  # pyrefly: ignore[bad-instantiation]
 
     def _create_public_transport_search_engine(
-        self, operator_config: dict, fleet: PublicTransportVehicleFleet
+        self, operator_config: OperatorConfig, fleet: PublicTransportVehicleFleet
     ) -> PublicTransportSearchEngine:
         from simulation.operator.public_transport_search_engine import (
             PublicTransportSearchEngine,
@@ -299,7 +317,7 @@ class World(SimulationBase):  # noqa: D101
 
     def _create_public_transport_operations(
         self,
-        operator_config: dict,
+        operator_config: OperatorConfig,
         timetable: Timetable,
         fleet: PublicTransportVehicleFleet,
     ) -> OperationsPublicTransport:
@@ -307,7 +325,8 @@ class World(SimulationBase):  # noqa: D101
             OperationsPublicTransport,
         )
 
-        return OperationsPublicTransport(
+        # TODO: old, pls fix
+        return OperationsPublicTransport(  # pyrefly: ignore[bad-instantiation]
             sim=self._sim,
             timetable=timetable,
             fleet=fleet,

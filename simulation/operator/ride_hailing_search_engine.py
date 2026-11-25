@@ -108,14 +108,9 @@ class RideHailingSearchEngine(SearchEngine):
         # Calc Distance
         distance = route.distance  # Euclidean Distance
 
-        # human-driven vehicles first, this just preserves old behavior, but is not necessary for correctness
-        candidates = sorted(
-            self._candidates(origin, distance),
-            key=lambda car: car.autonomy_type is AutonomyType.AUTONOMOUS,
-        )
-        for car in candidates:
-            is_autonomous = car.autonomy_type is AutonomyType.AUTONOMOUS
-            if car.is_reserved and not is_autonomous:
+        for car in self._candidates(origin, distance):
+            # allocation refuses a reserved vehicle
+            if car.is_reserved:
                 continue
 
             if car.state is VehicleStates.STANDBY:
@@ -133,7 +128,7 @@ class RideHailingSearchEngine(SearchEngine):
                 + distance / 1000 * self._price_per_km,
                 self._min_price,
             )
-            if is_autonomous:
+            if car.autonomy_type is AutonomyType.AUTONOMOUS:
                 price *= self._AV_price_reduction
 
             browser.add_transportation_alternative(

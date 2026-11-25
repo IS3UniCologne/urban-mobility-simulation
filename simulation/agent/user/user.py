@@ -47,6 +47,9 @@ if TYPE_CHECKING:
     from simulation.operator.interface.operator_interface import OperatorInterface
     from simulation.world.mobility_search_engine import MobilitySearchEngine
 
+_TIME_TOLERANCE_MIN = 1e-9
+"""Float noise allowed when two simulation times are compared (min)."""
+
 
 class User(Agent):
     """
@@ -483,12 +486,16 @@ class User(Agent):
         """
         Check if the search duration has exceeded the maximum allowed time.
 
+        A search at exactly the limit is still within it.
+        The comparison allows for float noise in the clock, so the result is the same on every platform.
+
         Returns
         -------
         bool
             True if search duration exceeded, False otherwise.
         """
-        return self._env.now - self._search_start_time > self._max_search_duration_min
+        elapsed = self._env.now - self._search_start_time
+        return elapsed > self._max_search_duration_min + _TIME_TOLERANCE_MIN
 
     def _search_for_alternatives(
         self,
