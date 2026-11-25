@@ -10,9 +10,9 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     import simpy
-    from shapely.geometry import Polygon
     from simpy import Event
 
+    from simulation.context.simulation_context import SimulationContext
     from simulation.environment.geodesic_position import GeodesicPosition
     from simulation.helper.types import RegionId
     from simulation.infrastructure.charging_stations.charging_station import (
@@ -26,11 +26,13 @@ if TYPE_CHECKING:
 class VirtualChargingStation(SimulationBase):
     """Virtual view of a physical charging station for a single operator.
 
-    Mirrors the physical station's plugs and queue while tracking
+    Mirrors the physical station's plugs and queue size while tracking
     operator-specific capacity reservations.
 
     Parameters
     ----------
+    sim : SimulationContext
+        Simulation context.
     charging_station : ChargingStation
         Backing physical charging station.
     virtual_charging_infrastructure : VirtualChargingInfrastructure
@@ -47,7 +49,6 @@ class VirtualChargingStation(SimulationBase):
         "_location",
         "_physical_charging_station",
         "_plugs",
-        "_polygon",
         "_power",
         "_queue",
         "_queue_size",
@@ -57,24 +58,24 @@ class VirtualChargingStation(SimulationBase):
 
     def __init__(
         self,
+        sim: SimulationContext,
         charging_station: ChargingStation,
         virtual_charging_infrastructure: VirtualChargingInfrastructure,
     ) -> None:
-        super().__init__(charging_station._sim)  # noqa: SLF001
+        super().__init__(sim)
         self._cs_id = charging_station.cs_id
-        self._env = charging_station._env  # noqa: SLF001
+        self._env = sim.env
         self._physical_charging_station = charging_station
         self._valid_timeframe: tuple[float, float] | None = None
         self._capacity = charging_station.capacity
         self._blocked_capacity = 0
-        self._polygon = charging_station.polygon
         self._centre = charging_station.centre
         self._plugs = charging_station.plugs  # reference, mutable object
         self._location = charging_station.location
         self._power = charging_station.power
-        self._queue = charging_station._queue  # noqa: SLF001
-        self._queue_size = charging_station._queue_size  # noqa: SLF001
-        self._current_queue_time = charging_station._current_queue_time  # noqa: SLF001
+        self._queue = charging_station.queue
+        self._queue_size = charging_station.queue_size
+        self._current_queue_time = charging_station.current_queue_time
         self._virtual_charging_infrastructure = virtual_charging_infrastructure
 
     def plug_in_notify(self) -> Generator[Event, None, None]:
@@ -187,18 +188,16 @@ class VirtualChargingStation(SimulationBase):
 
     @property
     def centre(self) -> GeodesicPosition:
-        """Centroid position of the station's cell."""
+        """Centre of the station's hexagon.
+
+        This is also the position vehicles drive to when they are assigned to this station.
+        """
         return self._centre
 
     @property
     def location(self) -> RegionId:
         """Region id of the station."""
         return self._location
-
-    @property
-    def polygon(self) -> Polygon:
-        """Cell boundary polygon."""
-        return self._polygon
 
     @property
     def queue_size(self) -> int:

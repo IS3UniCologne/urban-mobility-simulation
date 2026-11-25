@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from simulation.environment.geodesic_position import GeodesicPosition
-
 if TYPE_CHECKING:
     from simpy import Event
 
@@ -64,11 +62,7 @@ class ChargingSession:
         -------
         ChargingSession
         """
-        destination = charging_station.location
-        dest_position = GeodesicPosition(
-            sim, *sim.geo_env.get_centroid(destination), destination
-        )
-        distance = vehicle.position << dest_position
+        distance = vehicle.position << charging_station.centre
         estimated_arrival_time = sim.env.now + distance / vehicle.velocity
 
         charging_duration = (
@@ -86,7 +80,7 @@ class ChargingSession:
             charging_duration = min(charging_duration, slot_window)
 
         return cls(
-            destination=destination,
+            destination=charging_station.location,
             start_time=sim.env.now,
             estimated_arrival_time=estimated_arrival_time,
             scheduled_time=scheduled_time,

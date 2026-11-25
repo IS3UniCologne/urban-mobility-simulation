@@ -53,7 +53,7 @@ class Auction(SimulationBase, ABC, Generic[BidT, ResultT]):
         self._env = sim.env
         self._is_open = False
         self._bid_syntax: type[BidT] | type[None] = type(None)
-        self._bids: BidT | None = None
+        self._bids: BidT  # each subclass assigns its empty bids
         self._result_syntax: type[ResultT] | type[None] = type(None)
         self._result: ResultT | None = None
 
