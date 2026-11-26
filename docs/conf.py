@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 from importlib import metadata
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sphinx.util.logging import getLogger
@@ -16,17 +18,17 @@ logger = getLogger(__name__)
 
 project = "urban-mobility-simulation"
 package_version = metadata.version(project)
+_docs_url = "https://umosim.readthedocs.io"
 
-_rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
-_is_release_build = _rtd_version == "stable" or _rtd_version.startswith("v")
+# Read the Docs reports "stable" and each release as type "tag", develop as "branch"
+_is_release_build = os.environ.get("READTHEDOCS_VERSION_TYPE") == "tag"
 release = version = package_version if _is_release_build else "develop"
+# Releases read the list the develop build writes, so an old release learns of newer ones
 switcher_json_url = (
-    "https://umosim.readthedocs.io/latest/_static/switcher.json"
+    f"{_docs_url}/latest/_static/switcher.json"
     if _is_release_build
     else "_static/switcher.json"
 )
-
-switcher_version_match = "stable" if _rtd_version == "stable" else release
 
 extensions = [
     "myst_parser",
@@ -107,10 +109,9 @@ html_theme_options = {
     # Opens the simulation package in the API reference sidebar
     "show_nav_level": 2,
     "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
-    "switcher": {
-        "json_url": switcher_json_url,
-        "version_match": switcher_version_match,
-    },
+    "switcher": {"json_url": switcher_json_url, "version_match": release},
+    # The switcher list exists only in the build output, written by _write_switcher
+    "check_switcher": False,
     "show_version_warning_banner": True,
     "icon_links": [
         {
@@ -137,6 +138,29 @@ def _check_pydantic_models(app: Sphinx, env: BuildEnvironment) -> None:
         )
 
 
+def _write_switcher(app: Sphinx, exception: Exception | None) -> None:
+    """Write the version switcher list into the HTML output.
+
+    The stable entry takes the package version.
+    Develop keeps the version of the last release until Release Please merges the next one,
+    so the list the develop build writes names the last release.
+    """
+    if exception is not None or app.builder.format != "html":
+        return
+    entries = [
+        {"name": "develop", "version": "develop", "url": f"{_docs_url}/latest/"},
+        {
+            "name": "stable",
+            "version": package_version,
+            "url": f"{_docs_url}/stable/",
+            "preferred": True,
+        },
+    ]
+    switcher_path = Path(app.outdir, "_static", "switcher.json")
+    switcher_path.write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
+
+
 def setup(app: Sphinx) -> None:
-    """Fail the build when the configuration models lose their Pydantic rendering."""
+    """Check the Pydantic rendering and write the version switcher list."""
     app.connect("env-check-consistency", _check_pydantic_models)
+    app.connect("build-finished", _write_switcher)
