@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.2](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.5.1...v0.5.2) (2026-11-26)
+
+
+### Bug Fixes
+
+* **docs:** match the stable entry of the version switcher by name ([9ddddcd](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/9ddddcdfc66795216cbfcc449cbca0ce9e3b7536))
+
+
+### Documentation
+
+* let Release Please set the stable entry of the version switcher ([e85a314](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/e85a3145bd97c207b30c6ca34da08322d307f631))
+
 ## [0.5.1](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.5.0...v0.5.1) (2026-11-25)
 
 
