@@ -6,7 +6,7 @@
   },
   {
     "name": "stable",
-    "version": "0.5.1",
+    "version": "stable",
     "url": "https://umosim.readthedocs.io/stable/",
     "preferred": true
   }

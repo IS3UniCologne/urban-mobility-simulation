@@ -26,6 +26,8 @@ switcher_json_url = (
     else "_static/switcher.json"
 )
 
+switcher_version_match = "stable" if _rtd_version == "stable" else release
+
 extensions = [
     "myst_parser",
     "sphinx.ext.autodoc",
@@ -105,9 +107,10 @@ html_theme_options = {
     # Opens the simulation package in the API reference sidebar
     "show_nav_level": 2,
     "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
-    # Release Please sets the stable entry of _static/switcher.json to each new release
-    # (extra-files in release-please-config.json), so a stable build matches the preferred entry
-    "switcher": {"json_url": switcher_json_url, "version_match": release},
+    "switcher": {
+        "json_url": switcher_json_url,
+        "version_match": switcher_version_match,
+    },
     "show_version_warning_banner": True,
     "icon_links": [
         {

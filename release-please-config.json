@@ -5,14 +5,7 @@
   "packages": {
     ".": {
       "package-name": "urban-mobility-simulation",
-      "include-component-in-tag": false,
-      "extra-files": [
-        {
-          "type": "json",
-          "path": "docs/_static/switcher.json",
-          "jsonpath": "$[1].version"
-        }
-      ]
+      "include-component-in-tag": false
     }
   },
   "pull-request-title-pattern": "chore: release ${version}",
