@@ -1,5 +1,9 @@
 # This CITATION.cff file was generated with cffinit.
 # Visit https://bit.ly/cffinit to generate yours today!
+#
+# GitHub reads this file for its citation box. Zenodo reads .zenodo.json
+# instead and ignores this file, so a change to the title, authors,
+# abstract or keywords goes into both files.
 
 cff-version: 1.2.0
 title: 'umosim: A fast, extensible, agent-based model of smart sustainable mobility services, markets, and policies'
@@ -11,6 +15,7 @@ authors:
   - given-names: William
     family-names: Hulin
     affiliation: University of Cologne
+    orcid: 'https://orcid.org/0009-0002-8562-0614'
   - given-names: Janik
     family-names: Muires
     affiliation: University of Cologne
