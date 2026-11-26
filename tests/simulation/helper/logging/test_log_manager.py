@@ -311,6 +311,11 @@ class TestLogManagerClose:
 
     def test_close_detaches_and_closes_every_handler(self) -> None:
         """After close no logger holds the manager's handlers and its files are shut."""
+        logger_names = ("Plain", "Overridden", "system.boot", "metrics.output")
+        # pytest adds capture handlers to non-propagating loggers earlier tests made
+        foreign_handlers = {
+            name: set(logging.getLogger(name).handlers) for name in logger_names
+        }
         manager = LogManager(self.config, self.env)
         class_logger = manager.get_class_logger("Plain")
         override_logger = manager.get_class_logger("Overridden")
@@ -323,7 +328,7 @@ class TestLogManagerClose:
         manager.close()
 
         for logger in (class_logger, override_logger, system_logger, metrics_logger):
-            assert logger.handlers == []
+            assert set(logger.handlers) <= foreign_handlers[logger.name]
         root = logging.getLogger()
         assert manager._shared_console_handler not in root.handlers
         assert manager._shared_memory_handler not in root.handlers
