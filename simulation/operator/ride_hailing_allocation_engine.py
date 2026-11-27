@@ -194,7 +194,8 @@ class RideHailingAllocationEngine(AllocationEngine):
         vehicle_allocation = VehicleAllocation(
             user,
             selected_transportation_alternative,
-            selected_vehicle.position,
+            # the user's origin, since a vehicle's position changes only when a leg ends
+            user.transport_request.origin,
             selected_transportation_alternative.est_pickup_time,
         )
 
