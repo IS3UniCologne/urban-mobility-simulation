@@ -158,7 +158,6 @@ project-excludes = [
   "simulation/operator/ride_hailing_fleet.py",
   "simulation/operator/mixed_shared_vehicle_fleet.py",
   "simulation/operator/operations_management/algorithms/charging_station_allocation.py",
-  "simulation/operator/operations_management/integrated_shared_mobility_operations.py",
   "simulation/operator/operations_management/operations.py",
   "simulation/operator/operations_management/operations_public_transport.py",
   "simulation/operator/operations_management/ridehailing_MP_charging_operations.py",
