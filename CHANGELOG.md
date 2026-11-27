@@ -1,5 +1,76 @@
 # Changelog
 
+## [0.5.2](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.5.1...v0.5.2) (2026-11-26)
+
+
+### Bug Fixes
+
+* **docs:** match the stable entry of the version switcher by name ([9ddddcd](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/9ddddcdfc66795216cbfcc449cbca0ce9e3b7536))
+
+
+### Documentation
+
+* let Release Please set the stable entry of the version switcher ([e85a314](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/e85a3145bd97c207b30c6ca34da08322d307f631))
+
+## [0.5.1](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.5.0...v0.5.1) (2026-11-25)
+
+
+### Documentation
+
+* add a version switcher and a warning banner for the develop docs ([#433](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/433)) ([3ea7506](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/3ea750663052f42fb38bcd1f444ad0a865ebef0b))
+
+## [0.5.0](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.4.0...v0.5.0) (2026-11-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ride_hailing_search_engine:** results change for every scenario with autonomous ride-hailing vehicles
+* **charging_station:** remove ChargingStation.polygon, VirtualChargingStation.polygon and GeodesicPosition.is_in_geometry. VirtualChargingStation takes a new sim parameter.
+* **user:** fix non-deterministic transport choice ([#417](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/417))
+* **energy_system:** Initial charge of 0 no longer sets it to 1 ([#418](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/418))
+* **relocation_job:** read the relocation velocity from the owning operator instead of the first operator in the config ([#420](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/420))
+
+### Features
+
+* allow time-dependent prices for charging ([#378](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/378)) ([1d0e151](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/1d0e1514c47e9eddcb2854634a8b48e48277a220))
+
+
+### Bug Fixes
+
+* **charging_station:** use the h3 hexagon centre as the charging station centre ([#423](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/423)) ([27e983b](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/27e983b17ec4f7ab0101407920509aadd1dba637))
+* **demand_importer:** reject an origin with more than one arrival rate ([#419](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/419)) ([4700923](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/4700923e5fdf62b21a3c3458c91464145dfd083a))
+* **energy_system:** Initial charge of 0 no longer sets it to 1 ([#418](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/418)) ([8d6f335](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/8d6f335c94c5035b09d3ee79c28ecfb33b46adf8))
+* **relocation_job:** read the relocation velocity from the owning operator instead of the first operator in the config ([#420](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/420)) ([d390d1c](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/d390d1cc6d35de5885c9ded540047c4add7cf78c))
+* **ride_hailing_search_engine:** skip every reserved vehicle in the search ([#429](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/429)) ([030238b](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/030238b6a67d6a6f19442b70fe58fe29a8b3bf97))
+* **user:** fix non-deterministic transport choice ([#417](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/417)) ([2398756](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/23987568e1f5b312b8fd747daf11a7b19f6b4a63))
+
+
+### Performance
+
+* **demand:** cut the per-user cost of demand generation ([#428](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/428)) ([10680fa](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/10680fa4cde022a62b79178945d6174aeebdd078))
+* look a vehicle up in a set when it registers ([f58991c](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/f58991c951e022342922472f0cf24d13c92e0fc4))
+* replace the R-tree in the spatial indexes with NumPy arrays ([#427](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/427)) ([f58991c](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/f58991c951e022342922472f0cf24d13c92e0fc4))
+* **user:** run the steps of a user inside its own SimPy process ([#425](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/425)) ([647d6e2](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/647d6e211ee66520f5520ef46f8e27e6345a09df))
+
+
+### Refactors
+
+* replace deprecated pandas inplace parameter with assignments ([#409](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/409)) ([9d8ce9f](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/9d8ce9f96d2473ef20108929a134d4de432e21fb)), closes [#405](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/405)
+* **world:** type the world, the demand factory and the shared charging auction ([#424](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/424)) ([8d5f218](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/8d5f2189bb85324a4a9133fdaa76163458190124)), closes [#195](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/195)
+
+
+### Documentation
+
+* **contributing:** point the configuration rule at correct file ([#421](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/421)) ([5724dc4](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/5724dc48dcdbcfa4b176dbeb566f5a5a8e0df6b1))
+* **random_manager:** replace the Markdown fences in the RandomManager docs ([#422](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/422)) ([e07c110](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/e07c110cec907d97949fa8dd349e92a11619e0ec))
+
+
+### Dependencies
+
+* bump highspy from 1.15.1 to 1.16.0 in the runtime-dependencies group ([#431](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/431)) ([c380f12](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/c380f127c60d66503d3dd4c961584797c41a5e7a))
+* bump soupsieve from 2.10 to 4.0 ([#412](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/412)) ([1e93096](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/1e9309686f64b140f1b881392680c667c7344a2b))
+* bump the runtime-dependencies group with 3 updates ([#415](https://github.com/IS3UniCologne/urban-mobility-simulation/issues/415)) ([88dbc4b](https://github.com/IS3UniCologne/urban-mobility-simulation/commit/88dbc4b8ead39b06994ceb2eefc221c1bd59d5c8))
+
 ## [0.4.0](https://github.com/IS3UniCologne/urban-mobility-simulation/compare/v0.3.0...v0.4.0) (2026-11-09)
 
 

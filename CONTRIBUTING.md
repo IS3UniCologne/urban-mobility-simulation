@@ -125,8 +125,8 @@ test suite.
 CI runs the nox sessions above except pre-commit on GitHub-hosted runners, for PRs from
 forks too. Ruff runs in a workflow of its own.
 
-CI also compares the CPU time and peak memory of the saturated end-to-end scenarios
-between your PR and its target branch. The result shows up as a comment on the PR, or for
+CI also compares the CPU time and peak memory of the saturated and the large fleet
+end-to-end scenarios between your PR and its target branch. The result shows up as a comment on the PR, or for
 a PR from a fork in the summary of the Benchmark job. To run the comparison yourself (not
 part of `nox -r`):
 

@@ -4,7 +4,7 @@ license         = "MIT"
 name            = "urban-mobility-simulation"
 readme          = "README.md"
 requires-python = ">=3.11, <3.15.0"
-version         = "0.4.0"
+version         = "0.5.2"
 
 classifiers = [
   "Private :: Do Not Upload",
@@ -27,7 +27,6 @@ dependencies = [
   "prettytable>=3.18.0",
   "pyarrow>=25.0.0",
   "pydantic>=2.13.4",
-  "rtree>=1.4.1",
   "shapely>=2.1.2",
   "simpy>=4.1.2",
   "statsmodels>=0.14.6",
@@ -177,9 +176,6 @@ project-excludes = [
   "simulation/vehicle/public_transit_vehicle.py",
   "simulation/vehicle/ride_hailing_vehicle.py",
   "simulation/vehicle/shared_vehicle.py",
-  "simulation/world/demand/demand_factory.py",
-  "simulation/world/markets/shared_charging_auction.py",
-  "simulation/world/world.py",
 ]
 
 [tool.pytest.ini_options]

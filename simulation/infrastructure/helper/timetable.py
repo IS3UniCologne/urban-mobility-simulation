@@ -6,6 +6,7 @@ import datetime
 from typing import TYPE_CHECKING
 
 import geopandas as gpd
+import h3
 import pandas as pd
 
 from simulation.environment.geodesic_position import GeodesicPosition
@@ -37,13 +38,12 @@ class Timetable(SimulationBase):
         Simulation context.
     """
 
-    __slots__ = ("_data_path", "_geo_env", "_sim", "_trips")
+    __slots__ = ("_data_path", "_sim", "_trips")
 
     def __init__(self, data_path: Path, sim: SimulationContext) -> None:
         super().__init__(sim)
         self._data_path = data_path
         self._trips: gpd.GeoDataFrame | None = None
-        self._geo_env = sim.geo_env
         self._sim = sim
 
     @property
@@ -211,8 +211,13 @@ class Timetable(SimulationBase):
     ) -> gpd.GeoDataFrame:
         if strategy == "hexagon":
             # trips are viable that start/end in the same hexagon
-            poly = self._geo_env.get_hexagon(position.get_region_id())
-            return trips[trips.within(poly)]
+            region = position.get_region_id()
+            resolution = h3.get_resolution(region)
+            in_region = [
+                h3.latlng_to_cell(lat, lng, resolution) == region
+                for lat, lng in zip(trips["stop_lat"], trips["stop_lon"])
+            ]
+            return trips.loc[in_region]
         else:
             raise NotImplementedError(
                 "Other strategies for aligning travel demands are not implemented."

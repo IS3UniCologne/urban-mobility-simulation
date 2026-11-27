@@ -5,6 +5,7 @@ The PR side is the working tree this script runs from.
 Each side gets its own environment, its own Cython build and its own datasets.
 Runs alternate between the sides, each in a fresh process and with the dataset caches
 removed, so every run includes building the dataset cache.
+A scenario that one side has no configuration for is left out, as in the PR that adds it.
 The report is a verdict and a Markdown table of medians, meant for a PR comment.
 A change beyond the threshold of its metric is flagged as a regression or improvement.
 Wall time is reported for context only, since load from other jobs on the machine
@@ -42,7 +43,7 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = ROOT / "data" / "test_output"
 PYTHON_VERSION = f"{sys.version_info.major}.{sys.version_info.minor}"
-SCENARIOS = ("saturated_rh", "saturated_sm")
+SCENARIOS = ("saturated_rh", "saturated_sm", "large_fleet_sm")
 REPEATS = 3
 # About three times the spread of one commit's runs on the CI runner, at least 1%. Twenty
 # runs of the saturated scenarios spread by 1.2% in CPU time and 0.25% in peak memory
@@ -208,8 +209,9 @@ def _compare(base: str) -> str:
             # The first import compiles bytecode, so building the datasets keeps that
             # CPU time out of the measured runs
             _build_datasets(side)
-        samples = _measure_all(sides)
-    return _report(samples, base_side, pr_side, base_commit)
+        scenarios = _shared_scenarios(sides)
+        samples = _measure_all(sides, scenarios)
+    return _report(samples, scenarios, base_side, pr_side, base_commit)
 
 
 def _export(commit: str, destination: Path) -> None:
@@ -268,12 +270,26 @@ def _pinned_env() -> dict[str, str]:
     return env
 
 
-def _measure_all(sides: Sequence[Side]) -> dict[tuple[str, Side], list[Sample]]:
+def _config_dir(side: Side, scenario: str) -> Path:
+    return side.root / "tests" / "configurations" / scenario
+
+
+def _shared_scenarios(sides: Sequence[Side]) -> list[str]:
+    return [
+        scenario
+        for scenario in SCENARIOS
+        if all(_config_dir(side, scenario).is_dir() for side in sides)
+    ]
+
+
+def _measure_all(
+    sides: Sequence[Side], scenarios: Sequence[str]
+) -> dict[tuple[str, Side], list[Sample]]:
     samples: dict[tuple[str, Side], list[Sample]] = defaultdict(list)
     for repeat in range(REPEATS):
         # Alternate the order so a slow phase of the machine hits both sides
         order = sides if repeat % 2 == 0 else sides[::-1]
-        for scenario in SCENARIOS:
+        for scenario in scenarios:
             for side in order:
                 sample = _measure(side, scenario)
                 logger.info(
@@ -295,7 +311,7 @@ def _measure(side: Side, scenario: str) -> Sample:
     # elsewhere would run warm after its first run)
     for cache in (side.root / "data" / "datasets").glob("e2e_*/.cache"):
         shutil.rmtree(cache)
-    config_dir = side.root / "tests" / "configurations" / scenario
+    config_dir = _config_dir(side, scenario)
     command = (str(side.python), "-c", RUN_SCENARIO, str(config_dir))
     start = time.perf_counter()
     process = subprocess.Popen(command, cwd=side.root, env=_pinned_env())
@@ -314,13 +330,14 @@ def _measure(side: Side, scenario: str) -> Sample:
 
 def _report(
     samples: dict[tuple[str, Side], list[Sample]],
+    scenarios: Sequence[str],
     base_side: Side,
     pr_side: Side,
     base_commit: str,
 ) -> str:
     rows = []
     flagged = []
-    for scenario in SCENARIOS:
+    for scenario in scenarios:
         cells = []
         for metric in METRICS:
             base = statistics.median(map(metric.value, samples[scenario, base_side]))
@@ -334,6 +351,12 @@ def _report(
                 flagged.append(f"- {metric.label} of {scenario}: {change}")
         rows.append(f"| {scenario} | {' | '.join(cells)} |")
     verdict = ["**Flagged:**", "", *flagged] if flagged else ["**No flagged changes.**"]
+    skipped = [scenario for scenario in SCENARIOS if scenario not in scenarios]
+    skipped_note = (
+        [f"Not compared, since one side has no such scenario: {', '.join(skipped)}."]
+        if skipped
+        else []
+    )
     return (
         "\n".join(
             [
@@ -350,6 +373,7 @@ def _report(
                 f"A CPU time change beyond {CPU_TIME_THRESHOLD_PCT:g}% or a peak memory "
                 f"change beyond {PEAK_MEMORY_THRESHOLD_PCT:g}% is flagged. "
                 "Wall time is for context only.",
+                *skipped_note,
             ]
         )
         + "\n"

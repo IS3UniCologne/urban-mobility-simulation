@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from simulation.environment.geodesic_position import GeodesicPosition
 from simulation.helper.enums import TaskState
 from simulation.operator.operations_management.operations import (
     Operations,
@@ -50,12 +49,7 @@ class RideHailingOperations(Operations):
             Charging session DTO.
         """
         vehicle = charging_session.vehicle
-        geo_env = self._sim.geo_env
-        dest_position = GeodesicPosition(
-            self._sim,
-            *geo_env.get_centroid(charging_session.destination),
-            charging_session.destination,
-        )
+        dest_position = charging_session.charging_station.centre
         distance = vehicle.destination << dest_position
 
         reservation = vehicle.reserve()

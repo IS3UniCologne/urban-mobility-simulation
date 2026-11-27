@@ -39,6 +39,18 @@ class UidLoggerAdapter(logging.LoggerAdapter):  # type: ignore[type-arg]
         # Pre-cache the extra dict to avoid repeated creation
         self._extra_uid = uid_dict
 
+    def debug(
+        self, msg: object, *args: object, stacklevel: int = 1, **kwargs: object
+    ) -> None:
+        """Log a debug message, returning after one level check while debug is off.
+
+        Debug is off in a normal run, where every step of every user calls this method.
+        """
+        if self.logger.isEnabledFor(logging.DEBUG):
+            # One level up, so the record names the caller instead of this method
+            options: dict[str, Any] = {**kwargs, "stacklevel": stacklevel + 1}
+            self.log(logging.DEBUG, msg, *args, **options)
+
     def process(
         self, msg: str, kwargs: MutableMapping[str, Any]
     ) -> tuple[str, MutableMapping[str, Any]]:

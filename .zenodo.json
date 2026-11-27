@@ -1,0 +1,71 @@
+{
+  "title": "umosim: A fast, extensible, agent-based model of smart sustainable mobility services, markets, and policies",
+  "upload_type": "software",
+  "description": "<h2>Short Description</h2><p>We simulate shared mobility services (e.g. ride hailing, vehicle sharing), the infrastructure they use (e.g. charging), and the markets that link them to users (e.g., Mobility-as-a-Service) and to each other (e.g. charging slot auctions).</p><h2>Documentation</h2><p>For more information, please visit our user and developer guide at <a href=\"https://umosim.readthedocs.io/\">https://umosim.readthedocs.io/</a>.</p>",
+  "creators": [
+    {
+      "name": "Hulin, William",
+      "affiliation": "University of Cologne",
+      "orcid": "0009-0002-8562-0614"
+    },
+    {
+      "name": "Muires, Janik",
+      "affiliation": "University of Cologne",
+      "orcid": "0000-0002-7931-7603"
+    },
+    {
+      "name": "Sund, Lennard",
+      "affiliation": "University of Cologne",
+      "orcid": "0000-0001-8632-9429"
+    },
+    {
+      "name": "Ahadi, Ramin",
+      "affiliation": "University of Cologne",
+      "orcid": "0000-0002-8447-5008"
+    },
+    {
+      "name": "Demircan, Muhammed",
+      "affiliation": "University of Cologne",
+      "orcid": "0000-0002-8194-717X"
+    },
+    {
+      "name": "Ketter, Wolfgang",
+      "affiliation": "University of Cologne",
+      "orcid": "0000-0001-9008-142X"
+    }
+  ],
+  "contributors": [
+    {
+      "name": "Ge, Anthony",
+      "affiliation": "University of Cologne",
+      "type": "ProjectMember"
+    },
+    {
+      "name": "Ucar, Ilsu",
+      "affiliation": "University of Cologne",
+      "type": "ProjectMember"
+    },
+    {
+      "name": "Ramm, Tobias",
+      "affiliation": "University of Cologne",
+      "type": "ProjectMember"
+    },
+    {
+      "name": "Beihofer, Max",
+      "affiliation": "University of Cologne",
+      "orcid": "0009-0007-1763-9731",
+      "type": "ProjectMember"
+    },
+    {
+      "name": "Peter, Philipp",
+      "affiliation": "University of Cologne",
+      "type": "ProjectMember"
+    }
+  ],
+  "keywords": [
+    "agent-based model",
+    "transportation",
+    "choice modeling"
+  ],
+  "license": "MIT"
+}
