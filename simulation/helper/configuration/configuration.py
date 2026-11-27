@@ -574,10 +574,10 @@ class IntegratedSharedMobilityOperationsConfig(OperationsConfig):
     NUMBER_OF_SERVICE_WORKERS: int = Field(gt=0)
     WORKER_COST_CONFIG: WorkerCostConfig = Field(default_factory=WorkerCostConfig)
 
-    CHARGING_STATION_POWER: float | None = Field(default=None)
+    CHARGING_STATION_POWER: float
     NUMBER_OF_BASE_REGIONS: int | None = Field(default=None)
     BASE_CAPACITY: int | None = Field(default=None)
-    BASE_REGIONS: list[str] | None = Field(default=None)
+    BASE_REGIONS: list[str]
 
 
 class OperatorConfig(ConfigBaseModel):
